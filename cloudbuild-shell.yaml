@@ -22,3 +22,6 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/numista-shell'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
