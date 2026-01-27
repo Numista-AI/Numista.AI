@@ -1,0 +1,13 @@
+streamlit
+pandas
+requests
+google-cloud-documentai
+google-cloud-firestore
+google-cloud-aiplatform
+extra-streamlit-components
+python-dotenv
+firebase-admin
+xlsxwriter
+openpyxl
+google-cloud-documentai
+google-auth

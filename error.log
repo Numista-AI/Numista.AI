@@ -1,0 +1,6 @@
+ClientError: [VertexAI.ClientError]: got status: 404 Not Found. {"error":{"code":404,"message":"Publisher Model `projects/studio-9101802118-8c9a8/locations/us-central1/publishers/google/models/gemini-3-flash-preview` was not found or your project does not have access to it. Please ensure you are using a valid model version. For more information, see: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions","status":"NOT_FOUND"}}
+    at throwErrorIfNotOK (C:\Users\ericd\Documents\MyVertexProject\node_modules\@google-cloud\vertexai\build\src\functions\post_fetch_processing.js:32:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async generateContent (C:\Users\ericd\Documents\MyVertexProject\node_modules\@google-cloud\vertexai\build\src\functions\generate_content.js:59:5)
+    at async mapToSchema (C:\Users\ericd\Documents\MyVertexProject\mappingController.js:36:20)
+    at async runTest (C:\Users\ericd\Documents\MyVertexProject\testApp.js:30:33)

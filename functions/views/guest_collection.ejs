@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Collection - Numista.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="/" class="logo">
+                <span>✦</span> Numista.ai
+            </a>
+            <div class="nav-links">
+                <span style="color: var(--text-muted); margin-right: 1rem;">Logged in as Guest</span>
+                <a href="/" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Exit Demo</a>
+            </div>
+        </nav>
+
+        <header class="mb-4">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">My Collection (Guest)</h2>
+            <p style="color: var(--text-muted);">This is a sample collection generated for demonstration purposes.</p>
+        </header>
+
+        <div class="collection-stats">
+            <div class="stat-card">
+                <div class="stat-value">
+                    <%= coins.length %>
+                </div>
+                <div class="stat-label">Total Coins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">$<%= totalValue.toLocaleString() %>
+                </div>
+                <div class="stat-label">Estimated Value</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success-color);">+12.5%</div>
+                <div class="stat-label">Annual Growth</div>
+            </div>
+        </div>
+
+        <div class="coin-grid">
+            <% coins.forEach(function(coin) { %>
+                <div class="coin-card">
+                    <div class="coin-image">
+                        <!-- Placeholder for actual coin image -->
+                        <span style="font-size: 3rem;">🪙</span>
+                    </div>
+                    <div class="coin-details">
+                        <div class="coin-meta">
+                            <span>
+                                <%= coin.year %>
+                            </span>
+                            <span>
+                                <%= coin.country %>
+                            </span>
+                        </div>
+                        <h3 class="coin-title">
+                            <%= coin.name %>
+                        </h3>
+
+                        <div style="margin: 1rem 0; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="tag">
+                                <%= coin.composition %>
+                            </span>
+                            <span class="tag" style="background: rgba(34, 197, 94, 0.1); color: var(--success-color);">
+                                <%= coin.grade %>
+                            </span>
+                        </div>
+
+                        <div class="coin-value">
+                            $<%= coin.value.toLocaleString() %>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+        </div>
+
+        <div class="text-center" style="margin-top: 4rem; padding-bottom: 4rem;">
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Ready to build your own collection?</p>
+            <a href="#" class="btn btn-primary">Create Free Account</a>
+        </div>
+    </div>
+</body>
+
+</html>

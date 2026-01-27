@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Secrets (CRITICAL)
+.env
+serviceAccountKey.json
+serviceAccountKey.json.json
+*.json
+!firebase.json
+!package.json
+!firestore.indexes.json
+!projects.json
+
+# Google Cloud / Firebase
+.firebase/
+.gcloudignore
+
+# IDE
+.vscode/
+.idea/

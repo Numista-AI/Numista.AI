@@ -1,0 +1,24 @@
+steps:
+  # Build the container image specific for Shell
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/numista-shell-swap', '-f', 'Dockerfile.shell', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/numista-shell-swap']
+
+  # Deploy container image to Cloud Run (OVERWRITING OLD BACKEND)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'aj-s-coin-collection-ai-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/numista-shell-swap'
+      - '--region'
+      - 'us-west1'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/$PROJECT_ID/numista-shell-swap'

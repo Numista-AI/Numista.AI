@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AJ's Coin App - Review Station</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            background: #f0f2f5;
+            color: #333;
+        }
+
+        h1 {
+            color: #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+            padding-bottom: 10px;
+        }
+
+        .coin-card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #1a73e8;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        label {
+            font-size: 11px;
+            color: #777;
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        input {
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+
+        input:focus {
+            border-color: #1a73e8;
+            outline: none;
+            background: #fff;
+        }
+
+        .footer-actions {
+            position: sticky;
+            bottom: 20px;
+            background: rgba(240, 242, 245, 0.9);
+            padding: 20px;
+            border-top: 1px solid #ccc;
+            text-align: right;
+        }
+
+        .submit-btn {
+            background: #28a745;
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .submit-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🪙 Verify & Clean Your Collection</h1>
+    <p>Review the extracted data below. Remove any duplicates or errors before saving to the database.</p>
+
+    <form action="/submit-to-db" method="POST">
+        <div id="coin-container">
+            <% coins.forEach((coin, index)=> { %>
+                <div class="coin-card">
+                    <button type="button" class="delete-btn" onclick="removeCoin(this)">✕ Delete</button>
+                    <h3>Coin #<%= index + 1 %>: <small style="color:#666;">
+                                <%= coin.year %>
+                                    <%= coin.denomination %>
+                            </small></h3>
+                    <div class="grid">
+                        <% Object.keys(coin).forEach(key=> { %>
+                            <div>
+                                <label>
+                                    <%= key.replace(/_/g, ' ' ).toUpperCase() %>
+                                </label>
+                                <input type="text" name="coins[<%= index %>][<%= key %>]" value="<%= coin[key] %>">
+                            </div>
+                            <% }) %>
+                    </div>
+                </div>
+                <% }) %>
+        </div>
+
+        <div class="footer-actions">
+            <button type="submit" class="submit-btn">✅ Looks Good, Save to Database</button>
+        </div>
+    </form>
+
+    <script>
+        function removeCoin(button) {
+            // Confirmation dialog to prevent accidental clicks
+            if (confirm("Are you sure you want to remove this coin from this batch?")) {
+                const card = button.closest('.coin-card');
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300); // Smooth fade out
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,24 @@
+steps:
+  # Build the container image specific for Shell
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/numista-shell-central', '-f', 'Dockerfile.shell', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/numista-shell-central']
+
+  # Deploy container image to Cloud Run (OVERWRITING numista-app in us-central1)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'numista-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/numista-shell-central'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/$PROJECT_ID/numista-shell-central'
