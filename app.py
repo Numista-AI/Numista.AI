@@ -40,18 +40,18 @@ if "vertex_init" not in st.session_state:
     vertexai.init(project=PROJECT_ID, location=LOCATION)
     st.session_state.vertex_init = True
     
-# --- CREDENTIALS HARD FIX ---
-# Explicitly load service account to avoid "Reauthentication needed" / ADC errors
-key_path = "serviceAccountKey.json.json"
-cred_admin = credentials.Certificate(key_path)
-cred_firestore = service_account.Credentials.from_service_account_file(key_path)
+# --- CREDENTIALS (ADC) ---
+# Use Application Default Credentials (works on Cloud Run & Local with `gcloud auth application-default login`)
+import google.auth
 
 # 1. Init Firebase Admin
 if not firebase_admin._apps:
-    firebase_admin.initialize_app(cred_admin)
+    firebase_admin.initialize_app(options={'projectId': PROJECT_ID})
 
-# 2. Init Firestore Client with explicit creds
-db = firestore.Client(credentials=cred_firestore, project=PROJECT_ID)
+# 2. Init Firestore Client
+# google.auth.default() automatically finds credentials
+credentials, project = google.auth.default()
+db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 
 model = GenerativeModel("gemini-2.5-flash")
 
