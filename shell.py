@@ -11,6 +11,7 @@ import os
 import time
 from datetime import datetime, timedelta
 import extra_streamlit_components as stx
+import base64
 
 # --- CONFIGURATION ---
 load_dotenv()
@@ -78,6 +79,23 @@ st.markdown("""
         animation: pulse-glow 3s infinite ease-in-out;
     }
 
+    /* Electric Blue & Sparkle Text Animation */
+    @keyframes shine {
+        0% { background-position: -200%; }
+        100% { background-position: 200%; }
+    }
+    .electric-text {
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        background: linear-gradient(120deg, #3b82f6 30%, #bfdbfe 38%, #3b82f6 48%);
+        background-size: 200% 100%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        animation: shine 4s linear infinite;
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+    
     /* 2. LAYOUT FIXES (Flush Iframe) */
     [data-testid="stSidebar"] + section { padding: 0; }
     .main .block-container { padding: 0; max-width: 100%; }
@@ -87,7 +105,12 @@ st.markdown("""
 
 # --- URL CONSTANTS (With ?embed=true) ---
 # Main App serves for Dashboard, Collection, Inventory, wishlist
-MAIN_APP_URL = "https://numista-app-568985927038.us-west1.run.app/" # Base URL
+if os.environ.get("K_SERVICE"):
+    # PROD URL (Cloud Run)
+    MAIN_APP_URL = "https://numista-backend-568985927038.us-central1.run.app/" 
+else:
+    # LOCAL DEV URL
+    MAIN_APP_URL = "http://localhost:8502/"
 
 # Add New Coins Sub-Apps (Nested)
 # We will append ?page=... &user_email=... dynamically
@@ -100,7 +123,10 @@ import extra_streamlit_components as stx
 
 # --- LOGIN & COOKIE LOGIC ---
 # We instantiate this directly to avoid CachedWidgetWarning
-cookie_manager = stx.CookieManager(key="numista_shell_cookies")
+try:
+    cookie_manager = stx.CookieManager(key="numista_shell_cookies")
+except:
+    cookie_manager = None
 
 def check_login_shell():
     # 1. Check Session
@@ -108,13 +134,14 @@ def check_login_shell():
         return True
     
     # 2. Check Cookie
-    try:
-        cookies = cookie_manager.get_all()
-        if "numista_auth_v1" in cookies:
-            st.session_state.user_email = cookies["numista_auth_v1"]
-            return True
-    except:
-        pass
+    if cookie_manager:
+        try:
+            cookies = cookie_manager.get_all()
+            if "numista_auth_v1" in cookies:
+                st.session_state.user_email = cookies["numista_auth_v1"]
+                return True
+        except:
+            pass
     
     return False
 
@@ -187,18 +214,28 @@ def get_collection_csv(email):
         return None
 
 def login_screen_shell():
-    col1, x_col, col3 = st.columns([1, 2, 1])
-    with x_col:
-        try:
-            st.image("public/Numista.AI Logo.svg", width=200)
-        except:
-             st.title("Numista.AI")
-    st.markdown("<h1 style='text-align: center;'>Numista.AI <span class='beta-tag'>BETA v2.6 (Shell)</span></h1>", unsafe_allow_html=True)
+    # --- LOGO & TITLE BLOCK ---
+    # Centering via HTML/CSS + Base64 Image
+    logo_path = "public/Numista.AI Logo.svg"
+    try:
+        with open(logo_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        img_tag = f'<img src="data:image/svg+xml;base64,{data}" width="300" style="margin-bottom: 20px;">'
+    except:
+        img_tag = "" # Fallback if file missing
+
+    st.markdown(f"""
+        <div style='text-align: center;'>
+            {img_tag}
+            <h1 style='font-size: 60px; margin-bottom: 0px; margin-top: 10px;'><span class='electric-text'>Numista.AI</span></h1>
+            <h3 style='margin-top: -15px; color: #475569;'>BETA v2.6</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-style: italic; color: #64748b; font-size: 14px;'>A Coin Collection Management System</p>", unsafe_allow_html=True)
     st.write("") # Padding
     
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.info("🔐 Secure Login (Shell)")
         
         # --- PASSWORD RESET FLOW ---
         if st.session_state.get('forgot_pin_mode'):
@@ -216,12 +253,53 @@ def login_screen_shell():
                 st.session_state.forgot_pin_mode = False
                 st.rerun()
             return
+
+        # --- SIGN UP FLOW ---
+        if st.session_state.get('signup_mode'):
+            st.subheader("Create Free Account")
+            st.info("Sign up below to start your collection.")
             
-        # --- GUEST BUTTON ---
-        if st.button("👤 Continue as Guest", use_container_width=True):
-            st.session_state.user_email = "guest@numista.ai"
-            st.session_state.guest_mode = True
-            st.rerun()
+            new_email = st.text_input("Email Address:", key="signup_email")
+            new_pin = st.text_input("Create 6-Digit PIN:", type="password", max_chars=6, key="signup_pin")
+            confirm_pin = st.text_input("Confirm PIN:", type="password", max_chars=6, key="signup_confirm_pin")
+            
+            if st.button("Create Account", type="primary", use_container_width=True):
+                if not new_email or "@" not in new_email:
+                    st.error("Please enter a valid email address.")
+                elif len(new_pin) != 6 or not new_pin.isdigit():
+                    st.error("PIN must be exactly 6 digits.")
+                elif new_pin != confirm_pin:
+                    st.error("PINs do not match.")
+                else:
+                    # Create User Logic
+                    success, msg = update_user_pin(new_email, new_pin) # Reusing this as it handles creation if user not found
+                    if success:
+                        st.balloons()
+                        st.success("Account Created! Logging you in...")
+                        st.session_state.user_email = new_email
+                        cookie_manager.set("numista_auth_v1", new_email, expires_at=datetime.now() + timedelta(days=30))
+                        time.sleep(1.5)
+                        st.session_state.signup_mode = False
+                        st.rerun()
+                    else:
+                        st.error(f"Sign Up Failed: {msg}")
+            
+            if st.button("Back to Login", type="secondary", use_container_width=True):
+                st.session_state.signup_mode = False
+                st.rerun()
+            return
+            
+        # --- GUEST & SIGN UP OPTIONS ---
+        c_guest, c_signup = st.columns(2)
+        with c_guest:
+            if st.button("👤 Continue as Guest", use_container_width=True):
+                st.session_state.user_email = "guest@numista.ai"
+                st.session_state.guest_mode = True
+                st.rerun()
+        with c_signup:
+            if st.button("📝 Sign up for Free", use_container_width=True):
+                st.session_state.signup_mode = True
+                st.rerun()
         
         st.write("--- OR ---")
         
@@ -277,13 +355,14 @@ def login_screen_shell():
             return
 
         # --- NORMAL LOGIN ---
+        st.markdown("**Verified Users Log-in below with email address and PIN**")
         email = st.text_input("Enter your verified email address:")
-        st.caption("ℹ️ Default Beta PIN: 1111")
+        # Removed Default Beta PIN text
         pin = st.text_input("Enter Access PIN:", type="password")
         
         c1, c2 = st.columns([1, 1])
         with c1:
-            if st.button("Access Vault", use_container_width=True):
+            if st.button("Access System", use_container_width=True): # Changed from Access Vault
                 clean_email = email.lower().strip()
                 
                 # 1. LEGACY/TRANSITION CHECK
@@ -350,7 +429,7 @@ else:
         # 2. Unified Sidebar Structure
         main_nav = st.radio(
             "Menu",
-            ["Home Dashboard", "My Collection", "Add New Coins", "Check Inventory", "My Wishlist", "Our Team"],
+            ["Home Dashboard", "My Collection", "Coin Programs", "Add New Coins", "Check Inventory", "My Wishlist", "Settings & Backup", "Our Team", "Customer Service"],
             label_visibility="collapsed"
         )
         
@@ -370,10 +449,13 @@ else:
             elif add_method == "Excel/CSV Upload": final_url = f"{EXCEL_UPLOAD_URL}?page=add_upload{auth_params}"
             
         elif main_nav == "Home Dashboard": final_url = f"{MAIN_APP_URL}?page=home{auth_params}"
+        elif main_nav == "Coin Programs": final_url = f"{MAIN_APP_URL}?page=programs{auth_params}" # NEW
         elif main_nav == "My Collection": final_url = f"{MAIN_APP_URL}?page=collection{auth_params}"
         elif main_nav == "Check Inventory": final_url = f"{MAIN_APP_URL}?page=inventory{auth_params}"
         elif main_nav == "My Wishlist": final_url = f"{MAIN_APP_URL}?page=wishlist{auth_params}"
+        elif main_nav == "Settings & Backup": final_url = f"{MAIN_APP_URL}?page=settings{auth_params}"
         elif main_nav == "Our Team": final_url = f"{MAIN_APP_URL}?page=team{auth_params}"
+        elif main_nav == "Customer Service": final_url = f"{MAIN_APP_URL}?page=support{auth_params}"
         else: final_url = f"{MAIN_APP_URL}?page=home{auth_params}"
     
         st.divider()

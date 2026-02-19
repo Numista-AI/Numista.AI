@@ -13,6 +13,7 @@ import extra_streamlit_components as stx
 from contextlib import contextmanager
 from google.cloud import documentai
 from google.api_core.client_options import ClientOptions
+from google.cloud import storage
 import requests
 import firebase_admin
 from firebase_admin import auth, credentials
@@ -23,9 +24,28 @@ from google.oauth2 import service_account
 # --- CONFIGURATION ---
 load_dotenv()
 PROJECT_ID = "studio-9101802118-8c9a8"
-LOCATION = "us-west1"
+LOCATION = "us-central1"
 st.set_page_config(page_title="Numista.AI", layout="wide", initial_sidebar_state="collapsed")
-st.sidebar.caption("v2.5 - DEBUG MODE")
+
+# --- HISTORY POPUP HANDLER (BEFORE SIDEBAR/AUTH) ---
+if "program_history" in st.query_params:
+    prog_id = st.query_params["program_history"]
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] { display: none !important; }
+            header { visibility: hidden !important; }
+            .stApp { background: white !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # We need US_PROGRAMS but it's defined later. Use basic search or move definition up.
+    # Since we can't easily move 200 lines up without reading them, let's just define the handler here 
+    # and execute it AFTER US_PROGRAMS is defined, by setting a flag.
+    # OR better: Just put the handler block AFTER the imports and definitions, but BEFORE the main UI render loop.
+    # Let's set a session state flag to trigger "Popup Mode" rendering later in the script.
+    st.session_state['POPUP_MODE_ID'] = prog_id
+
+st.sidebar.caption("v2.6 - DEBUG MODE")
 
 # Simple Sidebar Suppression (Just in case Streamlit tries to render it)
 st.markdown("""
@@ -36,8 +56,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- INITIALIZATION ---
+# Use Explicit Service Account Key if available to avoid 403 errors on Vertex
+key_path = "serviceAccountKey.json.json"
+vertex_creds = None
+if os.path.exists(key_path):
+    try:
+        vertex_creds = service_account.Credentials.from_service_account_file(key_path)
+    except: pass
+
 if "vertex_init" not in st.session_state:
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
+    vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=vertex_creds)
     st.session_state.vertex_init = True
     
 # --- CREDENTIALS (ADC) ---
@@ -62,7 +90,14 @@ FIREBASE_WEB_API_KEY = os.environ.get("FIREBASE_WEB_API_KEY", "")
 
 # --- COOKIE MANAGER (FIXED: NO CACHE) ---
 # We instantiate this directly to avoid CachedWidgetWarning
-cookie_manager = stx.CookieManager(key="numista_cookies")
+# FIX: Only load if NO query params (Direct Access) to avoid iframe errors
+if "user_email" in st.query_params:
+    cookie_manager = None
+else:
+    try:
+        cookie_manager = stx.CookieManager(key="numista_cookies")
+    except:
+        cookie_manager = None
 
 st.markdown("""
 <style>
@@ -86,11 +121,11 @@ st.markdown("""
     
     /* MAXIMIZE SCREEN WIDTH */
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 5rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        max-width: 98% !important;
+        padding-top: 1rem;
+        padding-bottom: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        max-width: 99% !important;
     }
 
     /* SIDEBAR */
@@ -105,6 +140,14 @@ st.markdown("""
     }
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
         color: white !important;
+    }
+    /* Force Radio Button Text Color in Sidebar */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label {
+        color: #e2e8f0 !important; /* Slate-200 */
+        font-weight: 500;
+    }
+    [data-testid="stSidebar"] .stRadio > div[role="radiogroup"] > label {
+        color: #e2e8f0 !important;
     }
     
     /* DASHBOARD HEADERS */
@@ -199,6 +242,23 @@ st.markdown("""
         animation: pulse-glow 3s infinite ease-in-out;
     }
 
+    /* Electric Blue & Sparkle Text Animation */
+    @keyframes shine {
+        0% { background-position: -200%; }
+        100% { background-position: 200%; }
+    }
+    .electric-text {
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        background: linear-gradient(120deg, #3b82f6 30%, #bfdbfe 38%, #3b82f6 48%);
+        background-size: 200% 100%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        animation: shine 4s linear infinite;
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+
     /* GRADE PILL & TABLE STYLES */
     .grade-pill {
         padding: 2px 8px; 
@@ -273,13 +333,14 @@ def check_login():
         return True
     
     # 2. Check Cookie (Wait for it to load)
-    try:
-        cookies = cookie_manager.get_all()
-        if "numista_auth_v1" in cookies:
-            st.session_state.user_email = cookies["numista_auth_v1"]
-            return True
-    except:
-        pass
+    if cookie_manager:
+        try:
+            cookies = cookie_manager.get_all()
+            if "numista_auth_v1" in cookies:
+                st.session_state.user_email = cookies["numista_auth_v1"]
+                return True
+        except:
+            pass
     
     return False
 
@@ -370,15 +431,29 @@ def get_collection_csv(email):
         return None
 
 def login_screen():
-    col1, x_col, col3 = st.columns([1, 2, 1])
-    with x_col:
-        st.image("public/Numista.AI Logo.svg", width=200)
-    st.markdown("<h1 style='text-align: center;'>Numista.AI <span class='beta-tag'>BETA v2.6 (App)</span></h1>", unsafe_allow_html=True)
+    # --- LOGO & TITLE BLOCK ---
+    logo_path = "public/Numista.AI Logo.svg"
+    try:
+        with open(logo_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        img_tag = f'<img src="data:image/svg+xml;base64,{data}" width="300" style="margin-bottom: 20px;">'
+    except:
+        img_tag = "" 
+
+    st.markdown(f"""
+        <div style='text-align: center;'>
+            {img_tag}
+            <h1 style='font-size: 60px; margin-bottom: 0px; margin-top: 10px;'><span class='electric-text'>Numista.AI</span></h1>
+            <h3 style='margin-top: -15px; color: #475569;'>BETA v2.6</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-style: italic; color: #64748b; font-size: 14px;'>A Coin Collection Management System</p>", unsafe_allow_html=True)
     st.write("") # Padding
     
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        st.info("🔐 Secure Login")
+        # Removed Secure Login Info
+
         
         # --- PASSWORD RESET FLOW ---
         if st.session_state.get('forgot_pin_mode'):
@@ -458,12 +533,12 @@ def login_screen():
 
         # --- NORMAL LOGIN ---
         email = st.text_input("Enter your verified email address:")
-        st.caption("ℹ️ Default Beta PIN: 1111")
+        # Removed Default Beta PIN text
         pin = st.text_input("Enter Access PIN:", type="password")
         
         c1, c2 = st.columns([1, 1])
         with c1:
-            if st.button("Access Vault", use_container_width=True):
+            if st.button("Access System", use_container_width=True):
                 clean_email = email.lower().strip()
                 
                 # 1. LEGACY/TRANSITION CHECK
@@ -505,8 +580,55 @@ def logout():
 
 # --- HELPER FUNCTIONS ---
 def get_user_collection_path():
-    if not st.session_state.get('user_email'): return None
-    return f"users/{st.session_state.user_email}/coins"
+    if st.session_state.get('guest_mode'): return None
+    email = st.session_state.get('user_email')
+    if not email: return None
+    return f"users/{email}/coins"
+
+# --- GCS QUEUE HELPERS ---
+from google.cloud import storage
+
+def get_bucket():
+    # Helper to get bucket object
+    if vertex_creds:
+        client = storage.Client(credentials=vertex_creds, project=PROJECT_ID)
+    else:
+        client = storage.Client(project=PROJECT_ID)
+    # Assume default bucket is the project's appspot or defined one
+    # For Cloud Run, 'PROJECT_ID.appspot.com' is standard default for Firebase
+    # bucket_name = f"{PROJECT_ID}.appspot.com" 
+    bucket_name = "numista-uploads-studio-9101802118-8c9a8"
+    return client.bucket(bucket_name)
+
+def list_queue_files(prefix="invoices/queue/"):
+    try:
+        bucket = get_bucket()
+        blobs = list(bucket.list_blobs(prefix=prefix))
+        # Filter out the folder itself if returned
+        return [b for b in blobs if not b.name.endswith('/')]
+    except Exception as e:
+        print(f"Queue List Error: {e}")
+        return []
+
+def move_blob(blob, dest_name):
+    try:
+        bucket = get_bucket()
+        bucket.rename_blob(blob, dest_name)
+    except Exception as e:
+        print(f"Move Error: {e}")
+
+def upload_to_gcs_queue(file_obj):
+    try:
+        bucket = get_bucket()
+        blob_name = f"invoices/queue/{uuid.uuid4()}_{file_obj.name}"
+        blob = bucket.blob(blob_name)
+        file_obj.seek(0)
+        blob.upload_from_file(file_obj, content_type=file_obj.type)
+        print(f"DEBUG: Successfully uploaded {blob_name}")
+        return True, None
+    except Exception as e:
+        print(f"DEBUG: Upload failed: {e}")
+        return False, str(e)
 
 @contextmanager
 def numista_loader(message="AI is analyzing data..."):
@@ -543,6 +665,275 @@ COIN_STANDARDS = {
         "Manganese-Brass": ["Golden Dollar Metal", "88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni"]
     }
 }
+
+
+
+US_PROGRAMS = {
+    "Circulating Coin Programs": [
+        {"id": "bicentennial", "name": "Bicentennial Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/bicentennial-coins", "years": "1976", "coins": ["Quarter", "Half Dollar", "Dollar"]},
+        {"id": "50state", "name": "50 State Quarters Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters", "years": "1999-2008", "coins": ['Delaware', 'Pennsylvania', 'New Jersey', 'Georgia', 'Connecticut', 'Massachusetts', 'Maryland', 'South Carolina', 'New Hampshire', 'Virginia', 'New York', 'North Carolina', 'Rhode Island', 'Vermont', 'Kentucky', 'Tennessee', 'Ohio', 'Louisiana', 'Indiana', 'Mississippi', 'Illinois', 'Alabama', 'Maine', 'Missouri', 'Arkansas', 'Michigan', 'Florida', 'Texas', 'Iowa', 'Wisconsin', 'California', 'Minnesota', 'Oregon', 'Kansas', 'West Virginia', 'Nevada', 'Nebraska', 'Colorado', 'North Dakota', 'South Dakota', 'Montana', 'Washington', 'Idaho', 'Wyoming', 'Utah', 'Oklahoma', 'New Mexico', 'Arizona', 'Alaska', 'Hawaii']},
+        {"id": "dc_territories", "name": "District of Columbia and U.S. Territories Quarters", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/dc-and-us-territories", "years": "2009", "coins": ["District of Columbia", "Puerto Rico", "Guam", "American Samoa", "U.S. Virgin Islands", "Northern Mariana Islands"]},
+        {"id": "westward", "name": "Westward Journey Nickel Series", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/westward-journey-nickel-series", "years": "2004-2005", "coins": ["Peace Medal", "Keelboat", "American Bison", "Ocean in View"]},
+        {"id": "lincoln", "name": "Lincoln Bicentennial One-Cent Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/lincoln-bicentennial-one-cent", "years": "2009", "coins": ["Birth and Early Childhood", "Formative Years", "Professional Life", "Presidency"]},
+        {"id": "sba", "name": "Susan B. Anthony Dollar", "url": "https://www.usmint.gov/coins/coin-medal-programs/circulating-coins/susan-b-anthony-dollar", "years": "1979-1981, 1999", "coins": ["1979-P", "1979-D", "1979-S", "1980-P", "1980-D", "1980-S", "1981-P", "1981-D", "1981-S", "1999-P", "1999-D"]},
+        {"id": "sacagawea", "name": "Sacagawea Golden Dollar", "url": "https://www.usmint.gov/coins/coin-medal-programs/sacagawea-golden-dollar", "years": "2000-2008", "coins": ["2000-P", "2000-D", "2000-S", "2001-P", "2001-D", "2001-S", "2002-P", "2002-D", "2002-S", "2003-P", "2003-D", "2003-S", "2004-P", "2004-D", "2004-S", "2005-P", "2005-D", "2005-S", "2006-P", "2006-D", "2006-S", "2007-P", "2007-D", "2007-S", "2008-P", "2008-D", "2008-S"]},
+        {"id": "atb", "name": "America the Beautiful Quarters Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters", "years": "2010-2021", "coins": ["Hot Springs", "Yellowstone", "Yosemite", "Grand Canyon", "Mount Hood", "Gettysburg", "Glacier", "Olympic", "Vicksburg", "Chickasaw", "El Yunque", "Chaco Culture", "Acadia", "Hawaii Volcanoes", "Denali", "White Mountain", "Perry's Victory", "Great Basin", "Fort McHenry", "Mount Rushmore", "Great Smoky Mountains", "Shenandoah", "Arches", "Great Sand Dunes", "Everglades", "Homestead", "Kisatchie", "Blue Ridge Parkway", "Bombay Hook", "Saratoga", "Shawnee", "Cumberland Gap", "Harpers Ferry", "Theodore Roosevelt", "Fort Moultrie", "Effigy Mounds", "Frederick Douglass", "Ozark", "Ellis Island", "George Rogers Clark", "Pictured Rocks", "Apostle Islands", "Voyageurs", "Cumberland Island", "Block Island", "Lowell", "American Memorial", "War in the Pacific", "San Antonio Missions", "Frank Church River of No Return", "National Park of American Samoa", "Weir Farm", "Salt River Bay", "Marsh-Billings-Rockefeller", "Tallgrass Prairie", "Tuskegee Airmen"]},
+        {"id": "presidential", "name": "Presidential $1 Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/presidential-dollar-coin", "years": "2007-2016, 2020", "coins": ["Washington", "Adams", "Jefferson", "Madison", "Monroe", "J.Q. Adams", "Jackson", "Van Buren", "Harrison", "Tyler", "Polk", "Taylor", "Fillmore", "Pierce", "Buchanan", "Lincoln", "Johnson", "Grant", "Hayes", "Garfield", "Arthur", "Cleveland (1st)", "Harrison", "Cleveland (2nd)", "McKinley", "Roosevelt", "Taft", "Wilson", "Harding", "Coolidge", "Hoover", "F.D. Roosevelt", "Truman", "Eisenhower", "Kennedy", "Johnson", "Nixon", "Ford", "Reagan", "G.H.W. Bush"]},
+        {"id": "native", "name": "Native American $1 Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/native-american-dollar-coins", "years": "2009-Present", "coins": ["Three Sisters (2009)", "Great Tree of Peace (2010)", "Wampanoag Treaty (2011)", "Trade Routes (2012)", "Delaware Treaty (2013)", "Native Hospitality (2014)", "Mohawk Ironworkers (2015)", "Code Talkers (2016)", "Sequoyah (2017)", "Jim Thorpe (2018)", "Space Program (2019)", "Elizabeth Peratrovich (2020)", "Military Service (2021)", "Ely S. Parker (2022)", "Maria Tallchief (2023)", "Indian Citizenship Act (2024)", "Northeast Tech (2025)"]},
+        {"id": "innovation", "name": "American Innovation $1 Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-innovation-dollar-coins", "years": "2018-2032", "coins": ['Intro Coin', 'Delaware', 'Pennsylvania', 'New Jersey', 'Georgia', 'Connecticut', 'Massachusetts', 'Maryland', 'South Carolina', 'New Hampshire', 'Virginia', 'New York', 'North Carolina', 'Rhode Island', 'Vermont', 'Kentucky', 'Tennessee', 'Ohio', 'Louisiana', 'Indiana', 'Mississippi', 'Illinois', 'Alabama', 'Maine', 'Missouri', 'Arkansas', 'Michigan', 'Florida', 'Texas', 'Iowa', 'Wisconsin', 'California', 'Minnesota', 'Oregon', 'Kansas', 'West Virginia', 'Nevada', 'Nebraska', 'Colorado', 'North Dakota', 'South Dakota', 'Montana', 'Washington', 'Idaho', 'Wyoming', 'Utah', 'Oklahoma', 'New Mexico', 'Arizona', 'Alaska', 'Hawaii']},
+        {"id": "women", "name": "American Women Quarters Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-women-quarters", "years": "2022-2025", "coins": ['Maya Angelou', 'Dr. Sally Ride', 'Wilma Mankiller', 'Adelina Otero-Warren', 'Anna May Wong', 'Bessie Coleman', 'Edith Kanakaʻole', 'Eleanor Roosevelt', 'Jovita Idar', 'Maria Tallchief', 'Rev. Dr. Pauli Murray', 'Patsy Takemoto Mink', 'Dr. Mary Edwards Walker', 'Celia Cruz', 'Zitkala-Ša']},
+        {"id": "semiquin", "name": "2026 Semiquincentennial Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/semiquincentennial-coins", "years": "2026", "coins": ["Mayflower Compact Quarter (Pending)", "Revolutionary War Quarter (Pending)", "Declaration of Independence Quarter (Pending)", "U.S. Constitution Quarter (Pending)", "Gettysburg Address Quarter (Pending)"]}
+    ],
+    "Bullion and Investment Programs": [
+        {"id": "ase", "name": "American Eagle Silver Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-eagle-silver-bullion-coins", "years": "1986-Present", "coins": ["Type 1 (1986-2021)", "Type 2 (2021-Present)"]},
+        {"id": "age", "name": "American Eagle Gold Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-eagle-gold-bullion-coins", "years": "1986-Present", "coins": ["Type 1 (1986-2021)", "Type 2 (2021-Present)"]},
+        {"id": "ape", "name": "American Eagle Platinum Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-eagle-platinum-bullion-coins", "years": "1997-Present", "coins": ["Proof Series", "Uncirculated Series", "Bullion"]},
+        {"id": "apall", "name": "American Eagle Palladium Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-eagle-palladium-bullion-coins", "years": "2017-Present", "coins": ["Bullion", "Proof", "Reverse Proof", "Uncirculated"]},
+        {"id": "buffalo", "name": "American Buffalo Gold Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-buffalo-coin", "years": "2006-Present", "coins": ["Bullion (1oz)", "Proof (1oz)", "Fractional (2008 Only)"]},
+        {"id": "liberty", "name": "American Liberty High Relief Gold and Silver Medal Series", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/american-liberty-high-relief-gold-coins", "years": "2015-Present", "coins": ["2015 High Relief Gold", "2016 Silver Medal", "2017 Gold Coin", "2018 Gold Coin", "2019 High Relief Gold", "2019 Silver Medal", "2021 High Relief Gold", "2022 Silver Medal", "2023 High Relief Gold", "2024 Silver Medal"]},
+        {"id": "spouse", "name": "First Spouse Gold Coin Program", "url": "https://www.usmint.gov/learn/coin-and-medal-programs/first-spouse-gold-coins", "years": "2007-2016, 2020", "coins": ["Martha Washington", "Abigail Adams", "Jefferson's Liberty", "Dolley Madison", "Elizabeth Monroe", "Louisa Adams", "Jackson's Liberty", "Van Buren's Liberty", "Anna Harrison", "Letitia Tyler", "Julia Tyler", "Sarah Polk", "Margaret Taylor", "Abigail Fillmore", "Jane Pierce", "Buchanan's Liberty", "Mary Todd Lincoln", "Eliza Johnson", "Julia Grant", "Lucy Hayes", "Lucretia Garfield", "Alice Paul", "Frances Cleveland (1st)", "Caroline Harrison", "Frances Cleveland (2nd)", "Ida McKinley", "Edith Roosevelt", "Helen Taft", "Ellen Wilson", "Edith Wilson", "Florence Harding", "Grace Coolidge", "Lou Hoover", "Eleanor Roosevelt", "Bess Truman", "Mamie Eisenhower", "Jacqueline Kennedy", "Lady Bird Johnson", "Pat Nixon", "Betty Ford", "Nancy Reagan", "Barbara Bush"]},
+        {"id": "dc_comics", "name": "DC Comics Bullion Series", "url": "https://catalog.usmint.gov/", "years": "2025-2027", "coins": ["Superman (2025 Pending)", "Batman (2025 Pending)", "Wonder Woman (2025 Pending)", "2026 Release 1 (Pending)", "2026 Release 2 (Pending)", "2026 Release 3 (Pending)", "2027 Release 1 (Pending)", "2027 Release 2 (Pending)", "2027 Release 3 (Pending)"]}
+    ],
+    "Upcoming Officially Announced Programs": [
+        {"id": "fifa", "name": "2026 FIFA World Cup Commemorative Coin Program", "url": "https://www.usmint.gov/", "years": "2026", "coins": ["$5 Gold Coin (Pending)", "$1 Silver Coin (Pending)", "Half Dollar Clad (Pending)"]},
+        {"id": "youth_post_2026", "name": "Youth and Paralympic Sports Quarters and Half Dollars", "url": "https://www.usmint.gov/news/press-releases", "years": "Post-2026", "coins": ["Youth Sports Quarter 1 (Pending)", "Youth Sports Quarter 2 (Pending)", "Youth Sports Quarter 3 (Pending)", "Youth Sports Quarter 4 (Pending)", "Youth Sports Quarter 5 (Pending)", "Paralympic Half Dollar (Pending)"]},
+        {"id": "youth_2027", "name": "2027 Youth and Paralympic Sports Program", "url": "https://www.usmint.gov/news/press-releases", "years": "2027", "coins": ["2027 Quarter 1 (Pending)", "2027 Quarter 2 (Pending)", "2027 Quarter 3 (Pending)", "2027 Quarter 4 (Pending)", "2027 Quarter 5 (Pending)", "2027 Half Dollar (Pending)"]}
+    ]
+}
+
+
+# --- POPUP MODE FUNCTION ---
+def render_popup_history_mode(prog_id):
+    # Locate Program
+    program = None
+    for cat, progs in US_PROGRAMS.items():
+        for p in progs:
+            if p['id'] == prog_id:
+                program = p
+                break
+        if program: break
+    
+    if not program:
+        st.error("Program not found.")
+        return
+
+    st.markdown(f"## 📚 History: {program['name']}")
+    st.caption(f"Years: {program['years']}")
+    
+    # Generate History
+    with st.spinner("Consulting the archives..."):
+        # Helper to generate history (duplicated or shared)
+        prompt = f"Provide a brief, engaging history of the US Mint '{program['name']}' coin program. Include authorization (law), years, designer info if key, and purpose. Format with markdown."
+        try:
+             # Direct Gemini Call (Bypass collection check)
+             chat_session = model.start_chat()
+             max_retries = 3
+             # Simple retry logic or just direct call
+             response = chat_session.send_message(prompt)
+             st.markdown(response.text)
+        except Exception as e:
+             st.error(f"AI Gemini Error: {e}")
+    
+    st.divider()
+    st.markdown(f"**Official Source:** [{program['url']}]({program['url']})")
+    # Close button for usability (closes tab)
+    st.markdown("""
+        <button onclick="window.close()" style="background-color:#f44336; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+            Close Window
+        </button>
+    """, unsafe_allow_html=True)
+
+
+
+
+
+def render_programs():
+    st.title("US Mint Coin Programs")
+    st.markdown(f"<div class='beta-tag'>PROGRAM MANAGER</div>", unsafe_allow_html=True)
+    st.caption("Track your progress on official US Mint series.")
+    
+    # 1. Load Collection
+    df = load_collection(limit_n=None)
+    
+    # 2. Render UI
+    selected_program_id = st.session_state.get('program_view_id')
+    
+    if not selected_program_id:
+        # --- VIEW SETTINGS ---
+        col_sort, col_gem = st.columns([1, 2])
+        with col_sort:
+            sort_order = st.selectbox("Sort Programs By:", ["Default (Release Date)", "Newest Release", "Oldest Release", "Most Complete", "Least Complete"])
+            
+        # CATEGORIZED GRID VIEW
+        for category, programs in US_PROGRAMS.items():
+            
+            # --- SORTING LOGIC ---
+            # Pre-calculate completion for sorting
+            prog_data = []
+            for p in programs:
+                collected_count = 0
+                for coin_name in p['coins']:
+                    if "Pending" in coin_name: continue
+                    match = df[df.astype(str).apply(lambda x: x.str.contains(coin_name, case=False, na=False)).any(axis=1)]
+                    if not match.empty: collected_count += 1
+                
+                total = len([c for c in p['coins'] if "Pending" not in c])
+                total = total if total > 0 else 1
+                pct = int((collected_count / total) * 100)
+                prog_data.append({**p, "count": collected_count, "total": total, "pct": pct})
+            
+            if sort_order == "Most Complete":
+                prog_data.sort(key=lambda x: x['pct'], reverse=True)
+            elif sort_order == "Least Complete":
+                prog_data.sort(key=lambda x: x['pct'], reverse=False)
+            elif sort_order == "Newest Release":
+                # Extract first year
+                def get_start_year(p):
+                     import re
+                     match = re.search(r'(\d{4})', p['years'])
+                     return int(match.group(1)) if match else 0
+                prog_data.sort(key=get_start_year, reverse=True)
+            elif sort_order == "Oldest Release":
+                def get_start_year(p):
+                     import re
+                     match = re.search(r'(\d{4})', p['years'])
+                     return int(match.group(1)) if match else 0
+                prog_data.sort(key=get_start_year, reverse=False)
+            
+            st.divider()
+            st.subheader(category)
+            
+            # Dynamic Grid Layout
+            cols = st.columns(3)
+            
+            for i, prog in enumerate(prog_data):
+                with cols[i % 3]:
+                    # CARD CONTAINER
+                    with st.container(border=True):
+                        # Title & Link Row
+                        c_tit, c_lnk = st.columns([5, 1])
+                        c_tit.markdown(f"**{prog['name']}**")
+                        
+                        # HISTORY POPUP LINK (Target Blank)
+                        # We use the query param ?program_history=ID to trigger the popup mode
+                        link_url = f"/?program_history={prog['id']}"
+                        # If running under shell, it might be messy, but let's try relative link first.
+                        # Since app.py is the iframe source, this opens app.py in a new tab with the param.
+                        c_lnk.markdown(f'<a href="{link_url}" target="_blank" style="text-decoration:none; font-size:20px;">🔗</a>', unsafe_allow_html=True)
+                        
+                        st.caption(f"{prog['years']}")
+                        
+                        # Progress Bar
+                        st.progress(prog['pct'] / 100)
+                        st.caption(f"{prog['count']} / {prog['total']} Collected")
+                        
+                        # CLICKABLE AREA (Full Width Button)
+                        if st.button("View Checklist", key=f"view_{prog['id']}", use_container_width=True):
+                            st.session_state.program_view_id = prog['id']
+                            if 'show_history_for' in st.session_state: del st.session_state.show_history_for
+                            st.rerun()
+
+    else:
+        # CHECKLIST VIEW
+        # Flat Search for the program dictionary
+        prog = None
+        for cat, progs in US_PROGRAMS.items():
+             for p in progs:
+                 if p['id'] == selected_program_id:
+                     prog = p
+                     break
+             if prog: break
+        
+        col_back, col_title, col_action = st.columns([1, 4, 1])
+        with col_back:
+            if st.button("← Back"):
+                del st.session_state.program_view_id
+                if 'show_history_for' in st.session_state: del st.session_state.show_history_for
+                st.rerun()
+        with col_title:
+             st.subheader(f"{prog['name']}")
+             
+        # GEMINI HISTORY & LINK
+        # Auto-expand if triggered from the chain icon
+        show_history = st.session_state.get('show_history_for') == prog['id']
+        
+        with st.expander("📚 Program History & Info", expanded=show_history):
+            
+            # Helper to generate history
+            def get_history(p_name):
+                prompt = f"Provide a brief, engaging history of the US Mint '{p_name}' coin program. Include authorization (law), years, designer info if key, and purpose. Format with markdown."
+                try:
+                    # Assuming ask_deepdive is defined elsewhere and can take a prompt and df
+                    # If df is not needed for this specific prompt, pass None or an empty df
+                    return ask_deepdive(prompt, df) # Reusing deepdive as it has context, or just generic model
+                except Exception as e:
+                    print(f"Error generating history: {e}")
+                    return "AI History currently unavailable."
+
+            # If triggered, generate automatically if not present? 
+            # OR just show a button to generate. User asked for "Gemini powered history... where the hyperlink points to"
+            # implying immediate view.
+            
+            if show_history:
+                 if f"history_{prog['id']}" not in st.session_state:
+                     with st.spinner(f"Generating history for {prog['name']}..."):
+                         st.session_state[f"history_{prog['id']}"] = get_history(prog['name'])
+            
+            # Display History if available
+            if f"history_{prog['id']}" in st.session_state:
+                st.markdown(st.session_state[f"history_{prog['id']}"])
+                st.caption(f"Source Reference: [{prog['url']}]({prog['url']})")
+                if st.button("🔄 Refresh History", key=f"refresh_{prog['id']}"):
+                    del st.session_state[f"history_{prog['id']}"]
+                    st.rerun()
+            else:
+                st.info("Click below to generate a detailed history of this program provided by Vertex AI.")
+                if st.button("✨ Generate AI History Summary", key=f"gen_{prog['id']}"):
+                    st.session_state.show_history_for = prog['id'] # Set flag to auto-trigger next render logic logic via rerun or just run it now
+                    st.session_state[f"history_{prog['id']}"] = get_history(prog['name'])
+                    st.rerun()
+                st.markdown(f"**Official Source:** [{prog['url']}]({prog['url']})")
+        
+        # EXPORT FEATURE
+        with col_action:
+             if st.button("📄 Export"):
+                 # Generate Text List
+                 txt = f"Checklist: {prog['name']}\n\n"
+                 for c in prog['coins']:
+                     txt += f"[ ] {c}\n"
+                 b64 = base64.b64encode(txt.encode()).decode()
+                 st.markdown(f'<a href="data:text/plain;base64,{b64}" download="{prog["id"]}_checklist.txt">Download Text</a>', unsafe_allow_html=True)
+
+        # Calculate Logic
+        collected_coins = []
+        
+        for coin in prog['coins']:
+            match = df[
+                df.astype(str).apply(lambda x: x.str.contains(coin, case=False, na=False)).any(axis=1)
+            ]
+            if not match.empty:
+                first = match.iloc[0]
+                collected_coins.append({"name": coin, "data": first})
+
+        # CHECKLIST ONLY (Wishlist moved to main page)
+        st.write("")
+        st.markdown("### Program Checklist")
+        
+        for c in prog['coins']:
+            is_collected = c in [x['name'] for x in collected_coins]
+            is_pending = "Pending" in c
+            
+            if is_collected:
+                data = next(x['data'] for x in collected_coins if x['name'] == c)
+                with st.expander(f"✅ {c}", expanded=False):
+                    st.caption(f"Found match: {data.get('Year')} {data.get('Denomination')}")
+                    st.write(f"Grade: {data.get('Condition')}")
+            elif is_pending:
+                 st.markdown(f"🗓️ <span style='color:orange; font-style:italic;'>{c}</span>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"⬜ <span style='color:grey'>{c}</span>", unsafe_allow_html=True)
+                
+        st.info("ℹ️ Missing items are automatically added to your 'My Wishlist' page.")
 
 def normalize_coin_data(df):
     if df.empty: return df
@@ -586,12 +977,12 @@ DISPLAY_ORDER = [
     "Country", "Year", "Mint Mark", "Denomination", "Quantity", 
     "Program/Series", "Theme/Subject", "Condition", "Surface & Strike Quality", 
     "Grading Service", "Grading Cert #", "Cost", "Purchase Date", 
-    "Retailer/Website", "Metal Content", "Melt Value", "Personal Notes", 
+    "Retailer/Website", "Retailer Invoice #", "Retailer Item No.", "Metal Content", "Melt Value", "Personal Notes", 
     "Personal Ref #", "AI Estimated Value", "Storage Location"
 ]
 
 def get_empty_collection_df():
-    system_cols = ['id', 'deep_dive_status', 'Numismatic Report', 'potentialVariety', 'imageUrlObverse', 'imageUrlReverse', 'inventoryStatus']
+    system_cols = ['id', 'deep_dive_status', 'Numismatic Report', 'potentialVariety', 'imageUrlObverse', 'imageUrlReverse', 'inventoryStatus', 'category', 'file_ref', 'source_file']
     final_cols = DISPLAY_ORDER + [c for c in system_cols if c not in DISPLAY_ORDER]
     return pd.DataFrame(columns=final_cols)
 
@@ -626,7 +1017,7 @@ def load_collection(limit_n=None):
     if not items: return get_empty_collection_df()
     
     df = pd.DataFrame(items)
-    system_cols = ['id', 'deep_dive_status', 'Numismatic Report', 'potentialVariety', 'imageUrlObverse', 'imageUrlReverse', 'inventoryStatus']
+    system_cols = ['id', 'deep_dive_status', 'Numismatic Report', 'potentialVariety', 'imageUrlObverse', 'imageUrlReverse', 'inventoryStatus', 'category', 'file_ref', 'source_file']
     final_cols = DISPLAY_ORDER + [c for c in system_cols if c not in DISPLAY_ORDER]
     
     for c in final_cols:
@@ -681,13 +1072,46 @@ def delete_coins(coin_ids):
         batch.delete(ref)
     batch.commit()
 
+
+# --- GCS UPLOAD HELPER ---
+def upload_to_gcs(file_bytes, destination_blob_name, content_type="application/octet-stream"):
+    """Uploads bytes to Google Cloud Storage and returns the GS URI."""
+    try:
+        storage_client = storage.Client()
+        bucket_name = f"{PROJECT_ID}-uploads"
+        
+        # Create bucket if not exists
+        try:
+            bucket = storage_client.get_bucket(bucket_name)
+        except:
+            bucket = storage_client.create_bucket(bucket_name, location=LOCATION)
+            
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_string(file_bytes, content_type=content_type)
+        return f"gs://{bucket_name}/{destination_blob_name}"
+    except Exception as e:
+        print(f"GCS Upload Failed: {e}")
+        return None
+
 def handle_image_upload(file, coin_id, side):
     path = get_user_collection_path()
     bytes_data = file.getvalue()
+    
+    # 1. Base64 for Instant Display (Legacy)
     base64_img = base64.b64encode(bytes_data).decode('utf-8')
     final_str = f"data:image/png;base64,{base64_img}"
     field = "imageUrlObverse" if side == "obverse" else "imageUrlReverse"
-    db.collection(path).document(coin_id).set({field: final_str}, merge=True)
+    
+    # 2. GCS for Persistence (New)
+    timestamp = int(time.time())
+    gcs_path = f"images/{coin_id}_{side}_{timestamp}.png"
+    gcs_uri = upload_to_gcs(bytes_data, gcs_path, content_type=file.type)
+    
+    update_data = {field: final_str}
+    if gcs_uri:
+        update_data[f"{field}_gcs"] = gcs_uri
+        
+    db.collection(path).document(coin_id).set(update_data, merge=True)
     st.toast("Image saved!", icon="📸"); time.sleep(1); st.rerun()
 
 def process_invoice(file_content):
@@ -783,6 +1207,11 @@ def ask_deepdive(query, df):
             chat = model.start_chat()
             return chat.send_message(chat_prompt).text
     except Exception as e: return f"Error: {e}"
+
+# --- POPUP EXECUTION (Placed here to ensure functions are defined) ---
+if st.session_state.get('POPUP_MODE_ID'):
+    render_popup_history_mode(st.session_state['POPUP_MODE_ID'])
+    st.stop()
 
 def confirm_variety(coin_data):
     path = get_user_collection_path()
@@ -898,101 +1327,230 @@ def save_to_firestore(df_to_save):
     if count > 0: batch.commit()
     st.success(f"Successfully imported {count} coins!"); st.balloons(); time.sleep(1.5); st.rerun()
 
+def get_column_mapping(source_columns):
+    target_columns = DISPLAY_ORDER
+    # We want to be smart about mapping.
+    prompt = f"""
+    You are an expert Data Engineer. Map the Source Columns from a user's spreadsheet to the Target Database Schema.
+    
+    Target Schema: {target_columns}
+    Source Columns: {source_columns}
+    
+    INSTRUCTIONS:
+    1. Return a JSON object where Key = Source Column, Value = Target Column.
+    2. If a Source Column has NO clear match in Target, map it to "EXTRA_METADATA".
+    3. Be generous with matching (e.g. "Date" -> "Purchase Date", "Grade" -> "Condition").
+    4. "Cost" should map to "Cost".
+    
+    OUTPUT JSON ONLY.
+    """
+    try:
+        chat = model.start_chat()
+        response = chat.send_message(prompt)
+        text = response.text.replace("```json", "").replace("```", "").strip()
+        mapping = json.loads(text)
+        return mapping
+    except Exception as e:
+        st.error(f"Mapping Failed: {e}")
+        return {}
+
+def process_row_with_mapping(row, mapping):
+    """
+    Applies strict mapping to a single row.
+    Returns: (processed_dict, list_of_errors)
+    """
+    data = {}
+    extra_metadata = {}
+    errors = []
+    
+    # Initialize Defaults
+    data['id'] = str(uuid.uuid4())
+    for col in DISPLAY_ORDER:
+        data[col] = "" # Default to empty string
+    
+    data['deep_dive_status'] = "PENDING"
+    data['inventoryStatus'] = "UNCHECKED"
+    data['AI Estimated Value'] = "Pending"
+    if 'Cost' not in data or not data['Cost']: data['Cost'] = "$0.00"
+
+    try:
+        for source_col, val in row.items():
+            # Handle NaN
+            if pd.isna(val) or val == "" or str(val).lower() == 'nan':
+                continue
+                
+            val_str = str(val).strip()
+            
+            target = mapping.get(source_col, "EXTRA_METADATA")
+            
+            if target == "EXTRA_METADATA":
+                extra_metadata[source_col] = val_str
+            elif target in DISPLAY_ORDER:
+                data[target] = val_str
+            else:
+                extra_metadata[source_col] = val_str # Fallback
+        
+        # Add basic cleanup
+        if 'Year' in data: 
+            try: data['Year'] = int(float(data['Year']))
+            except: pass
+            
+        data['extra_metadata'] = extra_metadata
+        return data, errors
+        
+    except Exception as e:
+        errors.append(str(e))
+        return None, errors
+
 def render_add_excel():
     st.info("📂 Upload Excel or CSV to Fast Map coins.")
     
-    # Initialize Staging State
+    if 'excel_uploader_key' not in st.session_state: st.session_state['excel_uploader_key'] = 0
     if 'upload_stage' not in st.session_state: st.session_state['upload_stage'] = None
+    if 'mapping_stage' not in st.session_state: st.session_state['mapping_stage'] = None
+    if 'failed_rows' not in st.session_state: st.session_state['failed_rows'] = []
 
-    # --- STAGE 1: UPLOAD & PROCESS ---
+    # --- RESET FUNCTION ---
+    def reset_upload_state():
+        st.session_state['upload_stage'] = None
+        st.session_state['mapping_stage'] = None
+        st.session_state['failed_rows'] = []
+        if 'current_file_gcs_uri' in st.session_state: del st.session_state['current_file_gcs_uri']
+        if 'gcs_upload_done' in st.session_state: del st.session_state['gcs_upload_done']
+        st.session_state['excel_uploader_key'] += 1
+        st.rerun()
+
+    # --- STAGE 1: UPLOAD & MAP ---
     if st.session_state['upload_stage'] is None:
-        uploaded_file = st.file_uploader("Upload Inventory File", type=['xlsx', 'xls', 'csv'])
-        if uploaded_file and st.button("Process File & Check Duplicates"):
+        uploaded_file = st.file_uploader(
+            "Upload Inventory File", 
+            type=['xlsx', 'xls', 'csv'], 
+            key=f"uploader_{st.session_state['excel_uploader_key']}"
+        )
+        
+        if uploaded_file:
             if uploaded_file.name.endswith('csv'): df = pd.read_csv(uploaded_file)
             else: df = pd.read_excel(uploaded_file)
             
-            progress = st.progress(0); chat = model.start_chat()
-            processed_coins = []
+            # --- PERSIST RAW FILE ---
+            if 'gcs_upload_done' not in st.session_state:
+                timestamp = int(time.time())
+                blob_name = f"spreadsheets/{uuid.uuid4()}_{timestamp}_{uploaded_file.name}"
+                gcs_uri = upload_to_gcs(uploaded_file.getvalue(), blob_name, content_type=uploaded_file.type)
+                st.session_state['current_file_gcs_uri'] = gcs_uri
+                st.session_state['gcs_upload_done'] = True
             
-            SYSTEM_PROMPT = (
-                "You are an expert Numismatist. Rules: No deep research. Fix typos. Return JSON 19-key schema.\n"
-                "{ \"Country\": \"US\", \"Year\": \"Year\", \"Denomination\": \"Name\", \"Mint Mark\": \"Letter\", \n"
-                "  \"Quantity\": \"1\", \"Program/Series\": \"Name\", \"Theme/Subject\": \"Name\", \"Condition\": \"Grade\", \n"
-                "  \"Surface & Strike Quality\": \"Notes\", \"Grading Service\": \"Name\", \"Grading Cert #\": \"Num\", \n"
-                "  \"Cost\": \"$0.00\", \"Purchase Date\": \"Date\", \"Retailer/Website\": \"Name\", \n"
-                "  \"Metal Content\": \"Composition\", \"Melt Value\": \"Pending\", \"Personal Notes\": \"Notes\", \n"
-                "  \"Personal Ref #\": \"Num\", \"AI Estimated Value\": \"Pending\", \"inventoryStatus\": \"UNCHECKED\", \"Storage Location\": \"\" }"
-            )
-            
-            for i, row in df.iterrows():
-                try:
-                    resp = chat.send_message([SYSTEM_PROMPT, f"Input: {row.to_string()}"])
-                    clean_text = resp.text.replace("```json", "").replace("```", "").strip()
-                    # Handle potential list response or single object
-                    if clean_text.startswith("["): chunk = json.loads(clean_text)
-                    else: chunk = [json.loads(clean_text)]
+            # --- AUTO-PROCESS (Skip Confirmation) ---
+            if st.button("Process & Import File", type="primary"):
+                with st.spinner("AI is analyzing & mapping columns..."):
+                    # 1. Map
+                    columns = df.columns.tolist()
+                    mapping = get_column_mapping(columns)
+                    st.session_state['mapping_stage'] = mapping
                     
-                    for data in chunk:
-                        data["id"] = str(uuid.uuid4())
-                        processed_coins.append(data)
-                except: pass
-                progress.progress((i+1)/len(df))
-                time.sleep(0.5)
-            
-            if processed_coins:
-                new_df = pd.DataFrame(processed_coins)
-                existing_df = load_collection(limit_n=None)
-                
-                # NORMALIZE BEFORE CHECK
-                new_df = normalize_coin_data(new_df)
-                
-                staged_df = identify_duplicates(new_df, existing_df)
-                
-                # Move 'Status' to front
-                cols = ['Status'] + [c for c in staged_df.columns if c != 'Status']
-                st.session_state['upload_stage'] = staged_df[cols]
-                st.rerun()
+                    # 2. Process
+                    processed_coins = []
+                    failed_rows = []
+                    gcs_ref = st.session_state.get('current_file_gcs_uri')
+                    
+                    progress = st.progress(0)
+                    total = len(df)
+                    
+                    for i, row in df.iterrows():
+                        data, errs = process_row_with_mapping(row, mapping)
+                        if data:
+                            if gcs_ref: data['file_ref'] = gcs_ref
+                            processed_coins.append(data)
+                        else:
+                            failed_rows.append({"Row Index": i, "Data": str(row.to_dict()), "Error": str(errs)})
+                        
+                        if i % 10 == 0: progress.progress((i+1)/total)
+                    
+                    st.session_state['failed_rows'] = failed_rows
+                    
+                    if processed_coins:
+                        new_df = pd.DataFrame(processed_coins)
+                        existing_df = load_collection(limit_n=None)
+                        new_df = normalize_coin_data(new_df)
+                        staged_df = identify_duplicates(new_df, existing_df)
+                        
+                        cols = ['Status'] + [c for c in staged_df.columns if c != 'Status']
+                        st.session_state['upload_stage'] = staged_df[cols]
+                        st.rerun()
+                    else:
+                        st.error("No valid rows extracted.")
 
     # --- STAGE 2: PREVIEW & CONFIRM ---
     else:
         st.divider()
         st.subheader("Import Preview")
-        st.caption("Review the coins below. Orange indicates a potential duplicate in your vault.")
         
+        # --- ERROR REPORTING ---
+        failures = st.session_state['failed_rows']
+        if failures:
+            st.error(f"⚠️ {len(failures)} Rows Failed to Process")
+            fail_df = pd.DataFrame(failures)
+            csv = fail_df.to_csv(index=False).encode('utf-8')
+            st.download_button("Download Failed Rows CSV", csv, "failed_rows.csv", "text/csv")
+            st.divider()
+
         staged_df = st.session_state['upload_stage']
         
         # Color Warning
         n_dupes = len(staged_df[staged_df['Status'] == 'DUPLICATE'])
         if n_dupes > 0: 
-            st.warning(f"⚠️ {n_dupes} Potential Duplicates Identified. You can edit rows below to fix them.", icon="⚠️")
+            st.warning(f"⚠️ {n_dupes} Potential Duplicates Identified.", icon="⚠️")
         else: 
             st.success("✅ No Duplicates Found", icon="✅")
         
-        # Editable Dataframe
+        # Editable Dataframe with Hidden Tech Cols
+        column_config = {
+            "id": None, 
+            "extra_metadata": None, 
+            "file_ref": None, 
+            "Duplicate Check Key": None
+        }
+        
         edited_df = st.data_editor(
             staged_df, 
             use_container_width=True, 
-            num_rows="dynamic",
-            key="editor_upload"
+            num_rows="dynamic", 
+            key="editor_upload",
+            column_config=column_config
         )
         
         c1, c2, c3 = st.columns([1, 2, 2])
         
         with c1:
             if st.button("Cancel", key="cancel_upload"):
-                st.session_state['upload_stage'] = None
-                st.rerun()
+                reset_upload_state()
+        
+        with c2:
+            if st.button("🔄 Upload Another Spreadsheet", key="upload_another_excel"):
+                reset_upload_state()
         
         with c2:
             if st.button("Import New Only", type="secondary", use_container_width=True):
                 final = edited_df[edited_df['Status'] == 'NEW']
                 save_to_firestore(final)
-                st.session_state['upload_stage'] = None
+                st.success("Import Complete!"); time.sleep(1)
+                # Don't rerun immediately, show buttons
+                st.session_state['upload_complete'] = True
 
         with c3:
             if st.button("Import All", type="primary", use_container_width=True):
                 save_to_firestore(edited_df)
-                st.session_state['upload_stage'] = None
+                st.success("Import Complete!"); time.sleep(1)
+                st.session_state['upload_complete'] = True
+
+        # --- POST UPLOAD ACTIONS ---
+        if st.session_state.get('upload_complete'):
+            st.divider()
+            st.balloons()
+            st.subheader("🎉 Import Successful!")
+            if st.button("📂 Upload Another Spreadsheet?", type="primary", use_container_width=True):
+                del st.session_state['upload_complete']
+                reset_upload_state()
 
 def render_add_manual():
     st.info("📝 Manually add a coin to your collection.")
@@ -1099,20 +1657,55 @@ def render_add_manual():
                     st.session_state['upload_stage'] = staged_df[cols]
                     st.rerun()
 
-    # --- STAGE 2: PREVIEW ---
-    else:
-        st.divider()
-        st.subheader("Confirm Manual Addition")
-        st.caption("Review the coins below. Orange indicates a potential duplicate in your vault.")
+# --- POPUP MODE CHECK ---
+if st.session_state.get('POPUP_MODE_ID'):
+    # Clear sidebar and other elements for a clean popup look if possible?
+    # Or just render it.
+    render_popup_history_mode(st.session_state['POPUP_MODE_ID'])
+    st.stop() # Stop execution to only show the popup content
+ 
+
+# ... (Existing code) ...
+
+# ... (At the end of file or suitable location) ...
+
+def render_popup_history_mode(prog_id):
+    # Locate Program
+    program = None
+    for cat, progs in US_PROGRAMS.items():
+        for p in progs:
+            if p['id'] == prog_id:
+                program = p
+                break
+        if program: break
+    
+    if not program:
+        st.error("Program not found.")
+        return
+
+    st.markdown(f"## 📚 History: {program['name']}")
+    st.caption(f"Years: {program['years']}")
+    
+    # Generate History
+    with st.spinner("consulting the archives..."):
+        # Helper to generate history (duplicated or shared)
+        prompt = f"Provide a brief, engaging history of the US Mint '{program['name']}' coin program. Include authorization (law), years, designer info if key, and purpose. Format with markdown."
+        try:
+             # Basic load to get context if needed, or just None
+             df = load_collection(limit_n=1) 
+             response = ask_deepdive(prompt, df)
+             st.markdown(response)
+        except Exception as e:
+             st.error(f"AI Error: {e}")
+    
+    st.divider()
+    st.markdown(f"**Official Source:** [{program['url']}]({program['url']})")
+    if st.button("Close Window"):
+        st.markdown("<script>window.close();</script>", unsafe_allow_html=True)
         
-        staged_df = st.session_state['upload_stage']
-        
-        # Color Warning
-        n_dupes = len(staged_df[staged_df['Status'] == 'DUPLICATE'])
-        if n_dupes > 0: 
-            st.warning(f"⚠️ {n_dupes} Potential Duplicates Identified. You can edit rows below to fix them.", icon="⚠️")
-        else: 
-            st.success("✅ No Duplicates Found", icon="✅")
+# ... (Inside render_programs) ...
+# replace the button with link
+# c_lnk.markdown(f'<a href="/?program_history={prog["id"]}" target="_blank" style="text-decoration:none;">🔗</a>', unsafe_allow_html=True)
         
         edited_df = st.data_editor(
             staged_df, 
@@ -1139,181 +1732,429 @@ def render_add_manual():
                 save_to_firestore(edited_df)
                 st.session_state['upload_stage'] = None
 
-def render_add_scan():
-    st.info("🧾 Upload an Invoice (PDF) to auto-extract coin data.")
+def extract_invoice_data(file_bytes):
+    """
+    Helper to run DocAI OCR + Gemini Extraction and return raw items list.
+    """
+    # 1. OCR (DocAI)
+    doc = process_invoice(file_bytes)
     
-    if 'upload_stage' not in st.session_state: st.session_state['upload_stage'] = None
+    # 2. AI Extraction (Gemini)
+    chat = model.start_chat()
+    
+    COIN_DICTIONARY = [
+        { "val": 0.01, "formal": "Lincoln Cent", "slang": ["penny", "wheatie", "steelie", "red cent", "lincoln wheat cent", "wheat cent"] },
+        { "val": 0.05, "formal": "Jefferson Nickel", "slang": ["nickel", "buffalo", "war nickel", "v-nickel", "buffalo nickel"] },
+        { "val": 0.10, "formal": "Roosevelt Dime", "slang": ["dime", "mercury", "rosie", "winged liberty", "mercury dime"] },
+        { "val": 0.25, "formal": "Washington Quarter", "slang": ["quarter", "two bits", "state quarter", "2026 semiquin"] },
+        { "val": 0.50, "formal": "Kennedy Half Dollar", "slang": ["half", "fifty cent", "franklin", "walker", "walking liberty"] },
+        { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar", "peace"] }
+    ]
 
-    if st.session_state['upload_stage'] is None:
-        inv_file = st.file_uploader("Invoice PDF", type=['pdf'])
-        if inv_file and st.button("Process Invoice"):
-            with st.spinner("Document AI Processing..."):
+    SYSTEM_PROMPT = (
+        "You are an expert Numismatist. Extract items from this invoice text. "
+        "Return a JSON LIST of objects using this validation rules: \n"
+        "1. CLASSIFY each item into 'category': 'US Coin', 'Paper Currency', 'Foreign Currency', 'Supply/Other'.\n"
+        "2. CONFIDENCE SCORING: For each item, add:\n"
+        "   - 'confidence_score': Float 0.0 to 1.0 (1.0 = perfect match, 0.0 = total guess)\n"
+        "   - 'needs_manual_review': Boolean (true if Date/Mint/Denomination is ambiguous or missing)\n"
+        "3. Use this schema for all items:\n"
+        "{ \"category\": \"String\", \"confidence_score\": 0.9, \"needs_manual_review\": false, \n"
+        "  \"Country\": \"US\", \"Year\": \"Year\", \"Denomination\": \"Name\", \"Mint Mark\": \"Letter\", \n"
+        "  \"Quantity\": \"1\", \"Program/Series\": \"Name\", \"Theme/Subject\": \"Name\", \"Condition\": \"Grade\", \n"
+        "  \"Surface & Strike Quality\": \"Notes\", \"Grading Service\": \"Name\", \"Grading Cert #\": \"Num\", \n"
+        "  \"Cost\": \"$0.00\", \"Purchase Date\": \"Date\", \"Retailer/Website\": \"Name\", \"Retailer Invoice #\": \"String\", \n"
+        "  \"Retailer Item No.\": \"String\", \n"
+        "  \"Metal Content\": \"Composition\", \"Melt Value\": \"Pending\", \"Personal Notes\": \"Notes\", \n"
+        "  \"Personal Ref #\": \"Num\", \"AI Estimated Value\": \"Pending\", \"inventoryStatus\": \"UNCHECKED\", \"Storage Location\": \"\" }\n\n"
+        f"IMPORTANT: Use this dictionary to map slang to formal coin names: {json.dumps(COIN_DICTIONARY)}"
+    )
+    resp = chat.send_message([SYSTEM_PROMPT, f"Invoice Text: {doc.text}"])
+    
+    # 3. Parse JSON
+    clean_json = resp.text.replace("```json", "").replace("```", "").strip()
+    if clean_json.startswith("{"): clean_json = f"[{clean_json}]"
+    items = json.loads(clean_json)
+    return items
+
+def process_invoice_workflow(file_bytes, filename, user_email):
+    try:
+        # 1. Extract Data (Refactored)
+        items = extract_invoice_data(file_bytes)
+        
+        process_list = []
+        holding_list = []
+        review_queue_list = []
+        
+        # 4. Filter & Route
+        for item in items:
+            cat = item.get('category', 'US Coin')
+            item['id'] = str(uuid.uuid4())
+            item['source_file'] = filename # Link to GCS file
+            
+            if cat == 'US Coin':
+                conf = item.get('confidence_score', 0.0)
+                needs_review = item.get('needs_manual_review', True)
+                
+                if conf >= 0.85 and not needs_review:
+                    # High Confidence -> Main Collection
+                    for col in DISPLAY_ORDER:
+                        if col not in item: item[col] = ""
+                    process_list.append(item)
+                else:
+                    # Low Confidence -> Review Queue
+                    item['review_reason'] = f"Low Confidence ({conf})" if conf < 0.85 else "Flagged by AI"
+                    review_queue_list.append(item)
+
+            elif cat in ['Paper Currency', 'Foreign Currency']:
+                holding_list.append(item)
+
+        # 5. Batch Save
+        batch = db.batch()
+        
+        # A. Staging (Paper/Foreign)
+        if holding_list:
+            stage_ref = db.collection('staging_area')
+            for h_item in holding_list:
+                h_item['user_email'] = user_email
+                h_item['created_at'] = firestore.SERVER_TIMESTAMP
+                new_doc = stage_ref.document()
+                batch.set(new_doc, h_item)
+                
+        # B. Review Queue
+        if review_queue_list:
+            review_ref = db.collection('review_queue')
+            for r_item in review_queue_list:
+                r_item['user_email'] = user_email
+                r_item['created_at'] = firestore.SERVER_TIMESTAMP
+                new_doc = review_ref.document()
+                batch.set(new_doc, r_item)
+        
+        # C. Main Collection (High Confidence)
+        if process_list:
+             path = f"users/{user_email}/coins"
+             main_ref = db.collection(path)
+             for p_item in process_list:
+                 p_item['created_at'] = firestore.SERVER_TIMESTAMP
+                 # Ensure defaults
+                 if 'deep_dive_status' not in p_item: p_item['deep_dive_status'] = "PENDING"
+                 new_doc = main_ref.document(p_item['id'])
+                 batch.set(new_doc, p_item)
+
+        batch.commit()
+        return True, f"Imported {len(process_list)}, Review {len(review_queue_list)}, Staged {len(holding_list)}"
+
+    except Exception as e:
+        return False, str(e)
+
+def render_review_hub():
+    st.info("👀 Review Hub: Correct items that the AI wasn't 100% sure about.")
+    email = st.session_state.get('user_email')
+    
+    if not email: return
+    
+    # 1. Fetch Queue
+    reviews = []
+    # Note: This query requires an index if ordering, but straightforward filtering usually works
+    docs = db.collection('review_queue').where("user_email", "==", email).stream()
+    for doc in docs:
+        d = doc.to_dict()
+        d['queue_id'] = doc.id
+        reviews.append(d)
+        
+    if not reviews:
+        st.success("🎉 Review Queue Empty! All items processed successfully.")
+        return
+
+    st.write(f"Pending Reviews: {len(reviews)}")
+    
+    df = pd.DataFrame(reviews)
+    
+    # Show Reason
+    if 'review_reason' in df.columns:
+        st.caption("Common Reasons: Low Confidence (<85%), Ambiguous Date/Mint.")
+        
+    # Editable
+    column_config = {
+            "queue_id": None, 
+            "review_reason": "Reason",
+            "confidence_score": "Conf.",
+            "source_file": "Source Scan"
+        }
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="review_editor", column_config=column_config)
+    
+    if st.button(f"✅ Approve & Import {len(edited_df)} Items", type="primary"):
+        # 1. Save to Coins
+        batch = db.batch()
+        path = get_user_collection_path()
+        coins_ref = db.collection(path)
+        queue_ref = db.collection('review_queue')
+        
+        count = 0
+        for i, row in edited_df.iterrows():
+            # Clean up review fields
+            if 'queue_id' in row: q_id = row['queue_id']; del row['queue_id']
+            else: q_id = None
+            
+            if 'review_reason' in row: del row['review_reason']
+            if 'confidence_score' in row: del row['confidence_score']
+            if 'needs_manual_review' in row: del row['needs_manual_review']
+            
+            # Save Coin
+            if not row.get('id'): row['id'] = str(uuid.uuid4())
+            new_doc = coins_ref.document(row['id'])
+            batch.set(new_doc, row.to_dict())
+            
+            # Delete from Queue
+            if q_id:
+                old_doc = queue_ref.document(q_id)
+                batch.delete(old_doc)
+            
+            count += 1
+            if count >= 400:
+                batch.commit()
+                batch = db.batch()
+                count = 0
+        
+        if count > 0: batch.commit()
+        
+        st.balloons()
+        st.success("Items Imported Successfully!")
+        time.sleep(1)
+        st.rerun()
+
+def render_add_scan():
+    st.info("🧾 Invoice Processor: Batch & Review")
+    
+    if 'scan_uploader_key' not in st.session_state: st.session_state['scan_uploader_key'] = 0
+    if 'batch_processing' not in st.session_state: st.session_state['batch_processing'] = False
+    
+    # TABS
+    tab_single, tab_upload, tab_batch, tab_review = st.tabs(["📄 Single Scan", "📤 Bulk Upload", "⚙️ Batch Processor", "👀 Review Hub"])
+    
+    # --- TAB 1: SINGLE SCAN (INTERACTIVE) ---
+    with tab_single:
+        st.subheader("Interactive Single Invoice Scan")
+        inv_file = st.file_uploader("Upload One PDF", type=['pdf'], key=f"single_{st.session_state.scan_uploader_key}")
+        
+        if inv_file and st.button("Process & Preview"):
+            with st.spinner("Analyzing Document..."):
                 try:
-                    doc = process_invoice(inv_file.getvalue())
-                    st.success("OCR Complete. Analyzing data...")
+                    # 1. Extract
+                    items = extract_invoice_data(inv_file.getvalue())
                     
-                    # --- AI PARSING ---
-                    chat = model.start_chat()
+                    # 2. Filter Lists
+                    process_list = []
+                    holding_list = []
                     
-                    # COIN DICTIONARY (MATCHING NODE.JS BACKEND)
-                    COIN_DICTIONARY = [
-                        { "val": 0.01, "formal": "Lincoln Cent", "slang": ["penny", "wheatie", "steelie", "red cent", "lincoln wheat cent", "wheat cent"] },
-                        { "val": 0.05, "formal": "Jefferson Nickel", "slang": ["nickel", "buffalo", "war nickel", "v-nickel", "buffalo nickel"] },
-                        { "val": 0.10, "formal": "Roosevelt Dime", "slang": ["dime", "mercury", "rosie", "winged liberty", "mercury dime"] },
-                        { "val": 0.25, "formal": "Washington Quarter", "slang": ["quarter", "two bits", "state quarter", "2026 semiquin"] },
-                        { "val": 0.50, "formal": "Kennedy Half Dollar", "slang": ["half", "fifty cent", "franklin", "walker", "walking liberty"] },
-                        { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar", "peace"] }
-                    ]
-
-                    SYSTEM_PROMPT = (
-                        "You are an expert Numismatist. Extract coins from this invoice text. "
-                        "Return a JSON LIST of objects using this schema: \n"
-                        "{ \"Country\": \"US\", \"Year\": \"Year\", \"Denomination\": \"Name\", \"Mint Mark\": \"Letter\", \n"
-                        "  \"Quantity\": \"1\", \"Program/Series\": \"Name\", \"Theme/Subject\": \"Name\", \"Condition\": \"Grade\", \n"
-                        "  \"Surface & Strike Quality\": \"Notes\", \"Grading Service\": \"Name\", \"Grading Cert #\": \"Num\", \n"
-                        "  \"Cost\": \"$0.00\", \"Purchase Date\": \"Date\", \"Retailer/Website\": \"Name\", \"Retailer Invoice #\": \"String\", \n"
-                        "  \"Retailer Item No.\": \"String\", \n"
-                        "  \"Metal Content\": \"Composition\", \"Melt Value\": \"Pending\", \"Personal Notes\": \"Notes\", \n"
-                        "  \"Personal Ref #\": \"Num\", \"AI Estimated Value\": \"Pending\", \"inventoryStatus\": \"UNCHECKED\", \"Storage Location\": \"\" }\n\n"
-                        f"IMPORTANT: Use this dictionary to map slang to formal coin names: {json.dumps(COIN_DICTIONARY)}"
-                    )
-                    resp = chat.send_message([SYSTEM_PROMPT, f"Invoice Text: {doc.text}"])
+                    for item in items:
+                        item['id'] = str(uuid.uuid4())
+                        item['source_file'] = inv_file.name
+                        cat = item.get('category', 'US Coin')
+                        
+                        if cat == 'US Coin':
+                            for col in DISPLAY_ORDER:
+                                if col not in item: item[col] = ""
+                            process_list.append(item)
+                        elif cat in ['Paper Currency', 'Foreign Currency']:
+                            holding_list.append(item)
                     
-                    # Parse JSON
-                    clean_json = resp.text.replace("```json", "").replace("```", "").strip()
-                    if clean_json.startswith("{"): clean_json = f"[{clean_json}]" # Handle single object response
-                    
-                    coins = json.loads(clean_json)
-                    
-                    # Prepare Data
-                    for coin in coins:
-                        coin["id"] = str(uuid.uuid4())
-                        coin["deep_dive_status"] = "PENDING"
-                        # Ensure fields exist
-                        for col in DISPLAY_ORDER:
-                             if col not in coin: coin[col] = ""
-
-                    if coins:
-                        new_df = pd.DataFrame(coins)
+                    # 3. Save Staging Immediately
+                    if holding_list:
+                        batch = db.batch()
+                        stage_ref = db.collection('staging_area')
+                        for h_item in holding_list:
+                            h_item['user_email'] = st.session_state.get('user_email', 'unknown')
+                            h_item['created_at'] = firestore.SERVER_TIMESTAMP
+                            new_doc = stage_ref.document()
+                            batch.set(new_doc, h_item)
+                        batch.commit()
+                        st.session_state['holding_stage'] = holding_list
+                        
+                    # 4. Preview Main Items
+                    if process_list:
+                        new_df = pd.DataFrame(process_list)
                         existing_df = load_collection(limit_n=None)
-                        
-                        # NORMALIZE
                         new_df = normalize_coin_data(new_df)
-                        
                         staged_df = identify_duplicates(new_df, existing_df)
                         
                         cols = ['Status'] + [c for c in staged_df.columns if c != 'Status']
                         st.session_state['upload_stage'] = staged_df[cols]
                         st.rerun()
-
+                    elif holding_list:
+                        st.warning("Only non-coin items found (saved to Staging).")
+                    else:
+                        st.error("No items found.")
+                        
                 except Exception as e:
-                    st.error(f"Processing Error: {e}")
+                    st.error(f"Error: {e}")
 
-    # --- STAGE 2: PREVIEW ---
-    else:
-        st.divider()
-        st.subheader("Import Preview")
-        st.caption("Review the coins below. Orange indicates a potential duplicate in your vault.")
+        # --- PREVIEW STAGE (REUSED FROM OLD LOGIC) ---
+        if st.session_state.get('upload_stage') is not None:
+             st.divider()
+             st.subheader("Confirm & Import")
+             staged_df = st.session_state['upload_stage']
+             
+             # Show Editor
+             edited_df = st.data_editor(staged_df, num_rows="dynamic", use_container_width=True, key="single_editor")
+             
+             c1, c2 = st.columns(2)
+             with c1:
+                 if st.button("Cancel", key="cancel_single"):
+                     st.session_state['upload_stage'] = None
+                     st.rerun()
+             with c2:
+                 if st.button("Import All", type="primary", key="import_single"):
+                     save_to_firestore(edited_df)
+                     st.session_state['upload_stage'] = None
+                     st.success("Import Complete!")
+                     time.sleep(1)
+                     st.rerun()
+    with tab_upload:
+        st.subheader("Bulk Upload to Queue")
+        # Ensure we always get a fresh list
+        files = st.file_uploader(
+            "Select PDFs", 
+            type=['pdf'], 
+            accept_multiple_files=True, 
+            key=f"u_{st.session_state.scan_uploader_key}"
+        )
         
-        staged_df = st.session_state['upload_stage']
-        
-        # Color Warning
-        n_dupes = len(staged_df[staged_df['Status'] == 'DUPLICATE'])
-        if n_dupes > 0: 
-            st.warning(f"⚠️ {n_dupes} Potential Duplicates Identified. You can edit rows below to fix them.", icon="⚠️")
-        else: 
-            st.success("✅ No Duplicates Found", icon="✅")
-        
-        # Toggle View Mode
-        view_mode = st.radio("View Mode:", ["Table View", "Detailed Card View"], horizontal=True)
+        if files:
+            if st.button(f"🚀 Upload {len(files)} Invoices to Queue"):
+                bar = st.progress(0)
+                success_count = 0
+                errors = []
+                
+                for i, f in enumerate(files):
+                    ok, err = upload_to_gcs_queue(f)
+                    if ok:
+                        success_count += 1
+                    else:
+                        errors.append(f"{f.name}: {err}")
+                    bar.progress((i+1)/len(files))
+                
+                if errors:
+                    st.error(f"Failed to upload {len(errors)} files.")
+                    with st.expander("Error Details"):
+                        for e in errors: st.write(e)
+                
+                if success_count > 0:
+                    st.success(f"Successfully uploaded {success_count} files!")
+                    time.sleep(1)
+                    st.session_state.scan_uploader_key += 1
+                    st.rerun()
 
-        if view_mode == "Table View":
-            edited_df = st.data_editor(
-                staged_df, 
-                use_container_width=True, 
-                num_rows="dynamic",
-                key="editor_scan"
-            )
-        else:
-            edited_df = staged_df.copy() # No editing in card mode for now
-            st.info("ℹ️ Switch to Table View to edit values.")
-            for i, row in staged_df.iterrows():
-                with st.container(border=True):
-                    c1, c2 = st.columns([1, 3])
-                    with c1:
-                        st.metric("Status", row.get('Status', 'UNKNOWN'))
-                        st.caption(f"Duplicate Key:\n{row.get('Duplicate Check Key', 'N/A')}")
-                    with c2:
-                        st.subheader(f"{row.get('Year', '')} {row.get('Denomination', '')}")
-                        st.text(f"Invoice #: {row.get('Retailer Invoice #', 'N/A')} | Item #: {row.get('Retailer Item No.', 'N/A')}")
-                        st.json(row.to_dict(), expanded=False)
+    # --- TAB 2: BATCH PROCESSOR ---
+    with tab_batch:
+        queue = list_queue_files()
+        st.subheader(f"Batch Queue ({len(queue)} Files)")
         
-        c1, c2, c3 = st.columns([1, 2, 2])
-        
+        c1, c2 = st.columns([1, 1])
         with c1:
-            if st.button("Cancel", key="cancel_scan"):
-                st.session_state['upload_stage'] = None
-                st.rerun()
-        
+            if st.button("▶️ Start Batch Processing") or st.session_state.batch_processing:
+                st.session_state.batch_processing = True
         with c2:
-            if st.button("Import New Only", type="secondary", use_container_width=True, key="imp_new_scan"):
-                final = edited_df[edited_df['Status'] == 'NEW']
-                save_to_firestore(final)
-                st.session_state['upload_stage'] = None
+            if st.button("⏹️ Stop"): st.session_state.batch_processing = False; st.rerun()
 
-        with c3:
-            if st.button("Import All", type="primary", use_container_width=True, key="imp_all_scan"):
-                save_to_firestore(edited_df)
-                st.session_state['upload_stage'] = None
+        if st.session_state.batch_processing:
+            if not queue:
+                st.success("Queue Empty - Batch Complete!")
+                st.session_state.batch_processing = False
+                st.balloons()
+                st.rerun()
+            
+            # PROCESS NEXT FILE
+            blob = queue[0]
+            st.info(f"Processing: {blob.name}...")
+            
+            try:
+                content = blob.download_as_bytes()
+                success, msg = process_invoice_workflow(content, blob.name, st.session_state.user_email)
+                
+                if success:
+                    st.success(f"Done: {msg}")
+                    # Move to processed
+                    move_blob(blob, f"invoices/processed/{blob.name.split('/')[-1]}")
+                else:
+                    st.error(f"Failed: {msg}")
+                    # Move to failed
+                    move_blob(blob, f"invoices/failed/{blob.name.split('/')[-1]}")
+                
+                time.sleep(1)
+                st.rerun() # LOOP
+            except Exception as e:
+                st.error(f"System Error: {e}")
+                st.session_state.batch_processing = False
 
+    # --- TAB 3: REVIEW HUB ---
+    with tab_review:
+        render_review_hub()
+        
 # --- MAIN APP LOGIC ---
 
 if not check_login():
     login_screen()
 else:
     # --- SIDEBAR LOGIC ---
-    # --- NO SIDEBAR ---
-    # We rely entirely on the shell for navigation. 
-    # Tools (Save/Backup) are moved to the main page.
-    
-    # 1. Determine Selection from URL Page Param
+    # Determine Default Index from URL
     page_param = st.query_params.get("page", "home").lower()
     
-    if page_param == "collection": selection = "My Collection"
-    elif page_param == "add": selection = "Add New Coins"
-    elif page_param == "inventory": selection = "Inventory"
-    elif page_param == "wishlist": selection = "My Wishlist"
-    elif page_param == "team": selection = "Our Team"
-    elif page_param == "spots": selection = "Metal spot prices"
-    elif page_param == "add_manual": selection = "ADD_MANUAL"
-    elif page_param == "add_scan": selection = "ADD_SCAN"
-    elif page_param == "add_upload": selection = "ADD_UPLOAD"
-    else: selection = "Home Dashboard"
-
-    # --- TOP UTILITY BAR MOVED TO BOTTOM ---
+    # Check for History Popup Request (sets state and reruns to hit the top-level check)
+    hist_req = st.query_params.get("program_history")
+    if hist_req:
+        st.session_state['POPUP_MODE_ID'] = hist_req
+        # Remove param to prevent loop? Or keep it? 
+        # If we keep it, we need to ensure we don't clear it. 
+        # But st.stop() in the top check handles the view.
+        # We should probably clear it from URL so refresh goes back?
+        # For now, just set state.
         
-    st.divider()
-    uploaded_restore = st.file_uploader("Restore JSON Backup", type=['json'])
-    if uploaded_restore:
-        if st.button("Confirm Restore"):
-            try:
-                data = json.load(uploaded_restore)
-                coins = data.get('coins', [])
-                wish = data.get('wishlist', [])
-                path = get_user_collection_path()
-                batch = db.batch(); count = 0
-                for c in coins:
-                    ref = db.collection(path).document(c['id'])
-                    batch.set(ref, c)
-                    count += 1
-                    if count > 400: batch.commit(); batch = db.batch(); count = 0
-                w_path = path.replace("coins", "wishlist")
-                for w in wish:
-                    ref = db.collection(w_path).document(w['id'])
-                    batch.set(ref, w)
-                batch.commit()
-                st.success("Restore Complete!"); st.rerun()
-            except Exception as e: st.error(f"Restore Failed: {e}")
+    nav_options = ["Home Dashboard", "My Collection", "Coin Programs", "Add New Coins", "Inventory", "My Wishlist", "Settings & Backup", "Our Team", "Customer Service"]
+    
+    default_ix = 0
+    if page_param == "collection": default_ix = 1
+    elif page_param == "programs": default_ix = 2
+    elif page_param == "add": default_ix = 3
+    elif page_param == "inventory": default_ix = 4
+    elif page_param == "wishlist": default_ix = 5
+    elif page_param == "settings": default_ix = 6
+    elif page_param == "team": default_ix = 7
+    elif page_param == "support": default_ix = 8
+    
+    with st.sidebar:
+        try:
+            st.image("public/Numista.AI Logo.svg", width=220)
+        except:
+            st.title("Numista.AI")
+            
+        st.write(f"Vault: **{st.session_state.user_email}**")
+        
+        selection = st.radio(
+            "Main Navigation",
+            nav_options,
+            index=default_ix,
+            label_visibility="collapsed"
+        )
+        
+        if selection == "Add New Coins":
+            st.divider()
+            st.caption("Select Entry Method:")
+            add_method = st.radio(
+                "Method",
+                ["Scan Invoice", "Manual Entry", "Excel/CSV Upload"],
+                label_visibility="collapsed"
+            )
+            if add_method == "Scan Invoice": selection = "ADD_SCAN"
+            elif add_method == "Manual Entry": selection = "ADD_MANUAL"
+            elif add_method == "Excel/CSV Upload": selection = "ADD_UPLOAD"
+
+        st.divider()
+        if st.button("Log Out"): 
+             try: cookie_manager.delete("numista_auth_v1")
+             except: pass
+             st.session_state.user_email = None
+             st.rerun()
 
     # --- MARKET DATA (Hidden/Default for now if not on dashboard) ---
     # We can move this to the dashboard or settings, for now set defaults if not visible
@@ -1332,6 +2173,52 @@ else:
             est_value = calculate_portfolio_value(df)
             val_fmt = "{:,.2f}".format(est_value)
             st.markdown(f"""<div class="portfolio-label">AI Estimated Portfolio Value</div><div class="portfolio-value">${val_fmt}</div>""", unsafe_allow_html=True)
+
+        # --- VERSION HISTORY SECTION ---
+        VERSION_HISTORY = [
+            {
+                "version": "v2.5",
+                "date": "2026-02-17",
+                "desc": "Program Manager & AI History Integration",
+                "changes": [
+                    "Program Manager: Interactive Guide for US Mint Series",
+                    "Gemini History: AI-powered historical context for each program",
+                    "Wishlist Consolidation: Integrated directly into main app",
+                    "Collection Export: Download your progress/checklists"
+                ]
+            },
+            {
+                "version": "v1.1",
+                "date": "2026-02-01",
+                "desc": "Major enhancements to Upload & Scan workflows.",
+                "changes": [
+                    "Introduced 'Staging Area' for non-currency items (Paper, Foreign).",
+                    "Implemented Schema-First Excel Upload: Mapped headers + stored extra metadata.",
+                    "Added Persistent File Storage: Raw files backed up to Google Cloud Storage.",
+                    "Visual enhancements to Import Preview."
+                ]
+            },
+            {
+                "version": "v1.0",
+                "date": "2026-01-20",
+                "desc": "Initial Launch of Numista.AI",
+                "changes": [
+                    "Core Collection Management",
+                    "AI Scan & Valuation",
+                    "Market Data Integration"
+                ]
+            }
+        ]
+
+        with st.expander("🚀 System Updates & Release Notes", expanded=False):
+            st.caption("Track the latest features deployed to Numista.AI")
+            st.markdown("---")
+            for release in VERSION_HISTORY:
+                st.markdown(f"**{release['version']}** - *{release['date']}*")
+                st.markdown(f"_{release['desc']}_")
+                for change in release['changes']:
+                    st.markdown(f"- {change}")
+                st.markdown("---")
 
         st.write("")
         df['Cost_Clean'] = df['Cost'].apply(clean_money_string)
@@ -1409,7 +2296,39 @@ else:
         if view_option == "Last 50": limit_val = 50
         elif view_option == "Last 100": limit_val = 100
         
+        
+        
         df = load_collection(limit_n=limit_val)
+        
+        # --- LOAD STAGING ITEMS (Separate Collection) ---
+        staging_items = []
+        try:
+             # Query global staging collection by user email
+             s_docs = db.collection('staging_area').where("user_email", "==", st.session_state.get('user_email')).stream()
+             for doc in s_docs:
+                 d = doc.to_dict()
+                 d['id'] = doc.id
+                 staging_items.append(d)
+        except Exception as e:
+            pass
+            
+        staging_df = pd.DataFrame(staging_items)
+
+        # --- STAGING AREA VIEWER ---
+
+        # --- STAGING AREA VIEWER ---
+        if not staging_df.empty:
+            with st.expander(f"📦 Staging Area ({len(staging_df)} items - Paper/Foreign)", expanded=False):
+                # Ensure columns exist before displaying to avoid KeyErrors
+                display_cols = ['Year', 'Denomination', 'category', 'Retailer Invoice #', 'Retailer Item No.', 'Cost', 'Quantity']
+                exist_cols = [c for c in display_cols if c in staging_df.columns]
+                
+                st.dataframe(
+                    staging_df[exist_cols].astype(str), 
+                    use_container_width=True,
+                    hide_index=True
+                )
+                st.caption("These items are stored but separated from your main US Coin collection.")
         
         if df.empty:
             st.info("Collection is empty. Go to 'Add New Coins'.")
@@ -1417,7 +2336,8 @@ else:
             pending_df = df[df['deep_dive_status'] != 'COMPLETED']
             pending_count = len(pending_df)
             
-            c1, c2 = st.columns([3, 1])
+            c1, c2 = st.columns([1, 3])
+            # ... kept search ...
             with c1: search = st.text_input("🔍 Search")
             with c2:
                 if pending_count > 0:
@@ -1467,102 +2387,67 @@ else:
 
 
 
-            # --- LIST VIEW (EXPANDED 12-COL + STICKY ACTIONS) ---
+            # --- LIST VIEW (DATA GRID) ---
             st.markdown("### 🗄️ Inventory List")
             
-            # Prepare Data
-            table_df = view_df.copy()
-
-            # Columns: [Sel, YR/MM/CNTRY, Denom, Series, Theme, Metal, Grade, Strike, Purch, Cost, AI, Actions]
-            # Weights: 0.4, 1.8, 1.2, 1.4, 1.4, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 0.8
-            col_weights = [0.4, 1.8, 1.2, 1.4, 1.4, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 0.8]
-            headers = ["", "YR/MM/CNTRY", "Denomination", "Series", "Theme", "Metal", "Grade", "Strike", "Purchased", "Cost", "AI Value", "Actions"]
+            # Prepare Data for Grid
+            grid_df = view_df.copy()
             
-            # Sticky Header Container
-            st.markdown('<div class="sticky-header">', unsafe_allow_html=True)
-            with st.container():
-                header_cols = st.columns(col_weights)
-                for col, text in zip(header_cols, headers):
-                     col.markdown(f"<div style='white-space: nowrap; font-weight: bold; color: #475569; font-size: 13px;'>{text}</div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            # Ensure nice column ordering
+            desired_columns = [
+                "Year", "Denomination", "Mint Mark", "Country", "Quantity", 
+                "Condition", "Surface & Strike Quality", "Grading Service", "Grading Cert #",
+                "AI Estimated Value", "Cost", "Purchase Date", "Retailer/Website", 
+                "Retailer Invoice #", "Retailer Item No.", "Program/Series", 
+                "Theme/Subject", "Metal Content", "Melt Value", "Storage Location", 
+                "Personal Notes", "Personal Ref #", "id"
+            ]
             
-            if "selected_rows" not in st.session_state: st.session_state.selected_rows = []
+            # Select only columns that exist
+            final_cols = [c for c in desired_columns if c in grid_df.columns]
+            grid_df = grid_df[final_cols]
+
+            # Editable Dataframe (Like Preview)
+            edited_grid = st.data_editor(
+                grid_df,
+                use_container_width=True,
+                num_rows="dynamic",
+                key="collection_grid",
+                column_config={
+                    "AI Estimated Value": st.column_config.TextColumn(help="AI Estimate"),
+                    "Cost": st.column_config.TextColumn(help="Cost"),
+                    "imageUrlObverse": st.column_config.ImageColumn("Front"),
+                    "imageUrlReverse": st.column_config.ImageColumn("Back"),
+                },
+                disabled=["id"] # ID should not be editable
+            )
             
-            for index, row in table_df.iterrows():
-                c_id = row['id']
-                cols = st.columns(col_weights)
-                
-                # 1. Select
-                with cols[0]:
-                    def update_sel(cid=c_id):
-                        if cid in st.session_state.selected_rows: st.session_state.selected_rows.remove(cid)
-                        else: st.session_state.selected_rows.append(cid)
-                    st.checkbox("", key=f"sel_{c_id}", value=(c_id in st.session_state.selected_rows), on_change=update_sel, label_visibility="collapsed")
+            # Save Changes Button
+            if st.button("💾 Save Grid Changes", type="primary"):
+                # 1. Handle Deletions
+                state = st.session_state.get('collection_grid')
+                if state and state.get('deleted_rows'):
+                    deleted_indices = state['deleted_rows']
+                    # Use grid_df (the input to data_editor) to get IDs
+                    ids_to_delete = []
+                    for i in deleted_indices:
+                        try:
+                            ids_to_delete.append(grid_df.iloc[i]['id'])
+                        except: pass
+                    
+                    if ids_to_delete:
+                        delete_coins(ids_to_delete)
 
-                # 2. Issue (Year-Mint \n Country)
-                y = str(row.get('Year', '')).replace('nan', '')
-                m = str(row.get('Mint Mark', '')).replace('nan',('').replace('None', ''))
-                c = str(row.get('Country', '')).replace('nan', '')
-                issue_main = f"{y}-{m}" if m else y
-                with cols[1]:
-                    st.markdown(f"<div class='issue-main'>{issue_main}</div><div class='issue-sub'>{c}</div>", unsafe_allow_html=True)
+                # 2. Handle Updates (Edits)
+                save_edits(edited_grid, view_df)
+                st.toast("Changes Saved!", icon="✅")
+                time.sleep(1)
+                st.rerun()
 
-                # 3. Denom
-                cols[2].write(row.get('Denomination', '-'))
-                
-                # 4. Series
-                cols[3].write(row.get('Program/Series', '-'))
-                
-                # 5. Theme
-                theme = row.get('Theme/Subject', '-')
-                if len(str(theme)) > 15: theme = theme[:13] + ".."
-                cols[4].write(theme)
-                
-                # 6. Metal [NEW]
-                cols[5].write(row.get('Metal Content', '-'))
-                
-                # 7. Grade
-                grade = row.get('Condition', '-')
-                if grade and grade != '-' and grade != 'None':
-                    cols[6].markdown(f"<span class='grade-pill'>{grade}</span>", unsafe_allow_html=True)
-                else: cols[6].write("-")
-                
-                # 8. Strike
-                cols[7].write(row.get('Surface & Strike Quality', '-'))
-
-                # 9. Purchased [NEW]
-                p_date = str(row.get('Purchase Date', '-')).split(' ')[0] # Simple date
-                cols[8].write(p_date)
-
-                # 10. Cost
-                cost_val = clean_money_string(row.get('Cost'))
-                cols[9].write(f"${cost_val:,.2f}")
-                
-                # 11. AI Value
-                ai_val = row.get('AI Estimated Value', 'Pending')
-                if ai_val != 'Pending': cols[10].markdown(f"**{ai_val}**")
-                else: cols[10].markdown("_Pending_")
-                
-                # 12. Actions
-                with cols[11]:
-                   ac1, ac2 = st.columns(2)
-                   if ac1.button("✏️", key=f"e_{c_id}"): st.toast("Edit Feature Coming Soon")
-                   if ac2.button("🗑️", key=f"d_{c_id}"): delete_coins([c_id]); st.rerun()
-
-                st.markdown("<hr style='margin: 4px 0px; opacity: 0.2;'>", unsafe_allow_html=True)
-
-            # Sticky Footer for Bulk Actions
-            if st.session_state.selected_rows:
-                with st.container(border=True):
-                     bc1, bc2 = st.columns([1, 4])
-                     with bc1:
-                         if st.button(f"🗑️ Delete {len(st.session_state.selected_rows)} Items", type="primary", use_container_width=True):
-                             delete_coins(st.session_state.selected_rows)
-                             st.session_state.selected_rows = []
-                             st.rerun()
-                     with bc2:
-                         st.warning("⚠️ This action cannot be undone.")
-
+            st.divider()
+             # Bulk Actions Footer
+            if st.session_state.get('collection_grid') and len(st.session_state['collection_grid'].get('deleted_rows', [])) > 0:
+                 st.warning("⚠️ Rows deleted in grid. Click 'Save Grid Changes' to confirm.")
 
     elif selection == 'ADD_MANUAL':
         render_add_manual()
@@ -1585,6 +2470,9 @@ else:
             st.caption("We are integrating WebRTC for live coin scanning.")
             st.markdown(f"<div class='coming-soon'>Feature Coming Soon</div>", unsafe_allow_html=True)
         with tab4: render_add_scan()
+
+    elif selection == 'Coin Programs':
+        render_programs()
 
     elif selection == 'Inventory':
         st.title("Inventory Manager")
@@ -1808,41 +2696,145 @@ else:
                     st.session_state.show_add_wish = False; st.rerun()
 
         # --- DISPLAY ---
-        if not wishlist_df.empty:
-            # Check Ownership Logic
-            my_coins = load_collection(limit_n=None)
+        # --- DISPLAY ---
+        
+        # 1. Load Collection (Needed for both lists)
+        my_coins = load_collection(limit_n=None)
+        
+        tab_custom, tab_programs = st.tabs(["My Picks", "From Coin Programs"])
+        
+        with tab_custom:
+            if not wishlist_df.empty:
+                for index, item in wishlist_df.iterrows():
+                    # Simple Match: Year + Denom
+                    matches = my_coins[
+                        (my_coins['Year'] == item['year']) & 
+                        (my_coins['Denomination'].str.contains(item['denomination'], case=False, na=False))
+                    ]
+                    is_owned = not matches.empty
+                    
+                    # Card Style
+                    bg_color = "#ecfdf5" if is_owned else "white" # Emerald-50 or White
+                    border_color = "#10b981" if is_owned else "#e2e8f0"
+                    
+                    with st.container(border=True):
+                        cols = st.columns([4, 2, 1])
+                        with cols[0]:
+                            st.markdown(f"### {item.get('year')} {item.get('denomination')}")
+                            st.caption(f"{item.get('series','')}")
+                            if is_owned: st.success("✅ In Collection")
+                        with cols[1]:
+                            st.write(f"**Budget:** ${item.get('maxPrice',0)}")
+                            st.write(f"**Priority:** {item.get('priority')}")
+                        with cols[2]:
+                            if st.button("🗑️", key=f"del_w_{item['id']}"):
+                                db.collection(path.replace("coins", "wishlist")).document(item['id']).delete()
+                                st.rerun()
+            else:
+                st.info("Your custom wishlist is empty.")
+
+        with tab_programs:
+            st.caption("Items automatically identified as missing from your tracked Programs.")
             
-            for index, item in wishlist_df.iterrows():
-                # Simple Match: Year + Denom
-                matches = my_coins[
-                    (my_coins['Year'] == item['year']) & 
-                    (my_coins['Denomination'].str.contains(item['denomination'], case=False, na=False))
-                ]
-                is_owned = not matches.empty
+            missing_items = []
+            
+            for cat, progs in US_PROGRAMS.items():
+                for p in progs:
+                    for c in p['coins']:
+                        # Skip if "Pending"
+                        if "Pending" in c: continue
+                        
+                        # Check ownership
+                        # Broad match same as render_programs
+                        matches = my_coins[
+                            my_coins.astype(str).apply(lambda x: x.str.contains(c, case=False, na=False)).any(axis=1)
+                        ]
+                        
+                        if matches.empty:
+                            missing_items.append({
+                                "program": p['name'],
+                                "coin": c,
+                                "year": p.get('years', 'Unknown')
+                            })
+            
+            if missing_items:
+                st.write(f"**{len(missing_items)} Missing Items Found**")
                 
-                # Card Style
-                bg_color = "#ecfdf5" if is_owned else "white" # Emerald-50 or White
-                border_color = "#10b981" if is_owned else "#e2e8f0"
+                # Group by Program for cleaner display
+                df_miss = pd.DataFrame(missing_items)
                 
-                with st.container(border=True):
-                    cols = st.columns([4, 2, 1])
-                    with cols[0]:
-                        st.markdown(f"### {item.get('year')} {item.get('denomination')}")
-                        st.caption(f"{item.get('series','')}")
-                        if is_owned: st.success("✅ In Collection")
-                    with cols[1]:
-                        st.write(f"**Budget:** ${item.get('maxPrice',0)}")
-                        st.write(f"**Priority:** {item.get('priority')}")
-                    with cols[2]:
-                        if st.button("🗑️", key=f"del_w_{item['id']}"):
-                            db.collection(path.replace("coins", "wishlist")).document(item['id']).delete()
-                            st.rerun()
-        else:
-            st.info("Wishlist is empty.")
+                for prog_name, group in df_miss.groupby("program"):
+                    with st.expander(f"{prog_name} ({len(group)})", expanded=False):
+                        for i, row in group.iterrows():
+                             c1, c2 = st.columns([4, 1])
+                             c1.markdown(f"**{row['coin']}**")
+                             c1.caption(f"Year/Era: {row['year']}")
+                             # Future: Add "Quick Add" button here?
+                             # c2.button("Find", key=f"find_{row['coin']}")
+            else:
+                st.success("🎉 No missing items found in tracked programs!")
 
     elif selection == 'Metal spot prices':
         st.title("Metal Spot Prices")
         st.markdown(f"<div class='coming-soon'>Feature Coming Soon</div>", unsafe_allow_html=True)
+
+    elif selection == 'Settings & Backup':
+        st.title("Settings & Backup")
+        st.markdown("Manage your collection data, export to backup file (JSON), or restore from a previous session.")
+        st.divider()
+        
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.subheader("📤 Export Data")
+            
+            # JSON BACKUP
+            try:
+                df = load_collection()
+                wish_path = f"users/{st.session_state.user_email}/wishlist"
+                wish_docs = db.collection(wish_path).stream()
+                wish_list = [d.to_dict() for d in wish_docs]
+                data = {"coins": df.to_dict(orient="records"), "wishlist": wish_list, "timestamp": datetime.now().isoformat()}
+                json_data = json.dumps(data, indent=2)
+                st.download_button("📥 Backup JSON (Full)", json_data, "Numisma_Backup.json", "application/json", use_container_width=True)
+            except Exception as e: st.error(f"Backup Error: {e}")
+            
+            st.write("")
+            
+            # CSV EXPORT
+            df = load_collection(limit_n=None)
+            if not df.empty: 
+                st.download_button("📊 Export CSV (Coins Only)", df.to_csv(index=False).encode('utf-8'), "coins.csv", "text/csv", use_container_width=True)
+            else:
+                st.info("Collection empty, cannot export CSV.")
+        
+        with c2:
+            st.subheader("📥 Restore Data")
+            uploaded_restore = st.file_uploader("Restore JSON Backup", type=['json'], key="rest_page")
+            if uploaded_restore:
+                if st.button("⚠️ Confirm Restore", type="primary", key="conf_rest_page", use_container_width=True):
+                    try:
+                        data = json.load(uploaded_restore)
+                        coins = data.get('coins', [])
+                        wish = data.get('wishlist', [])
+                        path = get_user_collection_path()
+                        batch = db.batch(); count = 0
+                        for c in coins:
+                            ref = db.collection(path).document(c['id'])
+                            batch.set(ref, c)
+                            count += 1
+                            if count > 400: batch.commit(); batch = db.batch(); count = 0
+                        w_path = path.replace("coins", "wishlist")
+                        for w in wish:
+                            ref = db.collection(w_path).document(w['id'])
+                            batch.set(ref, w)
+                        batch.commit()
+                        st.success("Restore Complete!"); st.rerun()
+                    except Exception as e: st.error(f"Restore Failed: {e}")
+
+        st.divider()
+        st.subheader("Account Actions")
+        if st.button("🚪 Log Out", key="logout_page"): logout()
 
     elif selection == 'Our Team':
         st.title("Our Team")
@@ -1861,48 +2853,48 @@ else:
             st.write("While coins are the focus of Numista.AI, the concept will be expanded to include the limitless amount of assets and collectibles out there; baseball cards, paintings, family heirlooms, just about anything that people love to collect and are passionate about.")
             st.write("LinkedIn Bio: www.linkedin.com/in/ericdseaman")
             st.link_button("Connect on LinkedIn", "https://www.linkedin.com/in/ericdseaman")
-    # --- BOTTOM UTILITY BAR ---
-    st.divider()
-    with st.expander("🛠️ Data & Settings (Backup, Restore, Save)", expanded=False):
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            if st.button("💾 Save Updates", use_container_width=True, key="save_btm"): st.toast("Saved!")
-        with c2:
-            if st.button("🚪 Log Out", use_container_width=True, key="logout_btm"): logout()
-        with c3:
-            if st.button("📥 Backup JSON", use_container_width=True, key="bkp_btm"):
-                try:
-                    df = load_collection()
-                    wish_path = f"users/{st.session_state.user_email}/wishlist"
-                    wish_docs = db.collection(wish_path).stream()
-                    wish_list = [d.to_dict() for d in wish_docs]
-                    data = {"coins": df.to_dict(orient="records"), "wishlist": wish_list, "timestamp": datetime.now().isoformat()}
-                    st.download_button("Click to Download", json.dumps(data, indent=2), "Numisma_Backup.json", "application/json")
-                except Exception as e: st.error(f"Backup Error: {e}")
-        with c4:
-             if st.button("📊 CSV Export", use_container_width=True, key="csv_btm"):
-                df = load_collection(limit_n=None)
-                if not df.empty: st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), "coins.csv", "text/csv")
+    elif selection == 'Customer Service':
+        st.title("Customer Service")
+        st.markdown(f"<div class='beta-tag'>SUPPORT & FEEDBACK</div>", unsafe_allow_html=True)
+        st.write("")
+        st.markdown(
+            "We're here to help! If you have any questions, want to report a bug, or have a feature request, "
+            "please let us know. You can either email us directly or use the form below."
+        )
+        
+        st.subheader("Direct Email")
+        st.markdown("For immediate assistance or to send attachments, email Eric directly:")
+        st.link_button("📧 Email eric@numista.ai", "mailto:eric@numista.ai", type="primary")
         
         st.divider()
-        uploaded_restore = st.file_uploader("Restore JSON Backup", type=['json'], key="rest_btm")
-        if uploaded_restore:
-            if st.button("Confirm Restore", key="conf_rest_btm"):
-                try:
-                    data = json.load(uploaded_restore)
-                    coins = data.get('coins', [])
-                    wish = data.get('wishlist', [])
-                    path = get_user_collection_path()
-                    batch = db.batch(); count = 0
-                    for c in coins:
-                        ref = db.collection(path).document(c['id'])
-                        batch.set(ref, c)
-                        count += 1
-                        if count > 400: batch.commit(); batch = db.batch(); count = 0
-                    w_path = path.replace("coins", "wishlist")
-                    for w in wish:
-                        ref = db.collection(w_path).document(w['id'])
-                        batch.set(ref, w)
-                    batch.commit()
-                    st.success("Restore Complete!"); st.rerun()
-                except Exception as e: st.error(f"Restore Failed: {e}")
+        
+        st.subheader("Send Feedback")
+        with st.form("feedback_form"):
+            feedback_type = st.selectbox("Topic", ["Bug Report", "Feature Request", "General Inquiry"])
+            feedback_message = st.text_area("Message", placeholder="Describe your issue or suggestion here...")
+            
+            if st.form_submit_button("Submit"):
+                if not feedback_message.strip():
+                    st.error("Please enter a message before submitting.")
+                else:
+                    # Save to Firestore
+                    try:
+                        uid = str(uuid.uuid4())
+                        user_email = st.session_state.get('user_email', 'unknown_user')
+                        feedback_data = {
+                            "id": uid,
+                            "user_email": user_email,
+                            "type": feedback_type,
+                            "message": feedback_message,
+                            "status": "New",
+                            "created_at": firestore.SERVER_TIMESTAMP
+                        }
+                        # Create a 'feedback' collection at the root level
+                        db.collection("feedback").document(uid).set(feedback_data)
+                        st.success("Thank you for your feedback! Eric will review it shortly.")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"Failed to submit feedback. Please use the email link above. (Error: {e})")
+
+    # --- BOTTOM UTILITY BAR REMOVED ---
+

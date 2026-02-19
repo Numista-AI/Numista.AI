@@ -9,5 +9,5 @@ python-dotenv
 firebase-admin
 xlsxwriter
 openpyxl
-google-cloud-documentai
 google-auth
+google-cloud-storage

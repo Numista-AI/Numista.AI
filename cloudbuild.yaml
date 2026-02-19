@@ -16,9 +16,9 @@ steps:
       - 'numista-app'
       - '--image'
       - 'gcr.io/$PROJECT_ID/numista-app'
+      - '--allow-unauthenticated'
       - '--region'
       - 'us-west1'
-      - '--allow-unauthenticated'
 
 images:
   - 'gcr.io/$PROJECT_ID/numista-app'
