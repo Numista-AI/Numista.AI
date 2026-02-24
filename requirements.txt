@@ -11,3 +11,4 @@ xlsxwriter
 openpyxl
 google-auth
 google-cloud-storage
+yfinance

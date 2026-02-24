@@ -154,6 +154,21 @@ Warning: This will completely replace your current local database.`;
     [coins]
   );
 
+  const totalAcquisitionCost = useMemo(() =>
+    coins.reduce((acc, coin) => acc + (coin.purchaseCost || 0), 0),
+    [coins]
+  );
+
+  const totalMeltValue = useMemo(() =>
+    coins.reduce((acc, coin) => acc + (coin.meltValue || 0), 0),
+    [coins]
+  );
+
+  const totalFaceValue = useMemo(() =>
+    coins.reduce((acc, coin) => acc + (coin.faceValueUSD || 0), 0),
+    [coins]
+  );
+
   const pendingValuations = useMemo(() => 
     coins.filter(c => c.estimatedValueMax === undefined).length,
     [coins]
@@ -266,9 +281,13 @@ Warning: This will completely replace your current local database.`;
 
           {currentView === AppView.DASHBOARD && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard title="Total Coins" value={coins.length} icon={Coins} />
-                <StatsCard title="Market Value" value={`$${totalValueMax.toLocaleString()}`} icon={DollarSign} />
+                <StatsCard title="AI Estimated Value" value={`$${totalValueMax.toLocaleString()}`} icon={Sparkles} />
+                <StatsCard title="Acquisition Cost" value={`$${totalAcquisitionCost.toLocaleString()}`} icon={Wallet} />
+                <StatsCard title="Melt Value" value={`$${totalMeltValue.toLocaleString()}`} icon={TrendingUp} />
+                {/* <StatsCard title="Face Value" value={`$${totalFaceValue.toLocaleString()}`} icon={DollarSign} /> */}
+
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                  <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 italic">

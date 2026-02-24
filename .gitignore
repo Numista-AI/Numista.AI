@@ -38,3 +38,6 @@ serviceAccountKey.json.json
 # IDE
 .vscode/
 .idea/
+
+# antigravity rules
+.agent/rules

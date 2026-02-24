@@ -48,7 +48,21 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
     const total = filteredCoins.length;
     const accounted = filteredCoins.filter(c => c.inventoryStatus === 'ACCOUNTED').length;
     const missing = filteredCoins.filter(c => c.inventoryStatus === 'MISSING').length;
-    return { total, accounted, missing };
+    
+    const totalAcquisitionCost = filteredCoins.reduce((sum, c) => sum + (c.purchaseCost || 0), 0);
+    const totalEstimatedValue = filteredCoins.reduce((sum, c) => sum + (c.estimatedValueMax || 0), 0);
+    const totalMeltValue = filteredCoins.reduce((sum, c) => sum + (c.meltValue || 0), 0);
+    const totalFaceValue = filteredCoins.reduce((sum, c) => sum + (c.faceValueUSD || 0), 0);
+
+    return { 
+      total, 
+      accounted, 
+      missing,
+      totalAcquisitionCost,
+      totalEstimatedValue,
+      totalMeltValue,
+      totalFaceValue
+    };
   }, [filteredCoins]);
 
   // --- Handlers ---
@@ -175,6 +189,15 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
     URL.revokeObjectURL(url);
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20">
       
@@ -280,7 +303,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
 
         {/* Action Bar */}
         <div className="bg-slate-800 text-white p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 flex-wrap">
                 <div className="text-center px-4 border-r border-slate-600">
                     <p className="text-2xl font-bold">{stats.total}</p>
                     <p className="text-xs text-slate-400 uppercase">Items Listed</p>
@@ -289,9 +312,25 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                     <p className="text-2xl font-bold text-emerald-400">{stats.accounted}</p>
                     <p className="text-xs text-slate-400 uppercase">Accounted</p>
                 </div>
-                 <div className="text-center px-4">
+                 <div className="text-center px-4 border-r border-slate-600">
                     <p className="text-2xl font-bold text-red-400">{stats.missing}</p>
                     <p className="text-xs text-slate-400 uppercase">Missing</p>
+                </div>
+                <div className="text-center px-4 border-r border-slate-600">
+                    <p className="text-2xl font-bold">{formatCurrency(stats.totalAcquisitionCost)}</p>
+                    <p className="text-xs text-slate-400 uppercase">Acquisition Cost</p>
+                </div>
+                <div className="text-center px-4 border-r border-slate-600">
+                    <p className="text-2xl font-bold text-sky-400">{formatCurrency(stats.totalEstimatedValue)}</p>
+                    <p className="text-xs text-slate-400 uppercase">AI Estimated Value</p>
+                </div>
+                <div className="text-center px-4 border-r border-slate-600">
+                    <p className="text-2xl font-bold">{formatCurrency(stats.totalMeltValue)}</p>
+                    <p className="text-xs text-slate-400 uppercase">Melt Value</p>
+                </div>
+                <div className="text-center px-4">
+                    <p className="text-2xl font-bold">{formatCurrency(stats.totalFaceValue)}</p>
+                    <p className="text-xs text-slate-400 uppercase">Face Value</p>
                 </div>
             </div>
             <button 
