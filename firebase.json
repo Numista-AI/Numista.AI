@@ -17,8 +17,8 @@
       {
         "source": "**",
         "run": {
-          "serviceId": "numista-shell",
-          "region": "us-west1"
+          "serviceId": "numista-app",
+          "region": "us-central1"
         }
       }
     ]

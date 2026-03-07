@@ -2846,11 +2846,20 @@ else:
             else: view_df = df
 
             def get_professional_label(coin_id):
-                row = view_df[view_df['id'] == coin_id].iloc[0]
+                try:
+                    row = view_df[view_df['id'] == coin_id].iloc[0]
+                except:
+                    return f"Unknown Coin ({coin_id})"
+                    
                 y = str(row.get('Year', '')).strip()
+                if y.lower() in ['nan', 'none', '']: y = "N/D"
+                
                 m = str(row.get('Mint Mark', '')).strip()
+                if m.lower() in ['nan', 'none', '']: m = ""
+                
                 d = str(row.get('Denomination', '')).strip()
                 s = str(row.get('Theme/Subject', '')).strip()
+                if s.lower() in ['nan', 'none', '']: s = ""
                 
                 # Format Year-Mint (e.g., 2007-P or just 2007)
                 year_mint = f"{y}-{m}".strip('-') if m else y
@@ -3080,7 +3089,7 @@ else:
             st.markdown("### 🗄️ Inventory List")
             
             # Prepare Data
-            table_df = view_df.copy()
+            table_df = filtered_df.copy()
             if 'Program/Series' not in table_df.columns: table_df['Program/Series'] = ''
             if 'Melt Value' not in table_df.columns: table_df['Melt Value'] = '$0.00'
             
