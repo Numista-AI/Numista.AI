@@ -1,0 +1,12 @@
+{
+    "python.languageServer": "Pylance",
+    "python.defaultInterpreterPath": "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_backend\\.venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_backend"
+    ],
+    "dart.flutterSdkPath": "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_mobile",
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true
+    }
+}

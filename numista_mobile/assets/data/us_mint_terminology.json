@@ -1,0 +1,49 @@
+﻿{
+  "_metadata": {
+    "source": "Official US Mint Numismatic Terminology",
+    "purpose": "AI training reference and denomination normalization for Numista.AI",
+    "schema_role": "Senior Data Architect — Numista.AI",
+    "schema_context": "Collectors use colloquial terms (e.g. date for mintage_year, shiny for uncirculated). This file maps all known aliases to official US Mint terms so any user spreadsheet can be parsed without manual correction.",
+    "version": "1.0.0",
+    "last_updated": "2026-04-03"
+  },
+  "coin_faces": [
+    { "official_us_mint_term": "Obverse", "common_names": ["front", "heads", "face", "head side"], "numista_field": "image_url_obverse" },
+    { "official_us_mint_term": "Reverse", "common_names": ["back", "tail", "tails", "flip side"], "numista_field": "image_url_reverse" }
+  ],
+  "denominations": [
+    { "common_name": "Penny",       "official_us_mint_denomination": "Cent",           "text_stamped_on_coin": "ONE CENT",      "numista_value": "Cent",         "numeric_value_usd": 0.01, "common_aliases": ["Penny","penny","cent","Cent","$0.01","0.01","1c","Wheatie","Lincoln Penny","One Cent","wheat penny","indian head penny"] },
+    { "common_name": "Nickel",      "official_us_mint_denomination": "Five Cents",     "text_stamped_on_coin": "FIVE CENTS",   "numista_value": "Five Cents",   "numeric_value_usd": 0.05, "common_aliases": ["Nickel","nickel","Five Cents","five cents","$0.05","0.05","5c","Jefferson Nickel","buffalo nickel","war nickel","shield nickel"] },
+    { "common_name": "Dime",        "official_us_mint_denomination": "Dime",           "text_stamped_on_coin": "ONE DIME",     "numista_value": "Dime",         "numeric_value_usd": 0.10, "common_aliases": ["Dime","dime","One Dime","$0.10","0.10","10c","Roosevelt Dime","Mercury Dime","Barber Dime","ten cent piece"] },
+    { "common_name": "Quarter",     "official_us_mint_denomination": "Quarter Dollar", "text_stamped_on_coin": "QUARTER DOLLAR", "numista_value": "Quarter Dollar", "numeric_value_usd": 0.25, "common_aliases": ["Quarter","quarter","Quarter Dollar","$0.25","0.25",".25","25c","Washington Quarter","state quarter","two bits","ATB quarter"] },
+    { "common_name": "Half Dollar", "official_us_mint_denomination": "Half Dollar",   "text_stamped_on_coin": "HALF DOLLAR",  "numista_value": "Half Dollar",  "numeric_value_usd": 0.50, "common_aliases": ["Half Dollar","half dollar","Half","$0.50","0.50","0.5","50c","fifty cent piece","JFK half","Kennedy Half Dollar","Franklin Half Dollar","Walking Liberty"] },
+    { "common_name": "Dollar Coin", "official_us_mint_denomination": "Dollar",        "text_stamped_on_coin": "ONE DOLLAR",   "numista_value": "Dollar",       "numeric_value_usd": 1.00, "common_aliases": ["Dollar","dollar","Dollar Coin","$1","1","1.0","$1 coin","One Dollar","Presidential Dollar","Sacagawea Dollar","Susan B. Anthony","SBA dollar","Peace Dollar","Morgan Dollar","Eisenhower Dollar","Ike Dollar"] }
+  ],
+  "condition_aliases": [
+    { "alias": "shiny",       "official": "Uncirculated",       "sheldon": "MS-60 to MS-70" },
+    { "alias": "like new",    "official": "Uncirculated",       "sheldon": "MS-60 to MS-70" },
+    { "alias": "mint",        "official": "Mint State",         "sheldon": "MS-60 to MS-70" },
+    { "alias": "good",        "official": "Good",               "sheldon": "G-4 to G-6"     },
+    { "alias": "great",       "official": "Very Fine",          "sheldon": "VF-20 to VF-35" },
+    { "alias": "perfect",     "official": "Mint State",         "sheldon": "MS-70"           },
+    { "alias": "worn",        "official": "About Good",         "sheldon": "AG-3"            },
+    { "alias": "circ",        "official": "Circulated",         "sheldon": "G-4 to AU-58"   },
+    { "alias": "VF",          "official": "Very Fine",          "sheldon": "VF-20 to VF-35" },
+    { "alias": "EF",          "official": "Extremely Fine",     "sheldon": "EF-40 to EF-45" },
+    { "alias": "XF",          "official": "Extremely Fine",     "sheldon": "EF-40 to EF-45" },
+    { "alias": "AU",          "official": "About Uncirculated", "sheldon": "AU-50 to AU-58" },
+    { "alias": "MS",          "official": "Mint State",         "sheldon": "MS-60 to MS-70" },
+    { "alias": "PR",          "official": "Proof",              "sheldon": "PR-60 to PR-70" }
+  ],
+  "field_name_aliases": [
+    { "aliases": ["date","year minted","mint year","yr"],              "numista_field": "Year"              },
+    { "aliases": ["denomination","denom","face value","value"],        "numista_field": "Denomination"      },
+    { "aliases": ["mint","mint mark","mintmark","mint location"],      "numista_field": "Mint Mark"         },
+    { "aliases": ["condition","grade","state","quality"],              "numista_field": "Condition"         },
+    { "aliases": ["front","obverse","heads","face"],                   "numista_field": "image_url_obverse" },
+    { "aliases": ["back","reverse","tails","flip"],                    "numista_field": "image_url_reverse" },
+    { "aliases": ["subject","theme","design","motif"],                 "numista_field": "Theme/Subject"     },
+    { "aliases": ["series","program","collection","set"],              "numista_field": "Program/Series"    },
+    { "aliases": ["price","value","est value","estimated value"],      "numista_field": "AI Estimated Value"}
+  ]
+}

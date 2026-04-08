@@ -1,0 +1,74 @@
+build:
+  images:
+  - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+  options:
+    logging: CLOUD_LOGGING_ONLY
+    substitutionOption: ALLOW_LOOSE
+  steps:
+  - args:
+    - build
+    - --no-cache
+    - -t
+    - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    - .
+    - -f
+    - Dockerfile
+    id: Build
+    name: gcr.io/cloud-builders/docker
+  - args:
+    - push
+    - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    id: Push
+    name: gcr.io/cloud-builders/docker
+  - args:
+    - run
+    - services
+    - update
+    - $_SERVICE_NAME
+    - --platform=managed
+    - --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
+    - --region=$_DEPLOY_REGION
+    - --quiet
+    entrypoint: gcloud
+    id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+  substitutions:
+    REPO_NAME: aj-s-coin-collection-ai-app
+    _AR_HOSTNAME: us-west1-docker.pkg.dev
+    _AR_PROJECT_ID: studio-9101802118-8c9a8
+    _AR_REPOSITORY: cloud-run-source-deploy
+    _DEPLOY_REGION: us-west1
+    _PLATFORM: managed
+    _SERVICE_NAME: aj-s-coin-collection-ai-app
+    _TRIGGER_ID: 0e37f3b1-412a-44ca-9b7e-39b47e71ece2
+  tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - aj-s-coin-collection-ai-app
+createTime: '2026-01-21T16:01:39.001106113Z'
+description: Build and deploy to Cloud Run service aj-s-coin-collection-ai-app on
+  push to "^main$"
+github:
+  name: Numista.AI
+  owner: Numista-AI
+  push:
+    branch: ^main$
+id: 0e37f3b1-412a-44ca-9b7e-39b47e71ece2
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+name: rmgpgab-aj-s-coin-collection-ai-app-us-west1-EricDCman-AJ-s-gmd
+resourceName: projects/studio-9101802118-8c9a8/locations/global/triggers/0e37f3b1-412a-44ca-9b7e-39b47e71ece2
+serviceAccount: projects/studio-9101802118-8c9a8/serviceAccounts/568985927038-compute@developer.gserviceaccount.com
+substitutions:
+  REPO_NAME: aj-s-coin-collection-ai-app
+  _AR_HOSTNAME: us-west1-docker.pkg.dev
+  _AR_PROJECT_ID: studio-9101802118-8c9a8
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _DEPLOY_REGION: us-west1
+  _PLATFORM: managed
+  _SERVICE_NAME: aj-s-coin-collection-ai-app
+  _TRIGGER_ID: 0e37f3b1-412a-44ca-9b7e-39b47e71ece2
+tags:
+- gcp-cloud-build-deploy-cloud-run
+- gcp-cloud-build-deploy-cloud-run-managed
+- aj-s-coin-collection-ai-app

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Numista.AI | Professional Numismatic Estate Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --gold: #d4af37;
+            --gold-hover: #f1c40f;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --accent: #38bdf8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .status-section {
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .status-badge.complete {
+            color: #10b981;
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .scan-button {
+            background-color: var(--gold);
+            color: #000;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px -1px rgba(212, 175, 55, 0.3);
+        }
+
+        .scan-button:hover:not(:disabled) {
+            background-color: var(--gold-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(212, 175, 55, 0.4);
+        }
+
+        .scan-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .scan-button:disabled {
+            background-color: var(--border);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .report-card {
+            margin-top: 2.5rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px dashed var(--gold);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: left;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .report-header {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .report-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .report-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .report-body {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        footer {
+            margin-top: auto;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Numista.AI</h1>
+        <p>Premium Numismatic Inventory & Digital Appraisal System</p>
+    </header>
+
+    <div class="main-container">
+        <div class="status-section">
+            <div id="statusBadge" class="status-badge">
+                <div class="dot"></div>
+                <span id="statusText">System Idle</span>
+            </div>
+            <button id="scanBtn" class="scan-button" onclick="startScan()">Scan New Coin</button>
+        </div>
+
+        <div id="reportCard" class="report-card">
+            <div class="report-header">Numismatic Analysis Report</div>
+            <div id="reportContent">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 Numista-AI Estate Planning Solutions. All rights reserved.
+    </footer>
+
+    <script>
+        const API_BASE = "http://localhost:5000";
+        const scanBtn = document.getElementById('scanBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        const reportCard = document.getElementById('reportCard');
+        const reportContent = document.getElementById('reportContent');
+
+        let isPolling = false;
+
+        async function startScan() {
+            try {
+                scanBtn.disabled = true;
+                reportCard.style.display = 'none';
+                
+                const response = await fetch(`${API_BASE}/start-scan`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    updateUI('ACTIVE', 'Scan Initiated');
+                    startPolling();
+                } else {
+                    alert('Error starting scan: ' + data.message);
+                    scanBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Could not connect to the scan server. Ensure auto_capture.py is running.');
+                scanBtn.disabled = false;
+            }
+        }
+
+        function startPolling() {
+            if (isPolling) return;
+            isPolling = true;
+            
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/get-status`);
+                    const status = await response.json();
+
+                    // Map backend statuses to friendly UI terms
+                    const msg = status.status_message;
+                    let displayMsg = msg;
+                    
+                    if (msg.includes('FOCUSING')) displayMsg = 'Focusing...';
+                    if (msg.includes('READY')) displayMsg = 'Stabilizing...';
+                    if (msg.includes('FLIP')) displayMsg = 'Waiting for Flip';
+                    if (msg.includes('ANALYZING')) displayMsg = 'Syncing & Analyzing...';
+                    if (msg.includes('COMPLETE')) displayMsg = 'Analysis Complete';
+
+                    updateUI(status.is_active ? 'ACTIVE' : (status.last_report ? 'COMPLETE' : 'IDLE'), displayMsg);
+
+                    if (status.error) {
+                        alert('System Error: ' + status.error);
+                        stopPolling(interval);
+                    }
+
+                    if (!status.is_active && status.last_report) {
+                        renderReport(status.last_report);
+                        stopPolling(interval);
+                    } else if (!status.is_active && !status.last_report) {
+                        stopPolling(interval);
+                    }
+
+                } catch (err) {
+                    console.error('Polling error:', err);
+                    stopPolling(interval);
+                }
+            }, 1000);
+        }
+
+        function stopPolling(interval) {
+            clearInterval(interval);
+            isPolling = false;
+            scanBtn.disabled = false;
+        }
+
+        function updateUI(step, message) {
+            statusText.innerText = message;
+            statusBadge.classList.remove('active', 'complete');
+            
+            if (step === 'ACTIVE') {
+                statusBadge.classList.add('active');
+            } else if (step === 'COMPLETE') {
+                statusBadge.classList.add('complete');
+            }
+        }
+
+        function renderReport(data) {
+            reportCard.style.display = 'block';
+            reportContent.innerHTML = `
+                <div class="report-item">
+                    <span class="report-label">Country:</span>
+                    <span class="report-value">${data.country || 'Unknown'}</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">Estimated Grade:</span>
+                    <span class="report-value">${data.grade || 'N/A'}</span>
+                </div>
+                <div class="report-item">
+                    <span class="report-label">File Reference:</span>
+                    <span class="report-value">${data.file_slug || 'N/A'}</span>
+                </div>
+                <div class="report-body">
+                    ${data.report || 'No detailed analysis provided.'}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

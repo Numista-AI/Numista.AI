@@ -1,0 +1,8 @@
+flask
+flask-cors
+opencv-python
+numpy
+google-genai
+python-dotenv
+pandas
+google-cloud-storage

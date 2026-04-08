@@ -1,0 +1,3 @@
+users/eric@numista.ai/coins: 1
+users/eric.seaman@v3tees.com/coins: 0
+coins: 0

@@ -1,0 +1,91 @@
+--- PATH: users/eric@numista.ai/coins (17 documents) ---
+Doc ID: 0f86ff03-16d8-47fd-bbfa-42de4ef992ff
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 1bea39c2-b281-400a-b05d-93b919037a56
+  Year: 1990
+  Denomination: Dime
+  Condition: Circ
+  AI Estimated Value: $1 - $20+
+Doc ID: 217dc977-ba99-4aaf-b4fa-970485624dc7
+  Year: 
+  Denomination: Dollar
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 5101a892-ca85-413c-bfa1-c3ea2d6a457d
+  Year: 2001
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 589dfb93-368c-49b8-b292-f49897c74dcc
+  Year: 1976
+  Denomination: $0.50
+  Condition: Circ
+  AI Estimated Value: $0.50 - $0.75
+Doc ID: 59cc1c74-588e-46f9-8899-b66bf13474be
+  Year: 2000
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 68e25e6f-ef01-4b48-9dcb-f10f8b81d86f
+  Year: 2000
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 81bda2ca-e232-4b36-922a-fef4d087a085
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 890b9e58-edf3-4d4e-a787-50a8ed692207
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 89515b5d-2213-4623-907f-027cf58c8ef3
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.10
+Doc ID: 909aaebb-1034-4c56-b811-890dcc784e1e
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: 947ff036-3787-46a2-8efb-acf876952c6e
+  Year: 1936
+  Denomination: Penny
+  Condition: Circ
+  AI Estimated Value: $0.25 - $1.00
+Doc ID: a0d69265-8e62-498a-a8bb-1e22ca5542b2
+  Year: 1979
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: b091de78-d18b-4021-a379-9c07fae41ea4
+  Year: 1979
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.50
+Doc ID: db5d4d7d-990a-4afa-97ec-b33b09584aa2
+  Year: 1980
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: e166cf26-8573-4a8b-86d6-4e3d7fe628b7
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+Doc ID: eeb8f93f-42dc-47a4-bc4d-cf8e4ea22310
+  Year: 
+  Denomination: 1
+  Condition: Circ
+  AI Estimated Value: $1.00 - $1.25
+
+--- PATH: users/eric.seaman@v3tees.com/coins (0 documents) ---
+
+--- PATH: coins (0 documents) ---
+

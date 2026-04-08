@@ -1,43 +1,62 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# ============================================================
+# Google Drive temp files (MAJOR source of noise)
+# ============================================================
+.tmp.drivedownload/
+.tmp.driveupload/
 
-# Secrets (CRITICAL)
-.env
-serviceAccountKey.json
-serviceAccountKey.json.json
-*.json
-!firebase.json
-!package.json
-!firestore.indexes.json
-!projects.json
+# ============================================================
+# AI / IDE tool caches
+# ============================================================
+.gemini/
 
-# Google Cloud / Firebase
-.firebase/
-.gcloudignore
+# ============================================================
+# Flutter / Dart (numista_mobile)
+# ============================================================
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/*.g.dart
+**/*.freezed.dart
+**/*.mocks.dart
+**/pubspec.lock
+**/.fvm/
 
-# IDE
-.vscode/
+# ============================================================
+# Python / Backend (numista_backend, numista_ai)
+# ============================================================
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/.venv/
+**/venv/
+**/.env
+**/*.egg-info/
+**/dist/
+**/.pytest_cache/
+**/.mypy_cache/
+
+# ============================================================
+# Hardware / Arduino / MicroPython (numista_hardware)
+# ============================================================
+**/*.hex
+**/*.elf
+**/*.bin
+**/*.map
+
+# ============================================================
+# Node / JS (legacy AJ's app)
+# ============================================================
+**/node_modules/
+
+# ============================================================
+# General
+# ============================================================
+*.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
 .idea/
-
-# antigravity rules
-.agent/rules
+*.iml

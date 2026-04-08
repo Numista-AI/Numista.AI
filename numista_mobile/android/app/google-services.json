@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "568985927038",
+    "project_id": "studio-9101802118-8c9a8",
+    "storage_bucket": "studio-9101802118-8c9a8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:568985927038:android:efb96a51420403078b072f",
+        "android_client_info": {
+          "package_name": "com.numista.numista_ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "568985927038-85b4nb9q82ckfbl7l6baqhp8n8c175rm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "568985927038-7h0k6qbp2q1hlerc76290r14aj52j9a0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
