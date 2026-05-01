@@ -2,8 +2,19 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // ── User coin photos ───────────────────────────────────────────────────────
+    // Path: users/{email}/coins/{coinId}/{filename}
+    // Only the owning user may read or write their own coin images.
+    match /users/{email}/{allPaths=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.token.email == email;
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
+

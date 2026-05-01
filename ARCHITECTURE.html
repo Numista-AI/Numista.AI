@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Numista.AI — System Architecture</title>
+  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  :root {
+    --primary: #1565C0;
+    --accent:  #F63366;
+    --bg:      #F0F4F8;
+    --surface: #FFFFFF;
+    --border:  #E2E6E9;
+    --text:    #1E293B;
+    --sub:     #64748B;
+    --code-bg: #0F172A;
+    --code-fg: #E2E8F0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.75;
+    padding: 48px 24px;
+  }
+  .wrapper { max-width: 960px; margin: 0 auto; }
+
+  /* Cover card */
+  .cover {
+    background: linear-gradient(135deg, #1565C0 0%, #0D47A1 55%, #1A237E 100%);
+    color: #fff;
+    border-radius: 16px;
+    padding: 56px 52px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(21,101,192,0.35);
+  }
+  .cover::before {
+    content: '';
+    position: absolute; bottom: -80px; right: -80px;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .cover .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.65; text-transform: uppercase; margin-bottom: 10px; }
+  .cover h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 14px; }
+  .cover .meta { font-size: 13px; opacity: 0.7; display: flex; gap: 24px; flex-wrap: wrap; }
+  .cover .badge {
+    display: inline-block; margin-top: 20px;
+    background: rgba(246,51,102,0.85);
+    border-radius: 20px; padding: 4px 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* Content */
+  h1 { font-size: 28px; font-weight: 700; color: var(--primary); margin: 52px 0 16px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+  h2 { font-size: 20px; font-weight: 600; color: var(--text); margin: 36px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; font-weight: 600; color: var(--primary); margin: 28px 0 8px; }
+  h4 { font-size: 12px; font-weight: 700; color: var(--sub); margin: 20px 0 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+  p  { margin-bottom: 12px; }
+  a  { color: var(--primary); }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; }
+  strong { font-weight: 600; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent);
+    background: #FFF5F7;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 18px;
+    margin: 16px 0;
+    color: #9D174D;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  blockquote p { margin: 0; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: #EEF2FF;
+    color: #DC2626;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 14px 0 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 12px; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 22px;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  }
+  th {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 12px;
+    letter-spacing: 0.2px;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #F8FAFC; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 0 0 44px;
+  }
+  .toc > h4 { margin-top: 0; }
+  .toc ul { list-style: none; padding: 0; }
+  .toc li { padding: 4px 0; border-bottom: 1px dotted var(--border); }
+  .toc li:last-child { border-bottom: none; }
+  .toc a { color: var(--primary); font-size: 13px; }
+
+  @media print {
+    body { background: #fff; padding: 16px; font-size: 12px; }
+    .cover { border-radius: 8px; page-break-inside: avoid; }
+    pre { white-space: pre-wrap; word-break: break-all; box-shadow: none; }
+    h1, h2 { page-break-after: avoid; }
+    table { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="cover">
+    <div class="eyebrow">Numista.AI</div>
+    <h1>System Architecture</h1>
+    <div class="meta">
+      <span>&#128197; Version: May 2026</span>
+      <span>&#128100; Author: Numista Deployer</span>
+      <span>&#9729; GCP: studio-9101802118-8c9a8</span>
+    </div>
+    <div class="badge">Beta MVP</div>
+  </div>
+
+  <p>﻿# Numista.AI — System Architecture</p>
+<blockquote>
+<p><strong>Version:</strong> May 2026 | <strong>Author:</strong> Numista Deployer | <strong>Status:</strong> Beta MVP</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-system-overview">System Overview</a></li>
+<li><a href="#2-module-map">Module Map</a></li>
+<li><a href="#3-layer-by-layer-architecture">Layer-by-Layer Architecture</a></li>
+<li><a href="#4-data-flow-diagrams">Data Flow Diagrams</a></li>
+<li><a href="#5-firestore-data-schema">Firestore Data Schema</a></li>
+<li><a href="#6-ai--gemini-integration">AI &amp; Gemini Integration</a></li>
+<li><a href="#7-authentication--security-model">Authentication &amp; Security Model</a></li>
+<li><a href="#8-external-integrations">External Integrations</a></li>
+<li><a href="#9-deployment-architecture">Deployment Architecture</a></li>
+<li><a href="#10-known-limitations--future-work">Known Limitations &amp; Future Work</a></li>
+</ol>
+<hr />
+<h2 id="1-system-overview">1. System Overview</h2>
+<p>Numista.AI is a <strong>cross-platform coin collection management platform</strong> powered by Google Gemini Vision AI. It allows numismatists to:</p>
+<ul>
+<li><strong>Digitize</strong> collections via AI checklist scanning, PCGS import, manual entry, or USB microscope</li>
+<li><strong>Identify</strong> coins using Gemini Vision (obverse + reverse photo analysis)</li>
+<li><strong>Track</strong> collections with program-based progress, wish lists, and eBay live pricing</li>
+<li><strong>Research</strong> coins via AI chat, numismatic reports, and PCGS CoinFacts data</li>
+</ul>
+<p>The platform consists of <strong>three primary modules</strong> running across local hardware, Google Cloud, and end-user devices:</p>
+<pre><code>+----------------------------------------------------------+
+|                    numista_mobile                        |
+|           Flutter Web / Android / iOS App               |
+|        (Primary user interface -- all features)         |
++------------------------+---------------------------------+
+                         | Firebase SDK (Firestore, Auth)
+                         | REST (Cloud Run endpoints)
++------------------------v---------------------------------+
+|               Google Cloud Platform                     |
+|  +----------------+  +--------------+  +-------------+  |
+|  |   Firestore    |  |  Cloud Run   |  |  GCS Bucket |  |
+|  |  (primary DB)  |  | (AI services)|  |  (images)   |  |
+|  +----------------+  +--------------+  +-------------+  |
+|  +------------------------------------------------------+|
+|  |      Gemini Vision AI  (gemini-3-flash-preview)      ||
+|  +------------------------------------------------------+|
++----------------------------------------------------------+
+                         | Firestore real-time listener
++------------------------v---------------------------------+
+|               numista_hardware                          |
+|     Windows Desktop Agent (Python + OpenCV)             |
+|     USB Microscope -&gt; Coin ID -&gt; GCS -&gt; Firestore       |
++----------------------------------------------------------+
+</code></pre>
+<hr />
+<h2 id="2-module-map">2. Module Map</h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Language</th>
+<th>Runtime</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>numista_mobile</code></td>
+<td>Dart / Flutter</td>
+<td>Web, Android, iOS</td>
+<td>Primary user application</td>
+</tr>
+<tr>
+<td><code>numista_backend</code></td>
+<td>Python</td>
+<td>Cloud Run (GCP)</td>
+<td>AI scan service, admin tools, data pipelines</td>
+</tr>
+<tr>
+<td><code>numista_hardware</code></td>
+<td>Python</td>
+<td>Windows Desktop</td>
+<td>USB microscope agent, local coin ID</td>
+</tr>
+<tr>
+<td><code>numista_ai</code></td>
+<td><em>(reserved)</em></td>
+<td>--</td>
+<td>Future dedicated AI model workspace</td>
+</tr>
+</tbody>
+</table>
+<p><strong>GCP Project:</strong> <code>studio-9101802118-8c9a8</code><br />
+<strong>GCS Bucket:</strong> <code>studio-9101802118-8c9a8-uploads</code><br />
+<strong>Cloud Run Region:</strong> <code>us-central1</code><br />
+<strong>Firestore Location:</strong> <code>(default)</code> multi-region</p>
+<hr />
+<h2 id="3-layer-by-layer-architecture">3. Layer-by-Layer Architecture</h2>
+<h3 id="31-frontend-numista_mobile-flutter">3.1 Frontend -- <code>numista_mobile</code> (Flutter)</h3>
+<p><strong>Entry Point:</strong> <code>lib/main.dart</code><br />
+- Initializes Firebase via <code>firebase_options.dart</code><br />
+- Auth gate: <code>StreamBuilder&lt;User?&gt;</code> on <code>FirebaseAuth.instance.authStateChanges()</code><br />
+- Signed out -&gt; <code>LoginScreen</code>; Signed in -&gt; <code>BaseLayout</code></p>
+<h4 id="311-screen-inventory">3.1.1 Screen Inventory</h4>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LoginScreen</code></td>
+<td><code>login_screen.dart</code></td>
+<td>Firebase Auth (email/password + Google Sign-in)</td>
+</tr>
+<tr>
+<td><code>BaseLayout</code></td>
+<td><code>base_layout.dart</code></td>
+<td>Shell with sidebar nav, responsive layout engine</td>
+</tr>
+<tr>
+<td><code>HomeDashboard</code></td>
+<td><code>home_dashboard.dart</code></td>
+<td>Program browser, news feed, portfolio summary</td>
+</tr>
+<tr>
+<td><code>MyCollectionScreen</code></td>
+<td><code>my_collection_screen.dart</code></td>
+<td>Full collection grid/table, inspector panel</td>
+</tr>
+<tr>
+<td><code>AddCoinsHub</code></td>
+<td><code>add_coins_hub.dart</code></td>
+<td>Multi-tab coin entry (Manual, PCGS, Checklist, Roll, CSV)</td>
+</tr>
+<tr>
+<td><code>WishlistScreen</code></td>
+<td><code>wishlist_screen.dart</code></td>
+<td>Wish list with eBay live pricing + "I Found It!" flow</td>
+</tr>
+<tr>
+<td><code>ProgramManagerScreen</code></td>
+<td><code>program_manager_screen.dart</code></td>
+<td>Browse/search US Mint programs</td>
+</tr>
+<tr>
+<td><code>MicroscopeScanScreen</code></td>
+<td><code>microscope_scan_screen.dart</code></td>
+<td>Hardware agent control + live status polling</td>
+</tr>
+<tr>
+<td><code>AIChatScreen</code></td>
+<td><code>ai_chat_screen.dart</code></td>
+<td>Gemini-powered numismatic AI assistant</td>
+</tr>
+<tr>
+<td><code>ReviewHubScreen</code></td>
+<td><code>review_hub_screen.dart</code></td>
+<td>Checklist scan upload + multi-page processing</td>
+</tr>
+<tr>
+<td><code>SettingsScreen</code></td>
+<td><code>settings_screen.dart</code></td>
+<td>User profile, PCGS token, preferences</td>
+</tr>
+<tr>
+<td><code>CustomerServiceScreen</code></td>
+<td><code>customer_service_screen.dart</code></td>
+<td>Support chat, FAQs</td>
+</tr>
+<tr>
+<td><code>OurTeamScreen</code></td>
+<td><code>our_team_screen.dart</code></td>
+<td>Team info page</td>
+</tr>
+<tr>
+<td><code>HumanAITrainerScreen</code></td>
+<td><code>human_ai_trainer_screen.dart</code></td>
+<td>(Future) human-in-the-loop AI training</td>
+</tr>
+</tbody>
+</table>
+<h4 id="312-service-layer">3.1.2 Service Layer</h4>
+<pre><code>lib/services/
++-- auth_service.dart               Firebase Auth wrapper; exposes userEmail, coinsPath
++-- numista_service.dart            General Firestore helpers (coin CRUD)
++-- reference_service.dart          Stream of global_programs from Firestore
++-- reference_library_service.dart  Reference image URL resolution from GCS
++-- reference_seed_service.dart     One-time admin migration to cloud
++-- coin_programs_data.dart         Local fallback copy of US coin program catalog
++-- wishlist_service.dart           Wishlist CRUD + StreamBuilder support
++-- checklist_generator_service.dart  PDF checklist generation (dart:ui canvas)
++-- checklist_scan_service.dart     HTTP client -&gt; scan_service Cloud Run endpoint
++-- pcgs_import_service.dart        PCGS Public API + cert# batch import + CSV parse
++-- pcgs_service.dart               PCGS token fetch helper
++-- epn_service.dart                eBay Partner Network live listing fetcher
++-- hardware_service.dart           HTTP polling client for numista_hardware agent
++-- mint_history_service.dart       Historical US mint mark data by year/denomination
++-- wizard_service.dart             Roll Entry wizard state + Firestore batch write
++-- guest_seed_service.dart         Demo collection seeding for guest mode
+</code></pre>
+<h4 id="313-widget-library">3.1.3 Widget Library</h4>
+<pre><code>lib/widgets/
++-- add_coin_manual_form.dart        Manual coin entry form fields
++-- coin_set_viewer.dart             Flip-card coin set viewer (for gift sets)
++-- roll_entry_dialog.dart           3-step roll wizard (Identical/Sequential/Lot)
++-- scan_result_dialog.dart          AI scan result confirmation dialog
++-- extraction_success_dialog.dart   Checklist scan success summary
++-- wizard_overlay.dart              Guided onboarding wizard
++-- common/ref_image_widget.dart     Reference coin image loader from GCS
+</code></pre>
+<hr />
+<h3 id="32-cloud-backend-numista_backend">3.2 Cloud Backend -- <code>numista_backend</code></h3>
+<h4 id="321-scan-service-cloud-run">3.2.1 Scan Service (Cloud Run)</h4>
+<p><strong>Path:</strong> <code>numista_backend/scan_service/</code><br />
+<strong>URL:</strong> <code>https://scan-service-568985927038.us-central1.run.app</code><br />
+<strong>Runtime:</strong> Python 3.9, Flask, <code>google-genai</code> SDK</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /scan_checklist</code></td>
+<td>multipart/form-data</td>
+<td>Accepts checklist image + program_id + user_id; calls Gemini Vision; writes results to Firestore</td>
+</tr>
+<tr>
+<td><code>GET /health</code></td>
+<td>--</td>
+<td>Health check, returns model name + SDK version</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scan Pipeline:</strong><br />
+1. Receive image bytes + <code>program_id</code> + <code>user_id</code> + page metadata<br />
+2. Load program coin list from <code>global_programs/{program_id}</code> in Firestore<br />
+3. Chunk coin list by page number (reduces output tokens ~65%)<br />
+4. Call <code>gemini-3-flash-preview</code> with system prompt + image + structured coin list<br />
+5. Parse JSON response (with truncation-recovery logic)<br />
+6. Batch-write to <code>users/{uid}/checklist_entries</code> (owned) and <code>users/{uid}/wishlist</code> (unowned)<br />
+7. Return summary JSON</p>
+<h4 id="322-sync-worker-cloud-run">3.2.2 Sync Worker (Cloud Run)</h4>
+<p><strong>Path:</strong> <code>numista_backend/sync_worker/</code><br />
+Handles background data synchronization between local processing results and Firestore.</p>
+<h4 id="323-main-backend-app-apppy-mainpy">3.2.3 Main Backend App (<code>app.py</code> + <code>main.py</code>)</h4>
+<p>A Streamlit + FastAPI hybrid (193 KB) used for admin data management, bulk ingestion, reference library management, and manual coin ID testing.</p>
+<h4 id="324-data-pipeline-scripts">3.2.4 Data Pipeline Scripts</h4>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Scripts</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Schema patching</td>
+<td><code>patch_*.py</code> (20+)</td>
+<td>One-time Firestore data fixes per program</td>
+</tr>
+<tr>
+<td>Phase 2 ingestion</td>
+<td><code>run_phase2_*.py</code> (30+)</td>
+<td>Wikipedia/Smithsonian image scraping + enrichment</td>
+</tr>
+<tr>
+<td>Auditing</td>
+<td><code>audit_*.py</code></td>
+<td>Validate Firestore data integrity per program</td>
+</tr>
+<tr>
+<td>Image management</td>
+<td><code>build_image_index.py</code>, <code>sync_local_images_to_gcs.py</code></td>
+<td>Build and sync reference image library to GCS</td>
+</tr>
+<tr>
+<td>PCGS proxy</td>
+<td>Inside <code>main.py</code></td>
+<td><code>/api/pcgs/cert/{certNo}</code> server-side Cloudflare bypass</td>
+</tr>
+<tr>
+<td>Contribution ingestion</td>
+<td><code>ingest_contributions.py</code></td>
+<td>Process user-submitted coin photos</td>
+</tr>
+<tr>
+<td>Coin set ingestion</td>
+<td><code>ingest_coin_set.py</code></td>
+<td>Push coin set manifests to <code>coin_set_index</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="33-hardware-agent-numista_hardware">3.3 Hardware Agent -- <code>numista_hardware</code></h3>
+<p><strong>Entry Point:</strong> <code>auto_capture.py</code><br />
+<strong>Runtime:</strong> Python, Windows desktop<br />
+<strong>Dependencies:</strong> OpenCV (<code>cv2</code>), Flask, Google Cloud SDK, <code>google-genai</code></p>
+<h4 id="331-file-structure">3.3.1 File Structure</h4>
+<pre><code>numista_hardware/
++-- auto_capture.py       Main agent: camera loop, vision pipeline, Flask server
++-- identify_coin.py      Gemini Vision coin identification (obverse + reverse)
++-- pcgs_service.py       Local PCGS enrichment (silver detection, melt value)
++-- coin_engine.py        Coin data normalization helpers
++-- tray_agent.py         Windows system tray icon (minimize to tray)
++-- scan_coin.py          Standalone single-scan utility
++-- index.html            Local web UI for the agent
++-- install_agent.ps1     Windows startup auto-install script
++-- NumistaAgent.spec     PyInstaller spec for .exe packaging
+</code></pre>
+<h4 id="332-capture-pipeline">3.3.2 Capture Pipeline</h4>
+<pre><code>Camera (USB Microscope or Webcam)
+    |
+    v
+OpenCV frame capture (1920x1080)
+    |
+    v
+Sharpness analysis (Laplacian variance)
+Motion detection (Gaussian blur diff)
+Coin detection (contour area threshold &gt; 10,000px)
+    |
+    v
+Pre-capture countdown (3-second hold-still timer)
+    |
+    v
+Auto-capture -&gt; crop_coin() -&gt; JPEG saved
+    |  [OBVERSE complete]
+    v
+&quot;FLIP COIN&quot; prompt (8-second lockout)
+    |  [REVERSE complete]
+    v
+run_numista_report(obv_path, rev_path)
+    |
+    v
+Gemini Vision -&gt; coin identification JSON
+    {year, denomination, mint_mark, grade, program_series,
+     ai_estimated_value, verification_confidence, report}
+    |
+    v
+PCGS enrichment (silver flag, melt value, PCGS#)
+    |
+    v
+GCS upload -&gt; microscope/{email}/{slug}_{side}_{ts}.jpg
+    |
+    v
+Firestore: users/{email}/coins/{uuid}
+</code></pre>
+<h4 id="333-remote-trigger-architecture-firestore-command-bus">3.3.3 Remote Trigger Architecture (Firestore Command Bus)</h4>
+<p>The hardware agent is triggered via Firestore, not HTTP, to avoid HTTPS mixed-content restrictions:</p>
+<pre><code>Flutter App (MicroscopeScanScreen)
+    |
+    v  writes
+commands/{email}/pending/{docId}  {command: &quot;start_scan&quot;}
+    |
+    v  real-time listener (on_snapshot)
+Hardware Agent (on_command_snapshot)
+    |
+    v  deletes doc (acknowledge)
+capture_worker thread -&gt; [pipeline above]
+    |
+    v
+commands/{email}/results/{coin_id}  {status: &quot;saved&quot;, gcs_urls: ...}
+</code></pre>
+<p>Flutter polls <code>GET http://localhost:5000/get-status</code> every 500ms for live sharpness, motion, and countdown.</p>
+<hr />
+<h3 id="34-data-infrastructure-google-cloud">3.4 Data Infrastructure (Google Cloud)</h3>
+<h4 id="341-firestore-collections">3.4.1 Firestore Collections</h4>
+<table>
+<thead>
+<tr>
+<th>Collection</th>
+<th>Content</th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users/{email}/coins</code></td>
+<td>Full coin documents</td>
+<td>Per-user isolated</td>
+</tr>
+<tr>
+<td><code>users/{email}/wishlist</code></td>
+<td>Wishlist items (individual or program)</td>
+<td>Per-user</td>
+</tr>
+<tr>
+<td><code>users/{email}/checklist_entries</code></td>
+<td>Scanned checklist results</td>
+<td>Per-user</td>
+</tr>
+<tr>
+<td><code>global_programs/{program_id}</code></td>
+<td>Program definition with coin + variety tree</td>
+<td>Read-only for users</td>
+</tr>
+<tr>
+<td><code>config/pcgs</code></td>
+<td>Platform PCGS bearer token</td>
+<td>Admin write, user read</td>
+</tr>
+<tr>
+<td><code>commands/{email}/pending</code></td>
+<td>Hardware agent command queue</td>
+<td>Agent listens</td>
+</tr>
+<tr>
+<td><code>commands/{email}/results</code></td>
+<td>Hardware scan confirmation</td>
+<td>Flutter reads</td>
+</tr>
+<tr>
+<td><code>coin_set_index/{set_id}</code></td>
+<td>Coin set manifests</td>
+<td>Read-only</td>
+</tr>
+</tbody>
+</table>
+<h4 id="342-gcs-bucket-structure">3.4.2 GCS Bucket Structure</h4>
+<pre><code>studio-9101802118-8c9a8-uploads/
++-- microscope/{email}/{slug}_Obverse_{timestamp}.jpg   &lt;- Hardware captures
++-- microscope/{email}/{slug}_Reverse_{timestamp}.jpg
++-- reference/{program_id}/{coin_id}_obverse.jpg        &lt;- Reference library
++-- reference/{program_id}/{coin_id}_reverse.jpg
++-- checklists/{program_id}/page_{n}.pdf                &lt;- Generated PDFs
+</code></pre>
+<hr />
+<h2 id="4-data-flow-diagrams">4. Data Flow Diagrams</h2>
+<h3 id="41-checklist-scan-pipeline">4.1 Checklist Scan Pipeline</h3>
+<pre><code>User photographs printed checklist (mobile camera)
+    |
+    v
+ReviewHubScreen: select program + upload image(s)
+    |
+    v
+checklist_scan_service.dart
+    POST /scan_checklist  (multipart/form-data)
+    {image, program_id, user_id, page_number, total_pages}
+    |
+    v
+scan_service (Cloud Run)
+    1. Firestore: GET global_programs/{program_id}
+    2. chunk_coin_list()  -- page-aware coin subset
+    3. Gemini Vision: system_prompt + image + coin_list
+    4. parse_json() with truncation recovery
+    5. write_to_firestore():
+         owned=true  -&gt; checklist_entries/{program}__{coin}
+         owned=false -&gt; checklist_entries + wishlist (merge)
+    |
+    v
+Flutter: ExtractionSuccessDialog
+    {X coins owned, Y added to wishlist, confidence: Z%}
+</code></pre>
+<h3 id="42-hardware-microscope-pipeline">4.2 Hardware Microscope Pipeline</h3>
+<pre><code>User taps &quot;Start Scan&quot; in MicroscopeScanScreen
+    |
+    v
+hardware_service.dart
+    Firestore write: commands/{email}/pending
+    {command: &quot;start_scan&quot;}
+    |
+    v
+numista_hardware auto_capture.py (always-on daemon)
+    on_command_snapshot() -&gt; capture_worker thread
+    |
+    v
+[OpenCV loop: sharpness -&gt; stability -&gt; countdown -&gt; capture]
+    Obverse JPEG saved -&gt; captures/obverse_peak.jpg
+    &quot;FLIP COIN&quot; prompt (8-sec lockout)
+    Reverse JPEG saved -&gt; captures/reverse_peak.jpg
+    |
+    v
+identify_coin.py -&gt; Gemini Vision
+    Returns: year, denomination, mint_mark, grade, series,
+             value estimate, confidence, numismatic report
+    |
+    v
+pcgs_service.py -&gt; PCGS enrichment
+    Returns: is_silver, metal_content, melt_value, pcgs_number
+    |
+    v
+upload_to_gcs_local() -&gt; GCS bucket
+    microscope/{email}/{slug}_{side}_{ts}.jpg
+    |
+    v
+Firestore write: users/{email}/coins/{uuid}  (full coin doc)
+Firestore write: commands/{email}/results/{uuid}  (confirmation)
+    |
+    v
+Flutter polls localhost:5000/get-status every 500ms
+    -&gt; Live sharpness bar, countdown ring, final result card
+</code></pre>
+<h3 id="43-pcgs-import-pipeline">4.3 PCGS Import Pipeline</h3>
+<pre><code>User enters cert numbers or uploads PCGS CSV
+    |
+    v
+AddCoinsHub -&gt; PCGS Import Tab
+    |
+    v
+pcgs_import_service.dart
+    parseCertNumbersFromCsv() [if CSV input]
+    |
+    v  for each cert number:
+    Firestore: check for duplicate (Certification Number field)
+    |
+    v
+    GET https://scan-service-*.run.app/api/pcgs/cert/{certNo}
+    (server-side proxy bypasses Cloudflare browser restriction)
+    |
+    v
+    mapToFirestoreSchema()  PCGS fields -&gt; Numista schema
+    |
+    v
+    Firestore: users/{email}/coins.add(firestoreData)
+    |
+    v
+PcgsImportResult: {successCount, failedCount, duplicateCount}
+    -&gt; UI shows import summary card
+</code></pre>
+<hr />
+<h2 id="5-firestore-data-schema">5. Firestore Data Schema</h2>
+<h3 id="coin-document-usersemailcoinsdocid">Coin Document (<code>users/{email}/coins/{docId}</code>)</h3>
+<pre><code class="language-json">{
+  &quot;Year&quot;:                      &quot;1921&quot;,
+  &quot;Country&quot;:                   &quot;United States&quot;,
+  &quot;Denomination&quot;:              &quot;Dollar&quot;,
+  &quot;Mint Mark&quot;:                 &quot;D&quot;,
+  &quot;Condition&quot;:                 &quot;MS-63&quot;,
+  &quot;Program/Series&quot;:            &quot;Morgan Dollar&quot;,
+  &quot;Theme/Subject&quot;:             &quot;Liberty Head / Eagle&quot;,
+  &quot;AI Estimated Value&quot;:        &quot;$95.00&quot;,
+  &quot;Melt Value&quot;:                &quot;$22.14&quot;,
+  &quot;Metal Content&quot;:             &quot;90% Silver, 10% Copper&quot;,
+  &quot;Is Silver&quot;:                 true,
+  &quot;PCGS Number&quot;:               &quot;7294&quot;,
+  &quot;Certification Number&quot;:      &quot;12345678&quot;,
+  &quot;Grading Service&quot;:           &quot;PCGS&quot;,
+  &quot;Holder Type&quot;:               &quot;PCGS Slab&quot;,
+  &quot;Variety&quot;:                   &quot;VAM-2&quot;,
+  &quot;Die Variety&quot;:               &quot;VAM-2&quot;,
+  &quot;Cost&quot;:                      &quot;$85.00&quot;,
+  &quot;Purchase Date&quot;:             &quot;2026-04-15&quot;,
+  &quot;Storage Location&quot;:          &quot;Morgan Binder&quot;,
+  &quot;Personal Notes&quot;:            &quot;Gorgeous luster&quot;,
+  &quot;Numismatic Report&quot;:         &quot;Full AI analysis text...&quot;,
+  &quot;Quantity&quot;:                  1,
+  &quot;Population&quot;:                &quot;1,250&quot;,
+  &quot;Is NFC Secure&quot;:             false,
+  &quot;image_url_obverse&quot;:         &quot;https://storage.googleapis.com/.../obverse.jpg&quot;,
+  &quot;image_url_reverse&quot;:         &quot;https://storage.googleapis.com/.../reverse.jpg&quot;,
+  &quot;source&quot;:                    &quot;pcgs_api | hardware_agent | manual | checklist_scan | roll_wizard&quot;,
+  &quot;scan_source&quot;:               &quot;microscope&quot;,
+  &quot;scan_date&quot;:                 &quot;20260415_1432&quot;,
+  &quot;deep_dive_status&quot;:          &quot;PENDING | COMPLETE&quot;,
+  &quot;roll_id&quot;:                   &quot;roll_quarter_1746123456789&quot;,
+  &quot;roll_type&quot;:                 &quot;identical | sequential | lot&quot;,
+  &quot;verification_confidence&quot;:   &quot;HIGH&quot;,
+  &quot;reference_images_used&quot;:     4,
+  &quot;added_at&quot;:                  &quot;&lt;Firestore Timestamp&gt;&quot;,
+  &quot;created_at&quot;:                &quot;&lt;Firestore Timestamp&gt;&quot;
+}
+</code></pre>
+<h3 id="global-program-document-global_programsprogram_id">Global Program Document (<code>global_programs/{program_id}</code>)</h3>
+<pre><code class="language-json">{
+  &quot;id&quot;:          &quot;morgan_dollar&quot;,
+  &quot;name&quot;:        &quot;Morgan Dollar&quot;,
+  &quot;category&quot;:    &quot;Dollars&quot;,
+  &quot;years&quot;:       &quot;1878-1904, 1921&quot;,
+  &quot;description&quot;: &quot;...&quot;,
+  &quot;coins&quot;: [
+    {
+      &quot;id&quot;:      &quot;1878_p&quot;,
+      &quot;name&quot;:    &quot;1878&quot;,
+      &quot;year&quot;:    1878,
+      &quot;varieties&quot;: [
+        {&quot;id&quot;: &quot;8TF&quot;,   &quot;name&quot;: &quot;8 Tail Feathers&quot;,   &quot;mint_marks&quot;: [&quot;P&quot;]},
+        {&quot;id&quot;: &quot;7TF&quot;,   &quot;name&quot;: &quot;7 Tail Feathers&quot;,   &quot;mint_marks&quot;: [&quot;P&quot;]},
+        {&quot;id&quot;: &quot;7/8TF&quot;, &quot;name&quot;: &quot;7/8 Tail Feathers&quot;, &quot;mint_marks&quot;: [&quot;P&quot;]}
+      ]
+    }
+  ]
+}
+</code></pre>
+<hr />
+<h2 id="6-ai-gemini-integration">6. AI &amp; Gemini Integration</h2>
+<h3 id="61-models-in-use">6.1 Models in Use</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Model</th>
+<th>SDK</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scan Service (Cloud Run)</td>
+<td><code>gemini-3-flash-preview</code></td>
+<td><code>google-genai</code></td>
+<td>Checklist OCR + checkbox detection</td>
+</tr>
+<tr>
+<td>Hardware Agent</td>
+<td><code>gemini-3-flash-preview</code></td>
+<td><code>google-genai</code></td>
+<td>Coin ID from microscope photos</td>
+</tr>
+<tr>
+<td>AI Chat (Flutter)</td>
+<td>Gemini via Vertex AI</td>
+<td>Firebase AI Logic</td>
+<td>Numismatic Q&amp;A assistant</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>IMPORTANT:</strong> The old <code>vertexai</code> Python SDK is deprecated (shutdown Jun 2026).<br />
+All backend services now use <code>google-genai</code> SDK:<br />
+<code>client = genai.Client(vertexai=True, project=..., location="global")</code></p>
+</blockquote>
+<h3 id="62-prompt-engineering">6.2 Prompt Engineering</h3>
+<p><strong>Checklist Scanner:</strong> Two-part prompt -- strict system instruction (checkbox rules + JSON-only output) + per-request prompt listing every expected coin ID. Coin list is chunked by page to stay within token limits.</p>
+<p><strong>Coin Identifier:</strong> Structured prompt requesting year, denomination, mint mark, grade, series, theme, estimated value, and numismatic report. Uses reference images from GCS for comparison.</p>
+<p><strong>AI Chat:</strong> Conversational assistant with numismatic expertise covering US coinage, grading standards, and collection management.</p>
+<h3 id="63-json-recovery-logic">6.3 JSON Recovery Logic</h3>
+<p>The scan service handles truncated Gemini responses: if the JSON is cut off mid-token (hit output token limit), it finds the last complete <code>}}</code> pair, closes the JSON object, and continues rather than failing the entire scan.</p>
+<hr />
+<h2 id="7-authentication-security-model">7. Authentication &amp; Security Model</h2>
+<h3 id="71-firebase-authentication">7.1 Firebase Authentication</h3>
+<ul>
+<li><strong>Primary:</strong> Email/password</li>
+<li><strong>Secondary:</strong> Google Sign-In</li>
+<li><strong>Auth state:</strong> <code>FirebaseAuth.instance.authStateChanges()</code> stream drives the auth gate in <code>main.dart</code></li>
+</ul>
+<h3 id="72-user-data-isolation">7.2 User Data Isolation</h3>
+<p>All Firestore paths are user-scoped:</p>
+<pre><code class="language-dart">// auth_service.dart
+static String get coinsPath =&gt; 'users/$userEmail/coins';
+</code></pre>
+<blockquote>
+<p><strong>CAUTION:</strong> The hardware agent has <code>USER_EMAIL</code> hardcoded as <code>eric@numista.ai</code>.<br />
+This must be replaced with dynamic auth before multi-user hardware deployment.</p>
+</blockquote>
+<h3 id="73-pcgs-token-management">7.3 PCGS Token Management</h3>
+<ul>
+<li><strong>Platform token:</strong> <code>config/pcgs.bearerToken</code> (admin-write only via Firestore rules)</li>
+<li><strong>User token:</strong> <code>users/{email}.pcgsToken</code> (user self-managed fallback)</li>
+<li><strong>Priority:</strong> platform -&gt; user personal -&gt; error</li>
+<li>Tokens are never logged or exposed in Flutter client code</li>
+</ul>
+<h3 id="74-gcs-access">7.4 GCS Access</h3>
+<ul>
+<li>Reference images: public CDN (<code>cache-control: public, max-age=31536000</code>)</li>
+<li>User microscope uploads: authenticated via service account key file</li>
+</ul>
+<hr />
+<h2 id="8-external-integrations">8. External Integrations</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Purpose</th>
+<th>Auth Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PCGS Public API</strong></td>
+<td>Coin facts by cert# or PCGS#; auction prices</td>
+<td>Bearer token (Firestore-managed)</td>
+</tr>
+<tr>
+<td><strong>eBay Partner Network (EPN)</strong></td>
+<td>Live listing prices on wishlist items</td>
+<td>API key stored in Firestore <code>config/epn</code></td>
+</tr>
+<tr>
+<td><strong>NewsAPI</strong></td>
+<td>Numismatic news feed on home dashboard</td>
+<td>API key stored in Firestore</td>
+</tr>
+<tr>
+<td><strong>Google Cloud Storage</strong></td>
+<td>Reference coin images; microscope captures</td>
+<td>Service account / ADC</td>
+</tr>
+<tr>
+<td><strong>Cloud Firestore</strong></td>
+<td>Primary database, real-time listeners</td>
+<td>Firebase SDK (authenticated)</td>
+</tr>
+<tr>
+<td><strong>Firebase Auth</strong></td>
+<td>User authentication, session management</td>
+<td>Firebase SDK</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-deployment-architecture">9. Deployment Architecture</h2>
+<h3 id="91-cloud-run-services">9.1 Cloud Run Services</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Source Directory</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scan-service</code></td>
+<td><code>numista_backend/scan_service/</code></td>
+<td>HTTPS POST from Flutter web</td>
+</tr>
+<tr>
+<td><code>sync-worker</code></td>
+<td><code>numista_backend/sync_worker/</code></td>
+<td>Background / Cloud Scheduler</td>
+</tr>
+<tr>
+<td><code>main-app</code></td>
+<td><code>numista_backend/</code> (app.py)</td>
+<td>Internal admin use</td>
+</tr>
+</tbody>
+</table>
+<p>Build pipeline: <code>cloudbuild.yaml</code><br />
+Registry: Google Artifact Registry (project-scoped)</p>
+<h3 id="92-flutter-web-hosting">9.2 Flutter Web Hosting</h3>
+<p>Flutter web build deployed to <strong>Firebase Hosting</strong> (<code>firebase.json</code> + <code>.firebaserc</code>).</p>
+<h3 id="93-hardware-agent-distribution">9.3 Hardware Agent Distribution</h3>
+<ul>
+<li>Packaged as a Windows <code>.exe</code> via PyInstaller (<code>NumistaAgent.spec</code>)</li>
+<li>Auto-starts with Windows via Task Scheduler (<code>install_agent.ps1</code>)</li>
+<li>System tray integration via <code>tray_agent.py</code></li>
+</ul>
+<h3 id="94-daily-automated-backup">9.4 Daily Automated Backup</h3>
+<ul>
+<li><strong>Script:</strong> <code>numista_auto_backup.ps1</code> (project root)</li>
+<li><strong>Schedule:</strong> Windows Task Scheduler -- daily at 7:00 PM</li>
+<li><strong>Target:</strong> <code>github.com/Numista-AI/Numista.AI</code> (main branch)</li>
+<li><strong>Behavior:</strong> Stages all changes, commits with timestamp, pushes to GitHub</li>
+<li><strong>Fallback:</strong> <code>StartWhenAvailable</code> ensures backup runs if machine was off at 7 PM</li>
+<li><strong>Log:</strong> <code>numista_backup.log</code></li>
+</ul>
+<hr />
+<h2 id="10-known-limitations-future-work">10. Known Limitations &amp; Future Work</h2>
+<h3 id="current-limitations">Current Limitations</h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardware agent</td>
+<td><code>USER_EMAIL</code> hardcoded -- single-user only today</td>
+</tr>
+<tr>
+<td>PCGS proxy</td>
+<td>Cert# lookup routes through Cloud Run; fragile if service is down</td>
+</tr>
+<tr>
+<td>Checklist scan</td>
+<td>Multi-page scans processed sequentially, not in parallel</td>
+</tr>
+<tr>
+<td>AI Chat</td>
+<td>No persistent conversation history across sessions</td>
+</tr>
+<tr>
+<td>Mobile (iOS)</td>
+<td>Full distribution requires physical Apple hardware + developer account</td>
+</tr>
+<tr>
+<td>Reference images</td>
+<td>~4.5M row GCS index; image coverage is partial for rare coins</td>
+</tr>
+</tbody>
+</table>
+<h3 id="planned-improvements">Planned Improvements</h3>
+<ul>
+<li>[ ] Multi-user hardware agent (dynamic user ID from Firebase Auth)</li>
+<li>[ ] Parallel multi-page checklist scanning</li>
+<li>[ ] AI Chat session persistence (Firestore-backed conversation history)</li>
+<li>[ ] Deep Dive AI reports (Gemini Pro for detailed numismatic analysis)</li>
+<li>[ ] Human-AI Trainer screen (collect corrections to improve scan accuracy)</li>
+<li>[ ] eBay snipe/alert integration for wishlist items</li>
+<li>[ ] iOS App Store distribution</li>
+<li>[ ] Real-time shared collections (multi-user collaboration)</li>
+</ul>
+
+</div>
+</body>
+</html>

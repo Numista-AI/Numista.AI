@@ -13,7 +13,7 @@ import 'auth_service.dart';
 /// Daily Limit: 1,000 calls per account
 class PcgsImportService {
   static const _baseUrl    = 'https://api.pcgs.com/publicapi';
-  static const _backendUrl = 'https://scan-service-568985927038.us-central1.run.app';
+  static const _backendUrl = 'https://numista-backend-568985927038.us-central1.run.app';
 
   // ─── Token Management ────────────────────────────────────────────────────
   //

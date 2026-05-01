@@ -188,6 +188,6 @@ class MintHistoryService {
 // Internal range entry (not exported)
 class _RangeEntry extends YearMints {
   const _RangeEntry(int year, List<String> circulation,
-      {List<String> proofOnly = const []})
-      : super(year: year, circulation: circulation, proofOnly: proofOnly);
+      {super.proofOnly = const []})
+      : super(year: year, circulation: circulation);
 }

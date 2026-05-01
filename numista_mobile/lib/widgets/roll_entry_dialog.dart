@@ -117,7 +117,7 @@ class _RollDialogState extends State<_RollDialog> {
 
   // ── Shared: denomination picker ───────────────────────────────────────────
   Widget _denomPicker() => DropdownButtonFormField<String>(
-    value: _denom,
+    initialValue: _denom,
     decoration: _decor('Denomination'),
     items: kDenominations.map((d) =>
       DropdownMenuItem(value: d['key'], child: Text(d['label']!))).toList(),
@@ -125,7 +125,7 @@ class _RollDialogState extends State<_RollDialog> {
   );
 
   Widget _conditionPicker() => DropdownButtonFormField<String>(
-    value: _condition,
+    initialValue: _condition,
     decoration: _decor('Condition'),
     items: ['Poor','Good','Fine','Very Fine','Extremely Fine','About Unc.',
             'MS-60','MS-63','MS-65','MS-67','Proof','Circulated','Uncirculated']
@@ -153,7 +153,7 @@ class _RollDialogState extends State<_RollDialog> {
         )),
         const SizedBox(width: 12),
         Expanded(child: DropdownButtonFormField<String>(
-          value: mints.contains(_mint) ? _mint : (mints.isNotEmpty ? mints.first : ''),
+          initialValue: mints.contains(_mint) ? _mint : (mints.isNotEmpty ? mints.first : ''),
           decoration: _decor('Mint Mark'),
           items: mints.map((m) => DropdownMenuItem(value: m, child: Text(m.isEmpty ? 'P (no mark)' : m))).toList(),
           onChanged: (v) => setState(() => _mint = v ?? ''),
@@ -337,7 +337,7 @@ class _RollDialogState extends State<_RollDialog> {
         child: ListView.separated(
           shrinkWrap: true,
           itemCount: _preview.length > 50 ? 51 : _preview.length,
-          separatorBuilder: (_, _d) => const Divider(height: 1, color: _border),
+          separatorBuilder: (_, _) => const Divider(height: 1, color: _border),
           itemBuilder: (_, i) {
             if (i == 50) return Padding(padding: const EdgeInsets.all(8), child: Text('... and ${_preview.length - 50} more', style: const TextStyle(color: _sub, fontSize: 12)));
             final c = _preview[i];

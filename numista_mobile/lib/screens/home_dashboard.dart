@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import '../services/melt_value_service.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -136,7 +137,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final data = doc.data() as Map<String, dynamic>;
               portfolioValue  += _parseCurrency(data['AI Estimated Value']);
               acquisitionCost += _parseCurrency(data['Cost']);
-              meltValue       += _parseCurrency(data['Melt Value']);
+              // Live melt value: compute from spot prices + Metal Content
+              // Falls back to stored Firestore value if spot prices not loaded yet.
+              final liveMelt = _spotPrices.isNotEmpty
+                  ? (MeltValueService.compute(
+                        metalContent: data['Metal Content']?.toString() ?? '',
+                        denomination: data['Denomination']?.toString() ?? '',
+                        spotPrices: _spotPrices,
+                      ) ?? 0.0)
+                  : _parseCurrency(data['Melt Value']);
+              meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
             }
 

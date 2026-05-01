@@ -1,4 +1,5 @@
 import 'dart:io' show File;
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
@@ -14,6 +15,9 @@ import '../services/epn_service.dart';
 import '../services/reference_library_service.dart';
 import '../widgets/coin_set_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../services/melt_value_service.dart';
 
 // ─── Field name constants ─────────────────────────────────────────────────────
 class _F {
@@ -47,6 +51,9 @@ class _F {
   static const pcgsNumber       = 'PCGS Number';
   static const imageObverse     = 'image_url_obverse';
   static const imageReverse     = 'image_url_reverse';
+  // PCGS-specific extended fields
+  static const population       = 'Population';
+  static const isNfcSecure      = 'Is NFC Secure';
 }
 
 // ─── Column definition ────────────────────────────────────────────────────────
@@ -76,6 +83,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   bool    _showOnlyPopulated = true;
 
   final _searchCtrl      = TextEditingController();
+  final _searchFocus     = FocusNode();
+  Timer? _searchDebounce;
   // Scroll controllers for the TableView (horizontal + vertical)
   final _tvHorizCtrl     = ScrollController();
   final _tvVertCtrl      = ScrollController();
@@ -92,6 +101,28 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   bool _loadingInspectorSimilar = false;
   String? _inspectorSimilarCoinId; // tracks which coin's similar images are loaded
 
+
+  // ─── Live spot prices (fetched once on mount, same endpoint as dashboard) ──
+  Map<String, double> _spotPrices = {};
+
+  Future<void> _fetchSpotPrices() async {
+    try {
+      final resp = await http.get(Uri.parse(
+          'https://numista-backend-568985927038.us-central1.run.app/api/spot_prices'));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (!mounted) return;
+        setState(() {
+          _spotPrices = {
+            'Gold':      (data['Gold']      ?? 0).toDouble(),
+            'Silver':    (data['Silver']    ?? 0).toDouble(),
+            'Platinum':  (data['Platinum']  ?? 0).toDouble(),
+            'Palladium': (data['Palladium'] ?? 0).toDouble(),
+          };
+        });
+      }
+    } catch (_) {}
+  }
 
   // ─── Colours (match Streamlit palette) ──────────────────────────────────
   static const _bg        = Color(0xFFF0F2F6);
@@ -135,14 +166,23 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchSpotPrices();
+    // Debounced search: wait 300ms after the user stops typing before
+    // triggering setState. Prevents Flutter Web from dropping TextField
+    // focus on every keystroke.
     _searchCtrl.addListener(() {
-      setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
+      });
     });
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     _tvHorizCtrl.dispose();
     _tvVertCtrl.dispose();
     super.dispose();
@@ -434,13 +474,24 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             height: 44,
             child: TextField(
               controller: _searchCtrl,
+              focusNode: _searchFocus,
               style: const TextStyle(color: _text, fontSize: 14),
               decoration: InputDecoration(
-                filled: true, fillColor: _bg,
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide.none),
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: _border, width: 1.5)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: _border, width: 1.5)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: _accent, width: 2.0)),
+                hintText: 'Search by year, series, grade…',
+                hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFFADB5BD)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 16),
@@ -500,10 +551,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       final aiRaw = m[_F.aiValue]?.toString() ?? '';
       aiTotal += _parseAiValue(aiRaw);
 
-      // Melt Value sum
-      final meltRaw = m[_F.meltValue]?.toString() ?? '';
-      final meltMatch = RegExp(r'\d+\.?\d*').firstMatch(meltRaw.replaceAll(',', ''));
-      if (meltMatch != null) meltTotal += double.tryParse(meltMatch.group(0)!) ?? 0;
+      // Melt Value — live from spot prices when available, else from Firestore
+      final liveMelt = _spotPrices.isNotEmpty
+          ? (MeltValueService.compute(
+                metalContent: m[_F.metalContent]?.toString() ?? '',
+                denomination: m[_F.denomination]?.toString() ?? '',
+                spotPrices: _spotPrices,
+              ) ?? 0.0)
+          : () {
+              final meltRaw = m[_F.meltValue]?.toString() ?? '';
+              final match = RegExp(r'\d+\.?\d*').firstMatch(meltRaw.replaceAll(',', ''));
+              return match != null ? (double.tryParse(match.group(0)!) ?? 0.0) : 0.0;
+            }();
+      meltTotal += liveMelt;
 
       // Face Value sum
       fvTotal += _faceValue(m[_F.denomination]?.toString() ?? '');
@@ -621,7 +681,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           thumbVisibility: true,
           trackVisibility: true,
           thickness: 8,
-          scrollbarOrientation: ScrollbarOrientation.bottom,
+          scrollbarOrientation: ScrollbarOrientation.top,
           thumbColor: const Color(0xFFB0B8C8),
           trackColor: const Color(0xFFF0F2F5),
           trackBorderColor: const Color(0xFFE0E4EA),
@@ -869,6 +929,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final pn = m[_F.pcgsNumber]?.toString().trim() ?? '';
         return (pn.isEmpty || pn == 'null') ? '' : pn;
       case _F.meltValue:
+        // Compute live from spot prices when available
+        if (_spotPrices.isNotEmpty) {
+          final lv = MeltValueService.compute(
+            metalContent: m[_F.metalContent]?.toString() ?? '',
+            denomination: m[_F.denomination]?.toString() ?? '',
+            spotPrices: _spotPrices,
+          );
+          return lv != null ? '\$${lv.toStringAsFixed(2)}' : '';
+        }
         final mv = m[_F.meltValue]?.toString().trim() ?? '';
         return (mv.isEmpty || mv == 'null' || mv == '—') ? '' : mv;
       case _F.storageLocation:
@@ -1032,91 +1101,63 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Headline metrics
-                  Row(children: [
-                    Expanded(child: _metric('Value',
-                        data[_F.aiValue]?.toString() ?? '--')),
-                    Expanded(child: _metric('Melt',
-                        data[_F.meltValue]?.toString() ?? 'N/A')),
-                    Expanded(child: _metric('Grade',
-                        data[_F.condition]?.toString() ?? 'N/A')),
-                    Expanded(child: _metric('Country',
-                        data[_F.country]?.toString() ?? 'USA')),
-                    Expanded(child: _metric('Series',
-                        data[_F.programSeries]?.toString() ?? '—')),
-                    Expanded(child: _metric('Live eBay',
-                        _ebayPrices[_selectedCoinId] ?? 'Check →')),
-                  ]),
-                  const SizedBox(height: 24),
+                  _buildMetricStrip(data),
+                  const SizedBox(height: 16),
+                  _buildPcgsBar(data),
+                  const SizedBox(height: 20),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(children: [
-                          _buildDetailGrid(data),
-                        ]),
-                      ),
+                      Expanded(flex: 3, child: _buildDetailGrid(data)),
                       const SizedBox(width: 32),
                       Expanded(
                         flex: 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => _onSearchGoogle(data),
-                                  icon: const Icon(Icons.search, size: 16),
-                                  label: const Text('Search Google'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: _text,
-                                    side: const BorderSide(color: _border),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4)),
-                                  ),
+                            Wrap(spacing: 8, runSpacing: 6, children: [
+                              OutlinedButton.icon(
+                                onPressed: () => _onSearchGoogle(data),
+                                icon: const Icon(Icons.search, size: 16),
+                                label: const Text('Google'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _text,
+                                  side: const BorderSide(color: _border),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 ),
-                                ElevatedButton.icon(
-                                  onPressed: _isCheckingEbay ? null : () => _onCheckEbay(data),
-                                  icon: _isCheckingEbay 
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: _isCheckingEbay ? null : () => _onCheckEbay(data),
+                                icon: _isCheckingEbay
                                     ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                     : const Icon(Icons.shopping_cart_outlined, size: 16),
-                                  label: const Text('Check eBay'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _accent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4)),
-                                  ),
+                                label: const Text('eBay'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _accent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _onAddToWishlist(data),
-                                  icon: const Icon(Icons.favorite_border, size: 16),
-                                  label: const Text('Wish List'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFFF63366),
-                                    side: const BorderSide(color: Color(0xFFF63366)),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4)),
-                                  ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => _onAddToWishlist(data),
+                                icon: const Icon(Icons.favorite_border, size: 16),
+                                label: const Text('Wish List'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFF63366),
+                                  side: const BorderSide(color: Color(0xFFF63366)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ]),
                             const SizedBox(height: 20),
-                            // ── Personal Vault Gallery ───────────────────
                             _buildCoinVaultGallery(data),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  // ── Coin Set Viewer (shown when coin belongs to a set) ─────
                   _buildCoinSetSection(data),
-                  // ── Roll banner (shown when coin belongs to a roll) ──────────
                   _buildRollBanner(data),
-                  // ── Similar Coins row ─────────────────────────────────────
                   _buildSimilarCoinsInspector(),
                 ],
               ),
@@ -1127,63 +1168,172 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  Widget _buildDetailGrid(Map<String, dynamic> data) {
-    final fields = [
-      ['Year',           data[_F.year]?.toString()],
-      ['Mint Mark',      data[_F.mintMark]?.toString()],
-      ['Denomination',   data[_F.denomination]?.toString()],
-      ['Country',        data[_F.country]?.toString()],
-      ['Condition',      data[_F.condition]?.toString()],
-      ['Strike Type',    data[_F.strikeType]?.toString()],
-      ['Holder Type',    data[_F.holderType]?.toString()],
-      ['Metal Content',  data[_F.metalContent]?.toString()],
-      ['Series',         data[_F.programSeries]?.toString()],
-      ['Theme/Subject',  data[_F.themeSubject]?.toString()],
-      ['Variety',        data[_F.variety]?.toString()],
-      ['Grading Svc',    data[_F.gradingService]?.toString()],
-      ['Grading Cert #', data[_F.gradingCert]?.toString()],
-      ['PCGS #',         data[_F.pcgsNumber]?.toString()],
-      ['Cost',           data[_F.cost]?.toString()],
-      ['Date',           data[_F.purchaseDate]?.toString()],
-      ['Retailer',       data[_F.retailer]?.toString()],
-      ['Item #',         data[_F.retailerItemNo]?.toString()],
-      ['Invoice #',      data[_F.retailerInvoice]?.toString()],
-      ['Storage',        data[_F.storageLocation]?.toString()],
-      ['Notes',          data[_F.personalNotes]?.toString()],
-      ['Personal Ref #', data[_F.personalRef]?.toString()],
-      ['Source Desc',    data[_F.originalDesc]?.toString()],
-    ];
-    return Wrap(
-      spacing: 16, runSpacing: 12,
-      children: fields
-          .where((f) => (f[1] ?? '').isNotEmpty)
-          .map((f) => SizedBox(
-                width: 160,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(f[0]!,
-                        style: const TextStyle(fontSize: 11, color: _subtext)),
-                    const SizedBox(height: 2),
-                    Text(f[1]!,
-                        style: const TextStyle(
-                            fontSize: 13,
-                            color: _text,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ))
-          .toList(),
+  // ─── Metric strip ────────────────────────────────────────────────────────
+  Widget _buildMetricStrip(Map<String, dynamic> data) {
+    final liveMelt = MeltValueService.compute(data, _spotPrices);
+    final meltStr  = liveMelt != null
+        ? '\$${liveMelt.toStringAsFixed(2)}'
+        : (data[_F.meltValue]?.toString().isNotEmpty == true
+            ? data[_F.meltValue].toString()
+            : 'N/A');
+    return Row(children: [
+      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '—', const Color(0xFF1A73E8), Icons.attach_money)),
+      const SizedBox(width: 10),
+      Expanded(child: _metricCard('Melt Value', meltStr, const Color(0xFF34A853), Icons.blur_circular_outlined)),
+      const SizedBox(width: 10),
+      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? '—', const Color(0xFFF9AB00), Icons.grade_outlined)),
+      const SizedBox(width: 10),
+      Expanded(child: _metricCard('Live eBay', _ebayPrices[_selectedCoinId] ?? 'Check →', const Color(0xFFE53935), Icons.shopping_cart_outlined)),
+    ]);
+  }
+
+  Widget _metricCard(String label, String value, Color accent, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent.withAlpha(60)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: accent, size: 20),
+        const SizedBox(width: 10),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text)),
+        ]),
+      ]),
     );
   }
+
+  // ─── PCGS feature bar ────────────────────────────────────────────────────
+  Widget _buildPcgsBar(Map<String, dynamic> data) {
+    final svc = data[_F.gradingService]?.toString() ?? '';
+    if (!svc.toUpperCase().contains('PCGS')) return const SizedBox.shrink();
+
+    final isNfc  = data[_F.isNfcSecure] == true;
+    final pop    = data[_F.population]?.toString() ?? '';
+    final pcgsNo = data[_F.pcgsNumber]?.toString() ?? '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF003087).withAlpha(12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF003087).withAlpha(50)),
+      ),
+      child: Wrap(spacing: 16, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        // PCGS label
+        const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.verified_outlined, size: 16, color: Color(0xFF003087)),
+          SizedBox(width: 5),
+          Text('PCGS Certified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF003087))),
+        ]),
+        // NFC badge
+        if (isNfc)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF34A853).withAlpha(20),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF34A853).withAlpha(80)),
+            ),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.nfc, size: 13, color: Color(0xFF34A853)),
+              SizedBox(width: 4),
+              Text('NFC Secured', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF34A853))),
+            ]),
+          ),
+        // Population
+        if (pop.isNotEmpty)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.bar_chart, size: 14, color: _subtext),
+            const SizedBox(width: 4),
+            Text('Pop: $pop', style: const TextStyle(fontSize: 12, color: _subtext, fontWeight: FontWeight.w500)),
+          ]),
+        // CoinFacts link
+        if (pcgsNo.isNotEmpty)
+          GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('https://www.pcgs.com/coinfacts/coin/$pcgsNo');
+              if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open browser.')));
+              }
+            },
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.open_in_new, size: 13, color: _accent),
+              SizedBox(width: 4),
+              Text('CoinFacts', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
+            ]),
+          ),
+      ]),
+    );
+  }
+
+  // ─── Sectioned detail grid ────────────────────────────────────────────────
+  Widget _buildDetailGrid(Map<String, dynamic> data) {
+    Widget section(String title, List<List<String?>> fields) {
+      final cells = fields.where((f) => (f[1] ?? '').isNotEmpty).toList();
+      if (cells.isEmpty) return const SizedBox.shrink();
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _subtext, letterSpacing: 1.0)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 16, runSpacing: 12,
+          children: cells.map((f) => _fieldCell(f[0]!, f[1]!)).toList()),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      section('IDENTITY', [
+        ['Year',          data[_F.year]?.toString()?.replaceAll(RegExp(r'\.0$'), '')],
+        ['Mint Mark',     data[_F.mintMark]?.toString()],
+        ['Denomination',  data[_F.denomination]?.toString()],
+        ['Country',       data[_F.country]?.toString()],
+        ['Series',        data[_F.programSeries]?.toString()],
+        ['Theme/Subject', data[_F.themeSubject]?.toString()],
+        ['Variety',       data[_F.variety]?.toString()],
+        ['Metal',         data[_F.metalContent]?.toString()],
+      ]),
+      section('CONDITION & AUTHENTICATION', [
+        ['Condition',    data[_F.condition]?.toString()],
+        ['Strike Type',  data[_F.strikeType]?.toString()],
+        ['Holder',       data[_F.holderType]?.toString()],
+        ['Grading Svc',  data[_F.gradingService]?.toString()],
+        ['Cert #',       data[_F.gradingCert]?.toString()],
+        ['PCGS #',       data[_F.pcgsNumber]?.toString()],
+        ['Population',   data[_F.population]?.toString()],
+      ]),
+      section('PURCHASE & STORAGE', [
+        ['Cost',        data[_F.cost]?.toString()],
+        ['Date',        data[_F.purchaseDate]?.toString()],
+        ['Retailer',    data[_F.retailer]?.toString()],
+        ['Item #',      data[_F.retailerItemNo]?.toString()],
+        ['Invoice #',   data[_F.retailerInvoice]?.toString()],
+        ['Storage',     data[_F.storageLocation]?.toString()],
+        ['Ref #',       data[_F.personalRef]?.toString()],
+        ['Notes',       data[_F.personalNotes]?.toString()],
+      ]),
+    ]);
+  }
+
+  Widget _fieldCell(String label, String value) => SizedBox(
+    width: 160,
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 10, color: _subtext)),
+      const SizedBox(height: 2),
+      Text(value, style: const TextStyle(fontSize: 13, color: _text, fontWeight: FontWeight.w500)),
+    ]),
+  );
 
   Widget _metric(String label, String value) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(fontSize: 13, color: _subtext)),
+      Text(label, style: const TextStyle(fontSize: 11, color: _subtext)),
       const SizedBox(height: 4),
-      Text(value, style: const TextStyle(
-          fontSize: 22, fontWeight: FontWeight.w500, color: _text)),
+      Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _text)),
     ],
   );
 

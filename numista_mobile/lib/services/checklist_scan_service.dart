@@ -85,9 +85,9 @@ class ScanResult {
 /// Sends a checklist image to the Numista.AI Cloud Run scan endpoint.
 class ChecklistScanService {
   static const String _baseUrl =
-      'https://scan-service-568985927038.us-central1.run.app';
+      'https://numista-backend-568985927038.us-central1.run.app';
 
-  /// Posts [imageFile] to /scan_checklist with the given [programId] and [userId].
+  /// Posts [imageFile] to /api/analyze_checklist with the given [programId] and [userId].
   /// [pageNumber] and [totalPages] enable server-side coin chunking to reduce token usage.
   /// Returns a [ScanResult] — check [ScanResult.success] before using the data.
   static Future<ScanResult> scanChecklist({
@@ -98,7 +98,7 @@ class ChecklistScanService {
     int totalPages = 1,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/scan_checklist');
+      final uri = Uri.parse('$_baseUrl/api/analyze_checklist');
       final request = http.MultipartRequest('POST', uri);
 
       request.fields['program_id'] = programId;
@@ -139,7 +139,7 @@ class ChecklistScanService {
   static Future<bool> isHealthy() async {
     try {
       final resp = await http
-          .get(Uri.parse('$_baseUrl/health'))
+          .get(Uri.parse('$_baseUrl/'))
           .timeout(const Duration(seconds: 10));
       return resp.statusCode == 200;
     } catch (_) {

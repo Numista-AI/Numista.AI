@@ -493,7 +493,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               Text('${item.coin!.year} ${item.coin!.denomination}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: condition,
+                initialValue: condition,
                 decoration: const InputDecoration(labelText: 'Condition', border: OutlineInputBorder()),
                 items: ['Poor','Good','Fine','Very Fine','Extremely Fine','About Unc.','MS-60','MS-63','MS-65','MS-67','Proof','Circulated','Uncirculated']
                   .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),

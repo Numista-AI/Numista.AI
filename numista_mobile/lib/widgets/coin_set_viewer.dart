@@ -208,7 +208,7 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: data.coins.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (ctx, i) => _CoinTile(
               coin: data.coins[i],
               onLongPress: (url, label) =>
