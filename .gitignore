@@ -46,7 +46,7 @@
 **/*.map
 
 # ============================================================
-# Node / JS (legacy AJ's app)
+# Node / JS
 # ============================================================
 **/node_modules/
 
@@ -60,3 +60,75 @@ Thumbs.db
 *.swo
 .idea/
 *.iml
+
+# ============================================================
+# Images & Binary Media (large coin photo assets)
+# ============================================================
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.gif
+**/*.webp
+**/*.bmp
+**/*.tiff
+**/*.tif
+**/*.ico
+# Exception: keep small UI assets inside numista_mobile/assets
+!numista_mobile/assets/**/*.png
+!numista_mobile/assets/**/*.jpg
+!numista_mobile/assets/mint_mark_diagrams/
+
+# ============================================================
+# PDFs (checklist files - large, binary, regenerable)
+# ============================================================
+**/*.pdf
+
+# ============================================================
+# Large data directories
+# ============================================================
+Coin program Training Data/
+Gemini Deprecation Schedules/
+Manual downloaded Coin Images/
+Scans 28 JAN 2026/
+US Mint Coin Programs/
+new_coin_images/
+training_output/
+numista_hardware/captures/
+numista_hardware/verified_images/
+numista_hardware/build/
+numista_backend/scan_service/
+numista_backend/scans/
+numista_backend/receipt_labels/
+
+# ============================================================
+# CSV data exports / staging files (large, not source code)
+# ============================================================
+numista_master_log.csv
+reference_library_export.csv
+AJ_Missing_Images_Target_List.csv
+numista_backend/staging_*.csv
+
+# ============================================================
+# Scratch / debug / one-off output files
+# ============================================================
+numista_backend/annotate_log.txt
+numista_backend/debug_html.txt
+numista_backend/dry_run_output.txt
+numista_backend/extract_log.txt
+numista_backend/fix_skipped_log.txt
+numista_backend/pdf_dump.txt
+numista_backend/pdf_survey.txt
+numista_backend/wiki_pdf_text.txt
+numista_backend/dump_curl.html
+numista_backend/checklist_render.png
+error_screenshot.png
+
+# ============================================================
+# VS Code workspace settings
+# ============================================================
+.vscode/
+
+# ============================================================
+# Refresh / temp marker files
+# ============================================================
+refresh

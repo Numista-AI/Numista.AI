@@ -1,10 +1,19 @@
 {
-    "python.languageServer": "Pylance",
-    "python.defaultInterpreterPath": "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_backend\\.venv\\Scripts\\python.exe",
-    "python.analysis.extraPaths": [
-        "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_backend"
+    "google.cloud.project": "studio-9101802118-8c9a8",
+    "dart.projectSearchDirs": [
+        "numista_mobile"
     ],
-    "dart.flutterSdkPath": "c:\\Users\\ericd\\Documents\\MyVertexProject\\numista_mobile",
+    "python.languageServer": "Jedi",
+    "python.defaultInterpreterPath": "C:\\Users\\ericd\\Documents\\MyVertexProject\\numista_backend\\.venv\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/numista_backend"
+    ],
+    "dart.flutterSdkPath": "C:\\src\\flutter",
+    "dart.analysisExcludedFolders": [
+        "numista_mobile/build",
+        ".dart_tool"
+    ],
     "[dart]": {
         "editor.formatOnSave": true,
         "editor.formatOnType": true

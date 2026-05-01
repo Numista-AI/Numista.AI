@@ -3,7 +3,7 @@ pandas
 requests
 google-cloud-documentai
 google-cloud-firestore
-google-cloud-aiplatform
+google-cloud-aiplatform==1.148.0
 extra-streamlit-components
 python-dotenv
 firebase-admin
@@ -12,3 +12,10 @@ openpyxl
 google-auth
 google-cloud-storage
 yfinance
+fastapi
+uvicorn
+flask
+python-multipart
+feedparser
+beautifulsoup4==4.12.3
+cloudscraper==1.2.71

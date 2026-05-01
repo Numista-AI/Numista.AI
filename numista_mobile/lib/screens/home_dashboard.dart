@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' as intl;
+import '../services/auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -10,432 +14,833 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  final TextEditingController _searchController = TextEditingController();
+  Map<String, double> _spotPrices = {};
+  bool _isLoadingPrices = true;
+  List<dynamic> _news = [];
+  bool _isLoadingNews = true;
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _fetchSpotPrices();
+    _fetchNews();
+  }
+
+  Future<void> _fetchNews() async {
+    try {
+      final response = await http.get(
+          Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/mint_news'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          _news = data['news'] ?? [];
+          _isLoadingNews = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoadingNews = false);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingNews = false);
+    }
+  }
+
+  Future<void> _fetchSpotPrices() async {
+    try {
+      final response = await http.get(
+          Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/spot_prices'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          _spotPrices = {
+            'Gold':      (data['Gold']      ?? 0).toDouble(),
+            'Silver':    (data['Silver']    ?? 0).toDouble(),
+            'Platinum':  (data['Platinum']  ?? 0).toDouble(),
+            'Palladium': (data['Palladium'] ?? 0).toDouble(),
+          };
+          _isLoadingPrices = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoadingPrices = false);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingPrices = false);
+    }
   }
 
   double _parseCurrency(dynamic value) {
     if (value == null) return 0.0;
-    final String str = value.toString().replaceAll('\$', '').replaceAll(',', '').trim();
-    return double.tryParse(str) ?? 0.0;
+    final raw = value.toString();
+    if (raw.contains(' - ')) {
+      final parts = raw.split(' - ');
+      final a = double.tryParse(parts[0].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+      final b = double.tryParse(parts[1].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+      return (a + b) / 2;
+    }
+    return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+  }
+
+  static double _computeFaceValue(String denom) {
+    final s = denom.toLowerCase().trim();
+    if (s.contains('penny')   || s.contains('cent')   || s.contains('1c'))  return 0.01;
+    if (s.contains('nickel')  || s.contains('5c'))                           return 0.05;
+    if (s.contains('dime')    || s.contains('10c'))                          return 0.10;
+    if (s.contains('quarter') || s.contains('25c'))                          return 0.25;
+    if (s.contains('half')    || s.contains('50c'))                          return 0.50;
+    if (s.contains('dollar')  || s.contains(r'$1'))                          return 1.00;
+    if (s.contains(r'$2'))   return 2.00;
+    if (s.contains(r'$5'))   return 5.00;
+    if (s.contains(r'$10'))  return 10.00;
+    if (s.contains(r'$20'))  return 20.00;
+    // Numeric fallback: "1" → 1.00, "5" → 5.00 (handles plain-number denominations
+    // stored by PCGS import or legacy CSV ingestion).
+    final n = double.tryParse(s.replaceAll(r'$', '').trim());
+    if (n != null) return n;
+    return 0.00;
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users/eric@numista.ai/coins')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFF63366)));
-        }
+    return LayoutBuilder(
+      builder: (context, outerConstraints) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection(AuthService.coinsPath)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFF63366)));
+            }
+            if (snapshot.hasError) {
+              return Center(
+                  child: Text('Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red)));
+            }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-        }
+            final docs = snapshot.data?.docs ?? [];
 
-        final docs = snapshot.data?.docs ?? [];
-        
-        // Calculate Metrics
-        int totalCoins = docs.length;
-        double portfolioValue = 0.0;
-        double acquisitionCost = 0.0;
-        double meltValue = 0.0;
-        double faceValue = 0.0;
+            // ── Compute portfolio metrics ──────────────────────────────────
+            int totalCoins = docs.length;
+            double portfolioValue  = 0;
+            double acquisitionCost = 0;
+            double meltValue       = 0;
+            double faceValue       = 0;
 
-        for (var doc in docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          portfolioValue += _parseCurrency(data['AI Estimated Value']);
-          acquisitionCost += _parseCurrency(data['Acquisition Cost']);
-          meltValue += _parseCurrency(data['Melt Value']);
-          faceValue += _parseCurrency(data['Face Value']);
-        }
+            for (var doc in docs) {
+              final data = doc.data() as Map<String, dynamic>;
+              portfolioValue  += _parseCurrency(data['AI Estimated Value']);
+              acquisitionCost += _parseCurrency(data['Cost']);
+              meltValue       += _parseCurrency(data['Melt Value']);
+              faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
+            }
 
-        // Sorting Logic for "Last 5 Coins"
-        final sortedDocs = List<QueryDocumentSnapshot>.from(docs);
-        sortedDocs.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          
-          final aTs = aData['timestamp'] ?? aData['created_at'];
-          final bTs = bData['timestamp'] ?? bData['created_at'];
-          if (aTs is Timestamp && bTs is Timestamp) {
-            return bTs.compareTo(aTs);
-          }
-          
-          final aDate = aData['Date']?.toString() ?? '';
-          final bDate = bData['Date']?.toString() ?? '';
-          if (aDate.isNotEmpty && bDate.isNotEmpty) {
-            return bDate.compareTo(aDate);
-          }
-          
-          return b.id.compareTo(a.id);
-        });
+            // ── Last 3 added ───────────────────────────────────────────────
+            final sorted = List<QueryDocumentSnapshot>.from(docs);
+            sorted.sort((a, b) {
+              final ad = a.data() as Map<String, dynamic>;
+              final bd = b.data() as Map<String, dynamic>;
+              final aTs = ad['timestamp'] ?? ad['created_at'];
+              final bTs = bd['timestamp'] ?? bd['created_at'];
+              if (aTs is Timestamp && bTs is Timestamp) return bTs.compareTo(aTs);
+              return b.id.compareTo(a.id);
+            });
+            final last3 = sorted.take(3).toList();
 
-        final last5 = sortedDocs.take(5).toList();
+            final fmt = intl.NumberFormat.currency(symbol: '\$');
 
-        final currencyFormatter = intl.NumberFormat.currency(symbol: '\$');
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Beta Testing Banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7DD),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFFFFD54F), width: 1),
-                ),
-                child: const Text(
-                  '🚧 BETA TESTING MODE 🚧',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Color(0xFF8B6B00),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'DASHBOARD',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                          color: Color(0xFF31333F),
-                        ),
-                      ),
-                      const Text(
-                        'AI POWERED COIN COLLECTION MANAGER',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF5A5C69),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'AI ESTIMATED PORTFOLIO VALUE',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF5A5C69),
-                        ),
-                      ),
-                      Text(
-                        currencyFormatter.format(portfolioValue),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F9D58),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Expander: System Updates
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFE2E6E9)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    iconColor: const Color(0xFF31333F),
-                    collapsedIconColor: const Color(0xFF31333F),
-                    title: const Row(
-                      children: [
-                        Text('🚀 System Updates & Release Notes', style: TextStyle(color: Color(0xFF31333F), fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Track the latest features deployed to Numista.AI', style: TextStyle(color: Color(0xFF5A5C69))),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Metric Cards Row
-              Row(
-                children: [
-                  Expanded(child: _buildMetricCard('Total Coins', totalCoins.toString())),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildMetricCard('Acquisition Cost', currencyFormatter.format(acquisitionCost))),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildMetricCard('Melt Value', currencyFormatter.format(meltValue))),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildMetricCard('Face Value', currencyFormatter.format(faceValue))),
-                ],
-              ),
-              const SizedBox(height: 48),
-
-              // Two Columns Layout
-              Row(
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Analytics Message Board
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Analytics Message Board',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF31333F)),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: const Color(0xFFE2E6E9)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Recently Added Coins:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF31333F))),
-                              const SizedBox(height: 16),
-                              // Simple Table
-                              Table(
-                                border: TableBorder(horizontalInside: BorderSide(color: Colors.grey.shade200)),
-                                columnWidths: const {
-                                  0: FlexColumnWidth(1),
-                                  1: FlexColumnWidth(2),
-                                  2: FlexColumnWidth(1.5),
-                                },
-                                children: [
-                                  _buildTableRow('Year', 'Denomination', 'AI Estimated Value', isHeader: true),
-                                  ...last5.map((doc) {
-                                    final data = doc.data() as Map<String, dynamic>;
-                                    return _buildTableRow(
-                                      data['Year']?.toString() ?? '????',
-                                      data['Denomination']?.toString() ?? 'Unknown',
-                                      data['AI Estimated Value']?.toString() ?? '--',
-                                    );
-                                  }),
-                                  if (last5.isEmpty)
-                                    _buildTableRow('', 'No coins found', ''),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  // ── Beta banner ──────────────────────────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7DD),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFFFFD54F)),
                     ),
+                    child: const Text('🚧  BETA TESTING MODE',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Color(0xFF8B6B00))),
                   ),
-                  const SizedBox(width: 32),
-                  
-                  // AI Numismatic Deepdive
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'AI Numismatic Deepdive',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF31333F)),
+                  const SizedBox(height: 20),
+
+                  // ── Header: title + portfolio value ──────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('DASHBOARD',
+                                style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    fontStyle: FontStyle.italic,
+                                    color: Color(0xFF31333F))),
+                            Text('AI POWERED COLLECTION MANAGER',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A5C69))),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(24.0),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FB), // Slightly darker gray for input area
-                            border: Border.all(color: const Color(0xFFE2E6E9)),
-                            borderRadius: BorderRadius.circular(8),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('EST. PORTFOLIO VALUE',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A5C69))),
+                            Text(fmt.format(portfolioValue),
+                                style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF0F9D58))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                   // ── Metric cards ──────────────────────────────────────────
+                  LayoutBuilder(builder: (ctx, bc) {
+                    final profit = portfolioValue - acquisitionCost;
+                    final profitFmt = (profit >= 0 ? '+' : '') + fmt.format(profit);
+                    final profitColor = profit >= 0
+                        ? const Color(0xFF0F9D58)
+                        : const Color(0xFFE53935);
+                    final narrow = bc.maxWidth < 480;
+                    if (narrow) {
+                      return Column(children: [
+                        Row(children: [
+                          Expanded(child: _metricCard('Total Coins', totalCoins.toString())),
+                          const SizedBox(width: 10),
+                          Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
+                        ]),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(child: _metricCard('Melt Value', fmt.format(meltValue))),
+                          const SizedBox(width: 10),
+                          Expanded(child: _metricCard('Face Value', fmt.format(faceValue))),
+                        ]),
+                        const SizedBox(height: 10),
+                        _metricCard('Profit / Loss', profitFmt,
+                            valueColor: profitColor),
+                      ]);
+                    }
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _metricCardFlex('Total Coins', totalCoins.toString()),
+                        _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
+                        _metricCardFlex('Melt Value', fmt.format(meltValue)),
+                        _metricCardFlex('Face Value', fmt.format(faceValue)),
+                        _metricCardFlex('Profit / Loss', profitFmt,
+                            valueColor: profitColor),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 24),
+
+                  // ── Live Metals strip ─────────────────────────────────────
+                  // Always horizontal-scroll — NEVER overflows
+                  Row(children: const [
+                    Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
+                    SizedBox(width: 6),
+                    Text('LIVE SPOT PRICES',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5)),
+                  ]),
+                  const SizedBox(height: 8),
+                  if (_isLoadingPrices)
+                    const SizedBox(height: 4,
+                        child: LinearProgressIndicator(color: Color(0xFF0F9D58)))
+                  else if (_spotPrices.isNotEmpty)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _spotPrices.entries.map((e) =>
+                          Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E6E9)),
+                              boxShadow: [BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 4, offset: const Offset(0, 2))],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(e.key,
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B))),
+                                const SizedBox(height: 2),
+                                Text(fmt.format(e.value),
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF0F172A))),
+                              ],
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Suggested Questions:', style: TextStyle(color: Color(0xFF5A5C69), fontSize: 12)),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildSuggestionPill('Most Valuable?'),
-                                  _buildSuggestionPill('Coins from 2025?'),
-                                  _buildSuggestionPill('Next Purchase?'),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        ).toList(),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+
+                  // ── Market Intel / News feed ──────────────────────────────
+                  Row(
+                    children: [
+                      const Icon(Icons.newspaper,
+                          size: 15, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 6),
+                      const Text('MARKET INTEL',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 0.5)),
+                      const Spacer(),
+                      if (!_isLoadingNews)
+                        IconButton(
+                          icon: const Icon(Icons.refresh,
+                              size: 16, color: Color(0xFF94A3B8)),
+                          tooltip: 'Refresh news',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            setState(() => _isLoadingNews = true);
+                            _fetchNews();
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_isLoadingNews)
+                    const SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                          color: Color(0xFF3B82F6)))
+                  else if (_news.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E6E9)),
+                      ),
+                      child: Column(children: const [
+                        Icon(Icons.wifi_off_outlined,
+                            size: 28, color: Color(0xFFCBD5E1)),
+                        SizedBox(height: 8),
+                        Text('News unavailable — add a NewsAPI key in\nFirestore config/newsapi → api_key',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFF94A3B8))),
+                      ]),
+                    )
+                  else
+                    SizedBox(
+                      height: 158,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _news.length,
+                        itemBuilder: (ctx, i) {
+                          final item = _news[i] as Map<String, dynamic>;
+                          final link = item['link']?.toString() ?? '';
+                          return GestureDetector(
+                            onTap: link.isNotEmpty
+                                ? () async {
+                                    final uri = Uri.parse(link);
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri,
+                                          mode: LaunchMode
+                                              .externalApplication);
+                                    }
+                                  }
+                                : null,
+                            child: MouseRegion(
+                              cursor: link.isNotEmpty
+                                  ? SystemMouseCursors.click
+                                  : MouseCursor.defer,
+                              child: Container(
+                                width: 270,
+                                margin:
+                                    const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: const Color(0xFFE2E6E9)),
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color:
+                                          const Color(0xFFE2E6E9)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.03),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ],
                                 ),
-                                child: Row(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _searchController,
-                                        style: const TextStyle(color: Color(0xFF31333F)),
-                                        decoration: const InputDecoration(
-                                          hintText: 'Ask about your collection...',
-                                          hintStyle: TextStyle(color: Color(0xFFA0A3AB)),
-                                          border: InputBorder.none,
+                                    // Source badge + timestamp
+                                    Row(children: [
+                                      Expanded(
+                                        child: Text(
+                                          item['source']?.toString() ??
+                                              'News',
+                                          overflow:
+                                              TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight:
+                                                  FontWeight.bold,
+                                              color: Color(0xFF3B82F6)),
                                         ),
-                                        onSubmitted: (_) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('AI Deepdive logic coming soon in the next phase!')),
-                                          );
-                                        },
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        item['published']?.toString() ??
+                                            '',
+                                        style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Color(0xFF94A3B8)),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 5),
+                                    // Headline
+                                    Text(
+                                      item['title']?.toString() ?? '',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E293B)),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    // Summary excerpt
+                                    Expanded(
+                                      child: Text(
+                                        item['summary']?.toString() ??
+                                            '',
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF64748B),
+                                            height: 1.4),
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.send, color: Color(0xFFF63366)),
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('AI Deepdive logic coming soon in the next phase!')),
-                                        );
-                                      },
-                                    ),
+                                    // Read more cue
+                                    if (link.isNotEmpty)
+                                      Align(
+                                        alignment:
+                                            Alignment.centerRight,
+                                        child: Row(
+                                          mainAxisSize:
+                                              MainAxisSize.min,
+                                          children: const [
+                                            Text('Read more',
+                                                style: TextStyle(
+                                                    fontSize: 10,
+                                                    color: Color(
+                                                        0xFF3B82F6),
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w600)),
+                                            SizedBox(width: 2),
+                                            Icon(
+                                                Icons
+                                                    .arrow_forward_ios,
+                                                size: 9,
+                                                color: Color(
+                                                    0xFF3B82F6)),
+                                          ],
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
+                  const SizedBox(height: 24),
+
+
+                  // ── Release Notes (collapsible) ───────────────────────────
+                  _ReleaseNotesPanel(),
+                  const SizedBox(height: 24),
+
+                  // ── Recently Added ────────────────────────────────────────
+                  const Text('Recently Added',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF31333F))),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E6E9)),
+                    ),
+                    child: last3.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No coins yet — add your first coin!',
+                                style: TextStyle(color: Color(0xFF5A5C69))))
+                        : Column(
+                            children: last3.asMap().entries.map((entry) {
+                              final data =
+                                  entry.value.data() as Map<String, dynamic>;
+                              final year  = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '—';
+                              final mint  = data['Mint Mark']?.toString() ?? '';
+                              final denom = data['Denomination']?.toString() ?? '—';
+                              final value = data['AI Estimated Value']?.toString() ?? '—';
+                              final label = mint.isNotEmpty ? '$year-$mint' : year;
+                              return Column(children: [
+                                if (entry.key > 0)
+                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
+                                ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  leading: Container(
+                                    width: 36, height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0F2F6),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Icon(Icons.toll,
+                                        size: 18, color: Color(0xFF5A5C69)),
+                                  ),
+                                  title: Text('$label  $denom',
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF31333F))),
+                                  trailing: Text(value,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0F9D58))),
+                                ),
+                              ]);
+                            }).toList(),
+                          ),
                   ),
+                  const SizedBox(height: 32),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildMetricCard(String label, String value) {
+  Widget _metricCard(String label, String value, {Color? valueColor}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
         border: Border.all(color: const Color(0xFFE2E6E9)),
+        boxShadow: [BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF5A5C69),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF31333F),
-            ),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF5A5C69))),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value,
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor ?? const Color(0xFF31333F))),
           ),
         ],
       ),
     );
   }
 
-  TableRow _buildTableRow(String col1, String col2, String col3, {bool isHeader = false}) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
-          child: Text(
-            col1,
-            style: TextStyle(
-              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-              color: isHeader ? const Color(0xFFA0A3AB) : const Color(0xFF31333F),
-              fontSize: 14,
+  /// Fixed-width card for use inside a Wrap row (5-card wide layout).
+  Widget _metricCardFlex(String label, String value, {Color? valueColor}) {
+    return SizedBox(
+      width: 160,
+      child: _metricCard(label, value, valueColor: valueColor),
+    );
+  }
+}
+
+// ─── Release Notes Data ────────────────────────────────────────────────────────
+
+class _Release {
+  final String version;
+  final String date;
+  final String description;
+  final List<String> changes;
+  final bool isLatest;
+  final bool isLegacy;
+
+  const _Release({
+    required this.version,
+    required this.date,
+    required this.description,
+    required this.changes,
+    this.isLatest = false,
+    this.isLegacy = false,
+  });
+}
+
+const _versionHistory = <_Release>[
+  _Release(
+    version: 'v3.2 Beta',
+    date: '2026-04-25',
+    description: 'PCGS Import Wizard',
+    isLatest: true,
+    changes: [
+      'Import graded coins directly from PCGS by certification number.',
+      'Paste cert numbers manually or upload a PCGS registry CSV export.',
+      'Automatic schema mapping: Year, Mint Mark, Grade, PCGS#, images, and price guide value.',
+      'Duplicate detection prevents double-importing slabs.',
+      'Bearer token saved to your account — no re-entry needed each session.',
+      'API called client-side (Flutter Web) to bypass Cloudflare restrictions.',
+    ],
+  ),
+  _Release(
+    version: 'v3.1 Beta',
+    date: '2026-04-23',
+    description: 'AI Checklist Scanner',
+    changes: [
+      'Photograph a printed coin checklist — AI reads it and syncs your collection.',
+      'Supports all 31 coin programs (Morgan Dollars, State Quarters, Lincoln Cents, etc.).',
+      'QTY and notes column now captured from the checklist (e.g. "MS-65", "stored in binder").',
+      'Unchecked coins auto-populate your Wish List in one scan.',
+      'Page-aware chunking: Gemini processes one page at a time to prevent token overflow.',
+      'SDK migrated from vertexai → google-genai ahead of June 24, 2026 shutdown.',
+    ],
+  ),
+  _Release(
+    version: 'v3 Beta',
+    date: '2026-04-08',
+    description: 'Flutter Platform Launch',
+    changes: [
+      'Rebuilt entire frontend on Flutter for true cross-platform support.',
+      'Real-time Firestore streaming on all collection screens.',
+      'Hardware agent bridge via Firestore command pattern.',
+      'Full collection data grid with sortable columns and inline editing.',
+      'Live Microscope Scan screen with sharpness meter and countdown rings.',
+      'AI-driven obverse/reverse identification via Gemini.',
+      'Enhanced Gemini prompt for precise mint mark detection.',
+    ],
+  ),
+  _Release(
+    version: 'v2.7',
+    date: '2026-03-07',
+    description: 'Improved UI Labels & Professional ID System',
+    isLegacy: true,
+    changes: [
+      'Replaced cryptic hex IDs with professional Year-Mint-Denomination labels.',
+      'Enhanced visual scannability for large collections.',
+    ],
+  ),
+  _Release(
+    version: 'v2.6',
+    date: '2026-02-23',
+    description: 'Checklist Logic Fixes & Strict Ingestion Rules',
+    isLegacy: true,
+    changes: [
+      'Fixed Program Checklist matching to avoid false positives.',
+      'Added Face Value and Melt Value to Dashboard & Database view.',
+    ],
+  ),
+  _Release(
+    version: 'v1.0',
+    date: '2026-01-20',
+    description: 'Initial Launch of Numista.AI',
+    isLegacy: true,
+    changes: [
+      'Core Collection Management.',
+      'AI Scan & Valuation.',
+      'Market Data Integration.',
+    ],
+  ),
+];
+
+// ─── Release Notes Panel Widget ───────────────────────────────────────────────
+
+class _ReleaseNotesPanel extends StatelessWidget {
+  const _ReleaseNotesPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E6E9)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          iconColor: const Color(0xFF31333F),
+          collapsedIconColor: const Color(0xFF31333F),
+          title: const Text('🚀 System Updates & Release Notes',
+              style: TextStyle(
+                  color: Color(0xFF31333F),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14)),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Track the latest features deployed to Numista.AI',
+                  style: TextStyle(
+                      color: const Color(0xFF5A5C69).withValues(alpha: 0.8),
+                      fontSize: 12),
+                ),
+              ),
             ),
-          ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            ..._versionHistory.map((r) => _buildEntry(r)),
+            const SizedBox(height: 8),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
-          child: Text(
-            col2,
-            style: TextStyle(
-              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-              color: isHeader ? const Color(0xFFA0A3AB) : const Color(0xFF31333F),
-              fontSize: 14,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
-          child: Text(
-            col3,
-            style: TextStyle(
-              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-              color: isHeader ? const Color(0xFFA0A3AB) : const Color(0xFF31333F),
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildSuggestionPill(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF31333F),
-          fontSize: 12,
-        ),
-      ),
+  Widget _buildEntry(_Release r) {
+    final vColor = r.isLatest
+        ? const Color(0xFF1967D2)
+        : r.isLegacy
+            ? const Color(0xFF9AA0A6)
+            : const Color(0xFF34A853);
+    final vBg = r.isLatest
+        ? const Color(0xFFE8F0FE)
+        : r.isLegacy
+            ? const Color(0xFFF1F3F4)
+            : const Color(0xFFE6F4EA);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+                color: vBg, borderRadius: BorderRadius.circular(12)),
+            child: Text(r.version,
+                style: TextStyle(
+                    color: vColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.5)),
+          ),
+          const SizedBox(width: 8),
+          Text(r.date,
+              style: const TextStyle(color: Color(0xFF9AA0A6), fontSize: 12)),
+          if (r.isLatest) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF34A853),
+                  borderRadius: BorderRadius.circular(4)),
+              child: const Text('LATEST',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+          if (r.isLegacy) ...[
+            const SizedBox(width: 8),
+            Text('Streamlit',
+                style: TextStyle(
+                    color: const Color(0xFF9AA0A6).withValues(alpha: 0.7),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic)),
+          ],
+        ]),
+        const SizedBox(height: 6),
+        Text(r.description,
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: r.isLegacy
+                    ? const Color(0xFF9AA0A6)
+                    : const Color(0xFF31333F))),
+        const SizedBox(height: 4),
+        ...r.changes.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('• ',
+                    style: TextStyle(
+                        color: r.isLegacy
+                            ? const Color(0xFF9AA0A6)
+                            : const Color(0xFF5A5C69),
+                        fontSize: 13)),
+                Expanded(
+                    child: Text(c,
+                        style: TextStyle(
+                            color: r.isLegacy
+                                ? const Color(0xFF9AA0A6)
+                                : const Color(0xFF5A5C69),
+                            fontSize: 13))),
+              ]),
+            )),
+        const SizedBox(height: 12),
+        const Divider(height: 1, color: Color(0xFFE2E6E9)),
+      ]),
     );
   }
 }

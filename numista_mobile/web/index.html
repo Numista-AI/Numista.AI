@@ -41,6 +41,35 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║  🚨 STOP — DEV-ONLY BLOCK — REMOVE BEFORE PRODUCTION BUILD 🚨   ║
+  ║                                                                  ║
+  ║  This script kills the Flutter service worker so hot-restart     ║
+  ║  changes are visible immediately in the browser during dev.      ║
+  ║                                                                  ║
+  ║  Shipping this to production will:                               ║
+  ║    • Force users to re-download ~5MB of JS on every page load    ║
+  ║    • Break PWA / offline support entirely                        ║
+  ║    • Disqualify the app from "Add to Home Screen" behavior       ║
+  ║                                                                  ║
+  ║  TO REMOVE: Delete from here down to the closing </script> tag   ║
+  ║  (lines 48–60 inclusive), then run flutter build web.            ║
+  ╚══════════════════════════════════════════════════════════════════╝
+  -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      // Unregister all existing service workers
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let r of registrations) { r.unregister(); }
+      });
+      // Prevent Flutter bootstrap from re-registering
+      navigator.serviceWorker.register = () => Promise.resolve({
+        installing: null, waiting: null, active: null,
+        addEventListener: () => {}, removeEventListener: () => {},
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -6,3 +6,6 @@ google-genai
 python-dotenv
 pandas
 google-cloud-storage
+pystray
+Pillow
+requests

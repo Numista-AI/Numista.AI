@@ -1,0 +1,138 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class CoinModel {
+  final String id;
+  final String year;
+  final String mintMark;
+  final String denomination;
+  final String programSeries;
+  final String themeSubject;
+  final String variety;
+  final String condition;
+  final String strikeType;
+  final String holderType;
+  final String gradingService;
+  final String certificationNumber;
+  final String metalContent;
+  final String quantity;
+  final String purchaseCost;
+  final String purchaseDate;
+  final String retailer;
+  final String retailerItemNo;
+  final String retailerInvoiceNo;
+  final String storageLocation;
+  final String personalNotes;
+  final String personalRef;
+  final String originalDescription;
+  final String country;
+  
+  // Internal tracking
+  final String aiEstimatedValue;
+  final String meltValue;
+  final String imageUrlObverse;
+  final String imageUrlReverse;
+  final DateTime? timestamp;
+
+  CoinModel({
+    required this.id,
+    this.year = '',
+    this.mintMark = '',
+    this.denomination = '',
+    this.programSeries = '',
+    this.themeSubject = '',
+    this.variety = '',
+    this.condition = 'Ungraded',
+    this.strikeType = '',
+    this.holderType = '',
+    this.gradingService = '',
+    this.certificationNumber = '',
+    this.metalContent = '',
+    this.quantity = '1',
+    this.purchaseCost = '\$0.00',
+    this.purchaseDate = '',
+    this.retailer = '',
+    this.retailerItemNo = '',
+    this.retailerInvoiceNo = '',
+    this.storageLocation = '',
+    this.personalNotes = '',
+    this.personalRef = '',
+    this.originalDescription = '',
+    this.aiEstimatedValue = 'Pending',
+    this.meltValue = 'N/A',
+    this.imageUrlObverse = '',
+    this.imageUrlReverse = '',
+    this.country = 'USA',
+    this.timestamp,
+  });
+
+  factory CoinModel.fromFirestore(DocumentSnapshot doc) {
+    return CoinModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+  }
+
+  factory CoinModel.fromMap(Map<String, dynamic> data, String id) {
+    return CoinModel(
+      id: id,
+      year: data['Year']?.toString() ?? '',
+      mintMark: data['Mint Mark']?.toString() ?? '',
+      denomination: data['Denomination']?.toString() ?? '',
+      programSeries: data['Program/Series']?.toString() ?? '',
+      themeSubject: data['Theme/Subject']?.toString() ?? '',
+      variety: data['Variety']?.toString() ?? '',
+      condition: data['Condition']?.toString() ?? 'Ungraded',
+      strikeType: data['Strike Type']?.toString() ?? '',
+      holderType: data['Holder Type']?.toString() ?? '',
+      gradingService: data['Grading Service']?.toString() ?? '',
+      certificationNumber: data['Certification Number']?.toString() ?? '',
+      metalContent: data['Metal Content']?.toString() ?? '',
+      quantity: data['Quantity']?.toString() ?? '1',
+      purchaseCost: data['Purchase Cost']?.toString() ?? '\$0.00',
+      purchaseDate: data['Purchase Date']?.toString() ?? '',
+      retailer: data['Retailer/Website']?.toString() ?? '',
+      retailerItemNo: data['Retailer Item No.']?.toString() ?? '',
+      retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? '',
+      storageLocation: data['Storage Location']?.toString() ?? '',
+      personalNotes: data['Personal Notes I']?.toString() ?? '',
+      personalRef: data['Personal Reference #']?.toString() ?? '',
+      originalDescription: data['Original Description from source']?.toString() ?? '',
+      aiEstimatedValue: data['AI Estimated Value']?.toString() ?? 'Pending',
+      meltValue: data['Melt Value']?.toString() ?? 'N/A',
+      imageUrlObverse: data['image_url_obverse']?.toString() ?? '',
+      imageUrlReverse: data['image_url_reverse']?.toString() ?? '',
+      country: data['Country']?.toString() ?? 'USA',
+      timestamp: data['timestamp'] is Timestamp ? (data['timestamp'] as Timestamp).toDate() : null,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'Year': year,
+      'Mint Mark': mintMark,
+      'Denomination': denomination,
+      'Program/Series': programSeries,
+      'Theme/Subject': themeSubject,
+      'Variety': variety,
+      'Condition': condition,
+      'Strike Type': strikeType,
+      'Holder Type': holderType,
+      'Grading Service': gradingService,
+      'Certification Number': certificationNumber,
+      'Metal Content': metalContent,
+      'Quantity': quantity,
+      'Purchase Cost': purchaseCost,
+      'Purchase Date': purchaseDate,
+      'Retailer/Website': retailer,
+      'Retailer Item No.': retailerItemNo,
+      'Retailer Invoice #': retailerInvoiceNo,
+      'Storage Location': storageLocation,
+      'Personal Notes I': personalNotes,
+      'Personal Reference #': personalRef,
+      'Original Description from source': originalDescription,
+      'AI Estimated Value': aiEstimatedValue,
+      'Melt Value': meltValue,
+      'image_url_obverse': imageUrlObverse,
+      'image_url_reverse': imageUrlReverse,
+      'Country': country,
+      'timestamp': timestamp ?? FieldValue.serverTimestamp(),
+    };
+  }
+}

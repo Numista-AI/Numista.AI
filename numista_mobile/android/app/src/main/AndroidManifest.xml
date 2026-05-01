@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera: required for Scan Checklist (image_picker) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Photo library access on Android 13+ (Pixel 9 / Android 15) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
         android:label="numista_ai"
         android:name="${applicationName}"
