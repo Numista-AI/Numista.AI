@@ -79,8 +79,11 @@ class MeltValueService {
 
     if (ag == 0 && au == 0) return null;
 
-    // ── Silver Eagles ────────────────────────────────────────────────────────
-    if (mc.contains('silver (99') || mc.contains('silver (999')) {
+    // ── Silver Eagles / .999 fine silver ─────────────────────────────────────
+    // Handles both "Silver (99.9%)" and "99.93% Silver, .007% Copper" formats
+    if (mc.contains('silver (99') ||
+        mc.contains('silver (999') ||
+        (mc.contains('silver') && RegExp(r'9[0-9]\.\d+%').hasMatch(mc))) {
       return ag * _silverEagleOz;
     }
 

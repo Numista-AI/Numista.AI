@@ -429,13 +429,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
 
               const SizedBox(height: 32),
-              const Divider(color: _border),
-              const SizedBox(height: 24),
-
-              // Coin inspector (below the table, collapsible)
-              if (selDoc != null)
-                _buildInspectorSection(
-                    selDoc.data() as Map<String, dynamic>),
             ],
           ),
         );
@@ -762,11 +755,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             final m   = doc.data() as Map<String, dynamic>;
             final sel = doc.id == _selectedCoinId;
 
-            void onTap() => setState(() {
-              if (_selectedCoinId != doc.id) _vaultShowObverse = true;
-              _selectedCoinId = doc.id;
-              _showInspector  = true;
-            });
+            void onTap() => _showCoinInspectorDialog(doc.id, m);
 
             // Actions cell (col 0)
             if (col == 0) {
@@ -1057,6 +1046,218 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
 
+  // ─── Coin Inspector Dialog ────────────────────────────────────────────────
+  void _showCoinInspectorDialog(String coinId, Map<String, dynamic> data) {
+    setState(() {
+      _selectedCoinId   = coinId;
+      _vaultShowObverse = true;
+    });
+    _fetchInspectorSimilar(data);
+
+    final year  = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+    final mint  = data[_F.mintMark]?.toString().trim() ?? '';
+    final denom = data[_F.denomination]?.toString() ?? '';
+    final title = '$year${mint.isNotEmpty ? '-$mint' : ''} $denom'.trim();
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          final obvUrl   = data[_F.imageObverse]?.toString() ?? '';
+          final revUrl   = data[_F.imageReverse]?.toString() ?? '';
+          final hasObv   = obvUrl.isNotEmpty && obvUrl.startsWith('http');
+          final hasRev   = revUrl.isNotEmpty && revUrl.startsWith('http');
+          final showObv  = _vaultShowObverse || (!hasRev && hasObv);
+          final activeUrl = showObv ? obvUrl : revUrl;
+          final hasActive = showObv ? hasObv : hasRev;
+
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 1100,
+                maxHeight: MediaQuery.of(context).size.height * 0.88,
+              ),
+              child: Column(children: [
+                // ── Header ───────────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8F9FB),
+                    border: Border(bottom: BorderSide(color: _border)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.book_outlined, size: 18, color: _text),
+                    const SizedBox(width: 8),
+                    Text('Coin Inspector — $title',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
+                    const Spacer(),
+                    // Action buttons in header
+                    OutlinedButton.icon(
+                      onPressed: () => _onSearchGoogle(data),
+                      icon: const Icon(Icons.search, size: 15),
+                      label: const Text('Google'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _text, side: const BorderSide(color: _border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: _isCheckingEbay ? null : () async {
+                        await _onCheckEbay(data);
+                        setDlg(() {});
+                      },
+                      icon: _isCheckingEbay
+                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.shopping_cart_outlined, size: 15),
+                      label: const Text('eBay'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accent, foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => _onAddToWishlist(data),
+                      icon: const Icon(Icons.favorite_border, size: 15),
+                      label: const Text('Wish List'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFF63366),
+                        side: const BorderSide(color: Color(0xFFF63366)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, size: 20, color: _subtext),
+                      tooltip: 'Close',
+                    ),
+                  ]),
+                ),
+
+                // ── Body ─────────────────────────────────────────────────
+                Expanded(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    // Left: image panel (300px)
+                    Container(
+                      width: 300,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8F9FB),
+                        border: Border(right: BorderSide(color: _border)),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(children: [
+                        // Obverse / Reverse toggle
+                        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          _vaultToggleButton('Obverse', showObv, hasObv, () {
+                            setState(() => _vaultShowObverse = true);
+                            setDlg(() {});
+                          }),
+                          const SizedBox(width: 8),
+                          _vaultToggleButton('Reverse', !showObv, hasRev, () {
+                            setState(() => _vaultShowObverse = false);
+                            setDlg(() {});
+                          }),
+                        ]),
+                        const SizedBox(height: 12),
+                        // Image
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: hasActive ? () => _showImageLightbox(activeUrl,
+                                label: showObv ? 'Obverse' : 'Reverse',
+                                isMicroscope: data['scan_source'] == 'microscope') : null,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: hasActive
+                                  ? Stack(fit: StackFit.expand, children: [
+                                      Image.network(activeUrl, fit: BoxFit.contain,
+                                        loadingBuilder: (_, child, prog) => prog == null ? child
+                                            : const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
+                                        errorBuilder: (_, err, __) {
+                                          debugPrint('Image load error: $err  url: $activeUrl');
+                                          return _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse', isError: true);
+                                        },
+                                      ),
+                                      Positioned(bottom: 8, right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
+                                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                            Icon(Icons.zoom_in, size: 12, color: Colors.white),
+                                            SizedBox(width: 3),
+                                            Text('Enlarge', style: TextStyle(fontSize: 10, color: Colors.white)),
+                                          ]),
+                                        ),
+                                      ),
+                                    ])
+                                  : _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Upload buttons
+                        Row(children: [
+                          Expanded(child: _vaultUploadButton(
+                            label: hasObv ? 'Replace Obverse' : '+ Obverse',
+                            icon: hasObv ? Icons.refresh : Icons.add_photo_alternate_outlined,
+                            progress: _uploadProgressObverse,
+                            onTap: () async {
+                              await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
+                                setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
+                            },
+                          )),
+                          const SizedBox(width: 8),
+                          Expanded(child: _vaultUploadButton(
+                            label: hasRev ? 'Replace Reverse' : '+ Reverse',
+                            icon: hasRev ? Icons.refresh : Icons.add_photo_alternate_outlined,
+                            progress: _uploadProgressReverse,
+                            onTap: () async {
+                              await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
+                                setProgress: (p) { setState(() => _uploadProgressReverse = p); setDlg(() {}); });
+                            },
+                          )),
+                        ]),
+                      ]),
+                    ),
+
+                    // Right: scrollable details
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          _buildMetricStrip(data),
+                          const SizedBox(height: 12),
+                          _buildPcgsBar(data),
+                          const SizedBox(height: 20),
+                          _buildDetailGrid(data),
+                          _buildCoinSetSection(data),
+                          _buildRollBanner(data),
+                          _buildSimilarCoinsInspector(),
+                        ]),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildInspectorSection(Map<String, dynamic> data) {
     // Kick off similar coins fetch when a new coin is selected
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1170,7 +1371,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // ─── Metric strip ────────────────────────────────────────────────────────
   Widget _buildMetricStrip(Map<String, dynamic> data) {
-    final liveMelt = MeltValueService.compute(data, _spotPrices);
+    final liveMelt = MeltValueService.compute(
+      metalContent: data[_F.metalContent]?.toString() ?? '',
+      denomination: data[_F.denomination]?.toString() ?? '',
+      spotPrices: _spotPrices,
+    );
     final meltStr  = liveMelt != null
         ? '\$${liveMelt.toStringAsFixed(2)}'
         : (data[_F.meltValue]?.toString().isNotEmpty == true
