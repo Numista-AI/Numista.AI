@@ -17,6 +17,7 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   Map<String, double> _spotPrices = {};
   bool _isLoadingPrices = true;
+  DateTime? _pricesLastUpdated;
   List<dynamic> _news = [];
   bool _isLoadingNews = true;
 
@@ -63,6 +64,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             'Palladium': (data['Palladium'] ?? 0).toDouble(),
           };
           _isLoadingPrices = false;
+          _pricesLastUpdated = DateTime.now();
         });
       } else {
         if (!mounted) return;
@@ -88,18 +90,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   static double _computeFaceValue(String denom) {
     final s = denom.toLowerCase().trim();
+    // ── Word-based matches (unambiguous) ─────────────────────────────────────
     if (s.contains('penny')   || s.contains('cent')   || s.contains('1c'))  return 0.01;
     if (s.contains('nickel')  || s.contains('5c'))                           return 0.05;
     if (s.contains('dime')    || s.contains('10c'))                          return 0.10;
     if (s.contains('quarter') || s.contains('25c'))                          return 0.25;
     if (s.contains('half')    || s.contains('50c'))                          return 0.50;
-    if (s.contains('dollar')  || s.contains(r'$1'))                          return 1.00;
-    if (s.contains(r'$2'))   return 2.00;
-    if (s.contains(r'$5'))   return 5.00;
-    if (s.contains(r'$10'))  return 10.00;
-    if (s.contains(r'$20'))  return 20.00;
-    // Numeric fallback: "1" → 1.00, "5" → 5.00 (handles plain-number denominations
-    // stored by PCGS import or legacy CSV ingestion).
+    // ── Dollar-sign matches: MUST go largest → smallest to prevent
+    // ── substring collisions (e.g. "$10" contains "$1" → wrong match) ────────
+    if (s.contains(r'$500'))  return 500.00;  // 1oz gold bar / commemorative
+    if (s.contains(r'$100'))  return 100.00;  // high-denomination gold
+    if (s.contains(r'$50'))   return 50.00;   // $50 Buffalo / gold eagle
+    if (s.contains(r'$25'))   return 25.00;   // $25 half-oz gold eagle
+    if (s.contains(r'$20'))   return 20.00;   // Saint-Gaudens / Liberty double eagle
+    if (s.contains(r'$10'))   return 10.00;   // Liberty / Indian Head gold eagle
+    if (s.contains(r'$5'))    return 5.00;    // Half eagle
+    if (s.contains(r'$2.50')) return 2.50;    // Quarter eagle
+    if (s.contains(r'$3'))    return 3.00;    // Three-dollar gold piece
+    if (s.contains(r'$2'))    return 2.00;    // Two-dollar note / $2 gold
+    if (s.contains('dollar')  || s.contains(r'$1')) return 1.00;
+    // ── Numeric fallback: "1" → 1.00, "0.25" → 0.25 ─────────────────────────
+    // Handles plain-number denominations stored by PCGS import or legacy CSV.
     final n = double.tryParse(s.replaceAll(r'$', '').trim());
     if (n != null) return n;
     return 0.00;
@@ -160,7 +171,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               if (aTs is Timestamp && bTs is Timestamp) return bTs.compareTo(aTs);
               return b.id.compareTo(a.id);
             });
-            final last3 = sorted.take(3).toList();
+            final last5 = sorted.take(5).toList();
 
             final fmt = intl.NumberFormat.currency(symbol: '\$');
 
@@ -272,17 +283,84 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   }),
                   const SizedBox(height: 24),
 
-                  // ── Live Metals strip ─────────────────────────────────────
-                  // Always horizontal-scroll — NEVER overflows
-                  Row(children: const [
-                    Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
-                    SizedBox(width: 6),
-                    Text('LIVE SPOT PRICES',
+                  // ── Recently Added ────────────────────────────────────────
+                  const Text('Recently Added',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF31333F))),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E6E9)),
+                    ),
+                    child: last5.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No coins yet — add your first coin!',
+                                style: TextStyle(color: Color(0xFF5A5C69))))
+                        : Column(
+                            children: last5.asMap().entries.map((entry) {
+                              final data =
+                                  entry.value.data() as Map<String, dynamic>;
+                              final year  = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '—';
+                              final mint  = data['Mint Mark']?.toString() ?? '';
+                              final denom = data['Denomination']?.toString() ?? '—';
+                              final value = data['AI Estimated Value']?.toString() ?? '—';
+                              final label = mint.isNotEmpty ? '$year-$mint' : year;
+                              return Column(children: [
+                                if (entry.key > 0)
+                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
+                                ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  leading: Container(
+                                    width: 36, height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0F2F6),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Icon(Icons.toll,
+                                        size: 18, color: Color(0xFF5A5C69)),
+                                  ),
+                                  title: Text('$label  $denom',
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF31333F))),
+                                  trailing: Text(value,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0F9D58))),
+                                ),
+                              ]);
+                            }).toList(),
+                          ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Live Spot Prices ──────────────────────────────────────
+                  Row(children: [
+                    const Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
+                    const SizedBox(width: 6),
+                    const Text('LIVE SPOT PRICES',
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF64748B),
                             letterSpacing: 0.5)),
+                    const SizedBox(width: 10),
+                    if (_pricesLastUpdated != null)
+                      Text(
+                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} · Source: metals-api.com',
+                        style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFF94A3B8)),
+                      ),
                   ]),
                   const SizedBox(height: 8),
                   if (_isLoadingPrices)
@@ -327,7 +405,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ),
                   const SizedBox(height: 24),
 
-                  // ── Market Intel / News feed ──────────────────────────────
+                  // ── System Updates & Release Notes ────────────────────────
+                  _ReleaseNotesPanel(),
+                  const SizedBox(height: 24),
+
+                  // ── Market Intel / News feed (bottom) ─────────────────────
                   Row(
                     children: [
                       const Icon(Icons.newspaper,
@@ -405,55 +487,44 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   : MouseCursor.defer,
                               child: Container(
                                 width: 270,
-                                margin:
-                                    const EdgeInsets.only(right: 12),
+                                margin: const EdgeInsets.only(right: 12),
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                      color:
-                                          const Color(0xFFE2E6E9)),
+                                      color: const Color(0xFFE2E6E9)),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.03),
+                                      color: Colors.black.withValues(alpha: 0.03),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     )
                                   ],
                                 ),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Source badge + timestamp
                                     Row(children: [
                                       Expanded(
                                         child: Text(
-                                          item['source']?.toString() ??
-                                              'News',
-                                          overflow:
-                                              TextOverflow.ellipsis,
+                                          item['source']?.toString() ?? 'News',
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                               fontSize: 10,
-                                              fontWeight:
-                                                  FontWeight.bold,
+                                              fontWeight: FontWeight.bold,
                                               color: Color(0xFF3B82F6)),
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        item['published']?.toString() ??
-                                            '',
+                                        item['published']?.toString() ?? '',
                                         style: const TextStyle(
                                             fontSize: 10,
                                             color: Color(0xFF94A3B8)),
                                       ),
                                     ]),
                                     const SizedBox(height: 5),
-                                    // Headline
                                     Text(
                                       item['title']?.toString() ?? '',
                                       maxLines: 2,
@@ -464,11 +535,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                           color: Color(0xFF1E293B)),
                                     ),
                                     const SizedBox(height: 5),
-                                    // Summary excerpt
                                     Expanded(
                                       child: Text(
-                                        item['summary']?.toString() ??
-                                            '',
+                                        item['summary']?.toString() ?? '',
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -477,30 +546,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                             height: 1.4),
                                       ),
                                     ),
-                                    // Read more cue
                                     if (link.isNotEmpty)
                                       Align(
-                                        alignment:
-                                            Alignment.centerRight,
+                                        alignment: Alignment.centerRight,
                                         child: Row(
-                                          mainAxisSize:
-                                              MainAxisSize.min,
+                                          mainAxisSize: MainAxisSize.min,
                                           children: const [
                                             Text('Read more',
                                                 style: TextStyle(
                                                     fontSize: 10,
-                                                    color: Color(
-                                                        0xFF3B82F6),
-                                                    fontWeight:
-                                                        FontWeight
-                                                            .w600)),
+                                                    color: Color(0xFF3B82F6),
+                                                    fontWeight: FontWeight.w600)),
                                             SizedBox(width: 2),
-                                            Icon(
-                                                Icons
-                                                    .arrow_forward_ios,
+                                            Icon(Icons.arrow_forward_ios,
                                                 size: 9,
-                                                color: Color(
-                                                    0xFF3B82F6)),
+                                                color: Color(0xFF3B82F6)),
                                           ],
                                         ),
                                       ),
@@ -512,71 +572,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         },
                       ),
                     ),
-                  const SizedBox(height: 24),
-
-
-                  // ── Release Notes (collapsible) ───────────────────────────
-                  _ReleaseNotesPanel(),
-                  const SizedBox(height: 24),
-
-                  // ── Recently Added ────────────────────────────────────────
-                  const Text('Recently Added',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF31333F))),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E6E9)),
-                    ),
-                    child: last3.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No coins yet — add your first coin!',
-                                style: TextStyle(color: Color(0xFF5A5C69))))
-                        : Column(
-                            children: last3.asMap().entries.map((entry) {
-                              final data =
-                                  entry.value.data() as Map<String, dynamic>;
-                              final year  = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '—';
-                              final mint  = data['Mint Mark']?.toString() ?? '';
-                              final denom = data['Denomination']?.toString() ?? '—';
-                              final value = data['AI Estimated Value']?.toString() ?? '—';
-                              final label = mint.isNotEmpty ? '$year-$mint' : year;
-                              return Column(children: [
-                                if (entry.key > 0)
-                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
-                                ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  leading: Container(
-                                    width: 36, height: 36,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF0F2F6),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: const Icon(Icons.toll,
-                                        size: 18, color: Color(0xFF5A5C69)),
-                                  ),
-                                  title: Text('$label  $denom',
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF31333F))),
-                                  trailing: Text(value,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF0F9D58))),
-                                ),
-                              ]);
-                            }).toList(),
-                          ),
-                  ),
                   const SizedBox(height: 32),
                 ],
               ),
