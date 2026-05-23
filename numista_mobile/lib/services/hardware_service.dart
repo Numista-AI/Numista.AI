@@ -6,15 +6,19 @@ import 'dart:convert';
 
 /// Bridges the Flutter UI to the numista hardware agent.
 ///
-/// Scan TRIGGERS use Firestore (HTTPS-safe, works from numista.ai).
-/// Live status POLLING uses localhost:5000 Flask (available when agent is
-/// running on the same machine as the browser, which is always true for
-/// the microscope use case).
+/// Scan TRIGGERS and saves use the hardware server's HTTP endpoints directly
+/// (localhost:5000) to avoid Firestore client-write restrictions.
+/// The hardware server itself writes to Firestore using its service account.
+/// Live status POLLING also uses localhost:5000 Flask.
 class HardwareService {
-  static const String _statusUrl = 'http://localhost:5000/get-status';
-  static const String _userEmail = 'eric@numista.ai';
-  static const String _commandsPath = 'commands/$_userEmail/pending';
-  static const String _resultsPath = 'commands/$_userEmail/results';
+  static const String _statusUrl    = 'http://localhost:5000/get-status';
+  static const String _startScanUrl = 'http://localhost:5000/start-scan';
+  static const String _saveUrl      = 'http://localhost:5000/add-to-collection';
+
+  // Firestore fallback (used only when HTTP is unreachable, e.g. production)
+  static const String _userEmail     = 'eric@numista.ai';
+  static const String _commandsPath  = 'commands/$_userEmail/pending';
+  static const String _resultsPath   = 'commands/$_userEmail/results';
 
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
@@ -22,68 +26,47 @@ class HardwareService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ─── Write a command to Firestore ─────────────────────────────────────────
-  Future<bool> _writeCommand(String command, [Map<String, dynamic>? data]) async {
+  // ─── Start Scan ───────────────────────────────────────────────────────────
+  /// Posts to /start-scan on the local hardware server.
+  /// Returns true if the command was accepted.
+  Future<bool> startScan() async {
     try {
-      final payload = <String, dynamic>{
-        'command': command,
-        'created_at': FieldValue.serverTimestamp(),
-        ...?data != null ? {'data': data} : null,
-      };
-      await _db.collection(_commandsPath).add(payload);
-      debugPrint('[HW] Command written → $command');
-      return true;
+      final response = await http
+          .post(Uri.parse(_startScanUrl))
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        debugPrint('[HW] ✅ Scan started via HTTP /start-scan');
+        return true;
+      }
+      debugPrint('[HW] /start-scan returned ${response.statusCode}');
+      return false;
     } catch (e) {
-      debugPrint('[HW] Failed to write command: $e');
+      debugPrint('[HW] /start-scan failed: $e');
       return false;
     }
   }
 
-  // ─── Start Scan ───────────────────────────────────────────────────────────
-  /// Writes a start_scan command to Firestore.
-  /// The local hardware agent picks this up and fires the microscope.
-  /// Returns true if the command was written successfully.
-  Future<bool> startScan() => _writeCommand('start_scan');
-
   // ─── Confirm & Save ───────────────────────────────────────────────────────
-  /// Writes a save_coin command to Firestore with the confirmed coin data.
-  /// The agent uploads images to GCS, writes the coin to Firestore,
-  /// then writes a result doc to commands/{user}/results.
-  /// Returns the Firestore coin ID by listening to the results collection.
+  /// Posts coin data to /add-to-collection on the local hardware server.
+  /// The server handles GCS upload + Firestore write via service account.
+  /// Returns a coin ID string on success, null on failure.
   Future<String?> addToCollection(Map<String, dynamic> coinData) async {
     try {
-      // Write the save command
-      await _writeCommand('save_coin', coinData);
-
-      // Wait for the agent to write back a result (up to 30 seconds)
-      final completer = Completer<String?>();
-      StreamSubscription? sub;
-
-      sub = _db
-          .collection(_resultsPath)
-          .orderBy('saved_at', descending: true)
-          .limit(1)
-          .snapshots()
-          .listen((snap) {
-        if (snap.docs.isNotEmpty) {
-          final doc = snap.docs.first;
-          final firestoreId = doc['firestore_id'] as String?;
-          if (!completer.isCompleted && firestoreId != null) {
-            completer.complete(firestoreId);
-            sub?.cancel();
-          }
-        }
-      });
-
-      // Timeout after 30 seconds
-      Future.delayed(const Duration(seconds: 30), () {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-          sub?.cancel();
-        }
-      });
-
-      return completer.future;
+      final response = await http
+          .post(
+            Uri.parse(_saveUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(coinData),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('[HW] ✅ addToCollection HTTP success: $json');
+        return json['coin_id'] as String? ??
+            'microscope_${DateTime.now().millisecondsSinceEpoch}';
+      }
+      debugPrint('[HW] /add-to-collection returned ${response.statusCode}');
+      return null;
     } catch (e) {
       debugPrint('[HW] addToCollection error: $e');
       return null;

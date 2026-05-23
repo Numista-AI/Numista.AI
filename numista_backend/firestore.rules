@@ -34,6 +34,14 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Coin image index (reference library — authenticated read) ─────────────
+    // Non-sensitive reference data built by build_image_index.py from GCS buckets.
+    // Any signed-in user may read; only the backend service account may write.
+    match /coin_image_index/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

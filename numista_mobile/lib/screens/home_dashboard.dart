@@ -166,9 +166,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
             sorted.sort((a, b) {
               final ad = a.data() as Map<String, dynamic>;
               final bd = b.data() as Map<String, dynamic>;
-              final aTs = ad['timestamp'] ?? ad['created_at'];
-              final bTs = bd['timestamp'] ?? bd['created_at'];
-              if (aTs is Timestamp && bTs is Timestamp) return bTs.compareTo(aTs);
+              // Check all three timestamp field names used across import methods
+              final aTs = ad['Added'] ?? ad['timestamp'] ?? ad['created_at'];
+              final bTs = bd['Added'] ?? bd['timestamp'] ?? bd['created_at'];
+
+              final aHas = aTs is Timestamp;
+              final bHas = bTs is Timestamp;
+
+              if (aHas && bHas) return bTs.compareTo(aTs); // both: newest first
+              // Mixed: the timestamped coin is the newer one — put it first
+              if (aHas && !bHas) return -1;   // a has timestamp → a first
+              if (!aHas && bHas) return 1;    // b has timestamp → b first
+              // Neither: stable fallback by doc ID
               return b.id.compareTo(a.id);
             });
             final last5 = sorted.take(5).toList();
@@ -305,11 +314,66 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             children: last5.asMap().entries.map((entry) {
                               final data =
                                   entry.value.data() as Map<String, dynamic>;
-                              final year  = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '—';
-                              final mint  = data['Mint Mark']?.toString() ?? '';
-                              final denom = data['Denomination']?.toString() ?? '—';
-                              final value = data['AI Estimated Value']?.toString() ?? '—';
-                              final label = mint.isNotEmpty ? '$year-$mint' : year;
+                              final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+                              final mint   = data['Mint Mark']?.toString() ?? '';
+                              final denom  = data['Denomination']?.toString() ?? '';
+                              final series = data['Program/Series']?.toString() ?? '';
+                              final theme  = data['Theme/Subject']?.toString() ?? '';
+                              final estVal = data['AI Estimated Value']?.toString() ?? '—';
+
+                              // Build a human-readable coin name
+                              // Priority: Program/Series > Theme/Subject > Denomination > fallback
+                              final denomFallback = denom.isNotEmpty && denom != 'Multiple'
+                                  ? (denom[0].toUpperCase() + denom.substring(1))
+                                      .replaceAll(r'$', '')
+                                      .trim()
+                                  : 'Coin';
+                              final coinName = series.isNotEmpty && series != 'Multiple'
+                                  ? series
+                                  : theme.isNotEmpty && theme != 'Multiple'
+                                      ? theme
+                                      : denomFallback;
+
+                              // Build year-mint label, normalise "Multiple" to "Various"
+                              final yearLabel = (year.isEmpty || year == 'Multiple') ? 'Various' : year;
+                              final mintLabel = (mint.isEmpty || mint == 'Multiple') ? '' : '-$mint';
+                              // Build denomination label — only prepend '$' if the
+                              // value is numeric (e.g. "1" → "$1") or already has it.
+                              // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
+                              String _fmtDenom(String d) {
+                                if (d.isEmpty || d == 'Multiple') return '';
+                                if (d.startsWith(r'$')) return d;              // already has $
+                                final numeric = double.tryParse(
+                                    d.replaceAll(RegExp(r'[^\d.]'), ''));
+                                if (numeric != null && d.contains(RegExp(r'^[\d]'))) {
+                                  return '\$$d';                              // numeric → add $
+                                }
+                                return d[0].toUpperCase() + d.substring(1);   // word → capitalise
+                              }
+                              final denomLabel = _fmtDenom(denom);
+                              final condition = data['Condition']?.toString() ?? '';
+
+                              // When year is known → "2025-W  $1"
+                              // When year is Various (sets/lots) → use Theme + Condition to differentiate
+                              final String subtitle;
+                              if (yearLabel != 'Various') {
+                                final parts = [
+                                  '$yearLabel$mintLabel',
+                                  if (denomLabel.isNotEmpty) denomLabel,
+                                ].where((s) => s.isNotEmpty).toList();
+                                subtitle = parts.join(' · ');
+                              } else {
+                                // Year unknown — use theme + condition to distinguish
+                                final themeStr = theme.isNotEmpty && theme != 'Multiple' ? theme : '';
+                                final condStr = (condition.isNotEmpty && condition != 'Ungraded') ? condition : '';
+                                final parts = [
+                                  if (themeStr.isNotEmpty) themeStr,
+                                  if (condStr.isNotEmpty) condStr,
+                                  if (denomLabel.isNotEmpty) denomLabel,
+                                ];
+                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' · ');
+                              }
+
                               return Column(children: [
                                 if (entry.key > 0)
                                   const Divider(height: 1, color: Color(0xFFE2E6E9)),
@@ -326,12 +390,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                     child: const Icon(Icons.toll,
                                         size: 18, color: Color(0xFF5A5C69)),
                                   ),
-                                  title: Text('$label  $denom',
+                                  title: Text(coinName,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF31333F))),
-                                  trailing: Text(value,
+                                  subtitle: Text(subtitle,
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B))),
+                                  trailing: Text(estVal,
                                       style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700,

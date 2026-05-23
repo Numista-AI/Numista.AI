@@ -179,6 +179,31 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
+  /// Used ONLY for Manual Entry — shows a snackbar since the coin is
+  /// saved directly to the collection (not sent to the Review Hub).
+  void _showManualAddedSnackbar() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(children: [
+          Icon(Icons.check_circle, color: Colors.white, size: 20),
+          SizedBox(width: 10),
+          Text('Coin added to My Collection!',
+              style: TextStyle(fontWeight: FontWeight.w600)),
+        ]),
+        backgroundColor: const Color(0xFF22C55E),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'View Collection',
+          textColor: Colors.white,
+          onPressed: () {
+            if (widget.onNavigate != null) widget.onNavigate!('My Collection');
+          },
+        ),
+      ),
+    );
+  }
+
   void _showWishlistMatchPrompt(WishlistItem item) {
     showDialog(
       context: context,
@@ -366,7 +391,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('✅  ${result.coinsAdded} coin${result.coinsAdded == 1 ? '' : 's'} added to your collection!'),
                       backgroundColor: const Color(0xFF22C55E),
-                      duration: const Duration(seconds: 4),
+                      duration: const Duration(seconds: 2),
                       action: SnackBarAction(
                         label: 'View Collection',
                         textColor: Colors.white,
@@ -420,24 +445,53 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 isProcessing: _isProcessing,
                 onSubmit: (data) async {
                   setState(() => _isProcessing = true);
-                  
-                  final coin = CoinModel.fromMap(data, 'temp');
-                  
-                  // Simulate backend add
-                  await Future.delayed(const Duration(seconds: 1));
-                  
-                  if (!mounted) return;
-                  
-                  // Smart Ownership Detection
-                  final match = await WishlistService.checkMatchAndMarkAsFound(coin);
-                  
-                  if (!mounted) return;
-                  setState(() => _isProcessing = false);
-                  
-                  if (match != null && match.type == 'individual') {
-                    _showWishlistMatchPrompt(match);
-                  } else {
-                    _showSuccessDialog(1);
+
+                  try {
+                    // ── Build Firestore document from form data ──────────────
+                    final coinDoc = <String, dynamic>{
+                      'Year':              data['Year'] ?? '',
+                      'Mint Mark':         data['Mint Mark'] ?? '',
+                      'Denomination':      data['Denomination'] ?? '',
+                      'Program/Series':    data['Program/Series'] ?? '',
+                      'Theme/Subject':     data['Theme/Subject'] ?? '',
+                      'Variety':           data['Variety'] ?? '',
+                      'Condition':         data['Condition'] ?? '',
+                      'Cost':              data['Cost'] ?? '',
+                      'Quantity':          int.tryParse(data['Quantity'] ?? '1') ?? 1,
+                      'Storage Location':  data['Storage Location'] ?? '',
+                      'Country':           data['Country'] ?? 'United States',
+                      'source':            'manual',
+                      'Added':             FieldValue.serverTimestamp(),
+                    };
+
+                    // ── Save to Firestore ────────────────────────────────────
+                    await FirebaseFirestore.instance
+                        .collection(AuthService.coinsPath)
+                        .add(coinDoc);
+
+                    if (!mounted) return;
+
+                    // ── Smart Wishlist Ownership Detection ───────────────────
+                    final coin = CoinModel.fromMap(data, 'temp');
+                    final match = await WishlistService.checkMatchAndMarkAsFound(coin);
+
+                    if (!mounted) return;
+                    setState(() => _isProcessing = false);
+
+                    if (match != null && match.type == 'individual') {
+                      _showWishlistMatchPrompt(match);
+                    } else {
+                      _showManualAddedSnackbar();
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    setState(() => _isProcessing = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error saving coin: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
                   }
                 },
               ),

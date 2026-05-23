@@ -2,23 +2,57 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/coin_model.dart';
 
 class EpnService {
   static const String _keyCampId = 'epn_campaign_id';
-  static const String _keyMkrid = 'epn_rotation_id';
-  static const String _keyAppId = 'ebay_app_id';
+  static const String _keyMkrid  = 'epn_rotation_id';
+  static const String _keyAppId  = 'ebay_app_id';
   static const String _keyCertId = 'ebay_cert_id';
-  
-  // Numista.AI EPN Credentials (Campaign ID confirmed active in partner.ebay.com)
-  static const String _defaultCampId = '5339148752'; // Numista.AI — approved April 10, 2026
-  static const String _defaultMkrid = '711-53200-19255-0'; // eBay US Marketplace
 
-  static Future<void> saveSettings(String campId, String mkrid, {String? appId, String? certId}) async {
+  // ── Numista.AI EPN Credentials ─────────────────────────────────────────────
+  // Defaults are empty; real values are loaded from Firestore /config/ebay
+  // at startup via loadFromFirestore(). This keeps secrets out of client code.
+  static const String _defaultCampId = '5339148752'; // public campaign ID (non-secret)
+  static const String _defaultMkrid  = '711-53200-19255-0'; // eBay US marketplace
+  static const String _defaultAppId  = ''; // loaded from Firestore at startup
+  static const String _defaultCertId = ''; // loaded from Firestore at startup
+
+  // ── Load credentials from Firestore /config/ebay ───────────────────────────
+  // Call once at app startup (BaseLayout.initState). Credentials are stored
+  // in SharedPreferences for subsequent requests within the session.
+  static Future<void> loadFromFirestore() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('ebay')
+          .get();
+      if (!doc.exists) return;
+      final data = doc.data()!;
+      final prefs = await SharedPreferences.getInstance();
+      final appId  = data['app_id']  as String? ?? '';
+      final certId = data['cert_id'] as String? ?? '';
+      final campId = data['campaign_id'] as String? ?? _defaultCampId;
+      final mkrid  = data['rotation_id'] as String? ?? _defaultMkrid;
+      if (appId.isNotEmpty)  await prefs.setString(_keyAppId,  appId);
+      if (certId.isNotEmpty) await prefs.setString(_keyCertId, certId);
+      if (campId.isNotEmpty) await prefs.setString(_keyCampId, campId);
+      if (mkrid.isNotEmpty)  await prefs.setString(_keyMkrid,  mkrid);
+      debugPrint('[EPN] Credentials loaded from Firestore');
+    } catch (e) {
+      debugPrint('[EPN] Failed to load credentials from Firestore: $e');
+    }
+  }
+
+  // ── Settings persistence ────────────────────────────────────────────────────
+
+  static Future<void> saveSettings(
+      String campId, String mkrid, {String? appId, String? certId}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyCampId, campId);
-    await prefs.setString(_keyMkrid, mkrid);
-    if (appId != null) await prefs.setString(_keyAppId, appId);
+    await prefs.setString(_keyMkrid,  mkrid);
+    if (appId  != null) await prefs.setString(_keyAppId,  appId);
     if (certId != null) await prefs.setString(_keyCertId, certId);
   }
 
@@ -26,26 +60,28 @@ class EpnService {
     final prefs = await SharedPreferences.getInstance();
     return {
       'campaignId': prefs.getString(_keyCampId) ?? _defaultCampId,
-      'rotationId': prefs.getString(_keyMkrid) ?? _defaultMkrid,
-      'appId': prefs.getString(_keyAppId) ?? '',
-      'certId': prefs.getString(_keyCertId) ?? '',
+      'rotationId': prefs.getString(_keyMkrid)  ?? _defaultMkrid,
+      'appId':      prefs.getString(_keyAppId)  ?? _defaultAppId,
+      'certId':     prefs.getString(_keyCertId) ?? _defaultCertId,
     };
   }
 
+  // ── OAuth token (eBay Browse API) ──────────────────────────────────────────
+
   static Future<String?> _getAccessToken() async {
     final settings = await getSettings();
-    final appId = settings['appId']!;
+    final appId  = settings['appId']!;
     final certId = settings['certId']!;
 
     if (appId.isEmpty || certId.isEmpty) return null;
 
     final credentials = base64Encode(utf8.encode('$appId:$certId'));
-    
+
     try {
       final response = await http.post(
         Uri.parse('https://api.ebay.com/identity/v1/oauth2/token'),
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type':  'application/x-www-form-urlencoded',
           'Authorization': 'Basic $credentials',
         },
         body: {
@@ -56,7 +92,9 @@ class EpnService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['access_token'];
+        return data['access_token'] as String?;
+      } else {
+        debugPrint('eBay OAuth ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       debugPrint('eBay OAuth Error: $e');
@@ -64,29 +102,35 @@ class EpnService {
     return null;
   }
 
+  // ── Live price fetch via eBay Browse API ───────────────────────────────────
+
   static Future<List<Map<String, dynamic>>> fetchEbayResults(CoinModel coin) async {
     final token = await _getAccessToken();
     if (token == null) return [];
 
-    final query = _buildQuery(coin);
+    final query        = _buildQuery(coin);
     final encodedQuery = Uri.encodeComponent(query);
-    
-    // Browse API search - limit 5 for performance
-    final url = 'https://api.ebay.com/buy/browse/v1/item_summary/search?q=$encodedQuery&limit=5';
+
+    // Limit to 5 results for performance; filter to US marketplace
+    final url =
+        'https://api.ebay.com/buy/browse/v1/item_summary/search'
+        '?q=$encodedQuery&limit=5&filter=itemLocationCountry:US';
 
     try {
       final response = await http.get(
         Uri.parse(url),
         headers: {
-          'Authorization': 'Bearer $token',
+          'Authorization':          'Bearer $token',
           'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
         },
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List items = data['itemSummaries'] ?? [];
+        final data   = jsonDecode(response.body);
+        final items  = data['itemSummaries'] as List? ?? [];
         return items.cast<Map<String, dynamic>>();
+      } else {
+        debugPrint('eBay Browse API ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       debugPrint('eBay API Error: $e');
@@ -94,25 +138,46 @@ class EpnService {
     return [];
   }
 
+  // ── Query builder ──────────────────────────────────────────────────────────
+
   static String _buildQuery(CoinModel coin) {
-    String query = '';
-    if (coin.year.isNotEmpty) query += '${coin.year} ';
-    if (coin.mintMark.isNotEmpty) query += '${coin.mintMark} ';
-    if (coin.denomination.isNotEmpty) query += '${coin.denomination} ';
-    if (coin.programSeries.isNotEmpty) query += '${coin.programSeries} ';
-    if (coin.variety.isNotEmpty) query += '${coin.variety} ';
-    return query.trim();
+    final parts = <String>[];
+    if (coin.year.isNotEmpty)         parts.add(coin.year);
+    if (coin.mintMark.isNotEmpty)     parts.add(coin.mintMark);
+    if (coin.denomination.isNotEmpty) parts.add(coin.denomination);
+    if (coin.programSeries.isNotEmpty) parts.add(coin.programSeries);
+    if (coin.variety.isNotEmpty)      parts.add(coin.variety);
+    parts.add('coin'); // improves eBay search relevance
+    return parts.join(' ').trim();
   }
 
-  static Future<String> generateSearchUrl(CoinModel coin) async {
+  // ── EPN affiliate URL generator ────────────────────────────────────────────
+  // Appending EPN parameters earns Numista.AI a commission (≈1–4%) on any
+  // eBay purchase made through these links.
+
+  static Future<String> generateSearchUrl(CoinModel coin, {bool soldOnly = true}) async {
     final settings = await getSettings();
-    final campId = settings['campaignId']!;
-    final mkrid = settings['rotationId']!;
-    
-    final query = _buildQuery(coin);
+    final campId   = settings['campaignId']!;
+    final mkrid    = settings['rotationId']!;
+
+    final query        = _buildQuery(coin);
     final encodedQuery = Uri.encodeComponent(query);
-    
-    final targetUrl = 'https://www.ebay.com/sch/i.html?_nkw=$encodedQuery';
-    return '$targetUrl&mkevt=1&mkcid=1&mkrid=$mkrid&campid=$campId&toolid=10001';
+
+    // Base eBay search with sold listings (most useful for valuation)
+    final baseSearch =
+        'https://www.ebay.com/sch/i.html'
+        '?_nkw=$encodedQuery'
+        '${soldOnly ? '&LH_Sold=1&LH_Complete=1' : ''}';
+
+    // EPN tracking parameters — required for commission attribution
+    final epnParams =
+        'mkevt=1'
+        '&mkcid=1'
+        '&mkrid=$mkrid'
+        '&campid=$campId'
+        '&toolid=10001'
+        '&siteid=0';
+
+    return '$baseSearch&$epnParams';
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/wizard_service.dart';
 import '../widgets/wizard_overlay.dart';
@@ -29,10 +30,15 @@ class BaseLayout extends StatefulWidget {
 
 class _BaseLayoutState extends State<BaseLayout> {
   String _activeRoute = 'Home Dashboard';
+  // Optional pre-populated AI query — set when the user taps AI Deep Dive
+  // on a specific coin. Consumed once and then cleared.
+  String? _aiInitialQuery;
 
   @override
   void initState() {
     super.initState();
+    // Load eBay credentials from Firestore into SharedPreferences.
+    EpnService.loadFromFirestore();
     // Auto-start the guided wizard for first-time Guest users.
     // Demo mode gets a read-only experience without the wizard.
     if (AuthService.isGuest && !widget.isDemoMode) {
@@ -54,7 +60,13 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Home Dashboard':
         return const HomeDashboard();
       case 'My Collection':
-        return const MyCollectionScreen();
+        return MyCollectionScreen(
+          onNavigate: (route) => setState(() => _activeRoute = route),
+          onNavigateWithQuery: (route, query) => setState(() {
+            _activeRoute = route;
+            _aiInitialQuery = query;
+          }),
+        );
       case 'Microscope Scanner':
         return const MicroscopeScanScreen();
       case 'Coin Programs':
@@ -66,7 +78,11 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Add New Coins':
         return AddCoinsHub(onNavigate: (route) => setState(() => _activeRoute = route));
       case 'AI Deepdive':
-        return const AiChatScreen();
+        // Consume the initial query once, then clear it so subsequent opens
+        // of AI Deepdive (from sidebar) start with an empty chat.
+        final q = _aiInitialQuery;
+        _aiInitialQuery = null;
+        return AiChatScreen(initialQuery: q);
       case 'Review Hub':
         return const ReviewHubScreen();
       case 'My Wishlist':
@@ -282,6 +298,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'My Wishlist',
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
+                        _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                         _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
                         const _SidebarDivider(),
@@ -361,6 +378,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       'Coin Programs',
       'Add New Coins',
       'My Wishlist',
+      'AI Deepdive',
       'Human AI Trainer Review Board',
       'AI Trainer Board',
       'Settings & Backup',

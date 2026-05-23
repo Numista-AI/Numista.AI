@@ -25,9 +25,10 @@ class _LoginScreenState extends State<LoginScreen>
   final _pinCreateCtrl   = TextEditingController();
   final _resetEmailCtrl  = TextEditingController();
 
-  bool _loading       = false;
-  bool _pinVisible    = false;
-  bool _showResetForm = false;
+  bool _loading          = false;
+  bool _pinSignInVisible = false;   // Show/hide on Sign In tab
+  bool _pinCreateVisible = false;   // Show/hide on Create Account tab (independent)
+  bool _showResetForm    = false;
   String? _error;
   String? _successMsg;
 
@@ -492,7 +493,7 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 16),
           _label('6-Digit PIN'),
           const SizedBox(height: 6),
-          _pinField(_pinCtrl),
+          _pinField(_pinCtrl, _pinSignInVisible, () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
           const SizedBox(height: 20),
           _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
         ],
@@ -515,7 +516,7 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 12),
           _label('Choose a 6-Digit PIN'),
           const SizedBox(height: 6),
-          _pinField(_pinCreateCtrl),
+          _pinField(_pinCreateCtrl, _pinCreateVisible, () => setState(() => _pinCreateVisible = !_pinCreateVisible)),
           const SizedBox(height: 20),
           _primaryButton(label: _loading ? 'Creating account…' : 'Create My Vault', onTap: _loading ? null : _createAccount),
         ],
@@ -571,9 +572,9 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
 
-  Widget _pinField(TextEditingController ctrl) => TextField(
+  Widget _pinField(TextEditingController ctrl, bool visible, VoidCallback onToggle) => TextField(
         controller: ctrl,
-        obscureText: !_pinVisible,
+        obscureText: !visible,
         maxLength: 6,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -590,8 +591,8 @@ class _LoginScreenState extends State<LoginScreen>
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _blue, width: 1.5)),
           suffixIcon: IconButton(
-            icon: Icon(_pinVisible ? Icons.visibility_off : Icons.visibility, color: _grey, size: 18),
-            onPressed: () => setState(() => _pinVisible = !_pinVisible),
+            icon: Icon(visible ? Icons.visibility_off : Icons.visibility, color: _grey, size: 18),
+            onPressed: onToggle,
           ),
         ),
       );

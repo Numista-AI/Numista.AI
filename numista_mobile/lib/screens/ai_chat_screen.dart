@@ -4,7 +4,10 @@ import 'dart:convert';
 import '../services/auth_service.dart';
 
 class AiChatScreen extends StatefulWidget {
-  const AiChatScreen({super.key});
+  /// Optional pre-populated query. When provided, the chatbot auto-submits
+  /// this question on load (e.g. from the "AI Deep Dive" button on a coin).
+  final String? initialQuery;
+  const AiChatScreen({super.key, this.initialQuery});
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -21,6 +24,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
   static const _border   = Color(0xFFE2E6E9);
   static const _text     = Color(0xFF31333F);
   static const _subtext  = Color(0xFF5A5C69);
+
+  @override
+  void initState() {
+    super.initState();
+    // If an initial query was injected (e.g. from AI Deep Dive on a coin),
+    // auto-submit it after the first frame so the UI is ready.
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _send(widget.initialQuery!);
+      });
+    }
+  }
 
   @override
   void dispose() {

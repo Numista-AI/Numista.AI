@@ -17,7 +17,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   bool _isProcessing = false;
 
   // Backend API URL (Hardcoded for trial, should be in a config service)
-  final String _apiUrl = "https://numista-backend-80775355608.us-central1.run.app";
+  final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
 
   Future<void> _commitSelected() async {
     if (_selectedIds.isEmpty) return;

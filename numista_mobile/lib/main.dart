@@ -8,7 +8,42 @@ import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // ── Diagnostic wrapper ─────────────────────────────────────────────────────
+  // Catches any crash before runApp() so a blank screen shows the real error.
+  // Remove this try/catch once startup issues are resolved.
+  try {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e, stack) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: const Color(0xFF1A1A2E),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 60),
+              const Text('🔥 Firebase Init Failed',
+                  style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Text(e.toString(),
+                  style: const TextStyle(color: Colors.orangeAccent, fontSize: 14)),
+              const SizedBox(height: 24),
+              Text(stack.toString(),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            ],
+          ),
+        ),
+      ),
+    ));
+    return;
+  }
+
   runApp(const NumistaAIApp());
 }
 
