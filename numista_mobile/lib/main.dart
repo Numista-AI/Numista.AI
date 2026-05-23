@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/base_layout.dart';
 import 'screens/login_screen.dart';
+import 'screens/welcome_screen.dart';
 
 
 Future<void> main() async {
@@ -93,12 +94,35 @@ class NumistaAIApp extends StatelessWidget {
             );
           }
 
-          // Signed in → show the main app
+          // Signed in -> show welcome screen on first launch, then main app
           if (snapshot.hasData && snapshot.data != null) {
-            return const BaseLayout();
+            return FutureBuilder<bool>(
+              future: WelcomeScreen.shouldShow(),
+              builder: (ctx, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    backgroundColor: Color(0xFFF0F2F6),
+                    body: Center(child: CircularProgressIndicator(
+                        color: Color(0xFF1565C0), strokeWidth: 3)),
+                  );
+                }
+                final showWelcome = snap.data ?? false;
+                if (showWelcome) {
+                  return WelcomeScreen(
+                    onDone: () {
+                      // Replace the welcome screen with the main app
+                      Navigator.of(ctx).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const BaseLayout()),
+                      );
+                    },
+                  );
+                }
+                return const BaseLayout();
+              },
+            );
           }
 
-          // Not signed in → show the login screen
+          // Not signed in -> show the login screen
           return const LoginScreen();
         },
       ),

@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _pinSignInVisible = false;   // Show/hide on Sign In tab
   bool _pinCreateVisible = false;   // Show/hide on Create Account tab (independent)
   bool _showResetForm    = false;
+  bool _termsAccepted    = false;   // Must be true before Create My Vault button enables
   String? _error;
   String? _successMsg;
 
@@ -94,6 +95,10 @@ class _LoginScreenState extends State<LoginScreen>
     }
     if (pin.length != 6 || int.tryParse(pin) == null) {
       setState(() => _error = 'PIN must be exactly 6 digits (numbers only).');
+      return;
+    }
+    if (!_termsAccepted) {
+      setState(() => _error = 'Please accept the Terms of Use and Privacy Policy to continue.');
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -517,8 +522,70 @@ class _LoginScreenState extends State<LoginScreen>
           _label('Choose a 6-Digit PIN'),
           const SizedBox(height: 6),
           _pinField(_pinCreateCtrl, _pinCreateVisible, () => setState(() => _pinCreateVisible = !_pinCreateVisible)),
-          const SizedBox(height: 20),
-          _primaryButton(label: _loading ? 'Creating account…' : 'Create My Vault', onTap: _loading ? null : _createAccount),
+          const SizedBox(height: 16),
+          // Terms of Use + Privacy Policy acceptance
+          InkWell(
+            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _termsAccepted,
+                    activeColor: _blue,
+                    visualDensity: VisualDensity.compact,
+                    onChanged: (v) => setState(() => _termsAccepted = v ?? false),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(color: _sub, fontSize: 12, height: 1.4),
+                          children: [
+                            const TextSpan(text: 'I agree to the Numista.AI '),
+                            WidgetSpan(
+                              child: GestureDetector(
+                                onTap: () {},   // TODO: open numista.ai/terms
+                                child: const Text('Terms of Use',
+                                    style: TextStyle(color: _blue, fontSize: 12,
+                                        decoration: TextDecoration.underline)),
+                              ),
+                            ),
+                            const TextSpan(text: ' and '),
+                            WidgetSpan(
+                              child: GestureDetector(
+                                onTap: () {},   // TODO: open numista.ai/privacy
+                                child: const Text('Privacy Policy',
+                                    style: TextStyle(color: _blue, fontSize: 12,
+                                        decoration: TextDecoration.underline)),
+                              ),
+                            ),
+                            const TextSpan(text: '.'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _primaryButton(
+            label: _loading ? 'Creating account...' : 'Create My Vault',
+            onTap: (_loading || !_termsAccepted) ? null : _createAccount,
+          ),
+          const SizedBox(height: 8),
+          if (!_termsAccepted)
+            const Text(
+              'Please accept the Terms of Use and Privacy Policy above to create your account.',
+              style: TextStyle(color: _grey, fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
         ],
       ),
     );
