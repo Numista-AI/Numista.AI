@@ -114,8 +114,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isPrimary: true,
           ),
           
+          const SizedBox(height: 16),
+          _buildSettingsCard(
+            context,
+            icon: Icons.feedback_outlined,
+            title: 'Submit App Feedback',
+            description: 'Found a bug or have a feature suggestion? Let us know!',
+            actionLabel: 'Send Email',
+            onAction: () async {
+              final Uri emailLaunchUri = Uri(
+                scheme: 'mailto',
+                path: 'beta@numista.ai',
+                queryParameters: {
+                  'subject': 'Numista.AI Beta Feedback',
+                  'body': 'Hi Numista.AI Team,\n\nHere is my feedback on the beta:\n\n',
+                },
+              );
+              try {
+                if (await canLaunchUrl(emailLaunchUri)) {
+                  await launchUrl(emailLaunchUri);
+                } else {
+                  throw 'Could not launch email';
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open email client. Please send feedback to beta@numista.ai.'),
+                    ),
+                  );
+                }
+              }
+            },
+            isPrimary: false,
+          ),
+          
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFFE2E6E9)),
+          const Divider(color: const Color(0xFFE2E6E9)),
           const SizedBox(height: 32),
 
           // EPN / Affiliate Section
