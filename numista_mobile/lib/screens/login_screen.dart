@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import 'base_layout.dart';
+import 'privacy_screen.dart';
+import 'terms_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -549,7 +551,11 @@ class _LoginScreenState extends State<LoginScreen>
                             const TextSpan(text: 'I agree to the Numista.AI '),
                             WidgetSpan(
                               child: GestureDetector(
-                                onTap: () {},   // TODO: open numista.ai/terms
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const TermsScreen()),
+                                  );
+                                },
                                 child: const Text('Terms of Use',
                                     style: TextStyle(color: _blue, fontSize: 12,
                                         decoration: TextDecoration.underline)),
@@ -558,7 +564,11 @@ class _LoginScreenState extends State<LoginScreen>
                             const TextSpan(text: ' and '),
                             WidgetSpan(
                               child: GestureDetector(
-                                onTap: () {},   // TODO: open numista.ai/privacy
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                                  );
+                                },
                                 child: const Text('Privacy Policy',
                                     style: TextStyle(color: _blue, fontSize: 12,
                                         decoration: TextDecoration.underline)),

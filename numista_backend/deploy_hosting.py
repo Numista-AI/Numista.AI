@@ -9,7 +9,7 @@ Firebase Hosting REST API steps:
   4. Finalize the version (FINALIZED)
   5. Create a release (makes it live)
 """
-import os, sys, json, hashlib, mimetypes, requests, base64
+import os, sys, json, hashlib, mimetypes, gzip, requests, base64
 from pathlib import Path
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
@@ -17,7 +17,7 @@ from google.auth.transport.requests import Request
 # ── Config ─────────────────────────────────────────────────────────────────
 SA_KEY     = r'c:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json.json'
 PROJECT_ID = 'studio-9101802118-8c9a8'
-SITE_ID    = PROJECT_ID   # default site is project ID
+SITE_ID    = 'numista-vault'
 BUILD_DIR  = Path(r'c:\Users\ericd\Documents\MyVertexProject\numista_mobile\build\web')
 SCOPES     = ['https://www.googleapis.com/auth/cloud-platform',
               'https://www.googleapis.com/auth/firebase']
@@ -50,7 +50,8 @@ file_data = {}
 for path in BUILD_DIR.rglob('*'):
     if path.is_file():
         rel = '/' + path.relative_to(BUILD_DIR).as_posix()
-        data = path.read_bytes()
+        raw  = path.read_bytes()
+        data = gzip.compress(raw, compresslevel=9)
         sha256 = hashlib.sha256(data).hexdigest()
         files[rel] = sha256
         file_data[sha256] = (rel, data, path)
@@ -78,12 +79,8 @@ if required_hashes:
         if sha256 not in file_data:
             print(f'    WARNING: hash {sha256[:16]} not found locally, skipping')
             continue
-        rel, data, path = file_data[sha256]
-        mime = mimetypes.guess_type(str(path))[0] or 'application/octet-stream'
-
-        import gzip
-        compressed = gzip.compress(data)
-        upload_headers_file = {**upload_headers, 'Content-Type': mime}
+        rel, compressed, path = file_data[sha256]
+        upload_headers_file = {**upload_headers, 'Content-Type': 'application/octet-stream'}
         r = requests.post(f'{upload_url}/{sha256}',
             headers=upload_headers_file,
             data=compressed
