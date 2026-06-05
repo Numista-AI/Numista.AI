@@ -48,7 +48,10 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text('Couldn\'t commit items — please check your connection and try again.'),
+          backgroundColor: Colors.red[700],
+        ),
       );
     } finally {
       setState(() => _isProcessing = false);
@@ -83,7 +86,10 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text('Update failed — please check your connection and try again.'),
+          backgroundColor: Colors.red[700],
+        ),
       );
     } finally {
       setState(() => _isProcessing = false);
@@ -226,7 +232,17 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 .orderBy('created_at', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+              if (snapshot.hasError) return Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: const [
+                  Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
+                  SizedBox(height: 12),
+                  Text('Couldn\'t load review queue.',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  SizedBox(height: 4),
+                  Text('Check your connection and try again.',
+                      style: TextStyle(color: Colors.grey)),
+                ]),
+              );
               if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
               final docs = snapshot.data?.docs ?? [];

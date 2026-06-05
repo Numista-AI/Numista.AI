@@ -368,8 +368,28 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           return const Center(child: CircularProgressIndicator(color: _accent));
         }
         if (snap.hasError) {
-          return Center(child: Text('Error: ${snap.error}',
-              style: const TextStyle(color: _red)));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_rounded, size: 48, color: _red),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Could not load your collection',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _text),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Check your internet connection and try refreshing the page.\nIf the problem persists, contact support at beta@numista.ai',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _subtext, height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         final allDocs = snap.data?.docs ?? [];
@@ -1061,16 +1081,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {
-                  // Navigate to Add Coins hub -- manual entry tab
-                  final nav = context.findAncestorStateOfType<NavigatorState>();
-                  if (nav == null && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Go to Add Coins > Manual Entry to get started!'),
-                      backgroundColor: _accent,
-                    ));
-                  }
-                },
+                onPressed: () => widget.onNavigate?.call('Add New Coins'),
               ),
               OutlinedButton.icon(
                 icon: const Icon(Icons.auto_awesome_motion, size: 18),
@@ -1081,14 +1092,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Go to the Add Coins tab to get started!'),
-                      backgroundColor: _accent,
-                    ));
-                  }
-                },
+                onPressed: () => widget.onNavigate?.call('Add New Coins'),
               ),
             ],
           ),
@@ -1988,8 +1992,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'), backgroundColor: _red));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Couldn\'t open the browser. Please try again.'), backgroundColor: _red));
       }
     }
   }
@@ -2009,8 +2013,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'), backgroundColor: _red));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Couldn\'t open eBay. Please try again.'), backgroundColor: _red));
       }
     }
   }

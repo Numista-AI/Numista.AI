@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
@@ -310,7 +311,42 @@ class _BaseLayoutState extends State<BaseLayout> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2A1F4E),
+                        foregroundColor: const Color(0xFFFFD700),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFFFD700)),
+                      label: const Text(
+                        'Send Beta Feedback',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: () async {
+                        final email = FirebaseAuth.instance.currentUser?.email ?? 'beta tester';
+                        final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
+                        final body = Uri.encodeComponent(
+                          'Beta tester: $email\n'
+                          'Version: Beta v1.0\n\n'
+                          'Feedback / Bug Report:\n\n'
+                          '---\n'
+                          '(Please describe what happened, what you expected, and any steps to reproduce)\n',
+                        );
+                        final uri = Uri.parse('mailto:beta@numista.ai?subject=$subject&body=$body');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(

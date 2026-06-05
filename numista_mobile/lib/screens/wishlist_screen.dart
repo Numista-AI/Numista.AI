@@ -532,8 +532,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
       ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Couldn\'t move coin to collection. Please try again.'),
+        backgroundColor: Colors.red));
     }
   }
 

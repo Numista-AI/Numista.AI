@@ -131,8 +131,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
             }
             if (snapshot.hasError) {
               return Center(
-                  child: Text('Error: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.red)));
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
+                    Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFFE53935)),
+                    SizedBox(height: 16),
+                    Text('Dashboard unavailable',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                            color: Color(0xFF31333F))),
+                    SizedBox(height: 8),
+                    Text('Check your connection and refresh the page.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF5A5C69))),
+                  ]),
+                ),
+              );
             }
 
             final docs = snapshot.data?.docs ?? [];

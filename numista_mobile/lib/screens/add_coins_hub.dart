@@ -158,7 +158,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text('File processing failed. Please check the file format and try again.'),
+          backgroundColor: Colors.red[700],
+        ),
       );
     }
   }
@@ -488,7 +491,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     setState(() => _isProcessing = false);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Error saving coin: $e'),
+                        content: const Text('Couldn\'t save coin. Please check your connection and try again.'),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -1384,7 +1387,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     } catch (e) {
       if (!mounted) return;
       setState(() => _pcgsSingleAdding = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Couldn\'t add coin from PCGS. Please check your cert number and try again.'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 

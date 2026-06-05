@@ -93,10 +93,15 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(color: Colors.redAccent),
-              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.redAccent),
+                const SizedBox(height: 16),
+                const Text('Couldn\'t load the gallery.',
+                    style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                const Text('Check your connection and try again.',
+                    style: TextStyle(color: Colors.white38)),
+              ]),
             );
           }
 
