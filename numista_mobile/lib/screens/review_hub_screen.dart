@@ -16,12 +16,12 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   final Set<String> _selectedIds = {};
   bool _isProcessing = false;
 
-  // Backend API URL (Hardcoded for trial, should be in a config service)
+  // Backend API URL
   final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
 
+  // ─── Commit selected ──────────────────────────────────────────────────────
   Future<void> _commitSelected() async {
     if (_selectedIds.isEmpty) return;
-    
     setState(() => _isProcessing = true);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -58,9 +58,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     }
   }
 
+  // ─── Bulk update ──────────────────────────────────────────────────────────
   Future<void> _bulkUpdateItems(Map<String, dynamic> updates) async {
     if (_selectedIds.isEmpty) return;
-    
     setState(() => _isProcessing = true);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -79,7 +79,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (response.statusCode == 200) {
         if (!mounted) return;
         setState(() => _selectedIds.clear());
-        Navigator.pop(context); // Close bulk edit drawer
+        Navigator.pop(context);
       } else {
         throw Exception("Bulk update failed: ${response.body}");
       }
@@ -96,6 +96,295 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     }
   }
 
+  // ─── Per-card edit dialog ─────────────────────────────────────────────────
+  void _showCoinEditDialog(String docId, Map<String, dynamic> data) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Pre-populate all controllers
+    final controllers = <String, TextEditingController>{
+      'Year':                    TextEditingController(text: data['Year']?.toString() ?? ''),
+      'Denomination':            TextEditingController(text: data['Denomination']?.toString() ?? ''),
+      'Mint Mark':               TextEditingController(text: data['Mint Mark']?.toString() ?? ''),
+      'Country':                 TextEditingController(text: data['Country']?.toString() ?? 'USA'),
+      'Program/Series':          TextEditingController(text: data['Program/Series']?.toString() ?? ''),
+      'Theme/Subject':           TextEditingController(text: data['Theme/Subject']?.toString() ?? ''),
+      'Variety':                 TextEditingController(text: data['Variety']?.toString() ?? ''),
+      'Condition':               TextEditingController(text: data['Condition']?.toString() ?? ''),
+      'Strike Type':             TextEditingController(text: data['Strike Type']?.toString() ?? ''),
+      'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
+      'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
+      'Purchase Date':           TextEditingController(text: data['Purchase Date']?.toString() ?? ''),
+      'Retailer/Website':        TextEditingController(text: data['Retailer/Website']?.toString() ?? ''),
+      'Retailer Invoice #':      TextEditingController(text: data['Retailer Invoice #']?.toString() ?? ''),
+      'Retailer Item No.':       TextEditingController(text: data['Retailer Item No.']?.toString() ?? ''),
+      'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
+    };
+
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          Widget field(String key, String label, IconData icon,
+              {TextInputType keyboardType = TextInputType.text,
+              TextCapitalization capitalization = TextCapitalization.none}) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: TextField(
+                controller: controllers[key],
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                keyboardType: keyboardType,
+                textCapitalization: capitalization,
+                decoration: InputDecoration(
+                  prefixIcon: Icon(icon, color: Colors.white38, size: 18),
+                  labelText: label,
+                  labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFFF63366)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withAlpha(8),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                ),
+              ),
+            );
+          }
+
+          Widget sectionHeader(String title) => Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 10),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFF63366),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.4,
+              ),
+            ),
+          );
+
+          return Dialog(
+            backgroundColor: const Color(0xFF1A1D27),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 640,
+                maxHeight: MediaQuery.of(dialogContext).size.height * 0.88,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Header ────────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 12, 16),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Colors.white10)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_note, color: Color(0xFFF63366), size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Edit Coin',
+                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Review Item'}',
+                                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white38),
+                          onPressed: () => Navigator.pop(dialogContext),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Scrollable form body ───────────────────────────────
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          sectionHeader('IDENTITY'),
+                          Row(children: [
+                            Expanded(child: field('Year', 'Year', Icons.calendar_today,
+                                keyboardType: TextInputType.number)),
+                            const SizedBox(width: 12),
+                            Expanded(child: field('Mint Mark', 'Mint Mark', Icons.location_pin,
+                                capitalization: TextCapitalization.characters)),
+                          ]),
+                          field('Denomination', 'Denomination', Icons.monetization_on_outlined),
+                          field('Country', 'Country', Icons.flag_outlined),
+                          field('Program/Series', 'Program / Series', Icons.collections_bookmark_outlined),
+                          field('Theme/Subject', 'Theme / Subject', Icons.image_outlined),
+                          field('Variety', 'Variety / Error', Icons.warning_amber_outlined),
+
+                          sectionHeader('CONDITION'),
+                          Row(children: [
+                            Expanded(child: field('Condition', 'Grade / Condition', Icons.grade_outlined)),
+                            const SizedBox(width: 12),
+                            Expanded(child: field('Strike Type', 'Strike Type', Icons.auto_fix_high_outlined)),
+                          ]),
+                          field('Metal Content', 'Metal Content', Icons.diamond_outlined),
+
+                          sectionHeader('PURCHASE'),
+                          Row(children: [
+                            Expanded(child: field('Purchase Cost', 'Purchase Cost', Icons.attach_money,
+                                keyboardType: TextInputType.number)),
+                            const SizedBox(width: 12),
+                            Expanded(child: field('Purchase Date', 'Purchase Date', Icons.calendar_month_outlined)),
+                          ]),
+                          field('Retailer/Website', 'Retailer / Website', Icons.storefront_outlined),
+                          Row(children: [
+                            Expanded(child: field('Retailer Invoice #', 'Invoice #', Icons.receipt_outlined)),
+                            const SizedBox(width: 12),
+                            Expanded(child: field('Retailer Item No.', 'Item #', Icons.tag)),
+                          ]),
+                          field('Storage Location', 'Storage Location', Icons.inventory_2_outlined),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Footer buttons ─────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Colors.white10)),
+                    ),
+                    child: Row(
+                      children: [
+                        // Save only
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white24),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: isSaving ? null : () async {
+                              setDialogState(() => isSaving = true);
+                              try {
+                                final updates = <String, dynamic>{};
+                                controllers.forEach((key, ctrl) {
+                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
+                                });
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.email!)
+                                    .collection('review_queue')
+                                    .doc(docId)
+                                    .update(updates);
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Changes saved to Review Queue.')),
+                                );
+                              } catch (e) {
+                                setDialogState(() => isSaving = false);
+                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red[700]),
+                                );
+                              }
+                            },
+                            child: const Text('Save'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Save + Commit
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF63366),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: isSaving ? null : () async {
+                              setDialogState(() => isSaving = true);
+                              try {
+                                final updates = <String, dynamic>{};
+                                controllers.forEach((key, ctrl) {
+                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
+                                });
+                                // Save edits first
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.email!)
+                                    .collection('review_queue')
+                                    .doc(docId)
+                                    .update(updates);
+                                // Then commit to main collection
+                                final response = await http.post(
+                                  Uri.parse("$_apiUrl/api/review/commit"),
+                                  headers: {"Content-Type": "application/json"},
+                                  body: jsonEncode({
+                                    "user_email": user.email,
+                                    "review_ids": [docId],
+                                  }),
+                                );
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                if (response.statusCode == 200) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Coin saved and committed to collection!')),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Saved, but commit failed — try committing from the hub.')),
+                                  );
+                                }
+                              } catch (e) {
+                                setDialogState(() => isSaving = false);
+                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+                                );
+                              }
+                            },
+                            icon: isSaving
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.check_circle_outline, size: 18),
+                            label: const Text('Save & Commit', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ).then((_) {
+      // Dispose controllers when dialog closes
+      for (final c in controllers.values) {
+        c.dispose();
+      }
+    });
+  }
+
+  // ─── Bulk edit bottom sheet ───────────────────────────────────────────────
   void _showBulkEditDialog() {
     final TextEditingController locationController = TextEditingController();
     final TextEditingController costController = TextEditingController();
@@ -133,7 +422,6 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   if (locationController.text.isNotEmpty) updates['Storage Location'] = locationController.text;
                   if (costController.text.isNotEmpty) updates['Cost'] = costController.text;
                   if (dateController.text.isNotEmpty) updates['Purchase Date'] = dateController.text;
-                  
                   if (updates.isNotEmpty) _bulkUpdateItems(updates);
                 },
                 child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -165,6 +453,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
+  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -188,7 +477,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 builder: (context, snapshot) {
                   final docs = snapshot.data?.docs ?? [];
                   if (docs.isEmpty) return const SizedBox.shrink();
-                  
+
                   final allSelected = _selectedIds.length == docs.length && docs.isNotEmpty;
                   return Row(
                     children: [
@@ -243,10 +532,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       style: TextStyle(color: Colors.grey)),
                 ]),
               );
-              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
               final docs = snapshot.data?.docs ?? [];
-              // ... skipping empty check lines for brevity in diff ...
               if (docs.isEmpty) {
                 return Center(
                   child: Column(
@@ -312,7 +602,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     ),
                                     const Spacer(),
                                     _buildBadge(
-                                      'Conf: ${(confidence * 100).toInt()}%', 
+                                      'Conf: ${(confidence * 100).toInt()}%',
                                       confidence < 0.85 ? Colors.orange : Colors.green),
                                   ],
                                 ),
@@ -330,7 +620,6 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     ),
                                   ),
                                 const Divider(height: 24),
-                                // Metadata Grid
                                 Wrap(
                                   spacing: 24,
                                   runSpacing: 12,
@@ -353,16 +642,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Detail editor coming soon.'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
+                          // ── Edit button — now opens full editor ──────────
+                          Tooltip(
+                            message: 'Edit this coin',
+                            child: IconButton(
+                              icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
+                              onPressed: () => _showCoinEditDialog(id, data),
+                            ),
                           ),
                         ],
                       ),
@@ -372,7 +658,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               );
             },
           ),
-          
+
+          // ── Floating action bar (shown when items are selected) ───────────
           if (_selectedIds.isNotEmpty)
             Positioned(
               bottom: 24,
@@ -395,6 +682,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.white54),
                       onPressed: () {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) return;
                         for (var sid in _selectedIds) {
                           FirebaseFirestore.instance
                               .collection('users')
@@ -414,7 +703,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       ),
                       onPressed: _isProcessing ? null : _commitSelected,
-                      icon: _isProcessing 
+                      icon: _isProcessing
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_circle_outline),
                       label: Text(_isProcessing ? 'Processing...' : 'Commit Selected'),
