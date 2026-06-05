@@ -327,9 +327,25 @@ def get_mint_news():
                 "q":        collector_query,
                 "language": "en",
                 "sortBy":   "publishedAt",
-                "pageSize": 12,
+                "pageSize": 30,
                 "apiKey":   news_api_key,
             }
+
+            # Require a numismatic keyword in the article TITLE.
+            # NewsAPI full-text search matches words buried anywhere in the article,
+            # so politics/tech articles mentioning "coin" in passing sneak through.
+            _COIN_KW = {
+                "numismatic", "numismatics", "coin", "coins", "mint", "minted",
+                "pcgs", "proof set", "mint set", "bullion", "morgan dollar",
+                "peace dollar", "american eagle coin", "american eagle bullion",
+                "walking liberty", "saint-gaudens", "commemorative coin",
+                "commemorative coins", "uncirculated", "coin show",
+                "coin auction", "coin dealer",
+            }
+
+            def _is_coin_title(t: str) -> bool:
+                tl = t.lower()
+                return any(kw in tl for kw in _COIN_KW)
 
             resp = req.get("https://newsapi.org/v2/everything", params=params, timeout=8)
             if resp.status_code == 200:
@@ -337,7 +353,11 @@ def get_mint_news():
                 articles = data.get("articles", [])
                 results = []
                 for a in articles:
-                    if not a.get("title") or a["title"] == "[Removed]":
+                    title = a.get("title", "")
+                    if not title or title == "[Removed]":
+                        continue
+                    # Skip articles not about coins/numismatics at the title level
+                    if not _is_coin_title(title):
                         continue
                     # Human-friendly relative date
                     raw_dt = a.get("publishedAt", "")
@@ -364,7 +384,7 @@ def get_mint_news():
                         desc = desc[:220].rsplit(" ", 1)[0] + "\u2026"
 
                     results.append({
-                        "title":     a["title"],
+                        "title":     title,
                         "source":    a.get("source", {}).get("name", "News"),
                         "published": pub_str,
                         "summary":   desc,
