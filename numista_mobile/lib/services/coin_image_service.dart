@@ -104,18 +104,20 @@ class CoinImageService {
   }
 
   /// Build all candidate Firestore document keys for a coin, in priority order.
-  /// We try with mint mark first, then without, then with simpler program slugs.
-  static List<String> _candidateKeys(
+  /// Each key is a base (without side suffix) that we'll probe for both _obverse
+  /// and _reverse documents.
+  static List<String> _candidateBases(
       String year, String? mint, String? program) {
-    final keys = <String>[];
-    if (program == null) return keys;
+    final bases = <String>[];
+    if (program == null) return bases;
 
+    // Exact program with mint, then without
     if (mint != null && mint.isNotEmpty) {
-      keys.add('${year}_${mint}_${program}_obverse');
+      bases.add('${year}_${mint}_$program');
     }
-    keys.add('${year}_${program}_obverse');
+    bases.add('${year}_$program');
 
-    // Also try cent / dollar / dime etc. as simpler fallbacks
+    // Simpler fallbacks: e.g. lincoln-cent -> cent
     const simpleFallbacks = {
       'lincoln-cent':          'cent',
       'kennedy-half-dollar':   'dollar',
@@ -134,16 +136,34 @@ class CoinImageService {
     final simple = simpleFallbacks[program];
     if (simple != null) {
       if (mint != null && mint.isNotEmpty) {
-        keys.add('${year}_${mint}_${simple}_obverse');
+        bases.add('${year}_${mint}_$simple');
       }
-      keys.add('${year}_${simple}_obverse');
+      bases.add('${year}_$simple');
     }
 
-    return keys;
+    // Reverse fallback: simple -> specific programs (quarter -> 50-state-quarters)
+    const expandFallbacks = {
+      'quarter': ['50-state-quarters', 'america-the-beautiful', 'american-women-quarters', 'american-innovation'],
+      'cent':    ['lincoln-cent'],
+      'nickel':  ['jefferson-nickel', 'buffalo-nickel'],
+      'dime':    ['mercury-dime'],
+      'dollar':  ['morgan-dollar', 'peace-dollar', 'native-american-dollar', 'presidential-dollars', 'kennedy-half-dollar'],
+    };
+    final expanded = expandFallbacks[program];
+    if (expanded != null) {
+      for (final p in expanded) {
+        if (mint != null && mint.isNotEmpty) {
+          bases.add('${year}_${mint}_$p');
+        }
+        bases.add('${year}_$p');
+      }
+    }
+
+    return bases;
   }
 
   /// Fetches obverse + reverse public URLs for a coin from Firestore.
-  /// Returns a [CoinImageResult] — fields are null if no image found.
+  /// Returns a [CoinImageResult] -- fields are null if no image found.
   /// Never throws; errors are silently swallowed so the UI degrades gracefully.
   static Future<CoinImageResult> fetchReferenceImages({
     required String year,
@@ -156,30 +176,39 @@ class CoinImageService {
       if (program == null) return const CoinImageResult();
 
       final db = FirebaseFirestore.instance;
-      final candidates = _candidateKeys(year, mint?.toUpperCase(), program);
+      final bases = _candidateBases(year, mint?.toUpperCase(), program);
 
-      for (final key in candidates) {
-        final doc = await db.collection(_collection).doc(key).get();
-        if (!doc.exists) continue;
+      for (final base in bases) {
+        final obvKey = '${base}_obverse';
+        final revKey = '${base}_reverse';
 
-        final data       = doc.data()!;
-        final obvData    = data['obverse'] as Map<String, dynamic>?;
-        final revKey     = key.replaceAll('_obverse', '_reverse');
-        final revDoc     = await db.collection(_collection).doc(revKey).get();
-        final revData    = revDoc.exists
+        final obvDoc = await db.collection(_collection).doc(obvKey).get();
+        final revDoc = await db.collection(_collection).doc(revKey).get();
+
+        if (!obvDoc.exists && !revDoc.exists) continue;
+
+        final obvData = obvDoc.exists
+            ? (obvDoc.data()!['obverse'] as Map<String, dynamic>?)
+            : null;
+        final revData = revDoc.exists
             ? (revDoc.data()!['reverse'] as Map<String, dynamic>?)
             : null;
+
+        if (obvData == null && revData == null) continue;
+
+        // Use whichever side has attribution info
+        final attrSource = obvData ?? revData;
 
         return CoinImageResult(
           obverseUrl:   obvData?['public_url'] as String?,
           reverseUrl:   revData?['public_url'] as String?,
-          attribution:  obvData?['attribution'] as String?,
-          sourceLabel:  obvData?['source_label'] as String?,
-          matchedKey:   key,
+          attribution:  attrSource?['attribution'] as String?,
+          sourceLabel:  attrSource?['source_label'] as String?,
+          matchedKey:   base,
         );
       }
     } catch (e) {
-      // Silent fail — image lookup is non-critical
+      // Silent fail -- image lookup is non-critical
     }
     return const CoinImageResult();
   }

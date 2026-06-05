@@ -586,7 +586,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           const SizedBox(height: 16),
           _primaryButton(
-            label: _loading ? 'Creating account...' : 'Create My Vault',
+            label: _loading ? 'Creating account...' : 'Create My Account and Vault',
             onTap: (_loading || !_termsAccepted) ? null : _createAccount,
           ),
           const SizedBox(height: 8),

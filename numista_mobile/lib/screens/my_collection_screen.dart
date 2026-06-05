@@ -20,7 +20,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 
-// â”€â”€â”€ Field name constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Field name constants -----------------------------------------------------
 class _F {
   static const country          = 'Country';
   static const year             = 'Year';
@@ -57,7 +57,7 @@ class _F {
   static const isNfcSecure      = 'Is NFC Secure';
 }
 
-// â”€â”€â”€ Column definition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Column definition --------------------------------------------------------
 class _ColDef {
   final String field;
   final String header;
@@ -76,7 +76,7 @@ class MyCollectionScreen extends StatefulWidget {
 
 class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
-  // â”€â”€â”€ UI / filter state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- UI / filter state ---------------------------------------------------
   String? _selectedCoinId;
   int     _limit            = 50;
   String  _searchQuery      = '';
@@ -91,7 +91,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   final _searchCtrl      = TextEditingController();
   final _searchFocus     = FocusNode();
   Timer? _searchDebounce;
-  // Firestore stream â€” created ONCE in initState to prevent StreamBuilder
+  // Firestore stream -- created ONCE in initState to prevent StreamBuilder
   // re-subscription on every setState (which briefly unmounts the TextField
   // and causes focus loss on Flutter Web).
   late final Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
@@ -106,13 +106,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   final Map<String, String> _ebayPrices = {};
   bool _isCheckingEbay = false;
 
-  // â”€â”€â”€ Similar Coins state (inspector) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Similar Coins state (inspector) ------------------------------------
   List<ReferenceImage> _inspectorSimilar = [];
   bool _loadingInspectorSimilar = false;
   String? _inspectorSimilarCoinId; // tracks which coin's similar images are loaded
 
 
-  // â”€â”€â”€ Live spot prices (fetched once on mount, same endpoint as dashboard) â”€â”€
+  // --- Live spot prices (fetched once on mount, same endpoint as dashboard) --
   Map<String, double> _spotPrices = {};
 
   Future<void> _fetchSpotPrices() async {
@@ -134,7 +134,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (_) {}
   }
 
-  // â”€â”€â”€ Colours (match Streamlit palette) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Colours (match Streamlit palette) ----------------------------------
   static const _bg        = Color(0xFFF0F2F6);
   static const _surface   = Colors.white;
   static const _text      = Color(0xFF31333F);
@@ -146,7 +146,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   static const _border    = Color(0xFFE2E6E9);
   static const _red       = Color(0xFFDC3545);
 
-  // â”€â”€â”€ Column definitions (widths tuned so Value col is visible â‰¥1200px) â”€â”€
+  // --- Column definitions (widths tuned so Value col is visible ≥1200px) --
   static const _columns = [
     // Year and Mint are narrow + adjacent so they read as one unit (e.g. 2025 W)
     // but remain independently sortable columns.
@@ -172,11 +172,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   static final _currencyFmt =
       intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
-  // â”€â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Lifecycle -----------------------------------------------------------
   @override
   void initState() {
     super.initState();
-    // Create the Firestore stream ONCE â€” reusing it in build() ensures
+    // Create the Firestore stream ONCE -- reusing it in build() ensures
     // StreamBuilder never re-subscribes on setState, so the TextField
     // keeps its focus between keystrokes on Flutter Web.
     _coinsStream = FirebaseFirestore.instance
@@ -208,7 +208,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.dispose();
   }
 
-  // â”€â”€â”€ Face value lookup (mirrors Streamlit logic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Face value lookup (mirrors Streamlit logic) -------------------------
   static double _faceValue(String denom) {
     final s = denom.toLowerCase().trim();
     if (s.contains('penny')   || s.contains('cent')   || s.contains('1c'))  return 0.01;
@@ -230,7 +230,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return 0.00;
   }
 
-  // â”€â”€â”€ Sort + filter helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Sort + filter helpers -----------------------------------------------
   List<QueryDocumentSnapshot> _sorted(List<QueryDocumentSnapshot> raw) {
     final copy = List<QueryDocumentSnapshot>.from(raw);
 
@@ -246,14 +246,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final bHas = bTs is Timestamp;
 
         if (aHas && bHas) {
-          // Both timestamped â€” sort by time
+          // Both timestamped -- sort by time
           return _sortAscending ? aTs.compareTo(bTs) : bTs.compareTo(aTs);
         }
         // One has a timestamp, the other doesn't.
-        // The timestamped coin was added via a known flow (newer) â€” sort it first.
+        // The timestamped coin was added via a known flow (newer) -- sort it first.
         if (aHas && !bHas) return _sortAscending ? 1  : -1;  // a newer > a first (desc)
         if (!aHas && bHas) return _sortAscending ? -1 : 1;   // b newer > b first (desc)
-        // Neither has a timestamp â€” stable fallback by doc ID
+        // Neither has a timestamp -- stable fallback by doc ID
         return _sortAscending ? a.id.compareTo(b.id) : b.id.compareTo(a.id);
       });
       return copy;
@@ -295,7 +295,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }).toList();
   }
 
-  // â”€â”€â”€ Returns columns that have â‰¥1 non-empty value in current docs â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Returns columns that have ≥1 non-empty value in current docs ---------
   // When _showOnlyPopulated is false, returns all columns unchanged.
   List<_ColDef> _visibleColumns(List<QueryDocumentSnapshot> docs) {
     if (!_showOnlyPopulated) return _columns;
@@ -317,7 +317,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// Numeric values map to Sheldon scale abbreviations.
   static String _conditionLabel(String raw) {
     if (raw.isEmpty || raw == 'null') return '';
-    // Plain text values â€” pass through directly
+    // Plain text values -- pass through directly
     final lower = raw.toLowerCase();
     if (lower.contains('proof'))       return 'Proof';
     if (lower.contains('uncirculated') || lower == 'unc') return 'Unc.';
@@ -329,7 +329,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Numeric Sheldon scale codes
     final n = int.tryParse(raw);
-    if (n == null) return raw; // unknown string â€” return as-is
+    if (n == null) return raw; // unknown string -- return as-is
     if (n == 1)   return 'P-1';
     if (n == 2)   return 'FR-2';
     if (n == 3)   return 'AG-3';
@@ -351,7 +351,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return 'Grade $n'; // fallback for any other number
   }
 
-  // â”€â”€â”€ Root build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Root build ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     Query<Map<String, dynamic>> q =
@@ -419,7 +419,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('ðŸ - „ï¸  Inventory List', style: TextStyle(
+                  const Text('Inventory List', style: TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
                   Row(children: [
                     // Column visibility toggle
@@ -443,7 +443,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Data table â€” three distinct states
+              // Data table -- three distinct states
               if (allDocs.isEmpty)
                 _buildCollectionEmptyState()
               else if (docs.isEmpty)
@@ -452,7 +452,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Center(child: Text('No coins match your filter.',
                       style: TextStyle(color: _subtext))))
               else
-                // SizedBox height sets the visible viewport â€” the TableView
+                // SizedBox height sets the visible viewport -- the TableView
                 // scrolls vertically AND horizontally internally, with the
                 // header row and Actions column pinned.
                 SizedBox(
@@ -462,7 +462,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
               const SizedBox(height: 16),
 
-              // Save Grid Changes â€” red button at bottom matching Streamlit
+              // Save Grid Changes -- red button at bottom matching Streamlit
               ElevatedButton.icon(
                 onPressed: _onSaveGridChanges,
                 icon: const Icon(Icons.save, size: 16),
@@ -485,7 +485,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // â”€â”€â”€ Filters row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Filters row --------------------------------------------------------
   Widget _buildFiltersRow() {
     return Row(children: [
       SizedBox(
@@ -530,7 +530,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
                     borderSide: const BorderSide(color: _accent, width: 2.0)),
-                hintText: 'Search by year, series, gradeâ€¦',
+                hintText: 'Search by year, series, grade...',
                 hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFFADB5BD)),
@@ -565,7 +565,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     ]);
   }
 
-  // â”€â”€â”€ AI value parser â€” mirrors home_dashboard._parseCurrency â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- AI value parser -- mirrors home_dashboard._parseCurrency -------------
   // Averages range strings so Est. Value matches the dashboard total.
   // e.g. '$4,000 - $6,000' > 5000.0 | '$3,700' > 3700.0 | 'Pending' > 0.0
   static double _parseAiValue(String raw) {
@@ -580,7 +580,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return double.tryParse(clean.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
   }
 
-  // â”€â”€â”€ Stats row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Stats row -----------------------------------------------------------
   Widget _buildStatsRow(List<QueryDocumentSnapshot> docs) {
     double aiTotal = 0;
     double fvTotal = 0;
@@ -588,12 +588,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     for (final doc in docs) {
       final m   = doc.data() as Map<String, dynamic>;
       
-      // AI Value sum â€” average range values to match dashboard logic
+      // AI Value sum -- average range values to match dashboard logic
       // e.g. '$4,000 - $6,000' > 5000, '$3,700' > 3700
       final aiRaw = m[_F.aiValue]?.toString() ?? '';
       aiTotal += _parseAiValue(aiRaw);
 
-      // Melt Value â€” live from spot prices when available, else from Firestore
+      // Melt Value -- live from spot prices when available, else from Firestore
       final liveMelt = _spotPrices.isNotEmpty
           ? (MeltValueService.compute(
                 metalContent: m[_F.metalContent]?.toString() ?? '',
@@ -615,7 +615,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       const SizedBox(width: 12),
       _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}'),
       const SizedBox(width: 12),
-      _statChip('Melt Value', 'ðŸ¥ˆ \$${meltTotal.toStringAsFixed(2)}'),
+      _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}'),
       const SizedBox(width: 12),
       _statChip('Est. Value', '\$${aiTotal.toStringAsFixed(2)}'),
     ]);
@@ -635,7 +635,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     ]),
   );
 
-  // â”€â”€â”€ Column visibility toggle button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Column visibility toggle button -------------------------------------
   Widget _columnToggleButton() {
     return Container(
       decoration: BoxDecoration(
@@ -697,7 +697,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // â”€â”€â”€ Data Table (TableView â€” sticky header + pinned Actions col) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Data Table (TableView -- sticky header + pinned Actions col) ---------
   Widget _buildDataTable(List<QueryDocumentSnapshot> docs) {
     final visCols   = _visibleColumns(docs);
     final totalCols = 1 + visCols.length; // col 0 = Actions (pinned)
@@ -716,7 +716,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(8),
         ),
-        // â”€â”€ RawScrollbar: binds directly to _tvHorizCtrl â€” no notification
+        // -- RawScrollbar: binds directly to _tvHorizCtrl -- no notification
         // depth wrangling. Always-visible thumb shows users they can scroll right.
         child: RawScrollbar(
           controller: _tvHorizCtrl,
@@ -732,13 +732,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 controller: _tvHorizCtrl),
             verticalDetails: ScrollableDetails.vertical(
                 controller: _tvVertCtrl),
-          // â”€â”€ Pinning: freeze row 0 and column 0 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // -- Pinning: freeze row 0 and column 0 --------------------------
           pinnedRowCount:    1,
           pinnedColumnCount: 1,
           columnCount: totalCols,
           rowCount:    totalRows,
 
-          // â”€â”€ Column sizing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // -- Column sizing -----------------------------------------------
           columnBuilder: (col) {
             final width = col == 0
                 ? actionsW
@@ -756,7 +756,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             );
           },
 
-          // â”€â”€ Row sizing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // -- Row sizing --------------------------------------------------
           rowBuilder: (row) => TableSpan(
             extent: FixedTableSpanExtent(row == 0 ? headerH : dataH),
             backgroundDecoration: TableSpanDecoration(
@@ -772,12 +772,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ),
           ),
 
-          // â”€â”€ Cell builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // -- Cell builder ------------------------------------------------
           cellBuilder: (context, vicinity) {
             final col = vicinity.column;
             final row = vicinity.row;
 
-            // â”€â”€ HEADER ROW (row 0) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -- HEADER ROW (row 0) -------------------------------------
             if (row == 0) {
               if (col == 0) {
                 return _tvHeaderCell('Actions', null, sortAsc: null);
@@ -799,7 +799,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               );
             }
 
-            // â”€â”€ DATA ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -- DATA ROW ----------------------------------------------
             final doc = docs[row - 1];
             final m   = doc.data() as Map<String, dynamic>;
             final sel = doc.id == _selectedCoinId;
@@ -835,7 +835,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             final colDef = visCols[col - 1];
             final value  = _getCellValue(colDef, m);
 
-            // â”€â”€ Cert # column: tappable PCGS link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -- Cert # column: tappable PCGS link -------------------------
             if (colDef.field == _F.gradingCert && value.isNotEmpty) {
               final gradingService =
                   m[_F.gradingService]?.toString().toUpperCase() ?? '';
@@ -950,21 +950,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       case _F.denomination:
         final rawD = m[_F.denomination]?.toString().trim() ?? '';
         if (rawD.isEmpty || rawD == 'null') return '';
-        if (rawD.startsWith(r'$')) return rawD;         // '$1', '$5' etc â€” keep as-is
-        if (RegExp(r'^\d+(\.\d+)?$').hasMatch(rawD)) { // '1', '25' etc â€” add $
+        if (rawD.startsWith(r'$')) return rawD;         // '$1', '$5' etc -- keep as-is
+        if (RegExp(r'^\d+(\.\d+)?$').hasMatch(rawD)) { // '1', '25' etc -- add $
           final n = double.tryParse(rawD);
           return (n != null && n == n.truncateToDouble())
               ? r'$' + n.toInt().toString()
               : r'$' + rawD;
         }
-        // Word-form denomination (penny, nickel, dime, quarter) â€” capitalise
+        // Word-form denomination (penny, nickel, dime, quarter) -- capitalise
         return rawD[0].toUpperCase() + rawD.substring(1);
       case _F.condition:
         return _conditionLabel(m[_F.condition]?.toString().trim() ?? '');
       case _F.isSilver:
         final rawS = m[_F.isSilver];
         if (rawS == true || rawS == 'true' || rawS == 1) return 'Ag';
-        if (rawS == false || rawS == 'false') return 'â€”';
+        if (rawS == false || rawS == 'false') return '--';
         return '';
       case _F.pcgsNumber:
         final pn = m[_F.pcgsNumber]?.toString().trim() ?? '';
@@ -980,7 +980,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           return lv != null ? '\$${lv.toStringAsFixed(2)}' : '';
         }
         final mv = m[_F.meltValue]?.toString().trim() ?? '';
-        return (mv.isEmpty || mv == 'null' || mv == 'â€”') ? '' : mv;
+        return (mv.isEmpty || mv == 'null' || mv == '--') ? '' : mv;
       case _F.storageLocation:
         final v = m[_F.storageLocation]?.toString().trim() ??
                   m['storage_location']?.toString().trim() ?? '';
@@ -1010,7 +1010,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     onPressed: onTap,
   );
 
-  // â”€â”€â”€ Empty state (zero coins in collection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Empty state (zero coins in collection) -------------------------------
   Widget _buildCollectionEmptyState() {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 32),
@@ -1062,7 +1062,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
-                  // Navigate to Add Coins hub â€” manual entry tab
+                  // Navigate to Add Coins hub -- manual entry tab
                   final nav = context.findAncestorStateOfType<NavigatorState>();
                   if (nav == null && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -1098,7 +1098,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
 
-  // â”€â”€â”€ Coin Inspector Dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Coin Inspector Dialog ------------------------------------------------
   void _showCoinInspectorDialog(String coinId, Map<String, dynamic> data) {
     setState(() {
       _selectedCoinId   = coinId;
@@ -1153,7 +1153,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 maxHeight: MediaQuery.of(context).size.height * 0.88,
               ),
               child: Column(children: [
-                // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // -- Header -----------------------------------------------
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: const BoxDecoration(
@@ -1164,7 +1164,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Row(children: [
                     const Icon(Icons.book_outlined, size: 18, color: _text),
                     const SizedBox(width: 8),
-                    Text('Coin Inspector â€” $title',
+                    Text('Coin Inspector -- $title',
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
                     const Spacer(),
                     // Google Images search
@@ -1183,7 +1183,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // eBay search â€” opens eBay in browser
+                    // eBay search -- opens eBay in browser
                     Tooltip(
                       message: 'Search eBay sold listings for this coin',
                       child: ElevatedButton.icon(
@@ -1207,7 +1207,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ]),
                 ),
 
-                // â”€â”€ Body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // -- Body -------------------------------------------------
                 Expanded(
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     // Left panel: image (300px)
@@ -1464,7 +1464,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                'ðŸ“ -   Coin Inspector â€” '
+                'Coin Inspector - '
                 '${data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? ''}'
                 '${(data[_F.mintMark]?.toString().trim() ?? '').isNotEmpty ? '-${data[_F.mintMark]}' : ''} '
                 '${data[_F.denomination] ?? ''}',
@@ -1543,7 +1543,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // â”€â”€â”€ Metric strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Metric strip --------------------------------------------------------
   Widget _buildMetricStrip(Map<String, dynamic> data) {
     final liveMelt = MeltValueService.compute(
       metalContent: data[_F.metalContent]?.toString() ?? '',
@@ -1556,11 +1556,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? data[_F.meltValue].toString()
             : 'N/A');
     return Row(children: [
-      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? 'â€”', const Color(0xFF1A73E8), Icons.attach_money)),
+      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '--', const Color(0xFF1A73E8), Icons.attach_money)),
       const SizedBox(width: 10),
       Expanded(child: _metricCard('Melt Value', meltStr, const Color(0xFF34A853), Icons.blur_circular_outlined)),
       const SizedBox(width: 10),
-      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? 'â€”', const Color(0xFFF9AB00), Icons.grade_outlined)),
+      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? '--', const Color(0xFFF9AB00), Icons.grade_outlined)),
       const SizedBox(width: 10),
       Expanded(child: _metricCard(
           'Live eBay',
@@ -1596,7 +1596,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     ));
   }
 
-  // â”€â”€â”€ PCGS feature bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- PCGS feature bar ----------------------------------------------------
   Widget _buildPcgsBar(Map<String, dynamic> data) {
     final svc = data[_F.gradingService]?.toString() ?? '';
     if (!svc.toUpperCase().contains('PCGS')) return const SizedBox.shrink();
@@ -1661,7 +1661,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // â”€â”€â”€ Sectioned detail grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Sectioned detail grid ------------------------------------------------
   Widget _buildDetailGrid(Map<String, dynamic> data) {
     Widget section(String title, List<List<String?>> fields) {
       final cells = fields.where((f) => (f[1] ?? '').isNotEmpty).toList();
@@ -1749,7 +1749,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
 
 
-  // â”€â”€â”€ Dropdown helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Dropdown helper -----------------------------------------------------
   Widget _styledDropdown<T>({
     required T value,
     required List<T> items,
@@ -1777,7 +1777,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ),
       );
 
-  // â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Actions -------------------------------------------------------------
 
   /// Opens an edit dialog pre-populated with all editable fields for this coin.
   void _onEdit(String id, Map<String, dynamic> data) {
@@ -1808,7 +1808,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Edit â€” $coinLabel'),
+        title: Text('Edit -- $coinLabel'),
         content: SizedBox(
           width: 520,
           height: 500,
@@ -1849,7 +1849,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     f: controllers[f]!.text.trim()
               };
               try {
-                // set(merge:true) treats map keys as literal field names â€”
+                // set(merge:true) treats map keys as literal field names --
                 // unlike update() which interprets '/' as a subcollection
                 // separator, breaking fields like 'Program/Series'.
                 await FirebaseFirestore.instance
@@ -1921,7 +1921,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 backgroundColor: _red, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
-              // Show snackbar IMMEDIATELY â€” don't wait for Firestore round-trip
+              // Show snackbar IMMEDIATELY -- don't wait for Firestore round-trip
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content: Text('Coin deleted.'),
@@ -2020,7 +2020,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       await WishlistService.addToWishlist(coin);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('â¤ï¸  Added to Wish List!'),
+        content: Text('Added to Wish List!'),
         backgroundColor: Color(0xFFF63366),
         duration: Duration(seconds: 2),
       ));
@@ -2035,24 +2035,24 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   void _onGenerateReport() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('ðŸš€  AI Report generation â€” coming in Phase 3'),
+      content: Text('AI Report generation -- coming in Phase 3'),
       backgroundColor: _accent,
     ));
   }
 
   void _onSaveGridChanges() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('âœ…  All changes saved to Firestore.'),
+      content: Text('All changes saved to Firestore.'),
       backgroundColor: _green,
     ));
   }
 
-  // â”€â”€â”€ Coin Vault Gallery state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Coin Vault Gallery state ---------------------------------------------
   bool _vaultShowObverse = true; // true = obverse, false = reverse
 
-  // â”€â”€â”€ Coin Vault Gallery widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Coin Vault Gallery widget --------------------------------------------
   /// Replaces the old upload-zone pair with a premium personal scan gallery.
-  /// Shows the user's microscope photo with a ðŸ“· YOUR SCAN badge when present,
+  /// Shows the user's microscope photo with a 📷 YOUR SCAN badge when present,
   /// or an inviting "Add Your Photo" prompt otherwise.
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
     final obvUrl = data[_F.imageObverse]?.toString() ?? '';
@@ -2098,7 +2098,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // â”€â”€ Header row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // -- Header row -------------------------------------------------
               Row(
                 children: [
                   if (hasRef) ...[
@@ -2151,7 +2151,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
               const SizedBox(height: 10),
 
-              // â”€â”€ Image panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // -- Image panel ------------------------------------------------
               GestureDetector(
                 onTap: hasRefActive
                     ? () => _showImageLightbox(refUrl,
@@ -2244,7 +2244,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
               const SizedBox(height: 10),
 
-              // â”€â”€ Upload buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // -- Upload buttons ----------------------------------------------
               Row(
                 children: [
                   Expanded(
@@ -2282,7 +2282,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       );
     }
 
-    // â”€â”€ User has their own photo â€” show it â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- User has their own photo -- show it ------------------------------------
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2637,14 +2637,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('âœ…  ${side[0].toUpperCase()}${side.substring(1)} photo saved!'),
+          content: Text('${side[0].toUpperCase()}${side.substring(1)} photo saved!'),
           backgroundColor: _green,
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('âŒ Upload failed: $e'),
+          content: Text('Upload failed: $e'),
           backgroundColor: _red,
         ));
       }
@@ -2717,7 +2717,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Text('$label  â€¢  Tap anywhere to close',
+              Text('$label  *  Tap anywhere to close',
                   style: const TextStyle(
                       color: Colors.white54, fontSize: 11)),
             ],
@@ -2750,8 +2750,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
-  // â”€â”€â”€ Coin Set Viewer section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ Roll banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Coin Set Viewer section ---------------------------------------------
+  // -- Roll banner ----------------------------------------------------------
   /// Shows a compact info strip when the selected coin is part of a roll/batch.
   Widget _buildRollBanner(Map<String, dynamic> data) {
     final rollId   = data['roll_id'] as String?;
@@ -2813,7 +2813,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // â”€â”€â”€ Similar Coins widget for the inspector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Similar Coins widget for the inspector ------------------------------
   Widget _buildSimilarCoinsInspector() {
     if (!_loadingInspectorSimilar && _inspectorSimilar.isEmpty) {
       return const SizedBox.shrink();
@@ -2904,7 +2904,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         const SizedBox(height: 4),
         Text(
-          'Tap to expand  â€¢  Kaggle reference datasets',
+          'Tap to expand  *  Kaggle reference datasets',
           style: TextStyle(fontSize: 10, color: _subtext.withAlpha(160),
               fontStyle: FontStyle.italic),
         ),

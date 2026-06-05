@@ -124,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onAction: () async {
               final Uri emailLaunchUri = Uri(
                 scheme: 'mailto',
-                path: 'beta@numista.ai',
+                path: 'eric@numista.ai',
                 queryParameters: {
                   'subject': 'Numista.AI Beta Feedback',
                   'body': 'Hi Numista.AI Team,\n\nHere is my feedback on the beta:\n\n',
@@ -132,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
               try {
                 if (await canLaunchUrl(emailLaunchUri)) {
-                  await launchUrl(emailLaunchUri);
+                  await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
                 } else {
                   throw 'Could not launch email';
                 }
@@ -140,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Could not open email client. Please send feedback to beta@numista.ai.'),
+                      content: Text('Could not open email client. Please send feedback to eric@numista.ai.'),
                     ),
                   );
                 }
@@ -153,7 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(color: const Color(0xFFE2E6E9)),
           const SizedBox(height: 32),
 
-          // EPN / Affiliate Section
+          // EPN / Affiliate Section -- only visible to admin (eric@numista.ai)
+          if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') ...[
           const Text('eBay Partner Network (EPN)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
           const SizedBox(height: 8),
           const Text(
@@ -246,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+          ], // end admin-only EPN section
           
           const SizedBox(height: 32),
           const Divider(color: Color(0xFFE2E6E9)),
