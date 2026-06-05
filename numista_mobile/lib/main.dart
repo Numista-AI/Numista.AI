@@ -48,8 +48,17 @@ Future<void> main() async {
   runApp(const NumistaAIApp());
 }
 
-class NumistaAIApp extends StatelessWidget {
+class NumistaAIApp extends StatefulWidget {
   const NumistaAIApp({super.key});
+
+  @override
+  State<NumistaAIApp> createState() => _NumistaAIAppState();
+}
+
+class _NumistaAIAppState extends State<NumistaAIApp> {
+  /// Set to true after the user dismisses the welcome screen.
+  /// Triggers a rebuild that bypasses the FutureBuilder check.
+  bool _welcomeDone = false;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +68,7 @@ class NumistaAIApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFF0F2F6),
-        primaryColor: const Color(0xFF1565C0),  // Blue — matches new login screen
+        primaryColor: const Color(0xFF1565C0),  // Blue -- matches new login screen
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1565C0),
           brightness: Brightness.light,
@@ -75,7 +84,7 @@ class NumistaAIApp extends StatelessWidget {
           bodyLarge:  TextStyle(color: Color(0xFF0F172A)),
         ),
       ),
-      // ─── Auth Gate ───────────────────────────────────────────────────────
+      // --- Auth Gate ---------------------------------------------------------
       // StreamBuilder on authStateChanges: shows LoginScreen until Firebase
       // confirms a signed-in user, then drops into the main app.
       home: StreamBuilder<User?>(
@@ -96,6 +105,12 @@ class NumistaAIApp extends StatelessWidget {
 
           // Signed in -> show welcome screen on first launch, then main app
           if (snapshot.hasData && snapshot.data != null) {
+            // If user already dismissed the welcome screen this session,
+            // go straight to the main app without re-checking SharedPrefs.
+            if (_welcomeDone) {
+              return const BaseLayout();
+            }
+
             return FutureBuilder<bool>(
               future: WelcomeScreen.shouldShow(),
               builder: (ctx, snap) {
@@ -110,10 +125,9 @@ class NumistaAIApp extends StatelessWidget {
                 if (showWelcome) {
                   return WelcomeScreen(
                     onDone: () {
-                      // Replace the welcome screen with the main app
-                      Navigator.of(ctx).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const BaseLayout()),
-                      );
+                      // Trigger a rebuild -- the _welcomeDone flag bypasses the
+                      // FutureBuilder and shows BaseLayout directly.
+                      setState(() => _welcomeDone = true);
                     },
                   );
                 }
