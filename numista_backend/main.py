@@ -298,7 +298,8 @@ def get_mint_news():
     news_api_key = os.environ.get("NEWSAPI_KEY", "").strip()
     if not news_api_key:
         try:
-            cfg = db.collection("config").document("newsapi").get()
+            # timeout=3 prevents indefinite hang if Firestore is slow
+            cfg = db.collection("config").document("newsapi").get(timeout=3)
             if cfg.exists:
                 news_api_key = cfg.to_dict().get("api_key", "")
         except Exception as e:
@@ -386,16 +387,18 @@ def get_mint_news():
         except Exception as e:
             print(f"[mint_news] NewsAPI call failed: {e}")
 
-    # ── 3. RSS fallback ────────────────────────────────────────────────────────
+    # ── 3. RSS fallback — verified working feeds (2026-06) ─────────────────────
     feeds = [
-        ("https://www.coinworld.com/rss/all-news.xml", "CoinWorld"),
-        ("https://www.numismaticnews.net/.rss/full/",  "Numismatic News"),
+        ("https://www.usmint.gov/rss/news.xml",       "US Mint"),
+        ("https://www.pcgs.com/rss/news",              "PCGS"),
+        ("https://www.ngccoin.com/rss/news.ashx",      "NGC"),
+        ("https://www.coinnews.net/feed/",             "CoinNews"),
     ]
     all_entries = []
     for url, label in feeds:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
+            for entry in feed.entries[:4]:
                 summary = re.sub(r"<[^>]+?>", "", entry.get("summary", ""))
                 if len(summary) > 220:
                     summary = summary[:220].rsplit(" ", 1)[0] + "\u2026"
