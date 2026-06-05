@@ -309,18 +309,19 @@ def get_mint_news():
     if news_api_key:
         try:
             # Collector-focused query — specific enough to avoid commodity/finance noise.
-            # Broad terms like "gold", "silver", "bullion", "coin" are intentionally
-            # excluded — they pull in India fintech, commodity markets, and astronomy.
-            # NOTE: domain filter removed — numismatic sites aren't indexed by NewsAPI
-            # so filtering by domain always returned 0 results and fell to dead RSS feeds.
+            # Exclusions (-term) prevent astronomy (NGC=galaxy catalog), crypto, beer, fashion.
+            # "American Eagle" alone matches Anheuser-Busch; use exact numismatic phrases.
+            # NGC alone matches New General Catalogue (astronomy); remove standalone NGC.
             collector_query = (
-                "numismatic OR numismatics OR "
+                "numismatic OR "
                 "\"coin collecting\" OR \"coin collector\" OR \"coin show\" OR "
-                "\"proof set\" OR \"mint set\" OR \"coin dealer\" OR "
-                "PCGS OR NGC OR "
-                "\"Morgan dollar\" OR \"Peace dollar\" OR \"American Eagle\" OR "
-                "\"Walking Liberty\" OR \"Saint-Gaudens\" OR "
-                "\"US Mint\" OR \"United States Mint\""
+                "\"proof set\" OR \"mint set\" OR \"coin dealer\" OR \"coin auction\" OR "
+                "PCGS OR "
+                "\"Morgan dollar\" OR \"Peace dollar\" OR \"American Eagle coin\" OR "
+                "\"American Eagle bullion\" OR \"Walking Liberty\" OR \"Saint-Gaudens\" OR "
+                "\"US Mint\" OR \"United States Mint\" OR "
+                "\"uncirculated\" OR \"commemorative coin\" OR \"numismatics\""
+                " -bitcoin -crypto -cluster -galaxy -beer -beauty -fashion -cluster"
             )
             params = {
                 "q":        collector_query,
