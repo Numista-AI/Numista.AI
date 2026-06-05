@@ -260,6 +260,11 @@ class CoinImageService {
   /// Fetches obverse + reverse public URLs for a coin from Firestore.
   /// Returns a [CoinImageResult] -- fields are null if no image found.
   /// Never throws; errors are silently swallowed so the UI degrades gracefully.
+  ///
+  /// Obverse and reverse are resolved INDEPENDENTLY across all candidate bases,
+  /// so a subject-specific reverse (e.g. 1999_new-jersey_50-state-quarters_reverse)
+  /// can be paired with a generic obverse (e.g. 1999_50-state-quarters_obverse)
+  /// from a different candidate base.
   static Future<CoinImageResult> fetchReferenceImages({
     required String year,
     String? mint,
@@ -280,33 +285,55 @@ class CoinImageService {
         subject: subjectSlug,
       );
 
+      // Independently track the best obverse and best reverse found.
+      // We keep scanning all candidate bases until both sides are resolved.
+      String? bestObvUrl;
+      String? bestRevUrl;
+      String? bestAttr;
+      String? bestLabel;
+      String? bestKey;
+
       for (final base in bases) {
-        final obvKey = '${base}_obverse';
-        final revKey = '${base}_reverse';
+        final needsObv = bestObvUrl == null;
+        final needsRev = bestRevUrl == null;
+        if (!needsObv && !needsRev) break; // both sides resolved
 
-        final obvDoc = await db.collection(_collection).doc(obvKey).get();
-        final revDoc = await db.collection(_collection).doc(revKey).get();
+        if (needsObv) {
+          final obvDoc = await db.collection(_collection)
+              .doc('${base}_obverse').get();
+          if (obvDoc.exists) {
+            final d = obvDoc.data()!['obverse'] as Map<String, dynamic>?;
+            if (d != null) {
+              bestObvUrl = d['public_url'] as String?;
+              bestAttr  ??= d['attribution'] as String?;
+              bestLabel ??= d['source_label'] as String?;
+              bestKey   ??= base;
+            }
+          }
+        }
 
-        if (!obvDoc.exists && !revDoc.exists) continue;
+        if (needsRev) {
+          final revDoc = await db.collection(_collection)
+              .doc('${base}_reverse').get();
+          if (revDoc.exists) {
+            final d = revDoc.data()!['reverse'] as Map<String, dynamic>?;
+            if (d != null) {
+              bestRevUrl = d['public_url'] as String?;
+              bestAttr  ??= d['attribution'] as String?;
+              bestLabel ??= d['source_label'] as String?;
+              bestKey   ??= base;
+            }
+          }
+        }
+      }
 
-        final obvData = obvDoc.exists
-            ? (obvDoc.data()!['obverse'] as Map<String, dynamic>?)
-            : null;
-        final revData = revDoc.exists
-            ? (revDoc.data()!['reverse'] as Map<String, dynamic>?)
-            : null;
-
-        if (obvData == null && revData == null) continue;
-
-        // Use whichever side has attribution info
-        final attrSource = obvData ?? revData;
-
+      if (bestObvUrl != null || bestRevUrl != null) {
         return CoinImageResult(
-          obverseUrl:   obvData?['public_url'] as String?,
-          reverseUrl:   revData?['public_url'] as String?,
-          attribution:  attrSource?['attribution'] as String?,
-          sourceLabel:  attrSource?['source_label'] as String?,
-          matchedKey:   base,
+          obverseUrl:  bestObvUrl,
+          reverseUrl:  bestRevUrl,
+          attribution: bestAttr,
+          sourceLabel: bestLabel,
+          matchedKey:  bestKey,
         );
       }
     } catch (e) {
