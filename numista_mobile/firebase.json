@@ -1,1 +1,49 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"studio-9101802118-8c9a8","appId":"1:568985927038:android:efb96a51420403078b072f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"studio-9101802118-8c9a8","configurations":{"android":"1:568985927038:android:efb96a51420403078b072f","web":"1:568985927038:web:9ea56548eed27d5a8b072f","windows":"1:568985927038:web:14e303f30991f9e78b072f"}}}}}}
+{
+  "hosting": {
+    "site": "numista-vault",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|wasm)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=31536000"
+          }
+        ]
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "studio-9101802118-8c9a8",
+          "appId": "1:568985927038:android:efb96a51420403078b072f",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "studio-9101802118-8c9a8",
+          "configurations": {
+            "android": "1:568985927038:android:efb96a51420403078b072f",
+            "web": "1:568985927038:web:9ea56548eed27d5a8b072f",
+            "windows": "1:568985927038:web:14e303f30991f9e78b072f"
+          }
+        }
+      }
+    }
+  }
+}

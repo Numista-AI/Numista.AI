@@ -46,11 +46,11 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
       _dmMessageController.clear();
       setState(() {
         _dmSubmitting = false;
-        _dmSuccess = 'Thank you for your message! It has been sent to Eric. If you are logged in, you may receive a response at your registered email.';
+        _dmSuccess = 'Message sent! We will respond to your registered email, or you can reach us directly at customerservice@numista.ai';
       });
     } catch (e) {
       setState(() => _dmSubmitting = false);
-      _showError('Failed to submit message. ($e)');
+      _showError('Couldn\'t send your message. Please email us directly at customerservice@numista.ai');
     }
   }
 
@@ -74,11 +74,11 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
       _fbMessageController.clear();
       setState(() {
         _fbSubmitting = false;
-        _fbSuccess = 'Thank you for your feedback! It has been submitted successfully.';
+        _fbSuccess = 'Feedback submitted — thank you! You can also email customerservice@numista.ai for a faster response.';
       });
     } catch (e) {
       setState(() => _fbSubmitting = false);
-      _showError('Failed to submit feedback. ($e)');
+      _showError('Couldn\'t submit. Please email customerservice@numista.ai directly.');
     }
   }
 
@@ -245,16 +245,29 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFBFD0FB)),
             ),
-            child: Row(children: [
-              const Icon(Icons.info_outline, color: Color(0xFF1967D2), size: 20),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'You can also connect with Eric directly on LinkedIn at linkedin.com/in/ericdseaman',
-                  style: TextStyle(color: Color(0xFF1967D2), fontSize: 13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: Color(0xFF1967D2), size: 20),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '✉  customerservice@numista.ai',
+                        style: TextStyle(color: Color(0xFF1967D2), fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'You can also connect with Eric directly on LinkedIn at linkedin.com/in/ericdseaman',
+                        style: TextStyle(color: Color(0xFF1967D2), fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ]),
+              ],
+            ),
           ),
         ],
       ),
