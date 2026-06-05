@@ -3,10 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
-import 'dart:io' as io;
+import '../utils/file_saver_stub.dart'
+    if (dart.library.html) '../utils/file_saver_web.dart'
+    if (dart.library.io) '../utils/file_saver_io.dart';
 
 import '../services/epn_service.dart';
 
@@ -371,19 +372,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       final bytes = utf8.encode(csv.toString());
       final filename = "numista_export_${DateTime.now().toIso8601String().split('T').first}.csv";
-      
-      if (kIsWeb) {
-        // Web download logic via blob URL (requires no manual dart:html import in modern Flutter if handled carefully)
-        // or we simply acknowledge this is a pending feature for pure-web.
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Web export currently requires dart:html - pending cross-platform fix.')));
-      } else {
-        final String currentDir = io.Directory.current.path;
-        final file = io.File('$currentDir/$filename');
-        await file.writeAsBytes(bytes);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported to $currentDir/$filename')));
-      }
+
+      final result = await downloadCsvFile(bytes, filename);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Exported ${snapshot.docs.length} coins to $result'),
+          backgroundColor: Colors.green.shade700,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red));
