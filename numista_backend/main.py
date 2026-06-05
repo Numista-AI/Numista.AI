@@ -311,6 +311,8 @@ def get_mint_news():
             # Collector-focused query — specific enough to avoid commodity/finance noise.
             # Broad terms like "gold", "silver", "bullion", "coin" are intentionally
             # excluded — they pull in India fintech, commodity markets, and astronomy.
+            # NOTE: domain filter removed — numismatic sites aren't indexed by NewsAPI
+            # so filtering by domain always returned 0 results and fell to dead RSS feeds.
             collector_query = (
                 "numismatic OR numismatics OR "
                 "\"coin collecting\" OR \"coin collector\" OR \"coin show\" OR "
@@ -320,23 +322,8 @@ def get_mint_news():
                 "\"Walking Liberty\" OR \"Saint-Gaudens\" OR "
                 "\"US Mint\" OR \"United States Mint\""
             )
-            # Restrict to known numismatic publishers — the most effective filter.
-            # NewsAPI domains param hard-limits results to these sites only.
-            numismatic_domains = ",".join([
-                "coinworld.com",
-                "numismaticnews.net",
-                "pcgs.com",
-                "ngccoin.com",
-                "coinnews.net",
-                "usmint.gov",
-                "coinage.com",
-                "coins.com",
-                "coinlink.com",
-                "numismaster.com",
-            ])
             params = {
                 "q":        collector_query,
-                "domains":  numismatic_domains,
                 "language": "en",
                 "sortBy":   "publishedAt",
                 "pageSize": 12,
@@ -387,7 +374,8 @@ def get_mint_news():
         except Exception as e:
             print(f"[mint_news] NewsAPI call failed: {e}")
 
-    # ── 3. RSS fallback — verified working feeds (2026-06) ─────────────────────
+    # ── 3. RSS fallback — verified working feeds with per-feed timeout ─────────
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     feeds = [
         ("https://www.usmint.gov/rss/news.xml",       "US Mint"),
         ("https://www.pcgs.com/rss/news",              "PCGS"),
@@ -397,7 +385,9 @@ def get_mint_news():
     all_entries = []
     for url, label in feeds:
         try:
-            feed = feedparser.parse(url)
+            with ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(feedparser.parse, url)
+                feed = future.result(timeout=5)  # 5s max per feed
             for entry in feed.entries[:4]:
                 summary = re.sub(r"<[^>]+?>", "", entry.get("summary", ""))
                 if len(summary) > 220:
@@ -409,6 +399,8 @@ def get_mint_news():
                     "summary":   summary,
                     "source":    label,
                 })
+        except FuturesTimeout:
+            print(f"[mint_news] RSS feed timed out ({url})")
         except Exception as e:
             print(f"[mint_news] RSS feed error ({url}): {e}")
 
