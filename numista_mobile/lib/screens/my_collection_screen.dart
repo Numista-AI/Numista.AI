@@ -1128,6 +1128,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             series:       (data[_F.programSeries]?.toString() ?? '').isEmpty
                 ? null
                 : data[_F.programSeries]?.toString(),
+            subject:      (data[_F.themeSubject]?.toString() ?? '').isEmpty
+                ? null
+                : data[_F.themeSubject]?.toString(),
           );
 
     showDialog(
@@ -2082,6 +2085,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           mint:         mint.isEmpty ? null : mint,
           denomination: denom.isEmpty ? null : denom,
           series:       series.isEmpty ? null : series,
+          subject:      (data[_F.themeSubject]?.toString() ?? '').isEmpty
+              ? null
+              : data[_F.themeSubject]?.toString(),
         ),
         builder: (context, snap) {
           final ref = snap.data;

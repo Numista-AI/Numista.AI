@@ -5,14 +5,82 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ///   - gs://us_mint_coin_images        (Tier 1 — US Mint official images)
 ///   - gs://numista-reference-library  (Tier 2–5 — reference + Wikimedia)
 ///
-/// Key format in Firestore: {year}_{mint}_{program}_{side}
-///              or without mint: {year}_{program}_{side}
+/// Key format in Firestore: {year}[_{mint}][_{subject}]_{program}_{side}
+/// where subject is the state/president/woman slug for series coins.
 ///
 /// Returns null for both obverse and reverse if no image is found — the caller
 /// should fall back to "No photo yet" rather than showing an error.
 
 class CoinImageService {
   static const _collection = 'coin_image_index';
+
+  /// Programs that have per-design subjects (state, president, woman, etc.)
+  /// Matches SUBJECT_PROGRAMS in build_image_index.py.
+  static const _subjectPrograms = {
+    '50-state-quarters',
+    'presidential-dollars',
+    'american-women-quarters',
+    'america-the-beautiful',
+    'american-innovation',
+    'native-american-dollar',
+    'commemorative',
+  };
+
+  /// Maps subject names (states, presidents, women) to canonical slugs.
+  /// Mirrors STATE_SLUG_MAP in build_image_index.py.
+  static const _subjectSlugMap = <String, String>{
+    // 50 US States
+    'alabama': 'alabama', 'alaska': 'alaska', 'arizona': 'arizona',
+    'arkansas': 'arkansas', 'california': 'california', 'colorado': 'colorado',
+    'connecticut': 'connecticut', 'delaware': 'delaware', 'florida': 'florida',
+    'georgia': 'georgia', 'hawaii': 'hawaii', 'idaho': 'idaho',
+    'illinois': 'illinois', 'indiana': 'indiana', 'iowa': 'iowa',
+    'kansas': 'kansas', 'kentucky': 'kentucky', 'louisiana': 'louisiana',
+    'maine': 'maine', 'maryland': 'maryland', 'massachusetts': 'massachusetts',
+    'michigan': 'michigan', 'minnesota': 'minnesota', 'mississippi': 'mississippi',
+    'missouri': 'missouri', 'montana': 'montana', 'nebraska': 'nebraska',
+    'nevada': 'nevada', 'new hampshire': 'new-hampshire', 'new jersey': 'new-jersey',
+    'new mexico': 'new-mexico', 'new york': 'new-york',
+    'north carolina': 'north-carolina', 'north dakota': 'north-dakota',
+    'ohio': 'ohio', 'oklahoma': 'oklahoma', 'oregon': 'oregon',
+    'pennsylvania': 'pennsylvania', 'rhode island': 'rhode-island',
+    'south carolina': 'south-carolina', 'south dakota': 'south-dakota',
+    'tennessee': 'tennessee', 'texas': 'texas', 'utah': 'utah',
+    'vermont': 'vermont', 'virginia': 'virginia', 'washington': 'washington',
+    'west virginia': 'west-virginia', 'wisconsin': 'wisconsin', 'wyoming': 'wyoming',
+    // Territories
+    'puerto rico': 'puerto-rico', 'guam': 'guam',
+    'us virgin islands': 'us-virgin-islands',
+    'american samoa': 'american-samoa',
+    'northern mariana': 'northern-mariana-islands',
+    'district of columbia': 'district-of-columbia',
+    // ATB parks
+    'yellowstone': 'yellowstone', 'grand canyon': 'grand-canyon',
+    'yosemite': 'yosemite', 'gettysburg': 'gettysburg',
+    'hot springs': 'hot-springs', 'mount hood': 'mount-hood',
+    'glacier': 'glacier', 'olympic': 'olympic',
+    // Presidents (presidential dollar subjects)
+    'adams': 'adams', 'jefferson': 'jefferson', 'madison': 'madison',
+    'monroe': 'monroe', 'jackson': 'jackson', 'van buren': 'van-buren',
+    'harrison': 'harrison', 'tyler': 'tyler', 'polk': 'polk',
+    'taylor': 'taylor', 'fillmore': 'fillmore', 'pierce': 'pierce',
+    'buchanan': 'buchanan', 'lincoln': 'lincoln', 'johnson': 'johnson',
+    'grant': 'grant', 'hayes': 'hayes', 'garfield': 'garfield',
+    'arthur': 'arthur', 'cleveland': 'cleveland', 'mckinley': 'mckinley',
+    'roosevelt': 'roosevelt', 'taft': 'taft', 'wilson': 'wilson',
+    'harding': 'harding', 'coolidge': 'coolidge', 'hoover': 'hoover',
+    'truman': 'truman', 'eisenhower': 'eisenhower', 'kennedy': 'kennedy',
+    'ford': 'ford', 'carter': 'carter', 'reagan': 'reagan',
+    'bush': 'bush', 'clinton': 'clinton', 'obama': 'obama',
+    'trump': 'trump', 'biden': 'biden',
+    // American Women Quarters
+    'maya angelou': 'maya-angelou', 'sally ride': 'sally-ride',
+    'wilma mankiller': 'wilma-mankiller', 'nina otero warren': 'nina-otero-warren',
+    'anna may wong': 'anna-may-wong', 'bessie coleman': 'bessie-coleman',
+    'edith kanaka ole': 'edith-kanaka-ole', 'eleanor roosevelt': 'eleanor-roosevelt',
+    'jovita idar': 'jovita-idar', 'maria tallchief': 'maria-tallchief',
+    'patsy mink': 'patsy-mink',
+  };
 
   /// Maps denomination/series strings → canonical program slug used as the
   /// Firestore key fragment. Matches the PROGRAM_MAP in build_image_index.py.
@@ -103,15 +171,42 @@ class CoinImageService {
     return null;
   }
 
+  /// Resolve a coin's Theme/Subject field to a canonical subject slug used in
+  /// the Firestore key for series coins (State Quarters, Presidents, Women, etc.)
+  static String? _resolveSubject(String? subject, String? program) {
+    if (subject == null || subject.trim().isEmpty) return null;
+    if (program == null || !_subjectPrograms.contains(program)) return null;
+    final key = subject.trim().toLowerCase();
+    // Exact match first
+    if (_subjectSlugMap.containsKey(key)) return _subjectSlugMap[key];
+    // Partial match — try longest matching key first to avoid e.g. 'adams' matching 'van buren'
+    final sorted = _subjectSlugMap.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+    for (final entry in sorted) {
+      if (key.contains(entry.key) || entry.key.contains(key)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
   /// Build all candidate Firestore document keys for a coin, in priority order.
   /// Each key is a base (without side suffix) that we'll probe for both _obverse
   /// and _reverse documents.
   static List<String> _candidateBases(
-      String year, String? mint, String? program) {
+      String year, String? mint, String? program, {String? subject}) {
     final bases = <String>[];
     if (program == null) return bases;
 
-    // Exact program with mint, then without
+    // Subject-specific keys have highest priority (e.g. 1999_new-jersey_50-state-quarters)
+    if (subject != null) {
+      if (mint != null && mint.isNotEmpty) {
+        bases.add('${year}_${mint}_${subject}_$program');
+      }
+      bases.add('${year}_${subject}_$program');
+    }
+
+    // Exact program with mint, then without (generic year+program fallbacks)
     if (mint != null && mint.isNotEmpty) {
       bases.add('${year}_${mint}_$program');
     }
@@ -170,13 +265,20 @@ class CoinImageService {
     String? mint,
     String? denomination,
     String? series,
+    String? subject,   // Theme/Subject field — e.g. 'New Jersey' for state quarters
   }) async {
     try {
       final program = _resolveProgram(denomination, series);
       if (program == null) return const CoinImageResult();
 
+      // Resolve subject slug (e.g. 'New Jersey' -> 'new-jersey')
+      final subjectSlug = _resolveSubject(subject, program);
+
       final db = FirebaseFirestore.instance;
-      final bases = _candidateBases(year, mint?.toUpperCase(), program);
+      final bases = _candidateBases(
+        year, mint?.toUpperCase(), program,
+        subject: subjectSlug,
+      );
 
       for (final base in bases) {
         final obvKey = '${base}_obverse';

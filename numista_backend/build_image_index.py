@@ -100,6 +100,70 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 # ─── Slug → metadata parser ────────────────────────────────────────────────────
 
+# Programs that have per-design subjects (State, President, Woman, etc.)
+# For these programs we extract and encode the subject into the canonical key.
+SUBJECT_PROGRAMS = {
+    "50-state-quarters",
+    "presidential-dollars",
+    "american-women-quarters",
+    "america-the-beautiful",
+    "american-innovation",
+    "native-american-dollar",
+    "commemorative",
+}
+
+# State names → slug (covers all 50 states + territories used in quarter programs)
+STATE_SLUG_MAP = {
+    "alabama": "alabama", "alaska": "alaska", "arizona": "arizona",
+    "arkansas": "arkansas", "california": "california", "colorado": "colorado",
+    "connecticut": "connecticut", "delaware": "delaware", "florida": "florida",
+    "georgia": "georgia", "hawaii": "hawaii", "idaho": "idaho",
+    "illinois": "illinois", "indiana": "indiana", "iowa": "iowa",
+    "kansas": "kansas", "kentucky": "kentucky", "louisiana": "louisiana",
+    "maine": "maine", "maryland": "maryland", "massachusetts": "massachusetts",
+    "michigan": "michigan", "minnesota": "minnesota", "mississippi": "mississippi",
+    "missouri": "missouri", "montana": "montana", "nebraska": "nebraska",
+    "nevada": "nevada", "new hampshire": "new-hampshire", "new jersey": "new-jersey",
+    "new mexico": "new-mexico", "new york": "new-york", "north carolina": "north-carolina",
+    "north dakota": "north-dakota", "ohio": "ohio", "oklahoma": "oklahoma",
+    "oregon": "oregon", "pennsylvania": "pennsylvania", "rhode island": "rhode-island",
+    "south carolina": "south-carolina", "south dakota": "south-dakota",
+    "tennessee": "tennessee", "texas": "texas", "utah": "utah",
+    "vermont": "vermont", "virginia": "virginia", "washington": "washington",
+    "west virginia": "west-virginia", "wisconsin": "wisconsin", "wyoming": "wyoming",
+    # ATB / AWQ / AI territories
+    "puerto rico": "puerto-rico", "guam": "guam", "us virgin islands": "us-virgin-islands",
+    "american samoa": "american-samoa", "northern mariana": "northern-mariana-islands",
+    "district of columbia": "district-of-columbia",
+    # Common ATB park/site names (abbreviated list)
+    "yellowstone": "yellowstone", "grand canyon": "grand-canyon",
+    "yosemite": "yosemite", "gettysburg": "gettysburg",
+    "hot springs": "hot-springs", "mount hood": "mount-hood",
+    "glacier": "glacier", "olympic": "olympic",
+    # Presidential dollar subjects (presidents)
+    "washington": "washington", "adams": "adams", "jefferson": "jefferson",
+    "madison": "madison", "monroe": "monroe", "jackson": "jackson",
+    "van buren": "van-buren", "harrison": "harrison", "tyler": "tyler",
+    "polk": "polk", "taylor": "taylor", "fillmore": "fillmore",
+    "pierce": "pierce", "buchanan": "buchanan", "lincoln": "lincoln",
+    "johnson": "johnson", "grant": "grant", "hayes": "hayes",
+    "garfield": "garfield", "arthur": "arthur", "cleveland": "cleveland",
+    "mckinley": "mckinley", "roosevelt": "roosevelt", "taft": "taft",
+    "wilson": "wilson", "harding": "harding", "coolidge": "coolidge",
+    "hoover": "hoover", "truman": "truman", "eisenhower": "eisenhower",
+    "kennedy": "kennedy", "ford": "ford", "carter": "carter",
+    "reagan": "reagan", "bush": "bush", "clinton": "clinton",
+    "obama": "obama", "trump": "trump", "biden": "biden",
+    # American Women Quarters subjects
+    "maya angelou": "maya-angelou", "dr sally ride": "sally-ride",
+    "wilma mankiller": "wilma-mankiller", "nina otero warren": "nina-otero-warren",
+    "anna may wong": "anna-may-wong", "bessie coleman": "bessie-coleman",
+    "edith kanaka ole": "edith-kanaka-ole", "eleanor roosevelt": "eleanor-roosevelt",
+    "jovita idar": "jovita-idar", "maria tallchief": "maria-tallchief",
+    "patsy mink": "patsy-mink", "nina otero": "nina-otero-warren",
+    "sally ride": "sally-ride",
+}
+
 # Known program slug fragments → canonical program name
 PROGRAM_MAP = [
     (r"silver.?eagle|american.?eagle.?silver",          "american-eagle-silver"),
@@ -163,6 +227,25 @@ def detect_program(slug):
             return canonical
     return None
 
+def detect_subject(slug, program):
+    """
+    For series programs (State Quarters, Presidential Dollars, etc.) extract
+    the per-design subject from the filename slug so that each unique design
+    gets its own Firestore document key.
+
+    Returns a slug string like "new-jersey" or "george-washington", or None.
+    """
+    if program not in SUBJECT_PROGRAMS:
+        return None
+
+    # Try multi-word subjects first (longest match wins)
+    for name_lower, name_slug in sorted(STATE_SLUG_MAP.items(), key=lambda x: -len(x[0])):
+        # Replace spaces with either space or hyphen/dash in the slug for matching
+        pattern = name_lower.replace(" ", r"[\s_-]")
+        if re.search(pattern, slug, re.I):
+            return name_slug
+    return None
+
 def parse_filename(blob_name, bucket, prefix, source_tier):
     """
     Parse a GCS blob path into structured coin metadata.
@@ -196,10 +279,15 @@ def parse_filename(blob_name, bucket, prefix, source_tier):
     if not year:
         return None  # can't index without a year
 
-    # Build canonical key
+    # Detect optional per-design subject (e.g. state name, president name)
+    subject = detect_subject(slug, program)
+
+    # Build canonical key: {year}[_{mint}][_{subject}]_{program}_{side}
     key_parts = [year]
     if mint:
         key_parts.append(mint)
+    if subject:
+        key_parts.append(subject)
     key_parts.append(program)
     key_parts.append(side)
     canonical_key = "_".join(key_parts)
@@ -212,6 +300,7 @@ def parse_filename(blob_name, bucket, prefix, source_tier):
         "canonical_key": canonical_key,
         "year":          year,
         "mint":          mint,
+        "subject":       subject,
         "program":       program,
         "side":          side,
         "gcs_path":      f"gs://{bucket}/{blob_name}",
@@ -437,6 +526,7 @@ def main():
                 },
                 "year":    result["year"],
                 "mint":    result["mint"],
+                "subject": result.get("subject"),
                 "program": result["program"],
             }
 
