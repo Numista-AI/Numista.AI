@@ -1,11 +1,11 @@
 {
-    "name": "numista_ai",
-    "short_name": "numista_ai",
+    "name": "Numista.AI",
+    "short_name": "Numista.AI",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1565C0",
+    "theme_color": "#1565C0",
+    "description": "Your AI-powered coin collection manager. Identify, catalog, track, and value your coins with Gemini AI.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

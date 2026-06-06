@@ -353,7 +353,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               // Build denomination label — only prepend '$' if the
                               // value is numeric (e.g. "1" → "$1") or already has it.
                               // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
-                              String _fmtDenom(String d) {
+                              String fmtDenom(String d) {
                                 if (d.isEmpty || d == 'Multiple') return '';
                                 if (d.startsWith(r'$')) return d;              // already has $
                                 final numeric = double.tryParse(
@@ -363,7 +363,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 }
                                 return d[0].toUpperCase() + d.substring(1);   // word → capitalise
                               }
-                              final denomLabel = _fmtDenom(denom);
+                              final denomLabel = fmtDenom(denom);
                               final condition = data['Condition']?.toString() ?? '';
 
                               // When year is known → "2025-W  $1"

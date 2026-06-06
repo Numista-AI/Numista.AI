@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
+import '../services/coin_normalizer_service.dart';
 import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/wizard_service.dart';
@@ -40,6 +41,11 @@ class _BaseLayoutState extends State<BaseLayout> {
     super.initState();
     // Load eBay credentials from Firestore into SharedPreferences.
     EpnService.loadFromFirestore();
+    // Run US Mint data normalization silently in background for all accounts.
+    // Only processes coins that haven't been normalized yet.
+    if (!AuthService.isGuest) {
+      CoinNormalizerService.runForUser();
+    }
     // Auto-start the guided wizard for first-time Guest users.
     // Demo mode gets a read-only experience without the wizard.
     if (AuthService.isGuest && !widget.isDemoMode) {

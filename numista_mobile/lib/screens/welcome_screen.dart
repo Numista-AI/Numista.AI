@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_service.dart';
 
 /// Shown once after a new user creates their account.
 /// Sets a SharedPreferences flag so it never shows again.
@@ -11,9 +13,28 @@ class WelcomeScreen extends StatelessWidget {
 
   /// Call this from main.dart / BaseLayout to check if the welcome screen
   /// should be shown. Returns true only on first launch after account creation.
+  /// Returns false for existing users who already have coins in their collection.
   static Future<bool> shouldShow() async {
     final prefs = await SharedPreferences.getInstance();
-    return !(prefs.getBool(_prefKey) ?? false);
+    // Already dismissed in this browser/device
+    if (prefs.getBool(_prefKey) ?? false) return false;
+
+    // Check if user already has coins — if so, skip welcome and mark seen
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .limit(1)
+          .get();
+      if (snap.docs.isNotEmpty) {
+        // Existing user — silently mark seen so it never shows again
+        await prefs.setBool(_prefKey, true);
+        return false;
+      }
+    } catch (_) {
+      // If Firestore check fails, fall through and show welcome
+    }
+
+    return true;
   }
 
   static Future<void> markSeen() async {
@@ -24,7 +45,7 @@ class WelcomeScreen extends StatelessWidget {
   static const _bg      = Color(0xFF0F172A);   // deep navy
   static const _accent  = Color(0xFF3B82F6);   // blue
   static const _gold    = Color(0xFFF59E0B);   // amber/gold
-  static const _surface = Color(0xFF1E293B);   // card surface
+  // _surface is declared in _FeatureCard where it's actually used
   static const _text    = Colors.white;
   static const _sub     = Color(0xFF94A3B8);
 
@@ -36,11 +57,12 @@ class WelcomeScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                   // ── Logo / Icon ─────────────────────────────────────────
                   Container(
                     width: 96,
@@ -132,6 +154,7 @@ class WelcomeScreen extends StatelessWidget {
                         style: TextStyle(color: _sub, fontSize: 13)),
                   ),
                 ],
+                ),
               ),
             ),
           ),

@@ -1,16 +1,16 @@
-/// melt_value_service.dart
-///
-/// Calculates real-time melt value for a coin given:
-///   - its standardized [metalContent] field (written by migrate_precious_metal.py)
-///   - its [denomination] string
-///   - a [spotPrices] map with keys 'Gold', 'Silver', 'Platinum', 'Palladium'
-///     (price per troy oz, fetched by the dashboard from /api/spot_prices)
-///
-/// Returns the melt value in USD, or null if the coin has no precious metal content
-/// worth calculating (e.g. modern clad coins, zinc pennies).
-///
-/// All silver weights are in troy oz of PURE silver per coin (Ag).
-/// All gold weights are in troy oz of PURE gold per coin (Au).
+// melt_value_service.dart
+//
+// Calculates real-time melt value for a coin given:
+//   - its standardized [metalContent] field (written by migrate_precious_metal.py)
+//   - its [denomination] string
+//   - a [spotPrices] map with keys 'Gold', 'Silver', 'Platinum', 'Palladium'
+//     (price per troy oz, fetched by the dashboard from /api/spot_prices)
+//
+// Returns the melt value in USD, or null if the coin has no precious metal content
+// worth calculating (e.g. modern clad coins, zinc pennies).
+//
+// All silver weights are in troy oz of PURE silver per coin (Ag).
+// All gold weights are in troy oz of PURE gold per coin (Au).
 
 class MeltValueService {
   // ── Silver (Ag) troy oz per coin by denomination ───────────────────────────
@@ -132,6 +132,17 @@ class MeltValueService {
       }
     }
 
+    // ── Gold coins with explicit troy oz weight in Metal Content ────────────
+    // e.g. "22 Karat Gold (0.1 troy oz fine gold)"
+    final troyOzPattern = RegExp(
+        r'(\d+\.?\d*)\s*troy\s*oz\s*(?:fine\s*)?gold',
+        caseSensitive: false);
+    final troyMatch = troyOzPattern.firstMatch(mc);
+    if (troyMatch != null && au > 0) {
+      final oz = double.tryParse(troyMatch.group(1) ?? '');
+      if (oz != null && oz > 0) return au * oz;
+    }
+
     // ── Copper / Clad coins — return null (effectively zero precious value) ──
     // Copper melt is < face value; not meaningful for collection display.
     return null;
@@ -170,7 +181,12 @@ class MeltValueService {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  static double? _matchDenom(Map<String, double> table, String denom) {
+  static double? _matchDenom(Map<String, double> table, String rawDenom) {
+    final denom = rawDenom
+        .replaceAll(RegExp(r'^\$?0?\.10?$'), 'dime')
+        .replaceAll(RegExp(r'^\$?0?\.25$'), 'quarter')
+        .replaceAll(RegExp(r'^\$?0?\.5(?:0)?$'), 'half dollar')
+        .replaceAll(RegExp(r'^\$?1(?:\.0+)?$'), 'dollar');
     for (final entry in table.entries) {
       if (denom.contains(entry.key)) return entry.value;
     }

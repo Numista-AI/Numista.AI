@@ -9,7 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
-import '../services/wishlist_service.dart';
+// wishlist_service removed from this screen — wishlist action is in CoinDetailScreen
 import '../models/coin_model.dart';
 import '../services/epn_service.dart';
 import '../services/reference_library_service.dart';
@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/melt_value_service.dart';
+import 'coin_detail_screen.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -43,8 +44,8 @@ class _F {
   static const personalNotes    = 'Personal Notes';
   static const personalRef      = 'Personal Reference #';
   static const storageLocation  = 'Storage Location';
-  static const originalDesc     = 'Original Description from source';
-  
+  // originalDesc removed — field exists in Firestore but not used in this screen
+
   // Internal/Legacy
   static const aiValue          = 'AI Estimated Value';
   static const meltValue        = 'Melt Value';
@@ -80,7 +81,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   String? _selectedCoinId;
   int     _limit            = 50;
   String  _searchQuery      = '';
-  bool    _showInspector    = true;
+  // _showInspector removed — inspector is now always expanded in the dialog
   // Default: sort by date added, newest first (column index -1 = special Added sort)
   // Users can click any column header to override.
   int     _sortColumnIndex  = -1;   // -1 = sort by Added timestamp
@@ -104,12 +105,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   
   // Stores fetched eBay prices keyed by coinId
   final Map<String, String> _ebayPrices = {};
-  bool _isCheckingEbay = false;
+  // _isCheckingEbay removed — eBay fetch state tracked locally in each call
 
   // --- Similar Coins state (inspector) ------------------------------------
   List<ReferenceImage> _inspectorSimilar = [];
   bool _loadingInspectorSimilar = false;
-  String? _inspectorSimilarCoinId; // tracks which coin's similar images are loaded
+  // _inspectorSimilarCoinId removed — tracking via _selectedCoinId is sufficient
 
 
   // --- Live spot prices (fetched once on mount, same endpoint as dashboard) --
@@ -836,8 +837,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _iconBtn(Icons.info_outline, 'View Details',
-                            () => _showCoinInspectorDialog(doc.id, m)),
+                        _iconBtn(Icons.info_outline, 'View Details', () {
+                          final coin = CoinModel.fromMap(m, doc.id);
+                          CoinDetailScreen.show(
+                            context,
+                            coin: coin,
+                            spotPrices: _spotPrices,
+                            onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                : null,
+                            onDeleted: () => setState(() {}),
+                            onEdited: () => setState(() {}),
+                          );
+                        }),
                         _iconBtn(Icons.edit_outlined,   'Edit',
                             () => _onEdit(doc.id, m)),
                         _iconBtn(Icons.auto_stories,    'AI Deep Dive',
@@ -982,9 +994,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       case _F.condition:
         return _conditionLabel(m[_F.condition]?.toString().trim() ?? '');
       case _F.isSilver:
+        // Derive metal type from Metal Content field
+        final mc2 = (m[_F.metalContent]?.toString() ?? '').toLowerCase();
+        if (mc2.contains('gold')) return 'Au';
+        if (mc2.contains('silver')) return 'Ag';
+        if (mc2.contains('platinum')) return 'Pt';
+        if (mc2.contains('palladium')) return 'Pd';
+        // Fallback to legacy Is Silver boolean
         final rawS = m[_F.isSilver];
         if (rawS == true || rawS == 'true' || rawS == 1) return 'Ag';
-        if (rawS == false || rawS == 'false') return '--';
         return '';
       case _F.pcgsNumber:
         final pn = m[_F.pcgsNumber]?.toString().trim() ?? '';
@@ -1121,9 +1139,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Pre-fetch reference image once (no user photo path only).
     // Capture in closure so FutureBuilder doesn't re-run on every rebuild.
-    final _hasUserPhoto = data[_F.imageObverse]?.toString().startsWith('http') == true
+    final hasUserPhoto = data[_F.imageObverse]?.toString().startsWith('http') == true
         || data[_F.imageReverse]?.toString().startsWith('http') == true;
-    final _refFuture = _hasUserPhoto
+    final refFuture = hasUserPhoto
         ? null
         : CoinImageService.fetchReferenceImages(
             year:         year,
@@ -1136,6 +1154,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ? null
                 : data[_F.themeSubject]?.toString(),
           );
+    // refFuture passed into FutureBuilder below
 
     showDialog(
       context: context,
@@ -1225,10 +1244,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         border: Border(right: BorderSide(color: _border)),
                       ),
                       padding: const EdgeInsets.all(16),
-                      child: _refFuture != null
+                      child: refFuture != null
                           // No user photo -- show reference image via FutureBuilder
                           ? FutureBuilder<CoinImageResult>(
-                              future: _refFuture,
+                              future: refFuture,
                               builder: (ctx2, snap) {
                                 final ref       = snap.data;
                                 final refObvUrl = ref?.obverseUrl ?? '';
@@ -1290,10 +1309,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                         child: hasRefActive
                                             ? Stack(fit: StackFit.expand, children: [
                                                 Image.network(refUrl, fit: BoxFit.contain,
-                                                  loadingBuilder: (_, child, prog) => prog == null
+                                                  loadingBuilder: (ctx, child, prog) => prog == null
                                                       ? child
                                                       : const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
-                                                  errorBuilder: (_, __, ___) => _vaultPlaceholder(
+                                                  errorBuilder: (ctx, err, st) => _vaultPlaceholder(
                                                       showObv ? 'Obverse' : 'Reverse', isError: true),
                                                 ),
                                                 Positioned(bottom: 8, right: 8,
@@ -1371,9 +1390,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                     child: hasActive
                                         ? Stack(fit: StackFit.expand, children: [
                                             Image.network(activeUrl, fit: BoxFit.contain,
-                                              loadingBuilder: (_, child, prog) => prog == null ? child
+                                              loadingBuilder: (ctx, child, prog) => prog == null ? child
                                                   : const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
-                                              errorBuilder: (_, err, __) {
+                                              errorBuilder: (ctx, err, st) {
                                                 debugPrint('Image load error: $err  url: $activeUrl');
                                                 return _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse', isError: true);
                                               },
@@ -1445,110 +1464,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  Widget _buildInspectorSection(Map<String, dynamic> data) {
-    // Kick off similar coins fetch when a new coin is selected
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_selectedCoinId != null &&
-          _selectedCoinId != _inspectorSimilarCoinId) {
-        _fetchInspectorSimilar(data);
-      }
-    });
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FB),
-        border: Border.all(color: _border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: _showInspector,
-          iconColor: _text,
-          collapsedIconColor: _text,
-          onExpansionChanged: (v) => setState(() => _showInspector = v),
-          title: Row(children: [
-            const Icon(Icons.book_outlined, color: _text, size: 18),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Coin Inspector - '
-                '${data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? ''}'
-                '${(data[_F.mintMark]?.toString().trim() ?? '').isNotEmpty ? '-${data[_F.mintMark]}' : ''} '
-                '${data[_F.denomination] ?? ''}',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: _text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-          ]),
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMetricStrip(data),
-                  const SizedBox(height: 16),
-                  _buildPcgsBar(data),
-                  const SizedBox(height: 20),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: _buildDetailGrid(data)),
-                      const SizedBox(width: 32),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(spacing: 8, runSpacing: 6, children: [
-                               Tooltip(
-                                message: 'Opens Google Images search for this coin',
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _onSearchGoogle(data),
-                                  icon: const Icon(Icons.image_search, size: 16),
-                                  label: const Text('Google Images'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: _text,
-                                    side: const BorderSide(color: _border),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                  ),
-                                ),
-                              ),
-                              Tooltip(
-                                message: 'Search eBay sold listings for this coin',
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _onSearchEbay(data),
-                                  icon: const Icon(Icons.shopping_cart_outlined, size: 16),
-                                  label: const Text('eBay Search'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _accent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                  ),
-                                ),
-                              ),
-                            ]),
-                            const SizedBox(height: 20),
-                            _buildCoinVaultGallery(data),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  _buildCoinSetSection(data),
-                  _buildRollBanner(data),
-                  _buildSimilarCoinsInspector(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // _buildInspectorSection was removed — inspector is now rendered directly
+  // inside showDialog via the _buildMetricStrip / _buildDetailGrid helpers below.
 
   // --- Metric strip --------------------------------------------------------
   Widget _buildMetricStrip(Map<String, dynamic> data) {
@@ -1684,7 +1601,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       section('IDENTITY', [
-        ['Year',          data[_F.year]?.toString()?.replaceAll(RegExp(r'\.0$'), '')],
+        ['Year',          data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '')],
         ['Mint Mark',     data[_F.mintMark]?.toString()],
         // Capitalise denomination (e.g. 'penny' > 'Penny', '$1' stays '$1')
         ['Denomination',  _capitalizeDenom(data[_F.denomination]?.toString())],
@@ -1745,16 +1662,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     ]),
   );
 
-  Widget _metric(String label, String value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 11, color: _subtext)),
-      const SizedBox(height: 4),
-      Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _text)),
-    ],
-  );
-
-
+  // _metric removed — replaced by _metricCard (the used variant with accent+icon)
 
   // --- Dropdown helper -----------------------------------------------------
   Widget _styledDropdown<T>({
@@ -1951,13 +1859,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   Future<void> _onCheckEbay(Map<String, dynamic> data) async {
     final coin = CoinModel.fromMap(data, _selectedCoinId!);
-    setState(() => _isCheckingEbay = true);
+    setState(() {});
     
     try {
       final results = await EpnService.fetchEbayResults(coin);
       if (results.isNotEmpty) {
-        // Find the lowest fixed price item for a conservative "buy now" estimate
-        // or just take the first one.
         final price = results.first['price']['value'];
         final currency = results.first['price']['currency'];
         setState(() {
@@ -1973,7 +1879,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('eBay Check Failed: $e'), backgroundColor: _red));
       }
     } finally {
-      if (mounted) setState(() => _isCheckingEbay = false);
+      if (mounted) setState(() {});
     }
   }
 
@@ -2019,26 +1925,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
-  /// Adds the currently selected coin to the user's Wish List.
-  Future<void> _onAddToWishlist(Map<String, dynamic> data) async {
-    if (_selectedCoinId == null) return;
-    try {
-      final coin = CoinModel.fromMap(data, _selectedCoinId!);
-      await WishlistService.addToWishlist(coin);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Added to Wish List!'),
-        backgroundColor: Color(0xFFF63366),
-        duration: Duration(seconds: 2),
-      ));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Could not add to Wish List: $e'),
-        backgroundColor: _red,
-      ));
-    }
-  }
+  // _onAddToWishlist removed — wishlist action now lives in CoinDetailScreen.
 
   void _onGenerateReport() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -2061,6 +1948,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// Replaces the old upload-zone pair with a premium personal scan gallery.
   /// Shows the user's microscope photo with a 📷 YOUR SCAN badge when present,
   /// or an inviting "Add Your Photo" prompt otherwise.
+  // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
     final obvUrl = data[_F.imageObverse]?.toString() ?? '';
     final revUrl = data[_F.imageReverse]?.toString() ?? '';
@@ -2747,7 +2635,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     setState(() {
       _loadingInspectorSimilar = true;
       _inspectorSimilar = [];
-      _inspectorSimilarCoinId = _selectedCoinId;
     });
 
     final imgs = await ReferenceLibraryService.fetchSimilar(

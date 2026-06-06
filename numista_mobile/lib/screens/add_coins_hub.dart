@@ -60,6 +60,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   String _pcgsLookupError   = '';
   bool   _pcgsSingleAdding  = false;
 
+  // ─── Excel import state ─────────────────────────────────────────────────
+  final _importNameCtrl = TextEditingController();
+
   // Backend API URL
   final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
 
@@ -76,6 +79,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _pcgsTokenCtrl.dispose();
     _pcgsCertCtrl.dispose();
     _pcgsSingleCtrl.dispose();
+    _importNameCtrl.dispose();
     super.dispose();
   }
 
@@ -107,7 +111,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   // ─── Automated Ingestion Logic ───────────────────────────────────────────
 
-  Future<void> _processFiles({required List<PlatformFile> files, required bool isInvoice}) async {
+  Future<void> _processFiles({
+    required List<PlatformFile> files,
+    required bool isInvoice,
+    String importName = '',
+  }) async {
     setState(() {
       _isProcessing = true;
       _processingProgress = 0;
@@ -128,7 +136,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
         var request = http.MultipartRequest('POST', Uri.parse('$_apiUrl$endpoint'));
         request.fields['user_email'] = AuthService.userEmail;
-        
+        if (!isInvoice && importName.isNotEmpty) {
+          request.fields['import_name'] = importName;
+        }
+
         if (file.bytes != null) {
           request.files.add(http.MultipartFile.fromBytes(
             'file',
@@ -142,7 +153,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          totalItems += (data['extracted_items'] ?? data['count'] ?? 0) as int;
+          final count = (data['extracted_items'] ?? data['count'] ?? 0) as int;
+          totalItems += count;
+          if (!mounted) return;
+          setState(() => _statusMessage = 'Added $count coins from ${file.name}…');
         }
       }
 
@@ -346,17 +360,233 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _buildExcelImportTab() {
-    return _buildUploadArea(
-      title: 'Spreadsheet Ingestor',
-      description: 'Upload Excel or CSV files. Vertex AI will auto-map your columns to our Golden Schema.',
-      icon: Icons.grid_on,
-      buttonLabel: 'Upload Spreadsheet',
-      onPressed: () async {
-        FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'xlsx', 'xls'], withData: true);
-        if (result != null) _processFiles(files: result.files, isInvoice: false);
-      },
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ──────────────────────────────────────────────────
+              const Text(
+                'Spreadsheet Ingestor',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Upload Excel or CSV files from any source — Access exports, personal spreadsheets, '
+                'or our pre-formatted template. AI auto-maps your columns and normalizes coin names, '
+                'grades, and year/mint formats.',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Import Name field ───────────────────────────────────────
+              const Text(
+                'Import Label (optional)',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _importNameCtrl,
+                decoration: InputDecoration(
+                  hintText: 'e.g. "Aunt Janet\'s Access Database" or "Safe Deposit Box Coins"',
+                  hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
+                  prefixIcon: const Icon(Icons.label_outline, color: Color(0xFF94A3B8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFF63366), width: 2),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This label will be stored on every imported coin so you can trace it back to its source.',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Drop zone / Upload button ────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.grid_on_rounded,
+                        size: 48, color: Color(0xFF94A3B8)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Excel (.xlsx / .xls) or CSV',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Limit 200 MB per file',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.upload_file, size: 20),
+                        label: const Text(
+                          'Upload Spreadsheet',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () async {
+                          FilePickerResult? result =
+                              await FilePicker.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: ['csv', 'xlsx', 'xls'],
+                            withData: true,
+                          );
+                          if (result != null) {
+                            _processFiles(
+                              files: result.files,
+                              isInvoice: false,
+                              importName: _importNameCtrl.text.trim(),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Template download row ────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.file_download_outlined,
+                        color: Color(0xFF16A34A), size: 22),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Download Pre-Formatted Template',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF15803D),
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            'Use our Golden Schema CSV to enter coins directly — no column mapping needed.',
+                            style: TextStyle(
+                                color: Color(0xFF4ADE80), fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF16A34A),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                      ),
+                      onPressed: () async {
+                        final uri = Uri.parse('$_apiUrl/api/template');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: const Text('Download',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              // ── What gets normalized note ────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  border: Border.all(color: const Color(0xFFFED7AA)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.auto_fix_high,
+                          color: Color(0xFFF97316), size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'AI Normalization — runs automatically',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFEA580C),
+                            fontSize: 13),
+                      ),
+                    ]),
+                    SizedBox(height: 8),
+                    Text(
+                      '• Year + Mint: "2007W" → Year: 2007, Mint: W\n'
+                      '• Grades: "Ch Proof 63" → Proof-63  |  "BU" → Uncirculated\n'
+                      '• Names: "Ike" → Eisenhower Dollar  |  "Merc" → Mercury Dime\n'
+                      '• Unrecognized values flagged for AI review automatically',
+                      style: TextStyle(
+                          color: Color(0xFF92400E), fontSize: 12, height: 1.6),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
+
 
   Widget _buildRollEntryTab() {
     return SingleChildScrollView(

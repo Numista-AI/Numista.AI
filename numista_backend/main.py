@@ -80,6 +80,344 @@ COIN_DICTIONARY = [
     { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar", "peace"] }
 ]
 
+# ── Normalization dictionaries ─────────────────────────────────────────────────
+# Used by import_spreadsheet and the backfill endpoint to interpret colloquial,
+# abbreviated, or inconsistently-formatted coin data entered by collectors.
+
+# Coin nicknames → official Program/Series name
+COIN_NICKNAMES: dict[str, str] = {
+    # Dollars
+    'ike': 'Eisenhower Dollar',
+    'ike dollar': 'Eisenhower Dollar',
+    'eisenhower': 'Eisenhower Dollar',
+    'morgan': 'Morgan Silver Dollar',
+    'morgan dollar': 'Morgan Silver Dollar',
+    'peace': 'Peace Dollar',
+    'peace dollar': 'Peace Dollar',
+    'sba': 'Susan B. Anthony Dollar',
+    'sba dollar': 'Susan B. Anthony Dollar',
+    'susan b anthony': 'Susan B. Anthony Dollar',
+    'sacagawea': 'Sacagawea Dollar',
+    'golden dollar': 'Sacagawea Dollar',
+    'trade dollar': 'Trade Dollar',
+    'trade': 'Trade Dollar',
+    'flowing hair': 'Flowing Hair Dollar',
+    'draped bust': 'Draped Bust Dollar',
+    'gobrecht': 'Gobrecht Dollar',
+    # Half Dollars
+    'walker': 'Walking Liberty Half Dollar',
+    'walking liberty': 'Walking Liberty Half Dollar',
+    'franklin': 'Franklin Half Dollar',
+    'franklin half': 'Franklin Half Dollar',
+    'kennedy': 'Kennedy Half Dollar',
+    'kennedy half': 'Kennedy Half Dollar',
+    'jfk': 'Kennedy Half Dollar',
+    'barber half': 'Barber Half Dollar',
+    'seated liberty half': 'Seated Liberty Half Dollar',
+    # Quarters
+    'barber quarter': 'Barber Quarter',
+    'seated liberty quarter': 'Seated Liberty Quarter',
+    'standing liberty': 'Standing Liberty Quarter',
+    'washington quarter': 'Washington Quarter',
+    # Dimes
+    'merc': 'Mercury Dime',
+    'mercury': 'Mercury Dime',
+    'mercury dime': 'Mercury Dime',
+    'winged liberty': 'Mercury Dime',
+    'barber dime': 'Barber Dime',
+    'seated liberty dime': 'Seated Liberty Dime',
+    'rosie': 'Roosevelt Dime',
+    'roosevelt dime': 'Roosevelt Dime',
+    'roosevelt': 'Roosevelt Dime',
+    # Nickels
+    'buffalo nickel': 'Buffalo Nickel',
+    'indian nickel': 'Buffalo Nickel',
+    'war nickel': 'Jefferson Wartime Nickel',
+    'wartime nickel': 'Jefferson Wartime Nickel',
+    'v nickel': 'Liberty V Nickel',
+    'v-nickel': 'Liberty V Nickel',
+    'liberty nickel': 'Liberty V Nickel',
+    'shield nickel': 'Shield Nickel',
+    'jefferson nickel': 'Jefferson Nickel',
+    # Cents
+    'wheat penny': 'Lincoln Wheat Cent',
+    'wheat cent': 'Lincoln Wheat Cent',
+    'wheatie': 'Lincoln Wheat Cent',
+    'wheats': 'Lincoln Wheat Cent',
+    'indian cent': 'Indian Head Cent',
+    'indian penny': 'Indian Head Cent',
+    'flying eagle': 'Flying Eagle Cent',
+    'large cent': 'Large Cent',
+    'half cent': 'Half Cent',
+    'steel penny': 'Lincoln Steel Cent',
+    'steelie': 'Lincoln Steel Cent',
+    'memorial cent': 'Lincoln Memorial Cent',
+    'bicentennial cent': 'Lincoln Bicentennial Cent',
+    # Gold
+    'ase': 'American Eagle Silver Dollar',
+    'silver eagle': 'American Eagle Silver Dollar',
+    'american silver eagle': 'American Eagle Silver Dollar',
+    'age': 'American Eagle Gold Coin',
+    'gold eagle': 'American Eagle Gold Coin',
+    'american gold eagle': 'American Eagle Gold Coin',
+    'st. gaudens': 'Saint-Gaudens Double Eagle',
+    'saint gaudens': 'Saint-Gaudens Double Eagle',
+    'st gaudens': 'Saint-Gaudens Double Eagle',
+    'double eagle': 'Saint-Gaudens Double Eagle',
+    'gold buffalo': 'Gold Buffalo',
+    'buffalo gold': 'Gold Buffalo',
+    'platinum eagle': 'Platinum Eagle',
+    'palladium eagle': 'Palladium Eagle',
+    'liberty gold': 'Liberty Head Gold',
+    'indian head gold': 'Indian Head Gold',
+    # Misc
+    'commem': 'Commemorative',
+    'commemorative': 'Commemorative',
+    'proof set': 'Proof Set',
+    'mint set': 'Uncirculated Mint Set',
+}
+
+# Mint place-names / abbreviations → mint mark code
+MINT_NAMES: dict[str, str] = {
+    'philadelphia': 'P',
+    'philly': 'P',
+    'no mint': 'P',
+    'no mint mark': 'P',
+    'no mark': 'P',
+    'p': 'P',
+    'denver': 'D',
+    'd': 'D',
+    'san francisco': 'S',
+    'sf': 'S',
+    's': 'S',
+    'west point': 'W',
+    'w': 'W',
+    'new orleans': 'O',
+    'no': 'O',
+    'o': 'O',
+    'carson city': 'CC',
+    'cc': 'CC',
+    'charlotte': 'C',
+    'dahlonega': 'D',
+    'manila': 'M',
+    'm': 'M',
+}
+
+# Condition / grade strings → standard numismatic grade
+CONDITION_MAP: dict[str, str] = {
+    # Uncirculated / Mint State — numeric
+    'ms60': 'MS-60', 'ms-60': 'MS-60',
+    'ms61': 'MS-61', 'ms-61': 'MS-61',
+    'ms62': 'MS-62', 'ms-62': 'MS-62',
+    'ms63': 'MS-63', 'ms-63': 'MS-63',
+    'ms64': 'MS-64', 'ms-64': 'MS-64',
+    'ms65': 'MS-65', 'ms-65': 'MS-65',
+    'ms66': 'MS-66', 'ms-66': 'MS-66',
+    'ms67': 'MS-67', 'ms-67': 'MS-67',
+    'ms68': 'MS-68', 'ms-68': 'MS-68',
+    'ms69': 'MS-69', 'ms-69': 'MS-69',
+    'ms70': 'MS-70', 'ms-70': 'MS-70',
+    # Uncirculated — descriptive
+    'bu': 'Uncirculated',
+    'brilliant uncirculated': 'Uncirculated',
+    'brilliant unc': 'Uncirculated',
+    'unc': 'Uncirculated',
+    'uncirculated': 'Uncirculated',
+    'mint state': 'Mint State',
+    'ms': 'Mint State',
+    'gem bu': 'MS-65',
+    'gem brilliant uncirculated': 'MS-65',
+    'gem unc': 'MS-65',
+    'ch bu': 'MS-63',
+    'choice bu': 'MS-63',
+    'choice brilliant uncirculated': 'MS-63',
+    # Proof — numeric
+    'proof60': 'Proof-60', 'proof-60': 'Proof-60', 'pr60': 'Proof-60', 'pf60': 'Proof-60',
+    'proof61': 'Proof-61', 'proof-61': 'Proof-61', 'pr61': 'Proof-61', 'pf61': 'Proof-61',
+    'proof62': 'Proof-62', 'proof-62': 'Proof-62', 'pr62': 'Proof-62', 'pf62': 'Proof-62',
+    'proof63': 'Proof-63', 'proof-63': 'Proof-63', 'pr63': 'Proof-63', 'pf63': 'Proof-63',
+    'proof64': 'Proof-64', 'proof-64': 'Proof-64', 'pr64': 'Proof-64', 'pf64': 'Proof-64',
+    'proof65': 'Proof-65', 'proof-65': 'Proof-65', 'pr65': 'Proof-65', 'pf65': 'Proof-65',
+    'proof66': 'Proof-66', 'proof-66': 'Proof-66', 'pr66': 'Proof-66', 'pf66': 'Proof-66',
+    'proof67': 'Proof-67', 'proof-67': 'Proof-67', 'pr67': 'Proof-67', 'pf67': 'Proof-67',
+    'proof68': 'Proof-68', 'proof-68': 'Proof-68', 'pr68': 'Proof-68', 'pf68': 'Proof-68',
+    'proof69': 'Proof-69', 'proof-69': 'Proof-69', 'pr69': 'Proof-69', 'pf69': 'Proof-69',
+    'proof70': 'Proof-70', 'proof-70': 'Proof-70', 'pr70': 'Proof-70', 'pf70': 'Proof-70',
+    # Proof — descriptive
+    'proof': 'Proof',
+    'gem proof': 'Proof-65',
+    'gem pf': 'Proof-65',
+    'ch proof': 'Proof-63',
+    'choice proof': 'Proof-63',
+    'ch proof 63': 'Proof-63',
+    'ch pf63': 'Proof-63',
+    'ch pr63': 'Proof-63',
+    'proof 63 cameo': 'Proof-63 Cameo',
+    'proof 65 cameo': 'Proof-65 Cameo',
+    'proof 65 dcam': 'Proof-65 Deep Cameo',
+    'pf63 cam': 'Proof-63 Cameo',
+    'pf65 cam': 'Proof-65 Cameo',
+    'pf65 dcam': 'Proof-65 Deep Cameo',
+    'pr63 cam': 'Proof-63 Cameo',
+    'pr65 cam': 'Proof-65 Cameo',
+    'pr65 dcam': 'Proof-65 Deep Cameo',
+    'dcam': 'Deep Cameo',
+    'deep cameo': 'Deep Cameo',
+    'cameo': 'Cameo',
+    'cam': 'Cameo',
+    # About Uncirculated
+    'au50': 'AU-50', 'au-50': 'AU-50',
+    'au55': 'AU-55', 'au-55': 'AU-55',
+    'au58': 'AU-58', 'au-58': 'AU-58',
+    'au': 'About Uncirculated',
+    'slider': 'AU-58',
+    'almost uncirculated': 'About Uncirculated',
+    'about uncirculated': 'About Uncirculated',
+    # Extremely Fine
+    'ef': 'Extremely Fine',
+    'xf': 'Extremely Fine',
+    'ef40': 'EF-40', 'ef-40': 'EF-40', 'xf40': 'EF-40', 'xf-40': 'EF-40',
+    'ef45': 'EF-45', 'ef-45': 'EF-45', 'xf45': 'EF-45', 'xf-45': 'EF-45',
+    'extremely fine': 'Extremely Fine',
+    'extra fine': 'Extremely Fine',
+    # Very Fine
+    'vf': 'Very Fine',
+    'vf20': 'VF-20', 'vf-20': 'VF-20',
+    'vf25': 'VF-25', 'vf-25': 'VF-25',
+    'vf30': 'VF-30', 'vf-30': 'VF-30',
+    'vf35': 'VF-35', 'vf-35': 'VF-35',
+    'very fine': 'Very Fine',
+    # Fine
+    'f': 'Fine',
+    'f12': 'F-12', 'f-12': 'F-12',
+    'f15': 'F-15', 'f-15': 'F-15',
+    'fine': 'Fine',
+    # Very Good
+    'vg': 'Very Good',
+    'vg8': 'VG-8', 'vg-8': 'VG-8',
+    'vg10': 'VG-10', 'vg-10': 'VG-10',
+    'very good': 'Very Good',
+    # Good
+    'g': 'Good',
+    'g4': 'G-4', 'g-4': 'G-4',
+    'g6': 'G-6', 'g-6': 'G-6',
+    'good': 'Good',
+    # About Good / Poor / Fair
+    'ag': 'About Good',
+    'ag3': 'AG-3', 'ag-3': 'AG-3',
+    'about good': 'About Good',
+    'poor': 'Poor',
+    'fair': 'Fair',
+    'fr2': 'FR-2', 'fr-2': 'FR-2',
+    # Circulated / Ungraded
+    'circulated': 'Circulated',
+    'circ': 'Circulated',
+    'ungraded': 'Ungraded',
+    'n/a': 'Ungraded',
+    'na': 'Ungraded',
+    '': 'Ungraded',
+}
+
+
+def _parse_year_mint(raw: str) -> tuple[str, str]:
+    """
+    Parse a combined or standalone year+mint string into (year, mint_mark).
+    Handles: '2007W', '2007 w', '2007-W', '2007/W', '1943-S', '2007', 'West Point'.
+    Returns ('', '') if nothing is recognized.
+    """
+    raw = str(raw).strip()
+    if not raw or raw.lower() in ('nan', 'none', ''):
+        return ('', '')
+
+    # Pattern: 4-digit year optionally followed by a mint letter/pair
+    m = re.match(r'^(\d{4})\s*[-/]?\s*([a-zA-Z]{1,2})$', raw)
+    if m:
+        year = m.group(1)
+        mint = m.group(2).upper()
+        if mint in ('P', 'D', 'S', 'W', 'O', 'C', 'M'):
+            return (year, mint)
+        if mint == 'CC':
+            return (year, 'CC')
+        if mint in ('NO',):
+            return (year, 'O')
+        # Unrecognised suffix — keep year, discard suffix
+        return (year, '')
+
+    # Pure 4-digit year
+    if re.match(r'^\d{4}$', raw):
+        return (raw, '')
+
+    # 2-digit year — ambiguous, pass through as-is
+    if re.match(r'^\d{2}$', raw):
+        return (raw, '')
+
+    # Named mint
+    key = raw.lower().strip()
+    for name, code in MINT_NAMES.items():
+        if key == name:
+            return ('', code)
+
+    # Nothing matched
+    return (raw, '')
+
+
+def _norm_condition(raw: str) -> str:
+    """
+    Normalize a colloquial or abbreviated condition/grade string to the
+    standard Numista.AI grade format.  Falls back to title-cased original
+    if not in the lookup table (preserves user data rather than guessing).
+    """
+    if not raw or str(raw).strip().lower() in ('nan', 'none', ''):
+        return 'Ungraded'
+    cleaned = re.sub(r'\s+', ' ', str(raw).strip().lower())
+    if cleaned in CONDITION_MAP:
+        return CONDITION_MAP[cleaned]
+    # Try without spaces
+    if cleaned.replace(' ', '') in CONDITION_MAP:
+        return CONDITION_MAP[cleaned.replace(' ', '')]
+    # Try without hyphens
+    if cleaned.replace('-', '') in CONDITION_MAP:
+        return CONDITION_MAP[cleaned.replace('-', '')]
+    # Preserve user value unchanged (title-cased)
+    return str(raw).strip()
+
+
+import time as _time
+
+# ── Community nickname cache (refreshed every 60 s) ───────────────────────────
+_community_cache: dict[str, str] = {}
+_community_cache_ts: float = 0.0
+
+def _community_nicknames() -> dict[str, str]:
+    """Returns approved community nicknames merged with the hardcoded dict."""
+    global _community_cache, _community_cache_ts
+    if _time.time() - _community_cache_ts > 60:
+        try:
+            docs = db.collection('coin_nickname_suggestions') \
+                     .where('status', '==', 'approved').stream()
+            _community_cache = {
+                d.to_dict()['nickname'].strip().lower(): d.to_dict()['maps_to']
+                for d in docs
+            }
+        except Exception as e:
+            print(f"[community_cache] refresh error: {e}")
+        _community_cache_ts = _time.time()
+    return {**COIN_NICKNAMES, **_community_cache}
+
+
+def _expand_series(text: str) -> str:
+    """
+    Expand a colloquial coin name to the official Program/Series name.
+    Checks hardcoded dict + live community-approved terms.
+    Case-insensitive. Returns original text if no match found.
+    """
+    if not text:
+        return text
+    key = str(text).strip().lower()
+    return _community_nicknames().get(key, text)
+
+
+
 class CommitReviewsRequest(BaseModel):
     user_email: str
     review_ids: list[str]
@@ -111,78 +449,748 @@ def get_live_metal_prices():
         return {"Gold": 3100.0, "Silver": 35.0, "Platinum": 1000.0, "Palladium": 1000.0}
 
 @app.post("/api/import_spreadsheet")
-async def import_spreadsheet(user_email: str = Form(...), file: UploadFile = File(...)):
+async def import_spreadsheet(
+    user_email:  str = Form(...),
+    file:        UploadFile = File(...),
+    import_name: str = Form(''),   # optional label e.g. "Aunt's Access DB - Jan 2026"
+):
     """
-    Ingests an Excel/CSV file, intelligently maps columns using Vertex AI,
-    enforces coin-schema formatting, and writes directly into the user's Firestore.
+    Ingests an Excel/CSV file into the user's review_queue.
+
+    Pipeline:
+      1. AI maps column NAMES to the Golden Schema (one call, fast).
+      2. Per-row rule-based normalization:
+           - Year column: split combined "2007W" → Year + Mint Mark
+           - Condition: expand abbreviations/colloquial grades
+           - Program/Series: expand coin nicknames (Ike, Merc, Walker …)
+      3. AI fallback: rows whose Condition or Series still look unresolved
+         go through a lightweight AI interpretation pass (batched, 10 rows/call).
     """
     contents = await file.read()
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(contents))
-        else:
-            df = pd.read_excel(io.BytesIO(contents))
+        df = pd.read_csv(io.BytesIO(contents)) if str(file.filename).lower().endswith('.csv') \
+             else pd.read_excel(io.BytesIO(contents))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
 
-    # Use Vertex AI to determine column mappings based on headers
+    # ── 1. AI column-name mapping ────────────────────────────────────────────
     headers = list(df.columns)
-    mapping_prompt = f"""
-    You are an expert data migration agent for a Numismatic application.
-    The primary schema requires these precise keys:
-    ["Program/Series", "Theme/Subject", "Year", "Country", "Denomination", "Mint Mark", "Condition", "Cost", "Quantity"]
-    
-    The user uploaded a spreadsheet with the following headers: {headers}
-    
-    Output ONLY a raw JSON dictionary mapping the USER headers to the SCHEMA keys. 
-    If a schema key doesn't exist, leave it out. Try your best to align abbreviations (e.g. 'Yr' -> 'Year', 'Grade' -> 'Condition', 'Purchased For' -> 'Cost').
-    """
-    
-    try:
-        response = model.generate_content(
-            mapping_prompt,
-            generation_config=GenerationConfig(response_mime_type="application/json")
-        )
-        mapping = json.loads(response.text)
-    except Exception as e:
-        print(f"AI Mapping error: {e}")
-        # Construct fallback direct 1-to-1 mapping
-        mapping = {h: h for h in headers}
+    nickname_hint = ', '.join(f'"{k}" → "{v}"' for k, v in list(COIN_NICKNAMES.items())[:20])
+    mapping_prompt = f"""You are an expert data migration agent for a numismatic (coin collecting) application.
 
+Golden Schema keys:
+["Program/Series", "Theme/Subject", "Year", "Country", "Denomination",
+ "Mint Mark", "Condition", "Cost", "Purchase Date", "Retailer Name",
+ "Retailer Invoice #", "Retailer Item No.", "Storage Location", "Notes"]
+
+User spreadsheet headers: {headers}
+
+Map each user header to the closest schema key. Common abbreviations:
+  Yr/Date → Year, Grade/Quality → Condition, Purchased For/Amount Paid/Price → Cost,
+  Series/Type/Kind → Program/Series, Desc/Description/Subject → Theme/Subject,
+  Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location.
+
+Coin nickname reference (first 20): {nickname_hint}
+
+Output ONLY a raw JSON object: {{"user_header": "schema_key", ...}}
+Omit any user headers with no reasonable match."""
+
+    try:
+        resp = model.generate_content(
+            mapping_prompt,
+            generation_config=GenerationConfig(response_mime_type="application/json"),
+        )
+        mapping: dict = json.loads(resp.text)
+    except Exception as e:
+        print(f"[import_spreadsheet] AI column-mapping error: {e}")
+        mapping = {h: h for h in headers}   # 1-to-1 fallback
+
+    # ── 2. Per-row ingestion + rule-based normalization ──────────────────────
     added_count = 0
-    batch = db.batch()
-    # TARGET: review_queue (Staging area)
+    ai_fallback_needed: list[tuple] = []   # (doc_ref, partial_doc) for AI pass
+
     col_ref = db.collection('users').document(user_email).collection('review_queue')
+    batch    = db.batch()
 
     for _, row in df.iterrows():
-        new_doc = {
-            'Program/Series': '', 'Theme/Subject': '', 'Date': '', 'Year': '', 
-            'Denomination': '', 'Mint Mark': '', 'Condition': 'Ungraded', 
-            'Cost': '$0.00', 'Quantity': 1, 'deep_dive_status': 'PENDING'
+        new_doc: dict = {
+            'Program/Series':   '',
+            'Theme/Subject':    '',
+            'Year':             '',
+            'Mint Mark':        '',
+            'Denomination':     '',
+            'Condition':        'Ungraded',
+            'Cost':             '',
+            'Purchase Date':    '',
+            'Country':          'United States',
+            'Quantity':         1,
+            'deep_dive_status': 'PENDING',
         }
-        
-        # Apply Mapping
+
+        # Apply column mapping (raw values)
         for user_col, schema_col in mapping.items():
             if user_col in row and pd.notna(row[user_col]):
-                new_doc[schema_col] = str(row[user_col])
-        
-        new_doc['source'] = 'Spreadsheet Import'
-        new_doc['source_file'] = file.filename
-        new_doc['created_at'] = firestore.SERVER_TIMESTAMP
-        new_doc['confidence_score'] = 1.0 # Spreadsheet is generally considered human-verified source
-        
+                new_doc[schema_col] = str(row[user_col]).strip()
+
+        # ── Rule-based normalizations ──────────────────────────────────────
+
+        # Year + Mint Mark: if Year field looks like "2007W", split it
+        raw_year = new_doc.get('Year', '')
+        yr, mm = _parse_year_mint(raw_year)
+        new_doc['Year'] = yr
+        # Only overwrite Mint Mark if it's empty (don't clobber explicit column)
+        if mm and not new_doc.get('Mint Mark', '').strip():
+            new_doc['Mint Mark'] = mm
+
+        # Condition normalization
+        raw_cond = new_doc.get('Condition', '')
+        norm_cond = _norm_condition(raw_cond)
+        new_doc['Condition'] = norm_cond
+        cond_resolved = norm_cond != raw_cond or raw_cond.lower() in CONDITION_MAP
+
+        # Program/Series nickname expansion
+        raw_series = new_doc.get('Program/Series', '')
+        expanded = _expand_series(raw_series)
+        new_doc['Program/Series'] = expanded
+        series_resolved = expanded != raw_series
+
+        # Theme/Subject nickname expansion (handles "Ike" in the wrong column)
+        raw_theme = new_doc.get('Theme/Subject', '')
+        expanded_theme = _expand_series(raw_theme)
+        new_doc['Theme/Subject'] = expanded_theme
+
+        # Strip leading $ from Cost/Denomination
+        for fld in ('Cost', 'Denomination'):
+            if new_doc.get(fld, '').startswith('$'):
+                new_doc[fld] = new_doc[fld][1:]
+
+        # ── Source provenance ──────────────────────────────────────────────
+        new_doc['upload_method'] = 'spreadsheet_import'
+        new_doc['source_file']   = file.filename
+        new_doc['import_name']   = import_name or file.filename
+        new_doc['created_at']    = firestore.SERVER_TIMESTAMP
+
+        # Confidence: lower when AI fallback will be needed
+        needs_ai = (not cond_resolved and raw_cond) or \
+                   (not series_resolved and raw_series and not raw_series.strip().isdigit())
+        new_doc['confidence_score'] = 0.75 if needs_ai else 0.95
+
         doc_ref = col_ref.document(str(uuid.uuid4()))
         batch.set(doc_ref, new_doc)
         added_count += 1
-        
-        if added_count % 500 == 0:
+
+        if needs_ai:
+            ai_fallback_needed.append((doc_ref.id, raw_series, raw_cond))
+
+        if added_count % 490 == 0:
             batch.commit()
             batch = db.batch()
-            
-    if added_count % 500 != 0:
+
+    if added_count % 490 != 0:
         batch.commit()
-        
-    return {"status": "success", "count": added_count, "mapping_used": mapping}
+
+    # ── 3. AI fallback for unresolved rows (batched 10 at a time) ───────────
+    ai_fixed = 0
+    if ai_fallback_needed:
+        for i in range(0, len(ai_fallback_needed), 10):
+            chunk = ai_fallback_needed[i:i + 10]
+            rows_text = '\n'.join(
+                f'{j+1}. Series="{r[1]}" Condition="{r[2]}"'
+                for j, r in enumerate(chunk)
+            )
+            fallback_prompt = f"""You are a US coin expert. For each row, provide the standardized
+Program/Series and Condition. Use official numismatic terminology.
+
+Rows:
+{rows_text}
+
+Output JSON array: [{{"series": "...", "condition": "..."}}]
+Preserve order. Use empty string if truly unknown."""
+            try:
+                fb_resp = model.generate_content(
+                    fallback_prompt,
+                    generation_config=GenerationConfig(response_mime_type="application/json"),
+                )
+                interpretations = json.loads(fb_resp.text)
+                fb_batch = db.batch()
+                for (doc_id, _, _), interp in zip(chunk, interpretations):
+                    updates: dict = {'confidence_score': 0.88}
+                    if interp.get('series'):
+                        updates['Program/Series'] = interp['series']
+                    if interp.get('condition'):
+                        updates['Condition'] = interp['condition']
+                    fb_batch.update(col_ref.document(doc_id), updates)
+                    ai_fixed += 1
+                fb_batch.commit()
+            except Exception as e:
+                print(f"[import_spreadsheet] AI fallback error (chunk {i}): {e}")
+
+    return {
+        "status":        "success",
+        "count":         added_count,
+        "ai_fallback":   ai_fixed,
+        "mapping_used":  mapping,
+        "extracted_items": added_count,   # alias for Flutter progress display
+    }
+
+
+@app.get("/api/template")
+def download_template():
+    """Returns a pre-formatted CSV template with the Numista.AI Golden Schema headers."""
+    from fastapi.responses import Response
+    headers_row = (
+        "Year,Mint Mark,Denomination,Program/Series,Theme/Subject,"
+        "Condition,Cost,Purchase Date,Retailer Name,Retailer Invoice #,"
+        "Retailer Item No.,Storage Location,Notes\n"
+    )
+    example_row = (
+        '1921,D,Dollar,Morgan Silver Dollar,Morgan Dollar,'
+        'VF-30,42.00,1995-06-15,Local Coin Shop,,,'
+        'Safe Deposit Box,Rim nick at 3 o\'clock\n'
+    )
+    csv_content = headers_row + example_row
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=numista_ai_template.csv"},
+    )
+
+
+@app.post("/api/normalize_backfill")
+async def normalize_backfill(user_email: str = Form(...)):
+    """
+    One-time normalization pass over all existing coins for a user.
+
+    Applies _parse_year_mint, _norm_condition, and _expand_series to every
+    coin in the coins collection.  Only writes back when a field actually
+    changes.  Returns a summary of changes made.
+    """
+    coins_ref = db.collection('users').document(user_email).collection('coins')
+    docs      = list(coins_ref.stream())
+
+    changed      = 0
+    unchanged    = 0
+    batch        = db.batch()
+    batch_count  = 0
+    changes_log: list[dict] = []
+
+    for doc in docs:
+        d       = doc.to_dict()
+        updates = {}
+
+        # ── Year + Mint Mark ─────────────────────────────────────────────
+        raw_year = str(d.get('Year', '')).strip()
+        yr, mm   = _parse_year_mint(raw_year)
+        if yr != raw_year:
+            updates['Year'] = yr
+        existing_mm = str(d.get('Mint Mark', '')).strip()
+        if mm and not existing_mm:
+            updates['Mint Mark'] = mm
+
+        # ── Condition ────────────────────────────────────────────────────
+        raw_cond  = str(d.get('Condition', '')).strip()
+        norm_cond = _norm_condition(raw_cond)
+        if norm_cond != raw_cond:
+            updates['Condition'] = norm_cond
+
+        # ── Program/Series ───────────────────────────────────────────────
+        raw_series  = str(d.get('Program/Series', '')).strip()
+        exp_series  = _expand_series(raw_series)
+        if exp_series != raw_series:
+            updates['Program/Series'] = exp_series
+
+        # ── Theme/Subject ────────────────────────────────────────────────
+        raw_theme  = str(d.get('Theme/Subject', '')).strip()
+        exp_theme  = _expand_series(raw_theme)
+        if exp_theme != raw_theme:
+            updates['Theme/Subject'] = exp_theme
+
+        if updates:
+            # Log BEFORE adding SERVER_TIMESTAMP — Sentinel isn't JSON-serializable
+            log_entry = {k: str(v) for k, v in updates.items()}
+            changes_log.append({'id': doc.id, 'changes': log_entry})
+
+            updates['normalized_at'] = firestore.SERVER_TIMESTAMP
+            # Use set(merge=True) instead of update() — update() treats '/'
+            # as a Firestore field-path separator, breaking 'Theme/Subject' etc.
+            batch.set(coins_ref.document(doc.id), updates, merge=True)
+            batch_count += 1
+            changed += 1
+            if batch_count >= 490:
+                batch.commit()
+                batch = db.batch()
+                batch_count = 0
+        else:
+            unchanged += 1
+
+    if batch_count > 0:
+        batch.commit()
+
+    print(f"[normalize_backfill] {user_email}: {changed} updated, {unchanged} unchanged")
+    return {
+        "status":    "success",
+        "changed":   changed,
+        "unchanged": unchanged,
+        "changes":   changes_log[:50],   # return first 50 for preview
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  Community Coin Nickname System
+# ════════════════════════════════════════════════════════════════════════════
+
+NICKNAME_COLLECTION = 'coin_nickname_suggestions'
+
+NICKNAME_CATEGORIES = [
+    'Cent', 'Nickel', 'Dime', 'Quarter',
+    'Half Dollar', 'Dollar', 'Gold', 'Silver', 'Other'
+]
+
+
+@app.post("/api/nicknames/submit")
+async def submit_nickname(
+    user_email: str  = Form(...),
+    nickname:   str  = Form(...),
+    maps_to:    str  = Form(...),
+    category:   str  = Form('Other'),
+    example:    str  = Form(''),
+    notes:      str  = Form(''),
+):
+    """Submit a new coin nickname/slang term for community review."""
+    nickname_clean = nickname.strip()
+    maps_to_clean  = maps_to.strip()
+    key = nickname_clean.lower()
+
+    # ── Check hardcoded dictionary first ────────────────────────────────────
+    if key in COIN_NICKNAMES:
+        official = COIN_NICKNAMES[key]
+        return {
+            "status":  "already_known",
+            "message": f'✨ Great minds think alike! "{nickname_clean}" is already in the '
+                       f'Numista.AI dictionary — it maps to "{official}". '
+                       f'No need to submit it again.',
+            "maps_to": official,
+        }
+
+    # ── Check existing community submissions ─────────────────────────────────
+    existing = db.collection(NICKNAME_COLLECTION) \
+                 .where('nickname_lower', '==', key) \
+                 .limit(1).stream()
+    existing_list = list(existing)
+    if existing_list:
+        doc = existing_list[0].to_dict()
+        status = doc.get('status', 'pending')
+        if status == 'approved':
+            return {
+                "status":  "already_known",
+                "message": f'"{nickname_clean}" was already submitted by the community '
+                           f'and approved — it maps to "{doc.get("maps_to", "")}"! '
+                           f'Head to the Approved Dictionary tab to see it.',
+                "maps_to": doc.get('maps_to', ''),
+            }
+        elif status == 'pending':
+            return {
+                "status":  "already_pending",
+                "message": f'"{nickname_clean}" is already in community review — '
+                           f'go vote on it in the Community Review tab!',
+                "doc_id":  existing_list[0].id,
+            }
+        # Rejected — allow resubmission
+
+    # ── Create new submission ────────────────────────────────────────────────
+    doc_ref = db.collection(NICKNAME_COLLECTION).document()
+    doc_ref.set({
+        'nickname':       nickname_clean,
+        'nickname_lower': key,
+        'maps_to':        maps_to_clean,
+        'category':       category if category in NICKNAME_CATEGORIES else 'Other',
+        'example':        example.strip(),
+        'notes':          notes.strip(),
+        'submitted_by':   user_email,
+        'submitted_at':   firestore.SERVER_TIMESTAMP,
+        'status':         'pending',
+        'ratings':        {},        # { email: 1-5 }
+        'avg_rating':     0.0,
+        'vote_count':     0,
+        'in_ai_dict':     False,
+    })
+    return {
+        "status":  "submitted",
+        "doc_id":  doc_ref.id,
+        "message": f'🎉 "{nickname_clean}" is now in community review! '
+                   f'Share it with other collectors to get votes.',
+    }
+
+
+@app.get("/api/nicknames")
+def list_nicknames(status: str = 'pending', limit: int = 50, offset: int = 0):
+    """List community nickname submissions, filterable by status."""
+    valid_statuses = ('pending', 'approved', 'rejected', 'all')
+    if status not in valid_statuses:
+        status = 'pending'
+
+    col = db.collection(NICKNAME_COLLECTION)
+    if status != 'all':
+        col = col.where('status', '==', status)
+
+    docs = list(col.order_by('submitted_at', direction=firestore.Query.DESCENDING)
+                   .limit(limit + offset).stream())
+    docs = docs[offset:]
+
+    results = []
+    for doc in docs:
+        d = doc.to_dict()
+        results.append({
+            'id':           doc.id,
+            'nickname':     d.get('nickname', ''),
+            'maps_to':      d.get('maps_to', ''),
+            'category':     d.get('category', 'Other'),
+            'example':      d.get('example', ''),
+            'notes':        d.get('notes', ''),
+            'submitted_by': d.get('submitted_by', ''),
+            'status':       d.get('status', 'pending'),
+            'avg_rating':   round(d.get('avg_rating', 0.0), 1),
+            'vote_count':   d.get('vote_count', 0),
+            'in_ai_dict':   d.get('in_ai_dict', False),
+            'is_builtin':   False,
+        })
+
+    # When requesting approved — also include a sample of built-ins for context
+    if status == 'approved':
+        builtin_sample = [
+            {'id': f'builtin_{k}', 'nickname': k.title(), 'maps_to': v,
+             'category': 'Built-In', 'example': '', 'notes': '',
+             'submitted_by': 'Numista.AI', 'status': 'approved',
+             'avg_rating': 5.0, 'vote_count': 0, 'in_ai_dict': True, 'is_builtin': True}
+            for k, v in list(COIN_NICKNAMES.items())[:20]
+        ]
+        results = builtin_sample + results
+
+    return {"status": "ok", "results": results, "count": len(results)}
+
+
+@app.post("/api/nicknames/{doc_id}/vote")
+async def vote_nickname(
+    doc_id:     str,
+    user_email: str = Form(...),
+    rating:     int = Form(...),
+):
+    """Cast or update a star rating (1–5) on a community nickname submission."""
+    if not 1 <= rating <= 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+
+    doc_ref = db.collection(NICKNAME_COLLECTION).document(doc_id)
+    doc     = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Nickname not found.")
+
+    d = doc.to_dict()
+
+    # Block self-voting
+    if d.get('submitted_by') == user_email:
+        raise HTTPException(status_code=403,
+                            detail="You cannot vote on your own submission.")
+    if d.get('status') not in ('pending',):
+        raise HTTPException(status_code=400,
+                            detail="You can only vote on pending submissions.")
+
+    # Update ratings map
+    ratings: dict = d.get('ratings', {})
+    ratings[user_email] = rating
+
+    # Recalculate stats
+    vote_count = len(ratings)
+    avg_rating = sum(ratings.values()) / vote_count
+
+    # Determine new status
+    new_status  = d.get('status', 'pending')
+    in_ai_dict  = d.get('in_ai_dict', False)
+    status_msg  = 'Vote recorded.'
+
+    if avg_rating >= 4.0 and vote_count >= 3:
+        new_status = 'approved'
+        in_ai_dict = True
+        _community_cache_ts_reset()   # bust cache immediately
+        status_msg = f'🎉 AUTO-APPROVED! "{d["nickname"]}" is now in the AI dictionary!'
+    elif avg_rating < 2.5 and vote_count >= 5:
+        new_status = 'rejected'
+        status_msg = f'"{d["nickname"]}" was rejected by community vote.'
+
+    doc_ref.set({
+        'ratings':    ratings,
+        'avg_rating': round(avg_rating, 2),
+        'vote_count': vote_count,
+        'status':     new_status,
+        'in_ai_dict': in_ai_dict,
+    }, merge=True)
+
+    return {
+        "status":      "ok",
+        "new_avg":     round(avg_rating, 1),
+        "vote_count":  vote_count,
+        "new_status":  new_status,
+        "message":     status_msg,
+        "your_rating": rating,
+    }
+
+
+def _community_cache_ts_reset():
+    """Force immediate cache refresh on next _expand_series call."""
+    global _community_cache_ts
+    _community_cache_ts = 0.0
+
+
+@app.get("/api/nicknames/stats")
+def nickname_stats():
+    """Community nickname submission statistics for the dashboard header."""
+    all_docs = list(db.collection(NICKNAME_COLLECTION).stream())
+    pending  = sum(1 for d in all_docs if d.to_dict().get('status') == 'pending')
+    approved = sum(1 for d in all_docs if d.to_dict().get('status') == 'approved')
+    rejected = sum(1 for d in all_docs if d.to_dict().get('status') == 'rejected')
+
+    # Top contributor (most submissions)
+    by_user: dict[str, int] = {}
+    for d in all_docs:
+        u = d.to_dict().get('submitted_by', '')
+        if u:
+            by_user[u] = by_user.get(u, 0) + 1
+    top_user = max(by_user, key=by_user.get) if by_user else ''
+
+    return {
+        "total":    len(all_docs),
+        "pending":  pending,
+        "approved": approved,
+        "rejected": rejected,
+        "builtin":  len(COIN_NICKNAMES),
+        "top_contributor": top_user.split('@')[0] if top_user else '—',
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  AI Grade Review System
+# ════════════════════════════════════════════════════════════════════════════
+
+from datetime import datetime as _dt
+
+# Sources that indicate an AI assigned the grade
+AI_SOURCES = {'Binder Scan', 'PDF Invoice', 'Binder Checklist'}
+
+# Confidence threshold below which a coin is "low confidence"
+LOW_CONFIDENCE_THRESHOLD = 0.85
+
+
+@app.get("/api/grade_review/queue")
+def grade_review_queue(user_email: str, limit: int = 30):
+    """
+    Returns the user's own AI-graded coins that haven't been reviewed yet,
+    sorted by confidence_score ascending (lowest = most urgently needs review).
+    """
+    coins_ref = db.collection('users').document(user_email).collection('coins')
+    docs      = list(coins_ref.stream())
+
+    results = []
+    for doc in docs:
+        d      = doc.to_dict()
+        source = d.get('source', '')
+        conf   = float(d.get('confidence_score', 1.0))
+
+        # Only AI-processed coins
+        is_ai = source in AI_SOURCES or conf < 0.95
+        if not is_ai:
+            continue
+
+        # Skip already reviewed by this user
+        reviews = d.get('grade_reviews', [])
+        if any(r.get('reviewer') == user_email for r in reviews):
+            continue
+
+        results.append({
+            'coin_id':             doc.id,
+            'year':                d.get('Year', ''),
+            'mint_mark':           d.get('Mint Mark', ''),
+            'denomination':        d.get('Denomination', ''),
+            'program_series':      d.get('Program/Series', ''),
+            'theme_subject':       d.get('Theme/Subject', ''),
+            'condition':           d.get('Condition', 'Ungraded'),
+            'ai_assigned_condition': d.get('ai_assigned_condition',
+                                          d.get('Condition', 'Ungraded')),
+            'confidence_score':    round(conf, 2),
+            'low_confidence':      conf < LOW_CONFIDENCE_THRESHOLD,
+            'source':              source,
+            'image_url_obverse':   d.get('image_url_obverse', ''),
+            'grade_review_status': d.get('grade_review_status', 'pending'),
+            'grade_review_count':  d.get('grade_review_count', 0),
+        })
+
+    # Lowest confidence first
+    results.sort(key=lambda x: x['confidence_score'])
+    return {
+        'status':  'ok',
+        'results': results[:limit],
+        'total':   len(results),
+    }
+
+
+@app.post("/api/grade_review/submit")
+async def submit_grade_review(
+    user_email:      str = Form(...),
+    coin_id:         str = Form(...),
+    action:          str = Form(...),    # 'confirmed' or 'corrected'
+    suggested_grade: str = Form(''),
+    rating:          int = Form(...),    # 1-5 AI accuracy stars
+    notes:           str = Form(''),
+):
+    """
+    Record a grade review on one of the user's own coins.
+    No auto-correction — if 2/3+ of reviews disagree with the AI grade,
+    the coin is flagged in admin_grade_flags for human review.
+    """
+    if not 1 <= rating <= 5:
+        raise HTTPException(status_code=400,
+                            detail="Rating must be between 1 and 5.")
+    if action not in ('confirmed', 'corrected'):
+        raise HTTPException(status_code=400,
+                            detail="Action must be 'confirmed' or 'corrected'.")
+    if action == 'corrected' and not suggested_grade.strip():
+        raise HTTPException(status_code=400,
+                            detail="suggested_grade is required when action=corrected.")
+
+    coins_ref = db.collection('users').document(user_email).collection('coins')
+    coin_ref  = coins_ref.document(coin_id)
+    coin_doc  = coin_ref.get()
+    if not coin_doc.exists:
+        raise HTTPException(status_code=404, detail="Coin not found.")
+
+    d = coin_doc.to_dict()
+
+    # Prevent duplicate reviews
+    reviews = list(d.get('grade_reviews', []))
+    if any(r.get('reviewer') == user_email for r in reviews):
+        raise HTTPException(status_code=400,
+                            detail="You have already reviewed this coin.")
+
+    # Snapshot original AI grade on first review
+    ai_assigned = d.get('ai_assigned_condition') or d.get('Condition', 'Ungraded')
+
+    # Append new review
+    reviews.append({
+        'reviewer':        user_email,
+        'action':          action,
+        'suggested_grade': suggested_grade.strip() if action == 'corrected' else '',
+        'rating':          rating,
+        'notes':           notes.strip(),
+        'reviewed_at':     _dt.utcnow().isoformat(),
+    })
+
+    review_count  = len(reviews)
+    corrections   = [r for r in reviews if r['action'] == 'corrected']
+    confirmations = [r for r in reviews if r['action'] == 'confirmed']
+
+    # Determine status
+    new_status     = 'pending'
+    grade_consensus = ''
+    flagged        = False
+
+    if review_count >= 3:
+        correction_ratio = len(corrections) / review_count
+        if correction_ratio >= 0.67:
+            # Find most-suggested grade
+            grade_counts: dict[str, int] = {}
+            for r in corrections:
+                g = r['suggested_grade']
+                if g:
+                    grade_counts[g] = grade_counts.get(g, 0) + 1
+            if grade_counts:
+                grade_consensus = max(grade_counts, key=grade_counts.get)
+            new_status = 'flagged_for_admin_review'
+            flagged    = True
+        elif len(confirmations) / review_count >= 0.75:
+            new_status = 'confirmed'
+
+    update_payload: dict = {
+        'grade_reviews':         reviews,
+        'grade_review_count':    review_count,
+        'grade_review_status':   new_status,
+        'ai_assigned_condition': ai_assigned,
+    }
+    if grade_consensus:
+        update_payload['grade_consensus'] = grade_consensus
+
+    # Write admin flag if consensus disagrees with AI
+    if flagged:
+        db.collection('admin_grade_flags').document(coin_id).set({
+            'user_email':        user_email,
+            'coin_id':           coin_id,
+            'ai_assigned_grade': ai_assigned,
+            'community_grade':   grade_consensus,
+            'review_count':      review_count,
+            'flagged_at':        firestore.SERVER_TIMESTAMP,
+            'resolved':          False,
+            'year':              d.get('Year', ''),
+            'mint_mark':         d.get('Mint Mark', ''),
+            'program_series':    d.get('Program/Series', ''),
+        }, merge=True)
+
+    coin_ref.set(update_payload, merge=True)
+
+    if action == 'confirmed':
+        msg = '✓ Grade confirmed! Thank you for helping improve Numista.AI.'
+    else:
+        msg = f'Correction submitted — "{suggested_grade}" has been noted.'
+        if flagged:
+            msg += (' 🚩 Community consensus differs from the AI grade — '
+                    'this coin has been flagged for admin review.')
+
+    return {
+        'status':       'ok',
+        'message':      msg,
+        'new_status':   new_status,
+        'review_count': review_count,
+        'flagged':      flagged,
+    }
+
+
+@app.get("/api/grade_review/stats")
+def grade_review_stats(user_email: str):
+    """Per-user grade review statistics for the Human AI Trainer dashboard."""
+    coins_ref = db.collection('users').document(user_email).collection('coins')
+    docs      = list(coins_ref.stream())
+
+    total_ai      = 0
+    pending       = 0
+    confirmed_ct  = 0
+    flagged_ct    = 0
+    reviewed_by_me = 0
+
+    for doc in docs:
+        d      = doc.to_dict()
+        source = d.get('source', '')
+        conf   = float(d.get('confidence_score', 1.0))
+        is_ai  = source in AI_SOURCES or conf < 0.95
+        if not is_ai:
+            continue
+
+        total_ai += 1
+        status = d.get('grade_review_status', 'pending')
+        if status == 'confirmed':
+            confirmed_ct += 1
+        elif status == 'flagged_for_admin_review':
+            flagged_ct += 1
+        else:
+            pending += 1
+
+        if any(r.get('reviewer') == user_email
+               for r in d.get('grade_reviews', [])):
+            reviewed_by_me += 1
+
+    return {
+        'total_ai_graded':  total_ai,
+        'pending_review':   pending,
+        'confirmed':        confirmed_ct,
+        'flagged':          flagged_ct,
+        'reviewed_by_me':   reviewed_by_me,
+    }
+
 
 @app.post("/api/process_invoice")
 async def process_invoice(user_email: str = Form(...), file: UploadFile = File(...)):
@@ -262,11 +1270,21 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         for item in items:
              # Apply defaults to pass schema rules
              item['deep_dive_status'] = 'PENDING'
-             item['Program/Series'] = item.get('Country', 'USA') + ' Invoice Import'
+             if not item.get('Program/Series'):  # preserve AI-extracted value
+                 item['Program/Series'] = (item.get('Country') or 'USA') + ' Invoice Import'
              if 'Condition' not in item: item['Condition'] = 'Ungraded'
              if 'Cost' not in item: item['Cost'] = '$0.00'
              
              item['source'] = 'PDF Invoice'
+             # ── Split combined Year+Mint (e.g. "2006D" → Year="2006", Mint Mark="D") ──
+             import re as _re
+             raw_year = str(item.get('Year', '')).strip()
+             raw_mint = str(item.get('Mint Mark', '')).strip()
+             if raw_year and not raw_mint:
+                 _ym = _re.match(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', raw_year, _re.IGNORECASE)
+                 if _ym:
+                     item['Year'] = _ym.group(1)
+                     item['Mint Mark'] = _ym.group(2).upper()
              item['source_file'] = file.filename
              item['created_at'] = firestore.SERVER_TIMESTAMP
              
@@ -503,18 +1521,39 @@ async def commit_reviews(request: CommitReviewsRequest):
             if doc_snapshot.exists:
                 data = doc_snapshot.to_dict()
                 
-                # Intelligent Duplicate Detection
-                # Check if this exact transaction item already exists in the main collection
-                existing_query = coins_ref.where("Year", "==", data.get("Year", ""))\
-                                         .where("Mint Mark", "==", data.get("Mint Mark", ""))\
-                                         .where("Denomination", "==", data.get("Denomination", ""))\
-                                         .where("Retailer Invoice #", "==", data.get("Retailer Invoice #", ""))\
-                                         .where("Retailer Item No.", "==", data.get("Retailer Item No.", ""))\
-                                         .limit(1).get()
-                
-                if len(existing_query) > 0:
-                    # Match found! This is a duplicate of a previously committed item.
-                    # We delete it from the queue regardless to clean up.
+                # ── Hybrid Duplicate Detection ──────────────────────────────────────
+                # Primary: invoice-based (if invoice# matches + item# matches → definite dupe)
+                # Fallback: attribute-based (Year + Mint + normalized Denomination)
+                inv_no  = (data.get('Retailer Invoice #') or '').strip()
+                item_no = (data.get('Retailer Item No.')  or '').strip()
+                is_dupe = False
+
+                if inv_no:
+                    try:
+                        q = coins_ref \
+                            .where('Retailer Invoice #', '==', inv_no) \
+                            .where('Retailer Item No.',  '==', item_no) \
+                            .limit(1).get()
+                        is_dupe = len(q) > 0
+                    except Exception:
+                        pass  # Index may be missing — fall through to attribute check
+
+                if not is_dupe:
+                    # Attribute-based fallback: normalise denomination before compare
+                    raw_d  = (data.get('Denomination') or '').strip()
+                    norm_d = raw_d.lstrip('$').strip()   # "$5" → "5", "5" → "5"
+                    denom_variants = list({raw_d, norm_d, f'${norm_d}'})
+                    try:
+                        q2 = coins_ref \
+                            .where('Year',      '==', data.get('Year', '')) \
+                            .where('Mint Mark', '==', data.get('Mint Mark', '')) \
+                            .where('Denomination', 'in', denom_variants[:10]) \
+                            .limit(1).get()
+                        is_dupe = len(q2) > 0
+                    except Exception:
+                        pass
+
+                if is_dupe:
                     batch.delete(queue_ref.document(doc_id))
                     skipped_count += 1
                     continue
@@ -550,6 +1589,224 @@ async def bulk_update_reviews(request: BulkUpdateRequest):
         return {"status": "success", "message": f"Updated {len(request.review_ids)} items"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def _norm_date(raw: str) -> str:
+    """Normalize a purchase date string to YYYY-MM-DD for key comparison.
+    Handles: YYYY-MM-DD, MM/DD/YY, MM/DD/YYYY, M/D/YY, YYYY/MM/DD."""
+    from datetime import datetime
+    raw = str(raw).strip()
+    if not raw:
+        return ''
+    for fmt in ('%Y-%m-%d', '%m/%d/%y', '%m/%d/%Y', '%-m/%-d/%y',
+                '%Y/%m/%d', '%d-%m-%Y', '%B %d, %Y'):
+        try:
+            return datetime.strptime(raw, fmt).strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    # Last resort: return as-is (still better than nothing)
+    return raw
+
+
+@app.post("/api/dedup_sweep")
+async def dedup_sweep(user_email: str = Form(...)):
+    """
+    Scans a user's coins collection for potential duplicates.
+
+    Match types (in order of confidence):
+      - 'invoice'   : Same Invoice# AND Item# → near-certain re-import duplicate
+      - 'attribute' : Same Year/Mint/Denom/Series/Theme/Condition/Date (normalized)
+                      → same coin imported twice on the same date
+      - 'possible'  : Same Year/Mint/Denom/Series/Theme/Condition but DIFFERENT dates
+                      → flag for human review only; may be intentional multiples
+
+    Coins that differ in Theme/Subject (e.g. different state/park quarters)
+    are never grouped together.
+    """
+    try:
+        coins_ref = db.collection('users').document(user_email).collection('coins')
+        docs = coins_ref.stream()
+
+        invoice_groups: dict  = {}   # invoice+item → list
+        attr_groups: dict     = {}   # attribute key WITH date → list
+        noddate_groups: dict  = {}   # attribute key WITHOUT date → list (for possible tier)
+
+        for doc in docs:
+            d = doc.to_dict()
+            year    = str(d.get('Year', '')).strip()
+            mint    = str(d.get('Mint Mark', '')).strip()
+            denom   = str(d.get('Denomination', '')).strip().lstrip('$')
+            series  = str(d.get('Program/Series', '')).strip().lower()
+            theme   = str(d.get('Theme/Subject', '')).strip().lower()
+            cond    = str(d.get('Condition', '')).strip().lower()
+            inv_no  = str(d.get('Retailer Invoice #', '')).strip()
+            item_no = str(d.get('Retailer Item No.', '')).strip()
+            raw_date = str(d.get('Purchase Date', ''))
+            norm_date = _norm_date(raw_date)
+
+            snippet = {
+                'id':      doc.id,
+                'year':    year,
+                'mint':    mint,
+                'denom':   d.get('Denomination', ''),
+                'series':  d.get('Program/Series', ''),
+                'theme':   d.get('Theme/Subject', ''),
+                'cond':    d.get('Condition', ''),
+                'invoice': inv_no,
+                'item_no': item_no,
+                'date':    raw_date,
+                'cost':    str(d.get('Cost', d.get('Purchase Cost', ''))),
+            }
+
+            # 1️⃣ Invoice key — only when BOTH invoice# AND item# are non-empty
+            if inv_no and item_no:
+                inv_key = f'inv::{inv_no}::{item_no}::{denom}'
+                invoice_groups.setdefault(inv_key, []).append(snippet)
+            else:
+                # 2️⃣ Attribute key WITH normalized date — true duplicates
+                #    (same coin imported twice on the same date)
+                base_key  = f'{year}::{mint}::{denom}::{series}::{theme}::{cond}'
+                attr_key  = f'attr::{base_key}::{norm_date}'
+                attr_groups.setdefault(attr_key, []).append(snippet)
+
+                # 3️⃣ No-date key — for possible-duplicate detection across dates
+                #    We only promote to 'possible' if no attr group already covers it
+                noddate_groups.setdefault(f'poss::{base_key}', []).append(snippet)
+
+        # Collect definite duplicates (invoice + attribute)
+        duplicates = []
+        for k, v in invoice_groups.items():
+            if len(v) > 1:
+                duplicates.append({'key': k, 'match_type': 'invoice',
+                                   'count': len(v), 'coins': v})
+        for k, v in attr_groups.items():
+            if len(v) > 1:
+                duplicates.append({'key': k, 'match_type': 'attribute',
+                                   'count': len(v), 'coins': v})
+
+        # Collect possible duplicates — coins that share all attributes but have
+        # DIFFERENT normalized dates.  Only include singleton-by-date coins so we
+        # don't double-count coins already in an attribute-match group.
+        for k, v in noddate_groups.items():
+            if len(v) <= 1:
+                continue
+            # Bucket coins by their normalized date
+            by_date: dict = {}
+            for s in v:
+                nd = _norm_date(s['date'])
+                by_date.setdefault(nd, []).append(s)
+            if len(by_date) <= 1:
+                continue   # all same date → already in attr_groups, skip
+            # Collect only the dates that have exactly ONE copy (true singletons).
+            # Dates with 2+ copies are already surfaced in the attribute tier.
+            singleton_coins = [coins[0] for coins in by_date.values() if len(coins) == 1]
+            if len(singleton_coins) <= 1:
+                continue   # not enough singletons to form a possible group
+            duplicates.append({'key': k, 'match_type': 'possible',
+                               'count': len(singleton_coins), 'coins': singleton_coins})
+
+        # Sort: invoice → attribute → possible, then by count desc within each tier
+        tier = {'invoice': 0, 'attribute': 1, 'possible': 2}
+        duplicates.sort(key=lambda x: (tier.get(x['match_type'], 9), -x['count']))
+
+        total = (sum(len(v) for v in invoice_groups.values()) +
+                 sum(len(v) for v in attr_groups.values()))
+        return {
+            'status': 'success',
+            'total_coins': total,
+            'duplicate_groups': len(duplicates),
+            'duplicates': duplicates,
+        }
+    except Exception as e:
+        print(f'[dedup_sweep] Error: {e}')
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@app.post("/api/dedup_sweep/auto_clean")
+async def dedup_auto_clean(user_email: str = Form(...)):
+    """
+    Automatically removes duplicates from INVOICE MATCH and ATTRIBUTE MATCH groups.
+
+    - Invoice groups  (Invoice# + Item# + Denom):   keeps first, deletes the rest.
+    - Attribute groups (Year/Mint/Denom/Series/Theme/Condition/Date-normalized):
+      also keeps first, deletes the rest — same-date exact matches are
+      just as safe as invoice matches for removing spreadsheet import duplicates.
+    - Possible groups (same attributes, different dates): NEVER auto-deleted.
+
+    Returns:
+        groups_cleaned  : total groups processed
+        coins_deleted   : total duplicate coins deleted
+        coins_kept      : total coins retained (one per group)
+    """
+    try:
+        coins_ref = db.collection('users').document(user_email).collection('coins')
+        docs = list(coins_ref.stream())   # load all into memory
+
+        invoice_groups: dict = {}
+        attr_groups: dict    = {}
+
+        for doc in docs:
+            d = doc.to_dict()
+            year    = str(d.get('Year', '')).strip()
+            mint    = str(d.get('Mint Mark', '')).strip()
+            denom   = str(d.get('Denomination', '')).strip().lstrip('$')
+            series  = str(d.get('Program/Series', '')).strip().lower()
+            theme   = str(d.get('Theme/Subject', '')).strip().lower()
+            cond    = str(d.get('Condition', '')).strip().lower()
+            inv_no  = str(d.get('Retailer Invoice #', '')).strip()
+            item_no = str(d.get('Retailer Item No.', '')).strip()
+            norm_date = _norm_date(str(d.get('Purchase Date', '')))
+
+            if inv_no and item_no:
+                key = f'inv::{inv_no}::{item_no}::{denom}'
+                invoice_groups.setdefault(key, []).append(doc)
+            else:
+                attr_key = f'attr::{year}::{mint}::{denom}::{series}::{theme}::{cond}::{norm_date}'
+                attr_groups.setdefault(attr_key, []).append(doc)
+
+        groups_cleaned = 0
+        coins_deleted  = 0
+        coins_kept     = 0
+
+        # Combine both group dicts for a single pass
+        all_groups = list(invoice_groups.values()) + list(attr_groups.values())
+
+        batch = db.batch()
+        batch_count = 0
+
+        for docs_in_group in all_groups:
+            if len(docs_in_group) <= 1:
+                continue
+            groups_cleaned += 1
+            coins_kept += 1
+            for dup_doc in docs_in_group[1:]:
+                batch.delete(coins_ref.document(dup_doc.id))
+                coins_deleted += 1
+                batch_count += 1
+                if batch_count >= 490:
+                    batch.commit()
+                    batch = db.batch()
+                    batch_count = 0
+
+
+        if batch_count > 0:
+            batch.commit()
+
+        return {
+            'status':         'success',
+            'groups_cleaned': groups_cleaned,
+            'coins_deleted':  coins_deleted,
+            'coins_kept':     coins_kept,
+        }
+    except Exception as e:
+        print(f'[dedup_auto_clean] Error: {e}')
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  PHASE 1: BINDER / HOLDER SCAN ENDPOINTS                                   ║

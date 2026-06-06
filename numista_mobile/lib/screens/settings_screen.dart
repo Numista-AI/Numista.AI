@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../utils/file_saver_stub.dart'
     if (dart.library.html) '../utils/file_saver_web.dart'
@@ -24,6 +25,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _appIdController = TextEditingController();
   final _certIdController = TextEditingController();
   bool _isLoading = true;
+  bool _dedupRunning = false;
+  Map<String, dynamic>? _dedupResults;
+
+  static const _apiUrl =
+      'https://numista-backend-568985927038.us-central1.run.app';
 
   @override
   void initState() {
@@ -114,7 +120,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             isPrimary: true,
           ),
-          
+
+          const SizedBox(height: 16),
+          // ── Dedup Sweep card ───────────────────────────────────────────────
+          _buildDedupCard(context),
+
           const SizedBox(height: 16),
           _buildSettingsCard(
             context,
@@ -151,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           
           const SizedBox(height: 32),
-          const Divider(color: const Color(0xFFE2E6E9)),
+          const Divider(color: Color(0xFFE2E6E9)),
           const SizedBox(height: 32),
 
           // EPN / Affiliate Section -- only visible to admin (eric@numista.ai)
@@ -297,7 +307,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ─── Dedup Sweep ─────────────────────────────────────────────────────────
+
+  Widget _buildDedupCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E6E9)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.find_replace_rounded,
+                color: Color(0xFFF97316)),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Find & Merge Duplicates',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF0F172A))),
+                const SizedBox(height: 4),
+                Text(
+                  _dedupResults == null
+                      ? 'Scan your collection for coins that may have been imported more than once.'
+                      : 'Found ${_dedupResults!["duplicate_groups"]} duplicate group(s) in ${_dedupResults!["total_coins"]} coins.',
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          _dedupRunning
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFFF97316)))
+              : ElevatedButton(
+                  onPressed: _runDedupSweep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF97316),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
+                  ),
+                  child: Text(_dedupResults == null ? 'Scan Now' : 'Re-Scan'),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runDedupSweep() async {
+    if (!GuestSeedService.canDownload) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign in to use duplicate detection.')));
+      return;
+    }
+    setState(() => _dedupRunning = true);
+    try {
+      final resp = await http.post(
+        Uri.parse('$_apiUrl/api/dedup_sweep'),
+        body: {'user_email': AuthService.userEmail},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        setState(() => _dedupResults = data);
+        if (mounted) _showDedupResultsDialog(data);
+      } else {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sweep failed: $e'),
+                backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _dedupRunning = false);
+    }
+  }
+
+  void _showDedupResultsDialog(Map<String, dynamic> data) {
+    final groups =
+        (data['duplicates'] as List).cast<Map<String, dynamic>>();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => _DedupDialog(
+        groups: groups,
+        userEmail: AuthService.userEmail,
+        onDeleted: (docId) async {
+          await FirebaseFirestore.instance
+              .collection(AuthService.coinsPath)
+              .doc(docId)
+              .delete();
+          // Re-run sweep to refresh results
+          if (mounted) _runDedupSweep();
+        },
+      ),
+    );
+  }
+
   Widget _buildSettingsCard(BuildContext context, {required IconData icon, required String title, required String description, required String actionLabel, required VoidCallback onAction, bool isPrimary = false}) {
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -388,3 +513,570 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 }
+
+// ─── Duplicate Results Dialog ─────────────────────────────────────────────────
+
+class _DedupDialog extends StatefulWidget {
+  final List<Map<String, dynamic>> groups;
+  final Future<void> Function(String docId) onDeleted;
+  final String userEmail;
+
+  const _DedupDialog({
+    required this.groups,
+    required this.onDeleted,
+    required this.userEmail,
+  });
+
+  @override
+  State<_DedupDialog> createState() => _DedupDialogState();
+}
+
+class _DedupDialogState extends State<_DedupDialog> {
+  final Set<String> _deleting = {};
+  bool _autoCleanRunning = false;
+
+  static const _apiUrl =
+      'https://numista-backend-568985927038.us-central1.run.app';
+
+  // Groups the auto-clean will process: invoice + attribute (NOT possible)
+  int get _cleanableGroupCount =>
+      widget.groups.where((g) =>
+        g['match_type'] == 'invoice' || g['match_type'] == 'attribute').length;
+
+  Future<void> _autoClean() async {
+    final nav = Navigator.of(context);
+
+    // Build cleanable groups: invoice + attribute matches (NOT possible)
+    final cleanableGroups = widget.groups
+        .where((g) =>
+            g['match_type'] == 'invoice' || g['match_type'] == 'attribute')
+        .toList();
+
+    // Count how many coins would be deleted
+    int willDelete = 0;
+    for (final g in cleanableGroups) {
+      final coins = (g['coins'] as List).cast<Map<String, dynamic>>();
+      willDelete += coins.length - 1; // keep 1, delete rest
+    }
+
+    // Show detailed preview before committing
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680, maxHeight: 560),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Color(0xFFE11D48), size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Review: $willDelete coin${willDelete == 1 ? '' : 's'} will be deleted',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(height: 3),
+                        const Text(
+                          'Invoice Match groups: same Invoice # + Item # imported twice.\n'
+                          'Attribute Match groups: identical coin on the same purchase date.\n'
+                          '🔵 Possible Duplicates are NOT included — those need manual review.\n'
+                          'One copy per group is always kept (shown in green).',
+                          style: TextStyle(
+                              color: Color(0xFF64748B), fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => Navigator.pop(ctx, false),
+                  ),
+                ]),
+              ),
+              // Scrollable preview
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: cleanableGroups.length,
+                  itemBuilder: (_, gi) {
+                    final group = cleanableGroups[gi];
+                    final coins = (group['coins'] as List)
+                        .cast<Map<String, dynamic>>();
+                    final isInvoice = (group['match_type'] as String? ?? '') == 'invoice';
+                    final invLabel = isInvoice
+                        ? 'Invoice ${coins.first['invoice']} · '
+                        : '';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Group label
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '$invLabel'
+                              '${coins.first['year']} ${coins.first['denom']}'
+                              '${((coins.first['theme'] as String?) ?? '').isNotEmpty ? ' · ${coins.first['theme']}' : ''}'
+                              '${!isInvoice && ((coins.first['date'] as String?) ?? '').isNotEmpty ? ' · ${coins.first['date']}' : ''}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Color(0xFF0F172A)),
+                            ),
+                          ),
+                          ...coins.asMap().entries.map((e) {
+                            final keep = e.key == 0;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: keep
+                                    ? const Color(0xFFF0FDF4)
+                                    : const Color(0xFFFFF1F2),
+                                border: Border.all(
+                                    color: keep
+                                        ? const Color(0xFFBBF7D0)
+                                        : const Color(0xFFFFCDD2)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(children: [
+                                Icon(
+                                  keep
+                                      ? Icons.check_circle_outline
+                                      : Icons.delete_outline,
+                                  size: 14,
+                                  color: keep
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFE11D48),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    [
+                                      if (((e.value['year'] as String?) ?? '').isNotEmpty) e.value['year'],
+                                      if (((e.value['mint'] as String?) ?? '').isNotEmpty) e.value['mint'],
+                                      if (((e.value['cond'] as String?) ?? '').isNotEmpty) e.value['cond'],
+                                      if (((e.value['date'] as String?) ?? '').isNotEmpty) 'Date: ${e.value['date']}',
+                                    ].join(' · '),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: keep
+                                            ? const Color(0xFF15803D)
+                                            : const Color(0xFF9F1239)),
+                                  ),
+                                ),
+                                Text(
+                                  keep ? 'KEEP' : 'DELETE',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: keep
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFE11D48)),
+                                ),
+                              ]),
+                            );
+                          }),
+                          if (gi < cleanableGroups.length - 1)
+                            const Divider(height: 16),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Footer buttons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel — Keep Everything'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE11D48),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      icon: const Icon(Icons.delete_sweep, size: 18),
+                      label: Text('Delete $willDelete Duplicate${willDelete == 1 ? '' : 's'}'),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _autoCleanRunning = true);
+    try {
+      final resp = await http.post(
+        Uri.parse('$_apiUrl/api/dedup_sweep/auto_clean'),
+        body: {'user_email': widget.userEmail},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final deleted = data['coins_deleted'] as int;
+        final cleaned = data['groups_cleaned'] as int;
+        if (mounted) {
+          nav.pop(); // close dedup dialog
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+              '✅ Cleaned $cleaned groups — $deleted duplicate coins removed. '
+              'Run Scan Now again to verify.'),
+            backgroundColor: const Color(0xFF16A34A),
+            duration: const Duration(seconds: 6),
+          ));
+        }
+      } else {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Auto-clean failed: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _autoCleanRunning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 620),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.find_replace_rounded,
+                      color: Color(0xFFF97316), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.groups.isEmpty
+                              ? '✅ No Duplicates Found'
+                              : '${widget.groups.length} Duplicate Group${widget.groups.length == 1 ? '' : 's'} Found',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Color(0xFF0F172A)),
+                        ),
+                        if (widget.groups.isNotEmpty)
+                          const Text(
+                            'Tap Delete on the copy you want to remove. The first entry is suggested to keep.',
+                            style: TextStyle(
+                                color: Color(0xFF64748B), fontSize: 13),
+                          ),
+                        // Auto-clean prompt when cleanable groups exist
+                        if (_cleanableGroupCount > 0) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            '$_cleanableGroupCount group${_cleanableGroupCount == 1 ? '' : 's'} can be auto-cleaned.',
+                            style: const TextStyle(
+                                color: Color(0xFFEA580C),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Auto-clean button
+                  if (_cleanableGroupCount > 0)
+                    _autoCleanRunning
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFE11D48))),
+                          )
+                        : TextButton.icon(
+                            onPressed: _autoClean,
+                            icon: const Icon(Icons.auto_fix_high,
+                                size: 16, color: Color(0xFFE11D48)),
+                            label: const Text('Auto-Clean',
+                                style: TextStyle(
+                                    color: Color(0xFFE11D48),
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Body
+            Expanded(
+              child: widget.groups.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.verified_outlined,
+                                size: 56, color: Color(0xFF22C55E)),
+                            SizedBox(height: 16),
+                            Text('Your collection is clean!',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A))),
+                            SizedBox(height: 8),
+                            Text('No duplicate coins were detected.',
+                                style: TextStyle(color: Color(0xFF64748B))),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: widget.groups.length,
+                      separatorBuilder: (_, i) => const Divider(height: 24),
+                      itemBuilder: (_, gi) {
+                        final group = widget.groups[gi];
+                        final coins = (group['coins'] as List)
+                            .cast<Map<String, dynamic>>();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Group header
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    // Match type badge — three tiers
+                                    Builder(builder: (context) {
+                                      final matchType = group['match_type'] as String? ?? 'attribute';
+                                      Color bgColor;
+                                      Color textColor;
+                                      String label;
+                                      switch (matchType) {
+                                        case 'invoice':
+                                          bgColor   = const Color(0xFFFEE2E2);
+                                          textColor = const Color(0xFFDC2626);
+                                          label     = '🔴 Invoice Match';
+                                        case 'possible':
+                                          bgColor   = const Color(0xFFEFF6FF);
+                                          textColor = const Color(0xFF1D4ED8);
+                                          label     = '🔵 Possible Duplicate';
+                                        default:
+                                          bgColor   = const Color(0xFFFEF3C7);
+                                          textColor = const Color(0xFFB45309);
+                                          label     = '🟡 ${coins.length} copies';
+                                      }
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: bgColor,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(label,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Builder(builder: (context) {
+                                        final theme = (coins.first['theme'] as String? ?? '').trim();
+                                        final label = theme.isNotEmpty
+                                            ? '${coins.first['year']} ${coins.first['denom']} · $theme'
+                                            : '${coins.first['year']} ${coins.first['denom']} — ${coins.first['series']}';
+                                        return Text(
+                                          label,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF0F172A)),
+                                          overflow: TextOverflow.ellipsis,
+                                        );
+                                      }),
+                                    ),
+                                  ]),
+                                  // Explanatory note for possible duplicates
+                                  if ((group['match_type'] as String? ?? '') == 'possible')
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        'Same coin type with different purchase dates — '
+                                        'may be intentional multiples. Review manually.',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF1D4ED8),
+                                            fontStyle: FontStyle.italic),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            // Each coin in the group
+                            ...coins.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final coin = entry.value;
+                              final docId = coin['id'] as String;
+                              final isDeleting = _deleting.contains(docId);
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: idx == 0
+                                      ? const Color(0xFFF0FDF4)
+                                      : const Color(0xFFFFF1F2),
+                                  border: Border.all(
+                                    color: idx == 0
+                                        ? const Color(0xFFBBF7D0)
+                                        : const Color(0xFFFFCDD2),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      idx == 0
+                                          ? Icons.check_circle_outline
+                                          : Icons.content_copy_outlined,
+                                      size: 16,
+                                      color: idx == 0
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFFE11D48),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        [
+                                          if ((coin['year'] as String).isNotEmpty)
+                                            coin['year'],
+                                          if ((coin['mint'] as String).isNotEmpty)
+                                            coin['mint'],
+                                          coin['denom'],
+                                          if ((coin['cond'] as String).isNotEmpty)
+                                            coin['cond'],
+                                          if ((coin['invoice'] as String).isNotEmpty)
+                                            'Inv: ${coin['invoice']}',
+                                          if ((coin['date'] as String).isNotEmpty)
+                                            coin['date'],
+                                        ].join(' · '),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: idx == 0
+                                              ? const Color(0xFF15803D)
+                                              : const Color(0xFF9F1239),
+                                        ),
+                                      ),
+                                    ),
+                                    if (idx == 0)
+                                      const Padding(
+                                        padding:
+                                            EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text('Keep',
+                                            style: TextStyle(
+                                                color: Color(0xFF16A34A),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12)),
+                                      )
+                                    else
+                                      TextButton.icon(
+                                        onPressed: isDeleting
+                                            ? null
+                                            : () async {
+                                                final nav = Navigator.of(context);
+                                                setState(() =>
+                                                    _deleting.add(docId));
+                                                await widget.onDeleted(docId);
+                                                if (mounted) nav.pop();
+                                              },
+                                        icon: isDeleting
+                                            ? const SizedBox(
+                                                width: 14,
+                                                height: 14,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2))
+                                            : const Icon(Icons.delete_outline,
+                                                size: 16),
+                                        label: const Text('Delete'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              const Color(0xFFE11D48),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+            // Footer
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

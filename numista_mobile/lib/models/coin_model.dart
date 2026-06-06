@@ -69,11 +69,30 @@ class CoinModel {
     return CoinModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
   }
 
+  /// Splits a combined Year+MintMark string.
+  /// e.g. "2006D" → (year: '2006', mint: 'D')
+  /// e.g. "1776-1976S" → (year: '1776-1976', mint: 'S')
+  /// Returns original values unchanged if already separated or no suffix.
+  static (String year, String mint) _splitYearMint(String rawYear, String rawMint) {
+    if (rawMint.isNotEmpty) return (rawYear, rawMint); // already split
+    final trimmed = rawYear.trim();
+    // Matches 4-digit year (with optional bicentennial suffix) + single uppercase letter
+    final re = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
+    final m = re.firstMatch(trimmed);
+    if (m != null) return (m.group(1)!, m.group(2)!.toUpperCase());
+    return (trimmed, rawMint);
+  }
+
   factory CoinModel.fromMap(Map<String, dynamic> data, String id) {
+    // Split combined Year+Mint before assigning (e.g. "2006D" → year='2006' mint='D')
+    final (year, mintMark) = _splitYearMint(
+      data['Year']?.toString().trim() ?? '',
+      data['Mint Mark']?.toString().trim() ?? '',
+    );
     return CoinModel(
       id: id,
-      year: data['Year']?.toString() ?? '',
-      mintMark: data['Mint Mark']?.toString() ?? '',
+      year: year,
+      mintMark: mintMark,
       denomination: data['Denomination']?.toString() ?? '',
       programSeries: data['Program/Series']?.toString() ?? '',
       themeSubject: data['Theme/Subject']?.toString() ?? '',

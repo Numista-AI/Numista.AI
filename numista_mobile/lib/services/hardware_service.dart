@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -15,16 +14,12 @@ class HardwareService {
   static const String _startScanUrl = 'http://localhost:5000/start-scan';
   static const String _saveUrl      = 'http://localhost:5000/add-to-collection';
 
-  // Firestore fallback (used only when HTTP is unreachable, e.g. production)
-  static const String _userEmail     = 'eric@numista.ai';
-  static const String _commandsPath  = 'commands/$_userEmail/pending';
-  static const String _resultsPath   = 'commands/$_userEmail/results';
+  // Firestore fallback paths: not implemented, HTTP is used in all code paths
+  // (keeping comment for future reference if offline-first support is needed)
 
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
   HardwareService._internal();
-
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ─── Start Scan ───────────────────────────────────────────────────────────
   /// Posts to /start-scan on the local hardware server.

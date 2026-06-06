@@ -283,11 +283,27 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             ),
                             onPressed: isSaving ? null : () async {
                               setDialogState(() => isSaving = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final dialogMessenger = ScaffoldMessenger.of(dialogContext);
+                              final nav = Navigator.of(dialogContext);
                               try {
                                 final updates = <String, dynamic>{};
                                 controllers.forEach((key, ctrl) {
                                   if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
                                 });
+                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
+                                final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
+                                final ry = (updates['Year'] as String? ?? '').trim();
+                                final rm = (updates['Mint Mark'] as String? ?? '').trim();
+                                if (ry.isNotEmpty && rm.isEmpty) {
+                                  final ym = ymRe.firstMatch(ry);
+                                  if (ym != null) {
+                                    updates['Year'] = ym.group(1)!;
+                                    updates['Mint Mark'] = ym.group(2)!.toUpperCase();
+                                    controllers['Year']?.text = ym.group(1)!;
+                                    controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
+                                  }
+                                }
                                 await FirebaseFirestore.instance
                                     .collection('users')
                                     .doc(user.email!)
@@ -295,13 +311,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     .doc(docId)
                                     .update(updates);
                                 if (!mounted) return;
-                                Navigator.pop(dialogContext);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                nav.pop();
+                                messenger.showSnackBar(
                                   const SnackBar(content: Text('Changes saved to Review Queue.')),
                                 );
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
-                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                dialogMessenger.showSnackBar(
                                   SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red[700]),
                                 );
                               }
@@ -322,11 +338,27 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             ),
                             onPressed: isSaving ? null : () async {
                               setDialogState(() => isSaving = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final dialogMessenger = ScaffoldMessenger.of(dialogContext);
+                              final nav = Navigator.of(dialogContext);
                               try {
                                 final updates = <String, dynamic>{};
                                 controllers.forEach((key, ctrl) {
                                   if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
                                 });
+                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
+                                final ymRe2 = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
+                                final ry2 = (updates['Year'] as String? ?? '').trim();
+                                final rm2 = (updates['Mint Mark'] as String? ?? '').trim();
+                                if (ry2.isNotEmpty && rm2.isEmpty) {
+                                  final ym2 = ymRe2.firstMatch(ry2);
+                                  if (ym2 != null) {
+                                    updates['Year'] = ym2.group(1)!;
+                                    updates['Mint Mark'] = ym2.group(2)!.toUpperCase();
+                                    controllers['Year']?.text = ym2.group(1)!;
+                                    controllers['Mint Mark']?.text = ym2.group(2)!.toUpperCase();
+                                  }
+                                }
                                 // Save edits first
                                 await FirebaseFirestore.instance
                                     .collection('users')
@@ -334,6 +366,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     .collection('review_queue')
                                     .doc(docId)
                                     .update(updates);
+
                                 // Then commit to main collection
                                 final response = await http.post(
                                   Uri.parse("$_apiUrl/api/review/commit"),
@@ -344,19 +377,19 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                   }),
                                 );
                                 if (!mounted) return;
-                                Navigator.pop(dialogContext);
+                                nav.pop();
                                 if (response.statusCode == 200) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Coin saved and committed to collection!')),
                                   );
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Saved, but commit failed — try committing from the hub.')),
                                   );
                                 }
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
-                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                dialogMessenger.showSnackBar(
                                   SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
                                 );
                               }
@@ -521,8 +554,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 .orderBy('created_at', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError) return Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: const [
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
                   Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
                   SizedBox(height: 12),
                   Text('Couldn\'t load review queue.',
@@ -532,6 +566,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       style: TextStyle(color: Colors.grey)),
                 ]),
               );
+              }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
