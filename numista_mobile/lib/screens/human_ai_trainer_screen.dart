@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
@@ -59,7 +60,7 @@ class GradeReviewCoin {
   final String coinId, year, mintMark, denomination, programSeries,
       themeSubject, condition, source, imageUrl, reviewStatus;
   final double confidenceScore;
-  final bool lowConfidence;
+  final bool lowConfidence, hasBbox;
   final int reviewCount;
 
   GradeReviewCoin({
@@ -69,21 +70,29 @@ class GradeReviewCoin {
     required this.confidenceScore, required this.lowConfidence,
     required this.source, required this.imageUrl,
     required this.reviewStatus, required this.reviewCount,
+    this.hasBbox = false,
   });
 
-  factory GradeReviewCoin.fromJson(Map<String, dynamic> j) => GradeReviewCoin(
-    coinId: j['coin_id'] ?? '', year: j['year'] ?? '',
-    mintMark: j['mint_mark'] ?? '', denomination: j['denomination'] ?? '',
-    programSeries: j['program_series'] ?? '',
-    themeSubject: j['theme_subject'] ?? '',
-    condition: j['condition'] ?? 'Ungraded',
-    confidenceScore: (j['confidence_score'] ?? 0.0).toDouble(),
-    lowConfidence: j['low_confidence'] ?? false,
-    source: j['source'] ?? '',
-    imageUrl: j['image_url_obverse'] ?? '',
-    reviewStatus: j['grade_review_status'] ?? 'pending',
-    reviewCount: j['grade_review_count'] ?? 0,
-  );
+  factory GradeReviewCoin.fromJson(Map<String, dynamic> j) {
+    final bbox = j['slot_bbox'] as Map? ?? {};
+    final hasBbox = bbox.isNotEmpty &&
+        ((bbox['w_pct'] ?? 0.0) as num) > 0 &&
+        ((bbox['h_pct'] ?? 0.0) as num) > 0;
+    return GradeReviewCoin(
+      coinId: j['coin_id'] ?? '', year: j['year'] ?? '',
+      mintMark: j['mint_mark'] ?? '', denomination: j['denomination'] ?? '',
+      programSeries: j['program_series'] ?? '',
+      themeSubject: j['theme_subject'] ?? '',
+      condition: j['condition'] ?? 'Ungraded',
+      confidenceScore: (j['confidence_score'] ?? 0.0).toDouble(),
+      lowConfidence: j['low_confidence'] ?? false,
+      source: j['source'] ?? '',
+      imageUrl: j['image_url_obverse'] ?? '',
+      reviewStatus: j['grade_review_status'] ?? 'pending',
+      reviewCount: j['grade_review_count'] ?? 0,
+      hasBbox: hasBbox,
+    );
+  }
 
   String get displayName {
     final parts = [year, mintMark].where((s) => s.isNotEmpty).join('-');
@@ -420,6 +429,8 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
   String _doneMsg        = '';
   bool   _flagged        = false;
 
+  String get _userEmail => AuthService.userEmail;
+
   @override
   void dispose() { _notesCtrl.dispose(); super.dispose(); }
 
@@ -513,13 +524,22 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Coin info row
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Coin image — uses slot crop for Binder Scan coins, full page otherwise
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: coin.imageUrl.isNotEmpty
-                    ? Image.network(coin.imageUrl, width: 72, height: 72,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => _placeholder())
-                    : _placeholder(),
+                child: coin.source == 'Binder Scan' && coin.imageUrl.isNotEmpty
+                    ? _CoinCropImage(
+                        coinId: coin.coinId,
+                        userEmail: _userEmail,
+                        fallbackUrl: coin.imageUrl,
+                        hasBbox: coin.hasBbox,
+                        size: 72,
+                      )
+                    : coin.imageUrl.isNotEmpty
+                        ? Image.network(coin.imageUrl, width: 72, height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (c, e, s) => _placeholder())
+                        : _placeholder(),
               ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -721,6 +741,114 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
         borderSide: const BorderSide(color: Color(0xFFF63366), width: 2)),
   );
 }
+
+// ─── Coin Crop Image Widget ───────────────────────────────────────────────────
+/// For Binder Scan coins: calls /api/coin_crop and shows the cropped slot.
+/// Falls back gracefully to full binder page image for old coins without bbox.
+
+class _CoinCropImage extends StatefulWidget {
+  final String coinId, userEmail, fallbackUrl;
+  final bool hasBbox;
+  final double size;
+
+  const _CoinCropImage({
+    required this.coinId, required this.userEmail,
+    required this.fallbackUrl, required this.hasBbox,
+    this.size = 72,
+  });
+
+  @override
+  State<_CoinCropImage> createState() => _CoinCropImageState();
+}
+
+class _CoinCropImageState extends State<_CoinCropImage> {
+  static const _api =
+      'https://numista-backend-568985927038.us-central1.run.app';
+
+  _CropState _state = _CropState.loading;
+  Uint8List?  _cropBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.hasBbox) {
+      _fetchCrop();
+    } else {
+      // No bbox in Firestore — show full binder page immediately
+      setState(() => _state = _CropState.fallback);
+    }
+  }
+
+  Future<void> _fetchCrop() async {
+    try {
+      final uri = Uri.parse(
+          '$_api/api/coin_crop'
+          '?coin_id=${Uri.encodeComponent(widget.coinId)}'
+          '&user_email=${Uri.encodeComponent(widget.userEmail)}');
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (!mounted) { return; }
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['status'] == 'ok' && data['crop_b64'] != null) {
+          final bytes = base64Decode(data['crop_b64'] as String);
+          setState(() { _cropBytes = bytes; _state = _CropState.cropped; });
+        } else {
+          // status == 'fallback'
+          setState(() => _state = _CropState.fallback);
+        }
+      } else {
+        setState(() => _state = _CropState.fallback);
+      }
+    } catch (_) {
+      if (mounted) { setState(() => _state = _CropState.fallback); }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.size;
+    switch (_state) {
+      case _CropState.loading:
+        return Container(
+          width: s, height: s,
+          decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8)),
+          child: const Center(child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2,
+                  color: Color(0xFF6366F1)))),
+        );
+
+      case _CropState.cropped:
+        return Image.memory(
+          _cropBytes!,
+          width: s, height: s, fit: BoxFit.cover,
+          errorBuilder: (c, e, _) => _fallbackWidget(s),
+        );
+
+      case _CropState.fallback:
+        return widget.fallbackUrl.isNotEmpty
+            ? Image.network(
+                widget.fallbackUrl, width: s, height: s,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, _) => _fallbackWidget(s),
+              )
+            : _fallbackWidget(s);
+    }
+  }
+
+  Widget _fallbackWidget(double s) => Container(
+    width: s, height: s,
+    decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8)),
+    child: const Icon(Icons.monetization_on_outlined,
+        size: 36, color: Color(0xFFCBD5E1)),
+  );
+}
+
+enum _CropState { loading, cropped, fallback }
 
 // ─── Tab 2: Community Nickname Review ────────────────────────────────────────
 

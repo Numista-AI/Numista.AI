@@ -1186,7 +1186,9 @@ class _ProvenanceTab extends StatelessWidget {
     final hasNotes = coin.personalNotes.isNotEmpty;
     final hasRef = coin.personalRef.isNotEmpty;
     final hasDesc = coin.originalDescription.isNotEmpty;
-    final hasAny = hasAcquisition || hasCert || hasStorage || hasNotes || hasRef || hasDesc;
+    final hasScanOrigin = coin.source == 'Binder Scan' && coin.sourceFile.isNotEmpty;
+    final hasAny = hasAcquisition || hasCert || hasStorage || hasNotes ||
+        hasRef || hasDesc || hasScanOrigin;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1314,6 +1316,45 @@ class _ProvenanceTab extends StatelessWidget {
               ),
               child: Text(coin.originalDescription,
                 style: const TextStyle(fontSize: 12, color: _kSubtext, height: 1.5)),
+            ),
+          ],
+
+          // ── Scan Origin (Binder Scan coins only) ─────────────────────────────
+          if (hasScanOrigin) ...[
+            const SizedBox(height: 16),
+            _SectionHeader('Scan Origin'),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withAlpha(12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF6366F1).withAlpha(50)),
+              ),
+              child: Column(children: [
+                _ProvenanceRow(
+                  icon: Icons.document_scanner_outlined,
+                  label: 'Source',
+                  value: coin.source,
+                ),
+                _ProvenanceRow(
+                  icon: Icons.qr_code_outlined,
+                  label: 'Scan ID',
+                  value: coin.sourceFile.length > 16
+                      ? '${coin.sourceFile.substring(0, 8)}…${coin.sourceFile.substring(coin.sourceFile.length - 4)}'
+                      : coin.sourceFile,
+                ),
+                if (coin.binderDocId.isNotEmpty)
+                  _ProvenanceRow(
+                    icon: Icons.folder_outlined,
+                    label: 'Binder Doc',
+                    value: coin.binderDocId.length > 16
+                        ? '${coin.binderDocId.substring(0, 8)}…${coin.binderDocId.substring(coin.binderDocId.length - 4)}'
+                        : coin.binderDocId,
+                  ),
+              ]),
             ),
           ],
 

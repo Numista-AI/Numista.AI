@@ -54,7 +54,12 @@ class CoinNormalizerService {
     print('[Normalizer] Starting AI normalization for ${toNormalize.length} coins...');
     for (int i = 0; i < toNormalize.length; i += _batchSize) {
       final batch = toNormalize.skip(i).take(_batchSize).toList();
-      await _normalizeBatch(batch, col);
+      final shouldContinue = await _normalizeBatch(batch, col);
+      if (!shouldContinue) {
+        // ignore: avoid_print
+        print('[Normalizer] Stopped early — will resume on next login.');
+        return;
+      }
     }
     // ignore: avoid_print
     print('[Normalizer] ✅ Normalization complete.');
@@ -108,7 +113,7 @@ class CoinNormalizerService {
     print('[Normalizer] ✅ Year+Mint split complete.');
   }
 
-  static Future<void> _normalizeBatch(
+  static Future<bool> _normalizeBatch(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     CollectionReference<Map<String, dynamic>> col,
   ) async {
@@ -167,7 +172,7 @@ class CoinNormalizerService {
       final rawJson = response.text ?? '';
       if (rawJson.isEmpty) {
         _markAllNormalized(docs, col);
-        return;
+        return true;
       }
 
       // Strip markdown code fences if present
@@ -183,7 +188,7 @@ class CoinNormalizerService {
       final writeBatch = FirebaseFirestore.instance.batch();
       for (final correction in corrections) {
         final id = correction['id'] as String?;
-        if (id == null) continue;
+        if (id == null) { continue; }
 
         final changed = correction['changed'] as bool? ?? false;
         final updates = <String, dynamic>{'_normalized': true};
@@ -192,19 +197,30 @@ class CoinNormalizerService {
           final series = correction['Program/Series'] as String?;
           final theme = correction['Theme/Subject'] as String?;
           final cond = correction['Condition'] as String?;
-          if (denom != null) updates['Denomination'] = denom;
-          if (series != null) updates['Program/Series'] = series;
-          if (theme != null) updates['Theme/Subject'] = theme;
-          if (cond != null) updates['Condition'] = cond;
+          if (denom != null) { updates['Denomination'] = denom; }
+          if (series != null) { updates['Program/Series'] = series; }
+          if (theme != null) { updates['Theme/Subject'] = theme; }
+          if (cond != null) { updates['Condition'] = cond; }
         }
         writeBatch.set(col.doc(id), updates, SetOptions(merge: true));
       }
 
       await writeBatch.commit();
+      return true;  // continue to next batch
     } catch (e) {
-      // Do NOT mark as normalized on failure — leave coins unprocessed
-      // so they will be retried on next login once the API is available.
-      rethrow;
+      final msg = e.toString();
+      if (msg.contains('spending cap') || msg.contains('quota') ||
+          msg.contains('RESOURCE_EXHAUSTED') || msg.contains('429')) {
+        // Spending cap hit — log once and stop gracefully.
+        // Coins remain un-normalized and will be retried when cap resets.
+        // ignore: avoid_print
+        print('[Normalizer] ⚠️ API spending cap reached — normalization paused until cap resets.');
+        return false;  // signal caller to stop
+      }
+      // For other errors, log and skip this batch (don't halt everything)
+      // ignore: avoid_print
+      print('[Normalizer] Batch error (skipping): $e');
+      return true;  // continue with next batch
     }
   }
 

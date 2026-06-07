@@ -1,0 +1,44 @@
+[19:49:08] ✅ PASS  Root health check                                       346ms  HTTP 200
+[19:49:08] ✅ PASS  FastAPI docs page                                       307ms  HTTP 200
+[19:49:08] ✅ PASS  GET /api/binder_scans/{email}                           362ms  HTTP 200
+[19:49:08] ✅ PASS  Binder scans returned                                     0 binder scan records
+[19:49:09] ✅ PASS  GET /api/admin/grade_flags                              339ms  HTTP 200
+[19:49:09] ✅ PASS  Admin grade flags returned                                0 open flag(s)
+[19:49:09] ✅ PASS  GET /api/coin_crop (non-existent coin → 404)              HTTP 404 — expected 404 ✓
+[19:49:09] ✅ PASS  Dedup sweep endpoint                                      POST-only — skipped in this suite (not a GET endpoint)
+[19:49:09] ✅ PASS  GET /api/template (CSV download)                        346ms  HTTP 200
+[19:49:09] ✅ PASS  Template headers check                                    22 columns all present
+[19:49:10] ✅ PASS  GET /api/nicknames (approved)                           353ms  HTTP 200
+[19:49:10] ✅ PASS  Approved nicknames returned                               20 terms
+[19:49:10] ✅ PASS  GET /api/nicknames/stats                                342ms  HTTP 200
+[19:49:10] ✅ PASS  Nickname stats fields                                     total=4 approved=0
+[19:49:10] ✅ PASS  POST /api/nicknames/submit 'Ike' (expect already_known) 336ms  HTTP 200
+[19:49:10] ✅ PASS  Ike already_known response                                ✨ Great minds think alike! "Ike" is already in the Numista.A
+[19:49:11] ✅ PASS  POST /api/nicknames/submit new term 'TestCoin_1780789750' 387ms  HTTP 200
+[19:49:11] ✅ PASS  New nickname submission status                            submitted
+[19:49:11] ✅ PASS  POST /api/nicknames/{id}/vote rating=5                  378ms  HTTP 200
+[19:49:11] ✅ PASS  Vote recorded                                             Vote recorded.
+[19:49:12] ✅ PASS  GET /api/grade_review/stats                             394ms  HTTP 200
+[19:49:12] ✅ PASS  Grade stats fields                                        total_ai=25 pending=25 flagged=0
+[19:49:12] ✅ PASS  GET /api/grade_review/queue                             392ms  HTTP 200
+[19:49:12] ✅ PASS  Grade review queue                                        19 coins awaiting review, returned 5
+[19:49:12] ✅ PASS    🟡 34c99831-448…                                         1929D | Grade=Average Circulated | Conf=90%
+[19:49:12] ✅ PASS    🟡 35eeb0f5-08f…                                         2024S | Grade=Ch Proof-63 | Conf=90%
+[19:49:12] ✅ PASS    🟡 44327617-0c6…                                         2024S | Grade=Choice Proof-63 | Conf=90%
+[19:49:12] ✅ PASS  POST /api/grade_review/submit confirmed (coin 1)        380ms  HTTP 200
+[19:49:12] ✅ PASS  Confirmed review response                                 ✓ Grade confirmed! Thank you for helping improve Numista.AI.
+[19:49:13] ✅ PASS  POST /api/grade_review/submit corrected (coin 2)        369ms  HTTP 200
+[19:49:13] ✅ PASS  Corrected review response                                 Correction submitted — "MS-63" has been noted.
+[19:49:13] ✅ PASS  GET /api/grade_review/stats (post-review)               379ms  HTTP 200
+[19:49:13] ⚠️  WARN  Stats may not have updated                                pending was 25, now 25
+[19:49:14] ⚠️  WARN  Normalization import skipped                              No module named 'fastapi'
+[19:49:15] ✅ PASS    /api/grade_review/queue                                 avg 473ms over 3 calls
+[19:49:16] ✅ PASS    /api/grade_review/stats                                 avg 399ms over 3 calls
+[19:49:17] ✅ PASS    /api/nicknames/stats                                    avg 378ms over 3 calls
+[19:49:18] ✅ PASS    /api/nicknames                                          avg 344ms over 3 calls
+[19:49:19] ✅ PASS    /api/template                                           avg 329ms over 3 calls
+
+======================================================================
+ Test Complete: 2026-06-06 19:49:19
+ ✅ PASS: 37   ❌ FAIL: 0   ⚠️  WARN: 2
+======================================================================

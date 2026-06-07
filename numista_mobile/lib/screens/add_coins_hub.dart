@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
+
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -145,6 +147,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'file',
             file.bytes!,
             filename: file.name,
+            contentType: MediaType('application', 'pdf'),
+          ));
+        } else if (file.path != null) {
+          // Native mobile/desktop path
+          request.files.add(await http.MultipartFile.fromPath(
+            'file',
+            file.path!,
+            filename: file.name,
+            contentType: MediaType('application', 'pdf'),
           ));
         }
 
@@ -340,7 +351,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       icon: Icons.cloud_upload_outlined,
       buttonLabel: 'Browse PDF',
       onPressed: () async {
-        FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true);
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          withData: true,
+          withReadStream: true,
+        );
         if (result != null) _processFiles(files: result.files, isInvoice: true);
       },
     );
@@ -353,7 +369,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       icon: Icons.topic_outlined,
       buttonLabel: 'Select Multiple PDFs',
       onPressed: () async {
-        FilePickerResult? result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true, allowMultiple: true);
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          withData: true,
+          withReadStream: true,
+          allowMultiple: true,
+        );
         if (result != null) _processFiles(files: result.files, isInvoice: true);
       },
     );

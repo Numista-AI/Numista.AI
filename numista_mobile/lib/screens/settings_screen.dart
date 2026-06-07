@@ -595,7 +595,7 @@ class _DedupDialogState extends State<_DedupDialog> {
                         const Text(
                           'Invoice Match groups: same Invoice # + Item # imported twice.\n'
                           'Attribute Match groups: identical coin on the same purchase date.\n'
-                          '🔵 Possible Duplicates are NOT included — those need manual review.\n'
+                          '🔵 Multiple Copies are NOT auto-cleaned — those need manual review.\n'
                           'One copy per group is always kept (shown in green).',
                           style: TextStyle(
                               color: Color(0xFF64748B), fontSize: 12),
@@ -907,7 +907,7 @@ class _DedupDialogState extends State<_DedupDialog> {
                                         case 'possible':
                                           bgColor   = const Color(0xFFEFF6FF);
                                           textColor = const Color(0xFF1D4ED8);
-                                          label     = '🔵 Possible Duplicate';
+                                          label     = '🔵 Multiple Copies';
                                         default:
                                           bgColor   = const Color(0xFFFEF3C7);
                                           textColor = const Color(0xFFB45309);
@@ -950,8 +950,8 @@ class _DedupDialogState extends State<_DedupDialog> {
                                     const Padding(
                                       padding: EdgeInsets.only(top: 4),
                                       child: Text(
-                                        'Same coin type with different purchase dates — '
-                                        'may be intentional multiples. Review manually.',
+                                         'Same coin type stored in multiple locations — '
+                                         'may be intentional. Review manually.',
                                         style: TextStyle(
                                             fontSize: 11,
                                             color: Color(0xFF1D4ED8),

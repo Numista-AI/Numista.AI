@@ -33,6 +33,11 @@ class CoinModel {
   final String imageUrlReverse;
   final DateTime? timestamp;
 
+  // Scan origin (Binder Scan coins only)
+  final String source;        // e.g. 'Binder Scan', 'Manual Entry'
+  final String sourceFile;    // scan_uuid — raw scan identifier
+  final String binderDocId;   // Firestore binder_scans doc ID
+
   CoinModel({
     required this.id,
     this.year = '',
@@ -63,6 +68,9 @@ class CoinModel {
     this.imageUrlReverse = '',
     this.country = 'USA',
     this.timestamp,
+    this.source = '',
+    this.sourceFile = '',
+    this.binderDocId = '',
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -119,6 +127,9 @@ class CoinModel {
       imageUrlReverse: data['image_url_reverse']?.toString() ?? '',
       country: data['Country']?.toString() ?? 'USA',
       timestamp: data['timestamp'] is Timestamp ? (data['timestamp'] as Timestamp).toDate() : null,
+      source: data['source']?.toString() ?? '',
+      sourceFile: data['source_file']?.toString() ?? data['scan_uuid']?.toString() ?? '',
+      binderDocId: data['binder_doc_id']?.toString() ?? '',
     );
   }
 

@@ -639,14 +639,16 @@ def download_template():
     """Returns a pre-formatted CSV template with the Numista.AI Golden Schema headers."""
     from fastapi.responses import Response
     headers_row = (
-        "Year,Mint Mark,Denomination,Program/Series,Theme/Subject,"
-        "Condition,Cost,Purchase Date,Retailer Name,Retailer Invoice #,"
-        "Retailer Item No.,Storage Location,Notes\n"
+        "Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Country,"
+        "Condition,Strike Type,Holder Type,Grading Service,Certification Number,"
+        "Metal Content,Purchase Cost,Purchase Date,Retailer/Website,"
+        "Retailer Invoice #,Retailer Item No.,Variety,Personal Notes I,"
+        "Personal Reference #,Storage Location,Original Description from source\n"
     )
     example_row = (
-        '1921,D,Dollar,Morgan Silver Dollar,Morgan Dollar,'
-        'VF-30,42.00,1995-06-15,Local Coin Shop,,,'
-        'Safe Deposit Box,Rim nick at 3 o\'clock\n'
+        '1921,D,Dollar,Morgan Silver Dollar,Morgan Dollar,USA,'
+        'VF-30,,Raw,,,Silver,42.00,1995-06-15,Local Coin Shop,,,'
+        ',,Safe Deposit Box,Rim nick at 3 o\'clock\n'
     )
     csv_content = headers_row + example_row
     return Response(
@@ -833,8 +835,18 @@ def list_nicknames(status: str = 'pending', limit: int = 50, offset: int = 0):
     if status != 'all':
         col = col.where('status', '==', status)
 
-    docs = list(col.order_by('submitted_at', direction=firestore.Query.DESCENDING)
-                   .limit(limit + offset).stream())
+    # order_by + where requires a composite index that may not exist yet.
+    # Gracefully fall back to unordered if the index is missing.
+    try:
+        docs = list(
+            col.order_by('submitted_at', direction=firestore.Query.DESCENDING)
+               .limit(limit + offset).stream()
+        )
+    except Exception:
+        try:
+            docs = list(col.limit(limit + offset).stream())
+        except Exception:
+            docs = []
     docs = docs[offset:]
 
     results = []
@@ -986,18 +998,36 @@ def grade_review_queue(user_email: str, limit: int = 30):
     sorted by confidence_score ascending (lowest = most urgently needs review).
     """
     coins_ref = db.collection('users').document(user_email).collection('coins')
-    docs      = list(coins_ref.stream())
+
+    # ── Server-side filter: only pull AI-sourced coins (avoids full-collection scan) ──
+    seen_ids: set[str] = set()
+    raw_docs: list     = []
+    try:
+        q1 = coins_ref.where('source', 'in', list(AI_SOURCES)).stream()
+        for doc in q1:
+            if doc.id not in seen_ids:
+                seen_ids.add(doc.id)
+                raw_docs.append(doc)
+    except Exception as e:
+        print(f"[grade_review_queue] source query failed: {e}, falling back to full scan")
+        raw_docs = list(coins_ref.stream())
+        seen_ids = {d.id for d in raw_docs}
+
+    # Also catch low-confidence coins from other sources (e.g. AI-fixed CSV rows)
+    try:
+        q2 = coins_ref.where('confidence_score', '<', 0.95).stream()
+        for doc in q2:
+            if doc.id not in seen_ids:
+                seen_ids.add(doc.id)
+                raw_docs.append(doc)
+    except Exception:
+        pass  # Index may not exist yet — source filter above handles main cases
 
     results = []
-    for doc in docs:
+    for doc in raw_docs:
         d      = doc.to_dict()
         source = d.get('source', '')
         conf   = float(d.get('confidence_score', 1.0))
-
-        # Only AI-processed coins
-        is_ai = source in AI_SOURCES or conf < 0.95
-        if not is_ai:
-            continue
 
         # Skip already reviewed by this user
         reviews = d.get('grade_reviews', [])
@@ -1150,11 +1180,174 @@ async def submit_grade_review(
     }
 
 
+# ─── Admin: Grade Flag Dashboard ─────────────────────────────────────────────
+
+@app.get("/api/admin/grade_flags")
+def admin_grade_flags(resolved: bool = False, limit: int = 100):
+    """
+    Returns all coins flagged for admin grade review.
+    resolved=false (default) → open flags only.
+    resolved=true            → already-resolved flags.
+    """
+    try:
+        q = (db.collection('admin_grade_flags')
+               .where('resolved', '==', resolved)
+               .order_by('flagged_at', direction=firestore.Query.DESCENDING)
+               .limit(limit))
+        docs = list(q.stream())
+    except Exception:
+        # Index may still be building — fall back to unordered
+        docs = list(
+            db.collection('admin_grade_flags')
+              .where('resolved', '==', resolved)
+              .limit(limit)
+              .stream()
+        )
+
+    flags = []
+    for doc in docs:
+        d = doc.to_dict()
+        # Fetch the coin's current image if available
+        try:
+            owner  = d.get('user_email', '')
+            cid    = d.get('coin_id', doc.id)
+            cdoc   = (db.collection('users').document(owner)
+                        .collection('coins').document(cid).get())
+            img    = cdoc.to_dict().get('image_url_obverse', '') if cdoc.exists else ''
+            conf   = cdoc.to_dict().get('confidence_score', 0.0) if cdoc.exists else 0.0
+            theme  = cdoc.to_dict().get('Theme/Subject', '') if cdoc.exists else ''
+        except Exception:
+            img = ''; conf = 0.0; theme = ''
+
+        # Build review summary for display
+        try:
+            cdoc2  = (db.collection('users').document(d.get('user_email',''))
+                        .collection('coins').document(doc.id).get())
+            reviews = cdoc2.to_dict().get('grade_reviews', []) if cdoc2.exists else []
+        except Exception:
+            reviews = []
+
+        grade_tally: dict = {}
+        for rv in reviews:
+            g = rv.get('suggested_grade', rv.get('action',''))
+            if g and g != 'confirmed':
+                grade_tally[g] = grade_tally.get(g, 0) + 1
+
+        flags.append({
+            'flag_id':         doc.id,
+            'coin_id':         d.get('coin_id', doc.id),
+            'user_email':      d.get('user_email', ''),
+            'year':            d.get('year', ''),
+            'mint_mark':       d.get('mint_mark', ''),
+            'program_series':  d.get('program_series', ''),
+            'theme_subject':   theme,
+            'ai_grade':        d.get('ai_assigned_grade', ''),
+            'community_grade': d.get('community_grade', ''),
+            'review_count':    d.get('review_count', 0),
+            'grade_tally':     grade_tally,
+            'confidence_score': round(float(conf), 2),
+            'image_url':       img,
+            'flagged_at':      str(d.get('flagged_at', '')),
+            'resolved':        d.get('resolved', False),
+            'resolved_grade':  d.get('resolved_grade', ''),
+            'resolved_by':     d.get('resolved_by', ''),
+        })
+
+    return {
+        'status':  'ok',
+        'results': flags,
+        'count':   len(flags),
+        'resolved': resolved,
+    }
+
+
+@app.post("/api/admin/grade_flags/{flag_id}/resolve")
+async def resolve_grade_flag(
+    flag_id:        str,
+    admin_email:    str = Form(...),
+    decision:       str = Form(...),   # 'accept_community' | 'keep_ai'
+    resolved_grade: str = Form(''),
+    notes:          str = Form(''),
+):
+    """
+    Admin resolves a flagged coin grade.
+    decision='accept_community' → updates coin Condition to community_grade
+    decision='keep_ai'          → keeps existing AI grade, marks flag resolved
+    """
+    flag_ref = db.collection('admin_grade_flags').document(flag_id)
+    flag_doc = flag_ref.get()
+    if not flag_doc.exists:
+        raise HTTPException(status_code=404, detail="Flag not found.")
+
+    d          = flag_doc.to_dict()
+    owner      = d.get('user_email', '')
+    coin_id    = d.get('coin_id', flag_id)
+    ai_grade   = d.get('ai_assigned_grade', '')
+    comm_grade = d.get('community_grade', '')
+
+    final_grade = comm_grade if decision == 'accept_community' else ai_grade
+    if resolved_grade:
+        final_grade = resolved_grade   # admin can also override both
+
+    # Update the coin's Condition field
+    if owner and coin_id:
+        coin_ref = (db.collection('users').document(owner)
+                      .collection('coins').document(coin_id))
+        coin_ref.set({
+            'Condition':           final_grade,
+            'grade_review_status': 'admin_resolved',
+            'admin_resolution': {
+                'decision':    decision,
+                'final_grade': final_grade,
+                'resolved_by': admin_email,
+                'notes':       notes,
+            },
+        }, merge=True)
+
+    # Mark the flag resolved
+    flag_ref.set({
+        'resolved':      True,
+        'resolved_grade': final_grade,
+        'resolved_by':   admin_email,
+        'resolved_at':   firestore.SERVER_TIMESTAMP,
+        'resolution':    decision,
+        'admin_notes':   notes,
+    }, merge=True)
+
+    action_desc = (f"Community grade '{comm_grade}' accepted"
+                   if decision == 'accept_community'
+                   else f"AI grade '{ai_grade}' kept")
+    return {
+        'status':      'ok',
+        'message':     f'Resolved: {action_desc}. Coin updated to "{final_grade}".',
+        'final_grade': final_grade,
+    }
+
+
 @app.get("/api/grade_review/stats")
 def grade_review_stats(user_email: str):
     """Per-user grade review statistics for the Human AI Trainer dashboard."""
     coins_ref = db.collection('users').document(user_email).collection('coins')
-    docs      = list(coins_ref.stream())
+
+    # Server-side filter — same two-query approach as queue endpoint
+    seen_ids: set[str] = set()
+    docs: list         = []
+    try:
+        for doc in coins_ref.where('source', 'in', list(AI_SOURCES)).stream():
+            if doc.id not in seen_ids:
+                seen_ids.add(doc.id)
+                docs.append(doc)
+    except Exception as e:
+        print(f"[grade_review_stats] source query failed: {e}, falling back")
+        docs     = list(coins_ref.stream())
+        seen_ids = {d.id for d in docs}
+    try:
+        for doc in coins_ref.where('confidence_score', '<', 0.95).stream():
+            if doc.id not in seen_ids:
+                seen_ids.add(doc.id)
+                docs.append(doc)
+    except Exception:
+        pass
 
     total_ai      = 0
     pending       = 0
@@ -1212,7 +1405,22 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
     # This is *significantly* more robust than legacy DocumentAI.
     try:
         from vertexai.generative_models import Part
-        pdf_part = Part.from_data(data=contents, mime_type="application/pdf")
+        # Detect MIME type from extension — ignore browser fallback 'application/octet-stream'
+        ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
+        mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+        reported_type = file.content_type or ""
+        # Use reported type only if it's specific (not generic octet-stream)
+        if reported_type and reported_type not in ("application/octet-stream", "binary/octet-stream", ""):
+            mime_type = reported_type
+        elif ext in mime_map:
+            mime_type = mime_map[ext]
+        else:
+            # Magic byte sniff: PDFs start with %PDF (hex 25 50 44 46)
+            mime_type = "application/pdf" if contents[:4] == b"%PDF" else "application/octet-stream"
+        print(f"[process_invoice] filename={file.filename!r} reported={reported_type!r} → using mime={mime_type!r}")
+        pdf_part = Part.from_data(data=contents, mime_type=mime_type)
+
+
         
         extraction_prompt = """
         You are an expert coin collector's robotic accountant. Review this PDF invoice/receipt.
@@ -1222,6 +1430,19 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         1. Ignore shipping, tax, or discount rows.
         2. EXCLUDE all non-currency supplies such as: "Binders", "Coin Holders", "Slabs", "Magnifiers", "Pages", "Capsules".
         3. If an item is a foreign coin, ensure Country is accurate.
+        4. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
+           - Phone "1-800-645-3122" OR Customer# starting with "54" (5-8 digits) → "Littleton Coin Company"
+           - Phone "1-800-546-2995" OR "littletoncoin.com" → "Littleton Coin Company"
+           - "shop.usmint.gov" OR "United States Mint" OR "usmint.gov" OR phone "1-800-872-6468" → "US Mint"
+           - "APMEX" OR "apmex.com" → "APMEX"
+           - "JM Bullion" OR "jmbullion.com" → "JM Bullion"
+           - "SD Bullion" OR "sdbullion.com" → "SD Bullion"
+           - "Provident Metals" OR "providentmetals.com" → "Provident Metals"
+           - "BGASC" OR "bgasc.com" → "BGASC"
+           - "MCM" OR "moderncoinmart.com" → "Modern Coin Mart"
+           - "GovMint" OR "govmint.com" → "GovMint"
+           - "American Mint" OR "americanmint.com" → "American Mint"
+           If you cannot determine the retailer from any clue on the invoice, set "Retailer/Website" to "Unknown".
         
         Return ONLY a JSON list of objects matching this precise schema (23 columns):
         [
@@ -1241,7 +1462,7 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
             "Metal Content": "e.g. 90% Silver, Cupro-Nickel, 35% Silver Wartime",
             "Purchase Cost": "formatted price like $10.00",
             "Purchase Date": "found on invoice top",
-            "Retailer/Website": "e.g. Littleton Coin Company",
+            "Retailer/Website": "Identified retailer name (see RETAILER IDENTIFICATION rules above)",
             "Retailer Item No.": "The specific stock number (e.g. 214.AC)",
             "Retailer Invoice #": "The invoice ID (e.g. 67000001)",
             "Variety": "CRITICAL: Lookout for 'Double Die', 'Mint Error', 'Repunched Mint Mark', or specific errors in description",
@@ -1252,7 +1473,7 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
           }
         ]
         
-        DICTIONARY FOR MAPPING: {json.dumps(COIN_DICTIONARY)}
+        DICTIONARY FOR MAPPING: """ + json.dumps(COIN_DICTIONARY) + """
         """
         
         pro_model = GenerativeModel(PRO_MODEL)
@@ -1293,7 +1514,12 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
              added_count += 1
              
         batch.commit()
-        return {"status": "success", "extracted_items": added_count, "data": items}
+        # Strip non-serializable Firestore sentinels before returning JSON response
+        response_items = []
+        for item in items:
+            safe_item = {k: v for k, v in item.items() if k != 'created_at'}
+            response_items.append(safe_item)
+        return {"status": "success", "extracted_items": added_count, "data": response_items}
         
     except Exception as e:
         print(f"Error extracting invoice: {e}")
@@ -1987,12 +2213,28 @@ Return ONLY valid JSON matching this exact schema:
       "mint_uncertain": false,
       "present": true,
       "partially_visible": false,
-      "slot_condition_note": "optional — any note about damage or ambiguity"
+      "slot_condition_note": "optional — any note about damage or ambiguity",
+      "slot_bbox": {
+        "x_pct": 0.25,
+        "y_pct": 0.35,
+        "w_pct": 0.05,
+        "h_pct": 0.06
+      }
     }
   ],
   "analysis_notes": "Any overall observations about the binder, image quality, or uncertainties",
   "mint_clarification_needed": false
 }
+
+═══ SLOT BOUNDING BOXES ═══
+For each coin_slot, provide slot_bbox as PERCENTAGE coordinates (0.0–1.0) of the PAGE IMAGE:
+  x_pct = left edge of the circular slot / image width
+  y_pct = top edge of the circular slot / image height
+  w_pct = diameter of the slot / image width
+  h_pct = diameter of the slot / image height
+Add a small margin (~20%) so the crop includes the slot label below the coin.
+For map pages where slots are positioned geographically, estimate position as best you can.
+If you genuinely cannot determine position, use: {"x_pct": 0, "y_pct": 0, "w_pct": 0, "h_pct": 0}
 
 ═══ IMPORTANT RULES ═══
 - Report EVERY slot visible in the images, whether filled or empty
@@ -2004,6 +2246,127 @@ Return ONLY valid JSON matching this exact schema:
 - If an image is blurry or low quality, still attempt analysis and note it
 - Set mint_clarification_needed:true if ANY coin's mint mark is ambiguous
 """
+
+
+# ─── Coin Crop Endpoint ───────────────────────────────────────────────────────
+# Dependencies: google-cloud-storage, Pillow (already in requirements.txt)
+import base64, io as _io
+from PIL import Image as _PILImage
+
+
+@app.get("/api/coin_crop")
+def get_coin_crop(coin_id: str, user_email: str):
+    """
+    Returns a base64-encoded JPEG crop of the specific coin's binder slot.
+
+    Strategy:
+    1. Load the coin doc → get scan_uuid, page_index, slot_bbox from Firestore.
+    2. If slot_bbox exists (new scans): download the GCS page image, PIL crop, return.
+    3. If slot_bbox is missing (old scans): return {"fallback": true} so Flutter
+       displays the full binder page image instead (graceful degradation).
+    """
+    try:
+        coin_ref = (db.collection('users').document(user_email)
+                      .collection('coins').document(coin_id))
+        coin_doc = coin_ref.get()
+        if not coin_doc.exists:
+            raise HTTPException(status_code=404, detail='Coin not found.')
+
+        coin = coin_doc.to_dict()
+        scan_uuid  = coin.get('scan_uuid', '')
+        page_index = coin.get('page_index', 0)
+        slot_bbox  = coin.get('slot_bbox', {})
+        gcs_url    = coin.get('image_url_obverse', '')  # Full binder page URL
+
+        # Graceful degradation for old coins without bbox
+        if (not slot_bbox
+                or slot_bbox.get('w_pct', 0) == 0
+                or slot_bbox.get('h_pct', 0) == 0):
+            return {
+                'status':    'fallback',
+                'message':   'No crop data for this coin — showing full binder page.',
+                'image_url': gcs_url,
+                'coin_id':   coin_id,
+            }
+
+        if not gcs_url:
+            raise HTTPException(status_code=404, detail='No binder page image on file.')
+
+        # Download the full binder page from GCS
+        from google.cloud import storage as _gcs
+        import re as _re
+
+        # Parse GCS URL: could be gs:// or https://storage.googleapis.com/
+        if gcs_url.startswith('gs://'):
+            bucket_name, blob_name = gcs_url[5:].split('/', 1)
+        elif 'storage.googleapis.com' in gcs_url:
+            m = _re.match(
+                r'https://storage\.googleapis\.com/([^/]+)/(.+)', gcs_url)
+            if not m:
+                raise HTTPException(status_code=400,
+                    detail='Cannot parse GCS URL.')
+            bucket_name, blob_name = m.group(1), m.group(2)
+        else:
+            # Not a GCS URL (could be Firebase Storage CDN URL)
+            # Fall back to full-page display
+            return {
+                'status':    'fallback',
+                'message':   'Image not in GCS — showing full binder page.',
+                'image_url': gcs_url,
+                'coin_id':   coin_id,
+            }
+
+        _gcs_client = _gcs.Client()
+        bucket = _gcs_client.bucket(bucket_name)
+        blob   = bucket.blob(blob_name)
+        img_bytes = blob.download_as_bytes()
+
+        # Open with PIL and crop using percentage coordinates
+        img = _PILImage.open(_io.BytesIO(img_bytes)).convert('RGB')
+        W, H = img.size
+
+        x_pct = float(slot_bbox.get('x_pct', 0))
+        y_pct = float(slot_bbox.get('y_pct', 0))
+        w_pct = float(slot_bbox.get('w_pct', 0.1))
+        h_pct = float(slot_bbox.get('h_pct', 0.1))
+
+        # Add 25% margin so label below coin is included
+        margin_x = w_pct * 0.25
+        margin_y = h_pct * 0.25
+
+        x1 = max(0, int((x_pct - margin_x) * W))
+        y1 = max(0, int((y_pct - margin_y) * H))
+        x2 = min(W, int((x_pct + w_pct + margin_x) * W))
+        y2 = min(H, int((y_pct + h_pct + margin_y) * H))
+
+        # Ensure minimum crop size (at least 80×80 px)
+        if (x2 - x1) < 80 or (y2 - y1) < 80:
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            half = max(60, (x2 - x1) // 2, (y2 - y1) // 2)
+            x1 = max(0, cx - half); x2 = min(W, cx + half)
+            y1 = max(0, cy - half); y2 = min(H, cy + half)
+
+        cropped = img.crop((x1, y1, x2, y2))
+
+        # Encode as JPEG base64
+        buf = _io.BytesIO()
+        cropped.save(buf, format='JPEG', quality=88)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return {
+            'status':   'ok',
+            'coin_id':  coin_id,
+            'crop_b64': b64,
+            'crop_size': [x2 - x1, y2 - y1],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f'[coin_crop] Error: {e}')
+        raise HTTPException(status_code=500,
+            detail=f'Crop failed: {str(e)}')
 
 
 @app.post("/api/analyze_binder_scan")
@@ -2783,8 +3146,11 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
             # Internal tracking
             "source":              "Binder Scan",
             "source_file":         request.scan_uuid,
+            "scan_uuid":           request.scan_uuid,           # For crop endpoint
             "binder_doc_id":       request.binder_doc_id,
             "binder_page_index":   page_index,
+            "page_index":          page_index,                  # For crop endpoint
+            "slot_bbox":           slot.get("slot_bbox", {}),   # For crop endpoint
             "deep_dive_status":    "PENDING",
             "created_at":          firestore.SERVER_TIMESTAMP,
             "confidence_score":    0.85,  # AI-identified, user-confirmed

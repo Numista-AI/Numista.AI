@@ -21,6 +21,7 @@ import 'human_ai_trainer_screen.dart';
 import 'login_screen.dart';
 import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
+import 'admin_grade_flags_screen.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -96,6 +97,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const WishlistScreen();
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
+      case 'Admin: Grade Flags':
+        return const AdminGradeFlagsScreen();
       case 'Customer Service':
         return const CustomerServiceScreen();
       default:
@@ -307,6 +310,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                         ),
                         _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
+                        // Admin-only: Grade Flag Dashboard
+                        if (email == 'jseaman1204@gmail.com' ||
+                            email.endsWith('@numista.ai'))
+                          _buildNavItem('Admin: Grade Flags',
+                              icon: Icons.admin_panel_settings_outlined),
                         _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
                         const _SidebarDivider(),
                         _buildNavItem('Our Team', icon: Icons.people_outline),
@@ -423,6 +431,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       'AI Deepdive',
       'Human AI Trainer Review Board',
       'AI Trainer Board',
+      'Admin: Grade Flags',
       'Settings & Backup',
       'Our Team',
       'Customer Service',
