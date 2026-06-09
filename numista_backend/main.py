@@ -1,5 +1,5 @@
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -1421,16 +1421,42 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         pdf_part = Part.from_data(data=contents, mime_type=mime_type)
 
 
-        
+        # ─── Helper functions ─────────────────────────────────────────────────
+        def _parse_cost(cost_str: str) -> float:
+            """'$10.00' → 10.0. Returns 0.0 on any parse failure."""
+            try:
+                return float(str(cost_str).replace('$', '').replace(',', '').strip())
+            except Exception:
+                return 0.0
+
+        def _apply_defaults(it: dict):
+            """Apply schema defaults in-place."""
+            it['deep_dive_status'] = 'PENDING'
+            if not it.get('Program/Series'):
+                it['Program/Series'] = (it.get('Country') or 'USA') + ' Invoice Import'
+            if 'Condition' not in it:
+                it['Condition'] = 'Ungraded'
+            if 'Cost' not in it:
+                it['Cost'] = '$0.00'
+            # Auto-split combined Year+Mint (e.g. "2006D" → Year="2006", Mint Mark="D")
+            import re as _re
+            raw_year = str(it.get('Year', '')).strip()
+            raw_mint = str(it.get('Mint Mark', '')).strip()
+            if raw_year and not raw_mint:
+                _ym = _re.match(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', raw_year, _re.IGNORECASE)
+                if _ym:
+                    it['Year'] = _ym.group(1)
+                    it['Mint Mark'] = _ym.group(2).upper()
+
         extraction_prompt = """
-        You are an expert coin collector's robotic accountant. Review this PDF invoice/receipt.
-        Extract line items representing actual numismatic purchases (Coins, Bullion, Currency).
-        
+        You are an expert numismatic accountant and collectibles specialist. Review this PDF invoice/receipt.
+        Extract EVERY line item — coins, currency, stamps, medals, sets, supplies, and other collectibles.
+        Classify each item by type and return a full, accurate record.
+
         CRITICAL RULES:
-        1. Ignore shipping, tax, or discount rows.
-        2. EXCLUDE all non-currency supplies such as: "Binders", "Coin Holders", "Slabs", "Magnifiers", "Pages", "Capsules".
-        3. If an item is a foreign coin, ensure Country is accurate.
-        4. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
+        1. Ignore shipping, tax, discount, and subtotal rows — extract only purchasable line items.
+        2. Extract ALL item types, not just coins. Use the item_type field to classify each.
+        3. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
            - Phone "1-800-645-3122" OR Customer# starting with "54" (5-8 digits) → "Littleton Coin Company"
            - Phone "1-800-546-2995" OR "littletoncoin.com" → "Littleton Coin Company"
            - "shop.usmint.gov" OR "United States Mint" OR "usmint.gov" OR phone "1-800-872-6468" → "US Mint"
@@ -1442,37 +1468,73 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
            - "MCM" OR "moderncoinmart.com" → "Modern Coin Mart"
            - "GovMint" OR "govmint.com" → "GovMint"
            - "American Mint" OR "americanmint.com" → "American Mint"
-           If you cannot determine the retailer from any clue on the invoice, set "Retailer/Website" to "Unknown".
-        
-        Return ONLY a JSON list of objects matching this precise schema (23 columns):
+           - "PCS Coins" OR "PCS Stamps" OR "PCS Coins and Stamps" OR "pcscoins.com" → "PCS Stamps & Coins"
+           - "JP Capital Collectibles" OR "JP CAPITAL COLLECTIBLES" → "JP Capital Collectibles LLC"
+           - "Danbury Mint" OR "danburymint.com" → "The Danbury Mint"
+           If you cannot determine the retailer, set "Retailer/Website" to "Unknown".
+
+        ITEM TYPE CLASSIFICATION — set item_type for every record:
+          "coin"           → individual coin, bullion coin, or token
+          "set"            → a named group of coins sold together (e.g. "1971-1978 Ike Set", "Lincoln Cent Collection")
+                             MUST also populate set_contents listing each individual coin in the set
+          "paper_currency" → banknote, Silver Certificate, Federal Reserve Note, Obsolete Note, Fractional Currency, Legal Tender Note
+          "medal"          → commemorative medal, token, or non-monetary medallion
+          "stamp"          → postage stamp or stamp block
+          "supply"         → binder, coin page, holder, slab, capsule, album, magnifier, shipping supply
+          "other"          → anything not covered above
+
+        STAMP DISAMBIGUATION — this is CRITICAL:
+          Postage stamps often appear on the SAME invoice as coins from retailers like Littleton.
+          A line item is a STAMP (not a coin) if ANY of these are true:
+            - The description contains the word "stamp" or "block of [N]"
+            - It has a Scott catalog number (e.g. "#1234" or "Scott 1234")
+            - The subject is clearly historical art/event (e.g. "Iwo Jima", "Lexington & Concord",
+              "Military Academy West Point") AND the face value is a small postage amount (≤$1.00)
+            - The quantity is listed as a "block" (e.g. "(15)" or "block of 4")
+          EXAMPLE: "1937 5c Military Academy West Point (15)" = STAMP, not a Buffalo Nickel.
+          EXAMPLE: "1990 25c Eisenhower" on a Littleton invoice alongside stamps = STAMP.
+          EXAMPLE: "1945 Iwo Jima" at $0.XX = STAMP.
+
+        FOR SETS — when item_type is "set":
+          Enumerate the individual coins in set_contents. Use your numismatic knowledge to list
+          each coin by year, mint mark, and denomination. Example for "1971-1978 Ike Set Unc & Proof":
+          set_contents should list 1971-P, 1971-D, 1972-P, 1972-D ... through 1978.
+
+        Return ONLY a JSON list of objects. Every object MUST include item_type.
+        Schema (all fields apply to coins; use relevant fields for other types):
         [
           {
-            "Country": "Country of origin",
-            "Year": "numeric year",
-            "Mint Mark": "e.g. P, D, S, W",
-            "Denomination": "e.g. Lincoln Cent, Morgan Dollar",
+            "item_type": "coin | set | paper_currency | medal | stamp | supply | other",
+            "Country": "Country of origin (USA for US items)",
+            "Year": "numeric year or year range",
+            "Mint Mark": "e.g. P, D, S, W — blank if none",
+            "Denomination": "e.g. Lincoln Cent, Morgan Dollar, $1 Silver Certificate",
             "Quantity": 1,
-            "Program/Series": "e.g. 50 State Quarters",
-            "Theme/Subject": "Specific description",
-            "Condition": "e.g. MS-65, Average Circ",
-            "Strike Type": "e.g. Business, Proof, Special Mint Set",
+            "Program/Series": "e.g. 50 State Quarters, American Women Quarters",
+            "Theme/Subject": "Specific subject or design description",
+            "Condition": "e.g. MS-65, Average Circ, Ch Proof-63",
+            "Strike Type": "e.g. Business, Proof, Special Mint Set, Uncirculated",
             "Holder Type": "e.g. Raw, Slabs, Folder",
-            "Grading Service": "e.g. PCGS, NGC, None",
+            "Grading Service": "e.g. PCGS, NGC, PMG, None",
             "Certification Number": "if present",
             "Metal Content": "e.g. 90% Silver, Cupro-Nickel, 35% Silver Wartime",
             "Purchase Cost": "formatted price like $10.00",
-            "Purchase Date": "found on invoice top",
-            "Retailer/Website": "Identified retailer name (see RETAILER IDENTIFICATION rules above)",
-            "Retailer Item No.": "The specific stock number (e.g. 214.AC)",
-            "Retailer Invoice #": "The invoice ID (e.g. 67000001)",
-            "Variety": "CRITICAL: Lookout for 'Double Die', 'Mint Error', 'Repunched Mint Mark', or specific errors in description",
+            "Purchase Date": "found on invoice",
+            "Retailer/Website": "Identified retailer name (see RETAILER IDENTIFICATION rules)",
+            "Retailer Item No.": "The specific stock/item number",
+            "Retailer Invoice #": "The invoice ID",
+            "Variety": "CRITICAL: Look for Double Die, Mint Error, Repunched Mint Mark, or errors",
             "Personal Notes I": "",
             "Personal Reference #": "",
-            "Storage Location": "inferred or blank",
-            "Original Description from source": "THE EXACT FULL LINE DESCRIPTION FROM THE INVOICE"
+            "Storage Location": "",
+            "Original Description from source": "THE EXACT FULL LINE DESCRIPTION FROM THE INVOICE",
+            "set_contents": []
           }
         ]
-        
+
+        NOTE: set_contents is ONLY populated when item_type is "set". It is an array of coin objects
+        with at minimum: Year, Mint Mark, Denomination, Strike Type.
+
         DICTIONARY FOR MAPPING: """ + json.dumps(COIN_DICTIONARY) + """
         """
         
@@ -1482,44 +1544,90 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
             generation_config=GenerationConfig(response_mime_type="application/json")
         )
         items = json.loads(response.text)
-        
-        # Save to Firestore (Review Queue)
-        added_count = 0
-        batch = db.batch()
+        if isinstance(items, dict):
+            items = items.get('items', items.get('coins', [items]))
+        if not isinstance(items, list):
+            items = []
+
+        # ─── Route items by type ──────────────────────────────────────────────
+        added_count    = 0   # coins, currency, medals, set-records → review_queue
+        set_count      = 0   # number of set records
+        set_coins_inside = 0 # total coins inside all sets
+        pending_count  = 0   # stamps, other → pending_items
+        supplies_count = 0   # supplies → supplies_log
+
+        batch   = db.batch()
         col_ref = db.collection('users').document(user_email).collection('review_queue')
-        
+        pending_ref  = db.collection('users').document(user_email).collection('pending_items')
+        supplies_ref = db.collection('users').document(user_email).collection('supplies_log')
+
         for item in items:
-             # Apply defaults to pass schema rules
-             item['deep_dive_status'] = 'PENDING'
-             if not item.get('Program/Series'):  # preserve AI-extracted value
-                 item['Program/Series'] = (item.get('Country') or 'USA') + ' Invoice Import'
-             if 'Condition' not in item: item['Condition'] = 'Ungraded'
-             if 'Cost' not in item: item['Cost'] = '$0.00'
-             
-             item['source'] = 'PDF Invoice'
-             # ── Split combined Year+Mint (e.g. "2006D" → Year="2006", Mint Mark="D") ──
-             import re as _re
-             raw_year = str(item.get('Year', '')).strip()
-             raw_mint = str(item.get('Mint Mark', '')).strip()
-             if raw_year and not raw_mint:
-                 _ym = _re.match(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', raw_year, _re.IGNORECASE)
-                 if _ym:
-                     item['Year'] = _ym.group(1)
-                     item['Mint Mark'] = _ym.group(2).upper()
-             item['source_file'] = file.filename
-             item['created_at'] = firestore.SERVER_TIMESTAMP
-             
-             doc_ref = col_ref.document(str(uuid.uuid4()))
-             batch.set(doc_ref, item)
-             added_count += 1
-             
+            if not isinstance(item, dict):
+                continue
+
+            item_type = str(item.get('item_type', 'coin')).lower().strip()
+            item['source']      = 'PDF Invoice'
+            item['source_file'] = file.filename
+            item['created_at']  = firestore.SERVER_TIMESTAMP
+            _apply_defaults(item)
+
+            if item_type == 'set':
+                # Store as a single SET RECORD — user decides Break Up or Keep as Set
+                set_id       = str(uuid.uuid4())
+                set_contents = item.get('set_contents', [])
+                if not isinstance(set_contents, list):
+                    set_contents = []
+                n_coins = max(len(set_contents), 1)
+                item['set_id']         = set_id
+                item['set_size']       = n_coins
+                item['set_cost_label'] = f"{item.get('Purchase Cost', '$0.00')} total / {n_coins} coins"
+                item['set_broken_up']  = False
+                doc_ref = col_ref.document(set_id)
+                batch.set(doc_ref, item)
+                added_count      += 1
+                set_count        += 1
+                set_coins_inside += n_coins
+
+            elif item_type in ('coin', 'paper_currency', 'medal', 'other', ''):
+                # Numismatic items → review_queue
+                doc_ref = col_ref.document(str(uuid.uuid4()))
+                batch.set(doc_ref, item)
+                added_count += 1
+
+            elif item_type == 'stamp':
+                # Stamps → pending_items (future Stamps module)
+                doc_ref = pending_ref.document(str(uuid.uuid4()))
+                batch.set(doc_ref, item)
+                pending_count += 1
+
+            elif item_type == 'supply':
+                # Supplies → supplies_log (Inventory / expense tracking)
+                doc_ref = supplies_ref.document(str(uuid.uuid4()))
+                batch.set(doc_ref, item)
+                supplies_count += 1
+
+            else:
+                # Unknown types → pending_items for safety
+                doc_ref = pending_ref.document(str(uuid.uuid4()))
+                batch.set(doc_ref, item)
+                pending_count += 1
+
         batch.commit()
-        # Strip non-serializable Firestore sentinels before returning JSON response
-        response_items = []
-        for item in items:
-            safe_item = {k: v for k, v in item.items() if k != 'created_at'}
-            response_items.append(safe_item)
-        return {"status": "success", "extracted_items": added_count, "data": response_items}
+
+        # Strip non-serializable Firestore sentinels before returning
+        response_items = [
+            {k: v for k, v in it.items() if k != 'created_at'}
+            for it in items if isinstance(it, dict)
+        ]
+        return {
+            "status":           "success",
+            "extracted_items":  added_count,
+            "set_records":      set_count,
+            "set_coins_inside": set_coins_inside,
+            "pending_items":    pending_count,
+            "supplies_logged":  supplies_count,
+            "data":             response_items,
+        }
         
     except Exception as e:
         print(f"Error extracting invoice: {e}")
@@ -1799,6 +1907,131 @@ async def commit_reviews(request: CommitReviewsRequest):
     except Exception as e:
         print(f"Commit error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/review/break_up_set")
+async def break_up_set(request: Request):
+    """
+    Expands a set record in review_queue into individual coin records.
+    Each coin gets set_id, set_name, set_cost_label, from_set=True.
+    The original set record is then deleted.
+    Request body: { user_email: str, set_doc_id: str }
+    """
+    try:
+        body = await request.json()
+        user_email  = body.get("user_email", "").strip()
+        set_doc_id  = body.get("set_doc_id", "").strip()
+        if not user_email or not set_doc_id:
+            raise HTTPException(status_code=400, detail="user_email and set_doc_id are required")
+
+        user_ref  = db.collection('users').document(user_email)
+        queue_ref = user_ref.collection('review_queue')
+
+        set_snap = queue_ref.document(set_doc_id).get()
+        if not set_snap.exists:
+            raise HTTPException(status_code=404, detail="Set document not found in review_queue")
+
+        set_data     = set_snap.to_dict()
+        set_contents = set_data.get('set_contents', [])
+        if not isinstance(set_contents, list) or len(set_contents) == 0:
+            raise HTTPException(status_code=422, detail="set_contents is empty — cannot break up")
+
+        set_name       = set_data.get('Original Description from source', set_data.get('Theme/Subject', 'Unknown Set'))
+        set_cost_label = set_data.get('set_cost_label', set_data.get('Purchase Cost', ''))
+        n_coins        = len(set_contents)
+
+        batch = db.batch()
+
+        created = 0
+        for coin in set_contents:
+            if not isinstance(coin, dict):
+                continue
+            # Merge set-level fields with coin-level overrides
+            expanded = {**set_data, **coin}
+            expanded['item_type']      = 'coin'
+            expanded['from_set']       = True
+            expanded['set_id']         = set_doc_id
+            expanded['set_name']       = set_name
+            expanded['set_cost_label'] = set_cost_label
+            expanded['set_size']       = n_coins
+            # Clear set-specific fields that don't belong on individual coins
+            expanded.pop('set_contents',  None)
+            expanded.pop('set_broken_up', None)
+            expanded['created_at'] = firestore.SERVER_TIMESTAMP
+
+            new_doc = queue_ref.document(str(uuid.uuid4()))
+            batch.set(new_doc, expanded)
+            created += 1
+
+        # Mark the original set as broken up (delete it)
+        batch.delete(queue_ref.document(set_doc_id))
+
+        batch.commit()
+        return {
+            "status":  "success",
+            "set_id":  set_doc_id,
+            "created": created,
+            "message": f"Set broken up into {created} individual coin records.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"break_up_set error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/review/keep_set_as_is")
+async def keep_set_as_is(request: Request):
+    """
+    Commits a set record from review_queue to the main 'coins' collection
+    as a single set item (no expansion).
+    The original review_queue doc is deleted after successful commit.
+    Request body: { user_email: str, set_doc_id: str }
+    """
+    try:
+        body = await request.json()
+        user_email = body.get("user_email", "").strip()
+        set_doc_id = body.get("set_doc_id", "").strip()
+        if not user_email or not set_doc_id:
+            raise HTTPException(status_code=400, detail="user_email and set_doc_id are required")
+
+        user_ref  = db.collection('users').document(user_email)
+        queue_ref = user_ref.collection('review_queue')
+        coins_ref = user_ref.collection('coins')
+
+        set_snap = queue_ref.document(set_doc_id).get()
+        if not set_snap.exists:
+            raise HTTPException(status_code=404, detail="Set document not found in review_queue")
+
+        set_data = set_snap.to_dict()
+
+        # Build the committed set record — keep set_contents for reference,
+        # but mark it as committed and strip the queue-only flag.
+        committed = {**set_data}
+        committed['item_type']      = 'set'
+        committed['kept_as_set']    = True
+        committed['set_broken_up']  = False
+        committed['committed_at']   = firestore.SERVER_TIMESTAMP
+
+        batch = db.batch()
+        # Write to main coins collection using the same doc ID for traceability
+        batch.set(coins_ref.document(set_doc_id), committed)
+        # Remove from review queue
+        batch.delete(queue_ref.document(set_doc_id))
+        batch.commit()
+
+        set_name = set_data.get('Original Description from source',
+                                set_data.get('Theme/Subject', 'Unknown Set'))
+        return {
+            "status":  "success",
+            "set_id":  set_doc_id,
+            "message": f"Set '{set_name}' committed to collection as a single set item.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"keep_set_as_is error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/review/bulk_update")
 async def bulk_update_reviews(request: BulkUpdateRequest):

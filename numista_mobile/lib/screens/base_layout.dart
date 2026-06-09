@@ -22,6 +22,7 @@ import 'login_screen.dart';
 import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
 import 'admin_grade_flags_screen.dart';
+import 'supplies_screen.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -101,6 +102,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const AdminGradeFlagsScreen();
       case 'Customer Service':
         return const CustomerServiceScreen();
+      case 'Inventory':
+        return const SuppliesScreen();
       default:
         return const _UnderConstruction();
     }
@@ -435,6 +438,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       'Settings & Backup',
       'Our Team',
       'Customer Service',
+      'Inventory',
     }.contains(title);
 
     return Opacity(

@@ -19,6 +19,16 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   // Backend API URL
   final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
 
+  // ─── item_type badge config ────────────────────────────────────────────────
+  static const Map<String, _ItemTypeMeta> _typeMetaMap = {
+    'paper_currency': _ItemTypeMeta(label: '📜 Currency', color: Color(0xFF0D9488)),
+    'medal':          _ItemTypeMeta(label: '🎖️ Medal',    color: Color(0xFF7C3AED)),
+    'stamp':          _ItemTypeMeta(label: '📬 Stamp',    color: Color(0xFFEA580C)),
+    'set':            _ItemTypeMeta(label: '🗂️ Set',      color: Color(0xFF2563EB)),
+    'other':          _ItemTypeMeta(label: '❓ Other',    color: Color(0xFF94A3B8)),
+    'supply':         _ItemTypeMeta(label: '📦 Supply',   color: Color(0xFF64748B)),
+  };
+
   // ─── Commit selected ──────────────────────────────────────────────────────
   Future<void> _commitSelected() async {
     if (_selectedIds.isEmpty) return;
@@ -93,6 +103,130 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       );
     } finally {
       setState(() => _isProcessing = false);
+    }
+  }
+
+  // ─── Keep Set as-is ───────────────────────────────────────────────────────
+  Future<void> _keepSetAsIs(String docId, String setName) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1D27),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Keep as Set?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Commit "$setName" to your collection as a single set item.\n\nYou can still view its contents later.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Keep as Set'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final resp = await http.post(
+        Uri.parse("$_apiUrl/api/review/keep_set_as_is"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"user_email": user.email, "set_doc_id": docId}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('🗂️ Set committed to your collection!')),
+        );
+      } else {
+        throw Exception(resp.body);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // ─── Break Up Set ─────────────────────────────────────────────────────────
+  Future<void> _breakUpSet(String docId, String setName, int setSize) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1D27),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Break Up Set?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will expand "$setName" into $setSize individual coin records in the Review Hub.\n\nYou can then review and commit each coin separately.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF63366),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Break Up Set'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final resp = await http.post(
+        Uri.parse("$_apiUrl/api/review/break_up_set"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"user_email": user.email, "set_doc_id": docId}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final created = data['created'] ?? setSize;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('✅ Set expanded into $created individual coin records!')),
+        );
+      } else {
+        throw Exception(resp.body);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -594,101 +728,21 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   final data = doc.data() as Map<String, dynamic>;
                   final id = doc.id;
                   final isSelected = _selectedIds.contains(id);
-                  final double confidence = (data['confidence_score'] ?? 1.0).toDouble();
+                  final itemType = (data['item_type'] ?? 'coin').toString().toLowerCase();
+                  final isSet = itemType == 'set';
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: isSelected ? 4 : 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: isSelected ? const Color(0xFFF63366) : const Color(0xFFE2E6E9),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: isSelected,
-                            activeColor: const Color(0xFFF63366),
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) {
-                                  _selectedIds.add(id);
-                                } else {
-                                  _selectedIds.remove(id);
-                                }
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
-                                    ),
-                                    const Spacer(),
-                                    _buildBadge(
-                                      'Conf: ${(confidence * 100).toInt()}%',
-                                      confidence < 0.85 ? Colors.orange : Colors.green),
-                                  ],
-                                ),
-                                Text(data['Theme/Subject'] ?? 'No description', style: const TextStyle(color: Color(0xFF64748B))),
-                                if ((data['Variety'] ?? '').isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: const Color(0xFFF63366).withAlpha(10), borderRadius: BorderRadius.circular(4)),
-                                      child: Text(
-                                        'Variety: ${data['Variety']}',
-                                        style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold, fontSize: 12),
-                                      ),
-                                    ),
-                                  ),
-                                const Divider(height: 24),
-                                Wrap(
-                                  spacing: 24,
-                                  runSpacing: 12,
-                                  children: [
-                                    _buildMetaItem('Retailer', data['Retailer/Website'] ?? 'N/A', Icons.storefront),
-                                    _buildMetaItem('Invoice #', data['Retailer Invoice #'] ?? 'N/A', Icons.receipt),
-                                    _buildMetaItem('Cost', data['Purchase Cost'] ?? 'N/A', Icons.attach_money),
-                                    _buildMetaItem('Item #', data['Retailer Item No.'] ?? 'N/A', Icons.tag),
-                                    _buildMetaItem('QTY', data['Quantity']?.toString() ?? '1', Icons.numbers),
-                                    _buildMetaItem('Date', data['Purchase Date'] ?? 'N/A', Icons.calendar_today),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Source Desc: "${data['Original Description from source'] ?? 'N/A'}"',
-                                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          // ── Edit button — now opens full editor ──────────
-                          Tooltip(
-                            message: 'Edit this coin',
-                            child: IconButton(
-                              icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
-                              onPressed: () => _showCoinEditDialog(id, data),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  // Safe confidence parsing
+                  double confidence = 1.0;
+                  try {
+                    final raw = data['confidence_score'];
+                    if (raw != null) confidence = (raw as num).toDouble();
+                  } catch (_) {}
+
+                  if (isSet) {
+                    return _buildSetCard(id, data, isSelected);
+                  }
+
+                  return _buildCoinCard(id, data, isSelected, confidence, itemType);
                 },
               );
             },
@@ -752,6 +806,361 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
+  // ─── Set Card ─────────────────────────────────────────────────────────────
+  Widget _buildSetCard(String id, Map<String, dynamic> data, bool isSelected) {
+    final setName = data['Original Description from source']
+        ?? data['Theme/Subject']
+        ?? data['Denomination']
+        ?? 'Coin Set';
+    final setSize    = (data['set_size'] as num?)?.toInt() ?? 0;
+    final costLabel  = data['set_cost_label'] ?? data['Purchase Cost'] ?? 'N/A';
+    final retailer   = data['Retailer/Website'] ?? 'Unknown';
+    final srcFile    = data['source_file']?.toString() ?? '';
+
+    // Expand set_contents for the preview list
+    final rawContents = data['set_contents'];
+    final List<dynamic> contents = (rawContents is List) ? rawContents : [];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      elevation: isSelected ? 4 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isSelected ? const Color(0xFFF63366) : const Color(0xFF2563EB).withAlpha(120),
+          width: isSelected ? 2 : 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Title row ──────────────────────────────────────────────
+            Row(
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  activeColor: const Color(0xFFF63366),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) { _selectedIds.add(id); }
+                      else { _selectedIds.remove(id); }
+                    });
+                  },
+                ),
+                const SizedBox(width: 4),
+                _buildBadge('🗂️ SET', const Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    setName.toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF1E293B),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 48),
+              child: Text(
+                '$costLabel  •  $retailer',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              ),
+            ),
+
+            // ── Contents preview ───────────────────────────────────────
+            if (contents.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                margin: const EdgeInsets.only(left: 16),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withAlpha(12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF2563EB).withAlpha(40)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contains $setSize coins:',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF2563EB),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: contents.take(12).map((c) {
+                        final coin = c as Map<String, dynamic>? ?? {};
+                        final yr = coin['Year']?.toString() ?? '';
+                        final mm = coin['Mint Mark']?.toString() ?? '';
+                        final dn = coin['Denomination']?.toString() ?? '';
+                        final label = [yr + (mm.isNotEmpty ? '-$mm' : ''), dn]
+                            .where((s) => s.isNotEmpty).join(' ');
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                          ),
+                          child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
+                        );
+                      }).toList()
+                        ..addAll(contents.length > 12 ? [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB).withAlpha(20),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('+${contents.length - 12} more',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                          )
+                        ] : []),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Source file ────────────────────────────────────────────
+            if (srcFile.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 16),
+                child: Row(children: [
+                  const Icon(Icons.insert_drive_file_outlined, size: 11, color: Color(0xFFF63366)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(srcFile,
+                      style: const TextStyle(color: Color(0xFFF63366), fontSize: 11, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ),
+
+            const Divider(height: 20),
+
+            // ── Action buttons ─────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2563EB),
+                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _isProcessing ? null : () {
+                      final name = data['Original Description from source']
+                          ?? data['Theme/Subject']
+                          ?? data['Denomination']
+                          ?? 'This Set';
+                      _keepSetAsIs(id, name.toString());
+                    },
+                    icon: const Icon(Icons.collections_bookmark_outlined, size: 16),
+                    label: const Text('Keep as Set', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF63366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _isProcessing ? null : () {
+                      final name = data['Original Description from source']
+                          ?? data['Theme/Subject']
+                          ?? data['Denomination']
+                          ?? 'This Set';
+                      _breakUpSet(id, name.toString(), setSize);
+                    },
+                    icon: const Icon(Icons.call_split_rounded, size: 16),
+                    label: const Text('Break Up Set →', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Coin Card (standard + paper_currency / medal / stamp / other) ────────
+  Widget _buildCoinCard(String id, Map<String, dynamic> data, bool isSelected, double confidence, String itemType) {
+    final isFromSet = data['from_set'] == true;
+    final typeMeta  = _typeMetaMap[itemType];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: isSelected ? 4 : 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isSelected ? const Color(0xFFF63366) : const Color(0xFFE2E6E9),
+          width: isSelected ? 2 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: isSelected,
+              activeColor: const Color(0xFFF63366),
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedIds.add(id);
+                  } else {
+                    _selectedIds.remove(id);
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
+                      ),
+                      const Spacer(),
+                      // item_type badge (only shown for non-coin types)
+                      if (typeMeta != null) ...[
+                        _buildBadge(typeMeta.label, typeMeta.color),
+                        const SizedBox(width: 6),
+                      ],
+                      _buildBadge(
+                        'Conf: ${(confidence * 100).toInt()}%',
+                        confidence < 0.85 ? Colors.orange : Colors.green),
+                    ],
+                  ),
+                  Text(data['Theme/Subject'] ?? 'No description', style: const TextStyle(color: Color(0xFF64748B))),
+
+                  // "From Set" amber chip
+                  if (isFromSet) ...[
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withAlpha(30),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withAlpha(120)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.collections_bookmark_outlined, size: 12, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              'From Set: ${data['set_name'] ?? 'Unknown Set'}',
+                              style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+                    if ((data['set_cost_label'] ?? '').isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          'Cost: ${data['set_cost_label']}',
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        ),
+                      ),
+                  ],
+
+                  if ((data['Variety'] ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFFF63366).withAlpha(10), borderRadius: BorderRadius.circular(4)),
+                        child: Text(
+                          'Variety: ${data['Variety']}',
+                          style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  const Divider(height: 24),
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 12,
+                    children: [
+                      _buildMetaItem('Retailer', data['Retailer/Website'] ?? 'N/A', Icons.storefront),
+                      _buildMetaItem('Invoice #', data['Retailer Invoice #'] ?? 'N/A', Icons.receipt),
+                      _buildMetaItem('Cost', data['Purchase Cost'] ?? 'N/A', Icons.attach_money),
+                      _buildMetaItem('Item #', data['Retailer Item No.'] ?? 'N/A', Icons.tag),
+                      _buildMetaItem('QTY', data['Quantity']?.toString() ?? '1', Icons.numbers),
+                      _buildMetaItem('Date', data['Purchase Date'] ?? 'N/A', Icons.calendar_today),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Source Desc: "${data['Original Description from source'] ?? 'N/A'}"',
+                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if ((data['source_file'] ?? '').toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.insert_drive_file_outlined, size: 11, color: Color(0xFFF63366)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Scan File: ${data['source_file']}',
+                              style: const TextStyle(color: Color(0xFFF63366), fontSize: 11, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // ── Edit button ──────────
+            Tooltip(
+              message: 'Edit this coin',
+              child: IconButton(
+                icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
+                onPressed: () => _showCoinEditDialog(id, data),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMetaItem(String label, String value, IconData icon) {
     return SizedBox(
       width: 140,
@@ -788,4 +1197,12 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       ),
     );
   }
+}
+
+// ─── Helper data class ────────────────────────────────────────────────────────
+
+class _ItemTypeMeta {
+  final String label;
+  final Color  color;
+  const _ItemTypeMeta({required this.label, required this.color});
 }
