@@ -1847,6 +1847,7 @@ async def commit_reviews(request: CommitReviewsRequest):
         coins_ref = user_ref.collection('coins')
         
         batch = db.batch()
+        batch_op_count = 0
         committed_count = 0
         skipped_count = 0
         
@@ -1890,14 +1891,21 @@ async def commit_reviews(request: CommitReviewsRequest):
                 if is_dupe:
                     batch.delete(queue_ref.document(doc_id))
                     skipped_count += 1
-                    continue
-
-                new_coin_ref = coins_ref.document(doc_id)
-                batch.set(new_coin_ref, data)
-                batch.delete(queue_ref.document(doc_id))
-                committed_count += 1
+                    batch_op_count += 1
+                else:
+                    new_coin_ref = coins_ref.document(doc_id)
+                    batch.set(new_coin_ref, data)
+                    batch.delete(queue_ref.document(doc_id))
+                    committed_count += 1
+                    batch_op_count += 2
+                    
+                if batch_op_count >= 490:
+                    batch.commit()
+                    batch = db.batch()
+                    batch_op_count = 0
         
-        batch.commit()
+        if batch_op_count > 0:
+            batch.commit()
         return {
             "status": "success", 
             "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates.",
@@ -2041,10 +2049,17 @@ async def bulk_update_reviews(request: BulkUpdateRequest):
     try:
         queue_ref = db.collection('users').document(request.user_email).collection('review_queue')
         batch = db.batch()
+        batch_op_count = 0
         for doc_id in request.review_ids:
             batch.update(queue_ref.document(doc_id), request.updates)
+            batch_op_count += 1
+            if batch_op_count >= 490:
+                batch.commit()
+                batch = db.batch()
+                batch_op_count = 0
         
-        batch.commit()
+        if batch_op_count > 0:
+            batch.commit()
         return {"status": "success", "message": f"Updated {len(request.review_ids)} items"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

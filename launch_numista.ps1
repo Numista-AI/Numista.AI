@@ -69,19 +69,21 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", $hwCmd -WindowStyl
 Write-Host "  Waiting 3 seconds for hardware server to start..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 3
 
-# ── START FLUTTER WEB SERVER ───────────────────────────────────────────────────
-Write-Host "  [2/2] Starting Flutter Web Server..." -ForegroundColor Yellow
+# ── START FLUTTER (Chrome device) ─────────────────────────────────────────────
+Write-Host "  [2/2] Starting Flutter (Chrome)..." -ForegroundColor Yellow
+Write-Host "  Chrome will open automatically in ~30 seconds." -ForegroundColor DarkGray
 
-$flutterCmd = "cd '$MobileDir'; flutter run -d web-server --web-port 8080 --web-hostname localhost"
+$flutterCmd = "cd '$MobileDir'; flutter run -d chrome --web-port 8080"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $flutterCmd -WindowStyle Normal
 
 Write-Host ""
 Write-Host "  Both processes launched!" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Hardware Server -> http://localhost:5000" -ForegroundColor Gray
-Write-Host "  Flutter App     -> http://localhost:8080  (open this in Chrome)" -ForegroundColor Gray
+Write-Host "  Flutter App     -> Chrome opens automatically" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  Wait about 20 seconds, then open http://localhost:8080 in Chrome." -ForegroundColor DarkGray
+Write-Host "  Wait about 30 seconds for Chrome to open with the app." -ForegroundColor DarkGray
+Write-Host "  Hot reload: press 'r' in the Flutter PowerShell window." -ForegroundColor DarkGray
 Write-Host "  The microscope only works while the Hardware Server window is open." -ForegroundColor DarkGray
 Write-Host ""
 Read-Host "  Press Enter to close this window (the app keeps running)"

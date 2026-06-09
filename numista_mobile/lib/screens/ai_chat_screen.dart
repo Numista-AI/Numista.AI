@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import '../services/auth_service.dart';
 
@@ -18,6 +20,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
+  bool _isLoadingHistory = true;
+  String? _sessionId;
 
   static const _accent   = Color(0xFFF63366);
   static const _bg       = Color(0xFFF0F2F6);
@@ -25,11 +29,94 @@ class _AiChatScreenState extends State<AiChatScreen> {
   static const _text     = Color(0xFF31333F);
   static const _subtext  = Color(0xFF5A5C69);
 
+  // ── Firestore session path ──────────────────────────────────────────────────
+  CollectionReference? get _sessionsRef {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.email == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.email)
+        .collection('ai_chat_sessions');
+  }
+
+  DocumentReference? get _currentSessionRef {
+    if (_sessionId == null) return null;
+    return _sessionsRef?.doc(_sessionId);
+  }
+
   @override
   void initState() {
     super.initState();
-    // If an initial query was injected (e.g. from AI Deep Dive on a coin),
-    // auto-submit it after the first frame so the UI is ready.
+    _loadOrCreateSession();
+  }
+
+  /// Load the most recent session, or create a new one if none exists.
+  Future<void> _loadOrCreateSession() async {
+    if (AuthService.isGuest) {
+      // Guest mode: no persistence, just start fresh
+      setState(() => _isLoadingHistory = false);
+      _maybeSendInitialQuery();
+      return;
+    }
+
+    try {
+      final ref = _sessionsRef;
+      if (ref == null) {
+        setState(() => _isLoadingHistory = false);
+        return;
+      }
+
+      // Find most recent session
+      final snap = await ref
+          .orderBy('updated_at', descending: true)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty && widget.initialQuery == null) {
+        // Restore last session
+        final doc = snap.docs.first;
+        _sessionId = doc.id;
+        final raw = (doc.data() as Map<String, dynamic>)['messages'] as List? ?? [];
+        final loaded = raw
+            .whereType<Map>()
+            .map((m) => {
+                  'role':    m['role']?.toString() ?? 'user',
+                  'content': m['content']?.toString() ?? '',
+                })
+            .toList();
+        setState(() {
+          _messages.addAll(loaded.cast<Map<String, String>>());
+          _isLoadingHistory = false;
+        });
+        _scrollToBottom();
+      } else {
+        // Start a fresh session
+        await _startNewSession();
+      }
+    } catch (e) {
+      debugPrint('[AiChat] Failed to load session: $e');
+      setState(() => _isLoadingHistory = false);
+    }
+    _maybeSendInitialQuery();
+  }
+
+  Future<void> _startNewSession() async {
+    final id = DateTime.now().toUtc().toIso8601String().replaceAll(':', '-');
+    _sessionId = id;
+    await _sessionsRef?.doc(id).set({
+      'created_at': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
+      'messages':   [],
+    });
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _isLoadingHistory = false;
+      });
+    }
+  }
+
+  void _maybeSendInitialQuery() {
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _send(widget.initialQuery!);
@@ -47,8 +134,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _send(String query) async {
     if (query.trim().isEmpty) return;
 
+    final userMsg = {'role': 'user', 'content': query.trim()};
     setState(() {
-      _messages.add({'role': 'user', 'content': query.trim()});
+      _messages.add(userMsg);
       _isLoading = true;
     });
     _controller.clear();
@@ -64,26 +152,46 @@ class _AiChatScreenState extends State<AiChatScreen> {
         }),
       );
       if (!mounted) return;
+
+      String replyText;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        setState(() {
-          _messages.add({'role': 'assistant', 'content': data['response'] ?? 'No response.'});
-          _isLoading = false;
-        });
+        replyText = data['response'] ?? 'No response.';
       } else {
-        setState(() {
-          _messages.add({'role': 'assistant', 'content': 'Error: ${response.statusCode}'});
-          _isLoading = false;
-        });
+        replyText = 'Error ${response.statusCode}: please try again.';
       }
-    } catch (e) {
-      if (!mounted) return;
+
+      final aiMsg = {'role': 'assistant', 'content': replyText};
       setState(() {
-        _messages.add({'role': 'assistant', 'content': 'Failed to connect: $e'});
+        _messages.add(aiMsg);
         _isLoading = false;
       });
+
+      // Persist to Firestore
+      _persistMessages([userMsg, aiMsg]);
+    } catch (e) {
+      if (!mounted) return;
+      final errorMsg = {'role': 'assistant', 'content': 'Failed to connect. Check your connection and try again.'};
+      setState(() {
+        _messages.add(errorMsg);
+        _isLoading = false;
+      });
+      _persistMessages([userMsg, errorMsg]);
     }
     _scrollToBottom();
+  }
+
+  /// Appends new messages to the Firestore session document.
+  void _persistMessages(List<Map<String, String>> newMsgs) {
+    if (AuthService.isGuest || _currentSessionRef == null) return;
+    _currentSessionRef!.update({
+      'messages':   FieldValue.arrayUnion(newMsgs),
+      'updated_at': FieldValue.serverTimestamp(),
+      // Keep a trimmed preview of the last message for the session list
+      'last_preview': newMsgs.last['content']?.substring(
+              0, newMsgs.last['content']!.length.clamp(0, 80)) ??
+          '',
+    }).catchError((e) => debugPrint('[AiChat] Persist error: $e'));
   }
 
   void _scrollToBottom() {
@@ -98,6 +206,39 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
   }
 
+  Future<void> _onNewChat() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1D27),
+        title: const Text('New Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Start a fresh conversation? Your current chat history is saved and will be accessible next time.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('New Chat'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      setState(() => _isLoadingHistory = true);
+      await _startNewSession();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -105,22 +246,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
         // ── Header ────────────────────────────────────────────────────────
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
           color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.psychology, color: _accent, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 12),
-                const Column(
+                child: const Icon(Icons.psychology, color: _accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('AI Numismatic Deepdive',
@@ -129,14 +269,24 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         style: TextStyle(fontSize: 12, color: _subtext)),
                   ],
                 ),
-              ]),
+              ),
+              // New Chat button
+              IconButton(
+                icon: const Icon(Icons.add_comment_outlined, color: _subtext),
+                tooltip: 'New Chat',
+                onPressed: _isLoading ? null : _onNewChat,
+              ),
             ],
           ),
         ),
         const Divider(height: 1, color: _border),
 
+        // ── Loading indicator ──────────────────────────────────────────────
+        if (_isLoadingHistory)
+          const LinearProgressIndicator(color: _accent, minHeight: 2),
+
         // ── Suggestions (shown only until first message) ───────────────────
-        if (_messages.isEmpty)
+        if (_messages.isEmpty && !_isLoadingHistory)
           Container(
             color: _bg,
             padding: const EdgeInsets.all(16),

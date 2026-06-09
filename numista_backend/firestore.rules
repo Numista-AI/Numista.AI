@@ -42,10 +42,22 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Backend-managed collections ───────────────────────────────────────────
+    match /pending_items/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
+    match /supplies_log/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
+    match /admin_grade_flags/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

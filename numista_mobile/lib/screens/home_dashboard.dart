@@ -727,10 +727,25 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v3.5 Beta',
+    date: '2026-06-09',
+    description: 'Universal Item Routing & Supplies Tracking',
+    isLatest: true,
+    changes: [
+      'Invoice AI now classifies every line item: coins, sets, stamps, currency, medals, and supplies.',
+      'Coin sets create a single Set Record in Review Hub — choose Break Up or Keep as Set.',
+      'Break Up Set expands a set into individual coins, each inheriting set provenance.',
+      'Supplies (binders, pages, capsules) automatically routed to the new Inventory screen.',
+      'Stamps and non-numismatic items held in Pending Items for future module support.',
+      'Firestore security rules hardened: pending_items, supplies_log, admin_grade_flags, reference_library all covered.',
+      'Fixed backend startup crash (Request import NameError in break_up_set endpoint).',
+    ],
+  ),
+  _Release(
     version: 'v3.2 Beta',
     date: '2026-04-25',
     description: 'PCGS Import Wizard',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Import graded coins directly from PCGS by certification number.',
       'Paste cert numbers manually or upload a PCGS registry CSV export.',

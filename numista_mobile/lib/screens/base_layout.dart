@@ -23,6 +23,8 @@ import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
 import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
+import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
+import '../widgets/morgan_greeter.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -38,9 +40,43 @@ class _BaseLayoutState extends State<BaseLayout> {
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
 
+  // ── Show Morgan as a full-screen dialog (doesn't lose current screen) ──────
+  void _showMorganDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 350),
+      transitionBuilder: (ctx, anim, _, child) => FadeTransition(
+        opacity: anim,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.92, end: 1.0).animate(
+            CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+          child: child,
+        ),
+      ),
+      pageBuilder: (ctx, animation, secondaryAnimation) => MorganGreeter(
+        isFirstVisit: false,
+        onAction: (route) {
+          Navigator.of(ctx).pop(); // close dialog
+          if (route != null) setState(() => _activeRoute = route);
+        },
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+
+    // ── Morgan deep-link: if the user tapped a tile in the greeter,
+    // navigate directly to that screen instead of Home Dashboard.
+    final morganRoute = WelcomeScreen.pendingRoute;
+    if (morganRoute != null) {
+      WelcomeScreen.pendingRoute = null;  // consume once
+      _activeRoute = morganRoute;
+    }
+
     // Load eBay credentials from Firestore into SharedPreferences.
     EpnService.loadFromFirestore();
     // Run US Mint data normalization silently in background for all accounts.
@@ -168,14 +204,24 @@ class _BaseLayoutState extends State<BaseLayout> {
           ],
         ),
       ),
-      // FAB: only on Collection tab — opens Add Coins Hub
-      floatingActionButton: _activeRoute == 'My Collection'
-          ? FloatingActionButton(
+      // FAB column: Morgan owl (always) + Add Coins (Collection tab only)
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _MorganFab(onTap: _showMorganDialog),
+          if (_activeRoute == 'My Collection') ...[
+            const SizedBox(height: 12),
+            FloatingActionButton(
+              heroTag: 'fab_add_coins',
               onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
               backgroundColor: const Color(0xFFF63366),
               child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+            ),
+          ],
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (i) =>
@@ -326,6 +372,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                       ],
                     ),
                   ),
+                ),
+                // ── Morgan sidebar button ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                  child: _MorganSidebarButton(onTap: _showMorganDialog),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
@@ -655,3 +706,165 @@ class _GuestBanner extends StatelessWidget {
   }
 }
 
+// ── Morgan FAB — floating owl button (mobile) ─────────────────────────────────
+class _MorganFab extends StatefulWidget {
+  final VoidCallback onTap;
+  const _MorganFab({required this.onTap});
+
+  @override
+  State<_MorganFab> createState() => _MorganFabState();
+}
+
+class _MorganFabState extends State<_MorganFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1800));
+    _scale = Tween<double>(begin: 1.0, end: 1.08).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+    _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      child: Tooltip(
+        message: 'Ask Morgan',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0B3D6E), Color(0xFF0B5E8A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: const Color(0xFFD4A843), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                    color: const Color(0xFF2DD4BF).withAlpha(100),
+                    blurRadius: 12,
+                    spreadRadius: 1),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/morgan_avatar.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Color(0xFF2DD4BF),
+                    size: 26),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Morgan sidebar button (desktop) ───────────────────────────────────────
+class _MorganSidebarButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _MorganSidebarButton({required this.onTap});
+
+  @override
+  State<_MorganSidebarButton> createState() => _MorganSidebarButtonState();
+}
+
+class _MorganSidebarButtonState extends State<_MorganSidebarButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter:  (_) => setState(() => _hovered = true),
+      onExit:   (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: _hovered
+                ? const Color(0xFF2DD4BF).withAlpha(20)
+                : const Color(0xFF0B3D6E).withAlpha(120),
+            border: Border.all(
+              color: _hovered
+                  ? const Color(0xFFD4A843).withAlpha(200)
+                  : const Color(0xFFD4A843).withAlpha(80),
+              width: 1,
+            ),
+            boxShadow: _hovered
+                ? [BoxShadow(
+                    color: const Color(0xFF2DD4BF).withAlpha(40),
+                    blurRadius: 8)]
+                : [],
+          ),
+          child: Row(
+            children: [
+              // Mini owl avatar
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFFD4A843).withAlpha(150), width: 1),
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/morgan_avatar.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.smart_toy_rounded,
+                        color: Color(0xFF2DD4BF),
+                        size: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Ask Morgan',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                    Text('Your AI guide',
+                        style: TextStyle(
+                            color: Color(0xFF2DD4BF),
+                            fontSize: 9)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFD4A843), size: 14),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

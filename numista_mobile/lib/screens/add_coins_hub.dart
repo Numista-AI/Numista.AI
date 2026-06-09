@@ -351,7 +351,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       icon: Icons.cloud_upload_outlined,
       buttonLabel: 'Browse PDF',
       onPressed: () async {
-        FilePickerResult? result = await FilePicker.platform.pickFiles(
+        FilePickerResult? result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['pdf'],
           withData: true,
@@ -369,7 +369,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       icon: Icons.topic_outlined,
       buttonLabel: 'Select Multiple PDFs',
       onPressed: () async {
-        FilePickerResult? result = await FilePicker.platform.pickFiles(
+        FilePickerResult? result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['pdf'],
           withData: true,
