@@ -361,7 +361,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- Root build ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _coinsStream,
       builder: (context, snap) {
         // Only show spinner on the very first load (no cached data yet).

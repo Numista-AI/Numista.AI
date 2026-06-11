@@ -171,10 +171,41 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               future: _shouldShowWelcome,
               builder: (ctx, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    backgroundColor: Color(0xFFF0F2F6),
-                    body: Center(child: CircularProgressIndicator(
-                        color: Color(0xFF1565C0), strokeWidth: 3)),
+                  // Show the same branded dark splash as the Firebase init
+                  // screen so the user never sees a jarring gray flash while
+                  // SharedPreferences reads the "show on startup" preference.
+                  return Scaffold(
+                    backgroundColor: const Color(0xFF0B1220),
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset('assets/logo_owl.png', height: 80,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.account_balance_rounded,
+                                    color: Color(0xFFD4A843), size: 64)),
+                          const SizedBox(height: 24),
+                          const Text('Numista.AI',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5)),
+                          const SizedBox(height: 6),
+                          const Text('Your AI Coin Vault',
+                              style: TextStyle(
+                                  color: Color(0xFF94A3B8), fontSize: 13)),
+                          const SizedBox(height: 36),
+                          const SizedBox(
+                            width: 28, height: 28,
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF2DD4BF),
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }
                 final showWelcome = snap.data ?? false;

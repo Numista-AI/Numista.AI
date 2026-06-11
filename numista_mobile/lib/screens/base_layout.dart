@@ -316,7 +316,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'My Collection',
                           child: _buildNavItem('My Collection', icon: Icons.collections_bookmark_outlined),
                         ),
-                        StreamBuilder<QuerySnapshot>(
+                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                           stream: email.isNotEmpty
                               ? FirebaseFirestore.instance
                                   .collection('users')

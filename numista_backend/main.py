@@ -15,9 +15,10 @@ from google.cloud import storage as gcs
 import google.auth
 from google.cloud import documentai
 
-# AI SDK
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
+# AI SDK — google-genai (replaces deprecated vertexai SDK, shutdown Jun 24 2026)
+# Migration guide: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
+from google import genai
+from google.genai import types as genai_types
 import feedparser
 import re
 
@@ -66,26 +67,24 @@ db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 gcs_client = gcs.Client(credentials=credentials, project=PROJECT_ID)
 
 # ─── GEMINI MODEL CONFIGURATION ──────────────────────────────────────────────
-# Source: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
-# Verified: April 15, 2026
+# Per official deprecation schedule as of Jun 11, 2026
+# (see: Gemini Models as of 11 JUN 2026.png)
 #
-# Current stable Vertex AI lineup (NOT before Oct 16, 2026 retirement):
-#   gemini-2.5-flash   — Primary workhorse. Fast, multimodal, structured JSON.
-#   gemini-2.5-pro     — Complex document analysis. Higher quality, higher cost.
-#   gemini-2.5-flash-lite — Cheapest option for simple tasks.
+#   gemini-3.5-flash       Released May 19, 2026. NO shutdown announced. → PRIMARY
+#   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
+#   gemini-3.1-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
 #
-# Gemini 3.x models: NOT YET available on Vertex AI as of April 2026.
-# They exist in AI Studio docs index but have not launched in Vertex AI.
-# When Gemini 3.x lands on Vertex AI, update PRIMARY_MODEL below.
-# The new thinking API (thinking_level="MINIMAL"|"HIGH") requires the
-# google-genai SDK (successor to vertexai SDK). Migration note is documented
-# inline at each generate_content() call.
-PRIMARY_MODEL = "gemini-2.5-flash"
-PRO_MODEL     = "gemini-2.5-pro"
+# NOTE: gemini-3-pro-preview SHUT DOWN Mar 9, 2026 — do NOT use.
+# NOTE: All Gemini 3.x models require location='global' on Vertex AI.
+PRIMARY_MODEL = "gemini-3.5-flash"
+PRO_MODEL     = "gemini-3.1-pro-preview"
 
-vertexai.init(project=PROJECT_ID, location=LOCATION)
-model        = GenerativeModel(PRIMARY_MODEL)   # All general endpoints
-binder_model = GenerativeModel(PRIMARY_MODEL)   # Binder / checklist analysis
+# Initialize google-genai client (Vertex AI backend)
+# REGION: gemini-3-x-preview models require 'global' — stable gemini-2.5-x
+# models could use 'us-central1', but since we're on preview, global is correct.
+# Override via GEMINI_LOCATION env var if needed.
+GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
+genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=GEMINI_LOCATION)
 
 
 # --- NUMISMATIC CONSTANTS ---
@@ -514,9 +513,12 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key", ...}}
 Omit any user headers with no reasonable match."""
 
     try:
-        resp = model.generate_content(
-            mapping_prompt,
-            generation_config=GenerationConfig(response_mime_type="application/json"),
+        resp = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=mapping_prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
         )
         mapping: dict = json.loads(resp.text)
     except Exception as e:
@@ -625,9 +627,12 @@ Rows:
 Output JSON array: [{{"series": "...", "condition": "..."}}]
 Preserve order. Use empty string if truly unknown."""
             try:
-                fb_resp = model.generate_content(
-                    fallback_prompt,
-                    generation_config=GenerationConfig(response_mime_type="application/json"),
+                fb_resp = genai_client.models.generate_content(
+                    model=PRIMARY_MODEL,
+                    contents=[genai_types.Part.from_text(text=fallback_prompt)],
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
                 )
                 interpretations = json.loads(fb_resp.text)
                 fb_batch = db.batch()
@@ -1422,7 +1427,6 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
     # Actually, Gemini 1.5/2.5 Pro Multimodal can read PDFs natively, performing both OCR and AI structuration in one pass!
     # This is *significantly* more robust than legacy DocumentAI.
     try:
-        from vertexai.generative_models import Part
         # Detect MIME type from extension — ignore browser fallback 'application/octet-stream'
         ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
         mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
@@ -1436,7 +1440,7 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
             # Magic byte sniff: PDFs start with %PDF (hex 25 50 44 46)
             mime_type = "application/pdf" if contents[:4] == b"%PDF" else "application/octet-stream"
         print(f"[process_invoice] filename={file.filename!r} reported={reported_type!r} → using mime={mime_type!r}")
-        pdf_part = Part.from_data(data=contents, mime_type=mime_type)
+        pdf_part = genai_types.Part.from_bytes(data=contents, mime_type=mime_type)
 
 
         # ─── Helper functions ─────────────────────────────────────────────────
@@ -1556,10 +1560,12 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         DICTIONARY FOR MAPPING: """ + json.dumps(COIN_DICTIONARY) + """
         """
         
-        pro_model = GenerativeModel(PRO_MODEL)
-        response = pro_model.generate_content(
-            [pdf_part, extraction_prompt],
-            generation_config=GenerationConfig(response_mime_type="application/json")
+        response = genai_client.models.generate_content(
+            model=PRO_MODEL,
+            contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
         )
         items = json.loads(response.text)
         if isinstance(items, dict):
@@ -1884,7 +1890,10 @@ Instructions:
 """
 
         # ── 5. Call Gemini ─────────────────────────────────────────────────────
-        response = model.generate_content(prompt)
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=prompt)],
+        )
         return {"status": "success", "response": response.text}
 
     except Exception as e:
@@ -2699,8 +2708,6 @@ async def analyze_binder_scan(
     gcs_urls   = []
     image_parts = []
 
-    from vertexai.generative_models import Part, GenerationConfig as GC
-
     # ── 1. Upload each image to GCS and prepare multimodal parts ─────────────
     for idx, img_file in enumerate(images):
         raw_bytes   = await img_file.read()
@@ -2714,21 +2721,21 @@ async def analyze_binder_scan(
         gcs_urls.append(gcs_url)
 
         # Send inline (base64) to Gemini — faster than signed URL round-trip
-        image_parts.append(Part.from_data(data=raw_bytes, mime_type=content_type))
-        image_parts.append(Part.from_text(f"[Image {idx + 1} of {len(images)}: page_{idx:02d}.{ext}]"))
+        image_parts.append(genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type))
+        image_parts.append(genai_types.Part.from_text(text=f"[Image {idx + 1} of {len(images)}: page_{idx:02d}.{ext}]"))
 
     # ── 2. Call Gemini 2.5 Flash with all images + system prompt ──────────────────
     try:
-        prompt_parts = image_parts + [Part.from_text(BINDER_SCAN_SYSTEM_PROMPT)]
+        prompt_parts = image_parts + [genai_types.Part.from_text(text=BINDER_SCAN_SYSTEM_PROMPT)]
 
-        response = binder_model.generate_content(
-            prompt_parts,
-            generation_config=GC(
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=prompt_parts,
+            config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
                 max_output_tokens=65536,
-                # NOTE: thinking_level="MINIMAL" would be set here once we migrate
-                # from vertexai SDK to the newer google-genai SDK (see deprecation plan)
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),  # MINIMAL thinking
             ),
         )
         try:
@@ -3128,8 +3135,6 @@ async def analyze_checklist(
 
     Returns the same coin_slots structure as analyze_binder_scan.
     """
-    from vertexai.generative_models import Part, GenerationConfig as GC
-
     scan_uuid    = str(uuid.uuid4())
     gcs_urls     = []
     all_raw_bytes = []  # Keep bytes for potential Gemini fallback
@@ -3208,8 +3213,8 @@ async def analyze_checklist(
 
         file_parts = []
         for raw_bytes, content_type, filename in all_raw_bytes:
-            file_parts.append(Part.from_data(data=raw_bytes, mime_type=content_type))
-            file_parts.append(Part.from_text(f"[File: {filename}]"))
+            file_parts.append(genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type))
+            file_parts.append(genai_types.Part.from_text(text=f"[File: {filename}]"))
 
         checklist_prompt = """
 You are a numismatic AI analyzing a printed coin program checklist.
@@ -3260,13 +3265,14 @@ IMPORTANT:
 """
 
         try:
-            response = binder_model.generate_content(
-                file_parts + [Part.from_text(checklist_prompt)],
-                generation_config=GC(
+            response = genai_client.models.generate_content(
+                model=PRIMARY_MODEL,
+                contents=file_parts + [genai_types.Part.from_text(text=checklist_prompt)],
+                config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
                     max_output_tokens=65536,
-                    # NOTE: thinking_level="MINIMAL" pending google-genai SDK migration
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                 ),
             )
             try:

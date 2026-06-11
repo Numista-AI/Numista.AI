@@ -123,7 +123,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, outerConstraints) {
-        return StreamBuilder<QuerySnapshot>(
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection(AuthService.coinsPath)
               .limit(200)
@@ -152,7 +152,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             }
 
-            final docs = snapshot.data?.docs ?? [];
+            final docs = snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[];
 
             // ── Compute portfolio metrics ──────────────────────────────────
             int totalCoins = docs.length;
@@ -161,8 +161,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
             double meltValue       = 0;
             double faceValue       = 0;
 
-            for (var doc in docs) {
-              final data = doc.data() as Map<String, dynamic>;
+            for (final doc in docs) {
+              final data = doc.data();
               portfolioValue  += _parseCurrency(data['AI Estimated Value']);
               acquisitionCost += _parseCurrency(data['Cost']);
               // Live melt value: compute from spot prices + Metal Content
@@ -179,10 +179,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
             }
 
             // ── Last 3 added ───────────────────────────────────────────────
-            final sorted = List<QueryDocumentSnapshot>.from(docs);
+            final sorted = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
             sorted.sort((a, b) {
-              final ad = a.data() as Map<String, dynamic>;
-              final bd = b.data() as Map<String, dynamic>;
+              final ad = a.data();
+              final bd = b.data();
               // Check all three timestamp field names used across import methods
               final aTs = ad['Added'] ?? ad['timestamp'] ?? ad['created_at'];
               final bTs = bd['Added'] ?? bd['timestamp'] ?? bd['created_at'];
@@ -329,8 +329,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 style: TextStyle(color: Color(0xFF5A5C69))))
                         : Column(
                             children: last5.asMap().entries.map((entry) {
-                              final data =
-                                  entry.value.data() as Map<String, dynamic>;
+                              final data = entry.value.data();
                               final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
                               final mint   = data['Mint Mark']?.toString() ?? '';
                               final denom  = data['Denomination']?.toString() ?? '';

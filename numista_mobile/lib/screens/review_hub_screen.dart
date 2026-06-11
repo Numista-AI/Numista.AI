@@ -635,7 +635,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
           children: [
             const Text('Review Hub', style: TextStyle(color: Color(0xFF31333F), fontWeight: FontWeight.w900, fontStyle: FontStyle.italic)),
             const Spacer(),
-            StreamBuilder<QuerySnapshot>(
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.email!)
@@ -680,7 +680,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       ),
       body: Stack(
         children: [
-          StreamBuilder<QuerySnapshot>(
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.email!)

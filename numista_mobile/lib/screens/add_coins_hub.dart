@@ -127,6 +127,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     int totalItems = 0;
     final endpoint = isInvoice ? '/api/process_invoice' : '/api/import_spreadsheet';
 
+    // Derive the correct MIME type from the file extension.
+    // The backend uses the filename for parsing, but setting the correct
+    // Content-Type ensures proper HTTP semantics and future-proofing.
+    MediaType _mimeFor(String filename) {
+      final ext = filename.split('.').last.toLowerCase();
+      switch (ext) {
+        case 'pdf':  return MediaType('application', 'pdf');
+        case 'csv':  return MediaType('text', 'csv');
+        case 'xlsx': return MediaType('application',
+                         'vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        case 'xls':  return MediaType('application', 'vnd.ms-excel');
+        default:     return MediaType('application', 'octet-stream');
+      }
+    }
+
     try {
       for (int i = 0; i < files.length; i++) {
         final file = files[i];
@@ -147,7 +162,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'file',
             file.bytes!,
             filename: file.name,
-            contentType: MediaType('application', 'pdf'),
+            contentType: _mimeFor(file.name),
           ));
         } else if (file.path != null) {
           // Native mobile/desktop path
@@ -155,7 +170,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'file',
             file.path!,
             filename: file.name,
-            contentType: MediaType('application', 'pdf'),
+            contentType: _mimeFor(file.name),
           ));
         }
 

@@ -3,7 +3,8 @@ pandas
 requests
 google-cloud-documentai
 google-cloud-firestore
-google-cloud-aiplatform==1.148.0
+google-cloud-aiplatform
+google-genai>=1.16.0
 extra-streamlit-components
 python-dotenv
 firebase-admin

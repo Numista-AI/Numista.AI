@@ -78,7 +78,7 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
               color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         // Listen to the specific user's coins collection
         stream: FirebaseFirestore.instance
             .collection('users/eric@numista.ai/coins')
