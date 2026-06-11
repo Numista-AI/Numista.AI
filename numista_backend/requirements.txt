@@ -19,3 +19,4 @@ python-multipart
 feedparser
 beautifulsoup4==4.12.3
 cloudscraper==1.2.71
+google-cloud-discoveryengine>=0.13.0

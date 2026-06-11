@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' as intl;
 import '../services/auth_service.dart';
+import '../services/morgan_prefs.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 
 class HomeDashboard extends StatefulWidget {
-  const HomeDashboard({super.key});
+  /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
+  final VoidCallback? onAskMorgan;
+  const HomeDashboard({super.key, this.onAskMorgan});
 
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
@@ -123,6 +126,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection(AuthService.coinsPath)
+              .limit(200)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -422,6 +426,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               ]);
                             }).toList(),
                           ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Morgan Widget ─────────────────────────────────────────
+                  _MorganDashboardCard(
+                    totalCoins: totalCoins,
+                    onAskMorgan: widget.onAskMorgan,
                   ),
                   const SizedBox(height: 24),
 
@@ -727,10 +738,25 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v3.6 Beta',
+    date: '2026-06-10',
+    description: 'Vertex AI Coin Reference Search',
+    isLatest: true,
+    changes: [
+      'New Coin Search screen: semantic search over 1,913 coin reference entries powered by Vertex AI Search Enterprise tier.',
+      'Natural language queries: ask about dates, mint marks, designers, metal content, or coin history.',
+      'AI-generated summary banner surfaces key facts above results.',
+      'Category filter chips (Circulating, Commemorative, Bullion, Proof) narrow results instantly.',
+      'Mint mark chips and draggable detail sheet for every result card.',
+      'AI Reference Search button added to My Collection toolbar for quick cross-reference.',
+      'GET /api/coin_search open endpoint on Cloud Run — no authentication required (public reference data).',
+    ],
+  ),
+  _Release(
     version: 'v3.5 Beta',
     date: '2026-06-09',
     description: 'Universal Item Routing & Supplies Tracking',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Invoice AI now classifies every line item: coins, sets, stamps, currency, medals, and supplies.',
       'Coin sets create a single Set Record in Review Hub — choose Break Up or Keep as Set.',
@@ -943,6 +969,184 @@ class _ReleaseNotesPanel extends StatelessWidget {
         const SizedBox(height: 12),
         const Divider(height: 1, color: Color(0xFFE2E6E9)),
       ]),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  _MorganDashboardCard
+//  ────────────────────
+//  Contextual "Ask Morgan" card shown on the home dashboard.
+//  Shows a personalised greeting, coin count, and one-tap access to Morgan chat.
+// ══════════════════════════════════════════════════════════════════════════════
+class _MorganDashboardCard extends StatelessWidget {
+  final int totalCoins;
+  final VoidCallback? onAskMorgan;
+
+  const _MorganDashboardCard({
+    required this.totalCoins,
+    this.onAskMorgan,
+  });
+
+  static const _teal = Color(0xFF2DD4BF);
+  static const _gold = Color(0xFFD4A843);
+  static const _sub  = Color(0xFF94A3B8);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: MorganPrefs.getDisplayName(),
+      builder: (context, snap) {
+        final name = snap.data ?? '';
+        final greeting = name.isNotEmpty ? 'Hi $name! ' : '';
+        final coinLine = totalCoins == 0
+            ? 'Your collection is ready to grow.'
+            : 'I\'ve reviewed your $totalCoins coin${totalCoins == 1 ? '' : 's'}.';
+
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0B1220), Color(0xFF112240)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _gold.withAlpha(60), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: _teal.withAlpha(20),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header row ──────────────────────────────────────────────
+                Row(
+                  children: [
+                    // Morgan avatar
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: _gold.withAlpha(120), width: 2),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/morgan_avatar.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => const Icon(
+                              Icons.smart_toy_rounded,
+                              color: Colors.white, size: 24),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('Morgan',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _teal.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: _teal.withAlpha(80), width: 1),
+                                ),
+                                child: const Text('AI Guide',
+                                    style: TextStyle(
+                                        color: _teal,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.5)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text('$greeting$coinLine',
+                              style: const TextStyle(
+                                  color: _sub, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // ── Suggestion chips ─────────────────────────────────────────
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _chip(totalCoins == 0
+                          ? 'How do I add my first coin?'
+                          : 'What\'s my most valuable coin?'),
+                      const SizedBox(width: 8),
+                      _chip(totalCoins == 0
+                          ? 'What can Morgan help me with?'
+                          : 'Give me a collection summary'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Ask Morgan button ────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onAskMorgan,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _teal,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.chat_bubble_rounded, size: 16),
+                    label: const Text('Ask Morgan',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _chip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withAlpha(30)),
+      ),
+      child: Text(label,
+          style: const TextStyle(color: _sub, fontSize: 11)),
     );
   }
 }

@@ -67,8 +67,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       builder: (context, refSnapshot) {
         final allProgramsMap = refSnapshot.data ?? CoinProgramsData.usPrograms;
 
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots(),
+        return FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance.collection(AuthService.coinsPath).limit(2000).get(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFFF63366)));

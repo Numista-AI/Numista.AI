@@ -23,8 +23,9 @@ import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
 import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
+import 'coin_search_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
-import '../widgets/morgan_greeter.dart';
+import '../widgets/morgan_guide_flow.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -42,27 +43,8 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   // ── Show Morgan as a full-screen dialog (doesn't lose current screen) ──────
   void _showMorganDialog() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black87,
-      transitionDuration: const Duration(milliseconds: 350),
-      transitionBuilder: (ctx, anim, _, child) => FadeTransition(
-        opacity: anim,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(
-            CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-          child: child,
-        ),
-      ),
-      pageBuilder: (ctx, animation, secondaryAnimation) => MorganGreeter(
-        isFirstVisit: false,
-        onAction: (route) {
-          Navigator.of(ctx).pop(); // close dialog
-          if (route != null) setState(() => _activeRoute = route);
-        },
-      ),
-    );
+    // Navigate to the Morgan chat — she knows your collection
+    setState(() => _activeRoute = 'AI Deepdive');
   }
 
   @override
@@ -103,7 +85,9 @@ class _BaseLayoutState extends State<BaseLayout> {
   Widget _buildBody() {
     switch (_activeRoute) {
       case 'Home Dashboard':
-        return const HomeDashboard();
+        return HomeDashboard(
+          onAskMorgan: () => setState(() => _activeRoute = 'AI Deepdive'),
+        );
       case 'My Collection':
         return MyCollectionScreen(
           onNavigate: (route) => setState(() => _activeRoute = route),
@@ -140,6 +124,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const CustomerServiceScreen();
       case 'Inventory':
         return const SuppliesScreen();
+      case 'Coin Search':
+        return const CoinSearchScreen();
       default:
         return const _UnderConstruction();
     }
@@ -201,6 +187,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                 );
               },
             ),
+            // Morgan guide panel — floats above screen when a guide is active
+            const MorganGuidePanel(),
           ],
         ),
       ),
@@ -357,6 +345,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'My Wishlist',
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
+                        _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
                         _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                         // Admin-only: Grade Flag Dashboard
@@ -461,6 +450,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                     );
                   },
                 ),
+                // Morgan guide panel — floats above screen when a guide is active
+                const MorganGuidePanel(),
               ],
             ),
           ),
@@ -480,6 +471,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       'Review Hub',
       'Microscope Scanner',
       'Coin Programs',
+      'Coin Search',
       'Add New Coins',
       'My Wishlist',
       'AI Deepdive',

@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
+import '../services/morgan_prefs.dart';
+import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -89,7 +91,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Text('Manage your account preferences and export data.', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
           const SizedBox(height: 32),
           
-          // Data Export Card
+          // ── Morgan Settings Section ───────────────────────────────────
+          _buildMorganCard(context),
+          const SizedBox(height: 24),
+          const Divider(color: Color(0xFFE2E6E9)),
+          const SizedBox(height: 24),
+
+          // ── Data Export Card ───────────────────────────────────────
           _buildSettingsCard(
             context,
             icon: Icons.download,
@@ -418,6 +426,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (mounted) _runDedupSweep();
         },
       ),
+    );
+  }
+
+  // ── Morgan Settings Card ────────────────────────────────────────────────────
+  Widget _buildMorganCard(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: MorganPrefs.getPreferredName(),
+      builder: (ctx, snap) {
+        final name = (snap.data ?? '').isNotEmpty ? snap.data! : null;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0B1220), Color(0xFF112240)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: const Color(0xFFD4A843).withAlpha(60), width: 1.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 52, height: 52,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                    ),
+                    border: Border.all(
+                        color: const Color(0xFFD4A843).withAlpha(120), width: 2),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/morgan_avatar.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx2, err, stack) => const Icon(
+                          Icons.smart_toy_rounded,
+                          color: Colors.white, size: 26),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Morgan — Your AI Guide',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 3),
+                      Text(
+                        name != null
+                            ? 'Morgan knows you as "$name"'
+                            : 'Tell Morgan your name to personalise your experience',
+                        style: const TextStyle(
+                            color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2DD4BF),
+                    foregroundColor: Colors.black87,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    final changed = await showMorganSettings(context);
+                    if (changed && mounted) setState(() {});
+                  },
+                  child: const Text('Personalise',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

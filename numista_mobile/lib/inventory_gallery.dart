@@ -82,6 +82,7 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
         // Listen to the specific user's coins collection
         stream: FirebaseFirestore.instance
             .collection('users/eric@numista.ai/coins')
+            .limit(50)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

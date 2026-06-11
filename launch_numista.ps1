@@ -23,9 +23,13 @@ Write-Host "  [0/2] Cleaning up stale processes and locked build cache..." -Fore
 Get-Process -Name "dart","flutter" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 800
 
-# Wipe the directories that get file-locked
+# ⚠️  Only wipe the WINDOWS native build artifacts that cause file locks.
+#    build\web is intentionally EXCLUDED so the production web build is preserved.
+#    Deleting build\web here would break https://numista.ai after every dev session!
 $pathsToClean = @(
-    (Join-Path $MobileDir "build"),
+    (Join-Path $MobileDir "build\windows"),
+    (Join-Path $MobileDir "build\native_assets"),
+    (Join-Path $MobileDir "build\native_hooks"),
     (Join-Path $MobileDir ".dart_tool"),
     (Join-Path $MobileDir "windows\flutter\ephemeral")
 )
@@ -36,11 +40,23 @@ foreach ($p in $pathsToClean) {
     }
 }
 
-# Run flutter clean + pub get so the build is fully fresh
+# Run pub get (NOT flutter clean — that would delete build\web)
 Push-Location $MobileDir
-    & flutter clean | Out-Null
     & flutter pub get | Out-Null
 Pop-Location
+
+# Remind user if no web build exists yet
+$webBuildExists = Test-Path (Join-Path $MobileDir "build\web\index.html")
+if (-not $webBuildExists) {
+    Write-Host ""
+    Write-Host "  ⚠️  No production build found." -ForegroundColor Yellow
+    Write-Host "     Run this before deploying to numista.ai:" -ForegroundColor Yellow
+    Write-Host "       flutter build web --release --base-href \"/\"" -ForegroundColor Cyan
+    Write-Host "       firebase deploy --only hosting" -ForegroundColor Cyan
+    Write-Host ""
+} else {
+    Write-Host "  ✅ Web build present (build\web) — ready to deploy." -ForegroundColor Green
+}
 
 Write-Host "  Pre-launch cleanup complete." -ForegroundColor Green
 Write-Host ""

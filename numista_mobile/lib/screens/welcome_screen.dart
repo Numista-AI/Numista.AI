@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
 import '../widgets/morgan_greeter.dart';
 
 /// WelcomeScreen is the entry point called from main.dart.
@@ -21,38 +18,14 @@ class WelcomeScreen extends StatelessWidget {
 
   const WelcomeScreen({super.key, required this.onDone});
 
-  static const String _prefKey = 'welcome_seen';
+  /// Returns true whenever Morgan should greet the user on startup.
+  ///
+  /// Default: true for every user on every login.
+  /// Users can opt out via Morgan settings → "Don't greet me on startup".
+  /// This replaces the old "only show on first visit / empty collection" logic.
+  static Future<bool> shouldShow() => MorganGreeter.shouldShow();
 
-  /// Call this from main.dart / BaseLayout to check if the welcome screen
-  /// should be shown. Returns true only on first launch after account creation.
-  /// Returns false for existing users who already have coins in their collection.
-  static Future<bool> shouldShow() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Already dismissed in this browser/device
-    if (prefs.getBool(_prefKey) ?? false) return false;
-
-    // Check if user already has coins — if so, skip welcome and mark seen
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection(AuthService.coinsPath)
-          .limit(1)
-          .get();
-      if (snap.docs.isNotEmpty) {
-        // Existing user — silently mark seen so it never shows again
-        await prefs.setBool(_prefKey, true);
-        return false;
-      }
-    } catch (_) {
-      // If Firestore check fails, fall through and show welcome
-    }
-
-    return true;
-  }
-
-  static Future<void> markSeen() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey, true);
-  }
+  static Future<void> markSeen() => MorganGreeter.markSeen();
 
   @override
   Widget build(BuildContext context) {

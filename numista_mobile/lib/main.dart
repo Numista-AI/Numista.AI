@@ -71,6 +71,20 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
   /// Triggers a rebuild that bypasses the FutureBuilder check.
   bool _welcomeDone = false;
 
+  /// Cached Future for WelcomeScreen.shouldShow().
+  ///
+  /// IMPORTANT: FutureBuilder resets to ConnectionState.waiting whenever its
+  /// `future` argument changes.  Because the StreamBuilder fires 2-3 rebuilds
+  /// on a single login (Firebase auth can emit the user object more than once),
+  /// passing `WelcomeScreen.shouldShow()` directly creates a NEW Future every
+  /// rebuild — the FutureBuilder never leaves ConnectionState.waiting, so the
+  /// app is stuck on the gray loading spinner forever.
+  ///
+  /// Fix: create the Future once, cache it here, and reuse it for every
+  /// FutureBuilder rebuild that belongs to the same sign-in session.
+  /// Reset to null on sign-out so the next login gets a fresh check.
+  Future<bool>? _shouldShowWelcome;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -146,8 +160,15 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               return const BaseLayout();
             }
 
+            // Cache the Future so FutureBuilder doesn't reset to
+            // ConnectionState.waiting on every StreamBuilder rebuild.
+            // Firebase auth fires 2-3 events per login; without caching,
+            // each rebuild swaps in a brand-new Future and the gray spinner
+            // screen persists indefinitely.
+            _shouldShowWelcome ??= WelcomeScreen.shouldShow();
+
             return FutureBuilder<bool>(
-              future: WelcomeScreen.shouldShow(),
+              future: _shouldShowWelcome,
               builder: (ctx, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Scaffold(
@@ -170,6 +191,10 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               },
             );
           }
+
+          // User signed out — reset the cached future so next login is fresh.
+          _shouldShowWelcome = null;
+          _welcomeDone = false;
 
           // Not signed in -> show the login screen
           return const LoginScreen();

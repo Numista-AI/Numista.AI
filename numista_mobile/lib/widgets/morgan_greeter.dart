@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/morgan_prefs.dart';
+import 'morgan_setup_dialog.dart';
+import 'morgan_guide_flow.dart';
+import 'morgan_guides.dart';
 
 /// Morgan — Numista.AI's AI concierge greeter.
 ///
@@ -27,14 +30,14 @@ class MorganGreeter extends StatefulWidget {
 
   static const String _prefKey = 'morgan_greeter_seen';
 
-  static Future<bool> shouldShow() async {
-    final prefs = await SharedPreferences.getInstance();
-    return !(prefs.getBool(_prefKey) ?? false);
-  }
+  /// Show Morgan on startup unless the user has explicitly opted out.
+  /// Default is true — Morgan greets everyone on every login.
+  static Future<bool> shouldShow() => MorganPrefs.showOnStartup();
 
+  /// Legacy "mark as seen" — kept for compatibility but no longer hides Morgan.
   static Future<void> markSeen() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey, true);
+    await prefs.setBool(_prefKey, true); // marks first-visit done only
   }
 
   @override
@@ -59,9 +62,17 @@ class _MorganGreeterState extends State<MorganGreeter>
   static const _text    = Colors.white;
   static const _sub     = Color(0xFF94A3B8);
 
+  // ── Greeting copy ───────────────────────────────────────────────────────────
+  String _firstName = 'there'; // populated async in initState
+
   @override
   void initState() {
     super.initState();
+
+    // Load preferred name async — rebuild once loaded
+    MorganPrefs.getDisplayName().then((name) {
+      if (mounted) setState(() => _firstName = name);
+    });
 
     // Overall fade-in
     _fadeCtrl = AnimationController(
@@ -92,14 +103,6 @@ class _MorganGreeterState extends State<MorganGreeter>
     super.dispose();
   }
 
-  // ── Greeting copy ───────────────────────────────────────────────────────────
-  String get _firstName {
-    final user = FirebaseAuth.instance.currentUser;
-    final name = user?.displayName ?? user?.email?.split('@').first ?? 'there';
-    // Return just first name if display name has spaces
-    return name.split(' ').first;
-  }
-
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -118,14 +121,16 @@ class _MorganGreeterState extends State<MorganGreeter>
   // ── Action tiles data ───────────────────────────────────────────────────────
   List<_ActionTile> get _tiles => [
     _ActionTile(
+      tileId: 'invoice',
       emoji: '📄',
       icon: Icons.receipt_long_rounded,
-      color: const Color(0xFF3B82F6),  // blue
+      color: const Color(0xFF3B82F6),
       title: 'Add coins from a receipt or invoice',
       subtitle: 'Photo or PDF — I\'ll read it for you',
       route: 'Add New Coins',
     ),
     _ActionTile(
+      tileId: 'microscope',
       emoji: '🔬',
       icon: Icons.biotech_rounded,
       color: _teal,
@@ -134,17 +139,19 @@ class _MorganGreeterState extends State<MorganGreeter>
       route: 'Microscope Scanner',
     ),
     _ActionTile(
+      tileId: 'photo',
       emoji: '📱',
       icon: Icons.photo_camera_rounded,
-      color: const Color(0xFFF59E0B),  // amber
+      color: const Color(0xFFF59E0B),
       title: 'Take a photo to identify a coin',
       subtitle: 'Just snap a pic — I\'ll do the rest',
       route: 'Add New Coins',
     ),
     _ActionTile(
+      tileId: 'collection',
       emoji: '🗂️',
       icon: Icons.collections_bookmark_rounded,
-      color: const Color(0xFF8B5CF6),  // purple
+      color: const Color(0xFF8B5CF6),
       title: 'Browse my collection',
       subtitle: 'See everything you\'ve added so far',
       route: 'My Collection',
@@ -213,10 +220,7 @@ class _MorganGreeterState extends State<MorganGreeter>
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _ActionTileCard(
                             tile: tile,
-                            onTap: () async {
-                              await MorganGreeter.markSeen();
-                              widget.onAction(tile.route);
-                            },
+                            onTap: () => _onTileTap(tile),
                           ),
                         )).toList(),
                       ),
@@ -266,6 +270,25 @@ class _MorganGreeterState extends State<MorganGreeter>
         ),
       ),
     );
+  }
+
+  // ── Tile tap handler ──────────────────────────────────────────────────────
+  Future<void> _onTileTap(_ActionTile tile) async {
+    await MorganGreeter.markSeen();
+
+    // Show name setup on very first tile tap
+    final setupDone = await MorganPrefs.isSetupDone();
+    if (!setupDone && mounted) {
+      final confirmed = await showMorganSetup(context);
+      if (!confirmed) return; // user dismissed without confirming
+    }
+
+    // Start the matching guide flow
+    final guide = MorganGuides.forTileId(tile.tileId);
+    if (guide != null) MorganGuideService.start(guide);
+
+    // Navigate to the target screen
+    if (mounted) widget.onAction(tile.route);
   }
 }
 
@@ -340,6 +363,7 @@ class _MorganAvatar extends StatelessWidget {
 
 // ── Data class for action tiles ────────────────────────────────────────────────
 class _ActionTile {
+  final String tileId;  // used by MorganGuides.forTileId()
   final String emoji;
   final IconData icon;
   final Color color;
@@ -348,6 +372,7 @@ class _ActionTile {
   final String route;
 
   const _ActionTile({
+    required this.tileId,
     required this.emoji,
     required this.icon,
     required this.color,

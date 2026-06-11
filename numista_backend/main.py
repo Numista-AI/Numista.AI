@@ -21,6 +21,14 @@ from vertexai.generative_models import GenerativeModel, GenerationConfig
 import feedparser
 import re
 
+# Morgan's coin knowledge base RAG lookup
+try:
+    from morgan_knowledge import get_coin_context
+    MORGAN_KNOWLEDGE_AVAILABLE = True
+except ImportError:
+    MORGAN_KNOWLEDGE_AVAILABLE = False
+    print("[startup] morgan_knowledge.py not found — coin reference lookup disabled")
+
 app = FastAPI(title="Numista.AI Backend API")
 
 app.add_middleware(
@@ -30,6 +38,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── VERTEX AI SEARCH — Coin Reference Library ───────────────────────────────
+# Registers GET /api/coin_search — open endpoint, no auth required.
+# Data store: numista-coin-library (1,913 coin documents, Enterprise + LLM tier)
+try:
+    from vertex_search.coin_search_endpoint import register_coin_search
+    register_coin_search(app)
+    print("[startup] Vertex AI Search endpoint registered: GET /api/coin_search")
+except Exception as _vx_err:
+    print(f"[startup] Vertex AI Search not available: {_vx_err}")
 
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "us-central1"
@@ -1783,56 +1801,94 @@ def get_mint_news():
 class DeepDiveRequest(BaseModel):
     user_email: str
     query: str
+    # Optional fields sent by the Flutter app (Phase 3 Morgan Chat).
+    # When collection_context is provided the backend skips its own Firestore
+    # fetch — faster and avoids double-reading the same data.
+    collection_context: str = ""
+    user_name: str = ""
 
 @app.post("/api/deep_dive")
 async def deep_dive(request: DeepDiveRequest):
     """
-    Grounded AI search: Fetches the user's specific collection from Firestore 
-    and answers questions using Gemini 2.5 Flash as an expert numismatist.
+    Morgan AI chat: answers questions about the user's coin collection.
+
+    Two modes:
+      • Flutter provides collection_context  → use it directly (faster, no extra Firestore read)
+      • No collection_context provided       → fetch collection from Firestore (backward-compatible)
+
+    Always responds as Morgan, Numista.AI's warm numismatic guide owl.
     """
     try:
-        # 1. Fetch Collection
-        col_ref = db.collection('users').document(request.user_email).collection('coins')
-        docs = col_ref.stream()
-        
-        inventory_items = []
-        for doc in docs:
-            d = doc.to_dict()
-            # Reduce token size by only sending relevant searchable fields
-            inventory_items.append({
-                "Year": d.get("Year", ""),
-                "Denom": d.get("Denomination", ""),
-                "Mint": d.get("Mint Mark", ""),
-                "Condition": d.get("Condition", ""),
-                "Subject": d.get("Theme/Subject", ""),
-                "Value": d.get("AI Estimated Value", "$0.00")
-            })
-            
-        if not inventory_items:
-            context = "The user's collection is currently empty."
+        # ── 1. Resolve collection context ──────────────────────────────────────
+        if request.collection_context and len(request.collection_context.strip()) > 50:
+            # Flutter already built and sent the collection summary
+            context = request.collection_context.strip()
         else:
-            context = json.dumps(inventory_items, default=str)
-            
-        # 2. Call Gemini
-        prompt = f"""
-        You are 'Numista AI', a professional, expert numismatic advisor.
-        You are looking at the user's private coin collection data:
-        {context}
-        
-        User's Question: {request.query}
-        
-        Instructions:
-        - Be accurate based ONLY on the provided data when possible.
-        - If the question is general numismatics, answer as an expert.
-        - Be concise but professional.
-        - If they ask for 'most valuable', sort the provided JSON data by the Value field.
-        """
-        
+            # Fallback: fetch directly from Firestore (keeps backward compatibility)
+            col_ref = db.collection('users').document(request.user_email).collection('coins')
+            docs = col_ref.stream()
+            inventory_items = []
+            for doc in docs:
+                d = doc.to_dict()
+                inventory_items.append({
+                    "Year":      d.get("Year", ""),
+                    "Denom":     d.get("Denomination", ""),
+                    "Mint":      d.get("Mint Mark", ""),
+                    "Condition": d.get("Condition", ""),
+                    "Subject":   d.get("Theme/Subject", ""),
+                    "Series":    d.get("Program/Series", ""),
+                    "Value":     d.get("AI Estimated Value", "$0.00"),
+                    "Cost":      d.get("Cost", "$0.00"),
+                })
+            if not inventory_items:
+                context = "The user's collection is currently empty."
+            else:
+                context = json.dumps(inventory_items, default=str)
+
+        # ── 2. Personalisation ─────────────────────────────────────────────────
+        name = (request.user_name or "").strip()
+        name_line = f"You are speaking with {name}." if name else ""
+
+        # ── 3. RAG: look up coin knowledge base ────────────────────────────────
+        knowledge_block = ""
+        if MORGAN_KNOWLEDGE_AVAILABLE:
+            try:
+                kb_context = get_coin_context(db, request.query)
+                if kb_context:
+                    knowledge_block = f"\n\n{kb_context}"
+            except Exception as kb_err:
+                print(f"[deep_dive] Knowledge base lookup warning: {kb_err}")
+
+        # ── 4. Build prompt ────────────────────────────────────────────────────
+        prompt = f"""You are Morgan, the friendly AI numismatic guide owl for Numista.AI.
+You are an enthusiastic, expert numismatic mentor — warm and patient like a trusted friend who happens to be a world-class coin expert.
+You have encyclopedic knowledge of US coinage history, mint marks, designers, errors, and varieties.
+{name_line}
+
+Here is the user's current coin collection data:
+{context}{knowledge_block}
+
+User's Question: {request.query}
+
+Instructions:
+- Answer based on the collection data above whenever the question is about their specific coins.
+- If NUMISMATIC REFERENCE DATA is provided above, use those verified facts to answer accurately. Cite design details, compositions, and historical context from that data.
+- When asked for "most valuable", rank the collection by Value.
+- Speak in plain, friendly English — explain any numismatic terms you use.
+- Keep responses concise: 2–4 short paragraphs maximum (under 30 seconds of spoken length).
+- If the question is about general numismatics (not their specific collection), answer as an expert using the reference data.
+- If a coin they mention is NOT in their collection data, say you don't see it and suggest they add it.
+- Do NOT invent or make up coin values — only reference what is in the data.
+- Do NOT claim coins they don't own.
+- If a coin is not in the reference database, say: 'I don't have that specific coin in my reference collection yet, but I'm constantly learning.'
+"""
+
+        # ── 5. Call Gemini ─────────────────────────────────────────────────────
         response = model.generate_content(prompt)
         return {"status": "success", "response": response.text}
-        
+
     except Exception as e:
-        print(f"Deep dive error: {e}")
+        print(f"[deep_dive] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/review/commit")

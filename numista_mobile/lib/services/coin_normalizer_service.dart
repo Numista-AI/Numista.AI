@@ -21,9 +21,15 @@ import 'auth_service.dart';
 class CoinNormalizerService {
   static const int _batchSize = 8;
 
+  // Prevent re-running in the same browser session (BaseLayout is re-created
+  // on sign-in, so without this guard we'd fetch all coins on every login).
+  static bool _sessionRan = false;
+
   /// Call this once per login session (non-blocking).
   /// Runs fully in background — caller does not need to await.
   static void runForUser() {
+    if (_sessionRan) return;
+    _sessionRan = true;
     _run().catchError((e) {
       // Silently swallow errors — normalization is a best-effort service
       // ignore: avoid_print
@@ -38,11 +44,13 @@ class CoinNormalizerService {
     await _fixYearMintAll(col);
 
     // ── Phase 2: AI normalization for coins that still need it ─────────────────
-    // Re-fetch so Phase 1's _normalized resets are visible.
-    final snap2 = await col.get();
-    final toNormalize = snap2.docs
-        .where((d) => d.data()['_normalized'] != true)
-        .toList();
+    // Only fetch un-normalised coins (avoids reading all 3,700 docs again).
+    // Cap at 80 per session so we never make more than 10 Gemini API calls.
+    final snap2 = await col
+        .where('_normalized', isNotEqualTo: true)
+        .limit(80)
+        .get();
+    final toNormalize = snap2.docs;
 
     if (toNormalize.isEmpty) {
       // ignore: avoid_print
@@ -76,12 +84,13 @@ class CoinNormalizerService {
   static Future<void> _fixYearMintAll(
     CollectionReference<Map<String, dynamic>> col,
   ) async {
-    final allSnap = await col.get();
-    final toFix = allSnap.docs.where((doc) {
-      final d = doc.data();
-      final rawYear = d['Year']?.toString().trim() ?? '';
-      final rawMint = d['Mint Mark']?.toString().trim() ?? '';
-      if (rawMint.isNotEmpty) return false; // already split
+    // Only fetch coins where Mint Mark is empty — avoids reading all 3,700 docs.
+    // Coins with a populated Mint Mark are already split.
+    final emptyMintSnap = await col.where('Mint Mark', isEqualTo: '').get();
+    final nullMintSnap  = await col.where('Mint Mark', isNull: true).get();
+    final candidates = [...emptyMintSnap.docs, ...nullMintSnap.docs];
+    final toFix = candidates.where((doc) {
+      final rawYear = doc.data()['Year']?.toString().trim() ?? '';
       return _yearMintRe.hasMatch(rawYear);
     }).toList();
 

@@ -95,7 +95,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // Firestore stream -- created ONCE in initState to prevent StreamBuilder
   // re-subscription on every setState (which briefly unmounts the TextField
   // and causes focus loss on Flutter Web).
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
   // Scroll controllers for the TableView (horizontal + vertical)
   final _tvHorizCtrl     = ScrollController();
   final _tvVertCtrl      = ScrollController();
@@ -180,9 +180,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Create the Firestore stream ONCE -- reusing it in build() ensures
     // StreamBuilder never re-subscribes on setState, so the TextField
     // keeps its focus between keystrokes on Flutter Web.
-    _coinsStream = FirebaseFirestore.instance
-        .collection(AuthService.coinsPath)
-        .snapshots();
+    _coinsStream = _buildCoinsStream();
+
     _fetchSpotPrices();
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
@@ -197,6 +196,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
       });
     });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buildCoinsStream() {
+    Query<Map<String, dynamic>> q =
+        FirebaseFirestore.instance.collection(AuthService.coinsPath);
+    if (_limit > 0) q = q.limit(_limit);
+    return q.snapshots();
   }
 
   @override
@@ -355,12 +361,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- Root build ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    Query<Map<String, dynamic>> q =
-        FirebaseFirestore.instance.collection(AuthService.coinsPath);
-    if (_limit > 0) q = q.limit(_limit);
-
     return StreamBuilder<QuerySnapshot>(
-      stream: _coinsStream,   // reuse the stream created in initState
+      stream: _coinsStream,
       builder: (context, snap) {
         // Only show spinner on the very first load (no cached data yet).
         // On subsequent Firestore updates, keep showing the last known
@@ -520,6 +522,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             label: (v) => v,
             onChanged: (v) => setState(() {
               _limit = v == 'Last 50' ? 50 : v == 'Last 100' ? 100 : 0;
+              _coinsStream = _buildCoinsStream();
             }),
           ),
         ]),
@@ -583,6 +586,30 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ]),
         ),
       ),
+      const SizedBox(width: 12),
+      // ── Vertex AI Reference Search button ─────────────────────────────
+      if (widget.onNavigate != null)
+        Container(
+          margin: const EdgeInsets.only(top: 22),
+          child: Tooltip(
+            message: 'Search 1,913 coin reference entries with Vertex AI',
+            child: ElevatedButton.icon(
+              onPressed: () => widget.onNavigate!('Coin Search'),
+              icon: const Icon(Icons.manage_search, size: 16),
+              label: const Text('AI Reference Search'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                textStyle: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 
