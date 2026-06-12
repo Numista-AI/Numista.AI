@@ -9,6 +9,8 @@ import 'morgan_guide_flow.dart';
 ///   ✅ Friendly, patient tone — "I'll wait right here!"
 ///   ✅ No error codes or tech jargon
 ///   ✅ Celebrate small wins — "Great!", "Perfect!", "You did it!"
+///   ✅ Narrations ≤ 2 short sentences — keeps the compact 300px bubble tidy
+///   ✅ Positions set on every step so the bubble stays out of the active area
 class MorganGuides {
   MorganGuides._();
 
@@ -18,48 +20,57 @@ class MorganGuides {
     title: 'Adding coins from a receipt',
     emoji: '📄',
     steps: [
+      // Step 1: intro — user is looking at the Add New Coins tab bar
       MorganStep(
         narration:
-            "Let's add your coins from a receipt or invoice! "
-            "First — do you have a photo of the receipt on this device, "
-            "or would you like to take a photo right now?",
-        hint: 'Look for the "Upload" or "Take Photo" button on this screen.',
-        nextLabel: "I'm ready, let's go →",
+            "I can read your receipt and add coins automatically!\n"
+            "Pick the 'Single Invoice Scan' tab to get started.",
+        hint: 'The tabs are at the top of this screen.',
+        nextLabel: "Ready! →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 2: upload — red Browse PDF button is center-screen
       MorganStep(
-        narration:
-            "Tap the big blue \"Upload\" button on this screen. "
-            "Then find your receipt photo in your photos or files.",
-        hint: "If you don't see it, try scrolling down on this screen.",
-        nextLabel: 'I uploaded it →',
+        narration: "Tap the red Browse PDF button and choose your receipt file.",
+        hint: "The button is in the center of this screen.",
+        nextLabel: 'I tapped Browse PDF →',
+        position: GuidePosition.topRight,
+        showArrow: true,
+        arrowDirection: ArrowDirection.down,
       ),
+      // Step 3: processing — loading overlay is visible
       MorganStep(
         narration:
-            "I'm reading your receipt now — this usually takes about "
-            "10 to 15 seconds. Please wait while I work!",
-        hint: "You'll see a loading spinner. It will finish on its own.",
-        nextLabel: 'It finished loading →',
+            "I'm reading your receipt — about 10–15 seconds.\n"
+            "Watch the progress bar!",
+        hint: "The loading screen will disappear when I'm finished.",
+        nextLabel: 'It finished →',
+        position: GuidePosition.topRight,
       ),
+      // Step 4: ExtractionSuccessDialog — shows count + "Go to Review Hub"
       MorganStep(
         narration:
-            "Here are the coins I found on your receipt! "
-            "Look them over to make sure they look right.",
-        hint: 'If something looks wrong, tap the coin to fix it.',
-        nextLabel: 'They look right! →',
+            "I've sent your coins to the Review Hub!\n"
+            "Tap 'Go to Review Hub' to see what I found.",
+        hint: "You can review and fix any details before saving.",
+        nextLabel: "I'm in the Review Hub →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 5: Review Hub — user selects and commits items
       MorganStep(
         narration:
-            "Tap the \"Add to My Collection\" button to save these coins. "
-            "I'll add them right away!",
-        hint: 'The button is usually at the bottom of the list.',
-        nextLabel: "I tapped it →",
+            "Select the coins you want to keep,\n"
+            "then tap 'Commit Selected' to save them.",
+        hint: "Use the top checkbox to select everything at once.",
+        nextLabel: "I committed them →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 6: celebration
       MorganStep(
-        narration:
-            "🎉 You did it! Those coins are now saved in your collection. "
-            "Would you like to add more, or would you like to see your collection?",
-        hint: 'Tap "Done!" to finish, or use the menu on the left to keep going.',
+        narration: "🎉 Done! Those coins are now saved in your collection.",
+        hint: 'Use the menu on the left to keep going.',
         nextLabel: "All done! →",
+        position: GuidePosition.bottomCenter,
       ),
     ],
   );
@@ -70,48 +81,55 @@ class MorganGuides {
     title: 'Using the Microscope',
     emoji: '🔬',
     steps: [
+      // Step 1: intro — check microscope is connected
       MorganStep(
         narration:
-            "Let's use the microscope! This is a special camera that "
-            "connects to your computer to look at coins up close. "
-            "Is the microscope plugged in and turned on?",
-        hint: 'The microscope should have a small light when it\'s on.',
-        nextLabel: "Yes, it's ready →",
+            "Let's use the microscope!\n"
+            "Is it plugged in and powered on? Look for a small indicator light.",
+        hint: 'The microscope connects to your computer via USB.',
+        nextLabel: "It's ready →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 2: place coin under lens
       MorganStep(
-        narration:
-            "Place your coin face-up, flat under the microscope lens. "
-            "Try to center it as best you can.",
-        hint: 'The coin should be right under the glass lens of the microscope.',
-        nextLabel: "Coin is in place →",
+        narration: "Place your coin face-up, centered under the lens.",
+        hint: 'The coin should sit right under the glass lens.',
+        nextLabel: "Coin is placed →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 3: start scan — blue button is in the scan controls (left area)
       MorganStep(
-        narration:
-            "Now tap the \"Start Scan\" button on this screen. "
-            "I'll take a look at your coin!",
-        hint: 'Look for the large button in the middle of this screen.',
+        narration: "Now tap ▶ Start Microscope Scan — I'll take a close look!",
+        hint: 'Look for the blue Start Scan button on this screen.',
         nextLabel: 'I tapped Start Scan →',
+        position: GuidePosition.topRight,
+        showArrow: true,
+        arrowDirection: ArrowDirection.down,
       ),
+      // Step 4: scanning in progress
       MorganStep(
         narration:
-            "Hold still — I'm examining your coin! "
+            "Hold still — I'm examining your coin!\n"
             "This usually takes about 10 seconds.",
         hint: "Try not to bump the microscope while I'm scanning.",
-        nextLabel: 'The scan finished →',
+        nextLabel: 'Scan finished →',
+        position: GuidePosition.topRight,
       ),
+      // Step 5: review AI results
       MorganStep(
         narration:
-            "Here's what I think this coin is! "
-            "Take a look and see if it matches your coin.",
-        hint: 'If it looks wrong, tap "That\'s not right" and I\'ll try again.',
+            "Here's what I think this is!\n"
+            "Does it match your coin?",
+        hint: "Tap 'That's not right' and I'll try again.",
         nextLabel: "Yes, that's it! →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 6: save to collection
       MorganStep(
-        narration:
-            "Great! Tap \"Save to My Collection\" to add this coin. "
-            "I'll save all the details for you.",
-        hint: 'The save button is at the bottom of the screen.',
+        narration: "Tap 'Save to My Collection' — all details are saved automatically!",
+        hint: 'The Save button is near the bottom of the screen.',
         nextLabel: "Saved! →",
+        position: GuidePosition.bottomRight,
       ),
     ],
   );
@@ -122,40 +140,46 @@ class MorganGuides {
     title: 'Identify a coin from a photo',
     emoji: '📷',
     steps: [
+      // Step 1: intro — set up the coin
       MorganStep(
         narration:
-            "I can identify almost any coin from a photo! "
-            "First, place your coin on a flat surface — "
-            "a table with good lighting works best.",
-        hint: 'Bright, even lighting helps me see the coin clearly.',
+            "I can identify almost any coin from a photo!\n"
+            "Place it on a flat, well-lit surface first.",
+        hint: 'Good lighting helps me see the details clearly.',
         nextLabel: "Coin is ready →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 2: take or upload photo
       MorganStep(
         narration:
-            "Now tap \"Take Photo\" to use your camera, "
-            "or \"Upload from Device\" if you already have a photo saved.",
-        hint: 'Either button works — just pick whichever is easier for you.',
-        nextLabel: 'I took the photo →',
+            "Tap Take Photo to use your camera,\n"
+            "or Upload from Device if you have a photo saved.",
+        hint: 'Either works — pick whichever is easier.',
+        nextLabel: 'Photo is ready →',
+        position: GuidePosition.bottomRight,
       ),
+      // Step 3: processing
       MorganStep(
-        narration:
-            "I'm looking at your coin now — give me just a moment!",
-        hint: 'The screen will update on its own when I\'m done.',
+        narration: "Looking at your coin now — give me a moment! 🔍",
+        hint: "The screen updates automatically when I'm done.",
         nextLabel: 'Results appeared →',
+        position: GuidePosition.topRight,
       ),
+      // Step 4: results shown
       MorganStep(
         narration:
-            "Here's what I found! I'll show you the coin name, "
-            "year, and estimated value. Does that match your coin?",
-        hint: 'If I got it wrong, tap "That\'s not right" and I\'ll try again.',
-        nextLabel: "Yes, that's correct! →",
+            "Here's what I found — name, year, and estimated value.\n"
+            "Does that look right?",
+        hint: "Tap 'That's not right' and I'll try again.",
+        nextLabel: "Yes, that's it! →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 5: save
       MorganStep(
-        narration:
-            "Tap \"Save to My Collection\" to add this coin. "
-            "All the details will be saved automatically!",
+        narration: "Tap 'Save to My Collection' — all details save automatically!",
         hint: 'The green Save button is near the bottom.',
         nextLabel: "It's saved! →",
+        position: GuidePosition.bottomRight,
       ),
     ],
   );
@@ -166,7 +190,7 @@ class MorganGuides {
     title: 'Browsing your collection',
     emoji: '🗂️',
     steps: [
-      // Step 1: bubble at top-right, big gold ← arrow to its left pointing at the search box
+      // Step 1: bubble at top-right, big gold ← arrow pointing left at the search box
       MorganStep(
         narration:
             "Looking for a specific coin?\n"
@@ -188,7 +212,7 @@ class MorganGuides {
         nextLabel: 'I tapped a coin →',
         position: GuidePosition.bottomRight,
       ),
-      // Step 3: detail page
+      // Step 3: coin detail page
       MorganStep(
         narration:
             "This page shows everything I know — "

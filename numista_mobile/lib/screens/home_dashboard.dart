@@ -547,7 +547,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Icon(Icons.wifi_off_outlined,
                             size: 28, color: Color(0xFFCBD5E1)),
                         SizedBox(height: 8),
-                        Text('News unavailable — add a NewsAPI key in\nFirestore config/newsapi → api_key',
+                        Text('Market news unavailable right now — check back shortly.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 12, color: Color(0xFF94A3B8))),

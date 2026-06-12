@@ -147,7 +147,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         final file = files[i];
         if (!mounted) return;
         setState(() {
-          _statusMessage = 'Processing ${file.name} (${i + 1}/${files.length})...';
+          // Show a friendly message while the AI processes the file.
+          // For invoices, this can take 10–30 s; the indeterminate bar
+          // in the overlay keeps the UI feeling alive during that wait.
+          _statusMessage = files.length == 1
+              ? (isInvoice
+                  ? 'Reading your receipt — this usually takes 10–30 seconds…'
+                  : 'Analyzing ${file.name}…')
+              : 'Processing ${file.name} (${i + 1}/${files.length})…';
+          // Progress = 0 → overlay switches to indeterminate (bouncing) bar.
           _processingProgress = i / files.length;
         });
 
@@ -2052,6 +2060,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _buildProcessingOverlay() {
+    // While progress == 0 (waiting on the AI to process a single file),
+    // use an indeterminate indicator so the bar bounces rather than sitting empty.
+    final double? progressValue =
+        _processingProgress <= 0 ? null : _processingProgress;
+
     return Container(
       color: Colors.black.withAlpha(120),
       child: Center(
@@ -2065,17 +2078,44 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               children: [
                 const SizedBox(
                   width: 60, height: 60,
-                  child: CircularProgressIndicator(color: Color(0xFFF63366), strokeWidth: 5),
+                  child: CircularProgressIndicator(
+                      color: Color(0xFFF63366), strokeWidth: 5),
                 ),
                 const SizedBox(height: 24),
-                Text(_statusMessage, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 12),
+                Text(_statusMessage,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 8),
+                const Text(
+                  'AI extraction typically takes 10–30 seconds for PDF files.',
+                  style: TextStyle(
+                      color: Color(0xFF64748B), fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: 300,
-                  child: LinearProgressIndicator(value: _processingProgress, color: const Color(0xFFF63366), backgroundColor: const Color(0xFFE2E6E9)),
+                  child: LinearProgressIndicator(
+                    value: progressValue,
+                    color: const Color(0xFFF63366),
+                    backgroundColor: const Color(0xFFE2E6E9),
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Text('${(_processingProgress * 100).toInt()}%', style: const TextStyle(color: Color(0xFF64748B))),
+                // Only show percentage for multi-file bulk uploads
+                if (progressValue != null && _processingProgress > 0)
+                  Text('${(_processingProgress * 100).toInt()}%',
+                      style: const TextStyle(color: Color(0xFF64748B)))
+                else
+                  const Text('Working…',
+                      style: TextStyle(color: Color(0xFF64748B))),
+                const SizedBox(height: 12),
+                const Text(
+                  '💡 Tip: Keep this window open until processing completes.',
+                  style: TextStyle(
+                      color: Color(0xFF94A3B8), fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
