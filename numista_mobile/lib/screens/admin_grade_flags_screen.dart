@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
+import '../constants.dart';
 
-const _apiUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+const _apiUrl = kApiBaseUrl;
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 

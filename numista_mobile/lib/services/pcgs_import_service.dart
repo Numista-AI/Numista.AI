@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
+import '../constants.dart';
 
 /// PCGS Public API import service.
 ///
@@ -13,7 +14,7 @@ import 'auth_service.dart';
 /// Daily Limit: 1,000 calls per account
 class PcgsImportService {
   static const _baseUrl    = 'https://api.pcgs.com/publicapi';
-  static const _backendUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+  static const _backendUrl = kApiBaseUrl;
 
   // ─── Token Management ────────────────────────────────────────────────────
   //

@@ -125,7 +125,7 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
             padding: const EdgeInsets.all(16),
             itemCount: coins.length,
             itemBuilder: (context, index) {
-              final data = coins[index].data() as Map<String, dynamic>;
+              final data = coins[index].data();
 
               final imageUrlObverse = data['image_url_obverse']?.toString();
               final imageUrlReverse = data['image_url_reverse']?.toString();

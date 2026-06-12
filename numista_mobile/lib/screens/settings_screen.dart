@@ -7,6 +7,7 @@ import '../services/morgan_prefs.dart';
 import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 
 import '../utils/file_saver_stub.dart'
     if (dart.library.html) '../utils/file_saver_web.dart'
@@ -30,8 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dedupRunning = false;
   Map<String, dynamic>? _dedupResults;
 
-  static const _apiUrl =
-      'https://numista-backend-568985927038.us-central1.run.app';
+  static const _apiUrl = kApiBaseUrl;
 
   @override
   void initState() {
@@ -635,8 +635,7 @@ class _DedupDialogState extends State<_DedupDialog> {
   final Set<String> _deleting = {};
   bool _autoCleanRunning = false;
 
-  static const _apiUrl =
-      'https://numista-backend-568985927038.us-central1.run.app';
+  static const _apiUrl = kApiBaseUrl;
 
   // Groups the auto-clean will process: invoice + attribute (NOT possible)
   int get _cleanableGroupCount =>

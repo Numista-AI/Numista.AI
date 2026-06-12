@@ -86,7 +86,7 @@ class SuppliesScreen extends StatelessWidget {
           // Compute total cost
           double totalCost = 0;
           for (final doc in docs) {
-            final data = doc.data() as Map<String, dynamic>;
+            final data = doc.data();
             final costStr = (data['Purchase Cost'] ?? data['Cost'] ?? '0').toString();
             try {
               totalCost +=
@@ -128,7 +128,7 @@ class SuppliesScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
+                    final data = docs[index].data();
                     final description =
                         data['Original Description from source'] ??
                         data['Theme/Subject'] ??

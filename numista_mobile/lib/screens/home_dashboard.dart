@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
+import '../constants.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
@@ -34,7 +35,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Future<void> _fetchNews() async {
     try {
       final response = await http.get(
-          Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/mint_news'));
+          Uri.parse('$kApiBaseUrl/api/mint_news'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (!mounted) return;
@@ -55,7 +56,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Future<void> _fetchSpotPrices() async {
     try {
       final response = await http.get(
-          Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/spot_prices'));
+          Uri.parse('$kApiBaseUrl/api/spot_prices'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (!mounted) return;

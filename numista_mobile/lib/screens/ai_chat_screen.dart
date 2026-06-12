@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/morgan_chat_context.dart';
 import '../widgets/morgan_settings_panel.dart';
+import '../constants.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  AiChatScreen — Phase 3: Collection-Aware Morgan Chat
@@ -186,7 +187,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-            'https://numista-backend-568985927038.us-central1.run.app/api/deep_dive'),
+            '$kApiBaseUrl/api/deep_dive'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_email':          AuthService.userEmail,

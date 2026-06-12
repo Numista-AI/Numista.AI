@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../constants.dart';
 
 
 class ReviewHubScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   bool _isProcessing = false;
 
   // Backend API URL
-  final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
+  final String _apiUrl = kApiBaseUrl;
 
   // ─── item_type badge config ────────────────────────────────────────────────
   static const Map<String, _ItemTypeMeta> _typeMetaMap = {
@@ -725,7 +726,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final doc = docs[index];
-                  final data = doc.data() as Map<String, dynamic>;
+                  final data = doc.data();
                   final id = doc.id;
                   final isSelected = _selectedIds.contains(id);
                   final itemType = (data['item_type'] ?? 'coin').toString().toLowerCase();

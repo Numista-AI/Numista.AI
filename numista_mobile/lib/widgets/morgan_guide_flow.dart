@@ -480,7 +480,6 @@ class _BouncingArrowState extends State<_BouncingArrow>
         color = const Color(0xFF2DD4BF);
         break;
       case ArrowDirection.down:
-      default:
         offset = Offset(0, d);
         icon = Icons.keyboard_arrow_down_rounded;
         size = 32;
@@ -490,7 +489,7 @@ class _BouncingArrowState extends State<_BouncingArrow>
 
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Transform.translate(
+      builder: (_, child) => Transform.translate(
         offset: offset,
         child: Icon(icon, color: color, size: size),
       ),

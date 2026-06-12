@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../constants.dart';
 
 /// Result returned from the Cloud Run scan_service endpoint.
 class ScanResult {
@@ -84,8 +85,7 @@ class ScanResult {
 
 /// Sends a checklist image to the Numista.AI Cloud Run scan endpoint.
 class ChecklistScanService {
-  static const String _baseUrl =
-      'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
 
   /// Posts [imageFile] to /api/analyze_checklist with the given [programId] and [userId].
   /// [pageNumber] and [totalPages] enable server-side coin chunking to reduce token usage.

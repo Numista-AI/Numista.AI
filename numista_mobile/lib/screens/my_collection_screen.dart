@@ -21,6 +21,7 @@ import 'dart:convert';
 import '../services/melt_value_service.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
+import '../constants.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -120,7 +121,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Future<void> _fetchSpotPrices() async {
     try {
       final resp = await http.get(Uri.parse(
-          'https://numista-backend-568985927038.us-central1.run.app/api/spot_prices'));
+          '$kApiBaseUrl/api/spot_prices'));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (!mounted) return;

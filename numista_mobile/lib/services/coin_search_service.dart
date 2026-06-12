@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 
 /// A single coin result from the Vertex AI Search reference library.
 class CoinSearchResult {
@@ -113,8 +114,7 @@ class CoinSearchResponse {
 /// Calls GET /api/coin_search on the Numista.AI Cloud Run backend.
 /// Open endpoint — no auth header needed.
 class CoinSearchService {
-  static const String _baseUrl =
-      'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
 
   /// Searches the Vertex AI-indexed coin reference library.
   ///

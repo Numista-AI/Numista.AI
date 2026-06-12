@@ -24,6 +24,7 @@ import '../services/checklist_generator_service.dart';
 import '../services/pcgs_import_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants.dart';
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
@@ -66,7 +67,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _importNameCtrl = TextEditingController();
 
   // Backend API URL
-  final String _apiUrl = "https://numista-backend-568985927038.us-central1.run.app";
+  final String _apiUrl = kApiBaseUrl;
 
   @override
   void initState() {
@@ -130,7 +131,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     // Derive the correct MIME type from the file extension.
     // The backend uses the filename for parsing, but setting the correct
     // Content-Type ensures proper HTTP semantics and future-proofing.
-    MediaType _mimeFor(String filename) {
+    MediaType mimeFor(String filename) {
       final ext = filename.split('.').last.toLowerCase();
       switch (ext) {
         case 'pdf':  return MediaType('application', 'pdf');
@@ -170,7 +171,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'file',
             file.bytes!,
             filename: file.name,
-            contentType: _mimeFor(file.name),
+            contentType: mimeFor(file.name),
           ));
         } else if (file.path != null) {
           // Native mobile/desktop path
@@ -178,7 +179,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'file',
             file.path!,
             filename: file.name,
-            contentType: _mimeFor(file.name),
+            contentType: mimeFor(file.name),
           ));
         }
 

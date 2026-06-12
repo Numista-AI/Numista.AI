@@ -3,8 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
+import '../constants.dart';
 
-const _apiUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+const _apiUrl = kApiBaseUrl;
 
 // ─── ANA Standard Grade Scale ────────────────────────────────────────────────
 
@@ -763,7 +764,7 @@ class _CoinCropImage extends StatefulWidget {
 
 class _CoinCropImageState extends State<_CoinCropImage> {
   static const _api =
-      'https://numista-backend-568985927038.us-central1.run.app';
+      kApiBaseUrl;
 
   _CropState _state = _CropState.loading;
   Uint8List?  _cropBytes;

@@ -181,7 +181,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset('assets/logo_owl.png', height: 80,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (ctx, err, st) => const Icon(
                                     Icons.account_balance_rounded,
                                     color: Color(0xFFD4A843), size: 64)),
                           const SizedBox(height: 24),
