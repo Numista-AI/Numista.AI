@@ -207,21 +207,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Beta banner ──────────────────────────────────────────
+                  // ── Version badge ─────────────────────────────────────────
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7DD),
+                      color: const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFFFD54F)),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Text('🚧  BETA TESTING MODE',
+                    child: const Text('✅  Numista.AI  v3.7  —  API centralized · Morgan guides redesigned · Zero lint issues',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Color(0xFF8B6B00))),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                            color: Color(0xFF166534))),
                   ),
                   const SizedBox(height: 20),
 
@@ -738,10 +738,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v3.7',
+    date: '2026-06-12',
+    description: 'Code Quality & Morgan UX Pass',
+    isLatest: true,
+    changes: [
+      'Morgan guide bubbles fully redesigned: concise narrations, explicit arrow directions, gold ← arrow points at search box.',
+      'PDF invoice overlay: indeterminate bouncing progress bar replaces the frozen "0%" state; 10-30s timing hint added.',
+      'API URL centralised in lib/constants.dart — all 11 files now reference kApiBaseUrl.',
+      'Flutter analyze: 32 lint issues eliminated — zero warnings, zero errors.',
+      'Home dashboard: friendly news-unavailable message replaces internal config detail.',
+      'Unnecessary Map<String,dynamic> casts removed from 4 files.',
+    ],
+  ),
+  _Release(
     version: 'v3.6 Beta',
     date: '2026-06-10',
     description: 'Vertex AI Coin Reference Search',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'New Coin Search screen: semantic search over 1,913 coin reference entries powered by Vertex AI Search Enterprise tier.',
       'Natural language queries: ask about dates, mint marks, designers, metal content, or coin history.',
