@@ -180,9 +180,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           final count = (data['extracted_items'] ?? data['count'] ?? 0) as int;
+          final pending = (data['pending_items'] ?? 0) as int;  // stamps/other
+          final supplies = (data['supplies_logged'] ?? 0) as int;
           totalItems += count;
           if (!mounted) return;
-          setState(() => _statusMessage = 'Added $count coins from ${file.name}…');
+          String msg = 'Added $count coins from ${file.name}';
+          if (pending > 0) msg += ' (+$pending stamps/other in Pending)';
+          if (supplies > 0) msg += ' (+$supplies supplies logged)';
+          setState(() => _statusMessage = '$msg…');
+        } else {
+          // Non-200: show the error body so the user knows what went wrong
+          final errBody = response.body.length > 200
+              ? '${response.body.substring(0, 200)}…'
+              : response.body;
+          if (!mounted) return;
+          setState(() => _statusMessage = 'Error ${response.statusCode} on ${file.name}: $errBody');
         }
       }
 

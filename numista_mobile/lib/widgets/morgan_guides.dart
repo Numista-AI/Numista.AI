@@ -166,44 +166,54 @@ class MorganGuides {
     title: 'Browsing your collection',
     emoji: '🗂️',
     steps: [
+      // Step 1: bubble at top-right, big gold ← arrow to its left pointing at the search box
       MorganStep(
         narration:
-            "Welcome to your collection! "
-            "This is where all your coins live. "
-            "Are you looking for a specific coin, or just browsing?",
-        hint: 'You can search by name, year, or mint mark.',
-        nextLabel: "Just browsing →",
+            "Looking for a specific coin?\n"
+            "Type its name in the 🔍 Search box.\n\n"
+            "Try 'Dime', '1964', or 'Morgan Silver Dollar'.",
+        hint: "The Search box is to the left — tap it and start typing.",
+        nextLabel: 'Got it →',
+        position: GuidePosition.topRight,
+        showArrow: true,
+        arrowDirection: ArrowDirection.left,
       ),
+      // Step 2: coin list is centre-screen; bubble bottom-right stays out of the way
       MorganStep(
         narration:
-            "You can see all your coins listed here. "
-            "Tap on any coin to see its full details — "
+            "All your coins are listed here.\n"
+            "Tap any coin to see its full details — "
             "value, grade, photos, and more!",
         hint: 'Try tapping a coin that interests you.',
         nextLabel: 'I tapped a coin →',
+        position: GuidePosition.bottomRight,
       ),
+      // Step 3: detail page
       MorganStep(
         narration:
-            "On this coin's detail page, you can see everything "
-            "I know about it — the estimated value, "
-            "where it was minted, and its condition.",
+            "This page shows everything I know — "
+            "estimated value, mint, condition, and history.",
         hint: 'Scroll down to see all the details.',
         nextLabel: 'Got it →',
+        position: GuidePosition.bottomRight,
       ),
+      // Step 4: AI Deep Dive button
       MorganStep(
         narration:
-            "See the \"AI Deep Dive\" button? "
-            "Tap it to ask me anything about this coin — "
-            "history, what makes it valuable, or what it might be worth!",
-        hint: 'I love talking about coins. Ask me anything!',
+            "See the \"AI Deep Dive\" button?\n"
+            "Tap it to ask me anything about this coin!",
+        hint: 'History, value, varieties — I love talking about coins.',
         nextLabel: "That's great! →",
+        position: GuidePosition.bottomRight,
       ),
+      // Step 5: farewell, centred for emphasis
       MorganStep(
         narration:
-            "You're all set! You now know how to browse your collection "
-            "and get details on any coin. "
-            "I'm always here if you need me — just tap \"Ask Morgan\"!",
-        nextLabel: "Thanks, Morgan! →",
+            "You're all set! 🎉\n"
+            "I'm always here if you need me — "
+            "just tap \"Ask Morgan\"!",
+        nextLabel: 'Thanks, Morgan! →',
+        position: GuidePosition.bottomCenter,
       ),
     ],
   );

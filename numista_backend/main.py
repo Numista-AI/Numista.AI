@@ -1560,16 +1560,42 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         DICTIONARY FOR MAPPING: """ + json.dumps(COIN_DICTIONARY) + """
         """
         
-        response = genai_client.models.generate_content(
-            model=PRO_MODEL,
-            contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
-        items = json.loads(response.text)
+        # Try PRO model first; fall back to PRIMARY if it fails (e.g. model
+        # deprecated, quota exhausted, or API error).
+        try:
+            response = genai_client.models.generate_content(
+                model=PRO_MODEL,
+                contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+            print(f"[process_invoice] PRO model OK, filename={file.filename!r}")
+        except Exception as pro_err:
+            print(f"[process_invoice] PRO model failed ({pro_err!r}); retrying with PRIMARY")
+            response = genai_client.models.generate_content(
+                model=PRIMARY_MODEL,
+                contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+            print(f"[process_invoice] PRIMARY model OK, filename={file.filename!r}")
+
+        raw_text = response.text or ""
+        print(f"[process_invoice] raw_snippet={raw_text[:400]!r}")
+
+        items = json.loads(raw_text) if raw_text.strip() else []
         if isinstance(items, dict):
-            items = items.get('items', items.get('coins', [items]))
+            # Gemini sometimes wraps the list in an outer object —
+            # try every known wrapper key before falling back to [the dict itself].
+            for _key in ('items', 'coins', 'line_items', 'results', 'data',
+                         'extracted_items', 'invoice_items', 'coin_items'):
+                if _key in items and isinstance(items[_key], list):
+                    items = items[_key]
+                    break
+            else:
+                items = [items]   # treat the whole dict as one item record
         if not isinstance(items, list):
             items = []
 

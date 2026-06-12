@@ -20,6 +20,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import 'coin_detail_screen.dart';
+import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -193,9 +194,29 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           // Re-request focus after setState to guard against Flutter Web
           // losing the active text field during the rebuild cycle.
           _searchFocus.requestFocus();
+          // If Morgan is on Step 1 of the collection guide (the search-box
+          // tutorial step), advance to Step 2 now that the user has used search.
+          // This makes the guide reactive and prevents it from mysteriously
+          // disappearing due to Flutter web rebuild cycles.
+          _tryAdvanceMorganSearchStep();
         }
       });
     });
+  }
+
+  /// Advances the Morgan guide from Step 1 (search-box tutorial) to Step 2
+  /// automatically when the user types their first search query.
+  ///
+  /// Only fires once per guide run: the guide must be on the collection flow
+  /// AND on step 0 (the search step).  All other situations are ignored.
+  void _tryAdvanceMorganSearchStep() {
+    final gs = MorganGuideService.current.value;
+    if (gs != null &&
+        gs.guide.id == 'guide_collection' &&
+        gs.step == 0 &&
+        _searchCtrl.text.isNotEmpty) {
+      MorganGuideService.next();
+    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _buildCoinsStream() {
