@@ -1,0 +1,14 @@
+{
+  "name": "numista-ai-tests",
+  "version": "1.0.0",
+  "description": "Automated end-to-end tests for https://numista.ai",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report",
+    "generate-report": "node generate_report.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

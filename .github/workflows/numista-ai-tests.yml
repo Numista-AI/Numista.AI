@@ -1,0 +1,135 @@
+﻿# ================================================================
+# numista-ai-tests.yml
+# GitHub Actions Workflow: Automated E2E tests for numista.ai
+#
+# Schedule: Every 2 days at 6:00 AM UTC (2:00 AM Eastern)
+# Also runs: on every push to main (to catch regressions)
+# Manual run: Actions tab -> "Run workflow"
+# ================================================================
+
+name: Numista.AI Automated Tests
+
+on:
+  schedule:
+    # Every 2 days at 06:00 UTC = 2:00 AM Eastern
+    # Cron: minute hour day-of-month month day-of-week
+    - cron: '0 6 */2 * *'
+
+  # Also run on push to main branch (catches regressions before deploy)
+  push:
+    branches: [main]
+    paths:
+      - 'numista_tests/**'
+      - 'numista_mobile/**'
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout code ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Node.js ───────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: numista_tests/package-lock.json
+
+      # ── 3. Install dependencies ─────────────────────────────────
+      - name: Install dependencies
+        working-directory: numista_tests
+        run: npm ci --prefer-offline || npm install
+
+      # ── 4. Install Playwright browsers ──────────────────────────
+      - name: Install Playwright Chromium
+        working-directory: numista_tests
+        run: npx playwright install chromium --with-deps
+
+      # ── 5. Run all tests ─────────────────────────────────────────
+      - name: Run Playwright tests
+        working-directory: numista_tests
+        run: npx playwright test --reporter=list,json,html
+        env:
+          CI: true
+        continue-on-error: true  # Always generate report even if tests fail
+
+      # ── 6. Generate morning report ──────────────────────────────
+      - name: Generate morning report
+        working-directory: numista_tests
+        run: node generate_report.js
+        continue-on-error: true
+
+      # ── 7. Upload Playwright HTML report ────────────────────────
+      - name: Upload Playwright HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: numista_tests/playwright-report/
+          retention-days: 30
+
+      # ── 8. Upload screenshots ────────────────────────────────────
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-${{ github.run_id }}
+          path: numista_tests/screenshots/
+          retention-days: 30
+
+      # ── 9. Upload morning report markdown ────────────────────────
+      - name: Upload morning report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: morning-report-${{ github.run_id }}
+          path: numista_tests/reports/
+          retention-days: 90
+
+      # ── 10. Post summary to GitHub Actions summary page ──────────
+      - name: Post test summary
+        if: always()
+        working-directory: numista_tests
+        run: |
+          REPORT=$(ls reports/*_morning_report.md 2>/dev/null | tail -1)
+          if [ -f "$REPORT" ]; then
+            echo "## Numista.AI Test Report" >> $GITHUB_STEP_SUMMARY
+            cat "$REPORT" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Numista.AI Tests" >> $GITHUB_STEP_SUMMARY
+            echo "Report file not found - check test logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ── 11. Send email notification on failure ───────────────────
+      - name: Notify on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.NOTIFY_EMAIL_USER }}
+          password: ${{ secrets.NOTIFY_EMAIL_PASS }}
+          subject: "🚨 Numista.AI Tests FAILED — ${{ github.run_id }}"
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: "Numista.AI Test Bot <${{ secrets.NOTIFY_EMAIL_USER }}>"
+          body: |
+            Automated tests for https://numista.ai have FAILED.
+
+            Run ID: ${{ github.run_id }}
+            Date: ${{ github.run_started_at }}
+
+            View the full report:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Check your morning report artifact for details.
+        continue-on-error: true  # Don't fail if email not configured

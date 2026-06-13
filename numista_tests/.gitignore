@@ -1,0 +1,18 @@
+﻿# Playwright generated outputs - never commit these
+node_modules/
+playwright-report/
+test-results/
+.playwright-mcp/
+
+# Playwright artifact folders (failure traces, videos)
+screenshots/.playwright-artifacts-*/
+screenshots/*-chromium/
+screenshots/*-chromium-retry*/
+
+# Screenshots are regenerated every run - don't commit them
+screenshots/*.png
+
+# Reports are generated on each run
+reports/*.md
+reports/runner.log
+reports/test-results.json
