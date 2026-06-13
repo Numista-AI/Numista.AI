@@ -52,33 +52,47 @@ class SuppliesScreen extends StatelessWidget {
             );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
           }
 
           final docs = snapshot.data?.docs ?? [];
 
           if (docs.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No Supplies Logged Yet',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2DD4BF).withAlpha(20),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.inventory_2_outlined,
+                          size: 44, color: Color(0xFF2DD4BF)),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Supply items from invoices will appear here\nautomatically when invoices are processed.',
-                    style: TextStyle(color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    const Text(
+                      'No Supplies Logged Yet',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Supply items detected in invoices\nappear here automatically.',
+                      style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 14,
+                          height: 1.5),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           }

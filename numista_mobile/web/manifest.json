@@ -1,13 +1,26 @@
 {
-    "name": "Numista.AI",
+    "name": "Numista.AI — Coin Collection Manager",
     "short_name": "Numista.AI",
-    "start_url": ".",
+    "description": "AI-powered coin collection manager. Identify, catalog, appraise, and track your coins with Google Gemini AI.",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#1565C0",
+    "background_color": "#0F172A",
     "theme_color": "#1565C0",
-    "description": "Your AI-powered coin collection manager. Identify, catalog, track, and value your coins with Gemini AI.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["finance", "utilities", "lifestyle"],
+    "lang": "en-US",
+    "dir": "ltr",
+    "scope": "/",
+    "id": "numista-ai-app",
+    "screenshots": [
+      {
+        "src": "icons/Icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "label": "Numista.AI home screen"
+      }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -30,6 +43,22 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Add New Coins",
+            "short_name": "Add Coins",
+            "description": "Scan an invoice or photograph a coin to add it to your collection",
+            "url": "/",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "My Collection",
+            "short_name": "Collection",
+            "description": "Browse and search your full coin collection",
+            "url": "/",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         }
     ]
 }

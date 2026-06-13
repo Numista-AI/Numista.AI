@@ -58,7 +58,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             stream: WishlistService.getWishlistStream(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return _buildEmptyState();
@@ -134,25 +134,41 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.favorite_border, size: 64, color: Colors.grey.withAlpha(100)),
-          const SizedBox(height: 16),
-          const Text('Your Wish List is empty', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-          const SizedBox(height: 8),
-          const Text(
-            'Tap \u2665 Wish List on any coin in\nMy Collection to add it here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Or browse Programs to track full sets.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF63366).withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.favorite_border_rounded,
+                  size: 44, color: const Color(0xFFF63366).withAlpha(200)),
+            ),
+            const SizedBox(height: 20),
+            const Text('Your Wish List is Empty',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+            const SizedBox(height: 8),
+            const Text(
+              'Tap ♥ Wish List on any coin in\nMy Collection to save it here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Or browse Programs to track full sets.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32.0),

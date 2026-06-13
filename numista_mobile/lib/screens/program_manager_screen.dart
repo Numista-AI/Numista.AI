@@ -13,6 +13,7 @@ import 'package:uuid/uuid.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../services/checklist_generator_service.dart';
+import 'coin_search_screen.dart';
 
 class ProgramManagerScreen extends StatefulWidget {
   const ProgramManagerScreen({super.key});
@@ -392,45 +393,63 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Program History Card (AI summary placeholder before backend logic)
-          Container(
-            padding: const EdgeInsets.all(24),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E6E9)),
-              borderRadius: BorderRadius.circular(8),
+          // Program History Card — Coin Reference Search
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CoinSearchScreen(
+                  initialQuery: _selectedProgram?.name ?? '',
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.auto_awesome, color: Color(0xFFF63366), size: 20),
-                    SizedBox(width: 8),
-                    Text('📚 Program History & Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF31333F))),
-                  ],
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Cloud Run Backend Integration Pending: Click here to generate a detailed history of this program provided by Vertex AI.',
-                  style: TextStyle(color: Color(0xFF64748B), fontStyle: FontStyle.italic),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vertex AI integration coming in Phase 2.')));
-                  },
-                  icon: const Icon(Icons.bolt, size: 16),
-                  label: const Text('Generate AI History Summary'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF8F9FB),
-                    foregroundColor: const Color(0xFF3B82F6),
-                    elevation: 0,
-                    side: const BorderSide(color: Color(0xFF3B82F6)),
+                border: Border.all(color: const Color(0xFFD4A843).withAlpha(60)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD4A843).withAlpha(25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Color(0xFFD4A843), size: 22),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('AI Coin Reference Search',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Search 1,900+ coins from this program in the Vertex AI reference library',
+                          style: TextStyle(
+                              color: Colors.white.withAlpha(150), fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: Color(0xFFD4A843), size: 22),
+                ],
+              ),
             ),
           ),
           

@@ -703,20 +703,43 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               );
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
               }
 
               final docs = snapshot.data?.docs ?? [];
               if (docs.isEmpty) {
                 return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
-                      const SizedBox(height: 16),
-                      const Text('Review Hub is Empty', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      const Text('Any new AI scans will appear here.', style: TextStyle(color: Colors.grey)),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 80, height: 80,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E).withAlpha(20),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_circle_outline_rounded,
+                              size: 48, color: Color(0xFF22C55E)),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text('All Caught Up!',
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'No items waiting for review.\nScan an invoice or photograph a coin to add coins here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              height: 1.5,
+                              fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
