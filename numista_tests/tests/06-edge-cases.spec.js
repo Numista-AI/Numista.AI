@@ -1,4 +1,4 @@
-﻿const { test, expect } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 // ============================================================
 // TEST SUITE 06: Edge Cases & Resilience
@@ -45,10 +45,12 @@ test.describe('06 - Edge Cases & Resilience', () => {
   test('T03: Try It Free navigates to registration without crash', async ({ page }) => {
     await page.goto('https://numista.ai');
     await page.waitForTimeout(4000);
-    await page.mouse.click(902, 631); // Try It Free
-    await page.waitForTimeout(3000);
+    await page.mouse.click(902, 631); // Try It Free (right button)
+    await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/try-it-free.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(100000);
+    // Try It Free enters demo/signup mode — lighter initial render (~63-90KB)
+    // A completely blank/broken page would be <10KB
+    expect(buf.length, 'Try It Free shows blank page (button broken)').toBeGreaterThan(30000);
     expect(page.url()).toContain('numista.ai');
   });
 

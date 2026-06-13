@@ -5,6 +5,8 @@ module.exports = defineConfig({
   timeout: 60000,
   retries: 1,
   workers: 1,
+  // NOTE: Always use `npx playwright test` (no --reporter flag) so this
+  // config is used and JSON is always written to reports/test-results.json
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['json', { outputFile: 'reports/test-results.json' }],

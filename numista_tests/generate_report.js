@@ -1,4 +1,4 @@
-﻿/**
+/**
  * generate_report.js
  * Reads Playwright JSON results and generates a markdown morning report.
  * Run after: npx playwright test
@@ -16,41 +16,58 @@ if (!fs.existsSync(RESULTS_FILE)) {
   process.exit(1);
 }
 
-const results = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
+// Read and strip BOM (PowerShell Out-File adds UTF-8 BOM)
+let raw = fs.readFileSync(RESULTS_FILE, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+const results = JSON.parse(raw);
 const date = new Date().toISOString().split('T')[0];
 const time = new Date().toLocaleTimeString('en-US', { hour12: false });
 const reportFile = path.join(REPORTS_DIR, `${date}_morning_report.md`);
 
-// Aggregate stats
+// Aggregate stats — walk nested suite/spec/test tree
 let totalTests = 0;
 let passed = 0;
 let failed = 0;
 let flaky = 0;
 let skipped = 0;
 const failures = [];
-const warnings = [];
 
-for (const suite of results.suites || []) {
-  for (const spec of suite.specs || []) {
-    for (const test of spec.tests || []) {
-      totalTests++;
-      const status = test.results?.[0]?.status;
-      if (status === 'passed') passed++;
-      else if (status === 'failed') {
-        failed++;
-        const errMsg = test.results?.[0]?.error?.message || 'Unknown error';
-        const errStack = test.results?.[0]?.error?.stack?.split('\n')[0] || '';
-        failures.push({
-          suite: suite.title,
-          test: spec.title,
-          error: errMsg.substring(0, 300),
-          duration: test.results?.[0]?.duration || 0,
-        });
+function walkSuites(suites, parentTitle) {
+  for (const suite of (suites || [])) {
+    const title = parentTitle ? `${parentTitle} > ${suite.title}` : suite.title;
+    // Recurse into nested suites
+    if (suite.suites) walkSuites(suite.suites, title);
+    for (const spec of (suite.specs || [])) {
+      for (const test of (spec.tests || [])) {
+        totalTests++;
+        const result = test.results?.[0];
+        const status = result?.status;
+        if (status === 'passed' || status === 'expected') passed++;
+        else if (status === 'failed' || status === 'unexpected') {
+          failed++;
+          const errMsg = result?.error?.message || 'Unknown error';
+          failures.push({
+            suite: title,
+            test: spec.title,
+            error: errMsg.substring(0, 300),
+            duration: result?.duration || 0,
+          });
+        }
+        else if (status === 'flaky') { flaky++; passed++; }
+        else if (status === 'skipped') skipped++;
       }
-      else if (status === 'flaky') flaky++;
-      else if (status === 'skipped') skipped++;
     }
   }
+}
+
+walkSuites(results.suites, '');
+
+// Fallback: use top-level stats if suite walk found nothing
+if (totalTests === 0 && results.stats) {
+  passed   = results.stats.expected  || 0;
+  failed   = results.stats.unexpected || 0;
+  flaky    = results.stats.flaky     || 0;
+  skipped  = results.stats.skipped   || 0;
+  totalTests = passed + failed + flaky + skipped;
 }
 
 const passRate = totalTests > 0 ? Math.round((passed / totalTests) * 100) : 0;
