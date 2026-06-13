@@ -14,6 +14,19 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == email;
     }
 
+    // ── Estate reports — attorney portal token access ─────────────────────────
+    // The report document ID IS the access token (a crypto-random UUID).
+    // Any request that knows the exact reportId may GET that single document.
+    // This enables the no-auth attorney portal while keeping data private
+    // (the UUID is unguessable; the user controls the link).
+    // IMPORTANT: This rule must come BEFORE the wildcard /users/{email}/{document=**}
+    // rule so Firestore evaluates the more specific path first.
+    match /users/{email}/estate_reports/{reportId} {
+      allow read:  if isOwner(email);  // owner sees all their reports (list + get)
+      allow get:   if true;            // attorney portal — token == reportId
+      allow write: if false;           // backend SA only
+    }
+
     // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
     // Each user can only read and write their own subcollections.
     match /users/{email}/{document=**} {

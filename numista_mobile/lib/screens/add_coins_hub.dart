@@ -181,6 +181,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             filename: file.name,
             contentType: mimeFor(file.name),
           ));
+        } else {
+          // Neither bytes nor path is available — the platform could not read
+          // the file into memory (common on web when a file is very large or
+          // the browser memory budget is exceeded). Sending a request with no
+          // file field would cause HTTP 422 from the server. Skip this file
+          // and surface a clear message instead of failing silently.
+          if (mounted) {
+            setState(() => _statusMessage =
+                'Could not read "${file.name}" — try selecting fewer files at once, or use a smaller file.');
+          }
+          continue;
         }
 
         var streamedResponse = await request.send();

@@ -17,6 +17,7 @@ import 'our_team_screen.dart';
 import 'review_hub_screen.dart';
 import 'add_coins_hub.dart';
 import 'wishlist_screen.dart';
+import 'estate_planning_screen.dart';
 import 'human_ai_trainer_screen.dart';
 import 'login_screen.dart';
 import 'customer_service_screen.dart';
@@ -116,6 +117,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const ReviewHubScreen();
       case 'My Wishlist':
         return const WishlistScreen();
+      case 'Estate Planning':
+        return const EstatePlanningScreen();
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
       case 'Admin: Grade Flags':
@@ -345,6 +348,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'My Wishlist',
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
+                        _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
                         _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
                         _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
@@ -474,6 +478,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       'Coin Search',
       'Add New Coins',
       'My Wishlist',
+      'Estate Planning',
       'AI Deepdive',
       'Human AI Trainer Review Board',
       'AI Trainer Board',

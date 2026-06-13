@@ -55,6 +55,7 @@ dependencies:
   two_dimensional_scrollables: ^0.4.2
   firebase_ai: ^3.10.0
   flutter_markdown_plus: ^1.0.4
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

@@ -18,7 +18,7 @@ $IndexFile   = Join-Path $MobileDir "web\index.html"
 $BackupFile  = Join-Path $MobileDir "web\index.html.bak"
 
 Write-Host ""
-Write-Host "  Numista.AI — Production Deploy" -ForegroundColor Magenta
+Write-Host "  Numista.AI - Production Deploy" -ForegroundColor Magenta
 Write-Host "  ================================" -ForegroundColor Magenta
 Write-Host ""
 
@@ -132,7 +132,7 @@ try {
         Write-Host "  https://numista.ai returned HTTP $($response.StatusCode)" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "  Could not reach https://numista.ai — check manually." -ForegroundColor Yellow
+    Write-Host "  Could not reach https://numista.ai - check manually." -ForegroundColor Yellow
     Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor DarkGray
 }
 

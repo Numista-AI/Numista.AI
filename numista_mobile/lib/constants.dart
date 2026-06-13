@@ -7,4 +7,4 @@
 // Every HTTP call in the app should reference this constant rather than
 // hardcoding the full Cloud Run URL inline.
 const String kApiBaseUrl =
-    'https://numista-backend-568985927038.us-central1.run.app';
+    'https://numista-backend-qntvrqvxma-uc.a.run.app';

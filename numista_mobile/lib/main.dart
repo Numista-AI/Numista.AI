@@ -6,12 +6,34 @@ import 'firebase_options.dart';
 import 'screens/base_layout.dart';
 import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/attorney_portal_screen.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── Firebase init with timeout ─────────────────────────────────────────────
+  // ── Attorney portal deep-link detection ──────────────────────────────────
+  // If the URL contains /attorney?uid=...&token=... we skip auth entirely and
+  // render the read-only attorney portal instead of the normal app.
+  final uri = Uri.base;
+  final isAttorneyPortal = uri.path.contains('/attorney') ||
+      (uri.queryParameters.containsKey('uid') &&
+       uri.queryParameters.containsKey('token'));
+  if (isAttorneyPortal) {
+    final uid   = uri.queryParameters['uid'] ?? '';
+    final token = uri.queryParameters['token'] ?? '';
+    if (uid.isNotEmpty && token.isNotEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      runApp(MaterialApp(
+        title: 'Numista.AI — Estate Report',
+        debugShowCheckedModeBanner: false,
+        home: AttorneyPortalScreen(uid: uid, token: token),
+      ));
+      return;
+    }
+  }
   // On Flutter web, Firebase.initializeApp() can silently hang forever if the
   // network is slow or a service worker interferes. We wrap it in a 12-second
   // timeout so runApp() is always called, even in the worst case.
