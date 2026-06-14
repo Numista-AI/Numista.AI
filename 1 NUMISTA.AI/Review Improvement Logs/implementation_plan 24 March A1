@@ -1,0 +1,48 @@
+# Tomlov DM9 Capture & Auto-Crop Improvements
+
+The current# Fix Microscope Enrichment Bridge
+
+## User Review Required
+> [!IMPORTANT]
+> This fix uses the modern Streamlit `@st.dialog` feature. If your Streamlit version is older than 1.34, please let me know.
+
+## Proposed Changes
+
+### Main Application (app.py)
+#### [MODIFY] [app.py](file:///c:/Users/ericd/Documents/MyVertexProject/app.py)
+- Decorate [render_enrich_modal](file:///c:/Users/ericd/Documents/MyVertexProject/app.py#2310-2367) with `@st.dialog` to ensure it renders as a professional popup.
+- Refactor the `enrich_micro_coin` bridge to use session state for reliable triggering and avoid "flicker" caused by query parameter clearing.
+
+## Verification Plan
+### Manual Verification
+- Run a microscope scan.
+- Click "Add to Collection".
+- Verify that the parent site reloads and displays the "Verify & Enrich" modal.
+he contour detection.
+
+### Plan 2: Dynamic UI with Fixed ROI Crop (Recommended)
+This approach leverages the "Focus Ring" as a precise guide.
+
+- **How it works**:
+    1.  **Dynamic UI**: All UI elements (circle, info panel, flip countdown) are calculated based on the actual `frame.shape` (e.g., `center_x = width // 2`).
+    2.  **Fixed ROI Crop**: Since the user is instructed to "Center coin in circle", we simply crop a square region centered on those coordinates.
+- **Pros**: Extremely reliable and predictable. Produces a consistent "professional coin album" look.
+- **Cons**: Requires the user to actually put the coin in the center (which they are already trying to do).
+
+---
+
+## Technical Implementation (Plan 2)
+
+#### [MODIFY] [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's AI Coin Collection app/auto_capture.py)
+1.  **Calculate Center**: Derive `cx, cy = frame.shape[1]//2, frame.shape[0]//2` at the start of every frame processing loop.
+2.  **Refactor UI**: Replace all `320`, `240`, `640`, `480` literals with variables relative to [cx](file:///c:/Users/ericd/Documents/MyVertexProject/My%20Bio%20Numista.AI.docx), `cy`, `w`, and `h`.
+3.  **Implement [crop_coin(frame, cx, cy, radius)](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py#45-54)**: A helper function to save only the centered square region.
+4.  **Update Save Logic**: Use [crop_coin](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py#45-54) before calling `cv2.imwrite`.
+
+## Verification Plan
+
+### Manual Verification
+1.  Launch [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py).
+2.  Observe the live monitor: the "Focus Ring" should now be perfectly centered regardless of the camera resolution.
+3.  Capture a coin (Obverse and Reverse).
+4.  Check the `captures/` folder to ensure the saved `.jpg` files are tightly cropped squares containing only the coin.

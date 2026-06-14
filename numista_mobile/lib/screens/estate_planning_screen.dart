@@ -124,20 +124,51 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   String get _uid =>
       FirebaseAuth.instance.currentUser?.email ?? '';
 
-  // Skip premium gate for AJ (Customer #1) and admins during development
+  // ── Subscription tier ───────────────────────────────────────────────────────
+  // AJ (Customer #1) and @numista.ai accounts always have access.
+  // All other users need 'estate' or 'pro' subscription_tier in Firestore.
+  String _subscriptionTier = '';      // '', 'free', 'estate', 'pro'
+  bool   _tierLoaded       = false;
+  StreamSubscription<DocumentSnapshot>? _tierSub;
+
   bool get _hasEstateAccess =>
       _uid == 'jseaman1204@gmail.com' ||
       _uid.endsWith('@numista.ai') ||
-      true; // TODO: tie to subscription tier when billing is wired
+      _subscriptionTier == 'estate'   ||
+      _subscriptionTier == 'pro';
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this);
+    _listenToTier();
+  }
+
+  void _listenToTier() {
+    // AJ and internal accounts bypass Firestore lookup
+    if (_uid == 'jseaman1204@gmail.com' || _uid.endsWith('@numista.ai')) {
+      setState(() { _subscriptionTier = 'estate'; _tierLoaded = true; });
+      return;
+    }
+    _tierSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(_uid)
+        .collection('subscription')
+        .doc('status')
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      final tier = (snap.data()?['tier'] as String?) ?? 'free';
+      setState(() { _subscriptionTier = tier; _tierLoaded = true; });
+    }, onError: (_) {
+      // Firestore unavailable — fail open so users aren't incorrectly blocked
+      if (mounted) setState(() { _subscriptionTier = 'free'; _tierLoaded = true; });
+    });
   }
 
   @override
   void dispose() {
+    _tierSub?.cancel();
     _tabs.dispose();
     super.dispose();
   }
@@ -152,16 +183,18 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
           children: [
             _buildHeader(),
             Expanded(
-              child: _hasEstateAccess
-                  ? TabBarView(
-                      controller: _tabs,
-                      children: [
-                        _ProfileTab(uid: _uid),
-                        _CollectionTab(uid: _uid),
-                        _GenerateTab(uid: _uid),
-                      ],
-                    )
-                  : _PremiumGate(onUpgrade: () {}),
+              child: !_tierLoaded
+                  ? const Center(child: CircularProgressIndicator(color: _kGold))
+                  : _hasEstateAccess
+                      ? TabBarView(
+                          controller: _tabs,
+                          children: [
+                            _ProfileTab(uid: _uid),
+                            _CollectionTab(uid: _uid),
+                            _GenerateTab(uid: _uid),
+                          ],
+                        )
+                      : _PremiumGate(onUpgrade: _showUpgradeSheet),
             ),
           ],
         ),
@@ -169,7 +202,193 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
     );
   }
 
+  void _showUpgradeSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF161B27),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.72,
+        maxChildSize: 0.92,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scroll) => SingleChildScrollView(
+          controller: scroll,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A4055),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Header
+                const Text('\u{1F451}', style: TextStyle(fontSize: 40)),
+                const SizedBox(height: 12),
+                const Text('Estate Tier',
+                    style: TextStyle(
+                        color: _kGold, fontSize: 26, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                const Text(
+                  'Court-ready estate reports for serious collectors.',
+                  style: TextStyle(color: _kTextSecondary, fontSize: 14, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+
+                // Feature list
+                ..._kEstateFeatures.map((f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: _kGold.withAlpha(20),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: _kGold.withAlpha(50)),
+                        ),
+                        child: Icon(f.$1, color: _kGold, size: 18),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(f.$2,
+                                style: const TextStyle(
+                                    color: _kTextPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 2),
+                            Text(f.$3,
+                                style: const TextStyle(
+                                    color: _kTextSecondary, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+
+                const SizedBox(height: 24),
+
+                // Price row
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0E1117),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _kGold.withAlpha(60)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Estate Tier',
+                                style: TextStyle(
+                                    color: _kGold,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700)),
+                            Text('Billed annually',
+                                style: TextStyle(
+                                    color: _kTextSecondary, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      const Text('\$9.99',
+                          style: TextStyle(
+                              color: _kTextPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800)),
+                      const Text('/mo',
+                          style: TextStyle(
+                              color: _kTextSecondary, fontSize: 13)),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // CTA
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Estate Tier billing coming soon \u2014 contact support@numista.ai'),
+                          backgroundColor: Color(0xFF161B27),
+                          duration: Duration(seconds: 5),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kGold,
+                      foregroundColor: _kNavy,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w800),
+                    ),
+                    child: const Text('Get Estate Tier'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Maybe later',
+                        style: TextStyle(color: _kTextSecondary, fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Feature list for upgrade sheet
+  static const _kEstateFeatures = [
+    (Icons.picture_as_pdf_rounded,
+     'Court-Ready PDF Reports',
+     'Professionally formatted estate inventory accepted by Surrogate\'s Court'),
+    (Icons.gavel_rounded,
+     'State-Specific Legal Guidance',
+     'NY cliff rule, ET-706 deadlines, TPP memo rules for 7 states'),
+    (Icons.link_rounded,
+     'Attorney Portal Link',
+     'Shareable, read-only access for your estate attorney \u2014 no login required'),
+    (Icons.cloud_upload_rounded,
+     'Secure Cloud Storage',
+     'Every report stored in GCS with permanent download links'),
+    (Icons.assessment_rounded,
+     'IRS Appraisal Flagging',
+     'Automatically identifies coins requiring a qualified appraisal (>\$3,000 FMV)'),
+    (Icons.trending_up_rounded,
+     'Step-Up Basis Calculator',
+     'Quantifies the stepped-up basis benefit at death for your entire collection'),
+  ];
+
   Widget _buildHeader() {
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1147,6 +1366,12 @@ class _GenerateTabState extends State<_GenerateTab> {
         _ChecklistCard(profile: _profile, coinCount: _coinCount),
 
         const SizedBox(height: 20),
+
+        // ── NY-Specific Warnings (only shown for NY users) ───────────────
+        if (_profile?.jurisdiction == 'NY') ...[
+          _NyWarningCard(totalFmv: null), // FMV not available pre-generation
+          const SizedBox(height: 16),
+        ],
 
         // ── Generate Button ──────────────────────────────────────────────
         _GenerateButton(
@@ -2399,7 +2624,170 @@ class _ReportHistoryRow extends StatelessWidget {
       );
 }
 
+// ── NY-Specific Warning Card ─────────────────────────────────────────────────
+class _NyWarningCard extends StatelessWidget {
+  final double? totalFmv; // if known, shows proximity to cliff
+  const _NyWarningCard({this.totalFmv});
+
+  static const _kCliffExemption = 7_350_000.0;
+  static const _kCliffThreshold = 7_350_000.0 * 1.05; // $7,717,500
+
+  @override
+  Widget build(BuildContext context) {
+    final double? fmv = totalFmv;
+    final bool overCliff = fmv != null && fmv > _kCliffThreshold;
+    final bool nearCliff = fmv != null && !overCliff && fmv > _kCliffExemption;
+    final Color borderColor = overCliff
+        ? _kRed
+        : nearCliff
+            ? const Color(0xFFFF9800)
+            : const Color(0xFFE3B04B); // amber for informational
+    final Color bgColor = overCliff
+        ? _kRed.withAlpha(18)
+        : nearCliff
+            ? const Color(0xFFFF9800).withAlpha(15)
+            : const Color(0xFFE3B04B).withAlpha(12);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor.withAlpha(120)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance_outlined,
+                  size: 16, color: borderColor),
+              const SizedBox(width: 8),
+              Text(
+                'New York Estate Planning — Key Alerts',
+                style: TextStyle(
+                    color: borderColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Cliff rule
+          _NyAlert(
+            icon: Icons.warning_amber_rounded,
+            title: 'Estate Tax Cliff Rule',
+            body: 'If gross estate exceeds \$7,717,500 (105% of the '
+                '\$7,350,000 exemption), the ENTIRE estate is taxed — '
+                'not just the excess. This coin collection alone does not '
+                'trigger the cliff, but combined with real estate, retirement '
+                'accounts, and life insurance it may.',
+          ),
+          const SizedBox(height: 10),
+
+          // 3-year gift clawback
+          _NyAlert(
+            icon: Icons.history_toggle_off_rounded,
+            title: '3-Year Gift Clawback',
+            body: 'Gifts made within 3 years of death are added back to the '
+                'gross estate for purposes of the cliff calculation. '
+                'Any coins gifted recently should be disclosed to your '
+                'estate attorney.',
+          ),
+          const SizedBox(height: 10),
+
+          // ET-706 / filing deadline
+          _NyAlert(
+            icon: Icons.schedule_rounded,
+            title: 'ET-706 Filing Deadline',
+            body: 'If the gross estate exceeds \$7,350,000, a NY estate '
+                'tax return (ET-706) must be filed within 9 months of death — '
+                'the same deadline as the Surrogate\'s Court inventory '
+                '(SCPA §2102 / 22 NYCRR §207.20).',
+          ),
+
+          if (fmv != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0E1117),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Text('Collection FMV',
+                      style: TextStyle(
+                          color: _kTextSecondary, fontSize: 12)),
+                  const Spacer(),
+                  Text(
+                    '\$${fmv.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")}',
+                    style: TextStyle(
+                        color: overCliff ? _kRed : _kGold,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    overCliff
+                        ? '⚠ OVER CLIFF'
+                        : nearCliff
+                            ? '⚡ Near cliff'
+                            : '\$${(_kCliffThreshold - fmv).toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} below cliff',
+                    style: TextStyle(
+                        color: overCliff
+                            ? _kRed
+                            : nearCliff
+                                ? const Color(0xFFFF9800)
+                                : _kTextSecondary,
+                        fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NyAlert extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  const _NyAlert({required this.icon, required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 15, color: const Color(0xFFE3B04B)),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    color: _kTextPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(body,
+                style: const TextStyle(
+                    color: _kTextSecondary, fontSize: 11, height: 1.5)),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// ── Premium Gate ─────────────────────────────────────────────────────────────
 class _PremiumGate extends StatelessWidget {
+
   final VoidCallback onUpgrade;
   const _PremiumGate({required this.onUpgrade});
 

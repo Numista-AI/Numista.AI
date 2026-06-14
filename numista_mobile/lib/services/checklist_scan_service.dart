@@ -102,14 +102,14 @@ class ChecklistScanService {
       final request = http.MultipartRequest('POST', uri);
 
       request.fields['program_id'] = programId;
-      request.fields['user_id'] = userId;
+      request.fields['user_email'] = userId;
       request.fields['page_number'] = pageNumber.toString();
       request.fields['total_pages'] = totalPages.toString();
 
       final mimeType = _mimeTypeFromPath(imageFile.path);
       final parts = mimeType.split('/');
       request.files.add(await http.MultipartFile.fromPath(
-        'image',
+        'files',
         imageFile.path,
         contentType: MediaType(parts[0], parts.length > 1 ? parts[1] : 'jpeg'),
       ));
@@ -149,7 +149,8 @@ class ChecklistScanService {
 
   static String _mimeTypeFromPath(String path) {
     final lower = path.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.pdf'))  return 'application/pdf';
+    if (lower.endsWith('.png'))  return 'image/png';
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg'; // safe default

@@ -1,0 +1,38 @@
+# Integrate Microscope Hardware Agent into numista.ai
+
+This plan outlines the steps to add the microscope capture workflow to the existing "Add New Coins" page.
+
+## Proposed Changes
+
+### [Web Application Component]
+
+#### [MODIFY] [app.py](file:///c:/Users/ericd/Documents/MyVertexProject/app.py)
+
+1.  **Navigation Update**:
+    *   Add 'Upload image from connected high resolution device' to the `add_method` radio button options in the sidebar (around line 2611).
+    *   Map this new option to a state `ADD_MICROSCOPE`.
+
+2.  **Dashboard Implementation**:
+    *   Create a new function `render_microscope_agent()` to handle the dashboard UI.
+    *   Use `st.markdown` with unsafe HTML to apply a Slate & Gold theme.
+    *   Implement "Connect & Scan" button using `requests.post` to `http://localhost:5000/start-scan`.
+    *   Implement a real-time polling mechanism using a `while` loop and `st.empty()` placeholders to display live sharpness (Focus Meter) and status messages from `http://localhost:5000/get-status`.
+    *   Render the Gemini AI report data once the scan is complete.
+
+3.  **Main Loop Update**:
+    *   Add a conditional block to call `render_microscope_agent()` when `selection == 'ADD_MICROSCOPE'` (around line 2971).
+    *   Update the "Add New Coins" tabs to include a "Microscope Agent" tab or integrate it into the existing "Camera Scan" tab.
+
+## Design Aesthetics
+- **Theme**: Slate (#1e293b) backgrounds with Gold (#d4af37) borders and accents.
+- **Micro-animations**: Progress bars for the Focus Meter.
+- **Reporting**: Silver-bordered cards for the numismatic findings.
+
+## Verification Plan
+
+### Manual Verification
+1. Ensure [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) is running locally.
+2. Select 'Add New Coins' in the sidebar.
+3. Select 'Upload image from connected high resolution device' in the Entry Method.
+4. Verify the dashboard appears with the correct theme.
+5. Click 'Connect & Scan' and observe the live focus meter and eventual report.

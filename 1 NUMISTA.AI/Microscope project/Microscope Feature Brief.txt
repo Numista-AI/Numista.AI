@@ -1,0 +1,58 @@
+Project Brief: Numista.ai – AI-Powered Coin Collection Manager
+1. Project Overview
+Numista.ai is an application designed to revolutionize the way numismatists (coin collectors) catalog and manage their collections. The core value proposition is an automated workflow that uses a USB microscope and Generative AI to identify, grade, and catalog coins with minimal manual input.
+
+2. Hardware Environment
+Microscope: Jiusion USB Digital Microscope (UVC-compliant).
+
+Optics: Manual focus wheel (no internal motor for software-driven autofocus).
+
+Controls: Physical SNAP and ZOOM buttons (HID-based).
+
+Connection: USB 2.0.
+
+3. Technical Stack
+Development Environment: Antigravity (VS Code-based) on Windows.
+
+Primary Language: Python (using a .venv virtual environment).
+
+Core Libraries: * OpenCV (for camera feed and image processing).
+
+Google Generative AI (Gemini API for identification).
+
+NumPy (for sharpness calculations).
+
+Infrastructure: * Prototyping: Google AI Studio (Gemini 1.5 Flash).
+
+Production/Scaling: Google Cloud Vertex AI & Firebase.
+
+4. Feature Requirements (Microscope Integration)
+A. The "Auto-Capture" Workflow
+Since the microscope lacks an autofocus motor, the system must guide the user through a "Manual Focus, Auto-Capture" cycle:
+
+Peak Detection: The script calculates a real-time Laplacian Variance (Sharpness Score).
+
+User Guidance: A visual "Focus Meter" or "Stop" signal appears in the UI when sharpness peaks.
+
+Automatic Snap: The system captures the image automatically when a threshold of clarity and image stability (lack of motion) is met.
+
+Sequential Capture: The UI prompts: "Obverse captured. Please flip the coin for Reverse."
+
+B. AI Identification
+Captured images are sent to the Gemini API with a specialized prompt.
+
+Desired Output: Country, Denomination, Year, Mint Mark, Variety, and Side (Obverse/Reverse).
+
+5. Directory Structure
+AJ's AI Coin Collection app/: Primary application workspace for local hardware control scripts.
+
+MyVertexProject/: Backend infrastructure, Docker configurations, and cloud deployment triggers.
+
+captures/: Local storage for raw images before they are uploaded to the cloud database.
+
+6. Developer Guidelines (For the Gem)
+Python Focus: Prioritize clean, readable Python code suitable for an entrepreneur who is currently upskilling in the language.
+
+Hardware First: Always account for the fact that the camera is a USB peripheral (handle camera indices 0, 1, 2 and connection errors).
+
+Cost Efficiency: Use Gemini 1.5 Flash for high-speed, low-cost image analysis during development.

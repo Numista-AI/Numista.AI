@@ -1,0 +1,42 @@
+# Walkthrough - Coin Capture Web Server
+
+I have successfully converted the standalone [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) script into a Flask-based web server. This allows your website to trigger coin scans and poll for status updates.
+
+## Changes Made
+
+### 1. New Requirements
+Created a [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/requirements.txt) file with the necessary dependencies:
+- `flask` & `flask-cors`: For the web API.
+- `opencv-python` & `numpy`: For image processing.
+- `google-genai` & `python-dotenv`: For Gemini AI identification.
+
+### 2. Flask Integration in [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py)
+- **Threaded Capture**: The capture logic now runs in a background thread, preventing the web server from freezing during a scan.
+- **Global State**: A `capture_status` object tracks sharpness, motion, and current steps in real-time.
+- **API Endpoints**:
+    - `POST /start-scan`: Triggers the dual-side capture process.
+    - `GET /get-status`: Returns JSON data about the current scan progress.
+
+### 3. Hardware Persistence
+The script still targets the **Jiusion Microscope on Camera 1** and enforces the **2000 Sharpness Floor** as requested.
+
+## How to Run
+
+1. **Install Dependencies**:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+2. **Start the Server**:
+   ```powershell
+   python auto_capture.py
+   ```
+   The server will start at `http://localhost:5000`.
+
+3. **Trigger via Website**:
+   Your website can now send a request to `http://localhost:5000/start-scan` to begin the process. Use `http://localhost:5000/get-status` to show the live progress (sharpness, step, etc.) to the user.
+
+## Verification
+- [x] Verified [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/requirements.txt) content.
+- [x] Verified [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) refactor maintains core logic.
+- [x] Verified server structure and route implementation.

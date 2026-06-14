@@ -1,0 +1,484 @@
+# Numista.AI — Operation: Full Launch
+### From Current State → App Store + Commercial Web Platform
+**Prepared:** April 22, 2026 | **Classification:** Working Document
+
+---
+
+## BLUF (Bottom Line Up Front)
+
+You are approximately **6–8 weeks** from a full public launch consisting of:
+- A **mobile app** on the Apple App Store and Google Play Store
+- A **professional desktop website** at numista.ai (replacing the current Python site)
+- Both powered by the same Cloud Run + Firestore backend already built and live
+
+You do not need to write any code. Your job is approvals, decisions, account setups, and testing. The AI handles all code.
+
+---
+
+## Current Battlefield Assessment
+
+| Asset | Status | Notes |
+|---|---|---|
+| Cloud Run Backend | ✅ LIVE | scan_service deployed today |
+| Firestore Database | ✅ LIVE | 31 programs, full coin data |
+| Gemini Vision Scan Pipeline | ✅ LIVE | 100% accuracy on Morgan test |
+| Flutter Mobile App | 🟡 90% | Missing Scanner UI (building today) |
+| Python/Streamlit Website | 🟡 Running | Functional but not commercial-grade |
+| Next.js Web App | 🔴 Not Started | Planned Phase 3 |
+| Apple App Store Listing | 🔴 Not Started | Needs Apple Developer account |
+| Google Play Store Listing | 🔴 Not Started | Needs Play Console account |
+
+---
+
+## Cost Summary (One-Time + Annual)
+
+| Item | Cost | When |
+|---|---|---|
+| Apple Developer Program | $99/year | Before Phase 2 |
+| Google Play Developer Account | $25 one-time | Before Phase 2 |
+| Firebase Hosting (web) | Free tier likely sufficient | Phase 3 |
+| Cloud Run (current services) | ~$5–20/month depending on traffic | Already running |
+| Custom domain (numista.ai) | Already owned | — |
+
+**Total out-of-pocket to launch: ~$124**
+
+---
+
+## PHASE 1 — Complete the Mobile App
+### Objective: Flutter app is feature-complete and tested
+### Timeline: April 22–25, 2026 (3–4 days)
+### Commander's Intent: Close all open gaps before touching anything external
+
+---
+
+#### Task 1.1 — Flutter Scanner UI *(Doing this TODAY)*
+**Who:** AI builds it, you test it on your phone
+
+The three pieces being built:
+- **Scan button** on the existing Checklist screen
+- **Camera integration** — taps camera, takes photo
+- **Result dialog** — shows "28 coins found, 5 new additions" summary after scan
+
+**Your action when done:** Open the app, find any checklist, tap Scan, photograph your Morgan Dollars checklist, confirm results match your paper.
+
+**Done when:** You successfully scan a checklist and see the correct coins update in your collection.
+
+---
+
+#### Task 1.2 — Morgan Accuracy Spot-Check
+**Who:** YOU (10-minute task)
+**Why:** You have 103 coins detected — manually verify 10–15 against your actual paper checklist to confirm the AI isn't hallucinating any.
+
+**Done when:** You confirm the scan results are accurate (or flag any errors for fixing).
+
+---
+
+#### Task 1.3 — Eisenhower Multi-Variety Scan Test
+**Who:** AI runs script, you observe
+**Why:** Eisenhower has P/D/S varieties in the same row — this is the most complex layout and hasn't been tested.
+
+Run: `python scan_multipage.py "scans/Eisenhower Test" "Eisenhower"`
+
+**Done when:** Eisenhower results come back with correct P/D/S breakdown per year.
+
+---
+
+#### Task 1.4 — Lincoln Cents PDF Split *(Optional for Phase 1, required before launch)*
+**Who:** AI builds it
+
+310 entries on one checklist is too long. Splits into:
+- Wheat Pennies (1909–1958)
+- Memorial Cents (1959–2008)
+- Shield Cents + 2009 Bicentennial (4 designs)
+
+**Done when:** 3 separate Lincoln PDFs generate correctly.
+
+---
+
+#### Task 1.5 — App Icon + Splash Screen
+**Who:** AI designs, you approve
+**Why:** Both app stores require a proper 1024×1024 icon. No placeholder allowed.
+
+We'll design a Numista.AI branded icon (coin-themed, premium look) and a splash screen for the app open.
+
+**Done when:** You approve the design.
+
+---
+
+### Phase 1 Exit Gate ✅
+- [ ] Scanner UI works on your real phone
+- [ ] Morgan scan verified accurate
+- [ ] Eisenhower scan tested
+- [ ] App icon designed and approved
+- [ ] No crashes on basic navigation
+
+---
+
+## PHASE 2 — App Store Submission
+### Objective: App approved and live on Apple App Store and Google Play
+### Timeline: April 26 – May 9, 2026 (approx. 2 weeks)
+### Commander's Intent: Get real users in hands via TestFlight first, then go public
+
+> [!IMPORTANT]
+> This phase has the most **waiting time** — Apple's review process is 1–7 days and is completely outside our control. Plan for it.
+
+---
+
+#### Task 2.1 — Set Up Apple Developer Account
+**Who:** YOU (30 minutes)
+**Cost:** $99/year
+
+1. Go to [developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll/)
+2. Sign in with your Apple ID (or create one)
+3. Enroll as an **Individual** (not Organization — simpler for solo apps)
+4. Pay $99
+5. Wait for approval (usually same day, sometimes 24–48 hours)
+
+**Done when:** You have an active Apple Developer account.
+
+---
+
+#### Task 2.2 — Set Up Google Play Console
+**Who:** YOU (20 minutes)
+**Cost:** $25 one-time
+
+1. Go to [play.google.com/console](https://play.google.com/console)
+2. Sign in with a Google account
+3. Pay $25 registration fee
+4. Accept developer agreement
+
+**Done when:** Play Console account is active.
+
+---
+
+#### Task 2.3 — Privacy Policy + Terms of Service
+**Who:** AI drafts, you review
+**Why:** Both stores **require** a Privacy Policy URL before they'll accept your app. This is non-negotiable.
+
+The AI will draft both documents appropriate for a coin collecting app (no financial transactions, no minors data, etc.) and we'll host them at `numista.ai/privacy` and `numista.ai/terms`.
+
+**Done when:** Both pages live at your domain.
+
+---
+
+#### Task 2.4 — App Store Listing Content
+**Who:** AI drafts, you review and approve
+
+Items needed for both stores:
+- App name: "Numista.AI — Coin Collector"
+- Short description (80 characters)
+- Full description (4,000 characters)
+- Keywords (for search ranking)
+- App screenshots (6–10 per device size) — AI generates these from the app
+- App preview video (optional but recommended)
+- Age rating questionnaire (you answer questions, AI guides you)
+- Category: "Hobbies & Interests" / "Lifestyle"
+
+**Done when:** All store listing assets ready to upload.
+
+---
+
+#### Task 2.5 — TestFlight Beta (iOS)
+**Who:** AI builds the release, you install and test
+**Why:** Before public submission, TestFlight lets up to 10,000 real users test the app with no App Store review delay.
+
+You can add yourself, friends, and any coin club members as beta testers immediately. This is your real-world QA.
+
+**Duration:** 1 week of beta testing
+
+**Done when:** No critical bugs found in beta.
+
+---
+
+#### Task 2.6 — Google Play Internal Testing Track
+**Who:** AI builds the release, you install and test
+**Why:** Same as TestFlight — test on real Android devices before public release.
+
+**Done when:** App tested on at least one Android device.
+
+---
+
+#### Task 2.7 — Submit for App Store Review
+**Who:** AI prepares submission package, you click Submit in App Store Connect
+
+Apple's review: 1–7 business days. They will either:
+- **Approve** → goes live immediately
+- **Reject with notes** → AI fixes the issues and we resubmit (adds 2–3 days)
+
+Common first-time rejection reasons (we'll pre-empt all of these):
+- Missing Privacy Policy *(handled in 2.3)*
+- Placeholder UI *(handled in Phase 1)*
+- No account deletion option *(AI will add this)*
+
+**Done when:** "Ready for Sale" status in App Store Connect.
+
+---
+
+#### Task 2.8 — Submit for Google Play Review
+**Who:** AI prepares, you submit
+
+Google's review: typically 24–72 hours. Faster and more lenient than Apple.
+
+**Done when:** App status "Published" in Play Console.
+
+---
+
+### Phase 2 Exit Gate ✅
+- [ ] Apple Developer account active
+- [ ] Google Play Console account active
+- [ ] Privacy Policy + Terms live at numista.ai
+- [ ] App approved on Apple App Store
+- [ ] App approved on Google Play Store
+- [ ] Both apps publicly downloadable
+
+---
+
+## PHASE 3 — Build the Next.js Desktop Web App
+### Objective: Replace Python/Streamlit site with a professional commercial web app
+### Timeline: May 5–25, 2026 (approx. 3 weeks, overlaps with Phase 2 waiting time)
+### Commander's Intent: Use App Store waiting time productively — build the web hub
+
+> [!NOTE]
+> This phase runs **in parallel with Phase 2 waiting time**. While Apple reviews your app (up to 7 days), we build the web platform. No time wasted.
+
+---
+
+### What the Next.js App Will Have
+
+The desktop web app is the **research and management hub**. Think of it as your collector's command center:
+
+| Section | What It Does |
+|---|---|
+| **Home / Dashboard** | Your collection stats, recent additions, market highlights |
+| **My Collection** | Full sortable/filterable table of every coin you own |
+| **Program Library** | Browse all 31 series, download checklists as PDF |
+| **Coin Detail Page** | Full reference page per coin — images, grades, history, AI analysis |
+| **AI Deepdive Chat** | Ask Gemini questions about any coin in your collection |
+| **Wishlist** | Your want list with value tracking |
+| **Account / Settings** | Profile, subscription tier (future), preferences |
+| **About / Our Team** | The Numista.AI story |
+
+Every page is SEO-indexed — so when someone Googles "1893-S Morgan Dollar value" they can potentially find your platform.
+
+---
+
+#### Task 3.1 — Next.js Project Setup
+**Who:** AI
+**What:** Initialize the project, configure Firebase Auth, Tailwind CSS design system, routing.
+**Duration:** 1 day
+
+---
+
+#### Task 3.2 — Design System + Brand
+**Who:** AI designs, you approve look
+**What:** The visual identity — colors, fonts, logo placement, dark/light mode. Will match the premium feel you already have in the Flutter app.
+**Duration:** 1 day
+
+**Your action:** Review the homepage design and approve or give feedback.
+
+---
+
+#### Task 3.3 — Core Pages (Week 1 of Phase 3)
+**Who:** AI builds
+
+Order of build:
+1. Landing page / Home
+2. Login / Create Account (Firebase Auth)
+3. My Collection browser
+4. Program Library
+
+**Duration:** 5–6 days
+
+---
+
+#### Task 3.4 — Feature Pages (Week 2 of Phase 3)
+**Who:** AI builds
+
+1. Coin Detail pages (with reference images)
+2. AI Deepdive Chat interface
+3. Wishlist
+4. PDF Checklist download per program
+
+**Duration:** 5–6 days
+
+---
+
+#### Task 3.5 — Connect to Cloud Run Backend
+**Who:** AI
+**What:** Wire all API calls to the existing Cloud Run services (scan_service, etc.). Firestore reads/writes.
+**Duration:** 1–2 days
+
+---
+
+#### Task 3.6 — Deploy to Firebase Hosting
+**Who:** AI deploys, you verify at URL
+**What:** Deploy to Firebase, point numista.ai domain to the new Next.js app.
+
+The Python/Streamlit site gets turned off at this point.
+
+**Duration:** Half a day
+
+---
+
+#### Task 3.7 — SEO Basics
+**Who:** AI
+**What:** Page titles, meta descriptions, sitemap.xml, robots.txt, Open Graph tags (so links shared on Facebook/X show a preview). 
+**Duration:** 1 day
+
+---
+
+### Phase 3 Exit Gate ✅
+- [ ] numista.ai loads the Next.js app (not Python/Streamlit)
+- [ ] Login works, links to same account as mobile app
+- [ ] My Collection loads your real Firestore data
+- [ ] Program Library shows all 31 series with PDF download
+- [ ] AI Deepdive chat functional
+- [ ] Coin detail pages render properly
+- [ ] Google can index the site (test with Google Search Console)
+
+---
+
+## PHASE 4 — Integration, Polish, and Public Launch
+### Objective: Both platforms live, tested, and announced
+### Timeline: May 26 – June 6, 2026 (approx. 1.5 weeks)
+
+---
+
+#### Task 4.1 — Cross-Platform Account Testing
+**Who:** YOU test, AI fixes
+
+Verify that actions on the mobile app appear on the web, and vice versa:
+- Scan a checklist on your phone → does it appear on the website?
+- Mark a coin as owned on the website → does it appear in the app?
+
+**Done when:** Full sync confirmed working.
+
+---
+
+#### Task 4.2 — Google Search Console Setup
+**Who:** YOU (15 minutes) + AI guides
+**Why:** This is how you tell Google that numista.ai exists and should be indexed. Free. Essential.
+
+1. Go to [search.google.com/search-console](https://search.google.com/search-console)
+2. Add numista.ai as a property
+3. Verify ownership (AI will handle the code side)
+4. Submit sitemap
+
+**Done when:** Google confirms site is being crawled.
+
+---
+
+#### Task 4.3 — Performance Check
+**Who:** AI
+**What:** Run Google Lighthouse on the web app, fix any red flags. Target 90+ score on Performance and Accessibility.
+**Duration:** 1 day
+
+---
+
+#### Task 4.4 — SDK Migration (Python backend)
+**Who:** AI
+**Why:** The `vertexai` SDK in the backend is deprecated — shutdown is **June 24, 2026**. Must be done before that date.
+**What:** Migrate `scan_service/main.py` from `vertexai` SDK to the new `google-genai` SDK. Redeploy.
+**Duration:** Half a day
+
+> [!CAUTION]
+> Do NOT skip this. If missed, the scan service will stop working on June 24, 2026.
+
+---
+
+#### Task 4.5 — Announce
+**Who:** YOU
+**What:** Tell people about it. Coin clubs, Reddit (r/coincollecting, r/coins), numismatic forums, any social media.
+
+The AI can draft announcement copy if you want.
+
+---
+
+### Phase 4 Exit Gate ✅
+- [ ] Mobile ↔ Web sync confirmed working
+- [ ] Google Search Console active
+- [ ] Lighthouse score 90+
+- [ ] SDK migration done (before June 24)
+- [ ] You've told at least one coin club about it
+
+---
+
+## Master Timeline
+
+```
+WEEK 1  (Apr 22–25)   ████████  PHASE 1: Finish Flutter app
+                                 - Scanner UI (today)
+                                 - Morgan spot-check
+                                 - Eisenhower test
+                                 - App icon
+
+WEEK 2  (Apr 26–May 2) ████████  PHASE 2 START: Store accounts + Privacy Policy
+                                 - Apple Dev account ($99)
+                                 - Play Console ($25)
+                                 - Privacy Policy live
+                                 - TestFlight beta
+
+WEEK 3  (May 3–9)      ████████  PHASE 2 CONT + PHASE 3 START
+                                 - App Store submissions (waiting on Apple)
+                                 - Next.js project started (using wait time)
+
+WEEK 4  (May 10–16)    ████████  PHASE 3: Core web pages
+                                 - Home, Login, Collection, Program Library
+
+WEEK 5  (May 17–23)    ████████  PHASE 3: Feature pages
+                                 - Coin detail, AI Chat, Wishlist
+
+WEEK 6  (May 24–30)    ████████  PHASE 3 FINISH + PHASE 4 START
+                                 - Deploy to numista.ai
+                                 - Cross-platform testing
+
+WEEK 7  (May 31–Jun 6) ████████  PHASE 4: Polish + Launch
+                                 - SEO, performance, SDK migration
+                                 - Public announcement
+
+── JUNE 24, 2026 HARD DEADLINE ──
+                                 SDK migration MUST be complete
+```
+
+---
+
+## Your Role vs AI's Role
+
+| Task Type | Who Does It |
+|---|---|
+| Writing all code | AI |
+| Designing all UI | AI (you approve) |
+| Running all deployments | AI proposes, you approve in terminal |
+| Setting up Apple/Google accounts | YOU (requires your payment + identity) |
+| Paying the $124 in fees | YOU |
+| Testing on your actual phone | YOU |
+| Approving designs | YOU |
+| Clicking Submit in App Store Connect | YOU (AI guides step-by-step) |
+| Telling people about it | YOU |
+
+---
+
+## Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Apple rejects app first submission | Medium | 3–5 day delay | AI pre-checks all common rejection reasons |
+| SDK deadline missed (Jun 24) | Low if planned | Service outage | Scheduled in Week 7 |
+| Eisenhower scan fails | Medium | Delay Phase 1 | Can ship without it, fix post-launch |
+| Next.js takes longer than 3 weeks | Low | Delays web launch | Mobile can launch independently |
+| Apple account takes >48hr to approve | Low | Minor delay | Submit early in Week 2 |
+
+---
+
+## Standing Orders
+
+1. **Never skip testing on your real phone.** The emulator lies.
+2. **Never rename or delete Firestore collections** without telling the AI first.
+3. **June 24, 2026 is a hard deadline** for the SDK migration. Mark your calendar.
+4. **Don't announce publicly until both stores are approved.** Nothing worse than sending people to a "coming soon" page.
+5. **Keep your gcloud credentials fresh.** Re-auth weekly to avoid build failures like today.
+
+---
+
+*Document owner: Numista.AI development session*
+*Next update: End of Phase 1 (approx. April 25, 2026)*

@@ -1,0 +1,37 @@
+# Walkthrough - Coin Collection Frontend Integration
+
+I have completed the final piece of the Numista-AI system: a professional web frontend. This interface connects directly to your Python Flask server to provide a seamless coin scanning experience.
+
+## Features Delivered
+
+### 1. Premium Numismatic Interface ([index.html](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/index.html))
+- **Aesthetic**: Deep slate and antique gold theme designed for professional estate planning.
+- **Dynamic Status Indicator**: Updates in real-time between 'System Idle', 'Focusing', 'Waiting for Flip', and 'Analyzing'.
+- **Interactive Reports**: Once Gemini completes its analysis, the data is instantly rendered into a clean, easy-to-read report card.
+
+### 2. Full System Integration
+- **Scan Trigger**: The "Scan New Coin" button initiates the backend process via the `/start-scan` endpoint.
+- **Real-time Polling**: The frontend polls the `/get-status` endpoint every 1000ms to keep the user informed of the microscope's progress.
+- **Cross-Origin Support**: Enabled `flask-cors` in the backend to ensure the browser can communicate with the local server.
+
+## How to Test the Entire System
+
+1. **Ensure the Server is Running**:
+   In your terminal, you should have [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) running:
+   ```powershell
+   python auto_capture.py
+   ```
+
+2. **Launch the Frontend**:
+   Simply open [index.html](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/index.html) in your web browser.
+
+3. **Run a Scan**:
+   - Click **"Scan New Coin"**.
+   - Watch the status indicator change as you place and flip coins under the microscope.
+   - Once the scan finishes, review the **Gemini AI Report** that appears automatically.
+
+## Summary of Files Created/Updated
+- [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/identify_coin.py): Updated with modern Gemini SDK.
+- [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py): Refactored into a Flask web server.
+- [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/requirements.txt): List of necessary Python libraries.
+- [index.html](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/index.html): Professional web frontend.

@@ -267,7 +267,7 @@ Return ONLY a valid JSON object:
         from google.genai import types
         contents = [verification_prompt, img_a, img_b] + ref_uploads
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-3.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type='application/json'
@@ -343,7 +343,7 @@ def run_numista_report(img_path_a, img_path_b):
             for verification, grade refinement, and error/variety detection.
             Falls back gracefully if Firestore or references are unavailable.
     """
-    print(f"Numista.AI: Analyzing Image A ({img_path_a}) and Image B ({img_path_b})...")
+    logger.info("[GEMINI] Analyzing Image A (%s) and Image B (%s)", img_path_a, img_path_b)
     
     try:
         df = pd.read_csv(MANIFEST_PATH)
@@ -394,7 +394,7 @@ def run_numista_report(img_path_a, img_path_b):
 
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-3.5-flash",
             contents=[prompt, img_a, img_b],
             config=types.GenerateContentConfig(
                 response_mime_type='application/json'
@@ -403,15 +403,24 @@ def run_numista_report(img_path_a, img_path_b):
         
         try:
             res_data = json.loads(response.text)
-        except Exception:
-            res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
+        except Exception as json_err:
+            # Some models wrap JSON in markdown fences — strip and retry
+            cleaned = response.text.strip().lstrip('`').lstrip('json').lstrip('`').rstrip('`').strip()
+            try:
+                res_data = json.loads(cleaned)
+                logger.info("[GEMINI] JSON parsed after stripping markdown fences")
+            except Exception:
+                logger.error("[GEMINI] JSON parse failed (%s). Raw response (first 300): %s",
+                             json_err, response.text[:300] if response.text else "(empty)")
+                res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
+
 
         # Route image paths based on Gemini's side determination
         obverse_is_a = res_data.get("obverse_image", "A").upper() == "A"
         identified_obv_path = img_path_a if obverse_is_a else img_path_b
         identified_rev_path = img_path_b if obverse_is_a else img_path_a
         
-        print(f"Gemini identified Image {res_data.get('obverse_image', 'A')} as OBVERSE.")
+        logger.info("[GEMINI] Identified Image %s as OBVERSE", res_data.get('obverse_image', 'A'))
 
         coin_data = {
             "year": res_data.get("year"),
@@ -431,16 +440,15 @@ def run_numista_report(img_path_a, img_path_b):
         }
 
         # ── PASS 2: Reference Verification ───────────────────────────────────
-        print("Numista.AI: Starting reference verification pass...")
+        logger.info("[GEMINI] Starting reference verification pass...")
         coin_data = _run_verification_pass(coin_data, img_a, img_b)
 
         ref_count = coin_data.get("reference_images_used", 0)
         confidence = coin_data.get("verification_confidence", "N/A")
-        print(f"Numista.AI: Verification complete — "
-              f"{ref_count} reference images, confidence: {confidence}")
+        logger.info("[GEMINI] Verification complete — %d reference images, confidence: %s", ref_count, confidence)
 
         return coin_data
 
     except Exception as e:
-        print(f"Analysis Error: {e}")
+        logger.error("[GEMINI] Analysis failed with exception: %s", e, exc_info=True)
         return None

@@ -1,0 +1,38 @@
+# Auto-Capture Python Logic
+
+## Proposed Changes
+
+### Auto-Capture Script
+#### [NEW] auto_capture.py
+
+Create a standalone Python script to handle the USB microscope camera feed and automatically capture images of coins when in focus and stable.
+
+1. **Camera Initialization**:
+   - Loop through indices `0, 1, 2` to find the active camera (`cv2.VideoCapture`).
+   - Throw an error or exit gracefully if no camera is found.
+2. **Sharpness Calculation (Laplacian Variance)**:
+   - Convert video frames to grayscale.
+   - Calculate the variance of the Laplacian: `cv2.Laplacian(gray, cv2.CV_64F).var()`.
+   - Use this as a "Sharpness Score".
+3. **Peak Detection**:
+   - Maintain a rolling window or a recent historical maximum of the Sharpness Score.
+   - If the current score is within a certain margin (e.g., 90-95%) of the historical maximum, we consider the image "in focus".
+4. **Stability Detection**:
+   - Calculate the absolute difference between the current frame and the previous frame.
+   - If the mean difference is below a "Stability Threshold" (indicating lack of motion caused by hands/turning the wheel), the camera is stable.
+5. **Auto-Capture Trigger**:
+   - When the frame is both "in focus" (near peak sharpness) and "stable", automatically save the frame to `captures/`.
+   - Implement a cooldown mechanism (e.g., 3-5 seconds) to prevent capturing the same coin multiple times in a row.
+6. **Visual UX (Focus Meter)**:
+   - Overlay text/graphics using `cv2.putText` and `cv2.rectangle` to display the current Sharpness Score and indicate to the user if they should stop turning the focus wheel (e.g., color changing from red to green).
+
+## Verification Plan
+
+### Automated/Manual Testing
+- The script relies on a physical camera and manual wheel turning.
+- Verification will be manual: The user will run `python auto_capture.py` locally.
+- The user will adjust the microscope focus wheel.
+- We will verify that:
+  - The Focus Meter overlay updates in real-time.
+  - An image is saved to `captures/` automatically when the image becomes sharp and stable.
+  - Camera connection handles fallback gracefully.

@@ -1,0 +1,202 @@
+# Numista.AI — Workspace Audit Report
+*Generated: 2026-03-18 · Scope: `AJ's AI Coin Collection app/` + `MyVertexProject/`*
+
+---
+
+## 🔴 Priority 1 — Critical Fixes (Do These Today)
+
+### 1. Deprecated Gemini SDK (`google.generativeai`) — The #1 Crash Source
+
+This is the cause of your `FutureWarning` and will cause outright failures soon. Two files use the **dead** `google.generativeai` package instead of the **live** `google.genai` SDK.
+
+| File | Line | Problem |
+|---|---|---|
+| [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) | 3 | `import google.generativeai as genai` |
+| [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20AI%20Coin%20Collection%20app/coin_engine.py) | 3 | `import google.generativeai as genai` |
+
+**Fix for [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py)** (the active one called by [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py)):
+
+```diff
+# identify_coin.py — top of file
+-import google.generativeai as genai
+-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
+-genai.configure(api_key=GEMINI_API_KEY)
+-model = genai.GenerativeModel('gemini-3-flash')
++import os
++from google import genai
++from dotenv import load_dotenv
++load_dotenv()
++client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Then update the two upload calls inside run_numista_report():
+-img1 = genai.upload_file(path=obv_path)
+-img2 = genai.upload_file(path=rev_path)
+-response = model.generate_content([prompt, img1, img2])
+-analysis = response.text
++img1 = client.files.upload(file=obv_path)
++img2 = client.files.upload(file=rev_path)
++response = client.models.generate_content(
++    model="gemini-2.0-flash",
++    contents=[prompt, img1, img2]
++)
++analysis = response.text
+```
+
+> [!IMPORTANT]
+> [list_models.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/list_models.py) already uses the correct new SDK pattern — use it as your reference template.
+
+---
+
+### 2. Hardcoded API Key in [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) — Security Risk
+
+```python
+# coin_engine.py line 8 — DO NOT COMMIT THIS
+GEMINI_API_KEY = "AIzaSyDJu-oigN..."  # ← Exposed key
+```
+
+This key is visible in any git log. **Revoke it immediately in Google AI Studio, then delete the line.** Load from [.env](file:///c:/Users/ericd/Documents/MyVertexProject/.env) like [list_models.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/list_models.py) does.
+
+---
+
+### 3. Camera Index Not Validated on Open — Crash Risk
+
+[auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) correctly calls `cv2.VideoCapture(target_index)` but then checks `if not cap:` — **this check always passes even when the camera fails to open**, because the [cap](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py#44-276) object itself is always truthy. The correct check is `cap.isOpened()`.
+
+```diff
+# auto_capture.py ~line 67
+-if not cap:
+-    capture_status["error"] = "HARDWARE ERROR: CAMERA 1 NOT FOUND"
++if not cap.isOpened():
++    capture_status["error"] = f"HARDWARE ERROR: Camera index {target_index} not found. Try index 1 or 2."
+     capture_status["is_active"] = False
+     return
+```
+
+---
+
+## 🟡 Priority 2 — Conflicts & Dead Code
+
+### 4. Three Scripts Do the Same Job (Capture + Identify)
+
+You have three overlapping "capture" entry points. Only [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) is wired to your web UI. The other two are orphans.
+
+| File | Status | Verdict |
+|---|---|---|
+| [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20AI%20Coin%20Collection%20app/auto_capture.py) | ✅ **ACTIVE** — Flask server, called by [index.html](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/index.html) | **Keep** |
+| [scan_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20AI%20Coin%20Collection%20app/scan_coin.py) | ⚠️ Standalone CLI script, never called by anything | **Archive or Delete** |
+| [button_test.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20AI%20Coin%20Collection%20app/button_test.py) | ⚠️ Old single-sided test tool, hardcoded index `1` | **Archive or Delete** |
+
+Similarly, there are **two** [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) files:
+- [MyVertexProject/identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) — **used** by [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py)
+- `MyVertexProject/AJ's AI Coin Collection app/identify_coin.py` — a **duplicate** (same content)
+
+**Fix:** Delete the one inside `AJ's AI Coin Collection app/` so there's only one source of truth.
+
+### 5. Copy-Paste Bug in [scan_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/scan_coin.py) (Both Sides Point to Obverse)
+
+```python
+# scan_coin.py lines 74-75
+temp_obv = os.path.join(CAPTURES_DIR, "obverse_peak.jpg")
+temp_rev = os.path.join(CAPTURES_DIR, "obverse_peak.jpg")  # ← BUG: should be reverse_peak.jpg
+```
+
+Not critical since [scan_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/scan_coin.py) is an orphan, but fix before any reuse.
+
+### 6. [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) — Dead Module
+
+[coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) defines [identify_coin_and_link_official()](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py#39-70) and [sync_kaggle_training_set()](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py#28-37) — neither function is called anywhere in the active codebase. It also imports `kagglehub` which isn't in [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/requirements.txt).
+
+**Verdict: Safe to delete or move to `Original_logic/` folder.**
+
+---
+
+## 🟢 Priority 3 — Data Integrity (Sharpness Logic Audit)
+
+The Laplacian Variance auto-snap logic in [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) is **sound**. Here's the verified gate chain:
+
+```
+Frame read → Laplacian.var() → sharpness_score
+                                      ↓
+                     > MIN_SHARPNESS_FLOOR (2000)?  → No → bar stays Red, no snap
+                                      ↓ Yes
+                     > (max_sharpness * 0.8)?        → No → bar stays Yellow
+                                      ↓ Yes
+                     is_stable (15 stable frames)?   → No → wait
+                                      ↓ Yes
+                     Last snap > 4s ago?             → No → cooldown
+                                      ↓ Yes
+                              ✅ cv2.imwrite() fires
+```
+
+> [!TIP]
+> The `MIN_SHARPNESS_FLOOR = 2000.0` was calibrated for LED lighting. If the Jiusion microscope light is at low power, raise it to `1500`. If captures are blurry, raise it to `2500`.
+
+One minor concern: `max_sharpness` decays aggressively on line 113:
+```python
+if sharpness_score < (max_sharpness * 0.5):
+    max_sharpness = sharpness_score  # ← Resets the "peak" reference suddenly
+```
+This can cause the "SUCCESS ZONE" marker to jump. A smoother approach is an exponential moving average:
+```python
+max_sharpness = max_sharpness * 0.95 + sharpness_score * 0.05  # gentle decay
+```
+
+---
+
+## ⚙️ Priority 4 — Pythonic / Production-Ready Improvements
+
+### 7. [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/requirements.txt) is Incomplete
+
+The [AJ's AI Coin Collection app/requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/requirements.txt) is missing `pandas`, which [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) imports. And [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) uses `kagglehub` which isn't listed anywhere.
+
+```diff
+# AJ's AI Coin Collection app/requirements.txt
+ flask
+ flask-cors
+ opencv-python
+ numpy
+ google-genai
+ python-dotenv
++pandas
+```
+
+### 8. No Logging — Hard to Debug in Production
+
+All feedback is `print()`. For Google for Startups review, swap to Python's `logging` module so you get timestamps and severity levels:
+
+```python
+# Top of auto_capture.py
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+# Replace: print("some message")
+# With:    logging.info("some message")
+# Or:      logging.error("some error")
+```
+
+### 9. No [.env](file:///c:/Users/ericd/Documents/MyVertexProject/.env) Key Guard
+
+[identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) currently has a placeholder key string. After the SDK fix, add a startup guard so the server refuses to start with a missing key rather than failing mysteriously mid-scan:
+
+```python
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    raise EnvironmentError("GOOGLE_API_KEY is not set. Check your .env file.")
+```
+
+---
+
+## 📋 Summary Action Table
+
+| # | Action | File | Risk |
+|---|---|---|---|
+| 1 | Migrate to `google.genai` SDK | [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) | 🔴 Critical |
+| 2 | Revoke & remove hardcoded API key | [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) | 🔴 Critical |
+| 3 | Fix `if not cap` → `if not cap.isOpened()` | [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) line 67 | 🔴 Critical |
+| 4 | Delete duplicate [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) | [AJ's AI Coin Collection app/identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/identify_coin.py) | 🟡 Conflict |
+| 5 | Archive/delete [scan_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/scan_coin.py) + [button_test.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/button_test.py) | Both files | 🟡 Dead Code |
+| 6 | Archive/delete [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) | [coin_engine.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/coin_engine.py) | 🟡 Dead Code |
+| 7 | Add `pandas` to [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/requirements.txt) | [requirements.txt](file:///c:/Users/ericd/Documents/MyVertexProject/requirements.txt) | 🟡 Reliability |
+| 8 | Add `logging` module | [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) | 🟢 Polish |
+| 9 | Add API key startup guard | [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/identify_coin.py) | 🟢 Polish |
+| 10 | Smooth `max_sharpness` decay | [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) line 113 | 🟢 Polish |

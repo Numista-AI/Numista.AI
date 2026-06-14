@@ -1,0 +1,170 @@
+# Numista.AI Product Roadmap
+
+## The Vision (In One Sentence)
+Numista.AI is the world's definitive research platform and collection manager for US coinage — not an appraisal app, but an *experience* that connects collectors to the human stories embedded in metal.
+
+---
+
+## Priority 1A: Collection Onboarding — The Make-or-Break Problem
+
+> [!IMPORTANT]
+> A user with 5,000 coins needs to be **fully onboarded in under 30 minutes**, not 5 hours. This is the single biggest barrier to adoption and must be solved before the desktop platform is meaningfully promoted.
+
+### What the user needs:
+- Get what they *already have* into the platform as fast as possible
+- With no manual coin-by-coin data entry
+
+### Ingestion Strategies (in order of effort for the user)
+
+#### Tier 1: Zero-Effort Import (Target: <5 min for any size collection)
+| Source | Method | Who Uses It |
+|---|---|---|
+| **PCGS Registry CSV export** | Parse their export format, map to our schema | Serious graded coin collectors |
+| **NGC Registry CSV export** | Same as above | Serious graded coin collectors |
+| **PCGS CoinFacts** | API or scrape user's registry | ~5M registered collectors |
+| **Excel / CSV upload** | Generic: Year, Mint, Denom, Grade, Paid | Spreadsheet-keepers |
+| **Other app exports** | CoinManage, Coin Collector, etc. | Casual/intermediate users |
+
+#### Tier 2: Semi-Automated (Target: <2 hours for a full binder)
+| Method | Mechanism | Status |
+|---|---|---|
+| **Checklist scanning** | Gemini Vision + Document AI (littleton-v1) | ✅ Built — needs stabilization |
+| **Batch photo identification** | Upload 20–50 coin photos; AI identifies & adds each | 🔨 To Build |
+| **Dealer invoice parsing** | Upload a PDF receipt from a coin dealer | 🔨 To Build |
+
+#### Tier 3: Manual Entry (Fallback, for individual coins)
+- Fast smart-search: type "1921 Morgan" and it auto-fills all metadata
+- No blank forms — every field is pre-populated from the knowledge base
+
+### What to Build First
+1. **PCGS/NGC CSV importer** — the fastest win for the target audience
+2. **Generic CSV importer** — broader audience
+3. **Stabilize the checklist scan pipeline** ← already in progress
+4. **Batch photo identification** — high effort but very high wow factor
+
+---
+
+## Priority 1B: Desktop Academic Knowledge Platform
+
+> [!NOTE]
+> The emotional hook is not the coin price. It is the *story*. "In 1804, this dollar passed through the hands of a merchant in Philadelphia. Jefferson had just been re-elected. The Louisiana Purchase had just been completed."
+> That is what makes Numista.AI irreplaceable.
+
+### Platform Architecture
+- **Primary:** Browser-based web app, designed for 1280px+ desktop screens
+- **Secondary:** Responsive mobile web (same codebase, reduced layout)
+- **Tertiary:** Flutter companion app (existing work, reframed)
+
+### Core Desktop Features
+
+#### The Collection Dashboard
+- Full-screen grid/table view of the collection
+- Rich filtering: by year, mint, series, grade, purchase price, acquisition date
+- Sort by value, rarity, historical significance
+- Visual "completeness" view per series (e.g., Morgan Dollars: 47/97 complete)
+
+#### The Coin Record Page (The Heart of the Product)
+Each coin in the collection gets a dedicated, Wikipedia-depth record page:
+- **Obverse & Reverse images** (high-res, zoomable)
+- **The Story** — AI-written historical narrative: what was happening in America, who designed it, why this denomination existed
+- **Mint Data** — Mintage figures, die varieties, known errors
+- **Provenance** — Auction history, known previous owners (where public)
+- **Your Record** — When you acquired it, what you paid, grade, notes
+- **Market Context** — Recent eBay/auction sales (eBay API — see note below)
+- **Related Coins** — "If you own this, you may be interested in..."
+
+#### The Research Assistant (AI Chat, Desktop-First)
+- Multi-turn research sessions with full session history
+- Supports complex questions: "Compare the strike quality of 1881-S vs 1881-O Morgan Dollars and explain why the difference exists"
+- Cites sources: mintage records, Red Book, ANA standards
+- Agent Skills (compact knowledge files per series) prevent context bloat
+
+#### The Knowledge Base (Public, SEO-Indexed)
+- Every US coin program has a public, citable reference page
+- Replaces "just Googling" for coin history
+- This is how Numista.AI becomes the academic authority — not by having an app, but by *being the reference*
+
+### eBay API Integration Note
+This belongs here, not in an "Appraiser Agent." Framing matters:
+- ❌ "What is my coin worth?" → Appraisal app territory
+- ✅ "Recent auction results for this coin type" → Academic/market research
+The data is identical; the context makes Numista.AI the reference, not the valuator.
+
+---
+
+## Priority 2: Coin Image Identification
+
+> [!NOTE]
+> "Shazam for coins." Point a camera at a coin and get its full Numista.AI record page.
+
+### Pipeline
+1. User uploads photo (desktop: drag-and-drop; mobile: camera)
+2. Vision Agent (Gemini Vision) identifies: denomination, year, mint mark, die variety if detectable
+3. Match to Numista.AI knowledge base record
+4. Display full coin record + option to "Add to My Collection"
+
+### What Makes This Different
+Most apps stop at "Lincoln Cent, 1969." Numista.AI then opens the full record page — the story, the history, the mintage, the errors to look for on *this specific variety*. The identification is the door; the knowledge base is the room.
+
+---
+
+## Priority 3: Microscope Integration & Grading Certification (The Moonshot 🚀)
+
+> [!IMPORTANT]
+> This is the most ambitious and potentially most disruptive feature in the roadmap. If achieved, it directly challenges PCGS and NGC. Current PCGS grading fees: $30–$150/coin. Physical turnaround: weeks to months.
+
+### The Vision
+- **Seller workflow:** Attaches a USB microscope to their PC → Numista.AI captures high-res images of obverse, reverse, edge → AI analyzes surface marks, luster, strike quality → Issues a **Numista.AI Grade** (e.g., NAG-MS65) + a **unique Coin ID** (hash of the combined images + metadata)
+- **Buyer workflow:** Receives the coin → Uses their own microscope → Numista.AI compares their scan to the registered images → Confirms: ✅ *This is the exact coin listed. Grade confirmed.*
+
+### Why This is Viable
+- USB microscopes capable of this resolution: $50–$200 (e.g., AmScope, Celestron)
+- Gemini Vision's image analysis is already strong enough for initial surface analysis
+- The unique ID system doesn't require blockchain — a cryptographic hash of the coin images is sufficient
+- PCGS and NGC have no AI, no digital verification, and no at-home buyer confirmation workflow
+
+### Build Phases
+1. **Phase 1:** Microscope image capture integration (USB camera API via browser)
+2. **Phase 2:** Grading assistance (AI describes what it sees; user assigns grade with AI guidance)
+3. **Phase 3:** Automated grading with confidence score
+4. **Phase 4:** Unique Coin ID registration and buyer verification
+5. **Phase 5:** Numista.AI Grading Certification — a recognized industry standard
+
+> [!CAUTION]
+> This feature requires careful positioning. "AI-assisted grading with buyer verification" is legally and commercially safer than "certified grading" until Numista.AI has established market credibility. Plan for a gradual rollout starting with community beta.
+
+---
+
+## Priority 4: Phone Companion App (Flutter — Existing Work)
+
+Reframed role: the phone app is **not** the platform. It is the field tool.
+
+| Use Case | Phone App Feature |
+|---|---|
+| At a coin show | Quick camera ID of a coin you're considering buying |
+| At home with a new purchase | Scan to add to collection |
+| Checking the collection | Browse, filter, view coin records |
+| Checklist scanning | Photograph Littleton-style checklists |
+
+The phone app is a gateway to the desktop platform, not a replacement for it.
+
+---
+
+## The Multi-Agent Architecture (Mapped to Priorities)
+
+| Agent | Priority it Serves | What It Does |
+|---|---|---|
+| **Ingestion Agent** | 1A | Parses CSVs, photos, invoices; populates the collection |
+| **Vision Agent** | 2, 3 | Identifies coins from photos; microscope image analysis |
+| **Historian Agent** | 1B | Writes and updates coin stories; answers deep research questions |
+| **Market Data Tool** | 1B | Fetches eBay/auction results on demand (not a full agent) |
+| **Grading Agent** | 3 | Analyzes microscope images; issues grade + coin ID |
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. For the PCGS/NGC CSV import: do you have access to your own collection data in those systems to test with?
+> 2. For the desktop web app: should this be a **new Next.js web application**, or should the existing Flutter app be expanded to support desktop layouts?
+> 3. For the Grading Certification: what would you need to see from the AI grading accuracy before you'd be comfortable calling it a "certification"?

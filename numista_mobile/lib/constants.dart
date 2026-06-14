@@ -6,5 +6,9 @@
 // Base URL of the Numista backend (Cloud Run).
 // Every HTTP call in the app should reference this constant rather than
 // hardcoding the full Cloud Run URL inline.
+//
+// Project:  studio-9101802118-8c9a8
+// Service:  numista-backend  (revision 00061-lbh, Jun 14 2026)
+// Region:   us-central1
 const String kApiBaseUrl =
-    'https://numista-backend-qntvrqvxma-uc.a.run.app';
+    'https://numista-backend-568985927038.us-central1.run.app';

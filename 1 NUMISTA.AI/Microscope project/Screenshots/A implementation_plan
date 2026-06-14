@@ -1,0 +1,19 @@
+# Implementation Plan - Hardware Selector Refactor (Tomlov DM9)
+
+This plan covers the updates required in [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) to support the new Tomlov DM9 microscope, utilizing a more descriptive and generic hardware configuration approach.
+
+## Proposed Changes
+
+### [Backend] Local Agent Configuration
+
+#### [MODIFY] [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20AI%20Coin%20Collection%20app/auto_capture.py)
+1.  **Hardware Selector:** Replace `DEVICE_MODE` with the new `CAMERA_TYPE` and `get_camera_settings` schema requested by the user.
+2.  **Capture Configuration:** Update the initialization block within [capture_worker](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py#51-324) to apply the settings returned by `get_camera_settings(CAMERA_TYPE)`. This includes setting the generic width (1280), height (720), and autofocus parameters.
+3.  **Macro Zoom Logic:** Update the `if DEVICE_MODE == "KIYO":` check around line 150 to `if CAMERA_TYPE == "AUTOFOCUS_WEBCAM":`.
+4.  **Success Zone:** Increase `MIN_SHARPNESS_FLOOR` from 2000.0 to 3000.0 to accommodate the improved optics of the Tomlov DM9 microscope, ensuring it captures only at peak sharpness.
+
+## Verification Plan
+
+### Automated Tests
+1.  **Restart the Local Server:** Kill the currently running [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) process and restart it.
+2.  **Monitor Output:** Verify that the console logs show the successful application of the new 1280x720 resolution parameters without stream errors.

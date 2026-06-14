@@ -1,0 +1,33 @@
+# Frontend Integration for Numista-AI
+
+This plan outlines the creation of a professional web interface to interact with the coin capture server.
+
+## Proposed Changes
+
+### [Frontend Component]
+
+#### [NEW] [index.html](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/index.html)
+A single-file solution containing:
+- **HTML5 Semantic Structure**: Header, Main, and Report sections.
+- **Premium CSS Styling**: 
+  - Dark professional theme (Slate & Gold accents).
+  - Responsive layout for desktop and tablet.
+  - Animations for status transitions.
+- **JavaScript Logic**:
+  - `startScan()`: Calls `POST /start-scan`.
+  - `pollStatus()`: Fetches `GET /get-status` every 1s when active.
+  - UI Updates: Maps backend states (OBVERSE, REVERSE, ANALYZING) to user-friendly messages.
+  - Report Rendering: Extracts and formats the Gemini AI report data into an elegant display.
+
+## Design Aesthetics
+- **Color Palette**: Deep Charcoal (#1a1a1a), Antique Gold (#d4af37), and Soft White.
+- **Typography**: Professional sans-serif (Inter/Roboto) via Google Fonts.
+- **Components**: Polished "Scan" button, high-contrast status badge, and silver-bordered report card.
+
+## Verification Plan
+
+### Manual Verification
+1. Open `index.html` in a browser while [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) is running.
+2. Click "Scan New Coin".
+3. Observe the status transitions (Waiting -> Focusing -> Syncing/Analyzing).
+4. Verify the finalized Gemini Report appears correctly after completion.

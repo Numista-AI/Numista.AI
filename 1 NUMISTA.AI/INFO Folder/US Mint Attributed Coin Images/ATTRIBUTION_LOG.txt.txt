@@ -1,0 +1,7 @@
+ATTRIBUTION_LOG.txt
+
+NUMISTA.AI ASSET LOG
+Source: United States Mint (Official Image Library)
+Processing Date: February 2026
+Compliance Note: All images in this bucket have been programmatically modified to include a black high-contrast footer with the text "United States Mint image" to satisfy U.S. Mint publication requirements.
+Reference File: See numista_master_log.csv for full filename mapping.

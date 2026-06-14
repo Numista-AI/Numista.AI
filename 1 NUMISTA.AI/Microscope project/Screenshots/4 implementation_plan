@@ -1,0 +1,66 @@
+# Update identify_coin.py with new Gemini API logic
+
+The goal is to update the coin identification script to use the latest Gemini model and the new `google-genai` SDK implementation provided by the user.
+
+## Proposed Changes
+
+### [Component Name]
+
+#### [MODIFY] [identify_coin.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/identify_coin.py)
+
+Replace the existing logic with the provided snippet. I will adapt the snippet slightly to preserve the use of environment variables for the API key, ensuring it remains functional in the current setup.
+
+```python
+import os
+import json
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+def run_numista_report(obverse_path, reverse_path):
+    load_dotenv()
+    api_key = os.getenv("GOOGLE_API_KEY")
+    client = genai.Client(api_key=api_key)
+    
+    # Load images
+    obv_img = types.Part.from_bytes(data=open(obverse_path, "rb").read(), mime_type="image/jpeg")
+    rev_img = types.Part.from_bytes(data=open(reverse_path, "rb").read(), mime_type="image/jpeg")
+
+    # Nano Banana 2: High-efficiency image analysis
+    model_id = 'gemini-3.1-flash-image-preview' 
+
+    prompt = """
+    Analyze these two coin images (Obverse and Reverse).
+    Provide a professional numismatic report and a JSON object.
+    The JSON object MUST include a 'file_slug' formatted as 'YearMint-Type' 
+    (e.g., '1999D-NJ-Quarter'). Focus on identifying mint marks and varieties.
+    """
+
+    response = client.models.generate_content(
+        model=model_id,
+        contents=[prompt, obv_img, rev_img],
+        config=types.GenerateContentConfig(
+            response_mime_type='application/json',
+            response_schema={
+                'type': 'OBJECT',
+                'properties': {
+                    'file_slug': {'type': 'STRING'},
+                    'country': {'type': 'STRING'},
+                    'grade': {'type': 'STRING'},
+                    'report': {'type': 'STRING'}
+                }
+            }
+        )
+    )
+
+    # Parse JSON and print report
+    data = json.loads(response.text)
+    print(data.get('report', 'Analysis complete.'))
+    return data # Returns the dictionary to auto_capture.py
+```
+
+## Verification Plan
+
+### Manual Verification
+1. I will run a simple test script that calls [run_numista_report](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/identify_coin.py#12-64) with dummy paths or existing captures to verify that the imports and client initialization work correctly.
+2. If images are available in the `captures` directory, I will try to run the script with them.

@@ -1,0 +1,43 @@
+# Tomlov DM9 Capture & Auto-Crop Improvements
+
+The current [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py) uses hardcoded coordinates (320, 240) for UI elements, which assumes a 640x480 resolution. Since the Tomlov DM9 typically runs at 1280x720 or higher, the "focus ring" appears off-center, leading to poorly cropped captures with wasted space.
+
+## Proposed Changes
+
+We need to make the UI resolution-independent and implement an auto-crop feature.
+
+---
+
+### Plan 1: Intelligent Contour Detection
+This approach uses computer vision to "find" the coin in the frame regardless of its position.
+
+- **How it works**: When a capture is triggered, the code analyzes the frame for circles/contours. it finds the bounding box of the coin and crops to it.
+- **Pros**: Forgives slight misplacement by the user.
+- **Cons**: Can be unreliable if the coin has low contrast against the background or if the microscope lighting creates harsh shadows that break the contour detection.
+
+### Plan 2: Dynamic UI with Fixed ROI Crop (Recommended)
+This approach leverages the "Focus Ring" as a precise guide.
+
+- **How it works**:
+    1.  **Dynamic UI**: All UI elements (circle, info panel, flip countdown) are calculated based on the actual `frame.shape` (e.g., `center_x = width // 2`).
+    2.  **Fixed ROI Crop**: Since the user is instructed to "Center coin in circle", we simply crop a square region centered on those coordinates.
+- **Pros**: Extremely reliable and predictable. Produces a consistent "professional coin album" look.
+- **Cons**: Requires the user to actually put the coin in the center (which they are already trying to do).
+
+---
+
+## Technical Implementation (Plan 2)
+
+#### [MODIFY] [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's AI Coin Collection app/auto_capture.py)
+1.  **Calculate Center**: Derive `cx, cy = frame.shape[1]//2, frame.shape[0]//2` at the start of every frame processing loop.
+2.  **Refactor UI**: Replace all `320`, `240`, `640`, `480` literals with variables relative to `cx`, `cy`, `w`, and `h`.
+3.  **Implement `crop_coin(frame, cx, cy, radius)`**: A helper function to save only the centered square region.
+4.  **Update Save Logic**: Use `crop_coin` before calling `cv2.imwrite`.
+
+## Verification Plan
+
+### Manual Verification
+1.  Launch [auto_capture.py](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20AI%20Coin%20Collection%20app/auto_capture.py).
+2.  Observe the live monitor: the "Focus Ring" should now be perfectly centered regardless of the camera resolution.
+3.  Capture a coin (Obverse and Reverse).
+4.  Check the `captures/` folder to ensure the saved `.jpg` files are tightly cropped squares containing only the coin.

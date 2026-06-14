@@ -1475,12 +1475,22 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
         Extract EVERY line item — coins, currency, stamps, medals, sets, supplies, and other collectibles.
         Classify each item by type and return a full, accurate record.
 
+        *** NEVER RETURN AN EMPTY LIST. If you can see any purchasable item with a dollar amount > $0
+        in this invoice, you MUST extract it. An empty list [] is only acceptable when the document
+        truly contains zero purchasable items (e.g. it is a blank page or a pure shipping notice). ***
+
         CRITICAL RULES:
         1. Ignore shipping, tax, discount, and subtotal rows — extract only purchasable line items.
         2. Extract ALL item types, not just coins. Use the item_type field to classify each.
-        3. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
+        3. MULTI-LINE DESCRIPTIONS: Many invoices have item descriptions that span several lines within
+           a single table row (e.g. the club name on line 1, coin name on line 2, grade/service on
+           line 3, notation like "Taxable Item" on line 4). Treat all those lines TOGETHER as ONE item.
+        4. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
            - Phone "1-800-645-3122" OR Customer# starting with "54" (5-8 digits) → "Littleton Coin Company"
            - Phone "1-800-546-2995" OR "littletoncoin.com" → "Littleton Coin Company"
+           - "Washington Quarter Club" OR "Statehood Quarter Club" OR "Morgan Dollar Club" OR
+             "Lincoln Cent Club" OR any "[Coin Type] Club Selection" heading → "Littleton Coin Company"
+             (These are Littleton subscription club programs. Each invoice is ONE individual coin purchase.)
            - "shop.usmint.gov" OR "United States Mint" OR "usmint.gov" OR phone "1-800-872-6468" → "US Mint"
            - "APMEX" OR "apmex.com" → "APMEX"
            - "JM Bullion" OR "jmbullion.com" → "JM Bullion"
@@ -1494,6 +1504,33 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
            - "JP Capital Collectibles" OR "JP CAPITAL COLLECTIBLES" → "JP Capital Collectibles LLC"
            - "Danbury Mint" OR "danburymint.com" → "The Danbury Mint"
            If you cannot determine the retailer, set "Retailer/Website" to "Unknown".
+
+        CLUB/SUBSCRIPTION PROGRAM INVOICES:
+          Littleton Coin Company and similar retailers sell coins through subscription clubs.
+          When you see a heading like "WASHINGTON QUARTER CLUB SELECTION", "MORGAN DOLLAR CLUB",
+          "STATE QUARTER SELECTION", etc., the ACTUAL COIN is described on the NEXT line(s).
+          Example invoice layout:
+            Qty: 1  Item: 2330A.XD  Description: WASHINGTON QUARTER CLUB SELECTION
+                                                  1871 Liberty Seated Silver Quarter
+                                                  ANACS
+                                                  Taxable Item           Extremely Fi  $432.00
+          → Extract as item_type "coin", Year "1871", Denomination "Liberty Seated Quarter",
+            Grading Service "ANACS", Condition "Extremely Fine", Purchase Cost "$432.00".
+          DO NOT skip these items. The coin IS purchasable — the "Club Selection" heading is just
+          the program name, not a separate line item.
+
+        TRUNCATED TEXT COMPLETION:
+          Scanned invoices often cut off text at column boundaries. Complete using numismatic knowledge:
+          - "Extremely Fi" → Condition: "Extremely Fine" (EF)
+          - "Very Fi" → Condition: "Very Fine" (VF)
+          - "Very Go" → Condition: "Very Good" (VG)
+          - "Mint St" → Condition: "Mint State"
+          - "Uncircula" or "Uncirc" → Condition: "Uncirculated"
+          - "Brillian" → Condition: "Brilliant Uncirculated"
+          - "About Un" → Condition: "About Uncirculated" (AU)
+          - "Choice Un" → Condition: "Choice Uncirculated"
+          - "Fine" alone → Condition: "Fine" (F-12)
+          Always complete grade words; do not leave them truncated in the output.
 
         ITEM TYPE CLASSIFICATION — set item_type for every record:
           "coin"           → individual coin, bullion coin, or token
@@ -1516,6 +1553,8 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
           EXAMPLE: "1937 5c Military Academy West Point (15)" = STAMP, not a Buffalo Nickel.
           EXAMPLE: "1990 25c Eisenhower" on a Littleton invoice alongside stamps = STAMP.
           EXAMPLE: "1945 Iwo Jima" at $0.XX = STAMP.
+          NOTE: Pre-1900 US coins (1800s Liberty Seated, Bust, Draped Bust, Capped Bust series,
+          Early American coins, Morgan Dollars, Barber coins, etc.) are always COINS, not stamps.
 
         FOR SETS — when item_type is "set":
           Enumerate the individual coins in set_contents. Use your numismatic knowledge to list
@@ -1598,6 +1637,70 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
                 items = [items]   # treat the whole dict as one item record
         if not isinstance(items, list):
             items = []
+
+        # ─── Retry pass: if first extraction returned nothing, try a simpler ──────
+        # directive prompt focused purely on "find me the items with prices".
+        if not items:
+            print(f"[process_invoice] First pass empty — firing directive retry prompt")
+            retry_prompt = """
+            This is a coin/numismatic purchase invoice or receipt. I need you to extract every
+            purchasable item that has a dollar amount > $0 associated with it.
+
+            Look for ANY table row or line that contains:
+            - A coin name (e.g. "1871 Liberty Seated Silver Quarter", "Morgan Dollar", "Lincoln Cent")
+            - A currency note or collectible
+            - A price/amount column with a non-zero value
+
+            Rules:
+            - If a description spans multiple lines in the same row, combine them into one item.
+            - Complete truncated text: "Extremely Fi" → "Extremely Fine",
+              "Very Fi" → "Very Fine", "About Un" → "About Uncirculated", etc.
+            - For "Club Selection" invoices, the coin is on line 2 of the description block.
+            - Ignore shipping, tax, and subtotal lines.
+            - Pre-1900 coins (Liberty Seated, Barber, Morgan, etc.) are coins, not stamps.
+
+            Return a JSON array with one object per item. Required fields:
+            {
+              "item_type": "coin",
+              "Year": "year from description",
+              "Denomination": "coin type (e.g. Liberty Seated Quarter, Morgan Dollar)",
+              "Condition": "grade — complete any truncated words",
+              "Grading Service": "PCGS / NGC / ANACS / ICG / or empty",
+              "Purchase Cost": "dollar amount formatted like $432.00",
+              "Retailer/Website": "seller name",
+              "Retailer Item No.": "item or stock number if present",
+              "Retailer Invoice #": "invoice number if present",
+              "Original Description from source": "exact description text from invoice"
+            }
+
+            Even a single item is a valid result. Do NOT return [].
+            """
+            try:
+                retry_response = genai_client.models.generate_content(
+                    model=PRIMARY_MODEL,
+                    contents=[pdf_part, genai_types.Part.from_text(text=retry_prompt)],
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                )
+                retry_text = retry_response.text or ""
+                print(f"[process_invoice] retry_snippet={retry_text[:400]!r}")
+                retry_items = json.loads(retry_text) if retry_text.strip() else []
+                if isinstance(retry_items, dict):
+                    for _key in ('items', 'coins', 'line_items', 'results', 'data',
+                                 'extracted_items', 'invoice_items'):
+                        if _key in retry_items and isinstance(retry_items[_key], list):
+                            retry_items = retry_items[_key]
+                            break
+                    else:
+                        retry_items = [retry_items]
+                if isinstance(retry_items, list) and retry_items:
+                    items = retry_items
+                    print(f"[process_invoice] Retry succeeded: {len(items)} item(s) recovered")
+                else:
+                    print(f"[process_invoice] Retry also returned empty — genuinely nothing found")
+            except Exception as retry_err:
+                print(f"[process_invoice] Retry failed: {retry_err!r}")
 
         # ─── Route items by type ──────────────────────────────────────────────
         added_count    = 0   # coins, currency, medals, set-records → review_queue

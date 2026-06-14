@@ -42,7 +42,18 @@ FIRESTORE_COINS_PATH = f"users/{USER_EMAIL}/coins"
 FIRESTORE_COMMANDS_PATH = f"commands/{USER_EMAIL}/pending"
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://numista.ai", "http://localhost:*", "http://127.0.0.1:*"]}})
+CORS(app, resources={r"/*": {"origins": [
+    "https://numista.ai",
+    "https://www.numista.ai",
+    "https://numista-vault.web.app",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+]}}, allow_private_network=True)
+
+# Live preview frame store (thread-safe)
+import threading as _threading
+_frame_lock = _threading.Lock()
+_latest_frame_jpg: bytes = b""
 
 # --- NEW GENERIC HARDWARE SELECTOR ---
 # OPTIONS: "AUTOFOCUS_WEBCAM", "MANUAL_MICROSCOPE"
@@ -125,7 +136,13 @@ capture_status = {
 def capture_worker():
     global capture_status
     capture_status["is_active"] = True
- 
+
+    # Force working directory to this script's location so all relative paths
+    # (captures/, CSV manifest) work correctly even when run as a hidden process.
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(_script_dir)
+    logging.info("[CAP] Working directory: %s", _script_dir)
+
     # --- Robust Camera Initialization ---
     cap = None
     successful_idx = -1
@@ -288,6 +305,10 @@ def capture_worker():
                     filename = f"captures/{side_name}_peak.jpg"
                     cropped_img = crop_coin(frame)
                     cv2.imwrite(filename, cropped_img)
+                    if os.path.exists(filename):
+                        logging.info(f"[CAP] Saved {filename} ({os.path.getsize(filename):,} bytes)")
+                    else:
+                        logging.error(f"[CAP] cv2.imwrite FAILED for {filename} — file not created!")
                     has_captured_this_side = True
                     last_capture_time = current_time
                     stable_frames_count = 0
@@ -429,6 +450,12 @@ def capture_worker():
                 cv2.rectangle(frame, (0, 0), (frame.shape[1], frame.shape[0]), (0, 255, 0), 20)
 
             cv2.imshow("Numista.AI - Hardware Agent Monitor", frame)
+            # Encode annotated frame for live web preview (/frame endpoint)
+            _ok, _buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+            if _ok:
+                with _frame_lock:
+                    global _latest_frame_jpg
+                    _latest_frame_jpg = _buf.tobytes()
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -442,6 +469,13 @@ def capture_worker():
             obv_path = "captures/obverse_peak.jpg"
             rev_path = "captures/reverse_peak.jpg"
             
+            # Verify both files exist before calling Gemini
+            for _p in [obv_path, rev_path]:
+                if os.path.exists(_p):
+                    logging.info(f"[GEMINI] Input file OK: {_p} ({os.path.getsize(_p):,} bytes)")
+                else:
+                    logging.error(f"[GEMINI] MISSING input file: {_p} — Gemini call will fail!")
+
             coin_data = run_numista_report(obv_path, rev_path)
             
             if coin_data and "file_slug" in coin_data:
@@ -498,6 +532,18 @@ def add_to_collection_route():
         return jsonify({"status": "error", "message": "Scan still running"})
     threading.Thread(target=_process_coin_save, args=(data,), daemon=True).start()
     return jsonify({"status": "success", "message": "Saving coin..."})
+
+@app.route('/frame', methods=['GET'])
+def live_frame():
+    """Returns the latest annotated camera frame as JPEG.
+    Flutter polls this ~300ms to show live preview during scanning."""
+    from flask import Response
+    with _frame_lock:
+        data = _latest_frame_jpg
+    if not data:
+        return Response(status=204)  # No content — not scanning yet
+    return Response(data, mimetype='image/jpeg',
+                    headers={'Cache-Control': 'no-cache, no-store'})
 
 @app.route('/get-status', methods=['GET'])
 def get_status():
@@ -678,12 +724,28 @@ def start_command_watcher():
 if __name__ == "__main__":
     logging.info("="*55)
     logging.info("  Numista.AI Hardware Agent")
-    logging.info("  Flask status server  → http://localhost:5000")
-    logging.info("  Firestore commands   → commands/%s/pending", USER_EMAIL)
+    logging.info("  Flask status server  -> https://localhost:5000")
+    logging.info("  Firestore commands   -> commands/%s/pending", USER_EMAIL)
     logging.info("="*55)
 
     # Start Firestore command watcher (non-blocking — runs on SDK background thread)
     _watcher = start_command_watcher()
 
-    # Start Flask for /get-status polling (blocking)
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    # Load SSL cert so Chrome (HTTPS page) can reach this local server.
+    # Flutter's hardware_service.dart calls https://localhost:5000 — the server
+    # MUST be HTTPS or Chrome sends TLS handshakes that crash a plain HTTP server.
+    import ssl as _ssl
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _cert = os.path.join(_here, 'localhost.crt')
+    _key  = os.path.join(_here, 'localhost.key')
+    if os.path.exists(_cert) and os.path.exists(_key):
+        _ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+        _ctx.load_cert_chain(_cert, _key)
+        logging.info("SSL cert loaded — serving HTTPS on port 5000")
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, ssl_context=_ctx)
+    else:
+        logging.warning("No SSL cert found — falling back to plain HTTP.")
+        logging.warning("Run:  python gen_cert.py  to fix this.")
+        logging.warning("Then trust the cert: visit https://localhost:5000 in Chrome and click Proceed.")
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+

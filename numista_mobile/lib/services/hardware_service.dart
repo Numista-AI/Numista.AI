@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,9 +11,10 @@ import 'dart:convert';
 /// The hardware server itself writes to Firestore using its service account.
 /// Live status POLLING also uses localhost:5000 Flask.
 class HardwareService {
-  static const String _statusUrl    = 'http://localhost:5000/get-status';
-  static const String _startScanUrl = 'http://localhost:5000/start-scan';
-  static const String _saveUrl      = 'http://localhost:5000/add-to-collection';
+  static const String _statusUrl    = 'https://localhost:5000/get-status';
+  static const String _startScanUrl = 'https://localhost:5000/start-scan';
+  static const String _saveUrl      = 'https://localhost:5000/add-to-collection';
+
 
   // Firestore fallback paths: not implemented, HTTP is used in all code paths
   // (keeping comment for future reference if offline-first support is needed)
@@ -98,7 +100,25 @@ class HardwareService {
       return false;
     }
   }
+
+  // ─── Live Frame ───────────────────────────────────────────────────────────
+  /// Fetches the latest annotated camera frame as raw JPEG bytes.
+  /// Returns null if the agent is not scanning (204) or unreachable.
+  Future<Uint8List?> fetchFrame() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('https://localhost:5000/frame'))
+          .timeout(const Duration(milliseconds: 600));
+      if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+        return resp.bodyBytes;
+      }
+    } catch (_) {
+      // Not scanning or unreachable — caller handles null gracefully
+    }
+    return null;
+  }
 }
+
 
 // ─── Data Model ───────────────────────────────────────────────────────────────
 class HardwareStatus {

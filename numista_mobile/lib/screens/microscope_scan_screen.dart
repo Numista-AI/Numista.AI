@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/hardware_service.dart';
 import '../services/pcgs_service.dart';
 import '../services/reference_library_service.dart';
+import 'desktop_agent_download_screen.dart';
+
 
 // ─── Design Tokens (matches inventory_gallery.dart) ───────────────────────────
 const _electricBlue = Color(0xFF4C8CDA);
@@ -32,6 +35,8 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   bool _savedOk = false;
   String? _savedFirestoreId;
   Timer? _pollTimer;
+  Timer? _frameTimer;
+  Uint8List? _liveFrameBytes;
   late AnimationController _pulseController;
   final TextEditingController _locationCtrl = TextEditingController();
 
@@ -52,6 +57,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _frameTimer?.cancel();
     _pulseController.dispose();
     _locationCtrl.dispose();
     super.dispose();
@@ -69,6 +75,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   // ─── Polling ────────────────────────────────────────────────────────────────
   void _startPolling() {
     _pollTimer?.cancel();
+    _frameTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
       final status = await _hw.getStatus();
       if (mounted && status != null) {
@@ -80,6 +87,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           // Trigger reference library fetch on first completion
           if (!wasComplete) _fetchSimilarCoins(status);
         }
+      }
+    });
+    // Frame preview: poll /frame every 300ms while scanning
+    _frameTimer = Timer.periodic(const Duration(milliseconds: 300), (_) async {
+      final bytes = await _hw.fetchFrame();
+      if (mounted && bytes != null) {
+        setState(() => _liveFrameBytes = bytes);
       }
     });
   }
@@ -177,7 +191,12 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           const SizedBox(height: 32),
           if (_serverOnline) ...[
             _buildScanControls(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            // ── Live camera preview (shown while scanning) ──────────────────
+            if (_status?.isActive == true && _liveFrameBytes != null) ...[
+              _buildLivePreview(),
+              const SizedBox(height: 24),
+            ],
             if (_status != null) _buildStatusPanel(),
             if (_status?.isScanComplete == true) ...[
               const SizedBox(height: 32),
@@ -226,44 +245,182 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Server Status Banner ────────────────────────────────────────────────────
   Widget _buildServerStatus() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-      decoration: BoxDecoration(
-        color: _serverOnline
-            ? _successGreen.withValues(alpha: 0.1)
-            : _errorRed.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: _serverOnline
-              ? _successGreen.withValues(alpha: 0.4)
-              : _errorRed.withValues(alpha: 0.3),
+    if (_serverOnline) {
+      // ── Online state: compact green pill ────────────────────────────────────
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        decoration: BoxDecoration(
+          color: _successGreen.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _successGreen.withValues(alpha: 0.4)),
         ),
+        child: Row(
+          children: [
+            const Icon(Icons.circle, size: 12, color: _successGreen),
+            const SizedBox(width: 10),
+            const Text(
+              'Hardware Server Online  •  localhost:5000',
+              style: TextStyle(
+                color: _successGreen,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: _checkServer,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              style: TextButton.styleFrom(foregroundColor: _successGreen),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Offline state: rich explainer card with download button ──────────────
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _errorRed.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _errorRed.withValues(alpha: 0.25)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            _serverOnline ? Icons.circle : Icons.circle_outlined,
-            size: 12,
-            color: _serverOnline ? _successGreen : _errorRed,
+          // Status pill
+          Row(
+            children: [
+              const Icon(Icons.circle_outlined, size: 12, color: _errorRed),
+              const SizedBox(width: 10),
+              const Text(
+                'Hardware Server Offline',
+                style: TextStyle(
+                  color: _errorRed,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: _checkServer,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Retry'),
+                style: TextButton.styleFrom(foregroundColor: _errorRed),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+
+          // Explainer
+          const Text(
+            'To use the Microscope Scanner, install the free Desktop Agent on this computer.',
+            style: TextStyle(color: _charcoal, fontSize: 14, height: 1.5),
+          ),
+          const SizedBox(height: 8),
           Text(
-            _serverOnline
-                ? 'Hardware Server Online  •  localhost:5000'
-                : 'Hardware Server Offline  •  Run: python auto_capture.py',
+            'The Desktop Agent runs silently in your system tray and bridges your '  
+            'USB microscope to numista.ai over a local HTTPS connection. '
+            'Install takes about 30 seconds.',
             style: TextStyle(
-              color: _serverOnline ? _successGreen : _errorRed,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+              color: _charcoal.withValues(alpha: 0.6),
+              fontSize: 12,
+              height: 1.5,
             ),
           ),
-          const Spacer(),
-          TextButton.icon(
-            onPressed: _checkServer,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Retry'),
-            style: TextButton.styleFrom(
-              foregroundColor: _serverOnline ? _successGreen : _errorRed,
+          const SizedBox(height: 20),
+
+          // Download button
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const DesktopAgentDownloadScreen(showBack: true),
+                ),
+              );
+            },
+            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+            label: const Text(
+              'Download Desktop Agent',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _electricBlue,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Free • Windows 10/11 • ~30 sec install',
+            style: TextStyle(
+              color: _charcoal.withValues(alpha: 0.45),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Live Camera Preview ─────────────────────────────────────────────────
+  Widget _buildLivePreview() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _electricBlue.withValues(alpha: 0.4), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: _electricBlue.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // Live frame image
+          Image.memory(
+            _liveFrameBytes!,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            gaplessPlayback: true, // prevents flicker between frames
+          ),
+          // "LIVE" badge
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _errorRed.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.fiber_manual_record, size: 8, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text('LIVE',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2)),
+                ],
+              ),
             ),
           ),
         ],
