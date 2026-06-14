@@ -40,11 +40,11 @@ jobs:
     steps:
       # 1. Check out the code
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       # 2. Install Flutter
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v2.16.0
         with:
           channel: stable
           cache: true
@@ -81,7 +81,7 @@ jobs:
 
       # 6. Authenticate to Google Cloud using the service account key
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v2.1.8
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
