@@ -63,3 +63,20 @@ See `launch_readiness_plan.md` for the full 35-hour sprint. Block 1 complete. Bl
 3. **B4.2** — Silver melt value badge (live spot price × metal content) in collection view.
 4. **Block 3** — Full PROD build checklist run: remove SW kill-switch, `flutter build web --release`, deploy to Firebase Hosting.
 5. **Block 5** — Training data batch label run.
+
+---
+
+## Session — June 15, 2026
+
+### Features Deployed Live (Numista.ai)
+- **Localhost Auto-Pairing**: microscope scan screen automatically pairs the Python hardware agent to the logged-in user email via a new POST `/pair` endpoint, ensuring secure and seamless hardware control in multi-user setups.
+- **Heir Liquidation Playbook & Smart Division Engine**: Greedy LPT beneficiary allocation simulator implemented in Dart (frontend) and Python (backend) with real-time lot valuation, cash-balancing offsets, and individual coin locks saved in Firestore. Playbook includes dynamic PDF report generation customizing auction consignment recommendations based on strategy preferences.
+- **Portfolio Value Tracker**: Interactive fl_chart analytics dashboard rendering donut, horizontal bar, and line charts showing metal melt vs premium composition, top series, and a 90-day value history powered by a client-side daily snapshot service.
+- **Desktop Agent**: Product-grade Windows setup tray application (`NumistaAgent.exe`) with tkinter setup wizard, registry-based autostart, and local HTTPS certificate trust system. Supported by a dedicated tutorial download page in the Flutter app.
+- **AI Photo ID Integration**: Integrated double-pass Gemini AI verification endpoint in the FastAPI backend (`main.py`) and a custom "AI Photo ID" tab in `add_coins_hub.dart` allowing photo-based coin uploads, automatic field pre-filling, GCS image archiving, and collection additions.
+
+### Verification & Health
+- **Dart Analyzer**: Resolved all async build context warnings, unnecessary collection spreads, and deprecation notices. `flutter analyze` runs 100% clean.
+- **Unit Testing**: Ran division partitioning and lock overrides tests (`test_division.py`) with all 4 tests passing in 10ms.
+- **Deployments**: Both the Firebase Hosting web app (https://numista.ai) and the FastAPI Cloud Run backend (https://numista-backend-568985927038.us-central1.run.app) are updated and fully serving production traffic.
+
