@@ -3842,6 +3842,294 @@ async def pcgs_cert_lookup(cert_no: str):
     return {"found": True, "certNo": cert_no, "coinDetail": coin_detail}
 
 
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  AI PHOTO IDENTIFIER — POST /api/identify_coin_photo                        ║
+# ║  Two-pass Gemini coin identification from user-uploaded obverse + reverse    ║
+# ║  images. Identifies, grades, estimates value, detects errors/varieties.      ║
+# ║  Saves coin + images to Firestore/GCS on confirmation.                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+PHOTO_ID_PASS1_PROMPT = """
+You are a professional numismatist examining two coin images uploaded by a collector.
+Image A and Image B are provided — the collector may have uploaded them in any order.
+
+YOUR TASKS:
+1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE.
+2. IDENTIFICATION: Identify the coin precisely — Year, Country, Denomination, Program/Series, Theme/Subject.
+3. MINT MARK (critical): Examine the obverse extremely carefully for a mint mark letter.
+   Common locations: below the date, near the portrait neck, near "IN GOD WE TRUST", along the lower rim.
+   US Mint codes: P=Philadelphia, D=Denver, S=San Francisco, W=West Point, CC=Carson City, O=New Orleans.
+   Report any visible letter, even faint. If genuinely absent, return "None (P)".
+4. GRADE: Estimate the Sheldon scale grade (e.g. "G-4", "VF-30", "XF-45", "AU-55", "MS-63", "PR-65").
+5. METAL COMPOSITION (apply these rules exactly):
+   - Pre-1965 US dimes, quarters, halves = 90% Silver, 10% Copper
+   - Half dollars 1965-1970 = 40% Silver, 60% Copper
+   - Morgan/Peace Dollars, Walking Liberty, Franklin Half, Mercury Dime = 90% Silver
+   - Indian Head $5 Half Eagle ($5 gold), $10 Eagle, $20 Double Eagle = 90% Gold, 10% Copper
+   - American Gold Eagle = 91.67% Gold  |  American Silver Eagle = 99.9% Silver
+   - Gold Buffalo, Platinum Eagle = 99.99% respective metal
+   - Modern clad (post-1964 quarters, post-1970 halves) = NO silver, cupro-nickel
+   - Set is_silver=true/false and is_gold=true/false accordingly.
+6. NUMISMATIC REPORT: Write 2-4 sentences on the coin's historical significance and collectibility.
+7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies.
+
+Return ONLY valid JSON — no markdown fences, no commentary:
+{
+  "obverse_image": "A" or "B",
+  "year": integer,
+  "country": string,
+  "denomination": string,
+  "program_series": string,
+  "theme_subject": string,
+  "mint_mark": string,
+  "grade": string,
+  "is_silver": boolean,
+  "is_gold": boolean,
+  "metal_content": string,
+  "report": string,
+  "variety_notes": string,
+  "confidence": "HIGH", "MEDIUM", or "LOW"
+}
+"""
+
+PHOTO_ID_PASS2_PROMPT_TEMPLATE = """
+You are a senior grading expert performing a VERIFICATION PASS on a coin already identified as:
+  Year: {year} | Country: {country} | Denomination: {denomination}
+  Program/Series: {program_series} | Mint Mark: {mint_mark}
+  Initial Grade: {grade} | Metal: {metal_content}
+
+You are looking at the same two images (A and B) again.
+
+YOUR TASKS:
+1. VERIFY the identification — correct year, denomination, or series if wrong.
+2. REFINE the grade to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
+3. CHECK for mint errors: doubled dies, repunched mint marks (RPM), off-center strikes,
+   die cracks, cuds, lamination errors, rotated dies, or any other varieties.
+4. ESTIMATE retail value in USD based on current market for this grade.
+5. Write a brief condition note describing the coin's surfaces and strike quality.
+
+Return ONLY valid JSON:
+{{
+  "identification_confirmed": boolean,
+  "corrected_year": integer or null,
+  "corrected_denomination": string or null,
+  "corrected_series": string or null,
+  "refined_grade": string,
+  "errors_detected": [string],
+  "estimated_value_usd": string,
+  "condition_notes": string,
+  "confidence": "HIGH", "MEDIUM", or "LOW"
+}}
+"""
+
+
+@app.post("/api/identify_coin_photo")
+async def identify_coin_photo(
+    user_email:    str        = Form(...),
+    image_a:       UploadFile = File(...),
+    image_b:       UploadFile = File(...),
+    save_to_collection: bool  = Form(False),
+    # Optional user overrides sent from the review screen
+    override_year:    Optional[str] = Form(None),
+    override_denom:   Optional[str] = Form(None),
+    override_series:  Optional[str] = Form(None),
+    override_theme:   Optional[str] = Form(None),
+    override_mint:    Optional[str] = Form(None),
+    override_grade:   Optional[str] = Form(None),
+    override_metal:   Optional[str] = Form(None),
+    override_cost:    Optional[str] = Form(None),
+    override_storage: Optional[str] = Form(None),
+    override_notes:   Optional[str] = Form(None),
+):
+    """
+    Two-pass Gemini AI coin identification from obverse + reverse photos.
+
+    Pass 1  — Identification: determines which image is obverse/reverse,
+              identifies year/denomination/series/mint mark/grade/metal.
+    Pass 2  — Verification:   refines grade, checks for errors/varieties,
+              estimates retail value, confirms or corrects identification.
+
+    When save_to_collection=True, the identified coin (with any user overrides
+    applied) is written directly to Firestore under users/{user_email}/coins
+    and both images are uploaded to GCS.
+
+    Returns the full coin document as JSON whether or not it was saved.
+    """
+    print(f"[identify_coin_photo] user={user_email} save={save_to_collection}")
+
+    # ── 1. Read image bytes ───────────────────────────────────────────────────
+    bytes_a      = await image_a.read()
+    bytes_b      = await image_b.read()
+    mime_a       = image_a.content_type or "image/jpeg"
+    mime_b       = image_b.content_type or "image/jpeg"
+
+    part_a_img   = genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a)
+    part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
+    label_a      = genai_types.Part.from_text(text="[Image A]")
+    label_b      = genai_types.Part.from_text(text="[Image B]")
+
+    # ── 2. PASS 1 — Identification ────────────────────────────────────────────
+    try:
+        resp1 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[
+                label_a, part_a_img,
+                label_b, part_b_img,
+                genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
+            ],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        raw1 = resp1.text.strip()
+        if raw1.startswith("```"):
+            raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        pass1: dict = json.loads(raw1)
+        print(f"[identify_coin_photo] Pass 1 ✅ {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
+    except Exception as e:
+        print(f"[identify_coin_photo] Pass 1 error: {e}")
+        raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
+
+    # ── 3. PASS 2 — Verification ──────────────────────────────────────────────
+    pass2: dict = {}
+    try:
+        pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
+            year          = pass1.get("year", ""),
+            country       = pass1.get("country", ""),
+            denomination  = pass1.get("denomination", ""),
+            program_series= pass1.get("program_series", ""),
+            mint_mark     = pass1.get("mint_mark", ""),
+            grade         = pass1.get("grade", ""),
+            metal_content = pass1.get("metal_content", ""),
+        )
+        resp2 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[
+                label_a, part_a_img,
+                label_b, part_b_img,
+                genai_types.Part.from_text(text=pass2_prompt),
+            ],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        raw2 = resp2.text.strip()
+        if raw2.startswith("```"):
+            raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        pass2 = json.loads(raw2)
+        print(f"[identify_coin_photo] Pass 2 ✅ grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
+    except Exception as e:
+        # Non-fatal — continue with Pass 1 results only
+        print(f"[identify_coin_photo] Pass 2 error (non-fatal): {e}")
+
+    # ── 4. Merge Pass 1 + Pass 2 results ─────────────────────────────────────
+    final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
+    final_denom  = pass2.get("corrected_denomination") or pass1.get("denomination", "")
+    final_series = pass2.get("corrected_series")    or pass1.get("program_series", "")
+    final_grade  = pass2.get("refined_grade")       or pass1.get("grade", "")
+    final_conf   = pass2.get("confidence")          or pass1.get("confidence", "")
+    errors       = pass2.get("errors_detected", []) or []
+    variety_str  = "; ".join(errors) if errors else pass1.get("variety_notes", "")
+    est_value    = pass2.get("estimated_value_usd", "Pending")
+    cond_notes   = pass2.get("condition_notes", "")
+
+    full_report  = pass1.get("report", "")
+    if cond_notes:
+        full_report += f"\n\nCondition: {cond_notes}"
+    if errors:
+        full_report += f"\n\nErrors/Varieties: {variety_str}"
+    full_report += f"\n\n[AI Confidence: {final_conf}]"
+
+    # Determine which image is obverse vs reverse
+    obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
+    obv_bytes    = bytes_a if obverse_is_a else bytes_b
+    rev_bytes    = bytes_b if obverse_is_a else bytes_a
+    obv_mime     = mime_a  if obverse_is_a else mime_b
+    rev_mime     = mime_b  if obverse_is_a else mime_a
+
+    # Apply user overrides (from review screen)
+    ai_coin = {
+        "Year":           override_year    or final_year,
+        "Country":        pass1.get("country", "USA"),
+        "Denomination":   override_denom   or final_denom,
+        "Program/Series": override_series  or final_series,
+        "Theme/Subject":  override_theme   or pass1.get("theme_subject", ""),
+        "Mint Mark":      override_mint    or pass1.get("mint_mark", ""),
+        "Condition":      override_grade   or final_grade,
+        "Metal Content":  override_metal   or pass1.get("metal_content", ""),
+        "Variety":        variety_str,
+        "AI Estimated Value": est_value,
+        "Numismatic Report":  full_report,
+        "Cost":           override_cost    or "$0.00",
+        "Storage Location": override_storage or "",
+        "Personal Notes": override_notes   or "",
+        "Quantity":       1,
+        "ai_confidence":  final_conf,
+        "is_silver":      pass1.get("is_silver", False),
+        "is_gold":        pass1.get("is_gold",   False),
+        "source":         "AI Photo Identifier",
+        "deep_dive_status": "PENDING",
+    }
+
+    # ── 5. Optionally save to Firestore + GCS ─────────────────────────────────
+    coin_id      = str(uuid.uuid4())
+    gcs_obv_uri  = ""
+    gcs_rev_uri  = ""
+    obv_b64      = ""
+    rev_b64      = ""
+
+    if save_to_collection:
+        ts = int(__import__("time").time())
+        try:
+            gcs_obv_uri = _upload_to_gcs(
+                obv_bytes,
+                f"users/{user_email}/photo_id/{coin_id}_obverse_{ts}.jpg",
+                obv_mime,
+            )
+            gcs_rev_uri = _upload_to_gcs(
+                rev_bytes,
+                f"users/{user_email}/photo_id/{coin_id}_reverse_{ts}.jpg",
+                rev_mime,
+            )
+        except Exception as e:
+            print(f"[identify_coin_photo] GCS upload warning: {e}")
+
+        # Build base64 thumbnails for immediate Flutter display
+        obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
+        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+
+        coin_doc = {
+            **ai_coin,
+            "id":                    coin_id,
+            "imageUrlObverse":       obv_b64,
+            "imageUrlReverse":       rev_b64,
+            "imageUrlObverse_gcs":   gcs_obv_uri,
+            "imageUrlReverse_gcs":   gcs_rev_uri,
+            "Added":                 firestore.SERVER_TIMESTAMP,
+        }
+
+        db.collection(f"users/{user_email}/coins").document(coin_id).set(coin_doc)
+        print(f"[identify_coin_photo] ✅ Saved coin {coin_id} for {user_email}")
+    else:
+        # Preview mode — return b64 images for the Flutter review screen
+        obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
+        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+
+    return {
+        "coin_id":        coin_id,
+        "saved":          save_to_collection,
+        "coin":           ai_coin,
+        "obverse_b64":    obv_b64,
+        "reverse_b64":    rev_b64,
+        "gcs_obverse":    gcs_obv_uri,
+        "gcs_reverse":    gcs_rev_uri,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))

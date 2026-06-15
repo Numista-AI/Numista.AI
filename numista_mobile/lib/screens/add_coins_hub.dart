@@ -66,13 +66,31 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   // ─── Excel import state ─────────────────────────────────────────────────
   final _importNameCtrl = TextEditingController();
 
+  // ─── AI Photo ID state ───────────────────────────────────────────────────
+  Uint8List? _photoIdImageA;
+  Uint8List? _photoIdImageB;
+  bool       _photoIdRunning = false;
+  bool       _photoIdSaving  = false;
+  Map<String, dynamic>? _photoIdResult;
+  final _picYear    = TextEditingController();
+  final _picDenom   = TextEditingController();
+  final _picSeries  = TextEditingController();
+  final _picTheme   = TextEditingController();
+  final _picMint    = TextEditingController();
+  final _picGrade   = TextEditingController();
+  final _picMetal   = TextEditingController();
+  final _picVariety = TextEditingController();
+  final _picCost    = TextEditingController();
+  final _picStorage = TextEditingController();
+  final _picNotes   = TextEditingController();
+
   // Backend API URL
   final String _apiUrl = kApiBaseUrl;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
     _loadSavedPcgsToken();
   }
 
@@ -83,6 +101,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _pcgsCertCtrl.dispose();
     _pcgsSingleCtrl.dispose();
     _importNameCtrl.dispose();
+    _picYear.dispose();   _picDenom.dispose();   _picSeries.dispose();
+    _picTheme.dispose();  _picMint.dispose();    _picGrade.dispose();
+    _picMetal.dispose();  _picVariety.dispose(); _picCost.dispose();
+    _picStorage.dispose(); _picNotes.dispose();
     super.dispose();
   }
 
@@ -331,6 +353,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               _buildChecklistTab(),
               _buildPcgsImportTab(),
               _buildRollEntryTab(),
+              _buildAiPhotoIdTab(),
             ],
           ),
         ),
@@ -386,6 +409,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Tab(text: 'By Checklist', icon: Icon(Icons.fact_check, size: 20)),
           Tab(text: 'Import from PCGS', icon: Icon(Icons.shield_outlined, size: 20)),
           Tab(text: 'Roll / Batch', icon: Icon(Icons.currency_exchange, size: 20)),
+          Tab(text: 'AI Photo ID', icon: Icon(Icons.auto_awesome, size: 20)),
         ],
       ),
     );
@@ -2133,6 +2157,428 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ),
     );
   }
+
+  // ─── AI Photo ID ────────────────────────────────────────────────────────────
+
+  Future<void> _pickPhotoIdImage({required bool isA}) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      if (isA) { _photoIdImageA = bytes; }
+      else      { _photoIdImageB = bytes; }
+      _photoIdResult = null;
+    });
+  }
+
+  Future<void> _runPhotoIdentification() async {
+    if (_photoIdImageA == null || _photoIdImageB == null) return;
+    setState(() => _photoIdRunning = true);
+    try {
+      final uri     = Uri.parse('$_apiUrl/api/identify_coin_photo');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['user_email']         = AuthService.userEmail
+        ..fields['save_to_collection'] = 'false'
+        ..files.add(http.MultipartFile.fromBytes(
+            'image_a', _photoIdImageA!,
+            filename: 'image_a.jpg',
+            contentType: MediaType('image', 'jpeg')))
+        ..files.add(http.MultipartFile.fromBytes(
+            'image_b', _photoIdImageB!,
+            filename: 'image_b.jpg',
+            contentType: MediaType('image', 'jpeg')));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode != 200) {
+        throw Exception('Server error ${response.statusCode}: ${response.body}');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final coin = data['coin'] as Map<String, dynamic>? ?? {};
+      _picYear.text    = coin['Year']           ?? '';
+      _picDenom.text   = coin['Denomination']   ?? '';
+      _picSeries.text  = coin['Program/Series'] ?? '';
+      _picTheme.text   = coin['Theme/Subject']  ?? '';
+      _picMint.text    = coin['Mint Mark']      ?? '';
+      _picGrade.text   = coin['Condition']      ?? '';
+      _picMetal.text   = coin['Metal Content']  ?? '';
+      _picVariety.text = coin['Variety']        ?? '';
+      _picCost.text    = '';
+      _picStorage.text = '';
+      _picNotes.text   = '';
+      setState(() => _photoIdResult = data);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('AI identification failed: $e'),
+          backgroundColor: Colors.red[700],
+        ));
+      }
+    } finally {
+      setState(() => _photoIdRunning = false);
+    }
+  }
+
+  Future<void> _savePhotoIdCoin() async {
+    if (_photoIdImageA == null || _photoIdImageB == null) return;
+    setState(() => _photoIdSaving = true);
+    try {
+      final uri     = Uri.parse('$_apiUrl/api/identify_coin_photo');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['user_email']         = AuthService.userEmail
+        ..fields['save_to_collection'] = 'true'
+        ..fields['override_year']      = _picYear.text.trim()
+        ..fields['override_denom']     = _picDenom.text.trim()
+        ..fields['override_series']    = _picSeries.text.trim()
+        ..fields['override_theme']     = _picTheme.text.trim()
+        ..fields['override_mint']      = _picMint.text.trim()
+        ..fields['override_grade']     = _picGrade.text.trim()
+        ..fields['override_metal']     = _picMetal.text.trim()
+        ..fields['override_cost']      = _picCost.text.trim()
+        ..fields['override_storage']   = _picStorage.text.trim()
+        ..fields['override_notes']     = _picNotes.text.trim()
+        ..files.add(http.MultipartFile.fromBytes(
+            'image_a', _photoIdImageA!,
+            filename: 'image_a.jpg',
+            contentType: MediaType('image', 'jpeg')))
+        ..files.add(http.MultipartFile.fromBytes(
+            'image_b', _photoIdImageB!,
+            filename: 'image_b.jpg',
+            contentType: MediaType('image', 'jpeg')));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode != 200) {
+        throw Exception('Save failed ${response.statusCode}: ${response.body}');
+      }
+      setState(() { _photoIdImageA = null; _photoIdImageB = null; _photoIdResult = null; });
+      if (!mounted) return;
+      _showSuccessDialog(1);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Save failed: $e'), backgroundColor: Colors.red[700]));
+      }
+    } finally {
+      setState(() => _photoIdSaving = false);
+    }
+  }
+
+  Widget _buildAiPhotoIdTab() {
+    final result = _photoIdResult;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: result == null ? _buildPhotoIdUploadScreen() : _buildPhotoIdReviewScreen(result),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoIdUploadScreen() {
+    final bothPicked = _photoIdImageA != null && _photoIdImageB != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF0F172A), Color(0xFF1E293B)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFD4AF37), width: 2),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('AI Photo Identifier',
+                  style: TextStyle(color: Color(0xFFD4AF37), fontSize: 20, fontWeight: FontWeight.w800)),
+              SizedBox(height: 6),
+              Text(
+                'Upload two photos of your coin — obverse & reverse. '
+                'Gemini AI will identify it, estimate its grade, detect errors, '
+                'and add it to your collection.',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _photoPickerCard(
+              label: 'Image A  (Obverse or Reverse)',
+              bytes: _photoIdImageA,
+              onTap: () => _pickPhotoIdImage(isA: true),
+            )),
+            const SizedBox(width: 16),
+            Expanded(child: _photoPickerCard(
+              label: 'Image B  (The other side)',
+              bytes: _photoIdImageB,
+              onTap: () => _pickPhotoIdImage(isA: false),
+            )),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          "Order doesn't matter — AI automatically detects which side is which.",
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        if (!bothPicked)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F9FF),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(children: [
+              Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 18),
+              SizedBox(width: 10),
+              Text('Upload both images to enable AI identification.',
+                  style: TextStyle(color: Color(0xFF0369A1), fontSize: 13)),
+            ]),
+          ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton.icon(
+            onPressed: (bothPicked && !_photoIdRunning) ? _runPhotoIdentification : null,
+            icon: _photoIdRunning
+                ? const SizedBox(width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : const Icon(Icons.auto_awesome, size: 22),
+            label: Text(
+              _photoIdRunning ? 'Gemini AI is analyzing your coin...' : 'Identify with Gemini AI',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD4AF37),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _photoPickerCard({required String label, required Uint8List? bytes, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: bytes == null ? const Color(0xFFF8FAFC) : null,
+          border: Border.all(
+              color: bytes != null ? const Color(0xFFD4AF37) : const Color(0xFFCBD5E1),
+              width: bytes != null ? 2 : 1.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: bytes != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.memory(bytes, fit: BoxFit.cover, width: double.infinity))
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_photo_alternate_outlined, size: 40, color: Color(0xFF94A3B8)),
+                  const SizedBox(height: 10),
+                  Text(label, textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                  const SizedBox(height: 8),
+                  const Text('Tap to select',
+                      style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w600)),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoIdReviewScreen(Map<String, dynamic> result) {
+    final coin       = result['coin'] as Map<String, dynamic>? ?? {};
+    final confidence = (coin['ai_confidence'] ?? '') as String;
+    final estValue   = (coin['AI Estimated Value'] ?? 'Pending') as String;
+    final report     = (coin['Numismatic Report'] ?? '') as String;
+    final obvB64     = result['obverse_b64'] as String? ?? '';
+    final revB64     = result['reverse_b64'] as String? ?? '';
+    final badgeColor = {
+      'HIGH':   const Color(0xFF10B981),
+      'MEDIUM': const Color(0xFFF59E0B),
+      'LOW':    const Color(0xFFEF4444),
+    }[confidence] ?? const Color(0xFF64748B);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Text('AI Identification Complete',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(999)),
+            child: Text('$confidence CONFIDENCE',
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _b64ImageCard(obvB64, 'OBVERSE', const Color(0xFFD4AF37))),
+          const SizedBox(width: 12),
+          Expanded(child: _b64ImageCard(revB64, 'REVERSE', const Color(0xFF334155))),
+        ]),
+        const SizedBox(height: 20),
+        if (report.isNotEmpty) ...[
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Full Gemini AI Report',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A), fontSize: 14)),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(report,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B), height: 1.6)),
+              ),
+            ],
+          ),
+          if (estValue.isNotEmpty && estValue != 'Pending') ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(children: [
+                const Text('Estimated Retail Value',
+                    style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w700, fontSize: 13)),
+                const Spacer(),
+                Text(estValue,
+                    style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w800, fontSize: 16)),
+              ]),
+            ),
+          ],
+          const SizedBox(height: 16),
+        ],
+        const Divider(),
+        const SizedBox(height: 8),
+        const Text('Review & Edit Coin Details',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+        const Text('All fields pre-filled by AI — correct anything before saving.',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+        const SizedBox(height: 16),
+        _picRow([_picField('Year', _picYear), _picField('Denomination', _picDenom),
+            _picField('Country', TextEditingController(text: coin['Country'] ?? 'USA'))]),
+        _picRow([_picField('Program/Series', _picSeries), _picField('Theme/Subject', _picTheme),
+            _picField('Mint Mark', _picMint)]),
+        _picRow([_picField('Condition (Grade)', _picGrade), _picField('Metal Content', _picMetal),
+            _picField('Variety / Errors', _picVariety)]),
+        _picRow([_picField('Cost (Optional)', _picCost), _picField('Storage Location', _picStorage)]),
+        const SizedBox(height: 8),
+        TextField(controller: _picNotes, maxLines: 3, decoration: _picDecoration('Personal Notes')),
+        const SizedBox(height: 24),
+        Row(children: [
+          Expanded(
+            flex: 1,
+            child: OutlinedButton.icon(
+              onPressed: () => setState(() => _photoIdResult = null),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Start Over'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF64748B),
+                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: ElevatedButton.icon(
+              onPressed: _photoIdSaving ? null : _savePhotoIdCoin,
+              icon: _photoIdSaving
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : const Icon(Icons.add_circle_outline, size: 20),
+              label: Text(_photoIdSaving ? 'Saving...' : 'Add to My Collection',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _b64ImageCard(String b64, String label, Color borderColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700, color: borderColor, letterSpacing: 1)),
+        const SizedBox(height: 4),
+        Container(
+          height: 180,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: borderColor, width: 2)),
+          child: b64.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                      base64Decode(b64.contains(',') ? b64.split(',').last : b64),
+                      fit: BoxFit.cover, width: double.infinity))
+              : const Center(child: Icon(Icons.image_not_supported_outlined,
+                  color: Color(0xFF94A3B8), size: 32)),
+        ),
+      ],
+    );
+  }
+
+  Row _picRow(List<Widget> fields) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: fields.map((f) => Expanded(child: Padding(
+        padding: const EdgeInsets.only(right: 10, bottom: 10), child: f))).toList(),
+  );
+
+  Widget _picField(String label, TextEditingController ctrl) => TextField(
+    controller: ctrl,
+    decoration: _picDecoration(label),
+    style: const TextStyle(fontSize: 13),
+  );
+
+  InputDecoration _picDecoration(String label) => InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+    enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+    focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2)),
+  );
 }
 
 /// Compact action card used in the Checklist tab for Print / Scan actions.

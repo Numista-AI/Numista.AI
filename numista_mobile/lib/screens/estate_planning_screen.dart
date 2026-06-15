@@ -760,6 +760,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             _label('Liquidation Strategy'),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _liquidationPreference,
               decoration: _inputDecoration(),
               dropdownColor: _kCard,
@@ -775,6 +776,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             _label('Preferred Auction Partner'),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
+              // ignore: deprecated_member_use
               value: _preferredConsignor,
               decoration: _inputDecoration(),
               dropdownColor: _kCard,
@@ -1297,10 +1299,12 @@ class _DivisionTabState extends State<_DivisionTab> {
       }
 
       await batch.commit();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Division plan successfully saved.')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving division plan: $e')),
       );
@@ -1337,7 +1341,7 @@ class _DivisionTabState extends State<_DivisionTab> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
-                  DefaultTabController.of(context)?.animateTo(0);
+                  DefaultTabController.of(context).animateTo(0);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGold,
@@ -1431,7 +1435,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                   const Divider(color: _kCardBorder, height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1551,7 +1555,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
