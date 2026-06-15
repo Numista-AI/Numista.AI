@@ -37,9 +37,27 @@ def get_firestore_client():
         logging.info("Firestore client initialized.")
     return _db
 
-USER_EMAIL = "eric@numista.ai"
-FIRESTORE_COINS_PATH = f"users/{USER_EMAIL}/coins"
-FIRESTORE_COMMANDS_PATH = f"commands/{USER_EMAIL}/pending"
+USER_EMAIL = None
+FIRESTORE_COINS_PATH = None
+FIRESTORE_COMMANDS_PATH = None
+
+# Global watcher reference
+_watcher = None
+
+def set_user_email(email):
+    global USER_EMAIL, FIRESTORE_COINS_PATH, FIRESTORE_COMMANDS_PATH, _watcher
+    USER_EMAIL = email
+    FIRESTORE_COINS_PATH = f"users/{USER_EMAIL}/coins"
+    FIRESTORE_COMMANDS_PATH = f"commands/{USER_EMAIL}/pending"
+    
+    # Restart the Firestore command watcher for the new user
+    if _watcher:
+        try:
+            _watcher.unsubscribe()
+        except Exception:
+            pass
+    _watcher = start_command_watcher()
+    logging.info(f"Agent paired to {email}")
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": [
@@ -564,8 +582,21 @@ def get_status():
         if flip_start and snapshot.get("waiting_for_flip")
         else None
     )
+    
+    snapshot["paired_email"] = USER_EMAIL
 
     return jsonify(snapshot)
+
+@app.route('/pair', methods=['POST', 'OPTIONS'])
+def pair_agent_route():
+    if request.method == 'OPTIONS':
+        return '', 204
+    data = request.json or {}
+    email = data.get("email")
+    if email:
+        set_user_email(email)
+        return jsonify({"status": "success", "paired_email": email})
+    return jsonify({"status": "error", "message": "Email not provided"}), 400
 
 # ─── Firestore Command Watcher ────────────────────────────────────────────────
 def _process_coin_save(data: dict):
@@ -725,11 +756,15 @@ if __name__ == "__main__":
     logging.info("="*55)
     logging.info("  Numista.AI Hardware Agent")
     logging.info("  Flask status server  -> https://localhost:5000")
-    logging.info("  Firestore commands   -> commands/%s/pending", USER_EMAIL)
+    if USER_EMAIL:
+        logging.info("  Firestore commands   -> commands/%s/pending", USER_EMAIL)
+    else:
+        logging.info("  Firestore commands   -> Waiting for pairing...")
     logging.info("="*55)
 
     # Start Firestore command watcher (non-blocking — runs on SDK background thread)
-    _watcher = start_command_watcher()
+    if USER_EMAIL:
+        _watcher = start_command_watcher()
 
     # Load SSL cert so Chrome (HTTPS page) can reach this local server.
     # Flutter's hardware_service.dart calls https://localhost:5000 — the server

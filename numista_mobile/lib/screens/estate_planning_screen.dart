@@ -140,7 +140,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _listenToTier();
   }
 
@@ -191,6 +191,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                           children: [
                             _ProfileTab(uid: _uid),
                             _CollectionTab(uid: _uid),
+                            _DivisionTab(uid: _uid),
                             _GenerateTab(uid: _uid),
                           ],
                         )
@@ -461,6 +462,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
               tabs: const [
                 Tab(icon: Icon(Icons.person_outline, size: 16), text: 'My Profile'),
                 Tab(icon: Icon(Icons.paid_outlined, size: 16), text: 'Collection'),
+                Tab(icon: Icon(Icons.pie_chart_outline, size: 16), text: 'Division'),
                 Tab(icon: Icon(Icons.description_outlined, size: 16), text: 'Generate'),
               ],
             ),
@@ -503,6 +505,9 @@ class _ProfileTabState extends State<_ProfileTab> {
   String _jurisdiction     = '';
   String _willTrustStatus  = 'Unknown';
   List<EstateBeneficiary> _beneficiaries = [];
+  int _heirsCount = 1;
+  String _liquidationPreference = 'consign_all';
+  String _preferredConsignor = 'None';
 
   StreamSubscription<EstateProfile?>? _sub;
 
@@ -535,6 +540,9 @@ class _ProfileTabState extends State<_ProfileTab> {
     _jurisdiction          = p.jurisdiction;
     _willTrustStatus       = p.willOrTrustStatus;
     _beneficiaries         = List.from(p.beneficiaries);
+    _heirsCount            = p.heirsCount;
+    _liquidationPreference = p.liquidationPreference;
+    _preferredConsignor    = p.preferredConsignor;
     setState(() {});
   }
 
@@ -571,6 +579,9 @@ class _ProfileTabState extends State<_ProfileTab> {
         beneficiaries:      _beneficiaries,
         isMarried:          _maritalStatus == 'Married',
         maritalPropertyNotes: _maritalNotesCtrl.text.trim(),
+        heirsCount:         _heirsCount,
+        liquidationPreference: _liquidationPreference,
+        preferredConsignor: _preferredConsignor,
       );
       await EstateProfileService.saveProfile(widget.uid, updated);
       if (mounted) {
@@ -737,6 +748,85 @@ class _ProfileTabState extends State<_ProfileTab> {
             showNjClass: _jurisdiction == 'NJ',
             onChanged: (list) => setState(() => _beneficiaries = list),
           ),
+
+          const SizedBox(height: 16),
+
+          // ── Liquidation & Division Settings ───────────────────────────
+          _SectionHeader(
+            title: 'Liquidation & Division Settings',
+            icon: Icons.pie_chart_outline,
+          ),
+          _EstateCard(children: [
+            _label('Liquidation Strategy'),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: _liquidationPreference,
+              decoration: _inputDecoration(),
+              dropdownColor: _kCard,
+              style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+              items: const [
+                DropdownMenuItem(value: 'consign_all', child: Text('Consign High-Value to Auctions')),
+                DropdownMenuItem(value: 'maximize_value', child: Text('Maximize Value (Bullion Spot + Auction)')),
+                DropdownMenuItem(value: 'keep_family', child: Text('Distribute & Keep in Family')),
+              ],
+              onChanged: (v) => setState(() => _liquidationPreference = v ?? 'consign_all'),
+            ),
+            const SizedBox(height: 12),
+            _label('Preferred Auction Partner'),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: _preferredConsignor,
+              decoration: _inputDecoration(),
+              dropdownColor: _kCard,
+              style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+              items: const [
+                DropdownMenuItem(value: 'None', child: Text('None (AI Dynamic Selection)')),
+                DropdownMenuItem(value: 'GreatCollections', child: Text('GreatCollections')),
+                DropdownMenuItem(value: 'Heritage', child: Text('Heritage Auctions')),
+                DropdownMenuItem(value: 'StacksBowers', child: Text('Stack\'s Bowers')),
+              ],
+              onChanged: (v) => setState(() => _preferredConsignor = v ?? 'None'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _label('Number of Heirs'),
+                      const SizedBox(height: 2),
+                      Text(
+                        'For automatic division calculations',
+                        style: TextStyle(color: _kTextSecondary, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, color: _kGold),
+                      onPressed: _heirsCount > 1
+                          ? () => setState(() => _heirsCount--)
+                          : null,
+                    ),
+                    Text(
+                      _heirsCount.toString(),
+                      style: const TextStyle(color: _kTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: _kGold),
+                      onPressed: _heirsCount < 10
+                          ? () => setState(() => _heirsCount++)
+                          : null,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ]),
 
           const SizedBox(height: 24),
 
@@ -972,7 +1062,558 @@ class _CollectionTabState extends State<_CollectionTab> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAB 3 — Generate Report
+// TAB 3 — Division Tab
+// ─────────────────────────────────────────────────────────────────────────────
+class _DivisionTab extends StatefulWidget {
+  final String uid;
+  const _DivisionTab({required this.uid});
+
+  @override
+  State<_DivisionTab> createState() => _DivisionTabState();
+}
+
+class _DivisionTabState extends State<_DivisionTab> {
+  List<CoinModel> _coins = [];
+  Map<String, CoinEstateData> _estateData = {};
+  EstateProfile? _profile;
+  bool _loading = true;
+  bool _saving = false;
+
+  // Simulation results
+  Map<String, List<CoinModel>> _simulatedLots = {};
+  Map<String, double> _simulatedTotals = {};
+
+  StreamSubscription<Map<String, CoinEstateData>>? _estateSub;
+  StreamSubscription<EstateProfile?>? _profileSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoins();
+    _estateSub = EstateDataService.watchEstateData(widget.uid).listen((data) {
+      if (mounted) {
+        setState(() {
+          _estateData = data;
+        });
+        _runDivisionSimulation();
+      }
+    });
+    _profileSub = EstateProfileService.watchProfile(widget.uid).listen((p) {
+      if (mounted) {
+        setState(() {
+          _profile = p;
+        });
+        _runDivisionSimulation();
+      }
+    });
+  }
+
+  Future<void> _loadCoins() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .collection('coins')
+          .orderBy('timestamp', descending: true)
+          .get();
+      final coins = snap.docs
+          .map((d) => CoinModel.fromFirestore(d))
+          .toList();
+      if (mounted) {
+        setState(() {
+          _coins = coins;
+          _loading = false;
+        });
+        _runDivisionSimulation();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _estateSub?.cancel();
+    _profileSub?.cancel();
+    super.dispose();
+  }
+
+  double _parseFmv(CoinModel c) {
+    final raw = _estateData[c.id]?.fmvOverride
+        ?? _parseValue(c.aiEstimatedValue);
+    return raw;
+  }
+
+  double _parseValue(String v) {
+    final cleaned = v.replaceAll(RegExp(r'[^\d.]'), '');
+    return double.tryParse(cleaned) ?? 0.0;
+  }
+
+  String _formatCompactFmv(double val) {
+    if (val >= 1000) {
+      return '${(val / 1000).toStringAsFixed(1)}k';
+    }
+    return val.toStringAsFixed(0);
+  }
+
+  void _runDivisionSimulation() {
+    if (_profile == null || _profile!.beneficiaries.length < 2) {
+      setState(() {
+        _simulatedLots = {};
+        _simulatedTotals = {};
+      });
+      return;
+    }
+
+    final heirs = _profile!.beneficiaries;
+    final heirLots = <String, List<CoinModel>>{};
+    final heirTotals = <String, double>{};
+    for (final h in heirs) {
+      heirLots[h.id] = [];
+      heirTotals[h.id] = 0.0;
+    }
+
+    // Step 1: Pre-allocate locked assignments
+    final unlockedCoins = <CoinModel>[];
+    for (final coin in _coins) {
+      final override = _estateData[coin.id];
+      if (override?.excludeFromReport == true) {
+        continue;
+      }
+
+      final assignedHeirId = override?.assignedHeirId ?? override?.beneficiaryId;
+      final divisionLocked = override?.divisionLocked ?? false;
+
+      if (divisionLocked && assignedHeirId != null && heirLots.containsKey(assignedHeirId)) {
+        heirLots[assignedHeirId]!.add(coin);
+        heirTotals[assignedHeirId] = (heirTotals[assignedHeirId] ?? 0.0) + _parseFmv(coin);
+      } else {
+        final fmv = _parseFmv(coin);
+        if (fmv > 0) {
+          unlockedCoins.add(coin);
+        }
+      }
+    }
+
+    // Step 2: Sort unlocked coins descending by FMV
+    unlockedCoins.sort((a, b) => _parseFmv(b).compareTo(_parseFmv(a)));
+
+    // Step 3: Greedy LPT allocation
+    for (final coin in unlockedCoins) {
+      final fmv = _parseFmv(coin);
+      String? targetHeirId;
+      double minVal = 999999999999.0;
+      for (final h in heirs) {
+        final currentTotal = heirTotals[h.id] ?? 0.0;
+        if (currentTotal < minVal) {
+          minVal = currentTotal;
+          targetHeirId = h.id;
+        }
+      }
+
+      if (targetHeirId != null) {
+        heirLots[targetHeirId]!.add(coin);
+        heirTotals[targetHeirId] = minVal + fmv;
+      }
+    }
+
+    setState(() {
+      _simulatedLots = heirLots;
+      _simulatedTotals = heirTotals;
+    });
+  }
+
+  bool get _isDirty {
+    if (_profile == null || _profile!.beneficiaries.length < 2) return false;
+    for (final entry in _simulatedLots.entries) {
+      final heirId = entry.key;
+      for (final coin in entry.value) {
+        if (_estateData[coin.id]?.assignedHeirId != heirId) {
+          return true;
+        }
+      }
+    }
+    for (final coin in _coins) {
+      final savedHeirId = _estateData[coin.id]?.assignedHeirId;
+      if (savedHeirId != null) {
+        final lot = _simulatedLots[savedHeirId];
+        if (lot == null || !lot.any((c) => c.id == coin.id)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  Future<void> _commitDivision() async {
+    setState(() => _saving = true);
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final collectionRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .collection('estate_data');
+
+      final assignedCoinIds = <String>{};
+      _simulatedLots.forEach((heirId, coins) {
+        final heir = _profile?.beneficiaries.firstWhere((h) => h.id == heirId);
+        final heirName = heir?.name ?? 'Unknown';
+
+        for (final coin in coins) {
+          assignedCoinIds.add(coin.id);
+          final existing = _estateData[coin.id];
+          final updated = (existing ?? CoinEstateData(coinId: coin.id)).copyWith(
+            assignedHeirId: heirId,
+            beneficiaryId: heirId,
+            beneficiaryName: heirName,
+          );
+
+          batch.set(
+            collectionRef.doc(coin.id),
+            updated.toFirestore(),
+            SetOptions(merge: true),
+          );
+        }
+      });
+
+      // Clear assignedHeirId / beneficiary info for unassigned coins
+      for (final coin in _coins) {
+        if (!assignedCoinIds.contains(coin.id)) {
+          final existing = _estateData[coin.id];
+          if (existing != null && (existing.assignedHeirId != null || existing.beneficiaryId != null)) {
+            final updated = existing.copyWith(
+              assignedHeirId: null,
+              beneficiaryId: null,
+              beneficiaryName: null,
+              divisionLocked: false,
+            );
+            batch.set(
+              collectionRef.doc(coin.id),
+              updated.toFirestore(),
+              SetOptions(merge: true),
+            );
+          }
+        }
+      }
+
+      await batch.commit();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Division plan successfully saved.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving division plan: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: _kGold));
+    }
+
+    if (_profile == null || _profile!.beneficiaries.length < 2) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.pie_chart_outline, size: 64, color: _kTextSecondary),
+              const SizedBox(height: 16),
+              const Text(
+                'Beneficiaries Required',
+                style: TextStyle(color: _kTextPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The Smart Division Engine requires at least 2 beneficiaries configured in your profile to run partitioning simulations.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _kTextSecondary, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  DefaultTabController.of(context)?.animateTo(0);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGold,
+                  foregroundColor: _kNavy,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.person_outline),
+                label: const Text('Configure Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final heirs = _profile!.beneficiaries;
+    final totalFmv = _coins.fold(0.0, (acc, c) => acc + _parseFmv(c));
+    final avgValue = totalFmv / heirs.length;
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              const _SectionHeader(
+                title: 'Smart Division Engine',
+                icon: Icons.pie_chart_outline,
+              ),
+              const Text(
+                'Automatically partitions your collection into balanced lots of near-equal value. Use the lock icon to manually assign specific coins to heirs.',
+                style: TextStyle(color: _kTextSecondary, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+
+              _EstateCard(
+                children: [
+                  const Text(
+                    'Division Summary',
+                    style: TextStyle(color: _kTextPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  ...heirs.map((heir) {
+                    final lotCoins = _simulatedLots[heir.id] ?? [];
+                    final lotTotal = _simulatedTotals[heir.id] ?? 0.0;
+                    final diff = lotTotal - avgValue;
+                    final pctDiff = avgValue > 0 ? (diff / avgValue * 100) : 0.0;
+                    final cashOffset = -diff;
+
+                    final color = diff.abs() < (avgValue * 0.05)
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFF59E0B);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  heir.name,
+                                  style: const TextStyle(color: _kTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
+                                  style: const TextStyle(color: _kTextSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${diff >= 0 ? "+" : ""}${pctDiff.toStringAsFixed(1)}% vs avg',
+                                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                cashOffset >= 0
+                                    ? '+\$${_formatCompactFmv(cashOffset)} cash'
+                                    : '-\$${_formatCompactFmv(cashOffset.abs())} cash',
+                                style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const Divider(color: _kCardBorder, height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Average Lot Value',
+                        style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                      ),
+                      Text(
+                        _dollarFmt.format(avgValue),
+                        style: const TextStyle(color: _kGold, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              const _SectionHeader(
+                title: 'Beneficiary Lots & Locks',
+                icon: Icons.lock_outline,
+              ),
+              ...heirs.map((heir) {
+                final lotCoins = _simulatedLots[heir.id] ?? [];
+                final lotTotal = _simulatedTotals[heir.id] ?? 0.0;
+
+                return Card(
+                  color: _kCard,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: _kCardBorder),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  clipBehavior: Clip.antiAlias,
+                  child: ExpansionTile(
+                    title: Text(
+                      heir.name,
+                      style: const TextStyle(color: _kTextPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
+                      style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                    ),
+                    iconColor: _kGold,
+                    collapsedIconColor: _kTextSecondary,
+                    children: [
+                      if (lotCoins.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            'No coins in this lot.',
+                            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: lotCoins.length,
+                          itemBuilder: (ctx, idx) {
+                            final coin = lotCoins[idx];
+                            final override = _estateData[coin.id];
+                            final isLocked = override?.divisionLocked ?? false;
+                            final fmv = _parseFmv(coin);
+
+                            final title = '${coin.year}${coin.mintMark.isNotEmpty ? coin.mintMark : ''} ${coin.denomination}';
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: const BoxDecoration(
+                                border: Border(bottom: BorderSide(color: _kCardBorder, width: 0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                        if (coin.condition.isNotEmpty)
+                                          Text(
+                                            coin.condition,
+                                            style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    _dollarFmt.format(fmv),
+                                    style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: Icon(
+                                      isLocked ? Icons.lock : Icons.lock_open_outlined,
+                                      color: isLocked ? _kGold : _kTextSecondary,
+                                      size: 18,
+                                    ),
+                                    onPressed: () async {
+                                      final updated = (override ?? CoinEstateData(coinId: coin.id)).copyWith(
+                                        divisionLocked: !isLocked,
+                                        assignedHeirId: heir.id,
+                                        beneficiaryId: heir.id,
+                                        beneficiaryName: heir.name,
+                                      );
+                                      await EstateDataService.saveCoinEstateData(widget.uid, updated);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        
+        if (_isDirty)
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: const BoxDecoration(
+              color: _kNavy,
+              border: Border(top: BorderSide(color: _kCardBorder)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _commitDivision,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: _saving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Commit Division Plan to Database',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: const BoxDecoration(
+              color: _kNavy,
+              border: Border(top: BorderSide(color: _kCardBorder)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: null,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: _kCardBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.check_circle_outline, color: _kTextSecondary, size: 18),
+                label: const Text(
+                  'Division Plan is Up-to-Date',
+                  style: TextStyle(color: _kTextSecondary, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 4 — Generate Report
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 class _GenerateTab extends StatefulWidget {
   final String uid;
@@ -1441,6 +2082,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
   bool _excludeFromReport  = false;
   bool _useFmvOverride     = false;
   bool _saving             = false;
+  bool _divisionLocked     = false;
 
   @override
   void initState() {
@@ -1451,6 +2093,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
       _notesCtrl.text   = e.estateNotes ?? '';
       _isHeirloom       = e.isHeirloom;
       _excludeFromReport = e.excludeFromReport;
+      _divisionLocked   = e.divisionLocked;
       if (e.fmvOverride != null) {
         _useFmvOverride = true;
         _fmvOverrideCtrl.text = e.fmvOverride!.toStringAsFixed(2);
@@ -1499,6 +2142,8 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
             : _notesCtrl.text.trim(),
         isHeirloom:           _isHeirloom,
         excludeFromReport:    _excludeFromReport,
+        assignedHeirId:       _beneficiaryId,
+        divisionLocked:       _divisionLocked,
       );
 
       await EstateDataService.saveCoinEstateData(widget.uid, data);
@@ -1613,8 +2258,22 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                                 style: const TextStyle(color: _kTextPrimary)),
                           )),
                     ],
-                    onChanged: (v) => setState(() => _beneficiaryId = v),
+                    onChanged: (v) {
+                      setState(() {
+                        _beneficiaryId = v;
+                        if (v == null) _divisionLocked = false;
+                      });
+                    },
                   ),
+
+                  if (_beneficiaryId != null) ...[
+                    const SizedBox(height: 10),
+                    _ToggleTile(
+                      label: 'Lock Division Assignment',
+                      value: _divisionLocked,
+                      onChanged: (v) => setState(() => _divisionLocked = v),
+                    ),
+                  ],
 
                   const SizedBox(height: 14),
 

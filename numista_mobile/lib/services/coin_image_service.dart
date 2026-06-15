@@ -59,6 +59,83 @@ class CoinImageService {
     'yosemite': 'yosemite', 'gettysburg': 'gettysburg',
     'hot springs': 'hot-springs', 'mount hood': 'mount-hood',
     'glacier': 'glacier', 'olympic': 'olympic',
+    // ATB park name → state/territory slug (2010–2021 complete program)
+    // Note: coin_image_index keys images by state (from filename), not park name.
+    // 2010
+    'hot springs national park': 'arkansas',
+    'yellowstone national park': 'wyoming',
+    'yosemite national park': 'california',
+    'grand canyon national park': 'arizona',
+    'mount hood national forest': 'oregon',
+    // 2011
+    'gettysburg national military park': 'pennsylvania',
+    'glacier national park': 'montana',
+    'olympic national park': 'washington',
+    'vicksburg national military park': 'mississippi',
+    'chickasaw national recreation area': 'oklahoma',
+    // 2012
+    'el yunque national forest': 'puerto-rico',
+    'chaco culture national historical park': 'new-mexico',
+    'acadia national park': 'maine',
+    'hawaii volcanoes national park': 'hawaii',
+    'denali national park': 'alaska',
+    // 2013
+    'white mountain national forest': 'new-hampshire',
+    "perry's victory and international peace memorial": 'ohio',
+    'great basin national park': 'nevada',
+    'fort mchenry national monument': 'maryland',
+    'mount rushmore national memorial': 'south-dakota',
+    // 2014
+    'great smoky mountains national park': 'tennessee',
+    'shenandoah national park': 'virginia',
+    'arches national park': 'utah',
+    'great sand dunes national park': 'colorado',
+    'everglades national park': 'florida',
+    // 2015
+    'homestead national monument': 'nebraska',
+    'kisatchie national forest': 'louisiana',
+    'blue ridge parkway': 'north-carolina',
+    'bombay hook national wildlife refuge': 'delaware',
+    'saratoga national historical park': 'new-york',
+    // 2016
+    'shawnee national forest': 'illinois',
+    'cumberland gap national historical park': 'kentucky',
+    'harpers ferry national historical park': 'west-virginia',
+    'theodore roosevelt national park': 'north-dakota',
+    'fort moultrie national monument': 'south-carolina',
+    // 2017
+    'effigy mounds national monument': 'iowa',
+    'frederick douglass national historic site': 'district-of-columbia',
+    'ozark national scenic riverways': 'missouri',
+    'ellis island national monument': 'new-jersey',
+    'george rogers clark national historical park': 'indiana',
+    // 2018
+    'pictured rocks national lakeshore': 'michigan',
+    'apostle islands national lakeshore': 'wisconsin',
+    'voyageurs national park': 'minnesota',
+    'cumberland island national seashore': 'georgia',
+    'block island national wildlife refuge': 'rhode-island',
+    // 2019
+    'lowell national historical park': 'massachusetts',
+    'lowell': 'massachusetts',
+    'american memorial park': 'northern-mariana-islands',
+    'war in the pacific national historical park': 'guam',
+    'war in the pacific': 'guam',
+    'san antonio missions national historical park': 'texas',
+    'san antonio missions': 'texas',
+    'frank church river of no return wilderness': 'idaho',
+    'frank church': 'idaho',
+    'river of no return': 'idaho',
+    // 2020
+    'national park of american samoa': 'american-samoa',
+    'weir farm national historical park': 'connecticut',
+    'salt river bay national historical park': 'us-virgin-islands',
+    'marsh-billings-rockefeller national historical park': 'vermont',
+    'tallgrass prairie national preserve': 'kansas',
+    // 2021
+    'tuskegee airmen national historic site': 'alabama',
+    'crossing the delaware': 'new-jersey',
+    'washington crossing historic park': 'new-jersey',
     // Presidents (presidential dollar subjects)
     'adams': 'adams', 'jefferson': 'jefferson', 'madison': 'madison',
     'monroe': 'monroe', 'jackson': 'jackson', 'van buren': 'van-buren',

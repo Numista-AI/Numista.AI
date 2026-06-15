@@ -46,6 +46,9 @@ class EstateReportService {
       'executor_email': profile.executorEmail,
       'executor_phone': profile.executorPhone,
       'beneficiaries': profile.beneficiaries.map((b) => b.toMap()).toList(),
+      'liquidation_preference': profile.liquidationPreference,
+      'preferred_consignor': profile.preferredConsignor,
+      'heirs_count': profile.heirsCount,
       'date_of_death': dateOfDeath,
     };
 

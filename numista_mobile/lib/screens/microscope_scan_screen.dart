@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/hardware_service.dart';
+import '../services/auth_service.dart';
 import '../services/pcgs_service.dart';
 import '../services/reference_library_service.dart';
 import 'desktop_agent_download_screen.dart';
@@ -79,6 +80,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
       final status = await _hw.getStatus();
       if (mounted && status != null) {
+        if (status.pairedEmail != AuthService.userEmail) {
+          await _hw.pairAgent(AuthService.userEmail);
+        }
         final wasComplete = _status?.isScanComplete == true;
         setState(() => _status = status);
         // Stop polling when the scan is fully complete

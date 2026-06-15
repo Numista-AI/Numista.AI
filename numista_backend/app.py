@@ -45,7 +45,7 @@ if "program_history" in st.query_params:
     # Let's set a session state flag to trigger "Popup Mode" rendering later in the script.
     st.session_state['POPUP_MODE_ID'] = prog_id
 
-st.sidebar.caption("v3.5 - Microscope Optimization")
+st.sidebar.caption("v3.6 - AI Photo Identifier + Gemini 3.5 Upgrade")
 
 # Sidebar Suppression removed to allow navigation
 
@@ -75,7 +75,7 @@ if not firebase_admin._apps:
 credentials, project = google.auth.default()
 db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-3.5-flash")
 
 # --- FIREBASE CLIENT API KEY ---
 # Required for Client-Side Operations from Python (Login, Reset Password)
@@ -2367,6 +2367,387 @@ def render_enrich_modal(coin_data):
         except Exception as e:
             st.error(f"Save Failed: {e}")
 
+def render_ai_photo_identifier():
+    """
+    Upload obverse + reverse coin images from disk → Gemini AI identifies the coin
+    in two passes → user reviews pre-filled fields → saves to Firestore collection.
+    """
+    import tempfile, os as _os
+
+    # ── State Keys ────────────────────────────────────────────────────────────
+    KEY_RESULT   = "_photo_id_result"
+    KEY_RUNNING  = "_photo_id_running"
+
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                border: 2px solid #d4af37; border-radius: 14px; padding: 24px;
+                margin-bottom: 20px;">
+        <h2 style="color: #d4af37; margin: 0 0 6px 0; font-size: 1.4rem;">📸 AI Photo Identifier</h2>
+        <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">
+            Upload two photos of your coin (obverse &amp; reverse) and Gemini AI will
+            identify it, estimate its grade, detect errors/varieties, and add it to your collection.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.get('guest_mode'):
+        st.warning("🔒 Guest Mode — sign in to add coins.", icon="🚫")
+        return
+
+    # ── Step 1: Upload ────────────────────────────────────────────────────────
+    if not st.session_state.get(KEY_RESULT):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Image A** — Obverse or Reverse (order doesn't matter, AI figures it out)")
+            file_a = st.file_uploader("Upload first image", type=["jpg", "jpeg", "png"],
+                                      key="photo_id_a", label_visibility="collapsed")
+            if file_a:
+                st.image(file_a, use_container_width=True)
+        with col_b:
+            st.markdown("**Image B** — The other side")
+            file_b = st.file_uploader("Upload second image", type=["jpg", "jpeg", "png"],
+                                      key="photo_id_b", label_visibility="collapsed")
+            if file_b:
+                st.image(file_b, use_container_width=True)
+
+        st.write("")
+        btn_disabled = not (file_a and file_b)
+        if btn_disabled:
+            st.info("⬆️ Upload both images to enable AI identification.", icon="ℹ️")
+
+        if st.button("🔍 Identify with Gemini AI", type="primary",
+                     disabled=btn_disabled, use_container_width=True,
+                     key="photo_id_run"):
+
+            with st.spinner("🧠 Gemini AI is analyzing your coin... (Pass 1 of 2)"):
+                try:
+                    # Write uploads to temp files
+                    def _write_tmp(uploaded):
+                        ext = ".jpg" if uploaded.type != "image/png" else ".png"
+                        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+                        tmp.write(uploaded.getvalue())
+                        tmp.flush()
+                        tmp.close()
+                        return tmp.name
+
+                    path_a = _write_tmp(file_a)
+                    path_b = _write_tmp(file_b)
+
+                    # ── Use Vertex AI model (already initialised at app startup) ─
+                    from vertexai.generative_models import Part, GenerationConfig
+                    _client = model
+
+                    # ── Read image bytes ──────────────────────────────────────
+                    with open(path_a, "rb") as f: bytes_a = f.read()
+                    with open(path_b, "rb") as f: bytes_b = f.read()
+                    mime_a = file_a.type or "image/jpeg"
+                    mime_b = file_b.type or "image/jpeg"
+
+                    # ── PASS 1: Identification ────────────────────────────────
+                    pass1_prompt = """
+You are a professional numismatist. You are given two coin images: Image A and Image B.
+The user may have uploaded them in any order — do NOT assume A is the obverse.
+
+Your tasks:
+1. Determine which image is the OBVERSE (heads/portrait/date side) and which is the REVERSE (tails/design).
+2. Identify the coin: Year, Country, Denomination, Program/Series, Theme/Subject, and estimated Grade.
+3. MINT MARK (critical): Look extremely carefully at the obverse for a small letter mint mark.
+   Common locations: below the date, near the portrait, near "IN GOD WE TRUST", or along the lower rim.
+   US Mint codes: P (Philadelphia), D (Denver), S (San Francisco), W (West Point), CC (Carson City), O (New Orleans).
+   If you can see any letter — even faint — report it. If genuinely absent, return "None (P)".
+4. METAL COMPOSITION:
+   - US coins before 1965 (dimes, quarters, halves) are 90% silver.
+   - Half dollars 1965-1970 are 40% silver.
+   - Morgan Dollars, Peace Dollars, Walking Liberty, Franklin Half, Mercury Dimes are silver.
+   - Indian Head $5 Half Eagle, $10 Eagle, $20 Saint-Gaudens are 90% Gold, 10% Copper.
+   - American Gold/Silver Eagles are .9999/.999 fine.
+   - Modern clad coins (post-1964 quarters, post-1970 halves) contain NO silver.
+   - Set "is_silver": true/false, "is_gold": true/false.
+   - Set "metal_content" to the precise composition string.
+5. Provide a brief "report" summarizing the coin's key features and numismatic significance.
+6. Provide a "variety_notes" string with any obvious die varieties, errors, or special characteristics you notice.
+
+Return ONLY valid JSON with these exact keys:
+{
+  "obverse_image": "A" or "B",
+  "year": integer,
+  "country": string,
+  "denomination": string,
+  "program_series": string,
+  "theme_subject": string,
+  "mint_mark": string,
+  "grade": string,
+  "is_silver": boolean,
+  "is_gold": boolean,
+  "metal_content": string,
+  "report": string,
+  "variety_notes": string,
+  "confidence": "HIGH", "MEDIUM", or "LOW"
+}"""
+
+                    part_a = Part.from_data(data=bytes_a, mime_type=mime_a)
+                    part_b = Part.from_data(data=bytes_b, mime_type=mime_b)
+                    resp1 = _client.generate_content(
+                        [pass1_prompt, part_a, part_b],
+                        generation_config=GenerationConfig(response_mime_type="application/json")
+                    )
+                    raw1 = resp1.text
+
+                    # Strip markdown fences if present
+                    raw1 = raw1.strip()
+                    if raw1.startswith("```"):
+                        raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                    pass1 = json.loads(raw1)
+
+                except Exception as e:
+                    st.error(f"❌ AI Identification failed: {e}")
+                    # Clean up
+                    for p in [path_a, path_b]:
+                        try: _os.unlink(p)
+                        except: pass
+                    st.stop()
+
+            # ── PASS 2: Grade + Variety refinement ───────────────────────────
+            with st.spinner("🔬 Running verification pass (Pass 2 of 2)..."):
+                try:
+                    pass2_prompt = f"""You are a senior numismatist performing a VERIFICATION PASS.
+
+An AI system identified a coin as:
+  - Year: {pass1.get('year')}
+  - Country: {pass1.get('country')}
+  - Denomination: {pass1.get('denomination')}
+  - Program/Series: {pass1.get('program_series')}
+  - Mint Mark: {pass1.get('mint_mark')}
+  - Initial Grade: {pass1.get('grade')}
+  - Metal: {pass1.get('metal_content')}
+
+You are looking at the same two images (Image A and Image B).
+
+Your tasks:
+1. VERIFY the identification. If wrong, provide corrections.
+2. GRADE REFINEMENT: Refine the Sheldon grade (e.g. "VF-30", "XF-45", "MS-63").
+3. ERROR/VARIETY CHECK: Look for doubled dies, RPMs, off-center strikes, die cracks, cuds, or any other mint errors.
+4. VALUE RANGE: Provide a rough retail value range in USD based on the grade and current market.
+
+Return ONLY valid JSON:
+{{
+  "identification_confirmed": boolean,
+  "corrected_year": integer or null,
+  "corrected_denomination": string or null,
+  "refined_grade": string,
+  "errors_detected": [string],
+  "estimated_value_usd": string,
+  "condition_notes": string,
+  "confidence": "HIGH", "MEDIUM", or "LOW"
+}}"""
+
+                    resp2 = _client.generate_content(
+                        [pass2_prompt, part_a, part_b],
+                        generation_config=GenerationConfig(response_mime_type="application/json")
+                    )
+                    raw2 = resp2.text
+
+                    raw2 = raw2.strip()
+                    if raw2.startswith("```"):
+                        raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                    pass2 = json.loads(raw2)
+
+                except Exception:
+                    pass2 = {}  # Non-fatal: continue without verification pass
+
+            # ── Merge results ─────────────────────────────────────────────────
+            # Apply corrections from Pass 2
+            final_grade = pass2.get("refined_grade") or pass1.get("grade", "")
+            final_year  = pass2.get("corrected_year")  or pass1.get("year", "")
+            final_denom = pass2.get("corrected_denomination") or pass1.get("denomination", "")
+            errors      = pass2.get("errors_detected", [])
+            variety_str = "; ".join(errors) if errors else pass1.get("variety_notes", "")
+            est_value   = pass2.get("estimated_value_usd", "Pending")
+            cond_notes  = pass2.get("condition_notes", "")
+            confidence  = pass2.get("confidence") or pass1.get("confidence", "")
+
+            full_report = pass1.get("report", "")
+            if cond_notes:
+                full_report += f"\n\nCondition: {cond_notes}"
+            if errors:
+                full_report += f"\n\nErrors/Varieties detected: {variety_str}"
+            if confidence:
+                full_report += f"\n\n[Verification confidence: {confidence}]"
+
+            # Determine which uploaded file is obverse vs reverse
+            obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
+            obverse_bytes = bytes_a if obverse_is_a else bytes_b
+            reverse_bytes = bytes_b if obverse_is_a else bytes_a
+            obverse_mime  = mime_a if obverse_is_a else mime_b
+            reverse_mime  = mime_b if obverse_is_a else mime_a
+
+            # Store everything in session state for the review UI
+            st.session_state[KEY_RESULT] = {
+                "year":           str(final_year),
+                "country":        pass1.get("country", "USA"),
+                "denomination":   final_denom,
+                "program_series": pass1.get("program_series", ""),
+                "theme_subject":  pass1.get("theme_subject", ""),
+                "mint_mark":      pass1.get("mint_mark", ""),
+                "grade":          final_grade,
+                "metal_content":  pass1.get("metal_content", ""),
+                "is_silver":      pass1.get("is_silver", False),
+                "is_gold":        pass1.get("is_gold", False),
+                "variety":        variety_str,
+                "est_value":      est_value,
+                "confidence":     confidence,
+                "report":         full_report,
+                "obverse_bytes":  obverse_bytes,
+                "reverse_bytes":  reverse_bytes,
+                "obverse_mime":   obverse_mime,
+                "reverse_mime":   reverse_mime,
+            }
+
+            # Clean up temp files
+            for p in [path_a, path_b]:
+                try: _os.unlink(p)
+                except: pass
+
+            st.rerun()
+
+    # ── Step 2: Review & Confirm ──────────────────────────────────────────────
+    else:
+        r = st.session_state[KEY_RESULT]
+
+        # Confidence badge
+        conf = r.get("confidence", "")
+        badge_color = {"HIGH": "#10b981", "MEDIUM": "#f59e0b", "LOW": "#ef4444"}.get(conf, "#64748b")
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+            <span style="font-size:1.2rem; font-weight:700; color:#0f172a;">✅ AI Identification Complete</span>
+            <span style="background:{badge_color}; color:#fff; padding:3px 12px;
+                         border-radius:999px; font-size:0.8rem; font-weight:700;">
+                {conf} CONFIDENCE
+            </span>
+        </div>""", unsafe_allow_html=True)
+
+        # Side-by-side image preview
+        img_c1, img_c2 = st.columns(2)
+        with img_c1:
+            b64_obv = base64.b64encode(r["obverse_bytes"]).decode()
+            st.markdown(f'<p style="font-size:0.8rem;color:#64748b;margin-bottom:4px;">🪙 OBVERSE (AI-detected)</p>', unsafe_allow_html=True)
+            st.markdown(f'<img src="data:{r["obverse_mime"]};base64,{b64_obv}" style="width:100%;border-radius:10px;border:2px solid #d4af37;"/>', unsafe_allow_html=True)
+        with img_c2:
+            b64_rev = base64.b64encode(r["reverse_bytes"]).decode()
+            st.markdown(f'<p style="font-size:0.8rem;color:#64748b;margin-bottom:4px;">🦅 REVERSE (AI-detected)</p>', unsafe_allow_html=True)
+            st.markdown(f'<img src="data:{r["reverse_mime"]};base64,{b64_rev}" style="width:100%;border-radius:10px;border:1px solid #334155;"/>', unsafe_allow_html=True)
+
+        st.write("")
+
+        # AI Report
+        with st.expander("📋 Full Gemini AI Report", expanded=True):
+            st.markdown(f"<div style='font-size:0.88rem;line-height:1.6;color:#1e293b;white-space:pre-wrap;'>{r['report']}</div>",
+                        unsafe_allow_html=True)
+            if r.get("est_value"):
+                st.metric("💰 Estimated Retail Value", r["est_value"])
+
+        st.divider()
+        st.subheader("Review & Edit Coin Details")
+        st.caption("All fields are pre-filled by AI. Review and correct anything before saving.")
+
+        # Editable fields
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            e_year    = st.text_input("Year",            value=r["year"],          key="pie_year")
+            e_country = st.text_input("Country",         value=r["country"],       key="pie_country")
+            e_denom   = st.text_input("Denomination",    value=r["denomination"],  key="pie_denom")
+        with f2:
+            e_series  = st.text_input("Program/Series",  value=r["program_series"],key="pie_series")
+            e_theme   = st.text_input("Theme/Subject",   value=r["theme_subject"], key="pie_theme")
+            e_mint    = st.text_input("Mint Mark",        value=r["mint_mark"],     key="pie_mint")
+        with f3:
+            e_grade   = st.text_input("Condition (Grade)",value=r["grade"],         key="pie_grade")
+            e_metal   = st.text_input("Metal Content",   value=r["metal_content"], key="pie_metal")
+            e_variety = st.text_input("Variety / Errors",value=r.get("variety",""),key="pie_variety")
+
+        f4, f5 = st.columns(2)
+        with f4:
+            e_cost     = st.text_input("Cost (Optional)",   value="", key="pie_cost")
+            e_storage  = st.text_input("Storage Location",  value="", key="pie_storage")
+        with f5:
+            e_notes    = st.text_area("Personal Notes",     value="", key="pie_notes", height=80)
+
+        st.write("")
+        col_save, col_retry = st.columns([3, 1])
+
+        with col_retry:
+            if st.button("🔄 Start Over", use_container_width=True, key="pie_reset"):
+                del st.session_state[KEY_RESULT]
+                st.rerun()
+
+        with col_save:
+            if st.button("✨ Add to My Collection", type="primary", use_container_width=True, key="pie_save"):
+                with st.spinner("Saving to your collection..."):
+                    try:
+                        coin_id = str(uuid.uuid4())
+                        timestamp = int(time.time())
+                        path = get_user_collection_path()
+
+                        if not path:
+                            st.error("Cannot save — not logged in.")
+                            st.stop()
+
+                        # Upload images to GCS
+                        gcs_obv = upload_to_gcs(
+                            r["obverse_bytes"],
+                            f"images/{coin_id}_obverse_{timestamp}.jpg",
+                            content_type=r["obverse_mime"]
+                        )
+                        gcs_rev = upload_to_gcs(
+                            r["reverse_bytes"],
+                            f"images/{coin_id}_reverse_{timestamp}.jpg",
+                            content_type=r["reverse_mime"]
+                        )
+
+                        # Build base64 previews
+                        b64_obv_full = f"data:{r['obverse_mime']};base64," + base64.b64encode(r["obverse_bytes"]).decode()
+                        b64_rev_full = f"data:{r['reverse_mime']};base64," + base64.b64encode(r["reverse_bytes"]).decode()
+
+                        coin_doc = {
+                            "id":              coin_id,
+                            "Year":            e_year,
+                            "Country":         e_country,
+                            "Denomination":    e_denom,
+                            "Program/Series":  e_series,
+                            "Theme/Subject":   e_theme,
+                            "Mint Mark":       e_mint,
+                            "Condition":       e_grade,
+                            "Metal Content":   e_metal,
+                            "Variety (Legacy)": e_variety,
+                            "Cost":            e_cost or "$0.00",
+                            "Storage Location":e_storage,
+                            "Personal Notes":  e_notes,
+                            "Numismatic Report": r["report"],
+                            "AI Estimated Value": r.get("est_value", "Pending"),
+                            "Melt Value":      "Pending",
+                            "Quantity":        1,
+                            "imageUrlObverse": b64_obv_full,
+                            "imageUrlReverse": b64_rev_full,
+                            "imageUrlObverse_gcs": gcs_obv or "",
+                            "imageUrlReverse_gcs": gcs_rev or "",
+                            "deep_dive_status": "PENDING",
+                            "source_file":     "AI Photo Identifier",
+                            "created_at":      firestore.SERVER_TIMESTAMP,
+                        }
+
+                        db.collection(path).document(coin_id).set(coin_doc)
+
+                        # Clear state
+                        del st.session_state[KEY_RESULT]
+
+                        st.success("🎉 Coin added to your collection!")
+                        st.balloons()
+                        time.sleep(2)
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"Save failed: {e}")
+
 def render_microscope_agent():
     import streamlit.components.v1 as components
     
@@ -2864,14 +3245,15 @@ else:
             
             add_method = st.radio(
                 "Method",
-                ["Scan Invoice", "Manual Entry", "Excel/CSV Upload", "Upload image from connected high resolution device"],
+                ["📸 AI Photo Identifier", "Scan Invoice", "Manual Entry", "Excel/CSV Upload", "🔬 Microscope Agent"],
                 index=add_ix,
                 label_visibility="collapsed"
             )
-            if add_method == "Scan Invoice": selection = "ADD_SCAN"
+            if add_method == "📸 AI Photo Identifier": selection = "ADD_PHOTO"
+            elif add_method == "Scan Invoice": selection = "ADD_SCAN"
             elif add_method == "Manual Entry": selection = "ADD_MANUAL"
             elif add_method == "Excel/CSV Upload": selection = "ADD_UPLOAD"
-            elif add_method == "Upload image from connected high resolution device": selection = "ADD_MICROSCOPE"
+            elif add_method == "🔬 Microscope Agent": selection = "ADD_MICROSCOPE"
 
         st.divider()
         if st.button("Log Out"): 
@@ -3282,6 +3664,11 @@ else:
 
     elif selection == 'ADD_MANUAL':
         render_add_manual()
+    elif selection == 'ADD_PHOTO':
+        st.title("Add New Coins")
+        st.markdown(f"""<div class="beta-tag">AI COIN IDENTIFIER</div>""", unsafe_allow_html=True)
+        st.write("")
+        render_ai_photo_identifier()
     elif selection == 'ADD_SCAN':
         render_add_scan()
     elif selection == 'ADD_UPLOAD':
@@ -3299,9 +3686,7 @@ else:
         with tab1: render_add_excel()
         with tab2: render_add_manual()
         with tab3:
-            st.info("📷 Camera / Microscope Feature Coming Soon")
-            st.caption("We are integrating WebRTC for live coin scanning.")
-            st.markdown(f"<div class='coming-soon'>Feature Coming Soon</div>", unsafe_allow_html=True)
+            render_ai_photo_identifier()
         with tab4: render_add_scan()
 
     elif selection == 'Coin Programs':

@@ -15,6 +15,7 @@ import '../services/epn_service.dart';
 import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
 import '../widgets/coin_set_viewer.dart';
+import '../widgets/set_contents_panel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -2743,6 +2744,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // Shown in the inspector whenever the selected coin has a 'set_id' field
   // (populated by the ingestion pipeline). Falls back silently if not a set.
   Widget _buildCoinSetSection(Map<String, dynamic> data) {
+    // Invoice-imported sets store all coin data in set_contents directly.
+    // Use SetContentsPanel for these — no additional Firestore lookup needed.
+    final rawContents = data['set_contents'];
+    if (rawContents is List && rawContents.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+        child: SetContentsPanel(data: data),
+      );
+    }
+
+    // Pre-cataloged sets (e.g. Jamul Sovereign, Birth Year) use set_id
+    // to look up coin_set_index in Firestore.
     final setId = data['set_id'] as String?;
     if (setId == null || setId.isEmpty) return const SizedBox.shrink();
 

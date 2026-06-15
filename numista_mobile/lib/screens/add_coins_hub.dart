@@ -401,8 +401,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         FilePickerResult? result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['pdf'],
-          withData: true,
-          withReadStream: true,
+          withData: true,   // populates file.bytes on all platforms incl. web
         );
         if (result != null) _processFiles(files: result.files, isInvoice: true);
       },
@@ -419,8 +418,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         FilePickerResult? result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['pdf'],
-          withData: true,
-          withReadStream: true,
+          withData: true,   // populates file.bytes on all platforms incl. web
           allowMultiple: true,
         );
         if (result != null) _processFiles(files: result.files, isInvoice: true);

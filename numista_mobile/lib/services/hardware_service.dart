@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,6 +13,7 @@ class HardwareService {
   static const String _statusUrl    = 'https://localhost:5000/get-status';
   static const String _startScanUrl = 'https://localhost:5000/start-scan';
   static const String _saveUrl      = 'https://localhost:5000/add-to-collection';
+  static const String _pairUrl      = 'https://localhost:5000/pair';
 
 
   // Firestore fallback paths: not implemented, HTTP is used in all code paths
@@ -22,6 +22,28 @@ class HardwareService {
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
   HardwareService._internal();
+
+  // ─── Pair Agent ───────────────────────────────────────────────────────────
+  /// Posts to /pair on the local hardware server to auto-pair the agent.
+  Future<bool> pairAgent(String userEmail) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_pairUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': userEmail}),
+          )
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        debugPrint('[HW] ✅ Agent paired successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[HW] /pair failed: $e');
+      return false;
+    }
+  }
 
   // ─── Start Scan ───────────────────────────────────────────────────────────
   /// Posts to /start-scan on the local hardware server.
@@ -133,6 +155,7 @@ class HardwareStatus {
   final Map<String, dynamic>? lastReport;
   final double? captureCountdownRemaining;
   final double? flipTimeRemaining;
+  final String? pairedEmail;
 
   const HardwareStatus({
     required this.isActive,
@@ -146,6 +169,7 @@ class HardwareStatus {
     this.lastReport,
     this.captureCountdownRemaining,
     this.flipTimeRemaining,
+    this.pairedEmail,
   });
 
   factory HardwareStatus.fromJson(Map<String, dynamic> j) {
@@ -162,6 +186,7 @@ class HardwareStatus {
       captureCountdownRemaining:
           (j['capture_countdown_remaining'] as num?)?.toDouble(),
       flipTimeRemaining: (j['flip_time_remaining'] as num?)?.toDouble(),
+      pairedEmail: j['paired_email'] as String?,
     );
   }
 

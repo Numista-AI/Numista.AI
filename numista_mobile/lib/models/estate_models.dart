@@ -84,6 +84,9 @@ class EstateProfile {
   final bool isMarried;
   final String maritalPropertyNotes;
   final DateTime? lastUpdated;
+  final int heirsCount;
+  final String liquidationPreference; // 'consign_all' | 'maximize_value' | 'keep_family'
+  final String preferredConsignor;    // 'GreatCollections' | 'Heritage' | 'StacksBowers' | 'None'
 
   const EstateProfile({
     this.ownerName = '',
@@ -102,6 +105,9 @@ class EstateProfile {
     this.isMarried = false,
     this.maritalPropertyNotes = '',
     this.lastUpdated,
+    this.heirsCount = 1,
+    this.liquidationPreference = 'consign_all',
+    this.preferredConsignor = 'None',
   });
 
   bool get isCommunityPropertyState => _communityPropertyStates.contains(jurisdiction);
@@ -129,6 +135,9 @@ class EstateProfile {
       lastUpdated: m['lastUpdated'] is Timestamp
           ? (m['lastUpdated'] as Timestamp).toDate()
           : null,
+      heirsCount:         (m['heirsCount'] as num?)?.toInt() ?? 1,
+      liquidationPreference: m['liquidationPreference']?.toString() ?? 'consign_all',
+      preferredConsignor: m['preferredConsignor']?.toString() ?? 'None',
     );
   }
 
@@ -149,6 +158,9 @@ class EstateProfile {
     'isMarried':          isMarried,
     'maritalPropertyNotes': maritalPropertyNotes,
     'lastUpdated':        FieldValue.serverTimestamp(),
+    'heirsCount':         heirsCount,
+    'liquidationPreference': liquidationPreference,
+    'preferredConsignor': preferredConsignor,
   };
 
   EstateProfile copyWith({
@@ -168,6 +180,9 @@ class EstateProfile {
     bool? isMarried,
     String? maritalPropertyNotes,
     DateTime? lastUpdated,
+    int? heirsCount,
+    String? liquidationPreference,
+    String? preferredConsignor,
   }) {
     return EstateProfile(
       ownerName:          ownerName ?? this.ownerName,
@@ -186,6 +201,9 @@ class EstateProfile {
       isMarried:          isMarried ?? this.isMarried,
       maritalPropertyNotes: maritalPropertyNotes ?? this.maritalPropertyNotes,
       lastUpdated:        lastUpdated ?? this.lastUpdated,
+      heirsCount:          heirsCount ?? this.heirsCount,
+      liquidationPreference: liquidationPreference ?? this.liquidationPreference,
+      preferredConsignor:  preferredConsignor ?? this.preferredConsignor,
     );
   }
 }
@@ -205,6 +223,8 @@ class CoinEstateData {
   final String? estateNotes;
   final bool isHeirloom;
   final bool excludeFromReport;
+  final String? assignedHeirId;
+  final bool divisionLocked;
 
   const CoinEstateData({
     required this.coinId,
@@ -218,6 +238,8 @@ class CoinEstateData {
     this.estateNotes,
     this.isHeirloom = false,
     this.excludeFromReport = false,
+    this.assignedHeirId,
+    this.divisionLocked = false,
   });
 
   factory CoinEstateData.fromFirestore(DocumentSnapshot doc) {
@@ -236,6 +258,8 @@ class CoinEstateData {
       estateNotes:         m['estateNotes']?.toString(),
       isHeirloom:          m['isHeirloom'] == true,
       excludeFromReport:   m['excludeFromReport'] == true,
+      assignedHeirId:       m['assignedHeirId']?.toString(),
+      divisionLocked:       m['divisionLocked'] == true,
     );
   }
 
@@ -253,6 +277,8 @@ class CoinEstateData {
     'estateNotes':          estateNotes,
     'isHeirloom':           isHeirloom,
     'excludeFromReport':    excludeFromReport,
+    'assignedHeirId':       assignedHeirId,
+    'divisionLocked':       divisionLocked,
   };
 
   CoinEstateData copyWith({
@@ -267,6 +293,8 @@ class CoinEstateData {
     Object? estateNotes = _sentinel,
     bool? isHeirloom,
     bool? excludeFromReport,
+    Object? assignedHeirId = _sentinel,
+    bool? divisionLocked,
   }) {
     return CoinEstateData(
       coinId:               coinId ?? this.coinId,
@@ -280,6 +308,8 @@ class CoinEstateData {
       estateNotes:          estateNotes == _sentinel ? this.estateNotes : estateNotes as String?,
       isHeirloom:           isHeirloom ?? this.isHeirloom,
       excludeFromReport:    excludeFromReport ?? this.excludeFromReport,
+      assignedHeirId:       assignedHeirId == _sentinel ? this.assignedHeirId : assignedHeirId as String?,
+      divisionLocked:       divisionLocked ?? this.divisionLocked,
     );
   }
 }

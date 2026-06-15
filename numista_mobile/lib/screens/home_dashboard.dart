@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
+import '../services/portfolio_snapshot_service.dart';
+import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -24,6 +26,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
   DateTime? _pricesLastUpdated;
   List<dynamic> _news = [];
   bool _isLoadingNews = true;
+
+  // ── Portfolio Insights state ───────────────────────────────────────────
+  List<PortfolioSnapshot> _snapshots = [];
 
   @override
   void initState() {
@@ -162,9 +167,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
             double meltValue       = 0;
             double faceValue       = 0;
 
+            Map<String, double> programValues = {};
+
             for (final doc in docs) {
               final data = doc.data();
-              portfolioValue  += _parseCurrency(data['AI Estimated Value']);
+              final coinValue = _parseCurrency(data['AI Estimated Value']);
+              portfolioValue  += coinValue;
               acquisitionCost += _parseCurrency(data['Cost']);
               // Live melt value: compute from spot prices + Metal Content
               // Falls back to stored Firestore value if spot prices not loaded yet.
@@ -177,6 +185,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   : _parseCurrency(data['Melt Value']);
               meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
+
+              // Track per-program value for the bar chart
+              final program = data['Program/Series']?.toString() ?? 'Other';
+              programValues[program] = (programValues[program] ?? 0) + coinValue;
+            }
+
+            // ── Portfolio snapshot (fire-and-forget) ───────────────────────
+            if (totalCoins > 0) {
+              PortfolioSnapshotService.maybeTakeSnapshot(
+                totalCoins: totalCoins,
+                portfolioValue: portfolioValue,
+                meltValue: meltValue,
+                acquisitionCost: acquisitionCost,
+                faceValue: faceValue,
+              );
+              // Load historical snapshots for the line chart
+              PortfolioSnapshotService.getSnapshots().then((snaps) {
+                if (mounted) setState(() => _snapshots = snaps);
+              });
             }
 
             // ── Last 3 added ───────────────────────────────────────────────
@@ -308,6 +335,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ],
                     );
                   }),
+                  const SizedBox(height: 24),
+
+                  // ── Portfolio Insights Charts ──────────────────────────────
+                  PortfolioChartsPanel(
+                    portfolioValue: portfolioValue,
+                    meltValue: meltValue,
+                    acquisitionCost: acquisitionCost,
+                    programValues: programValues,
+                    snapshots: _snapshots,
+                  ),
                   const SizedBox(height: 24),
 
                   // ── Recently Added ────────────────────────────────────────
