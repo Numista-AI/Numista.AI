@@ -1,23 +1,25 @@
-streamlit
-pandas
-requests
-google-cloud-documentai
-google-cloud-firestore
-google-cloud-aiplatform
-google-genai>=1.16.0
-extra-streamlit-components
-python-dotenv
-firebase-admin
-xlsxwriter
-openpyxl
-google-auth
-google-cloud-storage
-yfinance
-fastapi
-uvicorn
-flask
+# Core API Framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
 python-multipart
-feedparser
-beautifulsoup4==4.12.3
-cloudscraper==1.2.71
+
+# Google Cloud
+google-genai>=1.16.0
+google-cloud-firestore
+google-cloud-storage
+google-cloud-documentai
 google-cloud-discoveryengine>=0.13.0
+google-auth
+firebase-admin>=6.0.0
+
+# Data & Finance
+pandas
+yfinance
+feedparser
+
+# Image processing (used in /api/coin_crop endpoint)
+Pillow>=10.3.0
+
+# Utilities
+requests>=2.31.0
+python-dotenv
