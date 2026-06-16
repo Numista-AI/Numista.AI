@@ -1,5 +1,4 @@
-﻿# Last verified: 2026-06-16 12:01
-# Core API Framework
+﻿# Core API Framework
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart
