@@ -113,9 +113,13 @@ jobs:
 
       - name: Verify backend health
         run: |
+          URL=$(gcloud run services describe numista-backend \
+            --region us-central1 \
+            --project studio-9101802118-8c9a8 \
+            --format="value(status.url)")
+          echo "Backend URL: $URL"
           sleep 10
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://numista-backend-568985927038.us-central1.run.app/)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/")
           echo "Backend health: HTTP $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "::error::Backend health check failed (HTTP $STATUS)"
