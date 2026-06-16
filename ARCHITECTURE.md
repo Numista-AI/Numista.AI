@@ -547,35 +547,73 @@ static String get coinsPath => 'users/$userEmail/coins';
 
 ### 9.1 Cloud Run Services
 
-| Service | Source Directory | Trigger |
-|---------|-----------------|---------|
-| `scan-service` | `numista_backend/scan_service/` | HTTPS POST from Flutter web |
-| `sync-worker` | `numista_backend/sync_worker/` | Background / Cloud Scheduler |
-| `main-app` | `numista_backend/` (app.py) | Internal admin use |
+> Last verified: **June 16, 2026**
 
-Build pipeline: `cloudbuild.yaml`
-Registry: Google Artifact Registry (project-scoped)
+| Service | Source Directory | Memory | Purpose |
+|---------|-----------------|--------|---------|
+| `numista-backend` | `numista_backend/` | 2Gi | **Primary API** — all Flutter app calls route here. min-instances=1 (no cold start), max=10, concurrency=20 |
+| `numista-scan-service` | `numista_backend/scan_service/` | 1Gi | Estate PDF generation + binder checklist scanning |
 
-### 9.2 Flutter Web Hosting
+> **Note:** 5 legacy services deleted June 16, 2026: `annotate-gcs`, `annotate-http`, `coin-app`, `numista-ai-prod`, `scan-service`.
 
+**Flutter app backend URL** — defined in a single constant:
+```dart
+// numista_mobile/lib/constants.dart
+const String kApiBaseUrl =
+    'https://numista-backend-568985927038.us-central1.run.app';
+```
+
+**Backend deploy command** (from `numista_backend/`):
+```powershell
+gcloud builds submit . --tag gcr.io/studio-9101802118-8c9a8/numista-backend:latest --project studio-9101802118-8c9a8
+gcloud run deploy numista-backend --image gcr.io/studio-9101802118-8c9a8/numista-backend:latest --region us-central1 --project studio-9101802118-8c9a8 --quiet
+```
+
+### 9.2 Python Backend Tech Stack
+- **Base image:** `python:3.11-slim` (upgraded from 3.9 on June 16, 2026)
+- **Framework:** FastAPI + uvicorn
+- **AI SDK:** `google-genai>=2.0.0` (unified SDK — NOT the legacy `vertexai` or `google-generativeai` packages)
+- **Key packages:** Pillow (coin crop), pandas, yfinance, feedparser, google-cloud-documentai, google-cloud-discoveryengine
+
+### 9.3 Backend Directory Structure
+```
+numista_backend/
+  main.py               ← Production FastAPI app (3,654 lines, all endpoints)
+  morgan_knowledge.py   ← RAG knowledge base for AI chat
+  Dockerfile            ← python:3.11-slim base
+  requirements.txt      ← 20 packages (clean as of June 16)
+  cloudbuild.yaml       ← Manual build config (used with gcloud builds submit)
+  .gcloudignore         ← Excludes _archive/, _scripts/, binaries from Docker context
+  vertex_search/        ← Vertex AI Search module (coin reference library)
+  scan_service/         ← Separate Cloud Run service for estate/scan
+  sync_worker/          ← Monthly Cloud Run Job (Wikipedia → Firestore sync)
+  _archive/             ← Legacy files (app.py — old Streamlit frontend)
+  _scripts/             ← 181 one-time data ingestion/migration scripts
+```
+
+### 9.4 Flutter Web Hosting
 Flutter web build deployed to **Firebase Hosting** (`firebase.json` + `.firebaserc`).
+Deploy via: `.\deploy_production.ps1` from project root.
 
-### 9.3 Hardware Agent Distribution
+### 9.5 CI/CD Pipeline (GitHub Actions)
+Automated deployment on every push to `main`:
+- File: `.github/workflows/deploy.yml`
+- **Job 1:** Backend → Cloud Build → Cloud Run
+- **Job 2:** Flutter → `flutter build web` → Firebase Hosting
+- Auth: Workload Identity Federation (no service account key files)
+- **Setup required:** WIF_PROVIDER and WIF_SERVICE_ACCOUNT must be configured as GitHub repository secrets (one-time setup)
 
+### 9.6 Hardware Agent Distribution
 - Packaged as a Windows `.exe` via PyInstaller (`NumistaAgent.spec`)
 - Auto-starts with Windows via Task Scheduler (`install_agent.ps1`)
 - System tray integration via `tray_agent.py`
 
-### 9.4 Daily Automated Backup
-
+### 9.7 Daily Automated Backup
 - **Script:** `numista_auto_backup.ps1` (project root)
-- **Schedule:** Windows Task Scheduler -- daily at 7:00 PM
+- **Schedule:** Windows Task Scheduler — daily at 7:00 PM
 - **Target:** `github.com/Numista-AI/Numista.AI` (main branch)
 - **Behavior:** Stages all changes, commits with timestamp, pushes to GitHub
 - **Fallback:** `StartWhenAvailable` ensures backup runs if machine was off at 7 PM
-- **Log:** `numista_backup.log`
-
----
 
 ## 10. Known Limitations & Future Work
 

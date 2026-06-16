@@ -1,10 +1,10 @@
-# Numista.AI - Agent Guidance & Standing Rules
+﻿# Numista.AI - Agent Guidance & Standing Rules
 > **ANTIGRAVITY: Read this file at the start of every session before making any changes.**
 > Last updated: 2026-06-16
 
 ---
 
-## ⚠️ RULE 0 — NEVER TRUST TRAINING DATA FOR VERSION NUMBERS
+## âš ï¸ RULE 0 â€” NEVER TRUST TRAINING DATA FOR VERSION NUMBERS
 
 **This is the most important rule added June 16, 2026.**
 
@@ -16,7 +16,7 @@ Before writing any version constraint into `requirements.txt`, `pubspec.yaml`, `
 
 1. **Always verify live** using one of these commands:
    ```powershell
-   # Python packages — check live PyPI
+   # Python packages â€” check live PyPI
    pip index versions <package-name>
 
    # npm/Node packages
@@ -28,11 +28,11 @@ Before writing any version constraint into `requirements.txt`, `pubspec.yaml`, `
 
 2. **Never assert** a version number from memory. Say "I believe X is the latest, let me verify" and then run the check.
 
-3. **For Google SDKs specifically** — check the deprecation schedules folder (see below) AND verify PyPI. Google SDK versions change frequently and my training data is often behind.
+3. **For Google SDKs specifically** â€” check the deprecation schedules folder (see below) AND verify PyPI. Google SDK versions change frequently and my training data is often behind.
 
 ---
 
-## 📋 GOOGLE DEPRECATION SCHEDULES — MANDATORY READING
+## ðŸ“‹ GOOGLE DEPRECATION SCHEDULES â€” MANDATORY READING
 
 The user maintains official Google deprecation schedule PDFs here:
 
@@ -45,12 +45,12 @@ C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
 - `Gemini Deprecation Schedules 9 June 2026.pdf`
 - `Gemini Models as of 11 JUN 2026.png`
 
-**Rule:** At the start of any session that involves Google AI SDKs, Gemini models, Vertex AI, or Firebase — read the most recent file in this folder before writing any code or making version recommendations.
+**Rule:** At the start of any session that involves Google AI SDKs, Gemini models, Vertex AI, or Firebase â€” read the most recent file in this folder before writing any code or making version recommendations.
 
 **Current known facts (as of June 16, 2026):**
 - `google-genai` (new unified SDK): **v2.8.0** is latest stable
-- `google-generativeai` (legacy SDK): peaked at v0.8.6 — do NOT use
-- `vertexai.generative_models` (old Python SDK): **shutting down June 24, 2026** — do NOT use
+- `google-generativeai` (legacy SDK): peaked at v0.8.6 â€” do NOT use
+- `vertexai.generative_models` (old Python SDK): **shutting down June 24, 2026** â€” do NOT use
 - Active Gemini models: `gemini-3.5-flash` (primary), `gemini-3.1-pro-preview` (pro tasks)
 - Backend now uses Python **3.11-slim** base image
 
@@ -58,16 +58,16 @@ C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
 
 ## ?? Project Context
 
-- **Company:** SGroup LLC (solo operator — Eric is the only developer)
-- **Product:** Numista.AI — a coin collection management app at https://numista.ai
+- **Company:** SGroup LLC (solo operator â€” Eric is the only developer)
+- **Product:** Numista.AI â€” a coin collection management app at https://numista.ai
 - **Stack:** Flutter (mobile & web), Python (FastAPI backend on Cloud Run), Firebase Hosting, Google Cloud (Vertex AI, BigQuery, GCS)
 - **GCP Project:** `studio-9101802118-8c9a8`
 
 ---
 
-## ?? CRITICAL DEPLOYMENT RULES — NEVER SKIP THESE
+## ?? CRITICAL DEPLOYMENT RULES â€” NEVER SKIP THESE
 
-### Rule 1 — Always Deploy to BOTH Environments
+### Rule 1 â€” Always Deploy to BOTH Environments
 
 **A task is NOT complete until BOTH of these are updated:**
 
@@ -78,7 +78,7 @@ C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
 
 > ?? Do NOT mark any task as "Done" or "Complete" until the live site at **https://numista.ai** reflects the change and has been verified.
 
-### Rule 2 — Production Deploy Script
+### Rule 2 â€” Production Deploy Script
 
 Always use the single script to deploy to production. Do not run steps manually unless the script fails:
 
@@ -94,14 +94,14 @@ This script will:
 4. Restore the dev service-worker kill-switch
 5. Print the live URL for verification
 
-### Rule 3 — Verify the Live Site After Every Deploy
+### Rule 3 â€” Verify the Live Site After Every Deploy
 
 After running `deploy_production.ps1`, always confirm:
 - [ ] https://numista.ai loads without errors
 - [ ] The specific feature/fix that was changed is visible and working
 - [ ] No console errors in browser DevTools
 
-### Rule 4 — Backend Deploys Are Separate
+### Rule 4 â€” Backend Deploys Are Separate
 
 If `numista_backend/main.py` was modified, the backend must also be deployed to Cloud Run separately. The deploy script does NOT handle this automatically.
 
@@ -143,7 +143,23 @@ Before ending any coding session:
 
 ## ?? Things to NEVER Do
 
-- Do NOT delete `numista_mobile/build/web/` — this is the production web build cache
+- Do NOT delete `numista_mobile/build/web/` â€” this is the production web build cache
 - Do NOT run `flutter clean` unless explicitly asked (it deletes the web build)
 - Do NOT push secrets, API keys, or `.env` files to Git
 - Do NOT consider a task complete if only the local dev server was updated
+
+---
+
+## 📐 ARCHITECTURE.md — Keep It Current
+
+**Rule:** Update `ARCHITECTURE.md` at the end of any session that changes:
+- Cloud Run services (add, delete, update memory/scaling)
+- Backend tech stack (Python version, packages, SDK versions)
+- Flutter app structure or backend URL
+- Firebase Hosting configuration
+- New directories (`_scripts/`, `_archive/`, etc.)
+- AI models in use
+
+**Section to always update:** Section 9 (Deployment Architecture) — includes a "Last verified" date stamp. Change that date every time you touch it.
+
+The file is at: `c:\Users\ericd\Documents\MyVertexProject\ARCHITECTURE.md`
