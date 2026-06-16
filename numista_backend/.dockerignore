@@ -2,7 +2,19 @@
 .gitignore
 .venv
 __pycache__
+*.pyc
+*.pyo
 node_modules
 functions
 firebase-debug.log
 .DS_Store
+
+# Large unused directories - don't include in Docker build context
+_scripts/
+_archive/
+app.py
+
+# Development/test files
+*.md
+tests/
+.pytest_cache/
