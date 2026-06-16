@@ -100,3 +100,68 @@ jobs:
           echo "numista.ai has been updated."
           echo "Live site: https://numista.ai"
           echo "Run ID: ${{ github.run_id }}"
+
+  # 🐍 JOB 2: Deploy Python backend to Cloud Run ──────────────────────────
+  deploy-backend:
+    name: Build & Deploy Backend (Cloud Run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only run this job when backend files actually changed
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(join(github.event.commits.*.modified, ' '), 'numista_backend/')
+
+    steps:
+      # 1. Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      # 2. Authenticate to Google Cloud (same SA as frontend job)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # 3. Set up gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: studio-9101802118-8c9a8
+
+      # 4. Configure Docker to push to Google Container Registry
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      # 5. Build the Docker image on the GitHub runner
+      - name: Build Docker image
+        working-directory: numista_backend
+        run: |
+          docker build -t gcr.io/studio-9101802118-8c9a8/numista-backend:latest .
+
+      # 6. Push image to Container Registry
+      - name: Push image to GCR
+        run: |
+          docker push gcr.io/studio-9101802118-8c9a8/numista-backend:latest
+
+      # 7. Deploy new revision to Cloud Run
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy numista-backend \
+            --image gcr.io/studio-9101802118-8c9a8/numista-backend:latest \
+            --region us-central1 \
+            --project studio-9101802118-8c9a8 \
+            --quiet
+
+      # 8. Verify backend is healthy
+      - name: Verify backend health
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://numista-backend-568985927038.us-central1.run.app/)
+          echo "Backend health: HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Backend health check failed (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "✅ Backend is live and healthy"
+
