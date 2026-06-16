@@ -34,13 +34,17 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Build & push container image
+      - name: Configure Docker to use GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      - name: Build Docker image
         working-directory: numista_backend
         run: |
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-          gcloud builds submit . \
-            --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/numista-backend:latest \
-            --project ${{ secrets.GCP_PROJECT_ID }}
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/numista-backend:latest .
+
+      - name: Push image to Container Registry
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/numista-backend:latest
 
       - name: Deploy to Cloud Run
         run: |
@@ -59,6 +63,7 @@ jobs:
             echo "::error::Backend health check failed (HTTP $STATUS)"
             exit 1
           fi
+          echo "✅ Backend is healthy"
 
   # ─────────────────────────────────────────────────────────
   # JOB 2: Deploy Flutter frontend to Firebase Hosting
