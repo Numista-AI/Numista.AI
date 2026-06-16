@@ -87,21 +87,26 @@ jobs:
         with:
           project_id: studio-9101802118-8c9a8
 
-      # Authenticate Docker to GCR using oauth2 bearer token from gcloud
-      - name: Authenticate Docker to GCR
-        run: gcloud auth print-access-token | docker login gcr.io -u oauth2accesstoken --password-stdin
+      # Authenticate Docker to Artifact Registry (where Cloud Run images actually live)
+      - name: Authenticate Docker to Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       - name: Build Docker image
         working-directory: numista_backend
-        run: docker build -t gcr.io/studio-9101802118-8c9a8/numista-backend:latest .
+        run: |
+          docker build \
+            -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest \
+            .
 
-      - name: Push image to GCR
-        run: docker push gcr.io/studio-9101802118-8c9a8/numista-backend:latest
+      - name: Push image to Artifact Registry
+        run: |
+          docker push \
+            us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy numista-backend \
-            --image gcr.io/studio-9101802118-8c9a8/numista-backend:latest \
+            --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest \
             --region us-central1 \
             --project studio-9101802118-8c9a8 \
             --quiet
