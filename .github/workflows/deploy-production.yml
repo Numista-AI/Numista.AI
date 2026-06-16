@@ -1,4 +1,4 @@
-# ================================================================
+﻿# ================================================================
 # deploy-production.yml
 # GitHub Actions Workflow: Auto-deploy numista.ai on every push to main
 #
@@ -31,7 +31,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── JOB 1: Deploy Flutter web to Firebase Hosting ──────────────
+  # â”€â”€ JOB 1: Deploy Flutter web to Firebase Hosting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   deploy-web:
     name: Build & Deploy Flutter Web
     runs-on: ubuntu-latest
@@ -40,11 +40,11 @@ jobs:
     steps:
       # 1. Check out the code
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.3
 
       # 2. Install Flutter
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2.16.0
+        uses: subosito/flutter-action@v2.23.0
         with:
           channel: stable
           cache: true
@@ -65,13 +65,13 @@ jobs:
           p = pathlib.Path("index.html")
           content = p.read_text(encoding="utf-8")
           # Match the dev-only block: HTML comment banner + script block
-          pattern = r'<!--\s*[╔].*?STOP.*?-->\s*<script>.*?navigator\.serviceWorker.*?</script>'
+          pattern = r'<!--\s*[â•”].*?STOP.*?-->\s*<script>.*?navigator\.serviceWorker.*?</script>'
           cleaned = re.sub(pattern, '', content, flags=re.DOTALL)
           if cleaned != content:
               p.write_text(cleaned, encoding="utf-8")
               print("Dev service-worker block removed.")
           else:
-              print("No dev block found — proceeding with existing index.html.")
+              print("No dev block found â€” proceeding with existing index.html.")
           EOF
 
       # 5. Build Flutter for web
@@ -81,7 +81,7 @@ jobs:
 
       # 6. Authenticate to Google Cloud using the service account key
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2.1.8
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
@@ -101,7 +101,7 @@ jobs:
           echo "Live site: https://numista.ai"
           echo "Run ID: ${{ github.run_id }}"
 
-  # 🐍 JOB 2: Deploy Python backend to Cloud Run ──────────────────────────
+  # ðŸ JOB 2: Deploy Python backend to Cloud Run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   deploy-backend:
     name: Build & Deploy Backend (Cloud Run)
     runs-on: ubuntu-latest
@@ -114,23 +114,25 @@ jobs:
     steps:
       # 1. Check out the code
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.3
 
       # 2. Authenticate to Google Cloud (same SA as frontend job)
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2.1.8
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       # 3. Set up gcloud CLI
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3.0.1
         with:
           project_id: studio-9101802118-8c9a8
 
-      # 4. Configure Docker to push to Google Container Registry
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker gcr.io --quiet
+      # 4. Authenticate Docker directly to GCR using the service account JSON key
+      - name: Authenticate Docker to GCR
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | \
+            docker login gcr.io -u _json_key --password-stdin
 
       # 5. Build the Docker image on the GitHub runner
       - name: Build Docker image
@@ -163,5 +165,5 @@ jobs:
             echo "::error::Backend health check failed (HTTP $STATUS)"
             exit 1
           fi
-          echo "✅ Backend is live and healthy"
+          echo "âœ… Backend is live and healthy"
 
