@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # deploy-production.yml
 # GitHub Actions Workflow: Auto-deploy numista.ai on every push to main
 #
@@ -106,10 +106,6 @@ jobs:
     name: Build & Deploy Backend (Cloud Run)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Only run this job when backend files actually changed
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(join(github.event.commits.*.modified, ' '), 'numista_backend/')
 
     steps:
       # 1. Check out the code
