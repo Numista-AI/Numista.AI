@@ -1,62 +1,35 @@
-# ================================================================
-# deploy-production.yml
-# GitHub Actions Workflow: Auto-deploy numista.ai on every push to main
-#
-# HOW IT WORKS:
-#   Any time code is pushed to the main branch, this workflow
-#   automatically builds the Flutter web app and deploys it to
-#   Firebase Hosting (numista.ai). No manual step required.
-#
-# ONE-TIME SETUP (do this once, then forget it):
-#   1. Go to: GitHub repo -> Settings -> Secrets -> Actions
-#   2. Add secret named: FIREBASE_SERVICE_ACCOUNT
-#   3. Paste the contents of firebase-deploy-key.json as the value
-#   4. Delete firebase-deploy-key.json from your local machine after
-#
-# FLUTTER VERSION:
-#   Pinned to stable channel. Update channel below if needed.
-# ================================================================
-
 name: Deploy to numista.ai
 
 on:
   push:
     branches: [main]
-    # Only trigger when app code actually changes (not docs, CSVs, etc.)
     paths:
       - 'numista_mobile/**'
       - 'numista_backend/**'
-
-  # Allow manual trigger from the GitHub Actions tab
   workflow_dispatch:
 
 jobs:
-  # â”€â”€ JOB 1: Deploy Flutter web to Firebase Hosting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── JOB 1: Deploy Flutter web to Firebase Hosting ──────────────────────
   deploy-web:
     name: Build & Deploy Flutter Web
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      # 1. Check out the code
       - name: Checkout repository
         uses: actions/checkout@v6.0.3
 
-      # 2. Install Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2.23.0
         with:
           channel: stable
           cache: true
 
-      # 3. Install app dependencies
       - name: Install Flutter dependencies
         working-directory: numista_mobile
         run: flutter pub get
 
-      # 4. Strip the dev-only service-worker kill-switch before building.
-      #    This block breaks PWA caching in production.
-      #    The pattern matches the dev-only <script> block in index.html.
+      # Strip the dev-only service-worker kill-switch before production build
       - name: Remove dev service-worker kill-switch
         working-directory: numista_mobile/web
         run: |
@@ -64,84 +37,69 @@ jobs:
           import re, pathlib
           p = pathlib.Path("index.html")
           content = p.read_text(encoding="utf-8")
-          # Match the dev-only block: HTML comment banner + script block
-          pattern = r'<!--\s*[â•”].*?STOP.*?-->\s*<script>.*?navigator\.serviceWorker.*?</script>'
+          pattern = r'<!--\s*.*?STOP.*?-->\s*<script>.*?navigator\.serviceWorker.*?</script>'
           cleaned = re.sub(pattern, '', content, flags=re.DOTALL)
           if cleaned != content:
               p.write_text(cleaned, encoding="utf-8")
               print("Dev service-worker block removed.")
           else:
-              print("No dev block found â€” proceeding with existing index.html.")
+              print("No dev block found - proceeding with existing index.html.")
           EOF
 
-      # 5. Build Flutter for web
       - name: Build Flutter web (release)
         working-directory: numista_mobile
         run: flutter build web --release --base-href "/"
 
-      # 6. Authenticate to Google Cloud using the service account key
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      # 7. Install Firebase CLI
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      # 8. Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting
         working-directory: numista_mobile
         run: firebase deploy --only hosting --project studio-9101802118-8c9a8
 
-      # 9. Print confirmation
       - name: Deployment complete
         run: |
-          echo "numista.ai has been updated."
+          echo "numista.ai frontend has been updated."
           echo "Live site: https://numista.ai"
-          echo "Run ID: ${{ github.run_id }}"
 
-  # ðŸ JOB 2: Deploy Python backend to Cloud Run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ── JOB 2: Deploy Python backend to Cloud Run ──────────────────────────
   deploy-backend:
     name: Build & Deploy Backend (Cloud Run)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      # 1. Check out the code
       - name: Checkout repository
         uses: actions/checkout@v6.0.3
 
-      # 2. Authenticate to Google Cloud (same SA as frontend job)
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      # 3. Set up gcloud CLI
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3.0.1
         with:
           project_id: studio-9101802118-8c9a8
 
-      # 4. Authenticate Docker directly to GCR using the service account JSON key
+      # Authenticate Docker directly to GCR using the service account JSON key
       - name: Authenticate Docker to GCR
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | \
-            docker login gcr.io -u _json_key --password-stdin
+        env:
+          SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: echo "$SA_KEY" | docker login gcr.io -u _json_key --password-stdin
 
-      # 5. Build the Docker image on the GitHub runner
       - name: Build Docker image
         working-directory: numista_backend
-        run: |
-          docker build -t gcr.io/studio-9101802118-8c9a8/numista-backend:latest .
+        run: docker build -t gcr.io/studio-9101802118-8c9a8/numista-backend:latest .
 
-      # 6. Push image to Container Registry
       - name: Push image to GCR
-        run: |
-          docker push gcr.io/studio-9101802118-8c9a8/numista-backend:latest
+        run: docker push gcr.io/studio-9101802118-8c9a8/numista-backend:latest
 
-      # 7. Deploy new revision to Cloud Run
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy numista-backend \
@@ -150,7 +108,6 @@ jobs:
             --project studio-9101802118-8c9a8 \
             --quiet
 
-      # 8. Verify backend is healthy
       - name: Verify backend health
         run: |
           sleep 10
@@ -161,5 +118,4 @@ jobs:
             echo "::error::Backend health check failed (HTTP $STATUS)"
             exit 1
           fi
-          echo "âœ… Backend is live and healthy"
-
+          echo "Backend is live and healthy"
