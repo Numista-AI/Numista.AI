@@ -87,11 +87,9 @@ jobs:
         with:
           project_id: studio-9101802118-8c9a8
 
-      # Authenticate Docker directly to GCR using the service account JSON key
+      # Authenticate Docker to GCR using oauth2 bearer token from gcloud
       - name: Authenticate Docker to GCR
-        env:
-          SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: echo "$SA_KEY" | docker login gcr.io -u _json_key --password-stdin
+        run: gcloud auth print-access-token | docker login gcr.io -u oauth2accesstoken --password-stdin
 
       - name: Build Docker image
         working-directory: numista_backend
