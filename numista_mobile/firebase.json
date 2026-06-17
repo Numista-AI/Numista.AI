@@ -18,6 +18,10 @@
 
     "rewrites": [
       {
+        "source": "/add_coins.html",
+        "destination": "/add_coins.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

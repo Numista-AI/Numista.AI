@@ -143,13 +143,23 @@ class MorganChatContextService {
   static double _parseCurrency(dynamic value) {
     if (value == null) return 0.0;
     final raw = value.toString();
-    if (raw.contains(' - ')) {
-      final parts = raw.split(' - ');
-      final a = double.tryParse(parts[0].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      final b = double.tryParse(parts[1].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      return (a + b) / 2;
+    if (raw == 'Pending' || raw.isEmpty) return 0.0;
+    // Normalise all dash variants and strip commas
+    final norm = raw
+        .replaceAll(',', '')
+        .replaceAll('\u2013', '-')   // en-dash
+        .replaceAll('\u2014', '-')   // em-dash
+        .replaceAll('\u2012', '-');  // figure dash
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    if (rangeMatch != null) {
+      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
+      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
+      final mid = (a + b) / 2;
+      return mid > 100000 ? 0.0 : mid;   // sanity cap
     }
-    return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return v > 100000 ? 0.0 : v;         // sanity cap
   }
 
   /// Loads and caches the collection context.

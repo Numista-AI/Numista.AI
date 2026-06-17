@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Coins — Numista.AI</title>
+  <meta name="description" content="Upload invoices, spreadsheets, and coin images to Numista.AI. Drop a single file or an entire folder — the AI does the rest." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:          #0d0f14;
+      --surface:     #161b26;
+      --surface2:    #1e2535;
+      --border:      #2a3249;
+      --accent:      #4f8ef7;
+      --accent-glow: rgba(79,142,247,0.18);
+      --gold:        #f0c040;
+      --gold-glow:   rgba(240,192,64,0.15);
+      --green:       #34d399;
+      --amber:       #fbbf24;
+      --red:         #f87171;
+      --muted:       #5a6785;
+      --text:        #e2e8f0;
+      --text-dim:    #94a3b8;
+      --radius:      12px;
+      --radius-lg:   18px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.45);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 64px;
+    }
+
+    /* Header */
+    .page-header {
+      max-width: 860px; margin: 0 auto 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .logo-mark {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--gold));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header p  { font-size: 0.85rem; color: var(--text-dim); margin-top: 2px; }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      max-width: 860px; margin: 0 auto 24px; overflow: hidden;
+    }
+    .card-header {
+      padding: 20px 28px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-header h2 { font-size: 1rem; font-weight: 600; }
+    .card-body { padding: 28px; }
+
+    /* Drop Zone */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 56px 32px; text-align: center; cursor: pointer;
+      transition: all 0.25s ease;
+      background: linear-gradient(135deg, rgba(79,142,247,0.03), rgba(240,192,64,0.03));
+      position: relative; overflow: hidden;
+    }
+    #drop-zone::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(79,142,247,0.07), transparent 70%);
+      pointer-events: none;
+    }
+    #drop-zone.drag-over { border-color: var(--accent); background: var(--accent-glow); transform: scale(1.01); }
+    #drop-zone.has-files { border-color: var(--green); border-style: solid; }
+    .drop-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+    .drop-title {
+      font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .drop-subtitle {
+      font-size: 0.88rem; color: var(--text-dim); max-width: 520px;
+      margin: 0 auto 20px; line-height: 1.65;
+    }
+    .drop-subtitle strong { color: var(--text); -webkit-text-fill-color: var(--text); }
+    .file-types {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 24px;
+    }
+    .file-type-pill {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 99px; padding: 4px 12px;
+      font-size: 0.78rem; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .drop-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 22px; border-radius: var(--radius);
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.2s ease;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #6366f1);
+      color: #fff; box-shadow: 0 4px 16px rgba(79,142,247,0.35);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,142,247,0.5); }
+    .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+    .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+    #file-input, #folder-input { display: none; }
+    .file-count-badge {
+      display: none; margin-top: 16px;
+      background: var(--surface2); border: 1px solid var(--green);
+      border-radius: var(--radius); padding: 10px 20px;
+      font-size: 0.9rem; color: var(--green); font-weight: 600;
+    }
+    .file-count-badge.show { display: inline-block; }
+
+    #start-btn {
+      width: 100%; margin-top: 20px; padding: 14px; font-size: 1rem;
+      background: linear-gradient(135deg, var(--gold), #f97316);
+      color: #0d0f14; font-weight: 700; border: none; border-radius: var(--radius);
+      cursor: pointer; transition: all 0.25s; display: none;
+      box-shadow: 0 4px 20px var(--gold-glow);
+    }
+    #start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px var(--gold-glow); }
+    #start-btn.show { display: block; }
+
+    /* Mode row */
+    #mode-row { display: none; margin-top: 16px; align-items: center; gap: 12px; flex-wrap: wrap; }
+    #mode-row.show { display: flex; }
+    .mode-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 600;
+    }
+    .mode-express { background: rgba(52,211,153,0.15); color: var(--green); }
+    .mode-bulk    { background: rgba(79,142,247,0.15);  color: var(--accent); }
+
+    /* Progress panel */
+    #progress-panel { display: none; }
+    #progress-panel.show { display: block; }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .progress-header h3 { font-size: 0.95rem; font-weight: 600; }
+    .progress-label { font-size: 0.82rem; color: var(--text-dim); }
+    .overall-bar-wrap { background: var(--surface2); border-radius: 99px; height: 6px; overflow: hidden; margin-bottom: 20px; }
+    .overall-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 99px; transition: width 0.4s ease; }
+    .file-list { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+    .file-row {
+      display: grid; grid-template-columns: 28px 1fr auto;
+      align-items: center; gap: 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px; transition: border-color 0.2s;
+    }
+    .file-row.status-done   { border-color: rgba(52,211,153,0.3); }
+    .file-row.status-error  { border-color: rgba(248,113,113,0.35); }
+    .file-row.status-review { border-color: rgba(251,191,36,0.35); }
+    .file-row.status-active { border-color: var(--accent); }
+    .file-type-icon { font-size: 1.1rem; text-align: center; }
+    .file-name { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-name-sub { font-size: 0.74rem; color: var(--text-dim); margin-top: 1px; }
+    .file-status-chip { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+    .chip-pending  { background: rgba(90,103,133,0.25);  color: var(--muted); }
+    .chip-active   { background: rgba(79,142,247,0.2);   color: var(--accent); }
+    .chip-done     { background: rgba(52,211,153,0.15);  color: var(--green); }
+    .chip-error    { background: rgba(248,113,113,0.15); color: var(--red); }
+    .chip-review   { background: rgba(251,191,36,0.15);  color: var(--amber); }
+    .chip-skipped  { background: rgba(90,103,133,0.15);  color: var(--muted); }
+
+    /* Summary */
+    #summary-panel { display: none; }
+    #summary-panel.show { display: block; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .stat-number { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .stat-label  { font-size: 0.75rem; color: var(--text-dim); }
+    .stat-coins .stat-number    { color: var(--green); }
+    .stat-receipts .stat-number { color: var(--accent); }
+    .stat-dupes .stat-number    { color: var(--amber); }
+    .stat-value .stat-number    { color: var(--gold); font-size: 1.4rem; }
+    .stat-unlinked .stat-number { color: var(--red); }
+    .summary-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* Paper Trail */
+    #paper-trail-panel { display: none; }
+    #paper-trail-panel.show { display: block; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    th {
+      text-align: left; padding: 10px 12px; color: var(--text-dim);
+      font-weight: 500; font-size: 0.75rem; text-transform: uppercase;
+      letter-spacing: 0.06em; border-bottom: 1px solid var(--border);
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(42,50,73,0.6); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .receipt-link {
+      color: var(--accent); text-decoration: none; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 5px; transition: color 0.15s;
+    }
+    .receipt-link:hover { color: var(--gold); }
+    .linked-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+    .linked-badge.linked   { background: rgba(52,211,153,0.15); color: var(--green); }
+    .linked-badge.unlinked { background: rgba(251,191,36,0.15);  color: var(--amber); }
+    .assign-btn {
+      background: transparent; border: 1px solid var(--amber); color: var(--amber);
+      padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s;
+    }
+    .assign-btn:hover { background: rgba(251,191,36,0.1); }
+
+    /* Spinner / pulse */
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(79,142,247,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 1.4s ease infinite; }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .drop-actions { flex-direction: column; }
+      table { font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="logo-mark">&#127916;</div>
+  <div>
+    <h1>Add Coins</h1>
+    <p>Import anything — invoices, spreadsheets, photos, or a whole folder</p>
+  </div>
+</header>
+
+<!-- Drop Zone Card -->
+<div class="card" id="upload-card">
+  <div class="card-body">
+    <div id="drop-zone" role="region" aria-label="File drop zone">
+      <span class="drop-icon">&#128194;</span>
+      <div class="drop-title">Drop your files or folder here</div>
+      <p class="drop-subtitle">
+        Upload <strong>almost anything digital</strong> you have &mdash; invoice PDFs, dealer receipts,
+        Excel or CSV spreadsheets, coin photos, phone pictures, scanned binder pages,
+        US Mint order confirmations &mdash; even a <strong>folder with hundreds of files mixed together</strong>.
+        Numista.AI will sort it out.
+      </p>
+      <div class="file-types">
+        <span class="file-type-pill">&#128196; PDF Invoices</span>
+        <span class="file-type-pill">&#128202; .xlsx / .xls</span>
+        <span class="file-type-pill">&#128202; .csv</span>
+        <span class="file-type-pill">&#128248; .jpg / .png</span>
+        <span class="file-type-pill">&#128248; .webp / .heic</span>
+        <span class="file-type-pill">&#128193; Whole Folders</span>
+      </div>
+      <div class="drop-actions">
+        <button class="btn btn-primary" id="folder-btn" onclick="document.getElementById('folder-input').click()">
+          &#128193; Browse Folder
+        </button>
+        <button class="btn btn-secondary" id="files-btn" onclick="document.getElementById('file-input').click()">
+          &#128196; Choose Files
+        </button>
+      </div>
+      <input type="file" id="folder-input" webkitdirectory multiple />
+      <input type="file" id="file-input" multiple
+             accept=".pdf,.xlsx,.xls,.csv,.ods,.jpg,.jpeg,.png,.webp,.heic,.bmp,.tiff" />
+      <div class="file-count-badge" id="file-count-badge"></div>
+    </div>
+
+    <div id="mode-row">
+      <span id="mode-badge" class="mode-badge"></span>
+      <span id="mode-desc" style="font-size:0.82rem;color:var(--text-dim);"></span>
+    </div>
+
+    <button id="start-btn" onclick="startImport()">&#9889; Start Import</button>
+  </div>
+</div>
+
+<!-- Progress Panel -->
+<div class="card" id="progress-panel">
+  <div class="card-header">
+    <h2>&#8987; Processing Files</h2>
+    <span class="progress-label" id="progress-label">0 / 0</span>
+  </div>
+  <div class="card-body">
+    <div class="overall-bar-wrap"><div class="overall-bar" id="overall-bar"></div></div>
+    <div class="file-list" id="file-list"></div>
+  </div>
+</div>
+
+<!-- Session Summary -->
+<div class="card" id="summary-panel">
+  <div class="card-header">
+    <h2>&#9989; Import Complete</h2>
+    <span id="summary-date" style="font-size:0.82rem;color:var(--text-dim);"></span>
+  </div>
+  <div class="card-body">
+    <div class="summary-grid">
+      <div class="stat-card stat-coins">
+        <div class="stat-number" id="stat-coins">0</div>
+        <div class="stat-label">Coins Identified</div>
+      </div>
+      <div class="stat-card stat-receipts">
+        <div class="stat-number" id="stat-receipts">0</div>
+        <div class="stat-label">Receipts Saved</div>
+      </div>
+      <div class="stat-card stat-dupes">
+        <div class="stat-number" id="stat-dupes">0</div>
+        <div class="stat-label">Duplicates Flagged</div>
+      </div>
+      <div class="stat-card stat-value">
+        <div class="stat-number" id="stat-value">$0</div>
+        <div class="stat-label">Total Purchase Value</div>
+      </div>
+      <div class="stat-card stat-unlinked" id="unlinked-stat" style="display:none;">
+        <div class="stat-number" id="stat-unlinked">0</div>
+        <div class="stat-label">Unlinked Receipts</div>
+      </div>
+    </div>
+    <div class="summary-actions">
+      <button class="btn btn-primary"   onclick="goToReviewQueue()">&#128203; Go to Review Queue</button>
+      <button class="btn btn-secondary" onclick="showPaperTrail()">&#129534; View Paper Trail</button>
+      <button class="btn btn-ghost"     onclick="resetImport()">&#11014;&#65039; Import More</button>
+    </div>
+  </div>
+</div>
+
+<!-- Paper Trail -->
+<div class="card" id="paper-trail-panel">
+  <div class="card-header">
+    <h2>&#129534; Paper Trail</h2>
+    <span style="font-size:0.82rem;color:var(--text-dim);">Original receipts saved permanently &mdash; click any file to view</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table id="receipts-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Retailer</th>
+          <th>Invoice #</th>
+          <th>Amount</th>
+          <th>Coins Linked</th>
+          <th>Original File</th>
+        </tr>
+      </thead>
+      <tbody id="receipts-tbody"></tbody>
+    </table>
+    <div id="unlinked-section" style="display:none; padding:20px;">
+      <h3 style="font-size:0.9rem;color:var(--amber);margin-bottom:12px;">&#128204; Unlinked Receipt Items</h3>
+      <p style="font-size:0.83rem;color:var(--text-dim);margin-bottom:16px;">
+        These invoice items could not be automatically matched to a coin record. Click "Assign" to link them manually.
+      </p>
+      <div id="unlinked-items-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE   = 'https://backend-studio-9101802118-8c9a8.a.run.app';
+const USER_EMAIL = localStorage.getItem('numista_user_email') || '';
+
+let selectedFiles  = [];
+let sessionId      = null;
+let pollInterval   = null;
+
+function classifyFile(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  if (['xlsx','xls','csv','ods'].includes(ext))                         return 'spreadsheet';
+  if (ext === 'pdf')                                                     return 'invoice';
+  if (['jpg','jpeg','png','webp','heic','bmp','tiff','tif'].includes(ext)) return 'image';
+  return 'other';
+}
+const TYPE_ICON  = { spreadsheet:'&#128202;', invoice:'&#128196;', image:'&#128248;', other:'&#10067;' };
+const TYPE_LABEL = { spreadsheet:'Spreadsheet', invoice:'Invoice / Receipt', image:'Coin Image', other:'Unknown' };
+
+// Drag and drop
+const dropZone = document.getElementById('drop-zone');
+['dragenter','dragover'].forEach(ev =>
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(ev =>
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }));
+dropZone.addEventListener('drop', e => { e.preventDefault(); handleFileList(e.dataTransfer.files); });
+dropZone.addEventListener('click', e => {
+  if (!e.target.closest('button')) document.getElementById('folder-input').click();
+});
+document.getElementById('folder-input').addEventListener('change', e => handleFileList(e.target.files));
+document.getElementById('file-input').addEventListener('change',   e => handleFileList(e.target.files));
+
+function handleFileList(fileList) {
+  const allowed = ['pdf','xlsx','xls','csv','ods','jpg','jpeg','png','webp','heic','bmp','tiff','tif'];
+  selectedFiles = Array.from(fileList).filter(f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    return allowed.includes(ext);
+  });
+  if (!selectedFiles.length) return;
+
+  const n = selectedFiles.length;
+  const badge = document.getElementById('file-count-badge');
+  badge.textContent = n + ' file' + (n !== 1 ? 's' : '') + ' selected and ready';
+  badge.classList.add('show');
+  dropZone.classList.add('has-files');
+
+  const modeRow  = document.getElementById('mode-row');
+  const modeBadge= document.getElementById('mode-badge');
+  const modeDesc = document.getElementById('mode-desc');
+  modeRow.classList.add('show');
+  if (n <= 5) {
+    modeBadge.className = 'mode-badge mode-express';
+    modeBadge.textContent = 'Express';
+    modeDesc.textContent = 'Small batch — results in ~15 seconds';
+  } else {
+    modeBadge.className = 'mode-badge mode-bulk';
+    modeBadge.textContent = 'Bulk';
+    modeDesc.textContent = n + ' files — live progress bar will appear';
+  }
+  document.getElementById('start-btn').classList.add('show');
+}
+
+async function startImport() {
+  if (!USER_EMAIL) { alert('Please log in first.'); return; }
+  if (!selectedFiles.length) { alert('No files selected.'); return; }
+
+  sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+  const uploadCard = document.getElementById('upload-card');
+  uploadCard.style.opacity = '0.5';
+  uploadCard.style.pointerEvents = 'none';
+
+  const progressPanel = document.getElementById('progress-panel');
+  progressPanel.classList.add('show');
+
+  buildFileListUI();
+
+  const manifest = selectedFiles.map(f => ({
+    name: f.name, size: f.size, mime: f.type || 'application/octet-stream'
+  }));
+
+  let signedFiles;
+  try {
+    const r = await fetch(API_BASE + '/api/import/start', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, file_manifest: manifest }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'start failed');
+    signedFiles = data.files;
+  } catch(err) {
+    showError('Could not start import: ' + err.message); return;
+  }
+
+  const urlMap = {};
+  signedFiles.forEach(sf => { urlMap[sf.name] = sf.upload_url; });
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const f = selectedFiles[i];
+    updateFileRow(i, 'active');
+    updateProgress(i, selectedFiles.length);
+    try {
+      const resp = await fetch(urlMap[f.name], {
+        method: 'PUT', body: f,
+        headers: { 'Content-Type': f.type || 'application/octet-stream' }
+      });
+      if (!resp.ok) throw new Error('Upload failed');
+      updateFileRow(i, 'uploaded');
+    } catch(e) {
+      updateFileRow(i, 'error', 'Upload failed');
+    }
+  }
+  updateProgress(selectedFiles.length, selectedFiles.length, 'Uploaded — AI processing...');
+
+  try {
+    const r = await fetch(API_BASE + '/api/import/process', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId }),
+    });
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'process failed'); }
+  } catch(err) {
+    showError('Processing error: ' + err.message); return;
+  }
+
+  startPolling();
+}
+
+function buildFileListUI() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const ftype = classifyFile(f.name);
+    const row = document.createElement('div');
+    row.className = 'file-row'; row.id = 'file-row-' + i;
+    row.innerHTML =
+      '<span class="file-type-icon">' + TYPE_ICON[ftype] + '</span>' +
+      '<div><div class="file-name">' + escHtml(f.name) + '</div>' +
+      '<div class="file-name-sub">' + TYPE_LABEL[ftype] + ' &middot; ' + formatBytes(f.size) + '</div></div>' +
+      '<span class="file-status-chip chip-pending" id="chip-' + i + '">Pending</span>';
+    list.appendChild(row);
+  });
+}
+
+function updateFileRow(idx, status, note) {
+  const row  = document.getElementById('file-row-' + idx);
+  const chip = document.getElementById('chip-' + idx);
+  if (!row || !chip) return;
+  const map = {
+    active:   ['chip-active',  'status-active',  'Processing...'],
+    uploaded: ['chip-active',  'status-active',  'Uploaded'],
+    done:     ['chip-done',    'status-done',    'Done'],
+    error:    ['chip-error',   'status-error',   'Error'],
+    review:   ['chip-review',  'status-review',  'Review'],
+    skipped:  ['chip-skipped', '',               'Skipped'],
+  };
+  const [chipCls, rowCls, def] = map[status] || ['chip-pending','','Pending'];
+  chip.className = 'file-status-chip ' + chipCls;
+  chip.textContent = note || def;
+  row.className = 'file-row' + (rowCls ? ' ' + rowCls : '');
+}
+
+function updateProgress(done, total, label) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('overall-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label || (done + ' / ' + total + ' files');
+}
+
+function startPolling() {
+  document.getElementById('progress-label').innerHTML = '<span class="pulse-dot"></span> AI processing...';
+  pollInterval = setInterval(async () => {
+    try {
+      const r = await fetch(
+        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL)
+      );
+      if (!r.ok) return;
+      const data = await r.json();
+
+      (data.per_file || []).forEach((f, i) => {
+        const sm = { done:'done', error:'error', review_needed:'review', skipped:'skipped', processing:'active' };
+        if (f.status !== 'pending') {
+          updateFileRow(i, sm[f.status] || 'active',
+            f.coins_added ? ('Done — ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null);
+        }
+      });
+      updateProgress(data.processed_files || 0, data.total_files || selectedFiles.length);
+
+      if (data.status === 'done') {
+        clearInterval(pollInterval);
+        showSummary(data.summary || {});
+        loadReceipts();
+      } else if (data.status === 'linking') {
+        document.getElementById('progress-label').textContent = 'Linking receipts to coins...';
+      }
+    } catch(e) { /* silent retry */ }
+  }, 2500);
+}
+
+function showSummary(s) {
+  document.getElementById('summary-panel').classList.add('show');
+  document.getElementById('summary-date').textContent =
+    new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+  document.getElementById('stat-coins').textContent    = s.coins_identified || 0;
+  document.getElementById('stat-receipts').textContent = s.receipts_parsed  || 0;
+  document.getElementById('stat-dupes').textContent    = s.duplicates_flagged || 0;
+  document.getElementById('stat-value').textContent =
+    '$' + (s.total_purchase_value || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (s.unlinked_receipts > 0) {
+    document.getElementById('stat-unlinked').textContent = s.unlinked_receipts;
+    document.getElementById('unlinked-stat').style.display = 'block';
+  }
+  document.getElementById('overall-bar').style.width = '100%';
+  document.getElementById('progress-label').textContent = 'Complete';
+}
+
+async function loadReceipts() {
+  try {
+    const r = await fetch(
+      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '?session_id=' + sessionId
+    );
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!(data.receipts || []).length) return;
+    renderReceiptsTable(data.receipts);
+    document.getElementById('paper-trail-panel').classList.add('show');
+  } catch(e) { console.warn('receipts load', e); }
+}
+
+function renderReceiptsTable(receipts) {
+  const tbody = document.getElementById('receipts-tbody');
+  tbody.innerHTML = '';
+  let hasUnlinked = false;
+  const unlinkedItems = [];
+
+  receipts.forEach(rec => {
+    const linked   = (rec.linked_coin_ids || []).length;
+    const unlinkN  = (rec.unlinked_items  || []).length;
+    if (unlinkN) { hasUnlinked = true; unlinkedItems.push(...(rec.unlinked_items||[]).map(u=>({...u,receipt:rec}))); }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + (rec.invoice_date || '&mdash;') + '</td>' +
+      '<td>' + escHtml(rec.retailer || 'Unknown') + '</td>' +
+      '<td style="font-family:\'JetBrains Mono\',monospace;font-size:0.78rem;">' + escHtml(rec.invoice_number || '&mdash;') + '</td>' +
+      '<td>$' + (rec.total_amount||0).toFixed(2) + '</td>' +
+      '<td><span class="linked-badge ' + (linked?'linked':'unlinked') + '">' +
+        linked + ' linked' + (unlinkN ? ' &middot; ' + unlinkN + ' unlinked' : '') +
+      '</span></td>' +
+      '<td><a class="receipt-link" href="#" data-id="' + rec.receipt_id + '" onclick="viewReceipt(\''+rec.receipt_id+'\',event)">&#128196; ' + escHtml(rec.original_filename||'View') + '</a></td>';
+    tbody.appendChild(tr);
+  });
+
+  if (hasUnlinked && unlinkedItems.length) {
+    document.getElementById('unlinked-section').style.display = 'block';
+    const listEl = document.getElementById('unlinked-items-list');
+    listEl.innerHTML = '';
+    unlinkedItems.forEach(item => {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);';
+      const desc = item['Program/Series'] || item['Denomination'] || 'Unknown item';
+      const yr   = item.Year ? ' &middot; ' + item.Year : '';
+      const mm   = item['Mint Mark'] ? ' ' + item['Mint Mark'] : '';
+      const cost = '$' + String(item['Purchase Cost']||'0').replace('$','');
+      div.innerHTML =
+        '<span style="flex:1;font-size:0.83rem;">' + escHtml(desc) + yr + mm + ' &mdash; ' + cost + '</span>' +
+        '<span style="font-size:0.78rem;color:var(--text-dim);">' + escHtml((item.receipt||{}).retailer||'') + '</span>' +
+        '<button class="assign-btn">Assign &rarr;</button>';
+      listEl.appendChild(div);
+    });
+  }
+}
+
+async function viewReceipt(receiptId, e) {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const origText = link.innerHTML;
+  link.textContent = 'Loading...';
+  try {
+    const r = await fetch(
+      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '/' + receiptId + '/view_url'
+    );
+    const data = await r.json();
+    if (data.signed_url) window.open(data.signed_url, '_blank');
+    else alert('Could not retrieve receipt URL.');
+  } catch(err) {
+    alert('Error loading receipt: ' + err.message);
+  } finally {
+    link.innerHTML = origText;
+  }
+}
+
+function showPaperTrail() {
+  document.getElementById('paper-trail-panel').scrollIntoView({ behavior:'smooth' });
+}
+function goToReviewQueue() { window.location.href = '/review_queue.html'; }
+function resetImport() {
+  selectedFiles = []; sessionId = null; clearInterval(pollInterval);
+  ['upload-card','progress-panel','summary-panel','paper-trail-panel'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.opacity=''; el.style.pointerEvents=''; el.classList.remove('show');
+  });
+  document.getElementById('file-count-badge').classList.remove('show');
+  document.getElementById('start-btn').classList.remove('show');
+  document.getElementById('mode-row').classList.remove('show');
+  dropZone.classList.remove('has-files');
+  document.getElementById('file-input').value = '';
+  document.getElementById('folder-input').value = '';
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showError(msg) {
+  clearInterval(pollInterval);
+  document.getElementById('progress-label').textContent = 'Error: ' + msg;
+}
+</script>
+</body>
+</html>

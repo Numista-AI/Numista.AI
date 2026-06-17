@@ -1,30 +1,16 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:http_parser/http_parser.dart';
 
-import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
-import '../widgets/scan_result_dialog.dart';
 import '../services/wishlist_service.dart';
-import '../services/checklist_scan_service.dart';
 import '../models/coin_model.dart';
-import '../models/program_model.dart';
-import '../services/reference_service.dart';
-import '../services/coin_programs_data.dart';
-import 'package:printing/printing.dart';
-import '../services/checklist_generator_service.dart';
 import '../services/pcgs_import_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../constants.dart';
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
@@ -37,13 +23,11 @@ class AddCoinsHub extends StatefulWidget {
 class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isProcessing = false;
+  // ignore: prefer_final_fields
   double _processingProgress = 0;
+  // ignore: prefer_final_fields
   String _statusMessage = '';
 
-  // Checklist scanner state
-  CoinProgram? _selectedScanProgram;
-  bool _isScanning = false;
-  String _scanStatus = '';
 
   // PCGS Import state
   final _pcgsTokenCtrl     = TextEditingController();
@@ -67,11 +51,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _importNameCtrl = TextEditingController();
 
   // ─── AI Photo ID state ───────────────────────────────────────────────────
-  Uint8List? _photoIdImageA;
-  Uint8List? _photoIdImageB;
-  bool       _photoIdRunning = false;
-  bool       _photoIdSaving  = false;
-  Map<String, dynamic>? _photoIdResult;
   final _picYear    = TextEditingController();
   final _picDenom   = TextEditingController();
   final _picSeries  = TextEditingController();
@@ -85,12 +64,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _picNotes   = TextEditingController();
 
   // Backend API URL
-  final String _apiUrl = kApiBaseUrl;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadSavedPcgsToken();
   }
 
@@ -136,129 +114,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   // ─── Automated Ingestion Logic ───────────────────────────────────────────
 
-  Future<void> _processFiles({
-    required List<PlatformFile> files,
-    required bool isInvoice,
-    String importName = '',
-  }) async {
-    setState(() {
-      _isProcessing = true;
-      _processingProgress = 0;
-      _statusMessage = 'Starting processing...';
-    });
-
-    int totalItems = 0;
-    final endpoint = isInvoice ? '/api/process_invoice' : '/api/import_spreadsheet';
-
-    // Derive the correct MIME type from the file extension.
-    // The backend uses the filename for parsing, but setting the correct
-    // Content-Type ensures proper HTTP semantics and future-proofing.
-    MediaType mimeFor(String filename) {
-      final ext = filename.split('.').last.toLowerCase();
-      switch (ext) {
-        case 'pdf':  return MediaType('application', 'pdf');
-        case 'csv':  return MediaType('text', 'csv');
-        case 'xlsx': return MediaType('application',
-                         'vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        case 'xls':  return MediaType('application', 'vnd.ms-excel');
-        default:     return MediaType('application', 'octet-stream');
-      }
-    }
-
-    try {
-      for (int i = 0; i < files.length; i++) {
-        final file = files[i];
-        if (!mounted) return;
-        setState(() {
-          // Show a friendly message while the AI processes the file.
-          // For invoices, this can take 10–30 s; the indeterminate bar
-          // in the overlay keeps the UI feeling alive during that wait.
-          _statusMessage = files.length == 1
-              ? (isInvoice
-                  ? 'Reading your receipt — this usually takes 10–30 seconds…'
-                  : 'Analyzing ${file.name}…')
-              : 'Processing ${file.name} (${i + 1}/${files.length})…';
-          // Progress = 0 → overlay switches to indeterminate (bouncing) bar.
-          _processingProgress = i / files.length;
-        });
-
-        var request = http.MultipartRequest('POST', Uri.parse('$_apiUrl$endpoint'));
-        request.fields['user_email'] = AuthService.userEmail;
-        if (!isInvoice && importName.isNotEmpty) {
-          request.fields['import_name'] = importName;
-        }
-
-        if (file.bytes != null) {
-          request.files.add(http.MultipartFile.fromBytes(
-            'file',
-            file.bytes!,
-            filename: file.name,
-            contentType: mimeFor(file.name),
-          ));
-        } else if (file.path != null) {
-          // Native mobile/desktop path
-          request.files.add(await http.MultipartFile.fromPath(
-            'file',
-            file.path!,
-            filename: file.name,
-            contentType: mimeFor(file.name),
-          ));
-        } else {
-          // Neither bytes nor path is available — the platform could not read
-          // the file into memory (common on web when a file is very large or
-          // the browser memory budget is exceeded). Sending a request with no
-          // file field would cause HTTP 422 from the server. Skip this file
-          // and surface a clear message instead of failing silently.
-          if (mounted) {
-            setState(() => _statusMessage =
-                'Could not read "${file.name}" — try selecting fewer files at once, or use a smaller file.');
-          }
-          continue;
-        }
-
-        var streamedResponse = await request.send();
-        var response = await http.Response.fromStream(streamedResponse);
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final count = (data['extracted_items'] ?? data['count'] ?? 0) as int;
-          final pending = (data['pending_items'] ?? 0) as int;  // stamps/other
-          final supplies = (data['supplies_logged'] ?? 0) as int;
-          totalItems += count;
-          if (!mounted) return;
-          String msg = 'Added $count coins from ${file.name}';
-          if (pending > 0) msg += ' (+$pending stamps/other in Pending)';
-          if (supplies > 0) msg += ' (+$supplies supplies logged)';
-          setState(() => _statusMessage = '$msg…');
-        } else {
-          // Non-200: show the error body so the user knows what went wrong
-          final errBody = response.body.length > 200
-              ? '${response.body.substring(0, 200)}…'
-              : response.body;
-          if (!mounted) return;
-          setState(() => _statusMessage = 'Error ${response.statusCode} on ${file.name}: $errBody');
-        }
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-        _processingProgress = 1.0;
-      });
-
-      _showSuccessDialog(totalItems);
-
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('File processing failed. Please check the file format and try again.'),
-          backgroundColor: Colors.red[700],
-        ),
-      );
-    }
-  }
 
   void _showSuccessDialog(int totalItems) {
     if (!mounted) return;
@@ -346,14 +201,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildSingleScanTab(),
-              _buildBulkUploadTab(),
+              _buildUploadFilesTab(),
               _buildManualEntryTab(),
-              _buildExcelImportTab(),
-              _buildChecklistTab(),
               _buildPcgsImportTab(),
               _buildRollEntryTab(),
-              _buildAiPhotoIdTab(),
             ],
           ),
         ),
@@ -402,55 +253,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         indicatorColor: const Color(0xFFF63366),
         indicatorWeight: 3,
         tabs: const [
-          Tab(text: 'Single Invoice Scan', icon: Icon(Icons.receipt_long, size: 20)),
-          Tab(text: 'Bulk Upload', icon: Icon(Icons.auto_awesome_motion, size: 20)),
-          Tab(text: 'Manual Entry', icon: Icon(Icons.edit_note, size: 20)),
-          Tab(text: 'Excel/CSV Upload', icon: Icon(Icons.table_view, size: 20)),
-          Tab(text: 'By Checklist', icon: Icon(Icons.fact_check, size: 20)),
-          Tab(text: 'Import from PCGS', icon: Icon(Icons.shield_outlined, size: 20)),
-          Tab(text: 'Roll / Batch', icon: Icon(Icons.currency_exchange, size: 20)),
-          Tab(text: 'AI Photo ID', icon: Icon(Icons.auto_awesome, size: 20)),
+          Tab(text: 'Upload Files',      icon: Icon(Icons.upload_file_outlined,  size: 20)),
+          Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
+          Tab(text: 'Import from PCGS',  icon: Icon(Icons.shield_outlined,       size: 20)),
+          Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
         ],
       ),
     );
   }
 
-  Widget _buildSingleScanTab() {
-    return _buildUploadArea(
-      title: 'Interactive Single Invoice Scan',
-      description: 'Upload one PDF. AI will extract coins, varieties, and transaction data.',
-      icon: Icons.cloud_upload_outlined,
-      buttonLabel: 'Browse PDF',
-      onPressed: () async {
-        FilePickerResult? result = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['pdf'],
-          withData: true,   // populates file.bytes on all platforms incl. web
-        );
-        if (result != null) _processFiles(files: result.files, isInvoice: true);
-      },
-    );
-  }
 
-  Widget _buildBulkUploadTab() {
-    return _buildUploadArea(
-      title: 'Batch Processor',
-      description: 'Upload multiple PDF invoices at once. We will process them in the background.',
-      icon: Icons.topic_outlined,
-      buttonLabel: 'Select Multiple PDFs',
-      onPressed: () async {
-        FilePickerResult? result = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['pdf'],
-          withData: true,   // populates file.bytes on all platforms incl. web
-          allowMultiple: true,
-        );
-        if (result != null) _processFiles(files: result.files, isInvoice: true);
-      },
-    );
-  }
-
-  Widget _buildExcelImportTab() {
+  Widget _buildUploadFilesTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Center(
@@ -459,216 +272,120 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header ──────────────────────────────────────────────────
-              const Text(
-                'Spreadsheet Ingestor',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Upload Excel or CSV files from any source — Access exports, personal spreadsheets, '
-                'or our pre-formatted template. AI auto-maps your columns and normalizes coin names, '
-                'grades, and year/mint formats.',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
-              ),
-              const SizedBox(height: 28),
 
-              // ── Import Name field ───────────────────────────────────────
-              const Text(
-                'Import Label (optional)',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: Color(0xFF334155),
+              // ── Header ──────────────────────────────────────────────────
+              Row(children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF0C040), Color(0xFFF97316)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.folder_open_outlined,
+                      color: Colors.white, size: 26),
                 ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _importNameCtrl,
-                decoration: InputDecoration(
-                  hintText: 'e.g. "Aunt Janet\'s Access Database" or "Safe Deposit Box Coins"',
-                  hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
-                  prefixIcon: const Icon(Icons.label_outline, color: Color(0xFF94A3B8)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFF63366), width: 2),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'This label will be stored on every imported coin so you can trace it back to its source.',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-              ),
+                const SizedBox(width: 14),
+                const Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Folder-Drop Bulk Import',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B))),
+                    Text('Drop a folder — AI sorts everything',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  ],
+                )),
+              ]),
               const SizedBox(height: 24),
 
-              // ── Drop zone / Upload button ────────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.grid_on_rounded,
-                        size: 48, color: Color(0xFF94A3B8)),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Excel (.xlsx / .xls) or CSV',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Color(0xFF475569),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Limit 200 MB per file',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF63366),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.upload_file, size: 20),
-                        label: const Text(
-                          'Upload Spreadsheet',
-                          style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: () async {
-                          FilePickerResult? result =
-                              await FilePicker.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: ['csv', 'xlsx', 'xls'],
-                            withData: true,
-                          );
-                          if (result != null) {
-                            _processFiles(
-                              files: result.files,
-                              isInvoice: false,
-                              importName: _importNameCtrl.text.trim(),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Template download row ────────────────────────────────────
+              // ── Description card ─────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.file_download_outlined,
-                        color: Color(0xFF16A34A), size: 22),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Download Pre-Formatted Template',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF15803D),
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            'Use our Golden Schema CSV to enter coins directly — no column mapping needed.',
-                            style: TextStyle(
-                                color: Color(0xFF4ADE80), fontSize: 12),
-                          ),
-                        ],
-                      ),
+                    const Text(
+                      'Upload almost anything digital you have:',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14,
+                          color: Color(0xFF1E293B)),
                     ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF16A34A),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                      ),
-                      onPressed: () async {
-                        final uri = Uri.parse('$_apiUrl/api/template');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: const Text('Download',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
+                    const SizedBox(height: 12),
+                    ...[
+                      (Icons.receipt_long_outlined, 'PDF Invoices & Dealer Receipts',
+                          'Parsed by AI — coins extracted automatically'),
+                      (Icons.table_chart_outlined,  'Excel, CSV & Access Exports',
+                          'Any column format — AI auto-maps to our schema'),
+                      (Icons.photo_camera_outlined,  'Coin Photos (JPG, PNG, HEIC)',
+                          'Identified & logged to your collection'),
+                      (Icons.folder_zip_outlined,    'A Whole Folder at Once',
+                          'Mix of hundreds of files — sorted automatically'),
+                      (Icons.receipt_rounded,        'Paper Trail',
+                          'Original invoices saved permanently; click to view from any coin'),
+                      (Icons.find_replace_outlined,  'Duplicate Detection',
+                          'Flagged for your review — never auto-merged'),
+                    ].map((t) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(t.$1, size: 16, color: const Color(0xFF4C8CDA)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t.$2, style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155))),
+                            Text(t.$3, style: const TextStyle(
+                                fontSize: 12, color: Color(0xFF64748B))),
+                          ],
+                        )),
+                      ]),
+                    )),
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 20),
-              // ── What gets normalized note ────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  border: Border.all(color: const Color(0xFFFED7AA)),
-                  borderRadius: BorderRadius.circular(10),
+              // ── Launch button ─────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    // Pass the logged-in email as a query param so the
+                    // standalone page can identify the user instantly,
+                    // without relying on Firebase JS SDK session timing.
+                    final email = AuthService.userEmail;
+                    final path  = '/add_coins.html?email=${Uri.encodeComponent(email)}';
+                    final uri   = kIsWeb
+                        ? Uri.base.resolve(path)
+                        : Uri.parse('https://numista-vault.web.app$path');
+                    await launchUrl(uri, mode: LaunchMode.platformDefault);
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('Open Bulk Import →',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF0C040),
+                    foregroundColor: const Color(0xFF1E293B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Icon(Icons.auto_fix_high,
-                          color: Color(0xFFF97316), size: 16),
-                      SizedBox(width: 8),
-                      Text(
-                        'AI Normalization — runs automatically',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFEA580C),
-                            fontSize: 13),
-                      ),
-                    ]),
-                    SizedBox(height: 8),
-                    Text(
-                      '• Year + Mint: "2007W" → Year: 2007, Mint: W\n'
-                      '• Grades: "Ch Proof 63" → Proof-63  |  "BU" → Uncirculated\n'
-                      '• Names: "Ike" → Eisenhower Dollar  |  "Merc" → Mercury Dime\n'
-                      '• Unrecognized values flagged for AI review automatically',
-                      style: TextStyle(
-                          color: Color(0xFF92400E), fontSize: 12, height: 1.6),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Opens in a dedicated full-screen import page',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                 ),
               ),
             ],
@@ -677,7 +394,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ),
     );
   }
-
 
   Widget _buildRollEntryTab() {
     return SingleChildScrollView(
@@ -688,7 +404,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Roll / Batch Entry', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+              const Text('Roll/Jar/Batch Entry', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
               const SizedBox(height: 8),
               const Text('Add a coin roll, a sequential set, or an unopened lot to your collection in one step.', style: TextStyle(color: Color(0xFF64748B))),
               const SizedBox(height: 32),
@@ -824,232 +540,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildChecklistTab() {
-    return StreamBuilder<Map<String, List<CoinProgram>>>(
-      stream: ReferenceService.getGroupedProgramsStream(),
-      builder: (context, snapshot) {
-        // Show spinner while Firestore is loading — don't fall back prematurely
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFF63366)));
-        }
-
-        // Show error if stream failed
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.cloud_off_rounded,
-                      size: 40, color: Color(0xFFF63366)),
-                  const SizedBox(height: 12),
-                  const Text('Could not load programs',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 6),
-                  Text('${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 12)),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Only use local fallback if Firestore truly returned nothing
-        final allProgramsMap = (snapshot.data?.isNotEmpty == true)
-            ? snapshot.data!
-            : CoinProgramsData.usPrograms;
-        final allPrograms = allProgramsMap.values.expand((e) => e).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-
-        final isNarrow = MediaQuery.of(context).size.width < 600;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(isNarrow ? 16 : 32),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isNarrow ? double.infinity : 700),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Header ─────────────────────────────────────────────────
-                  const Text('Checklist Scanner',
-                      style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B))),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Print a checklist, check off your coins, then scan it back in. '
-                    'Owned coins update your collection and missing coins go to your Wish List automatically.',
-                    style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // ── Program Selector ────────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E6E9)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Step 1 — Select a Coin Program',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1E293B))),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<CoinProgram>(
-                          // Safely resolve the selected value from the current list.
-                          // If the stream emitted new objects and the old selection
-                          // is no longer present, fall back to null to avoid assertion.
-                          initialValue: _selectedScanProgram != null &&
-                                  allPrograms.any((p) => p == _selectedScanProgram)
-                              ? _selectedScanProgram
-                              : null,
-                          decoration: InputDecoration(
-                            labelText: 'Coin Program',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                          ),
-                          isExpanded: true,
-                          items: allPrograms
-                              .map((p) => DropdownMenuItem(
-                                  value: p, child: Text(p.name)))
-                              .toList(),
-                          onChanged: (p) =>
-                              setState(() => _selectedScanProgram = p),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Action Cards ────────────────────────────────────────────
-                  Row(
-                    children: [
-                      // Print card
-                      Expanded(
-                        child: _ActionCard(
-                          icon: Icons.print_rounded,
-                          color: const Color(0xFF2563EB),
-                          title: 'Print Checklist',
-                          subtitle:
-                              'Generate a PDF checklist for the selected program.',
-                          buttonLabel: 'Print PDF',
-                          enabled: _selectedScanProgram != null,
-                          onPressed: _selectedScanProgram == null
-                              ? null
-                              : () => _printChecklist(_selectedScanProgram!),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Scan card
-                      Expanded(
-                        child: _ActionCard(
-                          icon: Icons.document_scanner_rounded,
-                          color: const Color(0xFF10B981),
-                          title: 'Scan Checklist',
-                          subtitle:
-                              'Photograph your completed checklist to sync your collection.',
-                          buttonLabel:
-                              _isScanning ? _scanStatus : 'Scan Now',
-                          enabled:
-                              _selectedScanProgram != null && !_isScanning,
-                          isLoading: _isScanning,
-                          onPressed: _selectedScanProgram == null || _isScanning
-                              ? null
-                              : () => _scanChecklist(_selectedScanProgram!),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── How it works ────────────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F9FF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFBAE6FD)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(children: [
-                          Icon(Icons.info_outline,
-                              color: Color(0xFF0284C7), size: 18),
-                          SizedBox(width: 8),
-                          Text('How it works',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0C4A6E),
-                                  fontSize: 14)),
-                        ]),
-                        const SizedBox(height: 12),
-                        for (final step in [
-                          ('1', 'Select a coin program above'),
-                          ('2', 'Print the checklist PDF'),
-                          ('3',
-                              'Check off the coins you own with a pen'),
-                          ('4',
-                              'Tap "Scan Now" and photograph the page'),
-                          ('5',
-                              'Owned coins sync to your collection — unowned coins go to your Wish List'),
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 22,
-                                  height: 22,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0284C7),
-                                    borderRadius: BorderRadius.circular(11),
-                                  ),
-                                  child: Text(step.$1,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(step.$2,
-                                      style: const TextStyle(
-                                          color: Color(0xFF0C4A6E),
-                                          fontSize: 13)),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1839,259 +1329,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _printChecklist(CoinProgram program) async {
-    Uint8List? logoBytes;
-    try {
-      final data = await rootBundle.load('assets/logo_owl.png');
-      logoBytes = data.buffer.asUint8List();
-    } catch (_) {}
-    final bytes = await ChecklistGeneratorService.generateChecklist(
-        program,
-        logoBytes: logoBytes);
-    await Printing.layoutPdf(
-      onLayout: (_) => bytes,
-      name: '${program.name}_Checklist.pdf',
-    );
-  }
 
-  Future<void> _scanChecklist(CoinProgram program) async {
-    final userId = AuthService.currentUser?.uid;
-    if (userId == null || userId.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please sign in to scan a checklist.'),
-            backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    // ── Step 1: Ask how many pages ───────────────────────────────────────────
-    final totalPages = await _pickPageCount();
-    if (totalPages == null || !mounted) return;
-
-    final picker = ImagePicker();
-    final Map<String, dynamic> allCoins = {};
-    double totalConfidence = 0;
-    int pagesScanned = 0;
-
-    // ── Step 2: Loop through each page ──────────────────────────────────────
-    for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
-      if (!mounted) return;
-
-      // Show prompt before picking each page
-      final source = await _pickImageSource(
-        title: totalPages == 1
-            ? 'Scan Checklist'
-            : 'Scan Page $pageNum of $totalPages',
-      );
-      if (source == null) break; // user cancelled this page
-
-      final picked = await picker.pickImage(
-        source: source,
-        imageQuality: 92,
-        maxWidth: 3000,
-        maxHeight: 3000,
-      );
-      if (picked == null) break;
-
-      setState(() {
-        _isScanning = true;
-        _scanStatus = totalPages == 1
-            ? 'Analyzing...'
-            : 'Analyzing page $pageNum of $totalPages...';
-      });
-
-      try {
-        final result = await ChecklistScanService.scanChecklist(
-          imageFile: File(picked.path),
-          programId: program.id,
-          userId: userId,
-          pageNumber: pageNum,
-          totalPages: totalPages,
-        );
-
-        if (!result.success) {
-          if (!mounted) return;
-          setState(() => _isScanning = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Page $pageNum failed: ${result.errorMessage ?? 'Unknown error'}'),
-                backgroundColor: Colors.red.shade700),
-          );
-          return;
-        }
-
-        // Merge coins from this page into accumulated results
-        allCoins.addAll(result.coins);
-        totalConfidence += result.pageConfidence ?? 0;
-        pagesScanned++;
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isScanning = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Page $pageNum error: $e'),
-              backgroundColor: Colors.red.shade700),
-        );
-        return;
-      }
-    }
-
-    if (!mounted) return;
-    setState(() => _isScanning = false);
-
-    if (pagesScanned == 0) return;
-
-    // ── Step 3: Show combined results ────────────────────────────────────────
-    final combined = ScanResult(
-      programId: program.id,
-      userId: userId,
-      coins: allCoins,
-      pageConfidence: pagesScanned > 0 ? totalConfidence / pagesScanned : 0,
-      firestoreWritten: true,
-      wishlistAdded: 0, // individual pages already wrote to Firestore
-    );
-
-    await ScanResultDialog.show(
-      context,
-      result: combined,
-      programName: program.name,
-    );
-  }
 
   /// Shows a bottom sheet to select how many checklist pages to scan.
-  Future<int?> _pickPageCount() async {
-    if (!mounted) return null;
-    return showModalBottomSheet<int>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            const Text('How many pages is your checklist?',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            const Text('Each page will be photographed separately.',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 16),
-            for (final n in [1, 2, 3])
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFF0284C7),
-                  child: Text('$n',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-                title: Text(n == 1 ? '1 page' : '$n pages',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () => Navigator.pop(context, n),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Future<ImageSource?> _pickImageSource({String title = 'Scan Checklist'}) async {
-    if (!mounted) return null;
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFF10B981),
-                child: Icon(Icons.camera_alt, color: Colors.white),
-              ),
-              title: const Text('Take Photo'),
-              subtitle: const Text('Use camera for best results'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFF2563EB),
-                child: Icon(Icons.photo_library, color: Colors.white),
-              ),
-              title: const Text('Choose from Gallery'),
-              subtitle: const Text('Select a previously taken photo'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildUploadArea({required String title, required String description, required IconData icon, required String buttonLabel, required VoidCallback onPressed}) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
-        child: Container(
-          margin: const EdgeInsets.all(32),
-          padding: const EdgeInsets.all(48),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E6E9)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 64, color: const Color(0xFF64748B).withAlpha(100)),
-              const SizedBox(height: 24),
-              Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-              const SizedBox(height: 12),
-              Text(description, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF64748B), fontSize: 16)),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                onPressed: onPressed,
-                icon: const Icon(Icons.add),
-                label: Text(buttonLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 16),
-              const Text('Limit 200MB per file • PDF', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildProcessingOverlay() {
     // While progress == 0 (waiting on the AI to process a single file),
@@ -2160,518 +1402,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   // ─── AI Photo ID ────────────────────────────────────────────────────────────
 
-  Future<void> _pickPhotoIdImage({required bool isA}) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (isA) { _photoIdImageA = bytes; }
-      else      { _photoIdImageB = bytes; }
-      _photoIdResult = null;
-    });
-  }
 
-  Future<void> _runPhotoIdentification() async {
-    if (_photoIdImageA == null || _photoIdImageB == null) return;
-    setState(() => _photoIdRunning = true);
-    try {
-      final uri     = Uri.parse('$_apiUrl/api/identify_coin_photo');
-      final request = http.MultipartRequest('POST', uri)
-        ..fields['user_email']         = AuthService.userEmail
-        ..fields['save_to_collection'] = 'false'
-        ..files.add(http.MultipartFile.fromBytes(
-            'image_a', _photoIdImageA!,
-            filename: 'image_a.jpg',
-            contentType: MediaType('image', 'jpeg')))
-        ..files.add(http.MultipartFile.fromBytes(
-            'image_b', _photoIdImageB!,
-            filename: 'image_b.jpg',
-            contentType: MediaType('image', 'jpeg')));
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-      if (response.statusCode != 200) {
-        throw Exception('Server error ${response.statusCode}: ${response.body}');
-      }
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final coin = data['coin'] as Map<String, dynamic>? ?? {};
-      _picYear.text    = coin['Year']           ?? '';
-      _picDenom.text   = coin['Denomination']   ?? '';
-      _picSeries.text  = coin['Program/Series'] ?? '';
-      _picTheme.text   = coin['Theme/Subject']  ?? '';
-      _picMint.text    = coin['Mint Mark']      ?? '';
-      _picGrade.text   = coin['Condition']      ?? '';
-      _picMetal.text   = coin['Metal Content']  ?? '';
-      _picVariety.text = coin['Variety']        ?? '';
-      _picCost.text    = '';
-      _picStorage.text = '';
-      _picNotes.text   = '';
-      setState(() => _photoIdResult = data);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('AI identification failed: $e'),
-          backgroundColor: Colors.red[700],
-        ));
-      }
-    } finally {
-      setState(() => _photoIdRunning = false);
-    }
-  }
 
-  Future<void> _savePhotoIdCoin() async {
-    if (_photoIdImageA == null || _photoIdImageB == null) return;
-    setState(() => _photoIdSaving = true);
-    try {
-      final uri     = Uri.parse('$_apiUrl/api/identify_coin_photo');
-      final request = http.MultipartRequest('POST', uri)
-        ..fields['user_email']         = AuthService.userEmail
-        ..fields['save_to_collection'] = 'true'
-        ..fields['override_year']      = _picYear.text.trim()
-        ..fields['override_denom']     = _picDenom.text.trim()
-        ..fields['override_series']    = _picSeries.text.trim()
-        ..fields['override_theme']     = _picTheme.text.trim()
-        ..fields['override_mint']      = _picMint.text.trim()
-        ..fields['override_grade']     = _picGrade.text.trim()
-        ..fields['override_metal']     = _picMetal.text.trim()
-        ..fields['override_cost']      = _picCost.text.trim()
-        ..fields['override_storage']   = _picStorage.text.trim()
-        ..fields['override_notes']     = _picNotes.text.trim()
-        ..files.add(http.MultipartFile.fromBytes(
-            'image_a', _photoIdImageA!,
-            filename: 'image_a.jpg',
-            contentType: MediaType('image', 'jpeg')))
-        ..files.add(http.MultipartFile.fromBytes(
-            'image_b', _photoIdImageB!,
-            filename: 'image_b.jpg',
-            contentType: MediaType('image', 'jpeg')));
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-      if (response.statusCode != 200) {
-        throw Exception('Save failed ${response.statusCode}: ${response.body}');
-      }
-      setState(() { _photoIdImageA = null; _photoIdImageB = null; _photoIdResult = null; });
-      if (!mounted) return;
-      _showSuccessDialog(1);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Save failed: $e'), backgroundColor: Colors.red[700]));
-      }
-    } finally {
-      setState(() => _photoIdSaving = false);
-    }
-  }
-
-  Widget _buildAiPhotoIdTab() {
-    final result = _photoIdResult;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: result == null ? _buildPhotoIdUploadScreen() : _buildPhotoIdReviewScreen(result),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhotoIdUploadScreen() {
-    final bothPicked = _photoIdImageA != null && _photoIdImageB != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF0F172A), Color(0xFF1E293B)]),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFD4AF37), width: 2),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('AI Photo Identifier',
-                  style: TextStyle(color: Color(0xFFD4AF37), fontSize: 20, fontWeight: FontWeight.w800)),
-              SizedBox(height: 6),
-              Text(
-                'Upload two photos of your coin — obverse & reverse. '
-                'Gemini AI will identify it, estimate its grade, detect errors, '
-                'and add it to your collection.',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _photoPickerCard(
-              label: 'Image A  (Obverse or Reverse)',
-              bytes: _photoIdImageA,
-              onTap: () => _pickPhotoIdImage(isA: true),
-            )),
-            const SizedBox(width: 16),
-            Expanded(child: _photoPickerCard(
-              label: 'Image B  (The other side)',
-              bytes: _photoIdImageB,
-              onTap: () => _pickPhotoIdImage(isA: false),
-            )),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          "Order doesn't matter — AI automatically detects which side is which.",
-          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        if (!bothPicked)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(children: [
-              Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 18),
-              SizedBox(width: 10),
-              Text('Upload both images to enable AI identification.',
-                  style: TextStyle(color: Color(0xFF0369A1), fontSize: 13)),
-            ]),
-          ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: (bothPicked && !_photoIdRunning) ? _runPhotoIdentification : null,
-            icon: _photoIdRunning
-                ? const SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : const Icon(Icons.auto_awesome, size: 22),
-            label: Text(
-              _photoIdRunning ? 'Gemini AI is analyzing your coin...' : 'Identify with Gemini AI',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD4AF37),
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _photoPickerCard({required String label, required Uint8List? bytes, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: bytes == null ? const Color(0xFFF8FAFC) : null,
-          border: Border.all(
-              color: bytes != null ? const Color(0xFFD4AF37) : const Color(0xFFCBD5E1),
-              width: bytes != null ? 2 : 1.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: bytes != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.memory(bytes, fit: BoxFit.cover, width: double.infinity))
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_photo_alternate_outlined, size: 40, color: Color(0xFF94A3B8)),
-                  const SizedBox(height: 10),
-                  Text(label, textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                  const SizedBox(height: 8),
-                  const Text('Tap to select',
-                      style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w600)),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildPhotoIdReviewScreen(Map<String, dynamic> result) {
-    final coin       = result['coin'] as Map<String, dynamic>? ?? {};
-    final confidence = (coin['ai_confidence'] ?? '') as String;
-    final estValue   = (coin['AI Estimated Value'] ?? 'Pending') as String;
-    final report     = (coin['Numismatic Report'] ?? '') as String;
-    final obvB64     = result['obverse_b64'] as String? ?? '';
-    final revB64     = result['reverse_b64'] as String? ?? '';
-    final badgeColor = {
-      'HIGH':   const Color(0xFF10B981),
-      'MEDIUM': const Color(0xFFF59E0B),
-      'LOW':    const Color(0xFFEF4444),
-    }[confidence] ?? const Color(0xFF64748B);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          const Text('AI Identification Complete',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(999)),
-            child: Text('$confidence CONFIDENCE',
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-          ),
-        ]),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(child: _b64ImageCard(obvB64, 'OBVERSE', const Color(0xFFD4AF37))),
-          const SizedBox(width: 12),
-          Expanded(child: _b64ImageCard(revB64, 'REVERSE', const Color(0xFF334155))),
-        ]),
-        const SizedBox(height: 20),
-        if (report.isNotEmpty) ...[
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text('Full Gemini AI Report',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A), fontSize: 14)),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(report,
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B), height: 1.6)),
-              ),
-            ],
-          ),
-          if (estValue.isNotEmpty && estValue != 'Pending') ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(children: [
-                const Text('Estimated Retail Value',
-                    style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w700, fontSize: 13)),
-                const Spacer(),
-                Text(estValue,
-                    style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w800, fontSize: 16)),
-              ]),
-            ),
-          ],
-          const SizedBox(height: 16),
-        ],
-        const Divider(),
-        const SizedBox(height: 8),
-        const Text('Review & Edit Coin Details',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-        const Text('All fields pre-filled by AI — correct anything before saving.',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-        const SizedBox(height: 16),
-        _picRow([_picField('Year', _picYear), _picField('Denomination', _picDenom),
-            _picField('Country', TextEditingController(text: coin['Country'] ?? 'USA'))]),
-        _picRow([_picField('Program/Series', _picSeries), _picField('Theme/Subject', _picTheme),
-            _picField('Mint Mark', _picMint)]),
-        _picRow([_picField('Condition (Grade)', _picGrade), _picField('Metal Content', _picMetal),
-            _picField('Variety / Errors', _picVariety)]),
-        _picRow([_picField('Cost (Optional)', _picCost), _picField('Storage Location', _picStorage)]),
-        const SizedBox(height: 8),
-        TextField(controller: _picNotes, maxLines: 3, decoration: _picDecoration('Personal Notes')),
-        const SizedBox(height: 24),
-        Row(children: [
-          Expanded(
-            flex: 1,
-            child: OutlinedButton.icon(
-              onPressed: () => setState(() => _photoIdResult = null),
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Start Over'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF64748B),
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 3,
-            child: ElevatedButton.icon(
-              onPressed: _photoIdSaving ? null : _savePhotoIdCoin,
-              icon: _photoIdSaving
-                  ? const SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                  : const Icon(Icons.add_circle_outline, size: 20),
-              label: Text(_photoIdSaving ? 'Saving...' : 'Add to My Collection',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD4AF37),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-        ]),
-      ],
-    );
-  }
-
-  Widget _b64ImageCard(String b64, String label, Color borderColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w700, color: borderColor, letterSpacing: 1)),
-        const SizedBox(height: 4),
-        Container(
-          height: 180,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderColor, width: 2)),
-          child: b64.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                      base64Decode(b64.contains(',') ? b64.split(',').last : b64),
-                      fit: BoxFit.cover, width: double.infinity))
-              : const Center(child: Icon(Icons.image_not_supported_outlined,
-                  color: Color(0xFF94A3B8), size: 32)),
-        ),
-      ],
-    );
-  }
-
-  Row _picRow(List<Widget> fields) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: fields.map((f) => Expanded(child: Padding(
-        padding: const EdgeInsets.only(right: 10, bottom: 10), child: f))).toList(),
-  );
-
-  Widget _picField(String label, TextEditingController ctrl) => TextField(
-    controller: ctrl,
-    decoration: _picDecoration(label),
-    style: const TextStyle(fontSize: 13),
-  );
-
-  InputDecoration _picDecoration(String label) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
-    enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
-    focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 2)),
-  );
-}
-
-/// Compact action card used in the Checklist tab for Print / Scan actions.
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final String buttonLabel;
-  final bool enabled;
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _ActionCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.buttonLabel,
-    required this.enabled,
-    this.isLoading = false,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: enabled ? color.withValues(alpha: 0.3) : const Color(0xFFE2E6E9)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: enabled ? 0.12 : 0.05),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon,
-                color: enabled ? color : Colors.grey.shade400, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(title,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: enabled
-                      ? const Color(0xFF1E293B)
-                      : Colors.grey.shade400)),
-          const SizedBox(height: 4),
-          Text(subtitle,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: enabled
-                      ? const Color(0xFF64748B)
-                      : Colors.grey.shade300)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: enabled ? onPressed : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey.shade200,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text(buttonLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

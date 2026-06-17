@@ -88,6 +88,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Home Dashboard':
         return HomeDashboard(
           onAskMorgan: () => setState(() => _activeRoute = 'AI Deepdive'),
+          onNavigateToCollection: () => setState(() => _activeRoute = 'My Collection'),
         );
       case 'My Collection':
         return MyCollectionScreen(

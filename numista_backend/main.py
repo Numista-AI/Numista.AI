@@ -473,9 +473,10 @@ def get_live_metal_prices():
 
 @app.post("/api/import_spreadsheet")
 async def import_spreadsheet(
-    user_email:  str = Form(...),
-    file:        UploadFile = File(...),
-    import_name: str = Form(''),   # optional label e.g. "Aunt's Access DB - Jan 2026"
+    user_email:        str = Form(...),
+    file:              UploadFile = File(...),
+    import_name:       str = Form(''),   # optional label e.g. "Aunt's Access DB - Jan 2026"
+    import_session_id: str = Form(''),   # set by Bulk Import flow; links coins to a session
 ):
     """
     Ingests an Excel/CSV file into the user's review_queue.
@@ -591,10 +592,12 @@ Omit any user headers with no reasonable match."""
                 new_doc[fld] = new_doc[fld][1:]
 
         # ── Source provenance ──────────────────────────────────────────────
-        new_doc['upload_method'] = 'spreadsheet_import'
-        new_doc['source_file']   = file.filename
-        new_doc['import_name']   = import_name or file.filename
-        new_doc['created_at']    = firestore.SERVER_TIMESTAMP
+        new_doc['upload_method']       = 'spreadsheet_import'
+        new_doc['source_file']         = file.filename
+        new_doc['import_name']         = import_name or file.filename
+        new_doc['created_at']          = firestore.SERVER_TIMESTAMP
+        if import_session_id:
+            new_doc['import_session_id'] = import_session_id
 
         # Confidence: lower when AI fallback will be needed
         needs_ai = (not cond_resolved and raw_cond) or \
@@ -1415,7 +1418,12 @@ def grade_review_stats(user_email: str):
 
 
 @app.post("/api/process_invoice")
-async def process_invoice(user_email: str = Form(...), file: UploadFile = File(...)):
+async def process_invoice(
+    user_email:        str = Form(...),
+    file:              UploadFile = File(...),
+    import_session_id: str = Form(''),  # set by Bulk Import flow
+    receipt_id:        str = Form(''),  # set by Bulk Import flow; links to receipts collection
+):
     """
     Uses GCP Document AI to scrape a PDF invoice, then heavily prompts Vertex AI 
     to filter out non-coin items (binders, sheets) and extract valid numismatic purchases.
@@ -1728,6 +1736,17 @@ async def process_invoice(user_email: str = Form(...), file: UploadFile = File(.
             item['source']      = 'PDF Invoice'
             item['source_file'] = file.filename
             item['created_at']  = firestore.SERVER_TIMESTAMP
+            # Paper Trail back-references
+            if import_session_id:
+                item['import_session_id'] = import_session_id
+            if receipt_id:
+                item['receipt_id'] = receipt_id
+                item['paper_trail'] = {
+                    'receipt_id':  receipt_id,
+                    'gcs_path':    f'receipts/{user_email}/{receipt_id}/original{("." + (file.filename or "pdf").rsplit(".", 1)[-1].lower()) if "." in (file.filename or "") else ".pdf"}',
+                    'matched_at':  None,
+                    'match_score': None,
+                }
             _apply_defaults(item)
 
             if item_type == 'set':
@@ -1832,7 +1851,8 @@ def get_mint_news():
                 "\"American Eagle bullion\" OR \"Walking Liberty\" OR \"Saint-Gaudens\" OR "
                 "\"US Mint\" OR \"United States Mint\" OR "
                 "\"uncirculated\" OR \"commemorative coin\" OR \"numismatics\""
-                " -bitcoin -crypto -cluster -galaxy -beer -beauty -fashion -cluster"
+                " -bitcoin -crypto -cryptocurrency -ethereum -blockchain -NFT"
+                " -cluster -galaxy -beer -beauty -fashion -election -tariff"
             )
             params = {
                 "q":        collector_query,
@@ -1845,6 +1865,7 @@ def get_mint_news():
             # Require a numismatic keyword in the article TITLE.
             # NewsAPI full-text search matches words buried anywhere in the article,
             # so politics/tech articles mentioning "coin" in passing sneak through.
+            # Keywords that MUST appear in the title to keep the article
             _COIN_KW = {
                 "numismatic", "numismatics", "coin", "coins", "mint", "minted",
                 "pcgs", "proof set", "mint set", "bullion", "morgan dollar",
@@ -1853,10 +1874,32 @@ def get_mint_news():
                 "commemorative coins", "uncirculated", "coin show",
                 "coin auction", "coin dealer",
             }
+            # Keywords that cause immediate rejection even if a coin term appears
+            _BLOCK_KW = {
+                "bitcoin", "crypto", "cryptocurrency", "ethereum", "blockchain",
+                "nft", "defi", "altcoin", "dogecoin", "litecoin", "ripple",
+                "election", "senate", "congress", "parliament", "politics",
+                "legislation", "tariff", "trade war", "policy",
+            }
+            # Block India-sourced articles (common source names from NewsAPI)
+            _BLOCK_SOURCES = {
+                "the hindu", "times of india", "hindustan times", "ndtv",
+                "economic times", "mint",  # Indian financial paper, not US Mint
+                "india today", "deccan chronicle", "business standard",
+            }
 
             def _is_coin_title(t: str) -> bool:
                 tl = t.lower()
                 return any(kw in tl for kw in _COIN_KW)
+
+            def _is_blocked(title: str, source_name: str) -> bool:
+                tl = title.lower()
+                sl = source_name.lower()
+                if any(bk in tl for bk in _BLOCK_KW):
+                    return True
+                if any(bs in sl for bs in _BLOCK_SOURCES):
+                    return True
+                return False
 
             resp = req.get("https://newsapi.org/v2/everything", params=params, timeout=8)
             if resp.status_code == 200:
@@ -1864,11 +1907,15 @@ def get_mint_news():
                 articles = data.get("articles", [])
                 results = []
                 for a in articles:
-                    title = a.get("title", "")
+                    title       = a.get("title", "")
+                    source_name = a.get("source", {}).get("name", "")
                     if not title or title == "[Removed]":
                         continue
-                    # Skip articles not about coins/numismatics at the title level
+                    # Must have a numismatic keyword in the title
                     if not _is_coin_title(title):
+                        continue
+                    # Hard-block crypto, politics, India-sourced
+                    if _is_blocked(title, source_name):
                         continue
                     # Human-friendly relative date
                     raw_dt = a.get("publishedAt", "")
@@ -1909,10 +1956,14 @@ def get_mint_news():
     # ── 3. RSS fallback — verified working feeds with per-feed timeout ─────────
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     feeds = [
+        # US Mint first — official government releases, always relevant
         ("https://www.usmint.gov/rss/news.xml",       "US Mint"),
+        # Top collector trade publications
+        ("https://coinweek.com/feed/",                "CoinWeek"),
         ("https://www.pcgs.com/rss/news",              "PCGS"),
         ("https://www.ngccoin.com/rss/news.ashx",      "NGC"),
         ("https://www.coinnews.net/feed/",             "CoinNews"),
+        ("https://www.numismaticnews.net/feed",        "Numismatic News"),
     ]
     all_entries = []
     for url, label in feeds:
@@ -1937,6 +1988,46 @@ def get_mint_news():
             print(f"[mint_news] RSS feed error ({url}): {e}")
 
     return {"status": "ok", "source": "rss", "news": all_entries}
+
+
+# ── News curation: user dismissal endpoints ────────────────────────────────────
+
+class DismissNewsRequest(BaseModel):
+    user_email: str
+    article_id: str   # SHA-1 hex of the article URL — computed client-side
+
+@app.post("/api/dismiss_news")
+def dismiss_news(req: DismissNewsRequest):
+    """
+    Records a user's 'Not Relevant' tap so the article never appears again.
+    Stores up to 500 dismissed IDs per user (oldest pruned automatically).
+    """
+    try:
+        import hashlib
+        ref = db.collection("users").document(req.user_email) \
+                  .collection("meta").document("dismissed_news")
+        doc = ref.get()
+        ids: list = doc.to_dict().get("ids", []) if doc.exists else []
+        if req.article_id not in ids:
+            ids.append(req.article_id)
+        if len(ids) > 500:
+            ids = ids[-500:]   # keep most recent 500
+        ref.set({"ids": ids})
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/dismissed_news/{user_email}")
+def get_dismissed_news(user_email: str):
+    """Returns the list of dismissed article IDs for a user."""
+    try:
+        ref = db.collection("users").document(user_email) \
+                  .collection("meta").document("dismissed_news")
+        doc = ref.get()
+        ids = doc.to_dict().get("ids", []) if doc.exists else []
+        return {"status": "ok", "ids": ids}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class DeepDiveRequest(BaseModel):
@@ -4136,7 +4227,849 @@ async def identify_coin_photo(
     }
 
 
+# ─── Text-Only Coin Valuation (Batch Estimator) ───────────────────────────────
+
+class TextValuationRequest(BaseModel):
+    year:           str
+    denomination:   str
+    mint_mark:      Optional[str] = ""
+    condition:      Optional[str] = ""
+    program_series: Optional[str] = ""
+    metal_content:  Optional[str] = ""
+    country:        Optional[str] = "USA"
+
+TEXT_VALUATION_PROMPT = """\
+You are a professional coin dealer with 30+ years experience pricing US and world coins.
+
+A user has a coin with these details:
+  Year:          {year}
+  Denomination:  {denomination}
+  Mint Mark:     {mint_mark}
+  Grade/Condition: {condition}
+  Program/Series:  {program_series}
+  Metal Content:   {metal_content}
+  Country:         {country}
+
+Estimate the current retail market value range for this coin.
+Return ONLY valid JSON with exactly these fields:
+{{
+  "estimated_value": "string — a price RANGE in USD, e.g. '$15 – $35' or '$1,200 – $1,800'. Never a single point value.",
+  "confidence": "HIGH, MEDIUM, or LOW",
+  "basis": "one sentence explaining your estimate (grade, series, metal content, demand)"
+}}
+
+Rules:
+- Always return a RANGE (low – high), never a single number.
+- If grade/condition is unknown, widen the range accordingly.
+- If the coin is common and low-value, '$1 – $3' is a valid answer.
+- If you cannot estimate (unknown coin, insufficient data), return estimated_value: 'Pending' and confidence: 'LOW'.
+- Do NOT add any text outside the JSON object.
+"""
+
+@app.post("/api/estimate_value_text")
+async def estimate_value_text(request: TextValuationRequest):
+    """
+    Text-only coin value estimation — no photos required.
+
+    Used by the Flutter BatchValuationService to estimate values for coins
+    imported via CSV, Excel, or PDF invoice that have no photos attached.
+
+    Always returns a PRICE RANGE (not a point value) since condition cannot
+    be visually confirmed without photos.  Sets needs_photo=True so the UI
+    can prompt the user to upload images for a more precise estimate.
+    """
+    prompt = TEXT_VALUATION_PROMPT.format(
+        year           = request.year           or "Unknown",
+        denomination   = request.denomination   or "Unknown",
+        mint_mark      = request.mint_mark      or "None",
+        condition      = request.condition      or "Unknown",
+        program_series = request.program_series or "Unknown",
+        metal_content  = request.metal_content  or "Unknown",
+        country        = request.country        or "USA",
+    )
+    try:
+        resp = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        raw = resp.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        result: dict = json.loads(raw)
+
+        estimated = result.get("estimated_value", "Pending")
+        confidence = result.get("confidence", "LOW")
+        basis      = result.get("basis", "")
+
+        print(f"[estimate_value_text] {request.year} {request.denomination} "
+              f"{request.mint_mark} → {estimated} ({confidence})")
+
+        return {
+            "estimated_value": estimated,
+            "confidence":      confidence,
+            "basis":           basis,
+            "needs_photo":     True,   # always — text estimate cannot confirm grade visually
+            "source":          "text_estimator",
+        }
+    except Exception as e:
+        print(f"[estimate_value_text] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BULK IMPORT & PAPER TRAIL  (Add Coins — unified tab)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Three-step flow:
+#   1. POST /api/import/start        → create session, return GCS signed upload URLs
+#   2. Browser uploads files directly to GCS (no server in the loop)
+#   3. POST /api/import/process      → orchestrate AI processing of all files
+#      GET  /api/import/status/{id}  → live progress polling
+#
+# Paper Trail:
+#   GET  /api/receipts/{email}                    → all receipts for a user
+#   GET  /api/receipts/{email}/{id}/view_url      → fresh signed URL for original PDF
+# ───────────────────────────────────────────────────────────────────────────────
+
+import asyncio
+import hashlib
+import threading
+
+IMPORT_BUCKET = USER_CONTENT_BUCKET  # reuse the existing bucket
+
+# ── File type classifier ──────────────────────────────────────────────────────
+
+def _classify_file(filename: str, first_bytes: bytes = b"") -> str:
+    """Return 'spreadsheet' | 'invoice' | 'image' | 'other'."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("xlsx", "xls", "csv", "ods"):
+        return "spreadsheet"
+    if ext == "pdf" or first_bytes[:4] == b"%PDF":
+        return "invoice"
+    if ext in ("jpg", "jpeg", "png", "webp", "heic", "bmp", "tiff", "tif"):
+        return "image"
+    return "other"
+
+
+# ── Duplicate detection ───────────────────────────────────────────────────────
+
+def _score_duplicate(new_coin: dict, existing_coin: dict) -> float:
+    """
+    Return a 0.0–1.0 duplicate confidence score.
+    >= 0.90  → Strong duplicate (flag, don't add)
+    0.60–0.89 → Possible duplicate (flag with warning, still add)
+    < 0.60   → Unique
+    """
+    score = 0.0
+    def _norm(v):
+        return str(v or "").strip().lower()
+
+    if _norm(new_coin.get("Program/Series")) == _norm(existing_coin.get("Program/Series")) \
+            and _norm(new_coin.get("Program/Series")):
+        score += 0.40
+    if _norm(new_coin.get("Year")) == _norm(existing_coin.get("Year")) \
+            and _norm(new_coin.get("Year")):
+        score += 0.30
+    if _norm(new_coin.get("Mint Mark")) == _norm(existing_coin.get("Mint Mark")):
+        score += 0.10
+    if _norm(new_coin.get("Condition")) == _norm(existing_coin.get("Condition")) \
+            and _norm(new_coin.get("Condition")):
+        score += 0.10
+    # Purchase date + cost exact match adds a lot of confidence
+    if _norm(new_coin.get("Purchase Date")) == _norm(existing_coin.get("Purchase Date")) \
+            and _norm(new_coin.get("Purchase Date")):
+        score += 0.05
+    if _norm(new_coin.get("Cost")) == _norm(existing_coin.get("Cost")) \
+            and _norm(new_coin.get("Cost")):
+        score += 0.05
+    return min(score, 1.0)
+
+
+def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[str]) -> dict:
+    """
+    Compare every coin added in this session against the user's existing
+    collection + review_queue (excluding coins in this very session).
+    Updates the session doc with duplicate flags. Returns summary dict.
+    """
+    if not new_coin_ids:
+        return {"strong": 0, "possible": 0}
+
+    # Load existing coins (collection + review_queue minus this session)
+    existing = []
+    for coll_name in ("collection", "review_queue"):
+        docs = db.collection("users").document(user_email).collection(coll_name)\
+                 .where("import_session_id", "!=", session_id)\
+                 .limit(2000).stream()
+        for d in docs:
+            existing.append((d.id, coll_name, d.to_dict()))
+
+    strong_count = 0
+    possible_count = 0
+    flags = []
+
+    session_ref = db.collection("users").document(user_email)\
+                    .collection("import_sessions").document(session_id)
+
+    for coin_id in new_coin_ids:
+        # Load the new coin
+        coin_doc = db.collection("users").document(user_email)\
+                     .collection("review_queue").document(coin_id).get()
+        if not coin_doc.exists:
+            continue
+        new_coin = coin_doc.to_dict()
+
+        best_score = 0.0
+        best_match = None
+        for ex_id, ex_coll, ex_data in existing:
+            s = _score_duplicate(new_coin, ex_data)
+            if s > best_score:
+                best_score = s
+                best_match = (ex_id, ex_coll, ex_data)
+
+        if best_score >= 0.90:
+            strong_count += 1
+            flags.append({
+                "new_coin_id": coin_id,
+                "match_id": best_match[0] if best_match else None,
+                "match_collection": best_match[1] if best_match else None,
+                "score": best_score,
+                "level": "strong",
+            })
+            # Tag the new coin record
+            db.collection("users").document(user_email)\
+              .collection("review_queue").document(coin_id)\
+              .update({"duplicate_flag": "strong", "duplicate_score": best_score})
+
+        elif best_score >= 0.60:
+            possible_count += 1
+            flags.append({
+                "new_coin_id": coin_id,
+                "match_id": best_match[0] if best_match else None,
+                "match_collection": best_match[1] if best_match else None,
+                "score": best_score,
+                "level": "possible",
+            })
+            db.collection("users").document(user_email)\
+              .collection("review_queue").document(coin_id)\
+              .update({"duplicate_flag": "possible", "duplicate_score": best_score})
+
+    # Write flags to session
+    session_ref.update({"duplicate_flags": flags})
+    return {"strong": strong_count, "possible": possible_count}
+
+
+# ── Receipt → Coin linker ─────────────────────────────────────────────────────
+
+def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
+    """
+    After all files are processed, attempt to link each invoice line item
+    to a coin record added in this session.
+
+    Match tiers:
+      EXACT  — retailer + invoice# + item# all agree → auto-link
+      STRONG — year + mint + series all agree         → auto-link
+      PARTIAL — series agrees, year/mint unclear      → AI suggestion (not auto-linked)
+      NONE   — mark as unlinked_item
+    """
+    # Load all receipts for this session
+    receipts = list(
+        db.collection("users").document(user_email).collection("receipts")
+          .where("session_id", "==", session_id).stream()
+    )
+    # Load all coins added in this session
+    coins = list(
+        db.collection("users").document(user_email).collection("review_queue")
+          .where("import_session_id", "==", session_id).stream()
+    )
+    coin_data = [(c.id, c.to_dict()) for c in coins]
+
+    linked_total = 0
+    unlinked_total = 0
+
+    for rec_snap in receipts:
+        rec_id = rec_snap.id
+        rec = rec_snap.to_dict()
+        line_items = rec.get("line_items", [])
+        if not line_items:
+            continue
+
+        linked_coin_ids = []
+        unlinked_items = []
+
+        for item in line_items:
+            item_type = str(item.get("item_type", "coin")).lower()
+            if item_type not in ("coin", "paper_currency", "medal", ""):
+                unlinked_items.append(item)
+                continue
+
+            matched_coin_id = None
+            match_tier = "none"
+
+            retailer = str(rec.get("retailer", "")).lower().strip()
+            inv_no   = str(rec.get("invoice_number", "")).lower().strip()
+            item_no  = str(item.get("Retailer Item No.", "")).lower().strip()
+            item_yr  = str(item.get("Year", "")).strip()
+            item_mm  = str(item.get("Mint Mark", "")).strip().upper()
+            item_ser = str(item.get("Program/Series", "") or item.get("Denomination", "")).lower().strip()
+
+            for c_id, c_data in coin_data:
+                c_retailer = str(c_data.get("Retailer Name", "")).lower().strip()
+                c_inv      = str(c_data.get("Retailer Invoice #", "")).lower().strip()
+                c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
+                c_yr       = str(c_data.get("Year", "")).strip()
+                c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
+                c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
+
+                # EXACT match
+                if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
+                        and item_no and c_item_no == item_no:
+                    matched_coin_id = c_id
+                    match_tier = "exact"
+                    break
+
+                # STRONG match
+                if item_yr and c_yr == item_yr \
+                        and c_mm == item_mm \
+                        and item_ser and c_ser and item_ser in c_ser:
+                    matched_coin_id = c_id
+                    match_tier = "strong"
+                    break
+
+            if matched_coin_id:
+                linked_coin_ids.append(matched_coin_id)
+                linked_total += 1
+                # Write paper_trail back to the coin record
+                purchase_date = (
+                    item.get("Purchase Date") or
+                    item.get("Invoice Date") or
+                    rec.get("invoice_date") or ""
+                )
+                purchase_price_raw = (
+                    item.get("Purchase Cost") or
+                    item.get("Cost") or
+                    item.get("price") or "0"
+                )
+                try:
+                    purchase_price = float(
+                        str(purchase_price_raw).replace("$", "").replace(",", "").strip()
+                    )
+                except Exception:
+                    purchase_price = 0.0
+
+                db.collection("users").document(user_email)\
+                  .collection("review_queue").document(matched_coin_id)\
+                  .update({
+                      "paper_trail": {
+                          "receipt_id":       rec_id,
+                          "receipt_filename": rec.get("original_filename", ""),
+                          "retailer":         rec.get("retailer", ""),
+                          "purchase_date":    purchase_date,
+                          "purchase_price":   purchase_price,
+                          "gcs_path":         rec.get("gcs_path", ""),
+                          "match_tier":       match_tier,
+                      },
+                      "Purchase Date": purchase_date,
+                  })
+                # Also mark the line item as linked
+                item["linked_coin_id"] = matched_coin_id
+                item["match_tier"] = match_tier
+            else:
+                # Partial match suggestion (series only) — leave for user
+                item["linked_coin_id"] = None
+                item["match_tier"] = "none"
+                unlinked_items.append(item)
+                unlinked_total += 1
+
+        # Update receipt with links
+        db.collection("users").document(user_email).collection("receipts")\
+          .document(rec_id).update({
+              "linked_coin_ids": linked_coin_ids,
+              "unlinked_items":  unlinked_items,
+              "line_items":      line_items,
+          })
+
+    return {"linked": linked_total, "unlinked": unlinked_total}
+
+
+# ── Helper: save original file to GCS (receipts/images) ──────────────────────
+
+def _save_to_gcs(user_email: str, session_id: str, filename: str,
+                 data: bytes, file_type: str) -> str:
+    """
+    Upload raw bytes to GCS under the user's import session path.
+    Returns the gs:// path.
+    """
+    bucket = gcs_client.bucket(IMPORT_BUCKET)
+    safe_name = filename.replace(" ", "_")
+    blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
+    blob = bucket.blob(blob_path)
+    mime_map = {
+        "invoice": "application/pdf",
+        "image":   "image/jpeg",
+        "spreadsheet": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+    blob.upload_from_string(data, content_type=mime_map.get(file_type, "application/octet-stream"))
+    return f"gs://{IMPORT_BUCKET}/{blob_path}"
+
+
+# ── POST /api/import/start ─────────────────────────────────────────────────────
+
+class ImportStartRequest(BaseModel):
+    user_email:    str
+    session_id:    str
+    file_manifest: list[dict]   # [{name, size, mime}]
+
+@app.post("/api/import/start")
+def import_start(req: ImportStartRequest):
+    """
+    Create a Firestore session document and return one GCS signed upload URL
+    per file. The browser uploads directly to GCS — no data passes through
+    Cloud Run, keeping large batches fast.
+    """
+    session_ref = db.collection("users").document(req.user_email)\
+                    .collection("import_sessions").document(req.session_id)
+    session_ref.set({
+        "started_at":   firestore.SERVER_TIMESTAMP,
+        "status":       "uploading",
+        "total_files":  len(req.file_manifest),
+        "processed_files": 0,
+        "per_file":     [
+            {"name": f["name"], "type": _classify_file(f["name"]), "status": "pending"}
+            for f in req.file_manifest
+        ],
+        "summary": {
+            "coins_identified":   0,
+            "receipts_parsed":    0,
+            "duplicates_flagged": 0,
+            "total_purchase_value": 0.0,
+            "unlinked_receipts":  0,
+        },
+    })
+
+    # Generate one signed URL per file (15-min write window)
+    bucket = gcs_client.bucket(IMPORT_BUCKET)
+    signed_urls = []
+    for f in req.file_manifest:
+        safe_name = f["name"].replace(" ", "_")
+        blob_path = f"{req.user_email}/imports/{req.session_id}/raw/{safe_name}"
+        blob = bucket.blob(blob_path)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=900,       # 15 minutes
+            method="PUT",
+            content_type=f.get("mime", "application/octet-stream"),
+        )
+        signed_urls.append({"name": f["name"], "upload_url": url, "gcs_path": f"gs://{IMPORT_BUCKET}/{blob_path}"})
+
+    return {"status": "ok", "session_id": req.session_id, "files": signed_urls}
+
+
+# ── GET /api/import/status/{session_id} ───────────────────────────────────────
+
+@app.get("/api/import/status/{session_id}")
+def import_status(session_id: str, user_email: str):
+    """Live progress polling — called every 2 s by the browser progress bar."""
+    doc = db.collection("users").document(user_email)\
+            .collection("import_sessions").document(session_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Session not found")
+    data = doc.to_dict()
+    # Strip server timestamps for JSON serialisation
+    data.pop("started_at", None)
+    return data
+
+
+# ── POST /api/import/process ───────────────────────────────────────────────────
+
+class ImportProcessRequest(BaseModel):
+    user_email: str
+    session_id: str
+
+@app.post("/api/import/process")
+async def import_process(req: ImportProcessRequest):
+    """
+    Orchestrates AI processing of every file in the session.
+    Files must already be in GCS (uploaded by the browser via signed URLs).
+
+    Processing runs synchronously here (Cloud Run timeout = 3600 s).
+    For very large sessions the client polls /api/import/status for progress.
+    """
+    user_email = req.user_email
+    session_id = req.session_id
+
+    session_ref = db.collection("users").document(user_email)\
+                    .collection("import_sessions").document(session_id)
+    session_snap = session_ref.get()
+    if not session_snap.exists:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session_ref.update({"status": "processing"})
+    per_file: list[dict] = session_snap.to_dict().get("per_file", [])
+
+    bucket = gcs_client.bucket(IMPORT_BUCKET)
+    summary = {
+        "coins_identified":   0,
+        "receipts_parsed":    0,
+        "total_purchase_value": 0.0,
+        "unlinked_receipts":  0,
+    }
+    new_coin_ids: list[str] = []
+
+    for idx, file_meta in enumerate(per_file):
+        fname     = file_meta["name"]
+        ftype     = file_meta.get("type") or _classify_file(fname)
+        safe_name = fname.replace(" ", "_")
+        blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
+        blob      = bucket.blob(blob_path)
+        gcs_path  = f"gs://{IMPORT_BUCKET}/{blob_path}"
+
+        # Update per-file status to "processing"
+        per_file[idx]["status"] = "processing"
+        session_ref.update({"per_file": per_file, "processed_files": idx})
+
+        try:
+            file_bytes = blob.download_as_bytes()
+        except Exception as e:
+            per_file[idx]["status"] = "error"
+            per_file[idx]["error"]  = str(e)
+            session_ref.update({"per_file": per_file})
+            continue
+
+        result_meta: dict = {}
+
+        # ── Route by file type ─────────────────────────────────────────────────
+        if ftype == "spreadsheet":
+            try:
+                ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+                df  = pd.read_csv(io.BytesIO(file_bytes)) if ext == "csv" \
+                      else pd.read_excel(io.BytesIO(file_bytes))
+
+                # Reuse existing column-mapping logic
+                headers = list(df.columns)
+                mapping_prompt = f"""You are an expert data migration agent for a numismatic app.
+Golden Schema keys: ["Program/Series","Theme/Subject","Year","Country","Denomination",
+"Mint Mark","Condition","Cost","Purchase Date","Retailer Name","Retailer Invoice #",
+"Retailer Item No.","Storage Location","Notes"]
+User spreadsheet headers: {headers}
+Map each user header to the closest schema key.
+Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
+
+                resp = genai_client.models.generate_content(
+                    model=PRIMARY_MODEL,
+                    contents=[genai_types.Part.from_text(text=mapping_prompt)],
+                    config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+                mapping: dict = json.loads(resp.text)
+
+                col_ref  = db.collection("users").document(user_email).collection("review_queue")
+                batch    = db.batch()
+                count    = 0
+                for _, row in df.iterrows():
+                    doc = {
+                        "Program/Series": "", "Year": "", "Mint Mark": "",
+                        "Denomination": "", "Condition": "Ungraded",
+                        "Cost": "", "Purchase Date": "", "Country": "United States",
+                        "deep_dive_status": "PENDING",
+                        "upload_method":    "spreadsheet_import",
+                        "source_file":      fname,
+                        "import_session_id": session_id,
+                        "source_type":      "spreadsheet",
+                        "created_at":       firestore.SERVER_TIMESTAMP,
+                    }
+                    for uc, sc in mapping.items():
+                        if uc in row and pd.notna(row[uc]):
+                            doc[sc] = str(row[uc]).strip()
+                    doc_ref = col_ref.document(str(uuid.uuid4()))
+                    batch.set(doc_ref, doc)
+                    new_coin_ids.append(doc_ref.id)
+                    count += 1
+                    if count % 490 == 0:
+                        batch.commit()
+                        batch = db.batch()
+                if count % 490 != 0:
+                    batch.commit()
+
+                summary["coins_identified"] += count
+                result_meta = {"coins_added": count}
+                per_file[idx]["status"]      = "done"
+                per_file[idx]["coins_added"] = count
+
+            except Exception as e:
+                per_file[idx]["status"] = "error"
+                per_file[idx]["error"]  = str(e)
+                print(f"[bulk_import] spreadsheet error ({fname}): {e}")
+
+        elif ftype == "invoice":
+            try:
+                # Reuse existing process_invoice Gemini logic (inline)
+                ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+                mime_map_local = {"pdf": "application/pdf", "png": "image/png",
+                                  "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+                mime_type = mime_map_local.get(ext, "application/pdf")
+                if file_bytes[:4] == b"%PDF":
+                    mime_type = "application/pdf"
+
+                pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+
+                extraction_prompt = """You are an expert numismatic accountant.
+Extract every purchasable line item from this invoice/receipt.
+Return JSON array. Each object must include:
+{
+  "item_type": "coin|set|stamp|supply|paper_currency|medal|other",
+  "Program/Series": "...", "Year": "...", "Mint Mark": "...",
+  "Denomination": "...", "Condition": "...",
+  "Purchase Cost": "$0.00", "Purchase Date": "YYYY-MM-DD or as printed",
+  "Retailer Name": "...", "Retailer Invoice #": "...", "Retailer Item No.": "..."
+}
+Ignore shipping, tax, subtotal rows."""
+
+                try:
+                    response = genai_client.models.generate_content(
+                        model=PRO_MODEL,
+                        contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
+                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                    )
+                except Exception:
+                    response = genai_client.models.generate_content(
+                        model=PRIMARY_MODEL,
+                        contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
+                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                    )
+
+                raw = response.text or ""
+                items = json.loads(raw) if raw.strip() else []
+                if isinstance(items, dict):
+                    for k in ("items", "coins", "line_items", "results"):
+                        if k in items and isinstance(items[k], list):
+                            items = items[k]; break
+                    else:
+                        items = [items]
+                if not isinstance(items, list):
+                    items = []
+
+                # Derive receipt-level metadata from first item
+                first_coin = next((i for i in items if isinstance(i, dict)
+                                   and str(i.get("item_type", "coin")).lower()
+                                   in ("coin", "paper_currency", "medal", "other", "")), {})
+                retailer    = first_coin.get("Retailer Name", "Unknown Retailer")
+                inv_no      = first_coin.get("Retailer Invoice #", "")
+                inv_date    = first_coin.get("Purchase Date", "")
+
+                total_val = 0.0
+                line_items_out = []
+                added_this_file = 0
+
+                col_ref = db.collection("users").document(user_email).collection("review_queue")
+                batch   = db.batch()
+
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    item_type = str(item.get("item_type", "coin")).lower()
+                    cost_str  = item.get("Purchase Cost") or item.get("Cost") or "0"
+                    try:
+                        cost_val = float(str(cost_str).replace("$", "").replace(",", "").strip())
+                    except Exception:
+                        cost_val = 0.0
+                    total_val += cost_val
+
+                    if item_type in ("coin", "paper_currency", "medal", "other", ""):
+                        item["import_session_id"] = session_id
+                        item["source_type"]       = "invoice_scan"
+                        item["source_file"]       = fname
+                        item["upload_method"]     = "invoice_scan"
+                        item["deep_dive_status"]  = "PENDING"
+                        item["created_at"]        = firestore.SERVER_TIMESTAMP
+                        doc_ref = col_ref.document(str(uuid.uuid4()))
+                        batch.set(doc_ref, item)
+                        new_coin_ids.append(doc_ref.id)
+                        line_items_out.append({**item, "coin_doc_id": doc_ref.id})
+                        added_this_file += 1
+
+                batch.commit()
+
+                # Save original PDF to GCS (already there from upload, just record path)
+                receipt_id  = str(uuid.uuid4())
+                receipt_doc = {
+                    "session_id":        session_id,
+                    "original_filename": fname,
+                    "gcs_path":          gcs_path,
+                    "retailer":          retailer,
+                    "invoice_number":    inv_no,
+                    "invoice_date":      inv_date,
+                    "total_amount":      total_val,
+                    "line_items":        line_items_out,
+                    "linked_coin_ids":   [],
+                    "unlinked_items":    [],
+                    "uploaded_at":       firestore.SERVER_TIMESTAMP,
+                }
+                db.collection("users").document(user_email)\
+                  .collection("receipts").document(receipt_id).set(receipt_doc)
+
+                summary["coins_identified"]     += added_this_file
+                summary["receipts_parsed"]      += 1
+                summary["total_purchase_value"] += total_val
+                result_meta = {"coins_added": added_this_file, "receipt_id": receipt_id,
+                               "total_value": total_val}
+                per_file[idx]["status"]      = "done"
+                per_file[idx]["coins_added"] = added_this_file
+                per_file[idx]["receipt_id"]  = receipt_id
+
+            except Exception as e:
+                per_file[idx]["status"] = "error"
+                per_file[idx]["error"]  = str(e)
+                print(f"[bulk_import] invoice error ({fname}): {e}")
+
+        elif ftype == "image":
+            try:
+                ext_lower = fname.rsplit(".", 1)[-1].lower() if "." in fname else "jpg"
+                img_mime  = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                             "png": "image/png",  "webp": "image/webp"}.get(ext_lower, "image/jpeg")
+                img_part  = genai_types.Part.from_bytes(data=file_bytes, mime_type=img_mime)
+
+                id_prompt = """You are an expert numismatist. Identify this coin image.
+Return a single JSON object:
+{
+  "identified": true|false,
+  "Program/Series": "...", "Year": "...", "Mint Mark": "...",
+  "Denomination": "...", "Country": "United States",
+  "Condition": "estimated grade",
+  "confidence": 0.0-1.0,
+  "notes": "..."
+}"""
+                resp = genai_client.models.generate_content(
+                    model=PRO_MODEL,
+                    contents=[img_part, genai_types.Part.from_text(text=id_prompt)],
+                    config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+                coin_data_from_img = json.loads(resp.text or "{}")
+
+                if coin_data_from_img.get("identified"):
+                    coin_doc = {
+                        **coin_data_from_img,
+                        "import_session_id": session_id,
+                        "source_type":       "image",
+                        "source_file":       fname,
+                        "upload_method":     "image_upload",
+                        "gcs_image_path":    gcs_path,
+                        "deep_dive_status":  "PENDING",
+                        "created_at":        firestore.SERVER_TIMESTAMP,
+                    }
+                    col_ref = db.collection("users").document(user_email).collection("review_queue")
+                    doc_ref = col_ref.document(str(uuid.uuid4()))
+                    doc_ref.set(coin_doc)
+                    new_coin_ids.append(doc_ref.id)
+                    summary["coins_identified"] += 1
+                    per_file[idx]["status"]     = "done"
+                    per_file[idx]["coins_added"] = 1
+                else:
+                    per_file[idx]["status"] = "review_needed"
+                    per_file[idx]["note"]   = "Coin not identified — needs manual review"
+
+            except Exception as e:
+                per_file[idx]["status"] = "error"
+                per_file[idx]["error"]  = str(e)
+                print(f"[bulk_import] image error ({fname}): {e}")
+
+        else:
+            per_file[idx]["status"] = "skipped"
+            per_file[idx]["note"]   = "File type not recognized"
+
+        # Push progress after each file
+        session_ref.update({
+            "per_file":       per_file,
+            "processed_files": idx + 1,
+            "summary":        summary,
+        })
+
+    # ── Post-processing: duplicate sweep + receipt linking ────────────────────
+    session_ref.update({"status": "linking"})
+
+    dup_result  = _run_duplicate_sweep(user_email, session_id, new_coin_ids)
+    link_result = _link_receipts_to_coins(user_email, session_id)
+
+    summary["duplicates_flagged"]  = dup_result["strong"] + dup_result["possible"]
+    summary["unlinked_receipts"]   = link_result["unlinked"]
+
+    session_ref.update({
+        "status":           "done",
+        "processed_files":  len(per_file),
+        "summary":          summary,
+        "per_file":         per_file,
+    })
+
+    return {
+        "status":       "done",
+        "session_id":   session_id,
+        "summary":      summary,
+        "duplicates":   dup_result,
+        "links":        link_result,
+    }
+
+
+# ── GET /api/receipts/{user_email} ────────────────────────────────────────────
+
+@app.get("/api/receipts/{user_email}")
+def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
+    """Return all receipts for a user, optionally filtered by session."""
+    col = db.collection("users").document(user_email).collection("receipts")
+    if session_id:
+        col = col.where("session_id", "==", session_id)
+    docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
+              .limit(limit).stream()
+    results = []
+    for d in docs:
+        data = d.to_dict()
+        data["receipt_id"] = d.id
+        data.pop("uploaded_at", None)
+        results.append(data)
+    return {"receipts": results}
+
+
+# ── GET /api/receipts/{user_email}/{receipt_id}/view_url ──────────────────────
+
+@app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
+def receipt_view_url(user_email: str, receipt_id: str):
+    """
+    Generate a fresh 24-hour signed GCS URL so the user can view the original
+    invoice PDF directly in the browser (no download required).
+    """
+    rec_snap = db.collection("users").document(user_email)\
+                 .collection("receipts").document(receipt_id).get()
+    if not rec_snap.exists:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    gcs_path = rec_snap.to_dict().get("gcs_path", "")
+    if not gcs_path.startswith("gs://"):
+        raise HTTPException(status_code=400, detail="No GCS path recorded for this receipt")
+
+    # Parse  gs://bucket/path/to/blob
+    path_part = gcs_path[len("gs://"):]
+    bucket_name, blob_name = path_part.split("/", 1)
+    bucket = gcs_client.bucket(bucket_name)
+    blob   = bucket.blob(blob_name)
+
+    signed_url = blob.generate_signed_url(
+        version="v4",
+        expiration=86400,    # 24 hours
+        method="GET",
+    )
+    return {
+        "receipt_id":      receipt_id,
+        "signed_url":      signed_url,
+        "filename":        rec_snap.to_dict().get("original_filename", ""),
+        "expires_seconds": 86400,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
+

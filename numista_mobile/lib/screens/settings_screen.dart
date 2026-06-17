@@ -595,7 +595,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         csv.writeln(row);
       }
       
-      final bytes = utf8.encode(csv.toString());
+      // Prepend UTF-8 BOM so Excel auto-detects encoding and parses columns correctly
+      final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode(csv.toString())];
       final filename = "numista_export_${DateTime.now().toIso8601String().split('T').first}.csv";
 
       final result = await downloadCsvFile(bytes, filename);

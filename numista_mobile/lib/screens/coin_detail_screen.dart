@@ -13,11 +13,13 @@
 //     onDeleted: () => ...,
 //   );
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../services/auth_service.dart';
@@ -1186,9 +1188,10 @@ class _ProvenanceTab extends StatelessWidget {
     final hasNotes = coin.personalNotes.isNotEmpty;
     final hasRef = coin.personalRef.isNotEmpty;
     final hasDesc = coin.originalDescription.isNotEmpty;
-    final hasScanOrigin = coin.source == 'Binder Scan' && coin.sourceFile.isNotEmpty;
+    final hasScanOrigin  = coin.source == 'Binder Scan' && coin.sourceFile.isNotEmpty;
+    final hasPaperTrail  = coin.receiptId.isNotEmpty;
     final hasAny = hasAcquisition || hasCert || hasStorage || hasNotes ||
-        hasRef || hasDesc || hasScanOrigin;
+        hasRef || hasDesc || hasScanOrigin || hasPaperTrail;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1358,6 +1361,14 @@ class _ProvenanceTab extends StatelessWidget {
             ),
           ],
 
+          // ── Paper Trail (Bulk Import / PDF Invoice) ──────────────────────────
+          if (hasPaperTrail) ...[
+            const SizedBox(height: 16),
+            _SectionHeader('Paper Trail'),
+            const SizedBox(height: 8),
+            _PaperTrailCard(coin: coin),
+          ],
+
           if (!hasAny)
             _emptyState(
               'No provenance information recorded yet.\n\n'
@@ -1448,6 +1459,116 @@ class _CertCard extends StatelessWidget {
               ),
           ]),
         ],
+      ]),
+    );
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAPER TRAIL CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _PaperTrailCard extends StatefulWidget {
+  final CoinModel coin;
+  const _PaperTrailCard({required this.coin});
+  @override
+  State<_PaperTrailCard> createState() => _PaperTrailCardState();
+}
+
+class _PaperTrailCardState extends State<_PaperTrailCard> {
+  bool _loading = false;
+  String? _error;
+
+  static const _kAmber = Color(0xFFF59E0B);
+  static const _kAmberBg = Color(0xFFFFFBEB);
+  static const _kAmberBorder = Color(0xFFFDE68A);
+
+  Future<void> _viewOriginal() async {
+    if (_loading) return;
+    setState(() { _loading = true; _error = null; });
+
+    try {
+      final userEmail = AuthService.userEmail;
+      final receiptId = widget.coin.receiptId;
+      const apiBase = 'https://backend-studio-9101802118-8c9a8.a.run.app';
+      final url = Uri.parse(
+        '$apiBase/api/receipts/${Uri.encodeComponent(userEmail)}/$receiptId/view_url',
+      );
+
+      final resp = await http.get(url);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final signedUrl = data['signed_url'] as String?;
+        if (signedUrl != null && signedUrl.isNotEmpty) {
+          await launchUrl(Uri.parse(signedUrl),
+              mode: LaunchMode.externalApplication);
+        } else {
+          setState(() => _error = 'No URL returned from server.');
+        }
+      } else {
+        setState(() => _error = 'Server error ${resp.statusCode}.');
+      }
+    } catch (e) {
+      setState(() => _error = 'Could not open receipt: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shortId = widget.coin.receiptId.length > 16
+        ? '${widget.coin.receiptId.substring(0, 8)}…'
+        : widget.coin.receiptId;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kAmberBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _kAmberBorder),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.receipt_long_outlined, size: 16, color: _kAmber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Original Invoice on File',
+              style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Text('Receipt ID: $shortId',
+          style: const TextStyle(fontSize: 11, color: Color(0xFF78350F),
+              fontFamily: 'monospace')),
+        const SizedBox(height: 10),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(_error!, style: const TextStyle(fontSize: 11, color: _kRed)),
+          ),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _loading ? null : _viewOriginal,
+            icon: _loading
+                ? const SizedBox(
+                    width: 14, height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _kAmber))
+                : const Icon(Icons.open_in_new, size: 14, color: _kAmber),
+            label: Text(_loading ? 'Opening…' : 'View Original Receipt',
+              style: const TextStyle(fontSize: 12, color: _kAmber,
+                  fontWeight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: _kAmber),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6)),
+            ),
+          ),
+        ),
       ]),
     );
   }

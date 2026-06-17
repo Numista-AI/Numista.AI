@@ -5,16 +5,20 @@ import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
+import '../services/batch_valuation_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
   final VoidCallback? onAskMorgan;
-  const HomeDashboard({super.key, this.onAskMorgan});
+  /// Called to navigate to My Collection (e.g. to run AI Valuation).
+  final VoidCallback? onNavigateToCollection;
+  const HomeDashboard({super.key, this.onAskMorgan, this.onNavigateToCollection});
 
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
@@ -26,30 +30,53 @@ class _HomeDashboardState extends State<HomeDashboard> {
   DateTime? _pricesLastUpdated;
   List<dynamic> _news = [];
   bool _isLoadingNews = true;
+  Set<String> _dismissedNewsIds = {};
 
   // ── Portfolio Insights state ───────────────────────────────────────────
   List<PortfolioSnapshot> _snapshots = [];
+
+  // ── Batch Valuation state ──────────────────────────────────────────────
+  BatchValuationProgress _valuation = const BatchValuationProgress();
+  StreamSubscription<BatchValuationProgress>? _valuationSub;
 
   @override
   void initState() {
     super.initState();
     _fetchSpotPrices();
     _fetchNews();
+    _loadDismissedNews();
+    // Listen to batch valuation progress so the dashboard updates live
+    _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
+      if (mounted) setState(() => _valuation = p);
+    });
+    // Sync current state in case service was already running
+    _valuation = BatchValuationService.instance.current;
   }
 
-  Future<void> _fetchNews() async {
+  @override
+  void dispose() {
+    _valuationSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchNews({bool isRefresh = false}) async {
+    // On refresh: show the shimmer bar but keep old articles visible — don't
+    // clear _news until we have a successful response.  This prevents a blank
+    // list + possible index-out-of-bounds crash during the in-flight period.
+    if (!isRefresh) {
+      if (mounted) setState(() => _isLoadingNews = true);
+    }
     try {
       final response = await http.get(
           Uri.parse('$kApiBaseUrl/api/mint_news'));
+      if (!mounted) return;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (!mounted) return;
         setState(() {
-          _news = data['news'] ?? [];
+          _news = List<dynamic>.from(data['news'] ?? []);
           _isLoadingNews = false;
         });
       } else {
-        if (!mounted) return;
         setState(() => _isLoadingNews = false);
       }
     } catch (e) {
@@ -57,8 +84,40 @@ class _HomeDashboardState extends State<HomeDashboard> {
       setState(() => _isLoadingNews = false);
     }
   }
+  Future<void> _loadDismissedNews() async {
+    try {
+      final userEmail = AuthService.userEmail;
+
+      if (userEmail.isEmpty) return;
+      final resp = await http.get(
+          Uri.parse('$kApiBaseUrl/api/dismissed_news/$userEmail'));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final ids = List<String>.from(data['ids'] ?? []);
+        setState(() => _dismissedNewsIds = ids.toSet());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _dismissArticle(String articleId) async {
+    // Immediately remove from view
+    setState(() => _dismissedNewsIds.add(articleId));
+    try {
+      final userEmail = AuthService.userEmail;
+
+      if (userEmail.isEmpty) return;
+      await http.post(
+        Uri.parse('$kApiBaseUrl/api/dismiss_news'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_email': userEmail, 'article_id': articleId}),
+      );
+    } catch (_) {}
+  }
+
 
   Future<void> _fetchSpotPrices() async {
+
     try {
       final response = await http.get(
           Uri.parse('$kApiBaseUrl/api/spot_prices'));
@@ -87,15 +146,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   double _parseCurrency(dynamic value) {
     if (value == null) return 0.0;
-    final raw = value.toString();
-    if (raw.contains(' - ')) {
-      final parts = raw.split(' - ');
-      final a = double.tryParse(parts[0].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      final b = double.tryParse(parts[1].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      return (a + b) / 2;
+    final raw  = value.toString();
+    if (raw == 'Pending' || raw.isEmpty) return 0.0;
+    // Normalise all dash variants and strip commas
+    final norm = raw
+        .replaceAll('\u2013', '-')   // en-dash –
+        .replaceAll('\u2014', '-')   // em-dash —
+        .replaceAll('\u2012', '-')   // figure dash
+        .replaceAll(',', '');
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    if (rangeMatch != null) {
+      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
+      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
+      final mid = (a + b) / 2;
+      return mid > 100000 ? 0.0 : mid;   // sanity cap: skip runaway AI estimates
     }
-    return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return v > 100000 ? 0.0 : v;
   }
+
 
   static double _computeFaceValue(String denom) {
     final s = denom.toLowerCase().trim();
@@ -132,10 +202,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection(AuthService.coinsPath)
-              .limit(200)
               .snapshots(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            // Only show the spinner on the very first load (no cached data).
+            // On subsequent Firestore updates keep showing the last known
+            // content so the widget tree is not blanked between updates.
+            if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                   child: CircularProgressIndicator(color: Color(0xFFF63366)));
             }
@@ -243,7 +315,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Text('✅  Numista.AI  v3.7  —  API centralized · Morgan guides redesigned · Zero lint issues',
+                    child: const Text('Numista.AI v3.7',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
@@ -276,21 +348,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(width: 12),
                       Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text('EST. PORTFOLIO VALUE',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5A5C69))),
-                            Text(fmt.format(portfolioValue),
-                                style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF0F9D58))),
-                          ],
-                        ),
+                        child: _buildPortfolioValueSection(portfolioValue, fmt, totalCoins),
                       ),
                     ],
                   ),
@@ -558,10 +616,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               size: 16, color: Color(0xFF94A3B8)),
                           tooltip: 'Refresh news',
                           visualDensity: VisualDensity.compact,
-                          onPressed: () {
-                            setState(() => _isLoadingNews = true);
-                            _fetchNews();
-                          },
+                          onPressed: () => _fetchNews(isRefresh: true),
                         ),
                     ],
                   ),
@@ -594,113 +649,148 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   else
                     SizedBox(
                       height: 158,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _news.length,
-                        itemBuilder: (ctx, i) {
-                          final item = _news[i] as Map<String, dynamic>;
+                      child: Builder(builder: (context) {
+                        // Filter out dismissed articles client-side
+                        final visibleNews = _news
+                            .whereType<Map<String, dynamic>>()
+                            .where((item) {
                           final link = item['link']?.toString() ?? '';
-                          return GestureDetector(
-                            onTap: link.isNotEmpty
-                                ? () async {
-                                    final uri = Uri.parse(link);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri,
-                                          mode: LaunchMode
-                                              .externalApplication);
+                          // Simple hash: use the link URL as a stable ID
+                          final id = link.isNotEmpty
+                              ? link.hashCode.toRadixString(16)
+                              : '';
+                          return id.isEmpty || !_dismissedNewsIds.contains(id);
+                        }).toList();
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: visibleNews.length,
+                          itemBuilder: (ctx, i) {
+                            final item = visibleNews[i];
+                            final link = item['link']?.toString() ?? '';
+                            final articleId = link.isNotEmpty
+                                ? link.hashCode.toRadixString(16)
+                                : '';
+                            return GestureDetector(
+                              onTap: link.isNotEmpty
+                                  ? () async {
+                                      final uri = Uri.parse(link);
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri,
+                                            mode: LaunchMode
+                                                .externalApplication);
+                                      }
                                     }
-                                  }
-                                : null,
-                            child: MouseRegion(
-                              cursor: link.isNotEmpty
-                                  ? SystemMouseCursors.click
-                                  : MouseCursor.defer,
-                              child: Container(
-                                width: 270,
-                                margin: const EdgeInsets.only(right: 12),
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFE2E6E9)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.03),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(children: [
-                                      Expanded(
-                                        child: Text(
-                                          item['source']?.toString() ?? 'News',
-                                          overflow: TextOverflow.ellipsis,
+                                  : null,
+                              child: MouseRegion(
+                                cursor: link.isNotEmpty
+                                    ? SystemMouseCursors.click
+                                    : MouseCursor.defer,
+                                child: Container(
+                                  width: 270,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E6E9)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Expanded(
+                                          child: Text(
+                                            item['source']?.toString() ?? 'News',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF3B82F6)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          item['published']?.toString() ?? '',
                                           style: const TextStyle(
                                               fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF3B82F6)),
+                                              color: Color(0xFF94A3B8)),
                                         ),
-                                      ),
-                                      const SizedBox(width: 4),
+                                      ]),
+                                      const SizedBox(height: 5),
                                       Text(
-                                        item['published']?.toString() ?? '',
-                                        style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Color(0xFF94A3B8)),
-                                      ),
-                                    ]),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      item['title']?.toString() ?? '',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF1E293B)),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Expanded(
-                                      child: Text(
-                                        item['summary']?.toString() ?? '',
-                                        maxLines: 3,
+                                        item['title']?.toString() ?? '',
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF64748B),
-                                            height: 1.4),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF1E293B)),
                                       ),
-                                    ),
-                                    if (link.isNotEmpty)
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Text('Read more',
-                                                style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: Color(0xFF3B82F6),
-                                                    fontWeight: FontWeight.w600)),
-                                            SizedBox(width: 2),
-                                            Icon(Icons.arrow_forward_ios,
-                                                size: 9,
-                                                color: Color(0xFF3B82F6)),
-                                          ],
+                                      const SizedBox(height: 5),
+                                      Expanded(
+                                        child: Text(
+                                          item['summary']?.toString() ?? '',
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF64748B),
+                                              height: 1.4),
                                         ),
                                       ),
-                                  ],
+                                      // ── Bottom row: Read more + 👎 Not relevant ──
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          if (link.isNotEmpty)
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: const [
+                                                Text('Read more',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Color(0xFF3B82F6),
+                                                        fontWeight: FontWeight.w600)),
+                                                SizedBox(width: 2),
+                                                Icon(Icons.arrow_forward_ios,
+                                                    size: 9,
+                                                    color: Color(0xFF3B82F6)),
+                                              ],
+                                            )
+                                          else
+                                            const SizedBox.shrink(),
+                                          // 👎 Not relevant
+                                          if (articleId.isNotEmpty)
+                                            GestureDetector(
+                                              onTap: () => _dismissArticle(articleId),
+                                              child: const Tooltip(
+                                                message: 'Not relevant — hide this article',
+                                                child: Icon(
+                                                  Icons.thumb_down_outlined,
+                                                  size: 13,
+                                                  color: Color(0xFFCBD5E1),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        );
+                      }),
+
                     ),
                   const SizedBox(height: 32),
                 ],
@@ -709,6 +799,171 @@ class _HomeDashboardState extends State<HomeDashboard> {
           },
         );
       },
+    );
+  }
+
+  // ── Portfolio value section with batch valuation progress ───────────────────
+  Widget _buildPortfolioValueSection(
+      double portfolioValue, intl.NumberFormat fmt, int totalCoins) {
+    final v = _valuation;
+    final hasValue    = portfolioValue > 0;
+    final isRunning   = v.isRunning;
+    final isPaused    = v.isPaused;
+    final hasProgress = v.completed > 0 || v.failed > 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Text('EST. PORTFOLIO VALUE',
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF5A5C69))),
+        const SizedBox(height: 2),
+
+        // ── Main value display ──────────────────────────────────────────────
+        if (hasValue)
+          Text(fmt.format(portfolioValue),
+              style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F9D58)))
+        else if (isRunning)
+          Text(
+            hasProgress ? '${fmt.format(portfolioValue)} (est.)' : 'Valuing\u2026',
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F9D58)),
+          )
+        else
+          const Text('Pending AI Valuation',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF9CA3AF))),
+
+        const SizedBox(height: 6),
+
+        // ── Progress bar (running or paused with progress) ──────────────────
+        if ((isRunning || isPaused) && v.total > 0) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: v.pct,
+              minHeight: 5,
+              backgroundColor: const Color(0xFFE5E7EB),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isRunning ? const Color(0xFF0D9488) : const Color(0xFFF59E0B),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  v.label,
+                  style: const TextStyle(
+                      fontSize: 10, color: Color(0xFF6B7280)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isRunning) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: BatchValuationService.instance.pause,
+                  child: const Text('\u25a0 Pause',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFFF59E0B),
+                          fontWeight: FontWeight.w600)),
+                ),
+              ] else ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: BatchValuationService.instance.resume,
+                  child: const Text('\u25ba Resume',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF0D9488),
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ],
+          ),
+          if (isRunning && v.etaLabel.isNotEmpty)
+            Text(v.etaLabel,
+                style: const TextStyle(
+                    fontSize: 9, color: Color(0xFF9CA3AF)),
+                textAlign: TextAlign.right),
+        ],
+
+        // ── Run button (not started) ────────────────────────────────────────
+        if (!isRunning && !isPaused && !hasValue && !hasProgress)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  border: Border.all(color: const Color(0xFF86EFAC)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Your collection has $totalCoins coins waiting for AI valuation. '
+                  'Tap Run AI Valuation to get started \u2014 I\u2019ll estimate a range for each one. '
+                  'No photos needed (upload images for a more precise value!).',
+                  style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF166534),
+                      height: 1.4),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ElevatedButton.icon(
+                onPressed: () => BatchValuationService.instance.start(),
+                icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                label: const Text('Run AI Valuation'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  textStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+
+        // ── Resume button (paused) ──────────────────────────────────────────
+        if (!isRunning && isPaused && !hasValue)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: ElevatedButton.icon(
+              onPressed: BatchValuationService.instance.resume,
+              icon: const Icon(Icons.play_arrow_rounded, size: 16),
+              label: Text('Resume (${v.remaining} remaining)'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                textStyle: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

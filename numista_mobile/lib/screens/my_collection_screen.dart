@@ -20,6 +20,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/melt_value_service.dart';
+import '../services/batch_valuation_service.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../constants.dart';
@@ -99,6 +100,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // re-subscription on every setState (which briefly unmounts the TextField
   // and causes focus loss on Flutter Web).
   late Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
+  
+  // ── Batch valuation progress ────────────────────────────────────────────────
+  BatchValuationProgress _valuation = const BatchValuationProgress();
+  StreamSubscription<BatchValuationProgress>? _valuationSub;
+
   // Scroll controllers for the TableView (horizontal + vertical)
   final _tvHorizCtrl     = ScrollController();
   final _tvVertCtrl      = ScrollController();
@@ -185,6 +191,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // keeps its focus between keystrokes on Flutter Web.
     _coinsStream = _buildCoinsStream();
 
+    // Listen to batch valuation progress for the live badge in _buildFiltersRow
+    _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
+      if (mounted) setState(() => _valuation = p);
+    });
+    _valuation = BatchValuationService.instance.current;
+
     _fetchSpotPrices();
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
@@ -235,6 +247,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _searchFocus.dispose();
     _tvHorizCtrl.dispose();
     _tvVertCtrl.dispose();
+    _valuationSub?.cancel();
     super.dispose();
   }
 
@@ -453,7 +466,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
               const SizedBox(height: 24),
 
-              _buildFiltersRow(),
+              _buildFiltersRow(allDocs),
               const SizedBox(height: 24),
               const Divider(color: _border),
               const SizedBox(height: 16),
@@ -472,7 +485,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     _columnToggleButton(),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _onGenerateReport,
+                      onPressed: widget.onNavigate != null
+                          ? () => widget.onNavigate!('Estate Planning')
+                          : null,
                       icon: const Icon(Icons.auto_awesome, size: 16),
                       label: const Text('Generate AI Report Now'),
                       style: ElevatedButton.styleFrom(
@@ -532,7 +547,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- Filters row --------------------------------------------------------
-  Widget _buildFiltersRow() {
+  Widget _buildFiltersRow(List<QueryDocumentSnapshot> allDocs) {
+    // Compute how many coins in the current view have a real AI estimated value
+    final estimated = allDocs.where((d) {
+      final v = (d.data() as Map<String, dynamic>)[_F.aiValue]?.toString() ?? '';
+      return v.isNotEmpty && v != 'Pending' && v != 'null';
+    }).length;
+    final total = allDocs.length;
+    final allEstimated = estimated == total && total > 0;
     return Row(children: [
       SizedBox(
         width: 140,
@@ -596,18 +618,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
       const SizedBox(width: 24),
       Expanded(
-        child: Container(
-          margin: const EdgeInsets.only(top: 22),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-              color: _greenBg, borderRadius: BorderRadius.circular(4)),
-          child: const Row(children: [
-            Icon(Icons.check_box, color: _green, size: 20),
-            SizedBox(width: 8),
-            Text('All estimated.',
-                style: TextStyle(color: _greenText, fontSize: 14)),
-          ]),
-        ),
+        child: _buildValuationBadge(allEstimated, estimated, total),
       ),
       const SizedBox(width: 12),
       // ── Vertex AI Reference Search button ─────────────────────────────
@@ -637,19 +648,30 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- AI value parser -- mirrors home_dashboard._parseCurrency -------------
-  // Averages range strings so Est. Value matches the dashboard total.
-  // e.g. '$4,000 - $6,000' > 5000.0 | '$3,700' > 3700.0 | 'Pending' > 0.0
+  // Handles both hyphen ranges ("$15 - $35") and em-dash ranges ("$15 – $35")
+  // from the text estimator.  Returns the midpoint for ranges.
+  // Sanity cap: any single-coin AI estimate > $100,000 is treated as 0 to
+  // prevent a runaway Gemini response from inflating the portfolio total.
   static double _parseAiValue(String raw) {
     if (raw.isEmpty || raw == 'Pending' || raw == 'null') return 0.0;
-    final clean = raw.replaceAll(',', '');
-    if (clean.contains(' - ')) {
-      final parts = clean.split(' - ');
-      final a = double.tryParse(parts[0].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      final b = double.tryParse(parts[1].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      return (a + b) / 2;
+    // Normalise all dash variants and strip commas
+    final norm = raw
+        .replaceAll(',', '')
+        .replaceAll('\u2013', '-')   // en-dash  –
+        .replaceAll('\u2014', '-')   // em-dash  —
+        .replaceAll('\u2012', '-');  // figure dash
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    if (rangeMatch != null) {
+      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
+      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
+      final mid = (a + b) / 2;
+      return mid > 100000 ? 0.0 : mid;   // sanity cap
     }
-    return double.tryParse(clean.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return v > 100000 ? 0.0 : v;          // sanity cap
   }
+
 
   // --- Stats row -----------------------------------------------------------
   Widget _buildStatsRow(List<QueryDocumentSnapshot> docs) {
@@ -690,6 +712,186 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       const SizedBox(width: 12),
       _statChip('Est. Value', '\$${aiTotal.toStringAsFixed(2)}'),
     ]);
+  }
+
+  // ── Valuation badge / progress banner ──────────────────────────────────────
+  Widget _buildValuationBadge(bool allEstimated, int estimated, int total) {
+    final v = _valuation;
+
+    // ─ All done ──────────────────────────────────────────────────────────────
+    if (allEstimated) {
+      return Container(
+        margin: const EdgeInsets.only(top: 22),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+            color: _greenBg, borderRadius: BorderRadius.circular(4)),
+        child: const Row(children: [
+          Icon(Icons.check_box, color: _green, size: 20),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text('All estimated.',
+                style: TextStyle(color: _greenText, fontSize: 13)),
+          ),
+        ]),
+      );
+    }
+
+    // ─ Running ───────────────────────────────────────────────────────────────
+    if (v.isRunning) {
+      return Container(
+        margin: const EdgeInsets.only(top: 22),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+            color: const Color(0xFFECFDF5),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+            borderRadius: BorderRadius.circular(4)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const SizedBox(
+                width: 12, height: 12,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF0D9488)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(v.label,
+                    style: const TextStyle(
+                        fontSize: 12, color: _text,
+                        fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              GestureDetector(
+                onTap: BatchValuationService.instance.pause,
+                child: const Text('\u25a0 Pause',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFF59E0B),
+                        fontWeight: FontWeight.w600)),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: v.pct, minHeight: 4,
+                backgroundColor: const Color(0xFFD1FAE5),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF0D9488)),
+              ),
+            ),
+            if (v.etaLabel.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(v.etaLabel,
+                  style: const TextStyle(
+                      fontSize: 10, color: Color(0xFF6B7280))),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // ─ Paused with progress ──────────────────────────────────────────────────
+    if (v.isPaused && v.total > 0) {
+      return Container(
+        margin: const EdgeInsets.only(top: 22),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            border: Border.all(color: const Color(0xFFFDE68A)),
+            borderRadius: BorderRadius.circular(4)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.pause_circle_outline,
+                  size: 14, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Paused — ${v.label}',
+                    style: const TextStyle(
+                        fontSize: 12, color: _text,
+                        fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              GestureDetector(
+                onTap: BatchValuationService.instance.resume,
+                child: const Text('\u25ba Resume',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF0D9488),
+                        fontWeight: FontWeight.w600)),
+              ),
+            ]),
+            const SizedBox(height: 5),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: v.pct, minHeight: 4,
+                backgroundColor: const Color(0xFFFEF3C7),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFFF59E0B)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ─ Not started ───────────────────────────────────────────────────────────
+    return Container(
+      margin: const EdgeInsets.only(top: 22),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+          color: const Color(0xFFFFF3CD),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+          borderRadius: BorderRadius.circular(4)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.info_outline,
+                size: 14, color: Color(0xFF856404)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                total == 0
+                    ? 'No coins loaded.'
+                    : '$estimated of $total estimated.',
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF664D03),
+                    fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          const Text(
+            'Our AI needs ~2 sec per coin to estimate value from year, grade & mint mark — no photos needed.',
+            style: TextStyle(fontSize: 10, color: Color(0xFF92400E), height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: () => BatchValuationService.instance.start(),
+            icon: const Icon(Icons.play_arrow_rounded, size: 14),
+            label: const Text('Run AI Valuation'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 30),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 6),
+              textStyle: const TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _statChip(String label, String value) => Container(
@@ -1976,13 +2178,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // _onAddToWishlist removed — wishlist action now lives in CoinDetailScreen.
-
-  void _onGenerateReport() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('AI Report generation -- coming in Phase 3'),
-      backgroundColor: _accent,
-    ));
-  }
+  // _onGenerateReport removed — navigation to Estate Planning is now inline on the button.
 
   void _onSaveGridChanges() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

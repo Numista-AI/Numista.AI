@@ -38,6 +38,11 @@ class CoinModel {
   final String sourceFile;    // scan_uuid — raw scan identifier
   final String binderDocId;   // Firestore binder_scans doc ID
 
+  // Paper Trail (Bulk Import / PDF Invoice)
+  final String receiptId;       // links to receipts/{user}/{receiptId} Firestore doc
+  final String receiptGcsPath;  // GCS path of original invoice PDF
+  final String importSessionId; // import session that created this coin record
+
   CoinModel({
     required this.id,
     this.year = '',
@@ -71,6 +76,9 @@ class CoinModel {
     this.source = '',
     this.sourceFile = '',
     this.binderDocId = '',
+    this.receiptId = '',
+    this.receiptGcsPath = '',
+    this.importSessionId = '',
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -130,6 +138,9 @@ class CoinModel {
       source: data['source']?.toString() ?? '',
       sourceFile: data['source_file']?.toString() ?? data['scan_uuid']?.toString() ?? '',
       binderDocId: data['binder_doc_id']?.toString() ?? '',
+      receiptId: data['receipt_id']?.toString() ?? '',
+      receiptGcsPath: (data['paper_trail'] as Map<String, dynamic>?)?['gcs_path']?.toString() ?? '',
+      importSessionId: data['import_session_id']?.toString() ?? '',
     );
   }
 
