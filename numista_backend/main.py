@@ -5068,6 +5068,97 @@ def receipt_view_url(user_email: str, receipt_id: str):
     }
 
 
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  COLLECTION MANAGEMENT — BULK CLEAR                                         ║
+# ║  Allows a user's entire coin collection to be wiped in one call.            ║
+# ║  Protected by a mandatory confirm=DELETE guard.                             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+class ClearCollectionRequest(BaseModel):
+    user_email: str
+    confirm: str          # must equal "DELETE" exactly
+
+
+@app.get("/api/collection/count")
+def collection_count(user_email: str):
+    """
+    Return the number of coins in a user's collection using Firestore's
+    aggregation query (COUNT) — reads zero documents, billed as a single
+    aggregation query.
+
+    Returns:
+        { "user_email": str, "coins": int }
+    """
+    try:
+        coins_ref   = db.collection('users').document(user_email).collection('coins')
+        agg_query   = coins_ref.count()
+        result      = agg_query.get()
+        # result is a list of AggregationResult; first item holds the count
+        count = result[0][0].value if result and result[0] else 0
+        return {"user_email": user_email, "coins": count}
+    except Exception as e:
+        print(f"[collection_count] Error for {user_email}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/collection/clear")
+def collection_clear(req: ClearCollectionRequest):
+    """
+    Permanently delete ALL coins from a user's collection.
+
+    Safety gate:
+        req.confirm must be the exact string "DELETE" — the endpoint returns
+        400 immediately if it is anything else.
+
+    Only the `coins` sub-collection is affected.  All other user data
+    (review_queue, import_sessions, receipts, binder_scans, etc.) is left
+    untouched.
+
+    Implementation:
+        Streams document references in pages and deletes in Firestore batches
+        of ≤ 490 writes (hard limit is 500).  Never loads the full collection
+        into memory.
+
+    Returns:
+        { "status": "success", "user_email": str, "coins_deleted": int }
+    """
+    if req.confirm != "DELETE":
+        raise HTTPException(
+            status_code=400,
+            detail="Safety check failed: 'confirm' must be the exact string 'DELETE'."
+        )
+
+    try:
+        coins_ref     = db.collection('users').document(req.user_email).collection('coins')
+        coins_deleted = 0
+        BATCH_LIMIT   = 490  # Firestore max is 500 writes per batch
+
+        while True:
+            # Stream up to BATCH_LIMIT doc refs at a time (select() fetches only IDs)
+            docs = list(coins_ref.limit(BATCH_LIMIT).stream())
+            if not docs:
+                break   # nothing left
+
+            batch = db.batch()
+            for doc in docs:
+                batch.delete(coins_ref.document(doc.id))
+                coins_deleted += 1
+            batch.commit()
+
+        print(f"[collection_clear] Deleted {coins_deleted} coins for {req.user_email}")
+        return {
+            "status":        "success",
+            "user_email":    req.user_email,
+            "coins_deleted": coins_deleted,
+        }
+
+    except Exception as e:
+        print(f"[collection_clear] Error for {req.user_email}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))

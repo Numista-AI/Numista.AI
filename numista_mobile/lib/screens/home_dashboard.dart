@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
 import '../services/batch_valuation_service.dart';
@@ -244,10 +245,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             for (final doc in docs) {
               final data = doc.data();
               final coinValue = _parseCurrency(data['AI Estimated Value']);
-              portfolioValue  += coinValue;
-              acquisitionCost += _parseCurrency(data['Cost']);
-              // Live melt value: compute from spot prices + Metal Content
-              // Falls back to stored Firestore value if spot prices not loaded yet.
+              // A coin is always worth at least its melt value — floor AI value at melt.
               final liveMelt = _spotPrices.isNotEmpty
                   ? (MeltValueService.compute(
                         metalContent: data['Metal Content']?.toString() ?? '',
@@ -255,6 +253,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         spotPrices: _spotPrices,
                       ) ?? 0.0)
                   : _parseCurrency(data['Melt Value']);
+              portfolioValue  += math.max(coinValue, liveMelt);
+              acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
 

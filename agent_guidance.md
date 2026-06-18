@@ -1,6 +1,6 @@
-﻿# Numista.AI - Agent Guidance & Standing Rules
+# Numista.AI - Agent Guidance & Standing Rules
 > **ANTIGRAVITY: Read this file at the start of every session before making any changes.**
-> Last updated: 2026-06-16
+> Last updated: 2026-06-18
 
 ---
 
@@ -110,6 +110,30 @@ If `numista_backend/main.py` was modified, the backend must also be deployed to 
 gcloud run deploy numista-backend --source . --project studio-9101802118-8c9a8 --region us-central1
 ```
 
+### Rule 5 — ALWAYS Verify in an Incognito Window
+
+**This is the #1 reason updates appear not to go live.** The service worker aggressively caches the app in the browser. Your regular browser tab will almost always show a stale version after a deploy.
+
+> 🔴 **Never verify a production deploy using your regular browser tab.**
+> ✅ **Always open a fresh Incognito / Private window to confirm the live site.**
+
+Steps:
+1. Open a new **Incognito** window (`Ctrl+Shift+N` in Chrome)
+2. Navigate to **https://numista.ai**
+3. Verify the specific change is live
+4. Open **DevTools → Application → Service Workers** — confirm the worker is active
+5. Check **DevTools → Console** — confirm zero errors
+
+### Rule 6 — Follow the Full Deployment SOP
+
+For the complete deploy checklist, timing estimates, and troubleshooting table, always refer to:
+
+```
+DEPLOYMENT_SOP.md  (project root)
+```
+
+When the user asks about deployment, pushing updates, or why a change isn't live — point them to `DEPLOYMENT_SOP.md` first.
+
 ---
 
 ## ?? Standard Session Checklist
@@ -132,6 +156,7 @@ Before ending any coding session:
 |---|---|
 | Dev launcher | `launch_numista.ps1` |
 | Production deploy | `deploy_production.ps1` |
+| **Deployment SOP** | **`DEPLOYMENT_SOP.md`** |
 | Production build checklist | `PROD_BUILD_CHECKLIST.md` |
 | Flutter app | `numista_mobile/` |
 | Python backend | `numista_backend/` |

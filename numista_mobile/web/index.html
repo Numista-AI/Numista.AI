@@ -115,6 +115,22 @@
     flutter_bootstrap.js initialises the Flutter engine.
     See: https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- CSV download helper: called from Dart via JS interop.
+       Using native JS Blob avoids all Dart<->JS byte conversion issues. -->
+  <script>
+    window._downloadCSV = function(content, filename) {
+      var blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

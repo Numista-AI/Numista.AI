@@ -31,12 +31,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dedupRunning = false;
   Map<String, dynamic>? _dedupResults;
 
+  // ── Danger Zone state ──────────────────────────────────────────────────────
+  bool _clearRunning = false;
+  int? _clearCoinCount;                          // null = not yet fetched
+  // Target account to wipe — hard-wired to the Aunt's account for the admin.
+  // The admin confirmation dialog also lets the user override this at runtime.
+  static const _defaultClearTarget = 'jseaman1204@gmail.com';
+
   static const _apiUrl = kApiBaseUrl;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    // Pre-fetch the coin count so it shows in the Danger Zone card immediately.
+    if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') {
+      _fetchCoinCount(_defaultClearTarget);
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -309,7 +320,286 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-          )
+          ),
+
+          // ── Danger Zone (admin only) ────────────────────────────────────
+          if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') ...[
+            const SizedBox(height: 32),
+            const Divider(color: Color(0xFFE2E6E9)),
+            const SizedBox(height: 32),
+            _buildDangerZoneCard(context),
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─── Danger Zone ──────────────────────────────────────────────────────────
+
+  Future<void> _fetchCoinCount(String email) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$_apiUrl/api/collection/count?user_email=${Uri.encodeComponent(email)}'),
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        if (mounted) setState(() => _clearCoinCount = (data['coins'] as num).toInt());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _clearCollection(String targetEmail) async {
+    if (mounted) setState(() => _clearRunning = true);
+    try {
+      final resp = await http.post(
+        Uri.parse('$_apiUrl/api/collection/clear'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_email': targetEmail, 'confirm': 'DELETE'}),
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final deleted = (data['coins_deleted'] as num).toInt();
+        if (mounted) {
+          setState(() => _clearCoinCount = 0);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('✅ $deleted coin${deleted == 1 ? '' : 's'} deleted from $targetEmail'),
+            backgroundColor: const Color(0xFF166534),
+            duration: const Duration(seconds: 6),
+          ));
+        }
+      } else {
+        throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('❌ Clear failed: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 8),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _clearRunning = false);
+    }
+  }
+
+  void _showClearConfirmDialog(BuildContext context) {
+    final confirmController = TextEditingController();
+    final targetController  = TextEditingController(text: _defaultClearTarget);
+    bool confirmEnabled = false;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_rounded, color: Color(0xFFEF4444)),
+                SizedBox(width: 8),
+                Text('Confirm Full Wipe',
+                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'You are about to permanently delete '
+                  '${_clearCoinCount != null ? '$_clearCoinCount coins' : 'all coins'} '
+                  'from the collection below. This cannot be undone.',
+                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                const Text('Target account:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: targetController,
+                  style: const TextStyle(color: Color(0xFFFBBF24), fontFamily: 'monospace', fontSize: 13),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF374151))),
+                    focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFEF4444))),
+                    fillColor: Color(0xFF0F172A),
+                    filled: true,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    children: [
+                      TextSpan(text: 'Type '),
+                      TextSpan(
+                        text: 'DELETE',
+                        style: TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      TextSpan(text: ' to confirm:'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: confirmController,
+                  autofocus: true,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'monospace',
+                    letterSpacing: 2,
+                    fontSize: 15,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Type DELETE here',
+                    hintStyle: TextStyle(color: Color(0xFF4B5563), letterSpacing: 1),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF374151))),
+                    focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFEF4444))),
+                    fillColor: Color(0xFF0F172A),
+                    filled: true,
+                  ),
+                  onChanged: (v) =>
+                      setDialogState(() => confirmEnabled = v.trim() == 'DELETE'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.delete_forever, size: 18),
+                label: const Text('Wipe Collection'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      confirmEnabled ? const Color(0xFFDC2626) : const Color(0xFF374151),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFF374151),
+                  disabledForegroundColor: const Color(0xFF6B7280),
+                ),
+                onPressed: confirmEnabled
+                    ? () {
+                        Navigator.pop(ctx);
+                        _clearCollection(targetController.text.trim());
+                      }
+                    : null,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDangerZoneCard(BuildContext context) {
+    final countText = _clearCoinCount != null
+        ? '$_clearCoinCount coin${_clearCoinCount == 1 ? '' : 's'}'
+        : 'loading...';
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1F2),
+        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE4E6),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                SizedBox(width: 8),
+                Text('Danger Zone',
+                    style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
+                SizedBox(width: 8),
+                Text('— irreversible actions',
+                    style: TextStyle(color: Color(0xFF9F1239), fontSize: 13)),
+              ],
+            ),
+          ),
+          // Action row
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFE4E6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_sweep_rounded,
+                      color: Color(0xFFDC2626)),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Clear Entire Collection',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF0F172A))),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Permanently delete $countText from jseaman1204@gmail.com. '
+                        'Receipts and import history are not affected.',
+                        style: const TextStyle(
+                            color: Color(0xFF64748B), fontSize: 13, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                _clearRunning
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2.5, color: Color(0xFFDC2626)))
+                    : ElevatedButton.icon(
+                        icon: const Icon(Icons.delete_forever, size: 18),
+                        label: const Text('Clear'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 14),
+                        ),
+                        onPressed: () => _showClearConfirmDialog(context),
+                      ),
+              ],
+            ),
+          ),
         ],
       ),
     );

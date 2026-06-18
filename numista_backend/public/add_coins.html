@@ -27,6 +27,75 @@
       --radius-lg:   18px;
       --shadow:      0 8px 32px rgba(0,0,0,0.45);
     }
+
+    /* ── Danger Zone card ──────────────────────────────────── */
+    .danger-zone {
+      border: 1px solid rgba(248,113,113,0.35);
+      background: linear-gradient(135deg, rgba(248,113,113,0.06), rgba(220,38,38,0.04));
+      border-radius: var(--radius-lg);
+      max-width: 860px; margin: 0 auto 24px;
+      overflow: hidden;
+    }
+    .danger-zone .card-header { border-bottom: 1px solid rgba(248,113,113,0.25); }
+    .danger-zone .card-header h2 { color: var(--red); }
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: #fff; border: none; border-radius: 8px;
+      padding: 10px 20px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-danger:hover { background: linear-gradient(135deg, #ef4444, #dc2626); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(220,38,38,0.4); }
+    .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Confirmation modal ────────────────────────────────── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+      z-index: 9000; align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid rgba(248,113,113,0.5);
+      border-radius: var(--radius-lg); padding: 36px 32px;
+      max-width: 480px; width: 90%;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+      animation: popIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(0.88); } to { opacity:1; transform:scale(1); } }
+    .modal-box h3 { font-size: 1.15rem; font-weight: 700; color: var(--red); margin-bottom: 12px; }
+    .modal-box p  { font-size: 0.88rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 18px; }
+    .modal-box strong { color: var(--text); }
+    .modal-confirm-input {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.95rem;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+      margin-bottom: 20px; outline: none; transition: border-color 0.2s;
+    }
+    .modal-confirm-input:focus { border-color: var(--red); }
+    .modal-confirm-input.valid { border-color: var(--red); box-shadow: 0 0 0 3px rgba(248,113,113,0.2); }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+    .btn-cancel {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: 8px; padding: 9px 18px;
+      font-size: 0.87rem; font-weight: 500; cursor: pointer; transition: all 0.18s;
+    }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+    /* ── Toast notification ────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 22px;
+      font-size: 0.88rem; font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0; transition: all 0.3s; z-index: 9999; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error   { border-color: var(--red);   color: var(--red); }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Inter', sans-serif;
@@ -263,14 +332,11 @@
         <span class="file-type-pill">&#128193; Whole Folders</span>
       </div>
       <div class="drop-actions">
-        <button class="btn btn-primary" id="folder-btn" onclick="document.getElementById('folder-input').click()">
-          &#128193; Browse Folder
-        </button>
-        <button class="btn btn-secondary" id="files-btn" onclick="document.getElementById('file-input').click()">
-          &#128196; Choose Files
+        <button class="btn btn-primary" id="files-btn" onclick="document.getElementById('file-input').click()">
+          &#128193; Browse Files or Folder
         </button>
       </div>
-      <input type="file" id="folder-input" webkitdirectory multiple />
+      <input type="file" id="folder-input" webkitdirectory multiple style="display:none" />
       <input type="file" id="file-input" multiple
              accept=".pdf,.xlsx,.xls,.csv,.ods,.jpg,.jpeg,.png,.webp,.heic,.bmp,.tiff" />
       <div class="file-count-badge" id="file-count-badge"></div>
@@ -363,6 +429,65 @@
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════ DANGER ZONE ══════════════════════ -->
+<div class="danger-zone" id="danger-zone-card">
+  <div class="card-header">
+    <h2>&#9888;&#65039; Danger Zone</h2>
+    <span style="font-size:0.82rem;color:var(--text-dim);">Irreversible actions &mdash; use with caution</span>
+  </div>
+  <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:0.92rem;font-weight:600;margin-bottom:4px;">Clear Entire Collection</div>
+      <div style="font-size:0.83rem;color:var(--text-dim);max-width:480px;">
+        Permanently deletes
+        <strong id="danger-coin-count" style="color:var(--text);">all coins</strong>
+        from
+        <span id="danger-user-label"
+              style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--amber);"
+        >the collection</span>.
+        This cannot be undone.
+      </div>
+    </div>
+    <button class="btn-danger" id="open-clear-modal-btn" onclick="openClearModal()">
+      &#128465;&#65039; Clear Entire Collection
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════ CLEAR MODAL ══════════════════════ -->
+<div class="modal-backdrop" id="clear-modal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="clear-modal-title">
+    <h3 id="clear-modal-title">&#128721; Confirm Full Wipe</h3>
+    <p>
+      You are about to permanently delete
+      <strong id="modal-coin-count">all coins</strong>
+      from <strong id="modal-user-email"
+                   style="color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:0.82rem;"
+      ></strong>.<br><br>
+      This action <strong>cannot be undone</strong>. All coin records will be
+      gone forever. Receipts, import history, and other data are not affected.
+    </p>
+    <p style="font-size:0.83rem;color:var(--text-dim);margin-bottom:8px;">
+      Type <strong style="color:var(--red);font-family:'JetBrains Mono',monospace;">DELETE</strong> to confirm:
+    </p>
+    <input
+      type="text" id="clear-confirm-input" class="modal-confirm-input"
+      placeholder="Type DELETE here"
+      autocomplete="off" spellcheck="false"
+      oninput="onClearConfirmInput(this)"
+    />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeClearModal()">Cancel</button>
+      <button class="btn-danger" id="execute-clear-btn" disabled onclick="executeClear()">
+        &#128465;&#65039; Wipe Collection
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="clear-toast"></div>
 
 <script>
 const API_BASE   = 'https://backend-studio-9101802118-8c9a8.a.run.app';
@@ -679,10 +804,119 @@ function formatBytes(b) {
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function showError(msg) {
-  clearInterval(pollInterval);
-  document.getElementById('progress-label').textContent = 'Error: ' + msg;
+
+// ───────────────────────────────────────────────────────────────────────────
+//  DANGER ZONE — Clear Entire Collection
+// ───────────────────────────────────────────────────────────────────────────
+
+// The target account. Falls back to jseaman1204@gmail.com (Aunt's account)
+// when the logged-in user is not detected from localStorage.
+const CLEAR_TARGET_EMAIL = USER_EMAIL || 'jseaman1204@gmail.com';
+
+let _clearCoinCount = null;  // cached from /api/collection/count
+
+// Populate the Danger Zone card header with the target email + live count.
+async function initDangerZone() {
+  const labelEl = document.getElementById('danger-user-label');
+  const countEl = document.getElementById('danger-coin-count');
+  if (labelEl) labelEl.textContent = CLEAR_TARGET_EMAIL;
+  try {
+    const r = await fetch(API_BASE + '/api/collection/count?user_email=' + encodeURIComponent(CLEAR_TARGET_EMAIL));
+    if (r.ok) {
+      const data = await r.json();
+      _clearCoinCount = data.coins;
+      if (countEl) countEl.textContent = _clearCoinCount.toLocaleString() + ' coin' + (_clearCoinCount !== 1 ? 's' : '');
+    }
+  } catch(e) {
+    console.warn('[danger-zone] count fetch failed:', e);
+  }
 }
+
+async function openClearModal() {
+  // Fetch a fresh count if we don't have one yet.
+  if (_clearCoinCount === null) {
+    try {
+      const r = await fetch(API_BASE + '/api/collection/count?user_email=' + encodeURIComponent(CLEAR_TARGET_EMAIL));
+      if (r.ok) { const d = await r.json(); _clearCoinCount = d.coins; }
+    } catch(e) { /* ignore */ }
+  }
+
+  const countStr = _clearCoinCount !== null
+    ? _clearCoinCount.toLocaleString() + ' coin' + (_clearCoinCount !== 1 ? 's' : '')
+    : 'all coins';
+
+  document.getElementById('modal-coin-count').textContent  = countStr;
+  document.getElementById('modal-user-email').textContent  = CLEAR_TARGET_EMAIL;
+  document.getElementById('clear-confirm-input').value     = '';
+  document.getElementById('clear-confirm-input').className = 'modal-confirm-input';
+  document.getElementById('execute-clear-btn').disabled    = true;
+  document.getElementById('clear-modal').classList.add('open');
+  setTimeout(() => document.getElementById('clear-confirm-input').focus(), 80);
+}
+
+function closeClearModal() {
+  document.getElementById('clear-modal').classList.remove('open');
+}
+
+function onClearConfirmInput(input) {
+  const valid = input.value.trim() === 'DELETE';
+  input.className = 'modal-confirm-input' + (valid ? ' valid' : '');
+  document.getElementById('execute-clear-btn').disabled = !valid;
+}
+
+async function executeClear() {
+  const confirmInput = document.getElementById('clear-confirm-input');
+  if (confirmInput.value.trim() !== 'DELETE') return;
+
+  const btn = document.getElementById('execute-clear-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
+  try {
+    const r = await fetch(API_BASE + '/api/collection/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_email: CLEAR_TARGET_EMAIL, confirm: 'DELETE' }),
+    });
+
+    const data = await r.json();
+    closeClearModal();
+
+    if (r.ok && data.status === 'success') {
+      const n = data.coins_deleted;
+      _clearCoinCount = 0;
+      document.getElementById('danger-coin-count').textContent = '0 coins';
+      showClearToast('\u2705 ' + n.toLocaleString() + ' coin' + (n !== 1 ? 's' : '') + ' deleted successfully.', 'success');
+    } else {
+      showClearToast('\u274C Error: ' + (data.detail || 'Unknown error'), 'error');
+    }
+  } catch(e) {
+    closeClearModal();
+    showClearToast('\u274C Network error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#128465;&#65039; Wipe Collection';
+  }
+}
+
+function showClearToast(msg, type) {
+  const t = document.getElementById('clear-toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  // Trigger show
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => t.classList.add('show'));
+  });
+  setTimeout(() => t.classList.remove('show'), 5000);
+}
+
+// Close modal on backdrop click
+document.getElementById('clear-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeClearModal();
+});
+
+// Kick off the count fetch on page load
+initDangerZone();
 </script>
 </body>
 </html>
