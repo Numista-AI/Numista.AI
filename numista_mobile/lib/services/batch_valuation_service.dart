@@ -89,6 +89,7 @@ class BatchValuationService {
   bool _pauseRequested = false;
   bool _running        = false;
 
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /// Start (or resume) the batch valuation for the current user's collection.
@@ -103,6 +104,7 @@ class BatchValuationService {
   void pause() {
     _pauseRequested = true;
     _emit(_progress.copyWith(isPaused: true, isRunning: false));
+    _persistProgress();  // save immediately on pause
   }
 
   void resume() {
@@ -111,7 +113,38 @@ class BatchValuationService {
     start();
   }
 
-  // ── Internal ───────────────────────────────────────────────────────────────
+  /// Restore previously saved progress from Firestore.
+  /// Call this in initState of any screen that shows the valuation badge.
+  /// Emits a BatchValuationProgress with isPaused=true if there is meaningful
+  /// in-progress state — this makes the Resume banner appear immediately.
+  Future<void> restoreFromFirestore() async {
+    final userEmail = AuthService.userEmail;
+    if (userEmail.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users').doc(userEmail)
+          .collection('meta').doc('valuation_state')
+          .get();
+      if (!doc.exists) return;
+      final data      = doc.data()!;
+      final completed = (data['completed'] as num?)?.toInt() ?? 0;
+      final failed    = (data['failed']    as num?)?.toInt() ?? 0;
+      final total     = (data['total']     as num?)?.toInt() ?? 0;
+      // Only restore if there is meaningful unfinished work
+      if (total > 0 && (completed + failed) < total) {
+        _emit(BatchValuationProgress(
+          total:     total,
+          completed: completed,
+          failed:    failed,
+          isRunning: false,
+          isPaused:  true,   // treat as paused so Resume banner shows
+        ));
+      }
+    } catch (e) {
+      debugPrint('[BatchValuation] Failed to restore progress: $e');
+    }
+  }
+
 
   Future<void> _run() async {
     final coinsRef = FirebaseFirestore.instance
@@ -203,6 +236,8 @@ class BatchValuationService {
         total: total, completed: completed, failed: failed,
         isRunning: true, isPaused: false,
       ));
+      // Persist progress so the Resume banner survives a page refresh
+      _persistProgress();
 
       // 2-second throttle between API calls
       await Future.delayed(const Duration(seconds: 2));
@@ -213,6 +248,8 @@ class BatchValuationService {
       total: total, completed: completed, failed: failed,
       isRunning: false, isPaused: false,
     ));
+    // All done — clear persisted state so Resume banner doesn't reappear
+    clearPersisted();
   }
 
   Future<Map<String, dynamic>> _callApi({
@@ -247,6 +284,41 @@ class BatchValuationService {
   void _emit(BatchValuationProgress p) {
     _progress = p;
     if (!_controller.isClosed) _controller.add(p);
+  }
+
+  // ── Firestore persistence ─────────────────────────────────────────────────
+
+  /// Saves current progress to Firestore so it survives a page refresh.
+  Future<void> _persistProgress() async {
+    final userEmail = AuthService.userEmail;
+    if (userEmail.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users').doc(userEmail)
+          .collection('meta').doc('valuation_state')
+          .set({
+            'completed':  _progress.completed,
+            'failed':     _progress.failed,
+            'total':      _progress.total,
+            'updatedAt':  FieldValue.serverTimestamp(),
+          });
+    } catch (e) {
+      debugPrint('[BatchValuation] Failed to persist progress: $e');
+    }
+  }
+
+  /// Removes the persisted state document — called when valuation finishes.
+  Future<void> clearPersisted() async {
+    final userEmail = AuthService.userEmail;
+    if (userEmail.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users').doc(userEmail)
+          .collection('meta').doc('valuation_state')
+          .delete();
+    } catch (e) {
+      debugPrint('[BatchValuation] Failed to clear persisted state: $e');
+    }
   }
 
   void dispose() => _controller.close();

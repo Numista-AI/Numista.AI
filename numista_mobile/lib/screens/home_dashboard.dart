@@ -52,12 +52,28 @@ class _HomeDashboardState extends State<HomeDashboard> {
     });
     // Sync current state in case service was already running
     _valuation = BatchValuationService.instance.current;
+    // Restore persisted progress so Resume banner appears after page refresh
+    BatchValuationService.instance.restoreFromFirestore();
   }
 
   @override
   void dispose() {
     _valuationSub?.cancel();
     super.dispose();
+  }
+
+  /// Computes a stable, deterministic article ID from a URL.
+  /// Dart's String.hashCode is randomized each app start since Dart 2.x,
+  /// so we use a simple djb2-style hash instead — same URL → same ID always.
+  static String _stableArticleId(String url) {
+    // Normalize: strip trailing slash and query params so equivalent URLs match.
+    final normalized = Uri.tryParse(url)?.replace(queryParameters: {}).toString()
+        ?? url;
+    int hash = 5381;
+    for (final c in normalized.codeUnits) {
+      hash = ((hash << 5) + hash + c) & 0x7FFFFFFF;
+    }
+    return hash.toRadixString(16);
   }
 
   Future<void> _fetchNews({bool isRefresh = false}) async {
@@ -657,7 +673,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           final link = item['link']?.toString() ?? '';
                           // Simple hash: use the link URL as a stable ID
                           final id = link.isNotEmpty
-                              ? link.hashCode.toRadixString(16)
+                              ? _stableArticleId(link)
                               : '';
                           return id.isEmpty || !_dismissedNewsIds.contains(id);
                         }).toList();
@@ -668,7 +684,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             final item = visibleNews[i];
                             final link = item['link']?.toString() ?? '';
                             final articleId = link.isNotEmpty
-                                ? link.hashCode.toRadixString(16)
+                                ? _stableArticleId(link)
                                 : '';
                             return GestureDetector(
                               onTap: link.isNotEmpty

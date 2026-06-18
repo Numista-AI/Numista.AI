@@ -4721,6 +4721,31 @@ async def import_process(req: ImportProcessRequest):
     }
     new_coin_ids: list[str] = []
 
+    # ── Pre-compute obverse/reverse image pairs ───────────────────────────────
+    # Group image-type files by their filename stem (minus suffix keywords).
+    # e.g. '1935_penny_obv.jpg' and '1935_penny_rev.jpg' share stem '1935_penny'.
+    _IMG_SUFFIXES = (
+        "_obv", "_rev", "_obverse", "_reverse", "_front", "_back",
+        "_a", "_b", "_1", "_2",
+    )
+    def _img_stem(name: str) -> str:
+        """Return filename stem with common obv/rev suffixes stripped."""
+        base = name.rsplit(".", 1)[0].lower().rstrip("_")
+        for sfx in _IMG_SUFFIXES:
+            if base.endswith(sfx):
+                return base[:-len(sfx)].rstrip("_")
+        return base
+
+    # Map: stem -> [per_file indices]
+    _img_stem_map: dict[str, list[int]] = {}
+    for _i, _fm in enumerate(per_file):
+        if (_fm.get("type") or _classify_file(_fm["name"])) == "image":
+            _s = _img_stem(_fm["name"])
+            _img_stem_map.setdefault(_s, []).append(_i)
+    # Set of indices already processed as part of a pair
+    _paired_idx_done: set[int] = set()
+    # ──────────────────────────────────────────────────────────────────────────
+
     for idx, file_meta in enumerate(per_file):
         fname     = file_meta["name"]
         ftype     = file_meta.get("type") or _classify_file(fname)
@@ -4927,50 +4952,154 @@ Ignore shipping, tax, subtotal rows."""
                 print(f"[bulk_import] invoice error ({fname}): {e}")
 
         elif ftype == "image":
+            # Skip this image if it was already handled as part of a pair
+            if idx in _paired_idx_done:
+                per_file[idx]["status"] = "done"
+                per_file[idx]["note"]   = "Processed as part of an obverse/reverse pair"
+                session_ref.update({"per_file": per_file, "processed_files": idx + 1})
+                continue
+
             try:
                 ext_lower = fname.rsplit(".", 1)[-1].lower() if "." in fname else "jpg"
-                img_mime  = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
-                             "png": "image/png",  "webp": "image/webp"}.get(ext_lower, "image/jpeg")
-                img_part  = genai_types.Part.from_bytes(data=file_bytes, mime_type=img_mime)
+                mime_a    = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                             "png": "image/png",  "webp": "image/webp",
+                             "heic": "image/heic"}.get(ext_lower, "image/jpeg")
+                bytes_a   = file_bytes
 
-                id_prompt = """You are an expert numismatist. Identify this coin image.
-Return a single JSON object:
-{
-  "identified": true|false,
-  "Program/Series": "...", "Year": "...", "Mint Mark": "...",
-  "Denomination": "...", "Country": "United States",
-  "Condition": "estimated grade",
-  "confidence": 0.0-1.0,
-  "notes": "..."
-}"""
-                resp = genai_client.models.generate_content(
-                    model=PRO_MODEL,
-                    contents=[img_part, genai_types.Part.from_text(text=id_prompt)],
-                    config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                # Check if there is a paired image (obverse + reverse)
+                partner_bytes: bytes = file_bytes   # default: use same image for both passes
+                partner_mime:  str   = mime_a
+                partner_idx:   int | None = None
+                stem = _img_stem(fname)
+                companions = [i for i in _img_stem_map.get(stem, []) if i != idx]
+                if companions:
+                    partner_idx = companions[0]
+                    _paired_idx_done.add(partner_idx)
+                    partner_meta  = per_file[partner_idx]
+                    partner_safe  = partner_meta["name"].replace(" ", "_")
+                    partner_blob  = bucket.blob(
+                        f"{user_email}/imports/{session_id}/raw/{partner_safe}"
+                    )
+                    try:
+                        partner_bytes = partner_blob.download_as_bytes()
+                        pext = partner_meta["name"].rsplit(".", 1)[-1].lower() if "." in partner_meta["name"] else "jpg"
+                        partner_mime  = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                                         "png": "image/png",  "webp": "image/webp",
+                                         "heic": "image/heic"}.get(pext, "image/jpeg")
+                    except Exception as pair_e:
+                        print(f"[bulk_import] Could not load partner image: {pair_e}")
+                        partner_bytes = bytes_a
+                        partner_mime  = mime_a
+
+                # ── Pass 1 — Full identification (mirrors identify_coin_photo) ──
+                part_a = genai_types.Part.from_bytes(data=bytes_a,   mime_type=mime_a)
+                part_b = genai_types.Part.from_bytes(data=partner_bytes, mime_type=partner_mime)
+
+                resp1 = genai_client.models.generate_content(
+                    model=PRIMARY_MODEL,
+                    contents=[
+                        genai_types.Part.from_text(text="[Image A]"), part_a,
+                        genai_types.Part.from_text(text="[Image B]"), part_b,
+                        genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
+                    ],
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.1,
+                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                    ),
                 )
-                coin_data_from_img = json.loads(resp.text or "{}")
+                raw1 = resp1.text.strip()
+                if raw1.startswith("```"):
+                    raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                pass1: dict = json.loads(raw1)
 
-                if coin_data_from_img.get("identified"):
-                    coin_doc = {
-                        **coin_data_from_img,
-                        "import_session_id": session_id,
-                        "source_type":       "image",
-                        "source_file":       fname,
-                        "upload_method":     "image_upload",
-                        "gcs_image_path":    gcs_path,
-                        "deep_dive_status":  "PENDING",
-                        "created_at":        firestore.SERVER_TIMESTAMP,
-                    }
-                    col_ref = db.collection("users").document(user_email).collection("review_queue")
-                    doc_ref = col_ref.document(str(uuid.uuid4()))
-                    doc_ref.set(coin_doc)
-                    new_coin_ids.append(doc_ref.id)
-                    summary["coins_identified"] += 1
-                    per_file[idx]["status"]     = "done"
-                    per_file[idx]["coins_added"] = 1
-                else:
-                    per_file[idx]["status"] = "review_needed"
-                    per_file[idx]["note"]   = "Coin not identified — needs manual review"
+                # ── Pass 2 — Verification (non-fatal) ────────────────────────
+                pass2: dict = {}
+                try:
+                    pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
+                        year          = pass1.get("year", ""),
+                        country       = pass1.get("country", ""),
+                        denomination  = pass1.get("denomination", ""),
+                        program_series= pass1.get("program_series", ""),
+                        mint_mark     = pass1.get("mint_mark", ""),
+                        grade         = pass1.get("grade", ""),
+                        metal_content = pass1.get("metal_content", ""),
+                    )
+                    resp2 = genai_client.models.generate_content(
+                        model=PRIMARY_MODEL,
+                        contents=[
+                            genai_types.Part.from_text(text="[Image A]"), part_a,
+                            genai_types.Part.from_text(text="[Image B]"), part_b,
+                            genai_types.Part.from_text(text=pass2_prompt),
+                        ],
+                        config=genai_types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            temperature=0.1,
+                            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                        ),
+                    )
+                    raw2 = resp2.text.strip()
+                    if raw2.startswith("```"):
+                        raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                    pass2 = json.loads(raw2)
+                except Exception as p2e:
+                    print(f"[bulk_import] image pass2 non-fatal: {p2e}")
+
+                # ── Merge results ─────────────────────────────────────────────
+                final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
+                final_denom  = pass2.get("corrected_denomination") or pass1.get("denomination", "")
+                final_series = pass2.get("corrected_series")    or pass1.get("program_series", "")
+                final_grade  = pass2.get("refined_grade")       or pass1.get("grade", "")
+                final_conf   = pass2.get("confidence")          or pass1.get("confidence", "")
+                errors       = pass2.get("errors_detected", []) or []
+                variety_str  = "; ".join(errors) if errors else pass1.get("variety_notes", "")
+                est_value    = pass2.get("estimated_value_usd", "Pending")
+                cond_notes   = pass2.get("condition_notes", "")
+                full_report  = pass1.get("report", "")
+                if cond_notes:
+                    full_report += f"\n\nCondition: {cond_notes}"
+                if errors:
+                    full_report += f"\n\nErrors/Varieties: {variety_str}"
+                full_report += f"\n\n[AI Confidence: {final_conf}]"
+
+                gcs_path_img = f"gs://{IMPORT_BUCKET}/{user_email}/imports/{session_id}/raw/{safe_name}"
+
+                coin_doc = {
+                    "Year":              final_year,
+                    "Country":           pass1.get("country", "USA"),
+                    "Denomination":      final_denom,
+                    "Program/Series":    final_series,
+                    "Theme/Subject":     pass1.get("theme_subject", ""),
+                    "Mint Mark":         pass1.get("mint_mark", ""),
+                    "Condition":         final_grade,
+                    "Metal Content":     pass1.get("metal_content", ""),
+                    "Variety":           variety_str,
+                    "AI Estimated Value": est_value,
+                    "Numismatic Report": full_report,
+                    "ai_confidence":     final_conf,
+                    "is_silver":         pass1.get("is_silver", False),
+                    "is_gold":           pass1.get("is_gold",   False),
+                    "source":            "AI Photo Identifier",
+                    "deep_dive_status":  "PENDING",
+                    "import_session_id": session_id,
+                    "source_type":       "image",
+                    "source_file":       fname,
+                    "upload_method":     "image_upload",
+                    "gcs_image_path":    gcs_path_img,
+                    "has_paired_image":  partner_idx is not None,
+                    "created_at":        firestore.SERVER_TIMESTAMP,
+                }
+
+                col_ref = db.collection("users").document(user_email).collection("review_queue")
+                doc_ref = col_ref.document(str(uuid.uuid4()))
+                doc_ref.set(coin_doc)
+                new_coin_ids.append(doc_ref.id)
+                summary["coins_identified"] += 1
+                per_file[idx]["status"]      = "done"
+                per_file[idx]["coins_added"] = 1
+                per_file[idx]["coin_doc_id"] = doc_ref.id
+                print(f"[bulk_import] image identified: {final_year} {final_denom} "
+                      f"conf={final_conf} pair={'yes' if partner_idx is not None else 'no'}")
 
             except Exception as e:
                 per_file[idx]["status"] = "error"

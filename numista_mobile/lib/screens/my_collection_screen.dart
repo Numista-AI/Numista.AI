@@ -196,6 +196,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       if (mounted) setState(() => _valuation = p);
     });
     _valuation = BatchValuationService.instance.current;
+    // Restore persisted progress so AI Valuation badge appears after page refresh
+    BatchValuationService.instance.restoreFromFirestore();
 
     _fetchSpotPrices();
     // Debounced search: 150ms after last keystroke before applying filter.
