@@ -68,7 +68,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadSavedPcgsToken();
   }
 
@@ -205,6 +205,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               _buildManualEntryTab(),
               _buildPcgsImportTab(),
               _buildRollEntryTab(),
+              _buildWorldItemsTab(),
             ],
           ),
         ),
@@ -257,6 +258,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
           Tab(text: 'Import from PCGS',  icon: Icon(Icons.shield_outlined,       size: 20)),
           Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
+          Tab(text: 'World & Specialty', icon: Icon(Icons.language_rounded,      size: 20)),
         ],
       ),
     );
@@ -447,6 +449,137 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ),
     );
   }
+
+  /// Tab body for the "World & Specialty" tab.
+  /// This is a lightweight promotional panel that navigates to the full
+  /// AddWorldItemScreen — it intentionally does not embed the whole flow
+  /// inline, since the world-item flow is complex enough to deserve a
+  /// dedicated full-screen experience.
+  Widget _buildWorldItemsTab() {
+    const types = [
+      ('🌍', 'Foreign / World Coin',        'Coins from any country, any era'),
+      ('💵', 'Foreign Currency / Banknote',  'World paper currency & notes'),
+      ('🪙', 'Bullion',                      'Gold, silver, platinum, palladium'),
+      ('🏛️', 'Specialty Collectible',        'Confederate, uncut sheets, medals, tokens'),
+      ('⚔️', 'Ancient Coins',               'Roman Empire, Greek, Byzantine & more'),
+      ('❓', 'Unknown Item',                  'Let AI analyse and identify for you'),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.language_rounded, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('World & Specialty Items',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B))),
+                    Text('AI-assisted identification + manual entry',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  ],
+                )),
+              ]),
+              const SizedBox(height: 20),
+
+              // Info banner
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Color(0xFF3B82F6), size: 18),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(
+                      'Upload a photo and let AI say "This appears to be…". '
+                      'Then refine with the Numista world catalogue or fill in details manually. '
+                      'Works for any item — if AI is uncertain, the confidence level is shown clearly.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF1E3A5F), height: 1.5),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Item type chips
+              const Text('SUPPORTED ITEM TYPES',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                    color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10, runSpacing: 10,
+                children: types.map((t) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    border: Border.all(color: const Color(0xFFE2E6E9)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(t.$1, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(t.$2,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B))),
+                      Text(t.$3,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ]),
+                  ]),
+                )).toList(),
+              ),
+              const SizedBox(height: 32),
+
+              // CTA button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.language_rounded),
+                  label: const Text('Add a World or Specialty Item',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    if (widget.onNavigate != null) {
+                      widget.onNavigate!('World & Specialty');
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _rollTypeCard(IconData icon, Color color, String title, String desc) {
     return Container(

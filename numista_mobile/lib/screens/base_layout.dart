@@ -26,6 +26,7 @@ import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
 import 'coin_search_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
+import 'add_world_item_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
 
 class BaseLayout extends StatefulWidget {
@@ -108,6 +109,10 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const OurTeamScreen();
       case 'Add New Coins':
         return AddCoinsHub(onNavigate: (route) => setState(() => _activeRoute = route));
+      case 'World & Specialty':
+        return AddWorldItemScreen(
+          onNavigate: (route) => setState(() => _activeRoute = route),
+        );
       case 'AI Deepdive':
         // Consume the initial query once, then clear it so subsequent opens
         // of AI Deepdive (from sidebar) start with an empty chat.
@@ -343,6 +348,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'Add New Coins',
                           child: _buildNavItem('Add New Coins', icon: Icons.add_circle_outline),
                         ),
+                        _buildNavItem('World & Specialty', icon: Icons.language_rounded),
                         _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
                         _buildNavItem('Inventory', icon: Icons.inventory_2_outlined),
                         WizardNavPulse(

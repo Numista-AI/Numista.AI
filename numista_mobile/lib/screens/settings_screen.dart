@@ -34,9 +34,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Danger Zone state ──────────────────────────────────────────────────────
   bool _clearRunning = false;
   int? _clearCoinCount;                          // null = not yet fetched
-  // Target account to wipe — hard-wired to the Aunt's account for the admin.
-  // The admin confirmation dialog also lets the user override this at runtime.
-  static const _defaultClearTarget = 'jseaman1204@gmail.com';
+  // Target defaults to the currently signed-in user's own collection.
+  // The confirmation dialog lets an admin override the email at runtime.
+  String get _defaultClearTarget => AuthService.userEmail;
 
   static const _apiUrl = kApiBaseUrl;
 
@@ -44,10 +44,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    // Pre-fetch the coin count so it shows in the Danger Zone card immediately.
-    if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') {
-      _fetchCoinCount(_defaultClearTarget);
-    }
+    // Pre-fetch the coin count for the Danger Zone card.
+    _fetchCoinCount(AuthService.userEmail);
   }
 
   Future<void> _loadSettings() async {
@@ -322,14 +320,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // ── Danger Zone (admin only) ────────────────────────────────────
-          if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') ...[
-            const SizedBox(height: 32),
-            const Divider(color: Color(0xFFE2E6E9)),
-            const SizedBox(height: 32),
-            _buildDangerZoneCard(context),
-            const SizedBox(height: 32),
-          ],
+          // ── Danger Zone (all signed-in users) ──────────────────────────────
+          const SizedBox(height: 32),
+          const Divider(color: Color(0xFFE2E6E9)),
+          const SizedBox(height: 32),
+          _buildDangerZoneCard(context),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -571,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: Color(0xFF0F172A))),
                       const SizedBox(height: 4),
                       Text(
-                        'Permanently delete $countText from jseaman1204@gmail.com. '
+                        'Permanently delete $countText from $_defaultClearTarget. '
                         'Receipts and import history are not affected.',
                         style: const TextStyle(
                             color: Color(0xFF64748B), fontSize: 13, height: 1.4),

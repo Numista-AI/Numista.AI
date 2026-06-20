@@ -471,6 +471,276 @@ def get_live_metal_prices():
         print(f"Error fetching metals: {e}")
         return {"Gold": 3100.0, "Silver": 35.0, "Platinum": 1000.0, "Palladium": 1000.0}
 
+
+# ─── WORLD ITEM IDENTIFICATION ────────────────────────────────────────────────
+# New endpoint: POST /api/identify-world-item
+#
+# Two-stage pipeline:
+#   1. Gemini Vision analyses the uploaded image (or text hints) and returns a
+#      structured JSON identification with a 0–1 confidence score.
+#   2. If confidence ≥ 0.90, we query the Numista API v3 text search for up to
+#      3 catalogue matches.  Below 0.90 we skip the API call and return the
+#      Gemini-only result with show_disclaimer = True.
+#
+# The Numista API key is the same one already used in scripts/fetch_numista_coins.py.
+# Text search is FREE — no per-request charges.
+
+NUMISTA_API_KEY    = "ExpST6TaGRDXkcEt6QajYJ0Lj76JZ8oqBPPpWhe"
+NUMISTA_SEARCH_URL = "https://api.numista.com/v3/types"
+
+# Confidence threshold below which we show the AI-estimate disclaimer
+_WORLD_CONFIDENCE_THRESHOLD = 0.90
+
+_WORLD_ITEM_PROMPT = """You are an expert numismatist and world-currency specialist.
+Examine the provided image carefully. Identify what this appears to be.
+
+Your response MUST be valid JSON only — no markdown, no commentary outside the JSON.
+Return exactly these fields:
+
+{
+  "identification": "<one complete natural-language sentence starting with 'This appears to be'>",
+  "item_type": "<one of: coin | banknote | bullion | medal | token | collectible | ancient_coin | unknown>",
+  "country": "<best-guess issuing country in English, or 'Unknown'>",
+  "era": "<year, decade, or period — e.g. '1921', '1860s', 'Roman Imperial c.250 AD', or 'Unknown'>",
+  "denomination": "<denomination text as it appears on the item, or null>",
+  "material": "<dominant metal or material — e.g. 'Silver', 'Gold', 'Bronze', 'Paper', or null>",
+  "design_keywords": ["<2–4 short keyword phrases describing key design elements for catalogue search>"],
+  "confidence": <float 0.0–1.0 — your confidence in the above identification>,
+  "confidence_notes": "<brief plain-English reason if confidence < 0.90, otherwise null>"
+}
+
+Rules:
+- Start 'identification' with the phrase 'This appears to be'.
+- 'confidence' must be a raw float, not a string.
+- If only text hints are provided (no image), base confidence on how specific those hints are.
+- Be conservative: prefer lower confidence over false precision.
+"""
+
+_WORLD_TEXT_ONLY_PROMPT = """You are an expert numismatist and world-currency specialist.
+The collector has provided the following hints (no image available):
+Country: {country}
+Year / Era: {year}
+Item type: {item_type}
+Additional notes: {notes}
+
+Your response MUST be valid JSON only — no markdown, no commentary outside the JSON.
+Return exactly these fields:
+
+{{
+  "identification": "<one complete natural-language sentence starting with 'This appears to be'>",
+  "item_type": "<one of: coin | banknote | bullion | medal | token | collectible | ancient_coin | unknown>",
+  "country": "<best-guess issuing country in English, or 'Unknown'>",
+  "era": "<year, decade, or period, or 'Unknown'>",
+  "denomination": "<denomination text or null>",
+  "material": "<dominant metal or material, or null>",
+  "design_keywords": ["<2–4 keyword phrases for catalogue search>"],
+  "confidence": <float 0.0–1.0>,
+  "confidence_notes": "<brief reason if confidence < 0.90, otherwise null>"
+}}
+
+Rules:
+- Start 'identification' with the phrase 'This appears to be'.
+- Confidence should reflect how specific and certain the provided hints are.
+- Text-only identifications should generally score ≤ 0.75 unless highly specific.
+"""
+
+
+def _numista_search(gemini: dict) -> list:
+    """
+    Query Numista API v3 text search based on Gemini extraction.
+    Returns up to 3 catalogue matches (list of dicts), or [] on error.
+    """
+    try:
+        # Build a search string from the most informative Gemini fields
+        parts = []
+        if gemini.get("denomination"):
+            parts.append(gemini["denomination"])
+        if gemini.get("era") and gemini["era"] != "Unknown":
+            parts.append(gemini["era"].split(" ")[0])  # first token (e.g. "1921")
+        if gemini.get("design_keywords"):
+            parts.extend(gemini["design_keywords"][:2])
+
+        query = " ".join(parts).strip() or gemini.get("country", "")
+
+        params = {
+            "q":     query[:200],   # API max query length
+            "count": 5,
+            "lang":  "en",
+        }
+        if gemini.get("country") and gemini["country"] != "Unknown":
+            # Numista uses lowercase ISO-like issuer codes; sending the country
+            # name as a supplemental hint (it falls back to text search).
+            params["issuer"] = gemini["country"]
+
+        resp = __import__("requests").get(
+            NUMISTA_SEARCH_URL,
+            headers={"Numista-API-Key": NUMISTA_API_KEY, "Accept": "application/json"},
+            params=params,
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            print(f"[world_item] Numista API {resp.status_code}: {resp.text[:200]}")
+            return []
+
+        types = resp.json().get("types", [])[:3]
+        results = []
+        for t in types:
+            results.append({
+                "numista_id":      t.get("id"),
+                "title":           t.get("title"),
+                "issuer":          t.get("issuer", {}).get("name") if isinstance(t.get("issuer"), dict) else t.get("issuer"),
+                "min_year":        t.get("min_year"),
+                "max_year":        t.get("max_year"),
+                "composition":     t.get("composition", {}).get("text") if isinstance(t.get("composition"), dict) else t.get("composition"),
+                "image_obverse":   t.get("obverse_thumbnail") or t.get("obverse_picture"),
+                "catalogue_url":   f"https://en.numista.com/catalogue/pieces/{t.get('id')}",
+            })
+        return results
+
+    except Exception as e:
+        print(f"[world_item] Numista search error: {e}")
+        return []
+
+
+@app.post("/api/identify-world-item")
+async def identify_world_item(
+    image:             Optional[UploadFile] = File(None),
+    country_hint:      str = Form(''),
+    year_hint:         str = Form(''),
+    item_type_hint:    str = Form('unknown'),
+    notes_hint:        str = Form(''),
+):
+    """
+    Identify a foreign coin, world currency, bullion, ancient coin, or specialty
+    collectible using Gemini Vision + Numista catalogue lookup.
+
+    Pipeline:
+      1. If an image is provided  → call Gemini Vision with world-item prompt.
+      2. If no image              → call Gemini text model with hint-only prompt.
+      3. If Gemini confidence ≥ 0.90 → search Numista catalogue for matches.
+      4. Return combined result.
+
+    Response shape:
+    {
+      "gemini": {
+        "identification": "This appears to be…",
+        "item_type": "coin",
+        "country": "Germany",
+        "era": "1921",
+        "denomination": "3 Mark",
+        "material": "Silver",
+        "design_keywords": ["Weimar eagle", "oak wreath"],
+        "confidence": 0.94,
+        "confidence_notes": null
+      },
+      "numista_matches": [ { numista_id, title, issuer, min_year, max_year, composition, image_obverse, catalogue_url }, … ],
+      "show_disclaimer": false,
+      "disclaimer_reason": null
+    }
+    """
+    # ── Stage 1: Gemini identification ────────────────────────────────────────
+    gemini_result: dict = {}
+    try:
+        if image is not None:
+            # Image path — use Gemini Vision
+            img_bytes = await image.read()
+            img_b64   = base64.b64encode(img_bytes).decode()
+
+            # Determine MIME type from filename / content sniff
+            fname = (image.filename or "").lower()
+            if fname.endswith(".png"):
+                mime = "image/png"
+            elif fname.endswith(".gif"):
+                mime = "image/gif"
+            elif fname.endswith(".webp"):
+                mime = "image/webp"
+            else:
+                mime = "image/jpeg"
+
+            response = genai_client.models.generate_content(
+                model=PRIMARY_MODEL,
+                contents=[
+                    genai_types.Part.from_bytes(data=img_bytes, mime_type=mime),
+                    genai_types.Part.from_text(_WORLD_ITEM_PROMPT),
+                ],
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=800,
+                ),
+            )
+        else:
+            # Text-only path — hints only
+            filled_prompt = _WORLD_TEXT_ONLY_PROMPT.format(
+                country=country_hint   or "Unknown",
+                year=year_hint         or "Unknown",
+                item_type=item_type_hint or "unknown",
+                notes=notes_hint       or "None provided",
+            )
+            response = genai_client.models.generate_content(
+                model=PRIMARY_MODEL,
+                contents=[genai_types.Part.from_text(filled_prompt)],
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=600,
+                ),
+            )
+
+        raw_text = response.text.strip()
+        # Strip markdown code fences if model wraps in ```json … ```
+        if raw_text.startswith("```"):
+            raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
+            raw_text = re.sub(r"\s*```$",          "", raw_text, flags=re.MULTILINE)
+
+        gemini_result = json.loads(raw_text)
+
+        # Normalise confidence to float in [0, 1]
+        conf = gemini_result.get("confidence", 0.5)
+        if isinstance(conf, str):
+            conf = float(conf.replace("%", "")) / (100 if "%" in conf else 1)
+        gemini_result["confidence"] = max(0.0, min(1.0, float(conf)))
+
+        # Always ensure identification starts correctly
+        ident = gemini_result.get("identification", "")
+        if ident and not ident.startswith("This appears to be"):
+            gemini_result["identification"] = "This appears to be " + ident
+
+    except json.JSONDecodeError as e:
+        # Gemini returned non-JSON — wrap the raw text gracefully
+        print(f"[world_item] Gemini JSON parse error: {e}. Raw: {raw_text[:300]}")
+        gemini_result = {
+            "identification":   "This appears to be an unidentified numismatic item.",
+            "item_type":        "unknown",
+            "country":          "Unknown",
+            "era":              "Unknown",
+            "denomination":     None,
+            "material":         None,
+            "design_keywords":  [],
+            "confidence":       0.30,
+            "confidence_notes": "AI returned an unstructured response. Please fill in details manually.",
+        }
+    except Exception as e:
+        print(f"[world_item] Gemini call error: {e}")
+        raise HTTPException(status_code=500, detail=f"AI identification failed: {str(e)}")
+
+    # ── Stage 2: Numista lookup (only when confidence is high enough) ─────────
+    numista_matches = []
+    if gemini_result.get("confidence", 0) >= _WORLD_CONFIDENCE_THRESHOLD:
+        numista_matches = _numista_search(gemini_result)
+
+    # ── Stage 3: Build response ───────────────────────────────────────────────
+    show_disclaimer   = gemini_result.get("confidence", 0) < _WORLD_CONFIDENCE_THRESHOLD
+    disclaimer_reason = gemini_result.get("confidence_notes") if show_disclaimer else None
+
+    return {
+        "gemini":          gemini_result,
+        "numista_matches": numista_matches,
+        "show_disclaimer": show_disclaimer,
+        "disclaimer_reason": disclaimer_reason,
+    }
+
+
+# ─── END WORLD ITEM IDENTIFICATION ───────────────────────────────────────────
+
 @app.post("/api/import_spreadsheet")
 async def import_spreadsheet(
     user_email:        str = Form(...),

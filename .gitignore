@@ -132,3 +132,6 @@ error_screenshot.png
 # Refresh / temp marker files
 # ============================================================
 refresh
+
+# Streamlit secrets (never commit real keys)
+.streamlit/secrets.toml

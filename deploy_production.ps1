@@ -65,6 +65,11 @@ Write-Host ""
 
 Push-Location $MobileDir
 
+# Clear stale build output to prevent PathExistsException on repeated deploys
+Write-Host "  Clearing stale build output..." -ForegroundColor DarkGray
+Remove-Item -Recurse -Force "build\web" -ErrorAction SilentlyContinue
+Write-Host "  Build output cleared." -ForegroundColor DarkGray
+
 # Run flutter analyze first
 Write-Host "  Running flutter analyze..." -ForegroundColor DarkGray
 $analyzeResult = & flutter analyze 2>&1
