@@ -26,6 +26,11 @@ from datetime import datetime
 from pathlib import Path
 from google.cloud import storage, firestore
 import google.auth
+
+# Force UTF-8 output so emoji in print() work on Windows cp1252 consoles
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 try:
     import vertexai
     from vertexai.generative_models import GenerativeModel, Part

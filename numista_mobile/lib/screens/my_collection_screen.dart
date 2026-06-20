@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../services/photo_sharing_service.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../constants.dart';
@@ -2786,6 +2787,34 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           content: Text('${side[0].toUpperCase()}${side.substring(1)} photo saved!'),
           backgroundColor: _green,
         ));
+        // ── Photo-sharing consent ─────────────────────────────────────────────
+        // On the user's very first upload: show a one-time opt-out popup.
+        // On subsequent uploads: silently honour their stored preference.
+        final firstUpload = await PhotoSharingService.shouldShowConsent();
+        bool contributionOptedIn;
+        if (firstUpload && mounted) {
+          contributionOptedIn = await _showPhotoSharingConsent();
+          await PhotoSharingService.saveConsent(optedIn: contributionOptedIn);
+        } else {
+          contributionOptedIn = await PhotoSharingService.isOptedIn();
+        }
+        // Tag this coin so the backend can queue it for library review
+        if (contributionOptedIn && _selectedCoinId != null) {
+          try {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userEmail)
+                .collection('coins')
+                .doc(_selectedCoinId!)
+                .update({
+              'contribute_to_library': true,
+              'contribute_side':       side,
+              'contribute_queued_at':  DateTime.now().toIso8601String(),
+            });
+          } catch (_) {
+            // Non-fatal — library contribution tag is best-effort
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -2797,6 +2826,106 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } finally {
       setProgress(null);
     }
+  }
+
+  /// One-time consent dialog for contributing personal coin photos to the
+  /// Numista.AI shared reference library.  Returns true = opt in, false = opt out.
+  Future<bool> _showPhotoSharingConsent() async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF63366).withAlpha(25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.volunteer_activism,
+                      color: Color(0xFFF63366), size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Help Other Collectors',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                const Text(
+                  'Your photo looks great! 🎉',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Would you like to contribute it to the Numista.AI reference '
+                  'library? Other collectors will see it when they view the same '
+                  'coin — no personal info is shared.',
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: const Color(0xFF4CAF50).withAlpha(100)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline,
+                          color: Color(0xFF388E3C), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You\'ll never be asked this again. '  
+                          'Change anytime in Settings → Privacy.',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green.shade800,
+                              height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actionsPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('No thanks',
+                    style: TextStyle(color: Colors.grey, fontSize: 13)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('Yes, Contribute!'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF63366),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   /// Full-screen image lightbox with tap-anywhere-to-close.

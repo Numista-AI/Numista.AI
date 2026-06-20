@@ -8,6 +8,7 @@ import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/photo_sharing_service.dart';
 
 import '../utils/file_saver_stub.dart'
     if (dart.library.html) '../utils/file_saver_web.dart'
@@ -40,10 +41,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   static const _apiUrl = kApiBaseUrl;
 
+  bool? _photoSharingOptedIn;
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadPhotoSharingPref();
     // Pre-fetch the coin count for the Danger Zone card.
     _fetchCoinCount(AuthService.userEmail);
   }
@@ -82,6 +86,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  void _loadPhotoSharingPref() async {
+    // Try Firestore first (cross-device), fall back to SharedPreferences
+    await PhotoSharingService.syncFromFirestore();
+    final opted = await PhotoSharingService.isOptedIn();
+    if (mounted) setState(() => _photoSharingOptedIn = opted);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
@@ -102,6 +113,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           // ── Morgan Settings Section ───────────────────────────────────
           _buildMorganCard(context),
+          const SizedBox(height: 24),
+          const Divider(color: Color(0xFFE2E6E9)),
+          const SizedBox(height: 24),
+
+          // ── Privacy & Photo Sharing Card ───────────────────────────
+          _buildPrivacyCard(context),
           const SizedBox(height: 24),
           const Divider(color: Color(0xFFE2E6E9)),
           const SizedBox(height: 24),
@@ -506,7 +523,160 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildPrivacyCard(BuildContext context) {
+    final opted = _photoSharingOptedIn;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF63366).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.volunteer_activism,
+                      color: Color(0xFFF63366), size: 22),
+                ),
+                const SizedBox(width: 14),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Privacy & Photo Sharing',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF31333F)),
+                    ),
+                    Text(
+                      'Control how your coin photos are used',
+                      style: TextStyle(
+                          fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Toggle row
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E6E9)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Contribute photos to reference library',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Color(0xFF31333F)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          opted == null
+                              ? 'Loading preference…'
+                              : opted
+                                  ? 'Your personal photos may be used as reference '
+                                    'images for other collectors. No personal info is shared.'
+                                  : 'Your personal photos are kept private and '
+                                    'will not be shared with other users.',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  opted == null
+                      ? const SizedBox(
+                          width: 40,
+                          height: 24,
+                          child: Center(
+                              child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFFF63366)))))
+                      : Switch(
+                          value: opted,
+                          activeThumbColor: const Color(0xFFF63366),
+                          onChanged: (val) async {
+                            setState(() => _photoSharingOptedIn = val);
+                            final messenger = ScaffoldMessenger.of(context);
+                            await PhotoSharingService.saveConsent(
+                                optedIn: val);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(val
+                                      ? 'Photo sharing enabled. Thank you! 🎉'
+                                      : 'Photo sharing disabled. Your photos stay private.'),
+                                  backgroundColor: val
+                                      ? const Color(0xFF4CAF50)
+                                      : const Color(0xFF64748B),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Fine print
+            Row(
+              children: [
+                const Icon(Icons.lock_outline,
+                    size: 13, color: Color(0xFF94A3B8)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Only photos you upload are considered. '
+                    'Images are reviewed before being added to the library.',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDangerZoneCard(BuildContext context) {
+
     final countText = _clearCoinCount != null
         ? '$_clearCoinCount coin${_clearCoinCount == 1 ? '' : 's'}'
         : 'loading...';

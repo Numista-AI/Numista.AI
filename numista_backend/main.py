@@ -37,6 +37,8 @@ app.add_middleware(
     allow_origins=[
         "https://numista.ai",
         "https://www.numista.ai",
+        "https://numista-vault.web.app",      # Firebase Hosting (production)
+        "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "http://localhost:5000",

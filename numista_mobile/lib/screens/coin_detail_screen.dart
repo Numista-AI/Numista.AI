@@ -25,6 +25,7 @@ import '../models/coin_model.dart';
 import '../services/auth_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
+import '../services/coin_image_service.dart';
 
 // ─── Design tokens (match app-wide palette) ────────────────────────────────────
 const _kBg       = Color(0xFFF0F2F6);
@@ -746,9 +747,59 @@ class _HeroHeader extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // COIN IMAGE PAIR
 // ─────────────────────────────────────────────────────────────────────────────
-class _CoinImagePair extends StatelessWidget {
+// Tries personal photo first (image_url_obverse / image_url_reverse stored on
+// the Firestore coin doc). If empty, falls back to CoinImageService which
+// looks up a reference image from the coin_image_index collection.
+class _CoinImagePair extends StatefulWidget {
   final CoinModel coin;
   const _CoinImagePair({required this.coin});
+
+  @override
+  State<_CoinImagePair> createState() => _CoinImagePairState();
+}
+
+class _CoinImagePairState extends State<_CoinImagePair> {
+  String _obvUrl = '';
+  String _revUrl = '';
+  String? _attribution;
+  bool _loadingRef = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _obvUrl = widget.coin.imageUrlObverse;
+    _revUrl = widget.coin.imageUrlReverse;
+    // Fetch reference images for any side that doesn't have a personal photo
+    if (_obvUrl.isEmpty || _revUrl.isEmpty) {
+      _fetchReferenceImages();
+    }
+  }
+
+  Future<void> _fetchReferenceImages() async {
+    if (_loadingRef) return;
+    setState(() => _loadingRef = true);
+    try {
+      final result = await CoinImageService.fetchReferenceImages(
+        year:         widget.coin.year,
+        mint:         widget.coin.mintMark.isEmpty ? null : widget.coin.mintMark,
+        denomination: widget.coin.denomination.isEmpty ? null : widget.coin.denomination,
+        series:       widget.coin.programSeries.isEmpty ? null : widget.coin.programSeries,
+        subject:      widget.coin.themeSubject.isEmpty ? null : widget.coin.themeSubject,
+      );
+      if (mounted && result.hasAny) {
+        setState(() {
+          // Only fill in sides that don't already have a personal photo
+          if (_obvUrl.isEmpty) _obvUrl = result.obverseUrl ?? '';
+          if (_revUrl.isEmpty) _revUrl = result.reverseUrl ?? '';
+          _attribution = result.attribution;
+        });
+      }
+    } catch (_) {
+      // Silent fail — image is non-critical
+    } finally {
+      if (mounted) setState(() => _loadingRef = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -756,15 +807,19 @@ class _CoinImagePair extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _CoinImageTile(
-          url: coin.imageUrlObverse,
+          url: _obvUrl,
           label: 'OBV',
-          heroTag: 'coin_obv_${coin.id}',
+          heroTag: 'coin_obv_${widget.coin.id}',
+          isLoading: _loadingRef,
+          attribution: _attribution,
         ),
         const SizedBox(width: 8),
         _CoinImageTile(
-          url: coin.imageUrlReverse,
+          url: _revUrl,
           label: 'REV',
-          heroTag: 'coin_rev_${coin.id}',
+          heroTag: 'coin_rev_${widget.coin.id}',
+          isLoading: _loadingRef,
+          attribution: _attribution,
         ),
       ],
     );
@@ -775,7 +830,15 @@ class _CoinImageTile extends StatelessWidget {
   final String url;
   final String label;
   final String heroTag;
-  const _CoinImageTile({required this.url, required this.label, required this.heroTag});
+  final bool isLoading;
+  final String? attribution;
+  const _CoinImageTile({
+    required this.url,
+    required this.label,
+    required this.heroTag,
+    this.isLoading = false,
+    this.attribution,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -794,15 +857,17 @@ class _CoinImageTile extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(9),
-            child: url.isNotEmpty
-                ? Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (ctx, err, st) => _placeholder(),
-                    loadingBuilder: (ctx, child, progress) =>
-                      progress == null ? child : _skeleton(),
-                  )
-                : _placeholder(),
+            child: isLoading && url.isEmpty
+                ? _skeleton()   // Show shimmer while reference lookup is in flight
+                : url.isNotEmpty
+                    ? Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, st) => _placeholder(),
+                        loadingBuilder: (ctx, child, progress) =>
+                          progress == null ? child : _skeleton(),
+                      )
+                    : _placeholder(),
           ),
         ),
       ),
@@ -1188,10 +1253,12 @@ class _ProvenanceTab extends StatelessWidget {
     final hasNotes = coin.personalNotes.isNotEmpty;
     final hasRef = coin.personalRef.isNotEmpty;
     final hasDesc = coin.originalDescription.isNotEmpty;
+    // Show Record Source whenever source_file is non-empty (not just Binder Scan)
     final hasScanOrigin  = coin.source == 'Binder Scan' && coin.sourceFile.isNotEmpty;
+    final hasImportSource = !hasScanOrigin && coin.sourceFile.isNotEmpty;
     final hasPaperTrail  = coin.receiptId.isNotEmpty;
     final hasAny = hasAcquisition || hasCert || hasStorage || hasNotes ||
-        hasRef || hasDesc || hasScanOrigin || hasPaperTrail;
+        hasRef || hasDesc || hasScanOrigin || hasImportSource || hasPaperTrail;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1358,6 +1425,51 @@ class _ProvenanceTab extends StatelessWidget {
                         : coin.binderDocId,
                   ),
               ]),
+            ),
+          ],
+
+          // ── Import Source (PDF Invoice / Spreadsheet / Crosscheck) ───────────
+          if (hasImportSource) ...[
+            const SizedBox(height: 16),
+            _SectionHeader('Record Source'),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withAlpha(12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF6366F1).withAlpha(50)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProvenanceRow(
+                    icon: Icons.insert_drive_file_outlined,
+                    label: 'Source File',
+                    // Show only the filename portion of the GCS/path string
+                    value: () {
+                      final raw = coin.sourceFile;
+                      final slash = raw.lastIndexOf('/');
+                      return slash >= 0 ? raw.substring(slash + 1) : raw;
+                    }(),
+                  ),
+                  if (coin.source.isNotEmpty)
+                    _ProvenanceRow(
+                      icon: Icons.input_outlined,
+                      label: 'Import Type',
+                      value: coin.source,
+                    ),
+                  if (coin.importBatch.isNotEmpty || coin.importSessionId.isNotEmpty)
+                    _ProvenanceRow(
+                      icon: Icons.tag_outlined,
+                      label: 'Import Batch',
+                      value: coin.importBatch.isNotEmpty
+                          ? coin.importBatch
+                          : coin.importSessionId,
+                    ),
+                ],
+              ),
             ),
           ],
 

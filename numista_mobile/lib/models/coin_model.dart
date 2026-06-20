@@ -42,6 +42,7 @@ class CoinModel {
   final String receiptId;       // links to receipts/{user}/{receiptId} Firestore doc
   final String receiptGcsPath;  // GCS path of original invoice PDF
   final String importSessionId; // import session that created this coin record
+  final String importBatch;     // import_batch tag (e.g. 'lincoln_missing_2026-06-20')
 
   CoinModel({
     required this.id,
@@ -79,6 +80,7 @@ class CoinModel {
     this.receiptId = '',
     this.receiptGcsPath = '',
     this.importSessionId = '',
+    this.importBatch = '',
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -141,6 +143,7 @@ class CoinModel {
       receiptId: data['receipt_id']?.toString() ?? '',
       receiptGcsPath: (data['paper_trail'] as Map<String, dynamic>?)?['gcs_path']?.toString() ?? '',
       importSessionId: data['import_session_id']?.toString() ?? '',
+      importBatch: data['import_batch']?.toString() ?? '',
     );
   }
 

@@ -189,7 +189,7 @@
     .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
     .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
 
-    #file-input, #folder-input { display: none; }
+    #file-input { display: none; }
     .file-count-badge {
       display: none; margin-top: 16px;
       background: var(--surface2); border: 1px solid var(--green);
@@ -336,8 +336,7 @@
           &#128193; Browse Files or Folder
         </button>
       </div>
-      <input type="file" id="folder-input" webkitdirectory multiple style="display:none" />
-      <input type="file" id="file-input" multiple
+            <input type="file" id="file-input" multiple
              accept=".pdf,.xlsx,.xls,.csv,.ods,.jpg,.jpeg,.png,.webp,.heic,.bmp,.tiff" />
       <div class="file-count-badge" id="file-count-badge"></div>
     </div>
@@ -490,8 +489,16 @@
 <div class="toast" id="clear-toast"></div>
 
 <script>
-const API_BASE   = 'https://backend-studio-9101802118-8c9a8.a.run.app';
-const USER_EMAIL = localStorage.getItem('numista_user_email') || '';
+const API_BASE = 'https://numista-backend-568985927038.us-central1.run.app';
+const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
+function getUserEmail() { return _urlEmail; }
+
+if (!_urlEmail) {
+  alert('Please open this page from the Numista.AI app.');
+  window.location.href = '/';
+}
+
+const USER_EMAIL = _urlEmail; // alias for legacy code in this file
 
 let selectedFiles  = [];
 let sessionId      = null;
@@ -515,9 +522,8 @@ const dropZone = document.getElementById('drop-zone');
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }));
 dropZone.addEventListener('drop', e => { e.preventDefault(); handleFileList(e.dataTransfer.files); });
 dropZone.addEventListener('click', e => {
-  if (!e.target.closest('button')) document.getElementById('folder-input').click();
+  if (!e.target.closest('button')) document.getElementById('file-input').click();
 });
-document.getElementById('folder-input').addEventListener('change', e => handleFileList(e.target.files));
 document.getElementById('file-input').addEventListener('change',   e => handleFileList(e.target.files));
 
 function handleFileList(fileList) {
@@ -781,7 +787,7 @@ async function viewReceipt(receiptId, e) {
 function showPaperTrail() {
   document.getElementById('paper-trail-panel').scrollIntoView({ behavior:'smooth' });
 }
-function goToReviewQueue() { window.location.href = '/review_queue.html'; }
+function goToReviewQueue() { window.location.href = '/?email=' + encodeURIComponent(getUserEmail()); }
 function resetImport() {
   selectedFiles = []; sessionId = null; clearInterval(pollInterval);
   ['upload-card','progress-panel','summary-panel','paper-trail-panel'].forEach(id => {
@@ -793,7 +799,6 @@ function resetImport() {
   document.getElementById('mode-row').classList.remove('show');
   dropZone.classList.remove('has-files');
   document.getElementById('file-input').value = '';
-  document.getElementById('folder-input').value = '';
 }
 
 function formatBytes(b) {
