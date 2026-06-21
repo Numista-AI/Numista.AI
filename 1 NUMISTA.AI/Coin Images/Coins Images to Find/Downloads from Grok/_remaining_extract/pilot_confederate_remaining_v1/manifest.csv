@@ -1,0 +1,4 @@
+doc_id,description,denomination,year,obverse_file,reverse_file,descriptive_name,status
+c1b68828-53c5-4b9d-ab69-3eb3b636f69e,$10 Confederate Note 1864,$10,1864,c1b68828-53c5-4b9d-ab69-3eb3b636f69e_obverse.jpg,c1b68828-53c5-4b9d-ab69-3eb3b636f69e_reverse.jpg,1864_10_Dollar_Confederate,"Generated - Text improving, some minor issues remain"
+3ec35374-d5ed-4f0a-b123-d151089c441d,$20 Confederate Note 1864,$20,1864,3ec35374-d5ed-4f0a-b123-d151089c441d_obverse.jpg,3ec35374-d5ed-4f0a-b123-d151089c441d_reverse.jpg,1864_20_Dollar_Confederate,Generated - Text improving
+d27ddc4f-063d-4adf-bfcd-9392e40239fa,$5 Confederate Note 1864 crisp unused,$5,1864,d27ddc4f-063d-4adf-bfcd-9392e40239fa_obverse.jpg,d27ddc4f-063d-4adf-bfcd-9392e40239fa_reverse.jpg,1864_5_Dollar_Confederate_Crisp,Generated

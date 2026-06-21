@@ -1,0 +1,247 @@
+﻿======================================================================
+CERT IMAGE SCRAPER v2 – AJ's Graded Currency (curl_cffi)
+======================================================================
+
+Testing Heritage Auctions access ...
+    ⚠ HA search HTTP 403
+  ✗ HA search still blocked — switching to fallback Numismatic Guaranty search
+
+Fetching graded docs ...
+  → 32 graded docs (PMG:13 / PCGS:19)
+
+Processing 32 docs ...
+----------------------------------------------------------------------
+
+[ 1/32] Ref#291  PMG  $5 Legal TenderNote large size PMG
+  Query: '1880 $5 Legal TenderNote AU 58'
+    ⚠ HA search HTTP 403
+  Fallback: '1880 $5 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 2/32] Ref#354  PCGS  $1 Silver Certificate large size 2 consecutive Serial #s (FR237) 
+  Query: '1923 $1 Silver Certificate 2 #s (FR237) AU-58'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 3/32] Ref#231  PMG  1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ
+  Query: '1935A 1 silver certificate Hawaii (FR2300) (SC Block) CU64 CU64'
+    ⚠ HA search HTTP 403
+  Fallback: '1935A PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 4/32] Ref#364  PMG  $1000 3rd Bank of the United States PMG New York Tear Repair Prev
+  Query: '$1000 3rd Bank of the United States New York Tear Repair'
+    ⚠ HA search HTTP 403
+  Fallback: '$1000 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 5/32] Ref#384  PCGS  $1 silver certificate Large size 2 consecutive serial # (FR237)  
+  Query: '1923 $1 silver certificate 2 # (FR237) unc 53'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 6/32] Ref#235  PCGS  $1 Federal Reserve Bamk Note large size PCGS 65PPQ
+  Query: '1918 $1 Federal Reserve Bamk Note 65PPQ unc 65'
+    ⚠ HA search HTTP 403
+  Fallback: '1918 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 7/32] Ref#203  PMG  $500 confederate note PMG
+  Query: '1864 $500 confederate note'
+    ⚠ HA search HTTP 403
+  Fallback: '1864 $500 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 8/32] Ref#357  PMG  50C Fractional Currency PMG EPQ CHUNC 63
+  Query: '1869-75 50C Fractional Currency CHUNC 63 UNC 63'
+    ⚠ HA search HTTP 403
+  Fallback: '1869-75 50 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[ 9/32] Ref#366  PMG  10 Silver Certificate Yellow Seal BA Block PMG EPQ65
+  Query: '1934A 10 Silver Certificate Yellow Seal BA Block EPQ65 Unc 65'
+    ⚠ HA search HTTP 403
+  Fallback: '1934A PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[10/32] Ref#212  PCGS  $1 Silver Certificate large size PCGS  PPQ66 2 consecutive serial
+  Query: '1923 $1 Silver Certificate PPQ66 2 #s (FR237) unc 66'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[11/32] Ref#290  PCGS  $1 Legal Tender Note large size PCGS
+  Query: '1917 $1 Legal Tender Note unc 50'
+    ⚠ HA search HTTP 403
+  Fallback: '1917 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[12/32] Ref#270  PCGS  $1 Silver Certificate Large size PCGS PPQ63 2 consecutive #s (FR2
+  Query: '1923 $1 Silver Certificate PPQ63 2 #s (FR238) unc 63'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[13/32] Ref#280  PMG  Federal Reserve Note Hawaii LB Block PMG
+  Query: '1934A Federal Reserve Note Hawaii LB Block'
+    ⚠ HA search HTTP 403
+  Fallback: '1934A PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[14/32] Ref#348  PMG  $20 Federal Reserve Note small size DD Block Inverted Back error 
+  Query: '1985 $20 Federal Reserve Note small DD Block Inverted Back error  Unc-64'
+    ⚠ HA search HTTP 403
+  Fallback: '1985 $20 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[15/32] Ref#324  PMG  $10 Falls Village Iton Bank (CT120G14C) PMG EDQ63
+  Query: "1850's-1860's $10 Falls Village Iton Bank (CT120G14C) EDQ63"
+    ⚠ HA search HTTP 403
+  Fallback: "1850's-1860's $10 PMG"
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[16/32] Ref#326  PCGS  $! Silver certificate large size PCGS PPQ64 2 consecutive serial 
+  Query: '1923 $! Silver certificate PPQ64 2 #s (FR238) unc 64'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[17/32] Ref#250  PMG  $1 Federal Reserve Bank Note Large size PMG EPQ 65
+  Query: '1918 $1 Federal Reserve Bank Note 65'
+    ⚠ HA search HTTP 403
+  Fallback: '1918 $1 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[18/32] Ref#126  PCGS  $1 Silver Certificate Large Size PCGS
+  Query: '1923 $1 Silver Certificate'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[19/32] Ref#320  PMG  $1 Bamk of Windsor Vermont PMG
+  Query: "1830's $1 Bamk of Windsor Vermont unc-66"
+    ⚠ HA search HTTP 403
+  Fallback: "1830's $1 PMG"
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[20/32] Ref#202  PCGS  $5 legal tender note Large size PCGS choice about new PPQ58
+  Query: '1907 $5 legal tender note choice about new PPQ58 AU 58'
+    ⚠ HA search HTTP 403
+  Fallback: '1907 $5 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[21/32] Ref#199  PCGS  % cents fractional currency PCGS
+  Query: '1864-69 % cents fractional currency unc 60'
+    ⚠ HA search HTTP 403
+  Fallback: '1864-69 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[22/32] Ref#234  PCGS  $1 Legal Tender Note Large sixe PCGS
+  Query: '1917 $1 Legal Tender Note sixe Au53'
+    ⚠ HA search HTTP 403
+  Fallback: '1917 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[23/32] Ref#374  PCGS  $500 3rd Bank of the United States Philadelphia PA Haxby 3 PCGS
+  Query: '$500 3rd Bank of the United States Philadelphia PA Haxby 3'
+    ⚠ HA search HTTP 403
+  Fallback: '$500 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[24/32] Ref#197  PCGS  $1 Federal Reserve Bank Note large size PCGS PPQ35
+  Query: '1918 $1 Federal Reserve Bank Note PPQ35'
+    ⚠ HA search HTTP 403
+  Fallback: '1918 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[25/32] Ref#405  PCGS  $1 silver certificate Large size PCGS PPQ64 cpnsecutive serial nu
+  Query: '1923 $1 silver certificate PPQ64 cpnsecutive UNC 64'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[26/32] Ref#229  PMG  $10 National Bank Note Type 1 Waynesboro PA charter #11866 PMG  E
+  Query: '1929 $10 National Bank Note Type 1 Waynesboro PA charter #11866 6 unc 64'
+    ⚠ HA search HTTP 403
+  Fallback: '1929 $10 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[27/32] Ref#267  PMG  Federal Reserve Bank Note Large size PMG
+  Query: '1918 Federal Reserve Bank Note'
+    ⚠ HA search HTTP 403
+  Fallback: '1918 PMG'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[28/32] Ref#227  PCGS  $1 Silver Certificate Large Size PCGS PPQ64
+  Query: '1923 $1 Silver Certificate PPQ64 unc 64'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[29/32] Ref#226  PCGS  $5 Silver Certificate Yellow Seal PCGS PPQ
+  Query: '1934A $5 Silver Certificate Yellow Seal unc 65'
+    ⚠ HA search HTTP 403
+  Fallback: '1934A $5 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[30/32] Ref#325  PCGS  $! Silver certificate large size PCGS PPQ63 2 consecutive serial 
+  Query: '1923 $! Silver certificate PPQ63 2 #s (FR237) unc 63'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[31/32] Ref#233  PCGS  1 silver certificate Note Yellow Seal PCGS PPQ
+  Query: '1935A 1 silver certificate Note Yellow Seal unc 64'
+    ⚠ HA search HTTP 403
+  Fallback: '1935A PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+[32/32] Ref#339  PCGS  $1 Silver Certificate Large Size PCGS PPQ65 2 consecutive Serial 
+  Query: '1923 $1 Silver Certificate PPQ65 2 #s (FR 238) Unc-65'
+    ⚠ HA search HTTP 403
+  Fallback: '1923 $1 PCGS'
+    ⚠ HA search HTTP 403
+  ✗ No results
+
+Writing report ...
+
+======================================================================
+DONE
+  Total graded:    32
+  Images found:    0
+  No image:        32
+  Report:          C:\Users\ericd\.gemini\antigravity\brain\26eebf0f-3c8f-47c1-940b-b41df002779f\cert_scraper_results.md
+======================================================================

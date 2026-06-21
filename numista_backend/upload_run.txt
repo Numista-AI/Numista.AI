@@ -1,0 +1,205 @@
+﻿======================================================================
+UPLOAD & UPDATE – 32 docs
+======================================================================
+
+[ 1/32] Ref#291  PMG  $5 Legal TenderNote large size PMG
+  Img: https://dyn1.heritagestatic.com/ha?p=3-6-7-5-3675771&w=900&h=600&it=product
+  ✓ Downloaded 128,958 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/0449a33d-a22e-4018-8a79-5ad1b8a7e128/obverse.jpg
+  ✓ Firestore updated
+
+[ 2/32] Ref#354  PCGS  $1 Silver Certificate large size 2 consecutive Serial #
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/076219f6-5198-4628-864d-dc17b932b719/obverse.jpg
+  ✓ Firestore updated
+
+[ 3/32] Ref#231  PMG  1 silver certificate Hawaii (FR2300) (SC Block) PMG CU6
+  Img: https://dyn1.heritagestatic.com/ha?p=4-6-9-2-4692295&w=900&h=600&it=product
+  ✓ Downloaded 93,176 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/087b9066-7de9-43ee-b106-d01a58314f20/obverse.jpg
+  ✓ Firestore updated
+
+[ 4/32] Ref#364  PMG  $1000 3rd Bank of the United States PMG New York Tear R
+  Img: https://dyn1.heritagestatic.com/ha?p=2-2-5-5-4-22554751&w=900&h=600&it=product
+  ✓ Downloaded 141,249 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/0f2da1a0-1152-45bc-9eba-cae06f0f4a88/obverse.jpg
+  ✓ Firestore updated
+
+[ 5/32] Ref#203  PMG  $500 confederate note PMG
+  Img: https://dyn1.heritagestatic.com/ha?p=2-0-3-6-4-20364794&w=900&h=600&it=product
+  ✓ Downloaded 99,827 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/2ea45a00-908d-477b-8eeb-20a127ae6db2/obverse.jpg
+  ✓ Firestore updated
+
+[ 6/32] Ref#357  PMG  50C Fractional Currency PMG EPQ CHUNC 63
+  Img: https://dyn1.heritagestatic.com/ha?p=2-3-1-3-2313682&w=900&h=600&it=product
+  ✓ Downloaded 77,476 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/329298f6-ecd7-46d7-9bae-026b3b559451/obverse.jpg
+  ✓ Firestore updated
+
+[ 7/32] Ref#366  PMG  10 Silver Certificate Yellow Seal BA Block PMG EPQ65
+  Img: https://dyn1.heritagestatic.com/ha?p=3-2-2-4-3-32243544&w=900&h=600&it=product
+  ✓ Downloaded 130,971 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/3d3f7001-af69-47f2-b347-6c4137abda1b/obverse.jpg
+  ✓ Firestore updated
+
+[ 8/32] Ref#280  PMG  Federal Reserve Note Hawaii LB Block PMG
+  Img: https://dyn1.heritagestatic.com/ha?p=2-1-4-8-5-21485229&w=900&h=600&it=product
+  ✓ Downloaded 120,035 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/5f4694e5-8396-4fa9-a5fe-88cad22bcf9c/obverse.jpg
+  ✓ Firestore updated
+
+[ 9/32] Ref#348  PMG  $20 Federal Reserve Note small size DD Block Inverted B
+  Img: https://dyn1.heritagestatic.com/ha?p=2-2-6-2-3-22623037&w=900&h=600&it=product
+  ✓ Downloaded 109,129 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/841d190b-01de-43b8-8f5d-b1d496eebe7d/obverse.jpg
+  ✓ Firestore updated
+
+[10/32] Ref#324  PMG  $10 Falls Village Iton Bank (CT120G14C) PMG EDQ63
+  Img: https://dyn1.heritagestatic.com/ha?p=3-1-4-7-1-31471267&w=900&h=600&it=product
+  ✓ Downloaded 167,534 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/8a457305-0b05-4766-be46-f8aa48e8cc41/obverse.jpg
+  ✓ Firestore updated
+
+[11/32] Ref#250  PMG  $1 Federal Reserve Bank Note Large size PMG EPQ 65
+  Img: https://dyn1.heritagestatic.com/ha?p=3-0-8-2-1-30821437&w=900&h=600&it=product
+  ✓ Downloaded 104,821 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/ba8b6759-f931-46d6-acc8-f979d167b0e4/obverse.jpg
+  ✓ Firestore updated
+
+[12/32] Ref#320  PMG  $1 Bamk of Windsor Vermont PMG
+  Img: https://dyn1.heritagestatic.com/ha?p=4-4-6-7-4467517&w=900&h=600&it=product
+  ✓ Downloaded 130,265 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/c0f11f40-29a8-4503-908a-5ba0d269e2c0/obverse.jpg
+  ✓ Firestore updated
+
+[13/32] Ref#229  PMG  $10 National Bank Note Type 1 Waynesboro PA charter #11
+  Img: https://dyn1.heritagestatic.com/ha?p=2-2-9-3-8-22938990&w=900&h=600&it=product
+  ✓ Downloaded 112,769 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/f282ec15-bcaf-4b7d-bdb5-297b597797aa/obverse.jpg
+  ✓ Firestore updated
+
+[14/32] Ref#267  PMG  Federal Reserve Bank Note Large size PMG
+  Img: https://dyn1.heritagestatic.com/ha?p=1-5-2-5-1525489&w=900&h=600&it=product
+  ✓ Downloaded 94,348 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/f2964c90-667d-4410-b6dc-4539403ddd01/obverse.jpg
+  ✓ Firestore updated
+
+[15/32] Ref#235  PCGS  $1 Federal Reserve Bamk Note large size PCGS 65PPQ
+  Img: https://dyn1.heritagestatic.com/ha?p=1-5-6-2-1-15621398&w=900&h=600&it=product
+  ✓ Downloaded 136,867 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/118419d7-93be-458e-b218-70ef48ec45dc/obverse.jpg
+  ✓ Firestore updated
+
+[16/32] Ref#290  PCGS  $1 Legal Tender Note large size PCGS
+  Img: https://dyn1.heritagestatic.com/ha?p=1-2-1-0-1210025&w=900&h=600&it=product
+  ✓ Downloaded 95,843 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/4db3fb0a-6b24-42b4-8d9a-da61e1edad16/obverse.jpg
+  ✓ Firestore updated
+
+[17/32] Ref#126  PCGS  $1 Silver Certificate Large Size PCGS
+  Img: https://dyn1.heritagestatic.com/ha?p=3-0-8-5-4-30854801&w=900&h=600&it=product
+  ✓ Downloaded 146,336 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/be0b5e30-8f6c-4b48-b30e-0f526a5c01af/obverse.jpg
+  ✓ Firestore updated
+
+[18/32] Ref#202  PCGS  $5 legal tender note Large size PCGS choice about new P
+  Img: https://dyn1.heritagestatic.com/ha?p=2-7-1-8-9-27189231&w=900&h=600&it=product
+  ✓ Downloaded 150,231 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/c12fbd3d-ced1-4ae6-864d-298fa940a09a/obverse.jpg
+  ✓ Firestore updated
+
+[19/32] Ref#199  PCGS  % cents fractional currency PCGS
+  Img: https://dyn1.heritagestatic.com/ha?p=6-9-4-694935&w=900&h=600&it=product
+  ✓ Downloaded 65,845 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/dc122fde-efab-454f-8c5d-423228facd9b/obverse.jpg
+  ✓ Firestore updated
+
+[20/32] Ref#374  PCGS  $500 3rd Bank of the United States Philadelphia PA Haxb
+  Img: https://dyn1.heritagestatic.com/ha?p=1-3-7-2-1-13721479&w=900&h=600&it=product
+  ✓ Downloaded 118,222 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/df2e6ec8-ca64-4930-afaa-76c7a55e38a4/obverse.jpg
+  ✓ Firestore updated
+
+[21/32] Ref#197  PCGS  $1 Federal Reserve Bank Note large size PCGS PPQ35
+  Img: https://dyn1.heritagestatic.com/ha?p=3-4-2-2-4-34224645&w=900&h=600&it=product
+  ✓ Downloaded 155,413 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/e1e2921b-55fe-480f-9206-d1d7190bc0c4/obverse.jpg
+  ✓ Firestore updated
+
+[22/32] Ref#226  PCGS  $5 Silver Certificate Yellow Seal PCGS PPQ
+  Img: https://dyn1.heritagestatic.com/ha?p=1-2-0-7-1207504&w=900&h=600&it=product
+  ✓ Downloaded 73,807 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/f637e7d8-ef8b-4acf-87cc-26ecaed3b456/obverse.jpg
+  ✓ Firestore updated
+
+[23/32] Ref#384  PCGS  $1 silver certificate Large size 2 consecutive serial #
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/0fa622a0-ba81-492d-bbcc-b070bc9ac79e/obverse.jpg
+  ✓ Firestore updated
+
+[24/32] Ref#212  PCGS  $1 Silver Certificate large size PCGS  PPQ66 2 consecut
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/411ec589-ae64-49e9-98d7-516fff2e64a2/obverse.jpg
+  ✓ Firestore updated
+
+[25/32] Ref#270  PCGS  $1 Silver Certificate Large size PCGS PPQ63 2 consecuti
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/587ea6ab-87fe-443f-b219-f3bd8ef0f690/obverse.jpg
+  ✓ Firestore updated
+
+[26/32] Ref#326  PCGS  $! Silver certificate large size PCGS PPQ64 2 consecuti
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/b7306c36-314e-451c-8b5c-8cc951f88f18/obverse.jpg
+  ✓ Firestore updated
+
+[27/32] Ref#234  PCGS  $1 Legal Tender Note Large sixe PCGS
+  Img: https://dyn1.heritagestatic.com/ha?p=1-2-1-0-1210025&w=900&h=600&it=product
+  ✓ Downloaded 95,843 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/dc94176a-8faf-4149-9b47-65173ec4fbb1/obverse.jpg
+  ✓ Firestore updated
+
+[28/32] Ref#405  PCGS  $1 silver certificate Large size PCGS PPQ64 cpnsecutive
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/ee958b47-da4f-46ef-aad9-280e44a23502/obverse.jpg
+  ✓ Firestore updated
+
+[29/32] Ref#227  PCGS  $1 Silver Certificate Large Size PCGS PPQ64
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/f35ef8cf-44bb-47ef-809d-48137dacde05/obverse.jpg
+  ✓ Firestore updated
+
+[30/32] Ref#325  PCGS  $! Silver certificate large size PCGS PPQ63 2 consecuti
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/fb15284a-daa0-4a0a-9f4d-3b9e8cc71341/obverse.jpg
+  ✓ Firestore updated
+
+[31/32] Ref#233  PCGS  1 silver certificate Note Yellow Seal PCGS PPQ
+  Img: https://dyn1.heritagestatic.com/ha?p=4-6-9-2-4692295&w=900&h=600&it=product
+  ✓ Downloaded 93,176 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/fbad48a0-786d-4586-a772-fe6a4fab0e39/obverse.jpg
+  ✓ Firestore updated
+
+[32/32] Ref#339  PCGS  $1 Silver Certificate Large Size PCGS PPQ65 2 consecuti
+  Img: https://dyn1.heritagestatic.com/ha?p=2-8-1-5-2-28152997&w=900&h=600&it=product
+  ✓ Downloaded 129,058 bytes
+  ✓ GCS: https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204%40gmail.com/currency/fc7982a2-327e-4879-8491-92c7833c5ea3/obverse.jpg
+  ✓ Firestore updated
+
+======================================================================
+RESULTS: 32 success, 0 failed
+  0 docs had no image collected (rate-limited)
+
+  Report: C:\Users\ericd\.gemini\antigravity\brain\26eebf0f-3c8f-47c1-940b-b41df002779f\cert_scraper_results.md
+  Log:    C:\Users\ericd\Documents\MyVertexProject\numista_backend\_cert_scraper_cache\final_results.json
+======================================================================
+DONE: 32/32 images uploaded to GCS and Firestore updated
+======================================================================

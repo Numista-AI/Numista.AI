@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+    // Returns true if the request comes from a signed-in, non-anonymous user.
+    function isAuthenticated() {
+      return request.auth != null && !request.auth.token.firebase.sign_in_provider.matches('anonymous');
+    }
+
+    // Returns true if the signed-in user's email matches the {email} path segment.
+    function isOwner(email) {
+      return isAuthenticated() && request.auth.token.email == email;
+    }
+
+    // ── Estate reports — attorney portal token access ─────────────────────────
+    // The report document ID IS the access token (a crypto-random UUID).
+    // Any request that knows the exact reportId may GET that single document.
+    // This enables the no-auth attorney portal while keeping data private
+    // (the UUID is unguessable; the user controls the link).
+    // IMPORTANT: This rule must come BEFORE the wildcard /users/{email}/{document=**}
+    // rule so Firestore evaluates the more specific path first.
+    match /users/{email}/estate_reports/{reportId} {
+      allow read:  if isOwner(email);  // owner sees all their reports (list + get)
+      allow get:   if true;            // attorney portal — token == reportId
+      allow write: if false;           // backend SA only
+    }
+
+    // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
+    // Each user can only read and write their own subcollections.
+    match /users/{email}/{document=**} {
+      allow read, write: if isOwner(email);
+    }
+
+    // ── Global programs (reference data — public read, no writes from client) ─
+    match /global_programs/{programId} {
+      allow read: if true;
+      allow write: if false;  // backend service account only
+    }
+
+    // ── Config (PCGS token, NewsAPI key, etc.) ────────────────────────────────
+    // Read access needed by the Flutter client to fetch the platform PCGS token.
+    // Write access restricted to admin (backend service account bypasses rules).
+    match /config/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
+    // ── Coin image index (reference library — authenticated read) ─────────────
+    // Non-sensitive reference data built by build_image_index.py from GCS buckets.
+    // Any signed-in user may read; only the backend service account may write.
+    match /coin_image_index/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
+    // ── Backend-managed collections ───────────────────────────────────────────
+    match /pending_items/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
+    match /supplies_log/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
+    match /admin_grade_flags/{document=**} {
+      allow read, write: if false; // backend service account only
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

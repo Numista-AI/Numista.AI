@@ -1,0 +1,3377 @@
+﻿Total docs: 413
+
+================================================================================
+DOCS WITH GRADING/CERT KEYWORDS:
+================================================================================
+
+--- 01598715-3532-45d1-8636-d08d4e04ab35 ---
+  Condition                     : choice crisp
+  Cost                          : $40.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 81
+  Purchase Date                 : 2017-07-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935E
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.111285+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 02f1f861-2578-42c9-bddf-afb58d9570c8 ---
+  Condition                     : Fine
+  Cost                          : $114.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate - No Yellow Seal
+  Personal Notes                : 
+  Personal Ref #                : 148
+  Purchase Date                 : 2016-12-27
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.135476+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0449a33d-a22e-4018-8a79-5ad1b8a7e128 ---
+  Condition                     : choice AU 58
+  Cost                          : $1325.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Legal TenderNote large size PMG
+  Personal Notes                : 
+  Personal Ref #                : 291
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1880
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.189223+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 076219f6-5198-4628-864d-dc17b932b719 ---
+  Condition                     : choice AU-58
+  Cost                          : $454.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate large size 2 consecutive Serial #s (FR237) PCGS
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 354
+  Purchase Date                 : 2021-12-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.201253+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 087b9066-7de9-43ee-b106-d01a58314f20 ---
+  Condition                     : CU64
+  Cost                          : $325.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ
+  Friedberg_Number              : Fr. 2300
+  Personal Notes                : 
+  Personal Ref #                : 231
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.173952+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0a256c7c-a7ea-4e02-9adb-67d10f09ceb0 ---
+  Condition                     : Good
+  Cost                          : $336.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 116
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.120939+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0b7d4e18-8663-46e2-a15c-9fdbbbecfce6 ---
+  Condition                     : choice crisp
+  Cost                          : $79.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Star Note
+  Personal Notes                : 
+  Personal Ref #                : 260
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935E
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.183509+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0bbb8757-2a9f-4d0d-9d25-8e0e961f7d7a ---
+  Condition                     : Very Good
+  Cost                          : $325.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Gold Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 20
+  Purchase Date                 : 2018-06-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1907-22
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.090474+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0f2da1a0-1152-45bc-9eba-cae06f0f4a88 ---
+  Condition                     : Select Unc 6
+  Cost                          : $1495.00
+  Country                       : US
+  Denomination                  : $1000
+  Description                   : $1000 3rd Bank of the United States PMG New York Tear Repair Previously Mounted
+  Personal Notes                : 
+  Personal Ref #                : 364
+  Purchase Date                 : 2022-11-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.202946+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0f688f7c-0256-41dd-a343-25dceffcc454 ---
+  Condition                     : crisp Unc
+  Cost                          : $37.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 70
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935G
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.106853+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0fa622a0-ba81-492d-bbcc-b070bc9ac79e ---
+  Condition                     : about unc 53
+  Cost                          : $435.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate Large size 2 consecutive serial # (FR237)  PCGS
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 384
+  Purchase Date                 : 2022-03-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.206422+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 118419d7-93be-458e-b218-70ef48ec45dc ---
+  Condition                     : unc 65 Prem
+  Cost                          : $1250.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Bamk Note large size PCGS 65PPQ
+  Personal Notes                : 
+  Personal Ref #                : 235
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1918
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.175527+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 196efc9f-8f8f-43c4-8c01-5275f7e46756 ---
+  Condition                     : Fine
+  Cost                          : $89.50
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 111
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.119433+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 1d0a722d-b9b0-4f5a-8a13-7ba145bdac01 ---
+  Condition                     : Very Fine
+  Cost                          : $45.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback
+  Personal Notes                : 
+  Personal Ref #                : 137
+  Purchase Date                 : 2016-09-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.131796+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 225340ee-e21d-433e-8b0c-0ac83414bbe9 ---
+  Condition                     : fine
+  Cost                          : $165.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : National Bank Note Type 1 Beatrice NE charter #2357
+  Personal Notes                : 
+  Personal Ref #                : 268
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.185166+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 299ef9a9-97e9-4721-9f57-1582a48fb36b ---
+  Condition                     : good
+  Cost                          : $413.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 Gold Certificate Latge size
+  Personal Notes                : 
+  Personal Ref #                : 298
+  Purchase Date                 : 2022-08-29
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1906
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.190507+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 29b89ec5-170a-4a04-b038-03b555639b2d ---
+  Condition                     : Fine
+  Cost                          : $89.50
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 43
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.100021+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 2a21b798-9aaa-4802-a1bf-789dbd959b71 ---
+  Condition                     : choice crisp
+  Cost                          : $40.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 82
+  Purchase Date                 : 2017-07-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935F
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.111627+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 2ea45a00-908d-477b-8eeb-20a127ae6db2 ---
+  Condition                     : very fine 35
+  Cost                          : $825.00
+  Country                       : US
+  Denomination                  : $500
+  Description                   : $500 confederate note PMG
+  Personal Notes                : 
+  Personal Ref #                : 203
+  Purchase Date                 : 2023-08-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1864
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.162153+00:00
+  currency_type                 : confederate
+  currency_type_label           : Confederate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 2ff4b0dc-2b94-4ff1-a6c5-a88b3a8155b2 ---
+  Condition                     : fine #2 qual
+  Cost                          : $1080.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 legal tender Note Bison
+  Personal Notes                : 
+  Personal Ref #                : 177
+  Purchase Date                 : 2019-05-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1901
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.149953+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 329298f6-ecd7-46d7-9bae-026b3b559451 ---
+  Condition                     : Unc 63 Prem
+  Cost                          : $1334.00
+  Country                       : US
+  Denomination                  : 50
+  Description                   : 50C Fractional Currency PMG EPQ CHUNC 63
+  Personal Notes                : 
+  Personal Ref #                : 357
+  Purchase Date                 : 2021-12-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1869-75
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.201772+00:00
+  currency_type                 : fractional_currency
+  currency_type_label           : Fractional Currency
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3705fe86-132c-4542-a00c-0ebe2962fbe1 ---
+  Condition                     : fine #2 qual
+  Cost                          : $563.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate large size Educational
+  Personal Notes                : 
+  Personal Ref #                : 190
+  Purchase Date                 : 2019-09-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1896
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.153818+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 38dbe211-2888-425d-aedb-c62756996087 ---
+  Condition                     : fine
+  Cost                          : $164.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback
+  Personal Notes                : 
+  Personal Ref #                : 331
+  Purchase Date                 : 2021-09-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.197236+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3905a42b-53b9-4d07-8299-27a4f9d3e62b ---
+  Condition                     : Fine
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback
+  Personal Notes                : 
+  Personal Ref #                : 110
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.119118+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 396a98c6-24d0-4208-b348-c13498690c49 ---
+  Condition                     : Good/Very Good
+  Cost                          : $450.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : ilver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 4
+  Purchase Date                 : 2018-07-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1886
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.084697+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3a267b43-b7f1-4f5e-a9b0-6845fb611870 ---
+  Condition                     : Very Fine
+  Cost                          : $90.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback
+  Personal Notes                : 
+  Personal Ref #                : 30
+  Purchase Date                 : 2019-01-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928$1
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.095585+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3bcee5ba-02a3-4636-98c0-483765d25b48 ---
+  Condition                     : fine
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 98
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.115310+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3c649910-6e54-4d7b-9e71-b2919979a92d ---
+  Condition                     : very fine
+  Cost                          : $318.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 293
+  Purchase Date                 : 2022-07-08
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.189566+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3d3f7001-af69-47f2-b347-6c4137abda1b ---
+  Condition                     : Unc 65 Prem
+  Cost                          : $922.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 10 Silver Certificate Yellow Seal BA Block PMG EPQ65
+  Personal Notes                : 
+  Personal Ref #                : 366
+  Purchase Date                 : 2023-01-12
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.203280+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 3fb23610-e584-4ef7-8f49-936a54a99398 ---
+  Condition                     : fine
+  Cost                          : $299.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 10 Silver Certificate Star Note
+  Personal Notes                : 
+  Personal Ref #                : 262
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.183926+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 411ec589-ae64-49e9-98d7-516fff2e64a2 ---
+  Condition                     : unc 66 prem
+  Cost                          : $1299.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate large size PCGS  PPQ66 2 consecutive serial #s (FR237)
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 212
+  Purchase Date                 : 2020-06-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.166366+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 417a6cce-7799-48a1-8538-966248dbf53c ---
+  Condition                     : good
+  Cost                          : $10.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver cert star note
+  Personal Notes                : 
+  Personal Ref #                : 101
+  Purchase Date                 : 
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.116283+00:00
+  currency_type                 : other
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 42ee64e9-7340-4c66-854f-b727c3579570 ---
+  Condition                     : very good
+  Cost                          : $1183.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certificate Largensize Educational
+  Personal Notes                : 
+  Personal Ref #                : 294
+  Purchase Date                 : 2022-07-08
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1896
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.189740+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 454d69cb-d53d-4630-87be-19f2be04fa80 ---
+  Condition                     : very good
+  Cost                          : $594.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate larhe size educational
+  Personal Notes                : 
+  Personal Ref #                : 176
+  Purchase Date                 : 2019-04-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1896
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.149605+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 463e04af-d451-4206-84a1-8041a347d174 ---
+  Condition                     : choice crisp
+  Cost                          : $115.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Star Note
+  Personal Notes                : 
+  Personal Ref #                : 261
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935H
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.183715+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 472fe365-3508-437a-8b4f-e86e10dea664 ---
+  Condition                     : fine
+  Cost                          : $1895.00
+  Country                       : US
+  Denomination                  : $50
+  Description                   : $50 gold certificate large size
+  Personal Notes                : 
+  Personal Ref #                : 196
+  Purchase Date                 : 2020-03-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1862
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.155910+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 4db3fb0a-6b24-42b4-8d9a-da61e1edad16 ---
+  Condition                     : about unc 50
+  Cost                          : $369.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Legal Tender Note large size PCGS
+  Personal Notes                : 
+  Personal Ref #                : 290
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1917
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.189051+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 52a3f15d-84ac-42cf-8393-c51f9bf7277f ---
+  Condition                     : Very Good
+  Cost                          : $210.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 171
+  Purchase Date                 : 2018-03-20
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A-R
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.147405+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 52b37bdf-b876-47ef-904a-db30ee5eff6e ---
+  Condition                     : v. Fine/E.F.
+  Cost                          : $595.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 National Bank Note Large size Bronkville PA charter #3051
+  Personal Notes                : 
+  Personal Ref #                : 180
+  Purchase Date                 : 2020-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.150797+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 57ac3665-0dc3-4bc2-9984-56b14541d9c9 ---
+  Condition                     : Crisp Unc
+  Cost                          : $35.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 21
+  Purchase Date                 : 2018-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935 C
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.090998+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 587ea6ab-87fe-443f-b219-f3bd8ef0f690 ---
+  Condition                     : unc 63 Prem
+  Cost                          : $694.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large size PCGS PPQ63 2 consecutive #s (FR238)
+  Friedberg_Number              : Fr. 238
+  Personal Notes                : 
+  Personal Ref #                : 270
+  Purchase Date                 : 2021-10-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.185549+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 5f4694e5-8396-4fa9-a5fe-88cad22bcf9c ---
+  Condition                     : V Fine/E F
+  Cost                          : $235.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : Federal Reserve Note Hawaii LB Block PMG
+  Personal Notes                : 
+  Personal Ref #                : 280
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.187303+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 6009ee2d-d8dd-4c20-98ac-b0b2c53f4788 ---
+  Condition                     : good/very good
+  Cost                          : $495.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 National Bank Note Type 1 Honolulu HI Charter #5550
+  Personal Notes                : 
+  Personal Ref #                : 220
+  Purchase Date                 : 2020-05-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.169468+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 61bcfefd-bf62-4d10-add6-0030308a2e75 ---
+  Condition                     : fine #2 qual
+  Cost                          : $275.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 National Bank Note Type 1 Newport NH $3404
+  Personal Notes                : 
+  Personal Ref #                : 221
+  Purchase Date                 : 2020-05-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.169922+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 6253c998-455f-4f21-9d5e-b9a852edd01f ---
+  Condition                     : very good
+  Cost                          : $495.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Siver Certificate Eagle Large Size Star Note
+  Personal Notes                : 
+  Personal Ref #                : 185
+  Purchase Date                 : 2023-08-18
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.152265+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 65819e0b-14ce-4941-aaeb-726ab07aaea8 ---
+  Condition                     : Fine
+  Cost                          : $12.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 150
+  Purchase Date                 : 2017-02-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.136497+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 673c2847-1ed3-4406-b29e-a8637fd7512a ---
+  Condition                     : choice crisp
+  Cost                          : $675.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1silver certificate large size Eagle
+  Personal Notes                : 
+  Personal Ref #                : 243
+  Purchase Date                 : 2021-01-04
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.179072+00:00
+  currency_type                 : silver_certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 6c8f4b81-851b-44b7-ab9d-213c28eb8395 ---
+  Condition                     : very fine #2
+  Cost                          : $369.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 gold certificate large size
+  Personal Notes                : 
+  Personal Ref #                : 195
+  Purchase Date                 : 2020-02-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1922
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.155541+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 6d74462d-36de-45fb-bb15-cfac379602ec ---
+  Condition                     : crisp unused
+  Cost                          : $33.25
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 State of Louisiana Single Bond with red serial number
+  Personal Notes                : 
+  Personal Ref #                : 223
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1880"s
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.170866+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 70481d94-aa04-4dec-b9eb-3c9936258eab ---
+  Condition                     : good
+  Cost                          : $269.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 National Bank Note Large size Atlanta GA Charter #5045
+  Personal Notes                : 
+  Personal Ref #                : 213
+  Purchase Date                 : 2020-06-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.166731+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 714ac8a9-a2f5-4504-b67f-15f480e2815b ---
+  Condition                     : Fine
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 146
+  Purchase Date                 : 2016-12-27
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934C
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.134261+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 724ddaf4-b9ab-4d48-ba20-5ed6908778ef ---
+  Condition                     : Very Good
+  Cost                          : $11.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 149
+  Purchase Date                 : 2017-02-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.136009+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 7498dc89-e0cf-458f-a1ec-88a4a15fff55 ---
+  Condition                     : very good
+  Cost                          : $184.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : Hawaii and Yellow Seal Silver certificate Set
+  Personal Notes                : 
+  Personal Ref #                : 99
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.115594+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 7bf39641-6a05-4ab3-b713-6d23bf5e3bb1 ---
+  Condition                     : fine
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 49
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.101623+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 7f6a8a62-63f0-4554-8e91-d94f242b5b2d ---
+  Condition                     : choice crisp
+  Cost                          : $895.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate large size Three consecutive Serial Numbers (FR237)
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 255
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1823
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.182409+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 80ca03d0-b340-4c16-bc7f-b877a9004c98 ---
+  Condition                     : choice crisp
+  Cost                          : $375.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : #10 National Bank Note Type 1 Zanesville, Ohio charter #5760
+  Personal Notes                : 
+  Personal Ref #                : 187
+  Purchase Date                 : 2023-08-18
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.152894+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 841d190b-01de-43b8-8f5d-b1d496eebe7d ---
+  Condition                     : Unc-64 Prem
+  Cost                          : $2595.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 Federal Reserve Note small size DD Block Inverted Back error FR1978 PMG
+  Friedberg_Number              : Fr. 1978
+  Personal Notes                : 
+  Personal Ref #                : 348
+  Purchase Date                 : 2021-07-26
+  Quantity                      : 1
+  Series                        : 1978
+  Series/Issuer                 : 
+  Year                          : 1985
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.200182+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8462ba93-c72d-4dcd-971f-de0ddbb1b509 ---
+  Condition                     : choice crisp
+  Cost                          : $53.95
+  Country                       : US
+  Denomination                  : 
+  Description                   : $!  Military Payment certificate
+  Personal Notes                : 
+  Personal Ref #                : 387
+  Purchase Date                 : 2022-03-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1969-70
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.207002+00:00
+  currency_type                 : other
+  currency_type_label           : Military Payment Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8686be42-0159-48d8-a923-e341cfc7f342 ---
+  Condition                     : good
+  Cost                          : $336.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certicate large size
+  Personal Notes                : 
+  Personal Ref #                : 192
+  Purchase Date                 : 2019-09-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.154428+00:00
+  currency_type                 : other
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 87189b96-278e-43de-8a20-efe597886f50 ---
+  Condition                     : ch about unc
+  Cost                          : $480.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate large size eagle
+  Personal Notes                : 
+  Personal Ref #                : 175
+  Purchase Date                 : 2019-04-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.149096+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8a457305-0b05-4766-be46-f8aa48e8cc41 ---
+  Condition                     : gem
+  Cost                          : $1701.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Falls Village Iton Bank (CT120G14C) PMG EDQ63
+  Personal Notes                : 
+  Personal Ref #                : 324
+  Purchase Date                 : 2021-09-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1850's-1860's
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.195987+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8a6d31c3-865b-4455-b7d1-4319ea7d7254 ---
+  Condition                     : Very Good
+  Cost                          : $184.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : WWII Hawaii & Yellow Seal Silver Cert. Set
+  Personal Notes                : 
+  Personal Ref #                : 106
+  Purchase Date                 : 2017-04-19
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.118014+00:00
+  currency_type                 : other
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8c02cf6c-7cd7-423f-99e6-bc934e8bf4de ---
+  Condition                     : Fine #2qual
+  Cost                          : $427.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Treasury Note Large size
+  Personal Notes                : 
+  Personal Ref #                : 266
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1891
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.184785+00:00
+  currency_type                 : treasury_note
+  currency_type_label           : Treasury Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8d727753-884c-4a40-af67-e33df1c4fbab ---
+  Condition                     : very fine
+  Cost                          : $49.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 274
+  Purchase Date                 : 2021-10-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.186260+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8dc33722-02b1-4ed4-886c-9b65d3135c74 ---
+  Condition                     : Extra Fine/ABT
+  Cost                          : $2350.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Farmers and Merchants National Bank of Fort Branch Indiana #9077
+  Personal Notes                : 
+  Personal Ref #                : 377
+  Purchase Date                 : 2021-06-18
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.205206+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 8fe20fb4-3ae9-45c1-9a44-c2d18c4156bb ---
+  Condition                     : Very Good
+  Cost                          : $85.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 31
+  Purchase Date                 : 2019-01-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.096064+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 90a93666-7791-4085-8ebb-6e3df9e90ef8 ---
+  Condition                     : choice crisp
+  Cost                          : $25.95
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Note - New York "911" serial number
+  Personal Notes                : 
+  Personal Ref #                : 406
+  Purchase Date                 : 2022-01-11
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 2013
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:46.018556+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 90dc83e8-3467-43bf-86b3-695b2192a197 ---
+  Condition                     : choice crisp
+  Cost                          : $650.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 silver certificate Star note
+  Personal Notes                : 
+  Personal Ref #                : 241
+  Purchase Date                 : 2021-01-04
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.178379+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 949919fa-ce5d-4db2-8265-bf424c4c24fb ---
+  Condition                     : Very Good
+  Cost                          : $210.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Gold Certificate
+  Personal Notes                : 
+  Personal Ref #                : 152
+  Purchase Date                 : 2017-02-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.137080+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 94ea8b99-f9c1-43f4-b1cf-2a9083cec95e ---
+  Condition                     : Choice Crisp
+  Cost                          : $65.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 15
+  Purchase Date                 : 2018-02-14
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.088594+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 99237bf6-b21c-433c-9ad3-262c2f6cb150 ---
+  Condition                     : choice crisp
+  Cost                          : $70.95
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Military Payment Certificate
+  Personal Notes                : 
+  Personal Ref #                : 400
+  Purchase Date                 : 2022-01-11
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1968-69
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.209692+00:00
+  currency_type                 : other
+  currency_type_label           : Military Payment Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 997f2950-8bda-4d90-a8ec-06b33a37e063 ---
+  Condition                     : Fine
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 105
+  Purchase Date                 : 2017-04-19
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.117611+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 99d9085e-2896-427e-950a-f9e94b2e2939 ---
+  Condition                     : Extra Fine
+  Cost                          : $45.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 119
+  Purchase Date                 : 2018-08-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.121800+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 9e7414d5-6ba0-4a67-b153-97d8f1d0d311 ---
+  Condition                     : Very Fine
+  Cost                          : $39.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 209
+  Purchase Date                 : 
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934C
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.165286+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- a410eb60-daf4-4f6f-826b-25943ac6a4e4 ---
+  Condition                     : Very Fine
+  Cost                          : $12.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 125
+  Purchase Date                 : 2018-10-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.123777+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- a66cf39b-a92b-4c9e-8228-5804bd2f1e83 ---
+  Condition                     : choice crisp
+  Cost                          : $31.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certicate
+  Personal Notes                : 
+  Personal Ref #                : 53
+  Purchase Date                 : 2017-06-23
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.102628+00:00
+  currency_type                 : other
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- a7c7b0c3-5fb5-4255-ae4e-2fa788ba24f8 ---
+  Condition                     : Fine
+  Cost                          : $245.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 Gold Certificate
+  Personal Notes                : 
+  Personal Ref #                : 139
+  Purchase Date                 : 2016-10-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.132297+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- a8a00966-e593-40b0-8856-4044a6609e56 ---
+  Condition                     : Fine
+  Cost                          : $123.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate - No Yellow Seal
+  Personal Notes                : 
+  Personal Ref #                : 147
+  Purchase Date                 : 2016-12-27
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.134739+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- ab9458d8-6487-4970-a8ce-38646717444a ---
+  Condition                     : Fine
+  Cost                          : $42.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 118
+  Purchase Date                 : 2018-08-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.121503+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- b0138b17-311a-45cc-9a93-9206b401a49e ---
+  Condition                     : very good
+  Cost                          : $184.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : World War II Hawaii and yellow seal silver certificate set
+  Personal Notes                : 
+  Personal Ref #                : 50
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.101867+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- b427cec9-2631-4ba6-b994-5cce57a67fd1 ---
+  Condition                     : crisp inc
+  Cost                          : $27.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 91
+  Purchase Date                 : 2017-08-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.113515+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- b5694584-c8d3-48ed-bfe9-832846358029 ---
+  Condition                     : fine
+  Cost                          : $35.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 205
+  Purchase Date                 : 
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.163480+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- b65865b8-2295-4f23-9c4b-47a30d7bbc22 ---
+  Condition                     : very fine
+  Cost                          : $1215.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate Indian Large size
+  Personal Notes                : 
+  Personal Ref #                : 372
+  Purchase Date                 : 2023-01-12
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.204305+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- b7306c36-314e-451c-8b5c-8cc951f88f18 ---
+  Condition                     : unc 64 Prem
+  Cost                          : $746.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : $! Silver certificate large size PCGS PPQ64 2 consecutive serial #s (FR238)
+  Friedberg_Number              : Fr. 238
+  Personal Notes                : 
+  Personal Ref #                : 326
+  Purchase Date                 : 2021-09-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.196336+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- ba8b6759-f931-46d6-acc8-f979d167b0e4 ---
+  Condition                     : gem unc
+  Cost                          : $1425.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Bank Note Large size PMG EPQ 65
+  Personal Notes                : 
+  Personal Ref #                : 250
+  Purchase Date                 : 2021-02-07
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1918
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.181140+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- bca4f87f-3bec-45b6-b03c-c0dcd3149366 ---
+  Condition                     : Good/Very Good
+  Cost                          : $444.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large Size Martha Washington
+  Personal Notes                : 
+  Personal Ref #                : 127
+  Purchase Date                 : 2018-10-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1891
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.126022+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- bda5379d-d182-463d-b46f-945b9f97087f ---
+  Condition                     : Crisp Unc
+  Cost                          : $13.75
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 211
+  Purchase Date                 : 
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.166010+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- be0b5e30-8f6c-4b48-b30e-0f526a5c01af ---
+  Condition                     : Ch about UNC
+  Cost                          : $185.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large Size PCGS
+  Personal Notes                : 
+  Personal Ref #                : 126
+  Purchase Date                 : 2018-10-01
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.124526+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- be4dc957-dae7-491d-8279-d5013bd0a2ad ---
+  Condition                     : crisp Unc
+  Cost                          : $27.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 71
+  Purchase Date                 : 2017-05-16
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.107197+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- bf35ce79-068d-4d96-8b49-70efed55acdc ---
+  Condition                     : crisp unused
+  Cost                          : $299.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : #3 West River Bank Vermont Note Jamaica
+  Personal Notes                : 
+  Personal Ref #                : 254
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1850's
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.182177+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- bf4391dc-95a6-47de-b5aa-76a752ad0316 ---
+  Condition                     : crisp unc
+  Cost                          : $43.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Star Note
+  Personal Notes                : 
+  Personal Ref #                : 285
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.188194+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- bf62e319-76b2-4897-af3f-a375682145c4 ---
+  Condition                     : very good
+  Cost                          : $450.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Eagle large size Star Note
+  Personal Notes                : 
+  Personal Ref #                : 191
+  Purchase Date                 : 2019-09-24
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.154116+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c0f11f40-29a8-4503-908a-5ba0d269e2c0 ---
+  Condition                     : gem unc-66
+  Cost                          : $129.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Bamk of Windsor Vermont PMG
+  Personal Notes                : 
+  Personal Ref #                : 320
+  Purchase Date                 : 2023-07-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1830's
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.195318+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c0f6ca0c-b618-4703-96f2-45735307b2d9 ---
+  Condition                     : Very Good
+  Cost                          : $75.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 173
+  Purchase Date                 : 2018-03-20
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.148189+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c12fbd3d-ced1-4ae6-864d-298fa940a09a ---
+  Condition                     : AU 58 preium
+  Cost                          : $775.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 legal tender note Large size PCGS choice about new PPQ58
+  Personal Notes                : 
+  Personal Ref #                : 202
+  Purchase Date                 : 2023-08-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1907
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.161470+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c1c65d19-ea92-4829-9baf-9962bba1c97f ---
+  Condition                     : very fine
+  Cost                          : $325.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 National Bank Note Dennison Ohio charter #6843
+  Personal Notes                : 
+  Personal Ref #                : 253
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.181944+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c75463e5-ac86-438c-b717-02e4a7cad963 ---
+  Condition                     : Crisp Unc
+  Cost                          : $50.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 142
+  Purchase Date                 : 2016-11-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935H
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.133116+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c7bb2f5b-3afb-483d-b5d9-a12b8f31ceb2 ---
+  Condition                     : Good
+  Cost                          : $360.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 10
+  Purchase Date                 : 2018-05-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.087028+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- c7fe1c85-7ab5-465e-a957-b6b8b807e4ce ---
+  Condition                     : Good
+  Cost                          : $336.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 48
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.101367+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- cb6b1aeb-16aa-4ff9-b39f-a3a97633bd43 ---
+  Condition                     : very fine
+  Cost                          : $15.95
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate wide design
+  Personal Notes                : 
+  Personal Ref #                : 80
+  Purchase Date                 : 2017-07-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.110814+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d3d8b11d-d555-4d88-a292-5fa27b206fb4 ---
+  Condition                     : very good
+  Cost                          : $210.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 78
+  Purchase Date                 : 2017-04-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.109927+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d3f76b10-1455-42dc-bb89-c0e3b4696ece ---
+  Condition                     : fine/very Fi
+  Cost                          : $425.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 National Bank Note large size Lewiston ME charter #330
+  Personal Notes                : 
+  Personal Ref #                : 179
+  Purchase Date                 : 2020-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.150509+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d4965885-02ee-4b7e-8348-e5eb3b25fac2 ---
+  Condition                     : Choice Crisp
+  Cost                          : $45.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Narrow Design
+  Personal Notes                : 
+  Personal Ref #                : 22
+  Purchase Date                 : 2018-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.091486+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d540ffb6-aef7-456c-a30b-1075e715a4ab ---
+  Condition                     : very good
+  Cost                          : $22.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 64
+  Purchase Date                 : 2017-12-14
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.105174+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d5cbb68d-a4e4-4f43-917b-0a5876899048 ---
+  Condition                     : very good
+  Cost                          : $90.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate Hawaii
+  Personal Notes                : 
+  Personal Ref #                : 97
+  Purchase Date                 : 2017-08-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.115044+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d62d2ace-b967-40e3-84aa-5f45f6edfb5c ---
+  Condition                     : about unc 50
+  Cost                          : $536.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 National Bank Note Type 2 Nashua, NH charter # 1310
+  Personal Notes                : 
+  Personal Ref #                : 252
+  Purchase Date                 : 2021-02-07
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.181703+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d64b6f7d-e05f-4a7d-9e55-f1b3571777ed ---
+  Condition                     : fine
+  Cost                          : $210.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback Star Note
+  Personal Notes                : 
+  Personal Ref #                : 246
+  Purchase Date                 : 2021-02-07
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.180085+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d9d75c78-21dc-4776-a872-44f8ac66dd34 ---
+  Condition                     : VF/XF
+  Cost                          : $399.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 5 National Bank Note Oakland Maryland #13776  V fine/EF
+  Personal Notes                : 
+  Personal Ref #                : 236
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.176036+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- d9d96ac1-417b-4088-96ea-7aa1f39aea10 ---
+  Condition                     : choice crisp
+  Cost                          : $128.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : #2 Leal Tender Star Note
+  Personal Notes                : 
+  Personal Ref #                : 225
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1963
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.171708+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- da327acc-9708-4332-98c1-0fb0d82b9379 ---
+  Condition                     : Fine
+  Cost                          : $42.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 172
+  Purchase Date                 : 2018-03-20
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934D
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.147806+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- da735250-20a9-4f50-a215-6bf6728a727d ---
+  Condition                     : very good
+  Cost                          : $426.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 Gold Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 409
+  Purchase Date                 : 2022-01-11
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1922
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:46.019706+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- dbf777f4-fba3-4f66-b9a5-15fc7bfd3d90 ---
+  Condition                     : Fine #2 Qual
+  Cost                          : $308.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 National Bank Note Large size Third Issue (Plain Back)
+  Personal Notes                : 
+  Personal Ref #                : 333
+  Purchase Date                 : 2021-09-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1902
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.197577+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- dc122fde-efab-454f-8c5d-423228facd9b ---
+  Condition                     : select unc 60249.00
+  Cost                          : $249.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : % cents fractional currency PCGS
+  Personal Notes                : 
+  Personal Ref #                : 199
+  Purchase Date                 : 2023-08-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1864-69
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.158954+00:00
+  currency_type                 : fractional_currency
+  currency_type_label           : Fractional Currency
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- dc94176a-8faf-4149-9b47-65173ec4fbb1 ---
+  Condition                     : Au53 Premium
+  Cost                          : $425.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Legal Tender Note Large sixe PCGS
+  Personal Notes                : 
+  Personal Ref #                : 234
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1917
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.175015+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- de791f2c-48f3-48ed-af8c-8842140080b1 ---
+  Condition                     : extra fine
+  Cost                          : $24.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 240
+  Purchase Date                 : 2021-01-04
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1957B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.178093+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- df2e6ec8-ca64-4930-afaa-76c7a55e38a4 ---
+  Condition                     : Very Fine or
+  Cost                          : $1231.00
+  Country                       : US
+  Denomination                  : $500
+  Description                   : $500 3rd Bank of the United States Philadelphia PA Haxby 3 PCGS
+  Personal Notes                : 
+  Personal Ref #                : 374
+  Purchase Date                 : 2021-06-18
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.204642+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- dfb2d06a-7254-404f-9b3a-cb6d93b998d4 ---
+  Condition                     : very good
+  Cost                          : $26.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate with motto
+  Personal Notes                : 
+  Personal Ref #                : 83
+  Purchase Date                 : 2017-07-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935G
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.111807+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- e1e2921b-55fe-480f-9206-d1d7190bc0c4 ---
+  Condition                     : very fine 35
+  Cost                          : $350.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Bank Note large size PCGS PPQ35
+  Personal Notes                : 
+  Personal Ref #                : 197
+  Purchase Date                 : 2020-03-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1918
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.156618+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- e201deae-06b0-46a5-9206-bf024f2dd25a ---
+  Condition                     : good
+  Cost                          : $723.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 silver certificate Large size Indian
+  Personal Notes                : 
+  Personal Ref #                : 181
+  Purchase Date                 : 2020-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.151081+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- e24971c5-2d60-465f-a7b2-5fb824b56e2d ---
+  Condition                     : very fine #2
+  Cost                          : $1550.00
+  Country                       : US
+  Denomination                  : $100
+  Description                   : $100 Federal Reserve note large size
+  Personal Notes                : 
+  Personal Ref #                : 194
+  Purchase Date                 : 2020-02-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1914
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.155196+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- ec3916df-8c41-4f7f-9bb2-a0a4f19cb91a ---
+  Condition                     : Fine
+  Cost                          : $50.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Funnyback
+  Personal Notes                : 
+  Personal Ref #                : 42
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.099718+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- ee958b47-da4f-46ef-aad9-280e44a23502 ---
+  Condition                     : UNC 64 Prem
+  Cost                          : $720.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate Large size PCGS PPQ64 cpnsecutive serial numbers
+  Personal Notes                : 
+  Personal Ref #                : 405
+  Purchase Date                 : 2022-01-11
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:46.018134+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- eeece5b0-292f-4371-a169-65d58683d83b ---
+  Condition                     : Fine
+  Cost                          : $37.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate
+  Personal Notes                : 
+  Personal Ref #                : 23
+  Purchase Date                 : 2018-01-15
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.092066+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f0ab304f-4f6a-45b2-b7fe-37e2283fb22a ---
+  Condition                     : good
+  Cost                          : $285.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 186
+  Purchase Date                 : 2023-08-18
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.152584+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f282ec15-bcaf-4b7d-bdb5-297b597797aa ---
+  Condition                     : unc 64 Prem
+  Cost                          : $295.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 National Bank Note Type 1 Waynesboro PA charter #11866 PMG  EPQ 64
+  Personal Notes                : 
+  Personal Ref #                : 229
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.173249+00:00
+  currency_type                 : national_bank_note
+  currency_type_label           : National Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f2964c90-667d-4410-b6dc-4539403ddd01 ---
+  Condition                     : very fine 35
+  Cost                          : $350.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : Federal Reserve Bank Note Large size PMG
+  Personal Notes                : 
+  Personal Ref #                : 267
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1918
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.184979+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f35ef8cf-44bb-47ef-809d-48137dacde05 ---
+  Condition                     : unc 64 Prem
+  Cost                          : $295.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large Size PCGS PPQ64
+  Personal Notes                : 
+  Personal Ref #                : 227
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.172546+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f637e7d8-ef8b-4acf-87cc-26ecaed3b456 ---
+  Condition                     : unc 65 Prem
+  Cost                          : $750.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Silver Certificate Yellow Seal PCGS PPQ
+  Personal Notes                : 
+  Personal Ref #                : 226
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.172139+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- f76f719d-40ac-45db-91de-edc255716be0 ---
+  Condition                     : crisp unc
+  Cost                          : $150.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Narrow Design Star Note
+  Personal Notes                : 
+  Personal Ref #                : 284
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.187982+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- fb15284a-daa0-4a0a-9f4d-3b9e8cc71341 ---
+  Condition                     : unc 63 Prem
+  Cost                          : $694.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : $! Silver certificate large size PCGS PPQ63 2 consecutive serial #s (FR237)
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 325
+  Purchase Date                 : 2021-09-10
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.196158+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- fbad48a0-786d-4586-a772-fe6a4fab0e39 ---
+  Condition                     : unc 64 Prem
+  Cost                          : $365.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 1 silver certificate Note Yellow Seal PCGS PPQ
+  Personal Notes                : 
+  Personal Ref #                : 233
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.174617+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- fc7982a2-327e-4879-8491-92c7833c5ea3 ---
+  Condition                     : Unc-65 Prem
+  Cost                          : $929.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Large Size PCGS PPQ65 2 consecutive Serial #s (FR 238)
+  Friedberg_Number              : Fr. 238
+  Personal Notes                : 
+  Personal Ref #                : 339
+  Purchase Date                 : 2021-07-26
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.198606+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- fc9c1d56-eaf1-4fd1-a92d-8acd5a0bd539 ---
+  Condition                     : very good
+  Cost                          : $80.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificatee funnyback
+  Personal Notes                : 
+  Personal Ref #                : 90
+  Purchase Date                 : 2017-08-17
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.113291+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+Total docs with keywords: 133
+
+
+================================================================================
+FIRST 20 DOCS (all fields, full):
+================================================================================
+
+--- 00b1cf06-18fb-4f28-b373-bed074a35341 ---
+  Condition                     : choice crisp
+  Cost                          : $69.50
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Federal Reserve Split Quad Note
+  Personal Notes                : 
+  Personal Ref #                : 282
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : $5 Federal Reserve Split Quad Note
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.187641+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 00d5f6a9-d781-4659-8de4-3c49f65ad655 ---
+  Condition                     : choice crisp
+  Cost                          : $16.75
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Note
+  Personal Notes                : 
+  Personal Ref #                : 275
+  Purchase Date                 : 2021-10-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1963
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.186439+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 01598715-3532-45d1-8636-d08d4e04ab35 ---
+  Condition                     : choice crisp
+  Cost                          : $40.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 silver certificate
+  Personal Notes                : 
+  Personal Ref #                : 81
+  Purchase Date                 : 2017-07-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935E
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.111285+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 02f1f861-2578-42c9-bddf-afb58d9570c8 ---
+  Condition                     : Fine
+  Cost                          : $114.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Silver Certificate - No Yellow Seal
+  Personal Notes                : 
+  Personal Ref #                : 148
+  Purchase Date                 : 2016-12-27
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1934A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.135476+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0342508c-19ff-4eb4-ab71-202498839396 ---
+  Condition                     : EF 45 Premium
+  Cost                          : $850.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Legal Tender Note Spelling Error Reverse P*C*BLIC EPQ
+  Personal Notes                : 
+  Personal Ref #                : 363
+  Purchase Date                 : 2022-11-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1907
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.202778+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0449a33d-a22e-4018-8a79-5ad1b8a7e128 ---
+  Condition                     : choice AU 58
+  Cost                          : $1325.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Legal TenderNote large size PMG
+  Personal Notes                : 
+  Personal Ref #                : 291
+  Purchase Date                 : 2021-03-22
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1880
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.189223+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 05b2ca0f-3b28-4ad8-bb74-76bcc3473b0e ---
+  Condition                     : Very Fine
+  Cost                          : $55.00
+  Country                       : US
+  Denomination                  : $5
+  Description                   : $5 Legal Tender Note
+  Personal Notes                : 
+  Personal Ref #                : 41
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1928F
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.099430+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0690d75a-931a-4c03-a8ea-b2c70f20e2c2 ---
+  Condition                     : fine
+  Cost                          : $25.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 legal tender note
+  Personal Notes                : 
+  Personal Ref #                : 100
+  Purchase Date                 : 
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.115954+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 076219f6-5198-4628-864d-dc17b932b719 ---
+  Condition                     : choice AU-58
+  Cost                          : $454.00
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate large size 2 consecutive Serial #s (FR237) PCGS
+  Friedberg_Number              : Fr. 237
+  Personal Notes                : 
+  Personal Ref #                : 354
+  Purchase Date                 : 2021-12-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1923
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.201253+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 07923724-faa8-42de-b013-9a1c04c810ea ---
+  Condition                     : fine
+  Cost                          : $93.50
+  Country                       : US
+  Denomination                  : 25
+  Description                   : 25C Fractional Currency
+  Personal Notes                : 
+  Personal Ref #                : 396
+  Purchase Date                 : 2022-01-11
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1862-76
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.208791+00:00
+  currency_type                 : fractional_currency
+  currency_type_label           : Fractional Currency
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 07969ed5-f14e-4e9d-9656-93458cda6302 ---
+  Condition                     : 
+  Cost                          : $36.50
+  Country                       : US
+  Denomination                  : 
+  Description                   : 19th Century Obsolete Currency
+  Personal Notes                : 
+  Personal Ref #                : 40
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.099086+00:00
+  currency_type                 : other
+  currency_type_label           : Obsolete Currency
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 087b9066-7de9-43ee-b106-d01a58314f20 ---
+  Condition                     : CU64
+  Cost                          : $325.00
+  Country                       : US
+  Denomination                  : 
+  Description                   : 1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ
+  Friedberg_Number              : Fr. 2300
+  Personal Notes                : 
+  Personal Ref #                : 231
+  Purchase Date                 : 2020-11-02
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.173952+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0a256c7c-a7ea-4e02-9adb-67d10f09ceb0 ---
+  Condition                     : Good
+  Cost                          : $336.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Silver Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 116
+  Purchase Date                 : 2018-11-05
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1899
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.120939+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0b7d4e18-8663-46e2-a15c-9fdbbbecfce6 ---
+  Condition                     : choice crisp
+  Cost                          : $79.50
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Silver Certificate Star Note
+  Personal Notes                : 
+  Personal Ref #                : 260
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1935E
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.183509+00:00
+  currency_type                 : silver_certificate
+  currency_type_label           : Silver Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0baa8aa6-e268-4586-ba9a-6292ba8995f6 ---
+  Condition                     : Choice Crisp
+  Cost                          : $11.75
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1 Federal Reserve Star Note
+  Personal Notes                : 
+  Personal Ref #                : 3
+  Purchase Date                 : 2018-07-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 2006
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.084218+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0bbb8757-2a9f-4d0d-9d25-8e0e961f7d7a ---
+  Condition                     : Very Good
+  Cost                          : $325.00
+  Country                       : US
+  Denomination                  : $10
+  Description                   : $10 Gold Certificate Large Size
+  Personal Notes                : 
+  Personal Ref #                : 20
+  Purchase Date                 : 2018-06-25
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1907-22
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.090474+00:00
+  currency_type                 : gold_certificate
+  currency_type_label           : Gold Certificate
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0d686842-1033-4755-a635-c0317f2c1e0d ---
+  Condition                     : crisp unc
+  Cost                          : $9.70
+  Country                       : US
+  Denomination                  : $1
+  Description                   : $1Federal Reserve Star Note
+  Personal Notes                : 
+  Personal Ref #                : 265
+  Purchase Date                 : 2021-04-30
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 2003A
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.184590+00:00
+  currency_type                 : federal_reserve_note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0e6e757c-8579-435f-ba6f-1f1e6c05412b ---
+  Condition                     : Extra Fine
+  Cost                          : $203.00
+  Country                       : US
+  Denomination                  : $20
+  Description                   : $20 Federal Reserve Bank Note
+  Personal Notes                : 
+  Personal Ref #                : 365
+  Purchase Date                 : 2022-11-03
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1929
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.203114+00:00
+  currency_type                 : federal_reserve_note
+  currency_type_label           : Federal Reserve Bank Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0e9eeec8-dfc5-418c-afc3-597898ff7652 ---
+  Condition                     : crisp unused
+  Cost                          : $199.00
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 New Orleans Jackson and Great Northern RR Co W-LA 380-002-G050
+  Personal Notes                : 
+  Personal Ref #                : 222
+  Purchase Date                 : 2020-09-21
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1861
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.170394+00:00
+  currency_type                 : other
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com
+
+--- 0ec4d582-1264-4da1-bfac-d712efe056fe ---
+  Condition                     : Fine
+  Cost                          : $56.25
+  Country                       : US
+  Denomination                  : $2
+  Description                   : $2 Legal Tender Star Note
+  Personal Notes                : 
+  Personal Ref #                : 129
+  Purchase Date                 : 2019-03-08
+  Quantity                      : 1
+  Series/Issuer                 : 
+  Year                          : 1953B
+  category                      : currency
+  created_at                    : 2026-06-20 16:03:43.128237+00:00
+  currency_type                 : other
+  currency_type_label           : Legal Tender Note
+  import_batch                  : currency_import_2026-06-20
+  inventoryStatus               : UNCHECKED
+  source                        : excel_import
+  source_file                   : Paper Money.xlsx
+  user_email                    : jseaman1204@gmail.com

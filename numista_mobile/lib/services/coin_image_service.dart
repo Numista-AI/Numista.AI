@@ -153,10 +153,28 @@ class CoinImageService {
     // American Women Quarters
     'maya angelou': 'maya-angelou', 'sally ride': 'sally-ride',
     'wilma mankiller': 'wilma-mankiller', 'nina otero warren': 'nina-otero-warren',
-    'anna may wong': 'anna-may-wong', 'bessie coleman': 'bessie-coleman',
-    'edith kanaka ole': 'edith-kanaka-ole', 'eleanor roosevelt': 'eleanor-roosevelt',
+    'nina otero-warren': 'nina-otero-warren', 'adelina otero-warren': 'nina-otero-warren',
+    'anna may wong': 'anna-may-wong', 'anna mae wong': 'anna-may-wong',
+    'bessie coleman': 'bessie-coleman',
+    'edith kanaka ole': 'edith-kanaka-ole',
+    "edith kanaka\u02bbole": 'edith-kanaka-ole',   // okina (ʻ)
+    "edith kanaka\u2018ole": 'edith-kanaka-ole',   // left single quote
+    "edith kanaka\u2019ole": 'edith-kanaka-ole',   // right single quote
+    'edith kanakaole': 'edith-kanaka-ole',
+    'eleanor roosevelt': 'eleanor-roosevelt',
     'jovita idar': 'jovita-idar', 'maria tallchief': 'maria-tallchief',
-    'patsy mink': 'patsy-mink',
+    'patsy mink': 'patsy-mink', 'patsy takemoto mink': 'patsy-mink',
+    // 2024 AWQ
+    'celia cruz': 'celia-cruz',
+    'zitkala-sa': 'zitkala-sa', 'zitkala sa': 'zitkala-sa', 'zitkala sha': 'zitkala-sa',
+    'mary edwards walker': 'mary-edwards-walker',
+    'pauli murray': 'pauli-murray',
+    // 2025 AWQ
+    'ida b. wells': 'ida-b-wells', 'ida b wells': 'ida-b-wells',
+    'vera rubin': 'vera-rubin',
+    'althea gibson': 'althea-gibson',
+    'stacey park milbern': 'stacey-park-milbern',
+    'juliette gordon low': 'juliette-gordon-low',
   };
 
   /// Maps denomination/series strings → canonical program slug used as the

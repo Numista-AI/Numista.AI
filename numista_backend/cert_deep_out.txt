@@ -1,0 +1,325 @@
+﻿Total docs: 413
+
+Docs mentioning PMG:  13
+Docs mentioning PCGS: 19
+
+
+=== ALL PMG DOCS ===
+
+--- 0449a33d-a22e-4018-8a79-5ad1b8a7e128 ---
+  Ref#:        291
+  Description: $5 Legal TenderNote large size PMG
+  Condition:   choice AU 58
+  Denom:       $5
+  Year:        1880
+  Cost:        $1325.00
+  Numeric candidates: ['189223']
+
+--- 087b9066-7de9-43ee-b106-d01a58314f20 ---
+  Ref#:        231
+  Description: 1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ
+  Condition:   CU64
+  Denom:       
+  Year:        1935A
+  Cost:        $325.00
+  Numeric candidates: ['173952']
+
+--- 0f2da1a0-1152-45bc-9eba-cae06f0f4a88 ---
+  Ref#:        364
+  Description: $1000 3rd Bank of the United States PMG New York Tear Repair Previously Mounted
+  Condition:   Select Unc 6
+  Denom:       $1000
+  Year:        
+  Cost:        $1495.00
+  Numeric candidates: ['202946']
+
+--- 2ea45a00-908d-477b-8eeb-20a127ae6db2 ---
+  Ref#:        203
+  Description: $500 confederate note PMG
+  Condition:   very fine 35
+  Denom:       $500
+  Year:        1864
+  Cost:        $825.00
+  Numeric candidates: ['162153']
+
+--- 329298f6-ecd7-46d7-9bae-026b3b559451 ---
+  Ref#:        357
+  Description: 50C Fractional Currency PMG EPQ CHUNC 63
+  Condition:   Unc 63 Prem
+  Denom:       50
+  Year:        1869-75
+  Cost:        $1334.00
+  Numeric candidates: ['201772']
+
+--- 3d3f7001-af69-47f2-b347-6c4137abda1b ---
+  Ref#:        366
+  Description: 10 Silver Certificate Yellow Seal BA Block PMG EPQ65
+  Condition:   Unc 65 Prem
+  Denom:       
+  Year:        1934A
+  Cost:        $922.00
+  Numeric candidates: ['203280']
+
+--- 5f4694e5-8396-4fa9-a5fe-88cad22bcf9c ---
+  Ref#:        280
+  Description: Federal Reserve Note Hawaii LB Block PMG
+  Condition:   V Fine/E F
+  Denom:       
+  Year:        1934A
+  Cost:        $235.00
+  Numeric candidates: ['187303']
+
+--- 841d190b-01de-43b8-8f5d-b1d496eebe7d ---
+  Ref#:        348
+  Description: $20 Federal Reserve Note small size DD Block Inverted Back error FR1978 PMG
+  Condition:   Unc-64 Prem
+  Denom:       $20
+  Year:        1985
+  Cost:        $2595.00
+  Numeric candidates: ['200182']
+
+--- 8a457305-0b05-4766-be46-f8aa48e8cc41 ---
+  Ref#:        324
+  Description: $10 Falls Village Iton Bank (CT120G14C) PMG EDQ63
+  Condition:   gem
+  Denom:       $10
+  Year:        1850's-1860's
+  Cost:        $1701.00
+  Numeric candidates: ['195987']
+
+--- ba8b6759-f931-46d6-acc8-f979d167b0e4 ---
+  Ref#:        250
+  Description: $1 Federal Reserve Bank Note Large size PMG EPQ 65
+  Condition:   gem unc
+  Denom:       $1
+  Year:        1918
+  Cost:        $1425.00
+  Numeric candidates: ['181140']
+
+--- c0f11f40-29a8-4503-908a-5ba0d269e2c0 ---
+  Ref#:        320
+  Description: $1 Bamk of Windsor Vermont PMG
+  Condition:   gem unc-66
+  Denom:       $1
+  Year:        1830's
+  Cost:        $129.00
+  Numeric candidates: ['195318']
+
+--- f282ec15-bcaf-4b7d-bdb5-297b597797aa ---
+  Ref#:        229
+  Description: $10 National Bank Note Type 1 Waynesboro PA charter #11866 PMG  EPQ 64
+  Condition:   unc 64 Prem
+  Denom:       $10
+  Year:        1929
+  Cost:        $295.00
+  Numeric candidates: ['173249']
+
+--- f2964c90-667d-4410-b6dc-4539403ddd01 ---
+  Ref#:        267
+  Description: Federal Reserve Bank Note Large size PMG
+  Condition:   very fine 35
+  Denom:       
+  Year:        1918
+  Cost:        $350.00
+  Numeric candidates: ['184979']
+
+
+=== ALL PCGS DOCS ===
+
+--- 076219f6-5198-4628-864d-dc17b932b719 ---
+  Ref#:        354
+  Description: $1 Silver Certificate large size 2 consecutive Serial #s (FR237) PCGS
+  Condition:   choice AU-58
+  Denom:       $1
+  Year:        1923
+  Cost:        $454.00
+  Numeric candidates: ['201253']
+
+--- 0fa622a0-ba81-492d-bbcc-b070bc9ac79e ---
+  Ref#:        384
+  Description: $1 silver certificate Large size 2 consecutive serial # (FR237)  PCGS
+  Condition:   about unc 53
+  Denom:       $1
+  Year:        1923
+  Cost:        $435.00
+  Numeric candidates: ['206422']
+
+--- 118419d7-93be-458e-b218-70ef48ec45dc ---
+  Ref#:        235
+  Description: $1 Federal Reserve Bamk Note large size PCGS 65PPQ
+  Condition:   unc 65 Prem
+  Denom:       $1
+  Year:        1918
+  Cost:        $1250.00
+  Numeric candidates: ['175527']
+
+--- 411ec589-ae64-49e9-98d7-516fff2e64a2 ---
+  Ref#:        212
+  Description: $1 Silver Certificate large size PCGS  PPQ66 2 consecutive serial #s (FR237)
+  Condition:   unc 66 prem
+  Denom:       $1
+  Year:        1923
+  Cost:        $1299.00
+  Numeric candidates: ['166366']
+
+--- 4db3fb0a-6b24-42b4-8d9a-da61e1edad16 ---
+  Ref#:        290
+  Description: $1 Legal Tender Note large size PCGS
+  Condition:   about unc 50
+  Denom:       $1
+  Year:        1917
+  Cost:        $369.00
+  Numeric candidates: ['189051']
+
+--- 587ea6ab-87fe-443f-b219-f3bd8ef0f690 ---
+  Ref#:        270
+  Description: $1 Silver Certificate Large size PCGS PPQ63 2 consecutive #s (FR238)
+  Condition:   unc 63 Prem
+  Denom:       $1
+  Year:        1923
+  Cost:        $694.00
+  Numeric candidates: ['185549']
+
+--- b7306c36-314e-451c-8b5c-8cc951f88f18 ---
+  Ref#:        326
+  Description: $! Silver certificate large size PCGS PPQ64 2 consecutive serial #s (FR238)
+  Condition:   unc 64 Prem
+  Denom:       
+  Year:        1923
+  Cost:        $746.00
+  Numeric candidates: ['196336']
+
+--- be0b5e30-8f6c-4b48-b30e-0f526a5c01af ---
+  Ref#:        126
+  Description: $1 Silver Certificate Large Size PCGS
+  Condition:   Ch about UNC
+  Denom:       $1
+  Year:        1923
+  Cost:        $185.00
+  Numeric candidates: ['124526']
+
+--- c12fbd3d-ced1-4ae6-864d-298fa940a09a ---
+  Ref#:        202
+  Description: $5 legal tender note Large size PCGS choice about new PPQ58
+  Condition:   AU 58 preium
+  Denom:       $5
+  Year:        1907
+  Cost:        $775.00
+  Numeric candidates: ['161470']
+
+--- dc122fde-efab-454f-8c5d-423228facd9b ---
+  Ref#:        199
+  Description: % cents fractional currency PCGS
+  Condition:   select unc 60249.00
+  Denom:       
+  Year:        1864-69
+  Cost:        $249.00
+  Numeric candidates: ['158954']
+
+--- dc94176a-8faf-4149-9b47-65173ec4fbb1 ---
+  Ref#:        234
+  Description: $1 Legal Tender Note Large sixe PCGS
+  Condition:   Au53 Premium
+  Denom:       $1
+  Year:        1917
+  Cost:        $425.00
+  Numeric candidates: ['175015']
+
+--- df2e6ec8-ca64-4930-afaa-76c7a55e38a4 ---
+  Ref#:        374
+  Description: $500 3rd Bank of the United States Philadelphia PA Haxby 3 PCGS
+  Condition:   Very Fine or
+  Denom:       $500
+  Year:        
+  Cost:        $1231.00
+  Numeric candidates: ['204642']
+
+--- e1e2921b-55fe-480f-9206-d1d7190bc0c4 ---
+  Ref#:        197
+  Description: $1 Federal Reserve Bank Note large size PCGS PPQ35
+  Condition:   very fine 35
+  Denom:       $1
+  Year:        1918
+  Cost:        $350.00
+  Numeric candidates: ['156618']
+
+--- ee958b47-da4f-46ef-aad9-280e44a23502 ---
+  Ref#:        405
+  Description: $1 silver certificate Large size PCGS PPQ64 cpnsecutive serial numbers
+  Condition:   UNC 64 Prem
+  Denom:       $1
+  Year:        1923
+  Cost:        $720.00
+  Numeric candidates: ['018134']
+
+--- f35ef8cf-44bb-47ef-809d-48137dacde05 ---
+  Ref#:        227
+  Description: $1 Silver Certificate Large Size PCGS PPQ64
+  Condition:   unc 64 Prem
+  Denom:       $1
+  Year:        1923
+  Cost:        $295.00
+  Numeric candidates: ['172546']
+
+--- f637e7d8-ef8b-4acf-87cc-26ecaed3b456 ---
+  Ref#:        226
+  Description: $5 Silver Certificate Yellow Seal PCGS PPQ
+  Condition:   unc 65 Prem
+  Denom:       $5
+  Year:        1934A
+  Cost:        $750.00
+  Numeric candidates: ['172139']
+
+--- fb15284a-daa0-4a0a-9f4d-3b9e8cc71341 ---
+  Ref#:        325
+  Description: $! Silver certificate large size PCGS PPQ63 2 consecutive serial #s (FR237)
+  Condition:   unc 63 Prem
+  Denom:       
+  Year:        1923
+  Cost:        $694.00
+  Numeric candidates: ['196158']
+
+--- fbad48a0-786d-4586-a772-fe6a4fab0e39 ---
+  Ref#:        233
+  Description: 1 silver certificate Note Yellow Seal PCGS PPQ
+  Condition:   unc 64 Prem
+  Denom:       
+  Year:        1935A
+  Cost:        $365.00
+  Numeric candidates: ['174617']
+
+--- fc7982a2-327e-4879-8491-92c7833c5ea3 ---
+  Ref#:        339
+  Description: $1 Silver Certificate Large Size PCGS PPQ65 2 consecutive Serial #s (FR 238)
+  Condition:   Unc-65 Prem
+  Denom:       $1
+  Year:        1923
+  Cost:        $929.00
+  Numeric candidates: ['198606']
+
+
+SUMMARY:
+  PMG docs:  13
+  PCGS docs: 19
+  Total graded: 32
+  Docs with any 6+ digit number: 32
+    0449a33d-a22e-4018-8a79-5ad1b8a7e128: ['189223']
+    087b9066-7de9-43ee-b106-d01a58314f20: ['173952']
+    0f2da1a0-1152-45bc-9eba-cae06f0f4a88: ['202946']
+    2ea45a00-908d-477b-8eeb-20a127ae6db2: ['162153']
+    329298f6-ecd7-46d7-9bae-026b3b559451: ['201772']
+    3d3f7001-af69-47f2-b347-6c4137abda1b: ['203280']
+    5f4694e5-8396-4fa9-a5fe-88cad22bcf9c: ['187303']
+    841d190b-01de-43b8-8f5d-b1d496eebe7d: ['200182']
+    8a457305-0b05-4766-be46-f8aa48e8cc41: ['195987']
+    ba8b6759-f931-46d6-acc8-f979d167b0e4: ['181140']
+    c0f11f40-29a8-4503-908a-5ba0d269e2c0: ['195318']
+    f282ec15-bcaf-4b7d-bdb5-297b597797aa: ['173249']
+    f2964c90-667d-4410-b6dc-4539403ddd01: ['184979']
+    076219f6-5198-4628-864d-dc17b932b719: ['201253']
+    0fa622a0-ba81-492d-bbcc-b070bc9ac79e: ['206422']
+    118419d7-93be-458e-b218-70ef48ec45dc: ['175527']
+    411ec589-ae64-49e9-98d7-516fff2e64a2: ['166366']
+    4db3fb0a-6b24-42b4-8d9a-da61e1edad16: ['189051']
+    587ea6ab-87fe-443f-b219-f3bd8ef0f690: ['185549']
+    b7306c36-314e-451c-8b5c-8cc951f88f18: ['196336']

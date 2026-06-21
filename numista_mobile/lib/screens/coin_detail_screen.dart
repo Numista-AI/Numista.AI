@@ -767,12 +767,21 @@ class _CoinImagePairState extends State<_CoinImagePair> {
   @override
   void initState() {
     super.initState();
-    _obvUrl = widget.coin.imageUrlObverse;
-    _revUrl = widget.coin.imageUrlReverse;
+    // gs:// URIs are not displayable by Image.network() — treat as empty
+    // so CoinImageService can fill in a public HTTPS URL from coin_image_index.
+    _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
+    _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
     // Fetch reference images for any side that doesn't have a personal photo
     if (_obvUrl.isEmpty || _revUrl.isEmpty) {
       _fetchReferenceImages();
     }
+  }
+
+  /// Returns the URL if it is a loadable HTTPS URL, otherwise empty string.
+  static String _toHttpsUrl(String url) {
+    if (url.isEmpty) return '';
+    if (url.startsWith('gs://')) return '';  // GCS internal path — not displayable
+    return url;
   }
 
   Future<void> _fetchReferenceImages() async {
@@ -1069,43 +1078,86 @@ class _FinancialsTab extends StatelessWidget {
         : coin.meltValue;
 
     final purchaseAmt = _parseDollar(coin.purchaseCost);
-    final aiAmt = _parseAiValue(coin.aiEstimatedValue);
-    final profit = aiAmt - purchaseAmt;
-    final profitPct = purchaseAmt > 0 ? (profit / purchaseAmt * 100) : null;
+    final aiAmt       = _parseAiValue(coin.aiEstimatedValue);
+    final profit      = aiAmt - purchaseAmt;
+    final profitPct   = purchaseAmt > 0 ? (profit / purchaseAmt * 100) : null;
+    final canCalcPL   = purchaseAmt > 0 && aiAmt > 0;
+
+    final costDisplay = (coin.purchaseCost.isEmpty || coin.purchaseCost == r'$0.00')
+        ? 'UKN' : coin.purchaseCost;
+    final aiDisplay   = (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending')
+        ? 'Pending' : coin.aiEstimatedValue;
+    final meltDisplay = (meltVal.isEmpty || meltVal == 'N/A') ? 'Pending' : meltVal;
+
+    final plDolStr = canCalcPL
+        ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';
+    final plPctStr = (canCalcPL && profitPct != null)
+        ? '${profitPct >= 0 ? '+' : ''}${profitPct.toStringAsFixed(1)}%' : '—';
+    final plColor  = canCalcPL ? (profit >= 0 ? _kGreen : _kRed) : _kSubtext;
+
+    Widget metricBox(String label, String value, Color valueColor) => Expanded(
+      child: Semantics(
+        label: '$label: $value',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(
+                  fontSize: 12, color: _kSubtext, letterSpacing: 0.5)),
+              const SizedBox(height: 4),
+              Text(value, style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w600, color: valueColor),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ),
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Profit / Loss card
-          if (purchaseAmt > 0 && aiAmt > 0) ...[
-            _ProfitLossCard(
-              purchaseCost: purchaseAmt,
-              aiValue: aiAmt,
-              profit: profit,
-              profitPct: profitPct,
-            ),
-            const SizedBox(height: 16),
-          ],
+          // ── Always-visible 4-metric summary ─────────────────────────────
+          const Text('Financial Summary',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: _kSubtext,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(children: [
+            metricBox('ACQUISITION COST', costDisplay, _kText),
+            const SizedBox(width: 8),
+            metricBox('EST. VALUE', aiDisplay,
+                aiDisplay == 'Pending' ? _kSubtext : _kAccent),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            metricBox('PROFIT / LOSS', plDolStr, plColor),
+            const SizedBox(width: 8),
+            metricBox('PROFIT / LOSS %', plPctStr, plColor),
+          ]),
+          const SizedBox(height: 16),
 
-          // Financial tiles
+          // ── Detail tiles ─────────────────────────────────────────────────
           Wrap(spacing: 12, runSpacing: 12, children: [
-            if (coin.purchaseCost.isNotEmpty && coin.purchaseCost != r'$0.00')
-              _DetailTile(label: 'Purchase Cost', value: coin.purchaseCost),
             if (coin.purchaseDate.isNotEmpty)
-              _DetailTile(label: 'Purchase Date', value: coin.purchaseDate),
+              _DetailTile(label: 'Purchase Date',  value: coin.purchaseDate),
             if (coin.retailer.isNotEmpty)
-              _DetailTile(label: 'Retailer', value: coin.retailer),
+              _DetailTile(label: 'Retailer',        value: coin.retailer),
             if (coin.retailerItemNo.isNotEmpty)
-              _DetailTile(label: 'Item No.', value: coin.retailerItemNo),
+              _DetailTile(label: 'Item No.',        value: coin.retailerItemNo),
             if (coin.retailerInvoiceNo.isNotEmpty)
-              _DetailTile(label: 'Invoice No.', value: coin.retailerInvoiceNo),
-            if (coin.aiEstimatedValue.isNotEmpty && coin.aiEstimatedValue != 'Pending')
-              _DetailTile(label: 'AI Est. Value', value: coin.aiEstimatedValue,
-                accent: true),
-            if (meltVal.isNotEmpty && meltVal != 'N/A')
-              _DetailTile(label: 'Melt Value', value: meltVal),
+              _DetailTile(label: 'Invoice No.',     value: coin.retailerInvoiceNo),
+            _DetailTile(label: 'Melt Value',        value: meltDisplay),
           ]),
 
           if (spotPrices.isNotEmpty) ...[
@@ -1236,12 +1288,39 @@ class _SpotPriceRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // PROVENANCE TAB
 // ─────────────────────────────────────────────────────────────────────────────
-class _ProvenanceTab extends StatelessWidget {
+class _ProvenanceTab extends StatefulWidget {
   final CoinModel coin;
   const _ProvenanceTab({required this.coin});
+  @override
+  State<_ProvenanceTab> createState() => _ProvenanceTabState();
+}
+
+class _ProvenanceTabState extends State<_ProvenanceTab> {
+  CoinModel? _freshCoin;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFresh();
+  }
+
+  Future<void> _fetchFresh() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .doc(widget.coin.id)
+          .get(const GetOptions(source: Source.server)); // always from server
+      if (mounted && doc.exists) {
+        setState(() => _freshCoin = CoinModel.fromFirestore(doc));
+      }
+    } catch (_) {
+      // fall through — use widget.coin as fallback
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final coin = _freshCoin ?? widget.coin;
     final hasAcquisition = coin.retailer.isNotEmpty ||
         coin.retailerInvoiceNo.isNotEmpty ||
         coin.retailerItemNo.isNotEmpty ||
@@ -1443,17 +1522,26 @@ class _ProvenanceTab extends StatelessWidget {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  children: [
                   _ProvenanceRow(
                     icon: Icons.insert_drive_file_outlined,
                     label: 'Source File',
-                    // Show only the filename portion of the GCS/path string
+                    // Show only the human-readable filename:
+                    // 1. Strip GCS path prefix (everything up to last '/')
+                    // 2. Strip UUID prefix if present (e.g. "uuid_Scan_..." → "Scan_...")
                     value: () {
                       final raw = coin.sourceFile;
                       final slash = raw.lastIndexOf('/');
-                      return slash >= 0 ? raw.substring(slash + 1) : raw;
+                      String name = slash >= 0 ? raw.substring(slash + 1) : raw;
+                      // Strip leading UUID pattern: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx_
+                      final uuidRe = RegExp(
+                          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_',
+                          caseSensitive: false);
+                      name = name.replaceFirst(uuidRe, '');
+                      return name;
                     }(),
                   ),
+
                   if (coin.source.isNotEmpty)
                     _ProvenanceRow(
                       icon: Icons.input_outlined,

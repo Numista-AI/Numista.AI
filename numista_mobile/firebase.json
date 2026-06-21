@@ -56,6 +56,15 @@
         ]
       },
       {
+        "source": "/main.dart.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
         "headers": [
           {

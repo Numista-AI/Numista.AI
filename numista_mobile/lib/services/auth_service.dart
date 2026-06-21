@@ -35,6 +35,14 @@ class AuthService {
     return 'users/${user.email ?? user.uid}/coins';
   }
 
+  /// Firestore path for this user's paper money / bank note collection.
+  static String get currencyPath {
+    final user = _auth.currentUser;
+    if (user == null) return 'users/unknown/currency';
+    if (user.isAnonymous) return 'users/${user.uid}/currency';
+    return 'users/${user.email ?? user.uid}/currency';
+  }
+
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ─── Sign In with Email + PIN ─────────────────────────────────────────────

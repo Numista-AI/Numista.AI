@@ -1,0 +1,250 @@
+﻿======================================================================
+CERT IMAGE SCRAPER – AJ's Graded Currency Collection
+======================================================================
+
+STEP 1: Fetching graded currency documents from Firestore ...
+  → 413 total docs fetched
+  → 32 graded docs identified
+     PMG:  13
+     PCGS: 19
+
+STEP 2-5: Processing 32 graded docs ...
+----------------------------------------------------------------------
+
+[ 1/32] Ref#291  PMG  $5 Legal TenderNote large size PMG
+  Search: '1880 $5 Legal TenderNote AU 58'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1880+%245+Legal+TenderNote+AU+58&N=790+231+4294967291
+  No results; trying fallback: '1880 $5 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1880+%245+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[ 2/32] Ref#354  PCGS  $1 Silver Certificate large size 2 consecutive Serial #s (FR237) 
+  Search: '1923 $1 Silver Certificate 2 #s (FR237) AU-58'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate+2+%23s+%28FR237%29+AU-58&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[ 3/32] Ref#231  PMG  1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ
+  Search: '1935A 1 silver certificate Hawaii (FR2300) (SC Block) CU64 CU64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1935A+1+silver+certificate+Hawaii+%28FR2300%29+%28SC+Block%29+CU64+CU64&N=790+231+4294967291
+  No results; trying fallback: '1935A  PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1935A++PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[ 4/32] Ref#364  PMG  $1000 3rd Bank of the United States PMG New York Tear Repair Prev
+  Search: '$1000 3rd Bank United States New York Tear Repair'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=%241000+3rd+Bank+United+States+New+York+Tear+Repair&N=790+231+4294967291
+  No results; trying fallback: ' $1000 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=+%241000+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[ 5/32] Ref#384  PCGS  $1 silver certificate Large size 2 consecutive serial # (FR237)  
+  Search: '1923 $1 silver certificate 2 # (FR237) unc 53'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+silver+certificate+2+%23+%28FR237%29+unc+53&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[ 6/32] Ref#235  PCGS  $1 Federal Reserve Bamk Note large size PCGS 65PPQ
+  Search: '1918 $1 Federal Reserve Bamk 65PPQ unc 65'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+Federal+Reserve+Bamk+65PPQ+unc+65&N=790+231+4294967291
+  No results; trying fallback: '1918 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[ 7/32] Ref#203  PMG  $500 confederate note PMG
+  Search: '1864 $500 confederate'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1864+%24500+confederate&N=790+231+4294967291
+  No results; trying fallback: '1864 $500 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1864+%24500+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[ 8/32] Ref#357  PMG  50C Fractional Currency PMG EPQ CHUNC 63
+  Search: '1869-75 50C Fractional Currency CHUNC 63 UNC 63'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1869-75+50C+Fractional+Currency+CHUNC+63+UNC+63&N=790+231+4294967291
+  No results; trying fallback: '1869-75 50 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1869-75+50+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[ 9/32] Ref#366  PMG  10 Silver Certificate Yellow Seal BA Block PMG EPQ65
+  Search: '1934A 10 Silver Certificate Yellow Seal BA Block EPQ65 Unc 65'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A+10+Silver+Certificate+Yellow+Seal+BA+Block+EPQ65+Unc+65&N=790+231+4294967291
+  No results; trying fallback: '1934A  PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A++PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[10/32] Ref#212  PCGS  $1 Silver Certificate large size PCGS  PPQ66 2 consecutive serial
+  Search: '1923 $1 Silver Certificate PPQ66 2 #s (FR237) unc 66'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate+PPQ66+2+%23s+%28FR237%29+unc+66&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[11/32] Ref#290  PCGS  $1 Legal Tender Note large size PCGS
+  Search: '1917 $1 Legal Tender unc 50'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1917+%241+Legal+Tender+unc+50&N=790+231+4294967291
+  No results; trying fallback: '1917 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1917+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[12/32] Ref#270  PCGS  $1 Silver Certificate Large size PCGS PPQ63 2 consecutive #s (FR2
+  Search: '1923 $1 Silver Certificate PPQ63 2 #s (FR238) unc 63'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate+PPQ63+2+%23s+%28FR238%29+unc+63&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[13/32] Ref#280  PMG  Federal Reserve Note Hawaii LB Block PMG
+  Search: '1934A Federal Reserve Hawaii LB Block'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A+Federal+Reserve+Hawaii+LB+Block&N=790+231+4294967291
+  No results; trying fallback: '1934A  PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A++PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[14/32] Ref#348  PMG  $20 Federal Reserve Note small size DD Block Inverted Back error 
+  Search: '1985 $20 Federal Reserve small DD Block Inverted Back error FR197 Unc-64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1985+%2420+Federal+Reserve+small+DD+Block+Inverted+Back+error+FR197+Unc-64&N=790+231+4294967291
+  No results; trying fallback: '1985 $20 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1985+%2420+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[15/32] Ref#324  PMG  $10 Falls Village Iton Bank (CT120G14C) PMG EDQ63
+  Search: "1850's-1860's $10 Falls Village Iton Bank (CT120G14C) EDQ63"
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1850%27s-1860%27s+%2410+Falls+Village+Iton+Bank+%28CT120G14C%29+EDQ63&N=790+231+4294967291
+  No results; trying fallback: "1850's-1860's $10 PMG"
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1850%27s-1860%27s+%2410+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[16/32] Ref#326  PCGS  $! Silver certificate large size PCGS PPQ64 2 consecutive serial 
+  Search: '1923 $! Silver certificate PPQ64 2 #s (FR238) unc 64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%24%21+Silver+certificate+PPQ64+2+%23s+%28FR238%29+unc+64&N=790+231+4294967291
+  No results; trying fallback: '1923  PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923++PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[17/32] Ref#250  PMG  $1 Federal Reserve Bank Note Large size PMG EPQ 65
+  Search: '1918 $1 Federal Reserve Bank 65'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+Federal+Reserve+Bank+65&N=790+231+4294967291
+  No results; trying fallback: '1918 $1 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[18/32] Ref#126  PCGS  $1 Silver Certificate Large Size PCGS
+  Search: '1923 $1 Silver Certificate'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[19/32] Ref#320  PMG  $1 Bamk of Windsor Vermont PMG
+  Search: "1830's $1 Bamk Windsor Vermont unc-66"
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1830%27s+%241+Bamk+Windsor+Vermont+unc-66&N=790+231+4294967291
+  No results; trying fallback: "1830's $1 PMG"
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1830%27s+%241+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[20/32] Ref#202  PCGS  $5 legal tender note Large size PCGS choice about new PPQ58
+  Search: '1907 $5 legal tender choice about new PPQ58 AU 58'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1907+%245+legal+tender+choice+about+new+PPQ58+AU+58&N=790+231+4294967291
+  No results; trying fallback: '1907 $5 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1907+%245+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[21/32] Ref#199  PCGS  % cents fractional currency PCGS
+  Search: '1864-69 % cents fractional currency unc 60'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1864-69+%25+cents+fractional+currency+unc+60&N=790+231+4294967291
+  No results; trying fallback: '1864-69  PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1864-69++PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[22/32] Ref#234  PCGS  $1 Legal Tender Note Large sixe PCGS
+  Search: '1917 $1 Legal Tender sixe Au53'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1917+%241+Legal+Tender+sixe+Au53&N=790+231+4294967291
+  No results; trying fallback: '1917 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1917+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[23/32] Ref#374  PCGS  $500 3rd Bank of the United States Philadelphia PA Haxby 3 PCGS
+  Search: '$500 3rd Bank United States Philadelphia PA Haxby 3'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=%24500+3rd+Bank+United+States+Philadelphia+PA+Haxby+3&N=790+231+4294967291
+  No results; trying fallback: ' $500 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=+%24500+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[24/32] Ref#197  PCGS  $1 Federal Reserve Bank Note large size PCGS PPQ35
+  Search: '1918 $1 Federal Reserve Bank PPQ35'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+Federal+Reserve+Bank+PPQ35&N=790+231+4294967291
+  No results; trying fallback: '1918 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[25/32] Ref#405  PCGS  $1 silver certificate Large size PCGS PPQ64 cpnsecutive serial nu
+  Search: '1923 $1 silver certificate PPQ64 cpnsecutive UNC 64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+silver+certificate+PPQ64+cpnsecutive+UNC+64&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[26/32] Ref#229  PMG  $10 National Bank Note Type 1 Waynesboro PA charter #11866 PMG  E
+  Search: '1929 $10 National Bank Type 1 Waynesboro PA charter #11866 64 unc 64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1929+%2410+National+Bank+Type+1+Waynesboro+PA+charter+%2311866+64+unc+64&N=790+231+4294967291
+  No results; trying fallback: '1929 $10 PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1929+%2410+PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[27/32] Ref#267  PMG  Federal Reserve Bank Note Large size PMG
+  Search: '1918 Federal Reserve Bank'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918+Federal+Reserve+Bank&N=790+231+4294967291
+  No results; trying fallback: '1918  PMG'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1918++PMG&N=790+231+4294967291
+  ✗ No search results found
+
+[28/32] Ref#227  PCGS  $1 Silver Certificate Large Size PCGS PPQ64
+  Search: '1923 $1 Silver Certificate PPQ64 unc 64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate+PPQ64+unc+64&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[29/32] Ref#226  PCGS  $5 Silver Certificate Yellow Seal PCGS PPQ
+  Search: '1934A $5 Silver Certificate Yellow Seal unc 65'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A+%245+Silver+Certificate+Yellow+Seal+unc+65&N=790+231+4294967291
+  No results; trying fallback: '1934A $5 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1934A+%245+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[30/32] Ref#325  PCGS  $! Silver certificate large size PCGS PPQ63 2 consecutive serial 
+  Search: '1923 $! Silver certificate PPQ63 2 #s (FR237) unc 63'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%24%21+Silver+certificate+PPQ63+2+%23s+%28FR237%29+unc+63&N=790+231+4294967291
+  No results; trying fallback: '1923  PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923++PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[31/32] Ref#233  PCGS  1 silver certificate Note Yellow Seal PCGS PPQ
+  Search: '1935A 1 silver certificate Yellow Seal unc 64'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1935A+1+silver+certificate+Yellow+Seal+unc+64&N=790+231+4294967291
+  No results; trying fallback: '1935A  PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1935A++PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+[32/32] Ref#339  PCGS  $1 Silver Certificate Large Size PCGS PPQ65 2 consecutive Serial 
+  Search: '1923 $1 Silver Certificate PPQ65 2 #s (FR 238) Unc-65'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+Silver+Certificate+PPQ65+2+%23s+%28FR+238%29+Unc-65&N=790+231+4294967291
+  No results; trying fallback: '1923 $1 PCGS'
+    ⚠ HA search failed: 403 Client Error: Forbidden for url: https://currency.ha.com/c/search-results.zx?Nty=1&Ntt=1923+%241+PCGS&N=790+231+4294967291
+  ✗ No search results found
+
+======================================================================
+STEP 6: Writing report ...
+  → Report saved to: C:\Users\ericd\.gemini\antigravity\brain\26eebf0f-3c8f-47c1-940b-b41df002779f\cert_scraper_results.md
+  → JSON log: C:\Users\ericd\Documents\MyVertexProject\numista_backend\_cert_scraper_cache\results_log.json
+
+======================================================================
+DONE
+  Total graded docs:     32
+  Images retrieved:      0
+  No image available:    32
+  Errors:                0
+  Report: C:\Users\ericd\.gemini\antigravity\brain\26eebf0f-3c8f-47c1-940b-b41df002779f\cert_scraper_results.md
+======================================================================

@@ -122,7 +122,7 @@ class CoinModel {
       certificationNumber: data['Certification Number']?.toString() ?? '',
       metalContent: data['Metal Content']?.toString() ?? '',
       quantity: data['Quantity']?.toString() ?? '1',
-      purchaseCost: data['Purchase Cost']?.toString() ?? '\$0.00',
+      purchaseCost: data['Purchase Cost']?.toString() ?? data['Cost']?.toString() ?? '\$0.00',
       purchaseDate: data['Purchase Date']?.toString() ?? '',
       retailer: data['Retailer/Website']?.toString() ?? '',
       retailerItemNo: data['Retailer Item No.']?.toString() ?? '',
