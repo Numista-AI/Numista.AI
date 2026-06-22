@@ -196,8 +196,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           if (_serverOnline) ...[
             _buildScanControls(),
             const SizedBox(height: 24),
-            // ── Live camera preview (shown while scanning) ──────────────────
-            if (_status?.isActive == true && _liveFrameBytes != null) ...[
+            // ── Live camera preview (shown whenever a frame is available) ────────
+            // This lets you see and adjust the microscope zoom BEFORE
+            // pressing Start Scan, not just during an active scan.
+            if (_serverOnline && _liveFrameBytes != null) ...[
               _buildLivePreview(),
               const SizedBox(height: 24),
             ],
@@ -379,14 +381,19 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Live Camera Preview ─────────────────────────────────────────────────
   Widget _buildLivePreview() {
+    final isScanning = _status?.isActive == true;
+    final badgeColor  = isScanning ? _errorRed   : const Color(0xFF00BCD4); // red = LIVE, cyan = PREVIEW
+    final badgeLabel  = isScanning ? 'LIVE'       : 'PREVIEW';
+    final borderColor = isScanning ? _electricBlue : const Color(0xFF00BCD4);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _electricBlue.withValues(alpha: 0.4), width: 2),
+        border: Border.all(color: borderColor.withValues(alpha: 0.4), width: 2),
         boxShadow: [
           BoxShadow(
-            color: _electricBlue.withValues(alpha: 0.2),
+            color: borderColor.withValues(alpha: 0.2),
             blurRadius: 24,
             offset: const Offset(0, 6),
           ),
@@ -402,23 +409,23 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             width: double.infinity,
             gaplessPlayback: true, // prevents flicker between frames
           ),
-          // "LIVE" badge
+          // State badge (LIVE or PREVIEW)
           Positioned(
             top: 12,
             right: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _errorRed.withValues(alpha: 0.85),
+                color: badgeColor.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.fiber_manual_record, size: 8, color: Colors.white),
                   SizedBox(width: 4),
-                  Text('LIVE',
-                      style: TextStyle(
+                  Text(badgeLabel,
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

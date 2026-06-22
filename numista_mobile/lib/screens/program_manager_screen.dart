@@ -36,28 +36,81 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   bool _isScanning = false;
   final ImagePicker _imagePicker = ImagePicker();
 
+  /// Returns the denomination family expected for a given program name.
+  /// e.g. "Presidential Dollars" → "dollar", "50 State Quarters" → "quarter"
+  String _expectedDenomFamily(String programName) {
+    final lower = programName.toLowerCase();
+    if (lower.contains('dollar'))      return 'dollar';
+    if (lower.contains('half'))        return 'half';
+    if (lower.contains('quarter'))     return 'quarter';
+    if (lower.contains('dime'))        return 'dime';
+    if (lower.contains('nickel'))      return 'nickel';
+    if (lower.contains('cent') || lower.contains('penny')) return 'cent';
+    return ''; // unknown — don't filter
+  }
+
+  /// Returns true only if the coin document's Denomination is consistent with
+  /// the expected denomination family for the given program.
+  bool _denominationMatches(Map<String, dynamic> coinData, String expectedFamily) {
+    if (expectedFamily.isEmpty) return true; // no constraint
+    final denom = (coinData['Denomination']?.toString() ?? '').toLowerCase();
+    switch (expectedFamily) {
+      case 'dollar':
+        // Accept: "dollar", "$1", "1 dollar", "presidential dollar", etc.
+        // Reject: "quarter dollar" (which contains "dollar" but is a quarter),
+        //         "half dollar", "quarter"
+        if (denom.contains('quarter dollar')) return false;
+        if (denom.contains('half dollar'))    return false;
+        return denom.contains('dollar') || denom.contains('\$1') ||
+               denom == '1' || denom.contains('1 dollar');
+      case 'half':
+        return denom.contains('half') || denom.contains('50c') || denom.contains('50¢');
+      case 'quarter':
+        // Reject "quarter dollar" only if we already know it's a quarter program
+        return denom.contains('quarter') || denom.contains('25c') || denom.contains('25¢');
+      case 'dime':
+        return denom.contains('dime') || denom.contains('10c') || denom.contains('10¢');
+      case 'nickel':
+        return denom.contains('nickel') || denom.contains('5c') || denom.contains('5¢');
+      case 'cent':
+        return denom.contains('cent') || denom.contains('penny') ||
+               denom.contains('1c') || denom.contains('1¢');
+      default:
+        return true;
+    }
+  }
+
   bool _isMatch(Map<String, dynamic> coinData, CoinProgram program, String coinName) {
-    // Basic heuristics since we lack the Python strict standardizer in Dart yet.
-    // 1. Check if Program/Series explicitly matches
+    // ── Denomination guard ────────────────────────────────────────────────────
+    // Reject the coin immediately if its denomination is wrong for this program.
+    // This prevents, e.g., a Quarter Dollar matching a Presidential Dollar slot,
+    // a Penny matching a Lincoln Dollar slot, or a Half Dollar matching a Kennedy
+    // Dollar slot.
+    final expectedFamily = _expectedDenomFamily(program.name);
+    if (!_denominationMatches(coinData, expectedFamily)) return false;
+
+    // ── Program/Series match ──────────────────────────────────────────────────
     final progSeries = (coinData['Program/Series']?.toString() ?? '').toLowerCase();
     final pNameLower = program.name.toLowerCase();
-    final themeSub = (coinData['Theme/Subject']?.toString() ?? '').toLowerCase();
+    final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').toLowerCase();
     final cNameLower = coinName.toLowerCase();
-    
-    if (progSeries.isNotEmpty && (progSeries.contains(pNameLower) || pNameLower.contains(progSeries))) {
-      // It's in the program, check if the coin matches
-      if (themeSub.contains(cNameLower) || cNameLower.contains(themeSub)) return true;
-      
-      final year = coinData['Year']?.toString() ?? '';
-      
-      if (year.isNotEmpty && (cNameLower.contains(year))) {
+
+    if (progSeries.isNotEmpty &&
+        (progSeries.contains(pNameLower) || pNameLower.contains(progSeries))) {
+      // Program matches — now check if this specific coin slot matches
+      if (themeSub.isNotEmpty &&
+          (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) {
         return true;
       }
+      final year = coinData['Year']?.toString() ?? '';
+      if (year.isNotEmpty && cNameLower.contains(year)) return true;
     }
-    
-    // Heuristic fallbacks for poorly ingested data
-    if (themeSub.contains(cNameLower)) return true;
-    
+
+    // ── Heuristic fallback (only when program series is also consistent) ──────
+    // Removed the unconstrained "if (themeSub.contains(cNameLower)) return true"
+    // that caused false positives across different programs/denominations.
+    // A theme-only match without a matching program is too broad.
+
     return false;
   }
 

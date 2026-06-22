@@ -73,6 +73,9 @@ import threading as _threading
 _frame_lock = _threading.Lock()
 _latest_frame_jpg: bytes = b""
 
+# Event used to pause the idle preview while capture_worker owns the camera
+_idle_pause_event = _threading.Event()  # SET = idle thread should stop; CLEAR = run normally
+
 # --- NEW GENERIC HARDWARE SELECTOR ---
 # OPTIONS: "AUTOFOCUS_WEBCAM", "MANUAL_MICROSCOPE"
 CAMERA_TYPE = "MANUAL_MICROSCOPE" 
@@ -151,8 +154,95 @@ capture_status = {
     "error": None
 }
 
+
+# ─── Idle Preview Worker ───────────────────────────────────────────────────────
+def _idle_preview_worker():
+    """
+    Runs as a daemon thread from startup.
+    Continuously reads frames from the microscope and stores them in
+    _latest_frame_jpg so the Flutter app can show a live viewfinder at all
+    times — not just during an active scan.
+
+    When capture_worker starts it sets _idle_pause_event; this thread detects
+    that, releases the camera, and waits.  When the scan finishes it clears
+    the event and this thread reopens the camera automatically.
+    """
+    global _latest_frame_jpg
+    logging.info("[PREVIEW] Idle preview worker started.")
+
+    while True:
+        # ── Wait if a scan is in progress (capture_worker owns the camera) ──
+        if _idle_pause_event.is_set():
+            logging.info("[PREVIEW] Paused — waiting for scan to finish.")
+            _idle_pause_event.wait()        # blocks until cleared
+            # give capture_worker a moment to fully release the camera
+            time.sleep(1.0)
+            logging.info("[PREVIEW] Resuming idle preview.")
+
+        # ── Open camera ──────────────────────────────────────────────────────
+        cap = None
+        for idx in [1, 2, 0]:
+            temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            if temp.isOpened():
+                ret, _ = temp.read()
+                if ret:
+                    cap = temp
+                    logging.info(f"[PREVIEW] Camera opened at index {idx}")
+                    break
+            temp.release()
+
+        if cap is None:
+            logging.warning("[PREVIEW] No camera found — retrying in 5 s.")
+            time.sleep(5)
+            continue
+
+        settings = get_camera_settings(CAMERA_TYPE)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  settings["width"])
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings["height"])
+
+        # Warm up
+        for _ in range(10):
+            cap.read()
+
+        logging.info("[PREVIEW] Streaming idle frames.")
+        while not _idle_pause_event.is_set():
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                logging.warning("[PREVIEW] Frame read failed — reopening camera.")
+                break
+
+            # Overlay a subtle 'PREVIEW' banner so the user knows it's idle
+            h, w = frame.shape[:2]
+            cv2.putText(
+                frame, "PREVIEW — Adjust zoom, then press Start Scan",
+                (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 220, 255), 2,
+            )
+            # Focus ring guide
+            cx, cy = w // 2, h // 2
+            radius = min(w, h) // 4
+            cv2.circle(frame, (cx, cy), radius, (0, 220, 255), 2)
+
+            ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            if ok:
+                with _frame_lock:
+                    _latest_frame_jpg = buf.tobytes()
+
+            time.sleep(0.05)  # ~20 fps is plenty for a viewfinder
+
+        cap.release()
+        logging.info("[PREVIEW] Camera released.")
+
+        # If we exited because a scan started, wait for the event to be cleared
+        # (capture_worker clears it when done)
+        if _idle_pause_event.is_set():
+            _idle_pause_event.wait()
+            time.sleep(1.0)
+
 def capture_worker():
     global capture_status
+    # Signal the idle preview to yield the camera before we open it
+    _idle_pause_event.set()
+    time.sleep(0.5)  # Brief pause so the idle thread can release
     capture_status["is_active"] = True
 
     # Force working directory to this script's location so all relative paths
@@ -523,6 +613,10 @@ def capture_worker():
                 capture_status["error"] = "Gemini analysis failed or returned no data."
 
         capture_status["is_active"] = False
+        # Signal idle preview to restart (clears the pause so the thread
+        # re-opens the camera and resumes streaming)
+        _idle_pause_event.clear()
+        logging.info("[CAP] capture_worker done — idle preview will resume.")
 
 # --- FLASK ROUTES ---
 # NOTE: /start-scan is now handled by the Firestore command watcher below.
@@ -761,6 +855,14 @@ if __name__ == "__main__":
     else:
         logging.info("  Firestore commands   -> Waiting for pairing...")
     logging.info("="*55)
+
+    # Start idle preview worker so the Flutter app shows the camera feed
+    # immediately, before the user presses Start Scan.
+    _preview_thread = threading.Thread(
+        target=_idle_preview_worker, daemon=True, name="IdlePreview"
+    )
+    _preview_thread.start()
+    logging.info("[PREVIEW] Idle preview thread launched.")
 
     # Start Firestore command watcher (non-blocking — runs on SDK background thread)
     if USER_EMAIL:

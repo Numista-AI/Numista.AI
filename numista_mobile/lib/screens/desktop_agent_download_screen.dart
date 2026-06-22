@@ -113,12 +113,12 @@ class DesktopAgentDownloadScreen extends StatelessWidget {
       _Step(icon: Icons.double_arrow_rounded, color: _gold,
             number: '2', title: 'Install',
             body: 'Double-click the installer. No admin password required.'),
-      _Step(icon: Icons.email_outlined,     color: Color(0xFF7C3AED),
-            number: '3', title: 'Enter Email',
-            body: 'A setup window appears asking for your Numista.AI account email.'),
+      _Step(icon: Icons.open_in_browser_rounded, color: Color(0xFF7C3AED),
+            number: '3', title: 'Open Numista.AI',
+            body: 'Go to the Microscope Scanner page. Your account links automatically — no setup needed.'),
       _Step(icon: Icons.check_circle_outline_rounded, color: _successGreen,
-            number: '4', title: 'Done!',
-            body: 'The gold coin appears in your system tray. Return here — you\'ll see 🟢 Online.'),
+            number: '4', title: 'You\'re Live!',
+            body: 'The gold coin icon appears in your tray and the camera preview starts instantly.'),
     ];
 
     return Container(
@@ -127,7 +127,7 @@ class DesktopAgentDownloadScreen extends StatelessWidget {
       child: Column(
         children: [
           const Text(
-            'Four steps. Thirty seconds.',
+            'Three steps. Thirty seconds.',
             style: TextStyle(
               color: _white,
               fontSize: 24,

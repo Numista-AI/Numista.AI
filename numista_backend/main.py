@@ -1327,6 +1327,16 @@ def grade_review_queue(user_email: str, limit: int = 30):
     except Exception:
         pass  # Index may not exist yet — source filter above handles main cases
 
+    # Also catch manually flagged coins
+    try:
+        q3 = coins_ref.where('grade_review_status', '==', 'pending').stream()
+        for doc in q3:
+            if doc.id not in seen_ids:
+                seen_ids.add(doc.id)
+                raw_docs.append(doc)
+    except Exception:
+        pass
+
     results = []
     for doc in raw_docs:
         d      = doc.to_dict()
@@ -1695,6 +1705,7 @@ async def process_invoice(
     file:              UploadFile = File(...),
     import_session_id: str = Form(''),  # set by Bulk Import flow
     receipt_id:        str = Form(''),  # set by Bulk Import flow; links to receipts collection
+    mask_pii:          bool = Form(False),
 ):
     """
     Uses GCP Document AI to scrape a PDF invoice, then heavily prompts Vertex AI 
@@ -1717,7 +1728,7 @@ async def process_invoice(
         ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
         mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
         reported_type = file.content_type or ""
-        # Use reported type only if it's specific (not generic octet-stream)
+        // Use reported type only if it's specific (not generic octet-stream)
         if reported_type and reported_type not in ("application/octet-stream", "binary/octet-stream", ""):
             mime_type = reported_type
         elif ext in mime_map:
@@ -1756,10 +1767,19 @@ async def process_invoice(
                     it['Year'] = _ym.group(1)
                     it['Mint Mark'] = _ym.group(2).upper()
 
-        extraction_prompt = """
+        pii_rule = ""
+        if mask_pii:
+            pii_rule = """
+            CRITICAL SECURITY RULE (PII REDACTION):
+            The user has requested to mask personal identifiable information (PII).
+            Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes I", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
+            """
+
+        extraction_prompt = f"""
         You are an expert numismatic accountant and collectibles specialist. Review this PDF invoice/receipt.
         Extract EVERY line item — coins, currency, stamps, medals, sets, supplies, and other collectibles.
         Classify each item by type and return a full, accurate record.
+        {pii_rule}
 
         *** NEVER RETURN AN EMPTY LIST. If you can see any purchasable item with a dollar amount > $0
         in this invoice, you MUST extract it. An empty list [] is only acceptable when the document
@@ -4962,6 +4982,7 @@ def import_status(session_id: str, user_email: str):
 class ImportProcessRequest(BaseModel):
     user_email: str
     session_id: str
+    mask_pii:   bool = False
 
 @app.post("/api/import/process")
 async def import_process(req: ImportProcessRequest):
@@ -4974,6 +4995,7 @@ async def import_process(req: ImportProcessRequest):
     """
     user_email = req.user_email
     session_id = req.session_id
+    mask_pii   = req.mask_pii
 
     session_ref = db.collection("users").document(user_email)\
                     .collection("import_sessions").document(session_id)
@@ -5114,17 +5136,26 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
 
                 pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
 
-                extraction_prompt = """You are an expert numismatic accountant.
+                pii_rule = ""
+                if mask_pii:
+                    pii_rule = """
+                    CRITICAL SECURITY RULE (PII REDACTION):
+                    The user has requested to mask personal identifiable information (PII).
+                    Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes I", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
+                    """
+
+                extraction_prompt = f"""You are an expert numismatic accountant.
 Extract every purchasable line item from this invoice/receipt.
 Return JSON array. Each object must include:
-{
+{{
   "item_type": "coin|set|stamp|supply|paper_currency|medal|other",
   "Program/Series": "...", "Year": "...", "Mint Mark": "...",
   "Denomination": "...", "Condition": "...",
   "Purchase Cost": "$0.00", "Purchase Date": "YYYY-MM-DD or as printed",
   "Retailer Name": "...", "Retailer Invoice #": "...", "Retailer Item No.": "..."
-}
-Ignore shipping, tax, subtotal rows."""
+}}
+Ignore shipping, tax, subtotal rows.
+{pii_rule}"""
 
                 try:
                     response = genai_client.models.generate_content(

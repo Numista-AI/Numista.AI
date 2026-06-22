@@ -94,18 +94,19 @@ _tray_icon: pystray.Icon | None = None
 # ─── Status tooltip ──────────────────────────────────────────────────────────
 def _get_status_text():
     s = auto_capture.capture_status
-    email = _cfg.get_user_email() or "Not configured"
+    email = auto_capture.USER_EMAIL or _cfg.get_user_email() or None
+    email_label = email if email else "Unpaired — open Numista.AI to link"
     if s.get("error"):
         return f"Numista Agent ⚠ {s['error'][:40]}"
     if s.get("is_active"):
         step  = s.get("current_step", "SCANNING")
         sharp = s.get("sharpness", 0)
-        return f"Numista Agent 🔬 {step} | Sharpness: {sharp} | {email}"
+        return f"Numista Agent 🔬 {step} | Sharpness: {sharp} | {email_label}"
     report = s.get("last_report")
     if report:
         slug = report.get("file_slug", "coin")
-        return f"Numista Agent ✓ Ready — last scan: {slug} | {email}"
-    return f"Numista Agent — Ready | {email}"
+        return f"Numista Agent ✓ Ready — last scan: {slug} | {email_label}"
+    return f"Numista Agent — Ready | {email_label}"
 
 # ─── Icon updater (background thread) ────────────────────────────────────────
 def _update_tray_icon():
@@ -154,12 +155,15 @@ def _quit(icon, item):
 # ─── Dynamic status label in menu ────────────────────────────────────────────
 def _status_label():
     s = auto_capture.capture_status
+    email = auto_capture.USER_EMAIL or _cfg.get_user_email() or None
     if s.get("error"):
         return f"⚠  Error: {s['error'][:30]}"
     if s.get("is_active"):
         return f"🔬  Scanning — {s.get('current_step', '…')}"
     if s.get("last_report"):
         return "✓  Online — scan complete"
+    if not email:
+        return "🟡  Unpaired — open Numista.AI to link"
     return "🟢  Online — Ready"
 
 def _build_menu():
@@ -171,9 +175,9 @@ def _build_menu():
             enabled=False,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Open Numista.AI", _open_numista),
-        pystray.MenuItem("Open Log File",   _open_log),
-        pystray.MenuItem("Settings…",       _open_settings),
+        pystray.MenuItem("Open Numista.AI",          _open_numista),
+        pystray.MenuItem("Open Log File",            _open_log),
+        pystray.MenuItem("Switch Account / Settings…", _open_settings),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", _quit),
     )
@@ -200,6 +204,17 @@ def _start_agent():
         logging.info("[TRAY] Firestore command watcher started.")
     except Exception as e:
         logging.error(f"[TRAY] Command watcher failed to start: {e}", exc_info=True)
+
+    # Start the idle preview thread so the Flutter app shows the camera feed
+    # immediately — before the user presses Start Scan.
+    import threading as _threading
+    _preview_thread = _threading.Thread(
+        target=auto_capture._idle_preview_worker,
+        daemon=True,
+        name="IdlePreview",
+    )
+    _preview_thread.start()
+    logging.info("[TRAY] Idle preview thread launched.")
 
     import ssl as _ssl
     if os.path.exists(cert) and os.path.exists(key):
@@ -266,24 +281,25 @@ def main():
     logging.info(f"  Log file: {LOG_FILE}")
     logging.info("=" * 55)
 
-    # [1] First-run wizard (blocks until complete or cancelled)
-    if not _ensure_configured():
-        logging.error("[TRAY] Aborting — no user configured.")
-        sys.exit(1)
-
-    # [2] Apply config to auto_capture module
+    # [1] Apply any previously saved email config to auto_capture.
+    #     If no email is stored yet, the agent starts in "Unpaired" state.
+    #     The Flutter web app will call POST /pair automatically when the user
+    #     opens the Microscope Scanner page, so no manual entry is needed.
     _patch_auto_capture_user()
+    if _cfg.get_user_email():
+        logging.info(f"[TRAY] Restored saved account: {_cfg.get_user_email()!r}")
+    else:
+        logging.info("[TRAY] No saved account — waiting for web app to pair via /pair endpoint.")
 
-    # [3] Start Firestore watcher + Flask server in background
+    # [2] Start Firestore watcher + Flask server in background
     agent_thread = threading.Thread(target=_start_agent, daemon=True)
     agent_thread.start()
 
-    # [4] Build and run the system tray icon (blocks until quit)
-    email = _cfg.get_user_email()
+    # [3] Build and run the system tray icon (blocks until quit)
     _tray_icon = pystray.Icon(
         name="NumistaAgent",
         icon=_ICON_IDLE,
-        title=f"Numista.AI Hardware Agent — {email}",
+        title="Numista.AI Hardware Agent — open Numista.AI to link",
         menu=_build_menu(),
     )
 

@@ -1,5 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import 'base_layout.dart';
@@ -427,6 +433,26 @@ class _LoginScreenState extends State<LoginScreen>
         _googleButton(),
 
         const SizedBox(height: 12),
+
+        // Free Scan Preview
+        ElevatedButton.icon(
+          onPressed: _loading ? null : () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FreeScanPreviewScreen()),
+            );
+          },
+          icon: const Icon(Icons.camera_alt_outlined, size: 20),
+          label: const Text('Free Scan Preview', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF59E0B), // Amber
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            elevation: 0,
+          ),
+        ),
+
+        const SizedBox(height: 12),
         // Forgot PIN
         Center(
           child: TextButton(
@@ -748,4 +774,338 @@ class _StatDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Container(width: 1, height: 36, color: const Color(0xFFCBD5E1));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FREE SCAN PREVIEW SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
+class FreeScanPreviewScreen extends StatefulWidget {
+  const FreeScanPreviewScreen({super.key});
+
+  @override
+  State<FreeScanPreviewScreen> createState() => _FreeScanPreviewScreenState();
+}
+
+class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
+  Uint8List? _obverseBytes;
+  Uint8List? _reverseBytes;
+  String? _obverseName;
+  String? _reverseName;
+
+  bool _loading = false;
+  String? _error;
+  Map<String, dynamic>? _result;
+
+  Future<void> _pickImage(bool isObverse) async {
+    try {
+      final res = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      if (f.bytes == null) return;
+
+      setState(() {
+        if (isObverse) {
+          _obverseBytes = f.bytes;
+          _obverseName = f.name;
+        } else {
+          _reverseBytes = f.bytes;
+          _reverseName = f.name;
+        }
+        _result = null; // Clear previous result
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = 'Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _runScan() async {
+    if (_obverseBytes == null || _reverseBytes == null) {
+      setState(() => _error = 'Please select both Obverse and Reverse photos.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _result = null;
+    });
+
+    try {
+      final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.fields['user_email'] = 'guest@numista.ai';
+      request.fields['save_to_collection'] = 'false';
+
+      // Helper to parse content type
+      MediaType getMediaType(String filename) {
+        final ext = filename.split('.').last.toLowerCase();
+        final mime = {
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] ?? 'image/jpeg';
+        return MediaType.parse(mime);
+      }
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_a',
+        _obverseBytes!,
+        filename: _obverseName ?? 'obverse.jpg',
+        contentType: getMediaType(_obverseName ?? 'obverse.jpg'),
+      ));
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_b',
+        _reverseBytes!,
+        filename: _reverseName ?? 'reverse.jpg',
+        contentType: getMediaType(_reverseName ?? 'reverse.jpg'),
+      ));
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        setState(() {
+          _result = data as Map<String, dynamic>;
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Scan failed: Server returned status code ${streamedResponse.statusCode}';
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Network or API error: $e';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A), // Premium Dark
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Free AI Scan Preview', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Test Our AI Coin Scanner',
+              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Upload obverse (front) and reverse (back) photos to see AI identification in action.',
+              style: TextStyle(color: Colors.white60, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+
+            // Photo picker row
+            Row(
+              children: [
+                Expanded(
+                  child: _imagePickerBox('Obverse (Front)', _obverseBytes, () => _pickImage(true)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _imagePickerBox('Reverse (Back)', _reverseBytes, () => _pickImage(false)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withAlpha(50)),
+                ),
+                child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            if (_loading) ...[
+              const Card(
+                color: Color(0xFF1E293B),
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFFF59E0B)),
+                      SizedBox(height: 16),
+                      Text('Morgan is scanning your coin...', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      SizedBox(height: 6),
+                      Text('Analyzing details & estimating value', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_result != null) ...[
+              _buildResultCard(),
+            ] else ...[
+              ElevatedButton.icon(
+                onPressed: (_obverseBytes == null || _reverseBytes == null) ? null : _runScan,
+                icon: const Icon(Icons.flash_on_rounded),
+                label: const Text('Scan Coin Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF59E0B),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.white10,
+                  disabledForegroundColor: Colors.white30,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePickerBox(String label, Uint8List? bytes, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 160,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: bytes != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(bytes, fit: BoxFit.cover),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_a_photo_outlined, color: Colors.white38, size: 36),
+                  const SizedBox(height: 10),
+                  Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  const Text('Tap to upload', style: TextStyle(color: Colors.white30, fontSize: 11)),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildResultCard() {
+    final r = _result!;
+    final title = [
+      r['Year']?.toString() ?? '',
+      if (r['Mint Mark'] != null && r['Mint Mark'].toString().isNotEmpty) '(${r['Mint Mark']})',
+      r['Denomination']?.toString() ?? 'Unknown Coin'
+    ].where((s) => s.isNotEmpty).join(' ');
+
+    return Card(
+      color: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(color: Colors.white10, height: 24),
+            _buildResultRow('Series', r['Program/Series'] ?? 'N/A'),
+            _buildResultRow('Grade', r['Condition'] ?? 'Ungraded'),
+            _buildResultRow('AI Value', r['AI Estimated Value'] ?? 'Pending'),
+            _buildResultRow('Metal', r['Metal Content'] ?? 'N/A'),
+            const SizedBox(height: 24),
+
+            // CTA container
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF334155)),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    '🔒 Want to save this coin?',
+                    style: TextStyle(color: Color(0xFFF59E0B), fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Create a free account to track your collection, log values, and export estate plans.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Back to Login page
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Create Free Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
 }

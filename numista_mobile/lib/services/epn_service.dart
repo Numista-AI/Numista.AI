@@ -180,4 +180,18 @@ class EpnService {
 
     return '$baseSearch&$epnParams';
   }
+
+  // ── Sync URL builder for raw query strings (e.g. missing program coins) ──
+  // Uses hardcoded defaults so it can be called synchronously without
+  // awaiting SharedPreferences — safe because campaign ID is non-secret.
+  // _sacat=11116 = eBay Coins & Paper Money category.
+  static String buildSearchUrlFromQuery(String query, {bool soldOnly = false}) {
+    final encodedQuery = Uri.encodeComponent(query);
+    return 'https://www.ebay.com/sch/i.html'
+        '?_nkw=$encodedQuery'
+        '&_sacat=11116'
+        '${soldOnly ? "&LH_Sold=1&LH_Complete=1" : ""}'
+        '&mkevt=1&mkcid=1&mkrid=$_defaultMkrid'
+        '&campid=$_defaultCampId&toolid=10001&siteid=0';
+  }
 }

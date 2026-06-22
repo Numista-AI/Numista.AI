@@ -1,43 +1,56 @@
-# ?? Numista.AI — Deployment SOP (Standard Operating Procedure)
+ï»¿# Numista.AI - Deployment SOP (Standard Operating Procedure)
 > **Read this before every production push.**
-> Last updated: 2026-06-18
+> Last updated: 2026-06-22
 
 ---
 
-## ?? GOLDEN RULE — When to Deploy
+## PRIMARY DEPLOYMENT METHOD - Push to Git
+
+**The definitive way to deploy Numista.AI is to push code to the `main` branch.**
+
+The GitHub Actions pipeline (`.github/workflows/deploy-production.yml`) automatically:
+1. Builds the Flutter web app and deploys it to **Firebase Hosting** (numista.ai)
+2. Builds the Docker image and deploys the Python backend to **Cloud Run** (`numista-backend`) via Artifact Registry
+
+> **WARNING:** `deploy_production.ps1` is an **emergency fallback only** (frontend/Firebase Hosting exclusively).
+> Do NOT use it as your default deploy path.
+
+---
+
+## GOLDEN RULE - When to Deploy
 
 **Do NOT deploy after every single tweak. Do NOT wait until end of day.**
 
-? **Deploy once per focused work session** — typically 1–3 times per day.
+**Deploy once per focused work session** - typically 1-3 times per day.
 
 | Session | Example |
 |---|---|
-| Morning session | Make 3–5 related tweaks ? test locally ? deploy ? verify live |
-| Afternoon session | Make 3–5 related tweaks ? test locally ? deploy ? verify live |
-| Evening (optional) | Only if needed and there's time to verify before stepping away |
+| Morning session | Make 3-5 related tweaks -> test locally -> git push -> verify live |
+| Afternoon session | Make 3-5 related tweaks -> test locally -> git push -> verify live |
+| Evening (optional) | Only if needed and there is time to verify before stepping away |
 
-> ?? **Never deploy right before stepping away from your computer.** If something breaks, you need to be available to fix it.
+> **Never deploy right before stepping away from your computer.** If something breaks, you need to be available to fix it.
 
 ---
 
-## ?? Why Updates May Not Appear on the Live Site
+## Why Updates May Not Appear on the Live Site
 
-If you deployed but don't see the change on https://numista.ai, check these in order:
+If you pushed but do not see the change on https://numista.ai, check these in order:
 
 | # | Cause | Fix |
 |---|---|---|
-| 1 | **Browser cache / service worker** (most common) | Verify in an **Incognito window** — always |
-| 2 | **Flutter analyze failed** and aborted the build | Re-read terminal output; fix errors and re-run script |
-| 3 | **Backend not redeployed** | If `numista_backend/main.py` changed, run `gcloud run deploy` separately |
-| 4 | **pubspec.yaml version not bumped** | Bump the version before building |
+| 1 | **GitHub Actions pipeline still running** (most common) | Check `https://github.com/Numista-AI/Numista.AI/actions` |
+| 2 | **Browser cache / service worker** | Verify in an **Incognito window** - always |
+| 3 | **Flutter analyze failed** and aborted the build | Check the Actions log; fix errors and re-push |
+| 4 | **pubspec.yaml version not bumped** | Bump the version before pushing |
 | 5 | **Wrong Firebase project targeted** | Confirm `studio-9101802118-8c9a8` appears in deploy output |
-| 6 | **Firebase deploy propagation delay** | Wait 60–90 seconds, then hard-refresh in Incognito |
+| 6 | **Firebase deploy propagation delay** | Wait 60-90 seconds, then hard-refresh in Incognito |
 
 ---
 
-## ? STEP-BY-STEP DEPLOY CHECKLIST
+## STEP-BY-STEP DEPLOY CHECKLIST
 
-### ?? Phase 1 — Before You Start Coding
+### Phase 1 - Before You Start Coding
 
 - [ ] Local dev server is running (`launch_numista.ps1`)
 - [ ] You know which files you are about to change
@@ -45,58 +58,87 @@ If you deployed but don't see the change on https://numista.ai, check these in o
 
 ---
 
-### ?? Phase 2 — While Coding
+### Phase 2 - While Coding
 
 - [ ] Test every change at `http://localhost:8080` before deploying
-- [ ] Group related tweaks together — deploy once when the group is done, not per-tweak
-- [ ] Note if `numista_backend/main.py` was modified (requires a separate backend deploy)
+- [ ] Group related tweaks together - deploy once when the group is done, not per-tweak
+- [ ] Note if `numista_backend/main.py` was modified (CI/CD handles the backend deploy automatically on push)
 
 ---
 
-### ?? Phase 3 — Pre-Deploy
+### Phase 3 - Pre-Deploy
 
-- [ ] `flutter analyze` passes with **zero errors** (the deploy script runs this automatically, but verify)
+- [ ] `flutter analyze` passes with **zero errors**
 - [ ] `pubspec.yaml` version number bumped (at minimum the build number: `1.0.x+N`)
-- [ ] Backend changes noted? ? will need `gcloud run deploy` after the script
+- [ ] All local tests passing
 
 ---
 
-### ?? Phase 4 — Deploy
+### Phase 4 - Deploy
 
-Run from the project root:
+#### PRIMARY: Push to Git (always preferred)
 
 ```powershell
+# Stage, commit, and push from project root
+git add -A
+git commit -m "Deploy: <brief description of what changed>"
+git push origin main
+```
+
+GitHub Actions triggers `.github/workflows/deploy-production.yml` automatically.
+Monitor progress at: `https://github.com/Numista-AI/Numista.AI/actions`
+
+**Typical pipeline time: 8-12 minutes total.**
+
+---
+
+#### EMERGENCY FALLBACK: Use deploy_production.ps1 (frontend only)
+
+Only use this if the GitHub Actions pipeline is unavailable or broken:
+
+```powershell
+# From project root - deploys frontend (Firebase Hosting) only
 .\deploy_production.ps1
 ```
 
 This script automatically:
-1. Removes the dev service-worker kill-switch from `web/index.html`
+1. Removes the dev service-worker kill-switch from `numista_mobile/web/index.html`
 2. Runs `flutter analyze` (aborts if errors found)
-3. Runs `flutter build web --release --base-href "/"`
-4. Deploys via `firebase deploy --only hosting`
+3. Changes into `numista_mobile/` and runs `flutter build web --release --base-href "/"`
+4. Changes into `numista_mobile/` and runs `firebase deploy --only hosting --project studio-9101802118-8c9a8`
 5. Restores the dev service-worker kill-switch
 6. Pings https://numista.ai for a 200 response
 
-> ?? Do NOT run these steps manually unless the script fails. Use the script.
+> **WARNING:** This does NOT deploy the backend. Use `git push` for full deployments.
 
-**If backend was also changed**, run separately after the script:
+**If backend also changed and CI/CD is unavailable**, run these emergency commands from `numista_backend/`:
 
 ```powershell
-# From numista_backend/
-gcloud run deploy numista-backend --source . --project studio-9101802118-8c9a8 --region us-central1
+# From numista_backend/ - EMERGENCY BACKEND DEPLOY ONLY
+gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+docker build -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest .
+docker push us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest
+gcloud run deploy numista-backend `
+  --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest `
+  --region us-central1 `
+  --project studio-9101802118-8c9a8 `
+  --quiet
 ```
+
+> **Registry:** Always use `us-central1-docker.pkg.dev` (Artifact Registry). NEVER use `gcr.io`.
+> **Service:** Always deploy to `numista-backend`. The retired `numista-app` service no longer exists.
 
 ---
 
-### ?? Phase 5 — Post-Deploy Verification (MANDATORY)
+### Phase 5 - Post-Deploy Verification (MANDATORY)
 
-> ? A deploy is NOT complete until you personally verify the live site.
+> A deploy is NOT complete until you personally verify the live site.
 
-1. **Open an Incognito window** (not your regular browser tab — it may show cached content)
+1. **Open an Incognito window** (not your regular browser tab - it may show cached content)
 2. Navigate to **https://numista.ai**
 3. Verify the specific feature/fix you just deployed is visible and working
-4. Open **DevTools ? Console** — confirm zero errors
-5. Open **DevTools ? Application ? Service Workers** — confirm service worker is active
+4. Open **DevTools Console** - confirm zero errors
+5. Open **DevTools Application Service Workers** - confirm service worker is active
 
 - [ ] Site loads without errors
 - [ ] The changed feature works correctly on the live site
@@ -105,38 +147,42 @@ gcloud run deploy numista-backend --source . --project studio-9101802118-8c9a8 -
 
 ---
 
-### ?? Phase 6 — Log It
+### Phase 6 - Log It
 
 Append a brief entry to `SESSION_LOG.md`:
 
 ```
-## YYYY-MM-DD — [Short description of what was deployed]
+## YYYY-MM-DD - [Short description of what was deployed]
 - Changes: [list what changed]
-- Backend redeployed: Yes / No
+- Backend redeployed: Yes / No (via GitHub Actions)
 - Verified live: Yes
 ```
 
 ---
 
-## ?? Things to NEVER Do
+## Things to NEVER Do
 
-| ? Never | ? Instead |
+| NEVER | INSTEAD |
 |---|---|
+| Use `deploy_production.ps1` as your default deploy | Use `git push origin main` (primary method) |
+| Push a Docker image to `gcr.io` | Always use `us-central1-docker.pkg.dev` (Artifact Registry) |
+| Reference the retired `numista-app` Cloud Run service | Use `numista-backend` only |
 | Deploy after every single small tweak | Group tweaks, deploy once per session |
 | Verify the live site using your regular browser tab | Always verify in **Incognito** |
 | Mark a task as done if only local dev was updated | Deploy AND verify live before marking done |
-| Run flutter build steps manually, bypassing the script | Always use `deploy_production.ps1` |
+| Run flutter build steps manually | Use `git push` (primary) or `deploy_production.ps1` (emergency) |
 | Deploy right before stepping away from your desk | Stay available to catch issues post-deploy |
 | Run `flutter clean` unless explicitly needed | It deletes the web build cache |
 
 ---
 
-## ?? Key File Reference
+## Key File Reference
 
 | Purpose | Path |
 |---|---|
 | **This SOP** | `DEPLOYMENT_SOP.md` |
-| Production deploy script | `deploy_production.ps1` |
+| GitHub Actions CI/CD pipeline | `.github/workflows/deploy-production.yml` |
+| Emergency manual deploy script (frontend only) | `deploy_production.ps1` |
 | Production build checklist | `PROD_BUILD_CHECKLIST.md` |
 | Agent standing rules | `agent_guidance.md` |
 | Session log | `SESSION_LOG.md` |
@@ -145,14 +191,25 @@ Append a brief entry to `SESSION_LOG.md`:
 
 ---
 
-## ?? How Long Does a Deploy Take?
+## How Long Does a Deploy Take?
+
+### GitHub Actions (primary)
+
+| Step | Time |
+|---|---|
+| Flutter build + Firebase Hosting deploy | ~5-8 minutes |
+| Docker build + Cloud Run deploy | ~5-8 minutes (parallel) |
+| Firebase CDN propagation | 30-90 seconds |
+| **Total (typical)** | **~8-12 minutes** |
+
+### Emergency script (frontend only)
 
 | Step | Time |
 |---|---|
 | flutter analyze | ~30 seconds |
-| flutter build web --release | 2–4 minutes |
+| flutter build web --release | 2-4 minutes |
 | firebase deploy --only hosting | ~30 seconds |
-| Firebase CDN propagation | 30–90 seconds |
-| **Total (typical)** | **~4–6 minutes** |
+| Firebase CDN propagation | 30-90 seconds |
+| **Total (typical)** | **~4-6 minutes** |
 
-Plan for ~10 minutes from running the script to confirmed live verification.
+Plan for ~15 minutes from push to confirmed live verification.

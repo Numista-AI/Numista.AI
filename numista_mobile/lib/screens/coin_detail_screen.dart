@@ -26,6 +26,9 @@ import '../services/auth_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
+import '../services/mint_error_service.dart';
+import '../models/mint_error.dart';
+import 'mint_error_detail_screen.dart';
 
 // ─── Design tokens (match app-wide palette) ────────────────────────────────────
 const _kBg       = Color(0xFFF0F2F6);
@@ -160,7 +163,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
   void initState() {
     super.initState();
     _coin = widget.coin;
-    _tabCtrl = TabController(length: 4, vsync: this);
+    _tabCtrl = TabController(length: 6, vsync: this);
     _tabCtrl.addListener(() {
       if (_tabCtrl.index == 3 && !_aiLoaded && !_aiLoading) {
         _loadAiInsight();
@@ -451,6 +454,69 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     }
   }
 
+  // ── Manual Verification ────────────────────────────────────────────────────
+  Future<void> _verifyManually() async {
+    final email = AuthService.userEmail;
+    if (email == null || email.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Verify Manually?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'This will submit the coin to the Human AI Trainer Review Board for manual verification by a numismatic expert.\n\nContinue?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .doc(_coin.id)
+          .update({'grade_review_status': 'pending'});
+
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Coin successfully submitted for manual verification!'),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Submission failed: $e'),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // BUILD
   // ─────────────────────────────────────────────────────────────────────────
@@ -473,6 +539,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
           onClose: () => Navigator.of(context).pop(),
           onWishlist: _toggleWishlist,
           onEdit: _enterEditMode,
+          onVerifyManually: _verifyManually,
           onAiChat: () {
             Navigator.of(context).pop();
             final denom = _fmtDenomination(_coin.denomination);
@@ -511,6 +578,8 @@ Write in an engaging, authoritative style like a respected numismatic reference.
               Tab(text: 'Financials'),
               Tab(text: 'Provenance'),
               Tab(text: 'AI Insights'),
+              Tab(text: 'History'),
+              Tab(text: 'Known Errors'),
             ],
           ),
         ),
@@ -536,6 +605,8 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                   );
                 },
               ),
+              _HistoryTab(coin: _coin),
+              _KnownErrorsTab(coin: _coin),
             ],
           ),
         ),
@@ -606,6 +677,7 @@ class _HeroHeader extends StatelessWidget {
   final VoidCallback onAiChat;
   final Future<void> Function()? onPcgs;
   final VoidCallback onDelete;
+  final VoidCallback? onVerifyManually;
 
   const _HeroHeader({
     required this.coin,
@@ -617,6 +689,7 @@ class _HeroHeader extends StatelessWidget {
     required this.onAiChat,
     this.onPcgs,
     required this.onDelete,
+    this.onVerifyManually,
   });
 
   @override
@@ -698,6 +771,15 @@ class _HeroHeader extends StatelessWidget {
                   label: 'PCGS',
                   color: Colors.white70,
                   onTap: onPcgs,
+                ),
+              ],
+              if (onVerifyManually != null) ...[
+                const SizedBox(width: 8),
+                _ActionBtn(
+                  icon: Icons.assignment_turned_in_outlined,
+                  label: 'Verify Manually',
+                  color: Colors.amberAccent,
+                  onTap: onVerifyManually,
                 ),
               ],
               const SizedBox(width: 8),
@@ -1938,6 +2020,258 @@ class _AiInsightsTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HISTORY TAB — Founding Legislation via Congress.gov API
+// ─────────────────────────────────────────────────────────────────────────────
+class _HistoryTab extends StatefulWidget {
+  final CoinModel coin;
+  const _HistoryTab({required this.coin});
+
+  @override
+  State<_HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<_HistoryTab> {
+  Map<String, dynamic>? _laws;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('metadata')
+          .doc('coin_legislation')
+          .get();
+      if (mounted) {
+        setState(() {
+          _laws = snap.data()?['laws'] as Map<String, dynamic>?;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Maps a coin's programSeries + denomination to a founding law key.
+  /// Returns the key string (e.g. '105-124') or null if not matched.
+  String? _matchLawKey() {
+    final series = widget.coin.programSeries.toLowerCase();
+    final denom  = widget.coin.denomination.toLowerCase();
+    final theme  = widget.coin.themeSubject.toLowerCase();
+
+    if (series.contains('state quarter') || series.contains('50 state') ||
+        series.contains('statehood quarter'))                          return '105-124';
+    if (series.contains('america') && series.contains('beautiful'))    return '110-456';
+    if (series.contains('presidential dollar') || series.contains('president dollar'))
+                                                                       return '109-145';
+    if (series.contains('silver eagle') || series.contains('american silver eagle') ||
+        series.contains('gold eagle'))                                 return '99-61';
+    if (series.contains('susan b') || series.contains('anthony'))      return '95-447';
+    if (series.contains('eisenhower'))                                 return '91-607';
+    if (series.contains('march of dimes') || theme.contains('march of dimes'))
+                                                                       return '112-209';
+    if (series.contains('sacagawea') || series.contains('native american dollar'))
+                                                                       return '106-445';
+    // Coinage Act 1965: affected all silver coins — halves, quarters, dimes
+    if (denom.contains('half dollar') || denom.contains('quarter') ||
+        denom.contains('dime'))                                        return '89-81';
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(color: _kAccent),
+        ),
+      );
+    }
+
+    final lawKey = _matchLawKey();
+    final law    = (lawKey != null && _laws != null) ? _laws![lawKey] as Map<String, dynamic>? : null;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Section header ──────────────────────────────────────────────
+          Row(children: const [
+            Icon(Icons.account_balance, size: 16, color: _kAccent),
+            SizedBox(width: 8),
+            Text('Founding Legislation',
+                style: TextStyle(fontSize: 13, color: _kSubtext,
+                    letterSpacing: 0.8, fontWeight: FontWeight.w600)),
+          ]),
+          const SizedBox(height: 12),
+
+          if (law != null) ...[
+            // ── Law card ──────────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withAlpha(15),
+                  blurRadius: 8, offset: const Offset(0, 2),
+                )],
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // Public Law badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _kAccent.withAlpha(22),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _kAccent.withAlpha(60)),
+                  ),
+                  child: Text('Public Law ${law['public_law'] ?? lawKey}',
+                      style: const TextStyle(fontSize: 11, color: _kAccent,
+                          fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                ),
+                const SizedBox(height: 12),
+
+                // Law title
+                Text(law['name'] ?? '',
+                    style: const TextStyle(fontSize: 16,
+                        fontWeight: FontWeight.bold, color: _kText, height: 1.4)),
+                const SizedBox(height: 12),
+
+                // Metadata rows
+                _HistoryRow(Icons.calendar_today_outlined, 'Enacted',
+                    law['enacted'] ?? ''),
+                _HistoryRow(Icons.forum_outlined, 'Congress',
+                    law['congress'] ?? ''),
+                _HistoryRow(Icons.gavel_outlined, 'Chamber',
+                    law['chamber'] ?? 'Congress'),
+                if ((law['actions_count'] ?? 0) > 0)
+                  _HistoryRow(Icons.rule_outlined, 'Legislative Actions',
+                      '${law['actions_count']} recorded actions'),
+
+                // Congress.gov link button
+                if ((law['congress_url'] ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(
+                      Uri.parse(law['congress_url']),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_new, size: 14),
+                    label: const Text('View on Congress.gov'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kAccent,
+                      side: const BorderSide(color: _kAccent),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Context blurb ─────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kAccent.withAlpha(10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _kAccent.withAlpha(30)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                const Icon(Icons.info_outline, size: 16, color: _kAccent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(law['description'] ?? '',
+                      style: const TextStyle(fontSize: 13, color: _kSubtext,
+                          height: 1.5)),
+                ),
+              ]),
+            ),
+          ] else ...[
+            // ── No legislation found ──────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Column(children: [
+                Icon(Icons.history_edu_outlined, size: 40,
+                    color: _kSubtext.withAlpha(100)),
+                const SizedBox(height: 12),
+                const Text('No Legislation Matched',
+                    style: TextStyle(fontSize: 15,
+                        fontWeight: FontWeight.bold, color: _kText)),
+                const SizedBox(height: 6),
+                Text(
+                  'Legislation data for "${widget.coin.programSeries.isEmpty ? widget.coin.denomination : widget.coin.programSeries}" '
+                  'is not yet in our database.\n\n'
+                  'The AI Insights tab can provide historical context about this coin.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: _kSubtext,
+                      height: 1.5),
+                ),
+              ]),
+            ),
+          ],
+
+          // ── Source credit ──────────────────────────────────────────────
+          const SizedBox(height: 20),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+            Icon(Icons.verified_outlined, size: 11, color: _kSubtext),
+            SizedBox(width: 4),
+            Text('Legislation data via Congress.gov API',
+                style: TextStyle(fontSize: 10, color: _kSubtext)),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single row in the History tab law card.
+class _HistoryRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _HistoryRow(this.icon, this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 14, color: _kSubtext),
+        const SizedBox(width: 8),
+        Text('$label: ', style: const TextStyle(
+            fontSize: 13, color: _kSubtext, fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(fontSize: 13, color: _kText)),
+        ),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SHARED SUB-WIDGETS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2037,3 +2371,216 @@ Widget _emptyState(String message) => Center(
     ]),
   ),
 );
+
+// ─── Known Errors Tab ─────────────────────────────────────────────────────────
+// Lazy-loads related mint errors from MintErrorService when the tab is first
+// opened. Shows a scrollable list of matching errors with a link to the full
+// Error Library detail screen.
+
+class _KnownErrorsTab extends StatefulWidget {
+  final CoinModel coin;
+  const _KnownErrorsTab({required this.coin});
+
+  @override
+  State<_KnownErrorsTab> createState() => _KnownErrorsTabState();
+}
+
+class _KnownErrorsTabState extends State<_KnownErrorsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  bool _loaded = false;
+  bool _loading = false;
+  List<MintError> _errors = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadErrors();
+  }
+
+  Future<void> _loadErrors() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    final denom = widget.coin.denomination.toLowerCase();
+    final year = int.tryParse(widget.coin.year) ?? 0;
+    final results = await MintErrorService.getErrorsForCoin(
+      denomination: denom,
+      year: year,
+    );
+    if (mounted) {
+      setState(() {
+        _errors = results;
+        _loaded = true;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loaded && _errors.isEmpty) {
+      return _emptyState(
+        'No known errors on record for this coin.\n\n'
+        'Check the Error Library for general error types\n'
+        'or search by denomination.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header strip
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, size: 16, color: _kBrand),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${_errors.length} known error${_errors.length == 1 ? '' : 's'} for '
+                  '${widget.coin.year} ${widget.coin.denomination}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: _kBorder),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.all(12),
+            itemCount: _errors.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final err = _errors[i];
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MintErrorDetailScreen(error: err),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      // Category color bar
+                      Container(
+                        width: 4,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _errorCategoryColor(err.category),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              err.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _kText,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                _ErrorBadge(err.category, _errorCategoryColor(err.category)),
+                                const SizedBox(width: 6),
+                                _ErrorBadge(err.rarity, _errorRarityColor(err.rarity)),
+                                const Spacer(),
+                                Text(
+                                  err.valueRange,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _kGold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, size: 18, color: _kSubtext),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Mini badge for Known Errors tab ─────────────────────────────────────────
+class _ErrorBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _ErrorBadge(this.label, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(70)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+      ),
+    );
+  }
+}
+
+Color _errorCategoryColor(String category) {
+  switch (category) {
+    case 'Doubled Die': return const Color(0xFFF63366);
+    case 'Off-Metal':   return const Color(0xFFFF9500);
+    case 'Planchet':    return const Color(0xFF34C759);
+    case 'Striking':    return const Color(0xFF4C8CDA);
+    case 'Die Variety': return const Color(0xFF9B59B6);
+    case 'Overdate':    return const Color(0xFFFF6B35);
+    case 'Missing Mintmark': return const Color(0xFFE74C3C);
+    case 'Currency':    return const Color(0xFF2ECC71);
+    default:            return const Color(0xFF5A5C69);
+  }
+}
+
+Color _errorRarityColor(String rarity) {
+  switch (rarity) {
+    case 'Legendary': return const Color(0xFFFFD700);
+    case 'Rare':      return const Color(0xFFF63366);
+    case 'Uncommon':  return const Color(0xFF4C8CDA);
+    default:          return const Color(0xFF5A5C69);
+  }
+}

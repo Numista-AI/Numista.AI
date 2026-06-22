@@ -20,6 +20,309 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
+  // ── Auto-wishlist from collection ────────────────────────────────────────
+  List<Map<String, dynamic>> _userCoins = [];
+  bool _coinsLoaded = false;
+  String? _expandedProgramId; // which program card is open
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserCoins();
+  }
+
+  Future<void> _loadUserCoins() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .limit(2000)
+          .get();
+      if (mounted) {
+        setState(() {
+          _userCoins = snapshot.docs
+              .map((d) => d.data())
+              .toList();
+          _coinsLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _coinsLoaded = true);
+    }
+  }
+
+  /// Returns true if a Firestore coin doc belongs to the given program.
+  bool _coinBelongsToProgram(Map<String, dynamic> coin, CoinProgram program) {
+    final series = (coin['Program/Series']?.toString() ?? '').toLowerCase().trim();
+    final programName = program.name.toLowerCase().trim();
+    if (series.isEmpty) return false;
+    return series.contains(programName) || programName.contains(series);
+  }
+
+  /// Returns true if the user already owns at least one coin matching [pc] in [program].
+  bool _userHasProgramCoin(CoinProgram program, ProgramCoin pc) {
+    final pcName = pc.name.toLowerCase();
+    return _userCoins.any((c) {
+      if (!_coinBelongsToProgram(c, program)) return false;
+      final theme = (c['Theme/Subject']?.toString() ?? '').toLowerCase();
+      final year  = c['Year']?.toString() ?? '';
+      return theme.contains(pcName) ||
+             pcName.contains(theme) ||
+             (pc.year != null && pc.year!.isNotEmpty && pc.year == year);
+    });
+  }
+
+  /// Programs where the user has collected ≥1 coin.
+  List<CoinProgram> _getTrackedPrograms(Map<String, List<CoinProgram>> allProgramsMap) {
+    final result = <CoinProgram>[];
+    for (final list in allProgramsMap.values) {
+      for (final program in list) {
+        if (_userCoins.any((c) => _coinBelongsToProgram(c, program))) {
+          result.add(program);
+        }
+      }
+    }
+    return result;
+  }
+
+  // ── Program Tracker UI ────────────────────────────────────────────────────
+
+  Widget _buildAutoMissingSection(Map<String, List<CoinProgram>> allProgramsMap) {
+    if (!_coinsLoaded) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFFF63366))),
+      );
+    }
+    final programs = _getTrackedPrograms(allProgramsMap);
+    if (programs.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Coin Programs',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1E293B))),
+        const SizedBox(height: 4),
+        const Text(
+          'Tap a program to see your full checklist and shop for missing coins.',
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        ...programs.map((p) => _buildProgramRow(p)),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildProgramRow(CoinProgram program) {
+    final isExpanded = _expandedProgramId == program.id;
+    final total = program.coins.length;
+    final ownedCount =
+        program.coins.where((pc) => _userHasProgramCoin(program, pc)).length;
+    final missingCount = total - ownedCount;
+    final progress = total > 0 ? ownedCount / total : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(7),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Collapsed header ──
+          InkWell(
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(14),
+              bottom: isExpanded ? Radius.zero : const Radius.circular(14),
+            ),
+            onTap: () => setState(() =>
+                _expandedProgramId = isExpanded ? null : program.id),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              child: Row(
+                children: [
+                  _buildMiniProgress(progress, ownedCount, total),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(program.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: Color(0xFF1E293B))),
+                        const SizedBox(height: 2),
+                        Text(
+                          missingCount == 0
+                              ? 'Complete! All $total coins collected ✓'
+                              : '$ownedCount of $total collected · $missingCount missing',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: missingCount == 0
+                                  ? const Color(0xFF22C55E)
+                                  : const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF94A3B8),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Expanded coin list ──
+          if (isExpanded) ...[
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            ...program.coins.asMap().entries.map((entry) {
+              final isLast = entry.key == program.coins.length - 1;
+              return _buildCoinRow(program, entry.value, isLast: isLast);
+            }),
+            const SizedBox(height: 4),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoinRow(CoinProgram program, ProgramCoin pc, {bool isLast = false}) {
+    final isOwned = _userHasProgramCoin(program, pc);
+    final query =
+        '${program.name} ${pc.name}${pc.year != null && pc.year!.isNotEmpty ? " ${pc.year}" : ""}';
+    final url = EpnService.buildSearchUrlFromQuery(query);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isOwned ? const Color(0xFFF0FDF4) : Colors.white,
+        border: isLast
+            ? null
+            : const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+        borderRadius: isLast
+            ? const BorderRadius.vertical(bottom: Radius.circular(14))
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        child: Row(
+          children: [
+            Icon(
+              isOwned ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              color: isOwned ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1),
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pc.name,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight:
+                          isOwned ? FontWeight.w600 : FontWeight.normal,
+                      color: isOwned
+                          ? const Color(0xFF166534)
+                          : const Color(0xFF1E293B),
+                    ),
+                  ),
+                  if (pc.year != null && pc.year!.isNotEmpty)
+                    Text(pc.year!,
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ),
+            if (isOwned)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('Collected',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF16A34A),
+                        fontWeight: FontWeight.w600)),
+              )
+            else
+              TextButton.icon(
+                onPressed: () async {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri,
+                        mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.open_in_new_rounded,
+                    size: 13, color: Color(0xFFE65100)),
+                label: const Text('Buy on eBay',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFE65100),
+                        fontWeight: FontWeight.w600)),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniProgress(double progress, int owned, int total) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 4,
+            backgroundColor: const Color(0xFFF1F5F9),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              progress >= 1.0
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFF3B82F6),
+            ),
+          ),
+          Center(
+            child: Text(
+              '${(progress * 100).toInt()}%',
+              style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,6 +383,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           child: ListView(
                             padding: const EdgeInsets.all(24),
                             children: [
+                              _buildAutoMissingSection(allProgramsMap),
                               if (programs.isNotEmpty) ...[
                                 const Text('Collector Programs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
                                 const SizedBox(height: 24),
@@ -109,6 +413,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     return ListView(
                       padding: const EdgeInsets.all(24),
                       children: [
+                        _buildAutoMissingSection(allProgramsMap),
                         if (programs.isNotEmpty) ...[
                           const Text('Collector Programs', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                           const SizedBox(height: 16),
@@ -555,7 +860,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Future<void> _launchEbaySearch(CoinModel coin) async {
-    final url = await EpnService.generateSearchUrl(coin);
+    final url = await EpnService.generateSearchUrl(coin, soldOnly: false);
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     }

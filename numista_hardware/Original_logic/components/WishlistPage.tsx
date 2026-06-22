@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Coin, WishlistItem } from '../types';
-import { Gift, Plus, Trash2, Printer, Download, CheckCircle, Search, DollarSign, Filter, X } from 'lucide-react';
+import { Gift, Plus, Trash2, Printer, Download, CheckCircle, Search, DollarSign, Filter, X, ShoppingCart, Share2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { buildEbayAffiliateUrl, canSearchEbay } from '../utils/ebay';
 
 interface WishlistPageProps {
   coins: Coin[];
@@ -113,6 +114,19 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ coins, wishlist, onU
                  >
                     <Plus className="w-4 h-4" />
                     Add Item
+                 </button>
+                 <button
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}${window.location.pathname}?share=wishlist`;
+                      navigator.clipboard.writeText(shareUrl).then(() => {
+                        alert('Wish list link copied to clipboard! Share it with friends & family so they can buy you coins for the holidays 🎄');
+                      });
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm"
+                    title="Share your wish list with friends & family"
+                 >
+                    <Share2 className="w-4 h-4" />
+                    Share List
                  </button>
                  <button 
                     onClick={handleExportExcel}
@@ -309,6 +323,19 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ coins, wishlist, onU
                             <p className="mt-3 text-xs text-slate-500 italic border-t border-slate-100 pt-2">
                                 "{item.notes}"
                             </p>
+                        )}
+                        {/* eBay Affiliate Buy Button — only shown for coins not already owned */}
+                        {!owned && canSearchEbay(item) && (
+                            <a
+                                href={buildEbayAffiliateUrl(item)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#e53238] text-white text-sm font-bold rounded-lg hover:bg-[#c9252b] transition-colors"
+                                title="Search eBay for this coin"
+                            >
+                                <ShoppingCart className="w-4 h-4" />
+                                Buy on eBay
+                            </a>
                         )}
                     </div>
                 );
