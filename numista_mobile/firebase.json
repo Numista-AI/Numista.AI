@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "numista-ai",
+    "site": "numista-vault",
     "public": "build/web",
     "ignore": [
       "firebase.json",
