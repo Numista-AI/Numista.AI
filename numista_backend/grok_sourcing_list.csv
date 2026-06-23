@@ -1,0 +1,225 @@
+type_id,category,denomination,year,series,need_obverse,need_reverse,doc_count,example_description,doc_ids
+TYPE_001,Bank Note,$1,,,YES,YES,1,$1 Farmers Bank of Bucks County Bank Note Hulmeville PA (181-Teen's),30e04d0e-972c-4d2e-815b-ae4fcd6b24f2
+TYPE_002,Bank Note,$10,1929,,YES,YES,1,$10 Fereral Reserve Bank Note,5c7a805d-ca39-4cd1-95d9-110fbe46c100
+TYPE_003,Confederate,$2,1862,,NO,YES,1,$2 Confederate Note,38f79268-6312-4e7b-9080-7f146190c0fc
+TYPE_004,Error Note,$5,1907,,YES,YES,1,"$5 Ledal Tender Note ""PCBLIC"" Engraving error Reverse",433f9c5d-223d-4ba4-b6b7-df2be99957f0
+TYPE_005,Federal Reserve Bank Note,,1918,,NO,YES,1,Federal Reserve Bank Note Large size PMG,f2964c90-667d-4410-b6dc-4539403ddd01
+TYPE_006,Federal Reserve Bank Note,$1,1918,,YES,YES,3,$1 Federal Reserve Bank Note Large Size,ab4c04f3-692c-4d86-8cf7-474b327aa7e7|ba8b6759-f931-46d6-acc8-f979d167b0e4|e1e2921b-55fe-480f-9206-d1d7190bc0c4
+TYPE_007,Federal Reserve Bank Note,$10,1929,,YES,YES,1,$10 Federal Reserve Bank Note,b2298557-2a79-4cca-9c08-3216ce6bef88
+TYPE_008,Federal Reserve Bank Note,$2,1918,,YES,YES,1,$2 Federal Reserve Bank Note Large size,72d31b0c-433a-497e-9823-068a848d91ba
+TYPE_009,Federal Reserve Bank Note,$20,1929,,YES,YES,3,$20 Federal Reserve Bank Note,0e6e757c-8579-435f-ba6f-1f1e6c05412b|1a430eea-6a15-4e9a-9515-b67e7860c328|6004dcd6-634e-4cc0-ba5e-41542ae84226
+TYPE_010,Federal Reserve Bank Note,$5,1929,,YES,YES,1,$5 Federal Reserve Bank Note,5c213b63-dceb-4ed7-95b0-7d34c7a88b8b
+TYPE_011,Federal Reserve Note,,1934A,,NO,YES,1,Federal Reserve Note Hawaii LB Block PMG,5f4694e5-8396-4fa9-a5fe-88cad22bcf9c
+TYPE_012,Federal Reserve Note,,1963A,,YES,YES,1,1$ Federal Reserve Star Note,53a95a8f-86ff-449f-912e-d0178b2ae9cc
+TYPE_013,Federal Reserve Note,,1993,,YES,YES,1,1 Federal Reserve Note,507f4608-e353-44e7-92eb-af1de7b69d99
+TYPE_014,Federal Reserve Note,$1,,,YES,YES,8,$1 Federal Reserve Liars Note Six in a Row,125ea498-a637-403f-9840-d7bbbd633025|5be37438-84eb-40db-8aca-8bf56f624dc0|723c3c09-d901-487e-ac28-e860ec08d1c8|76d98c8f-9d98-4a84-887a-278ee8381ab1|8b79528a-719b-4fe4-a526-8fe4225a5bc0|98681453-46f4-48ab-adcf-caef5796358e|c7a95f65-dc1e-4534-9cd1-78224845c407|ea5866db-e7cd-4a20-86f7-0a35f3760acb
+TYPE_015,Federal Reserve Note,$1,1918,,NO,YES,1,$1 Federal Reserve Bamk Note large size PCGS 65PPQ,118419d7-93be-458e-b218-70ef48ec45dc
+TYPE_016,Federal Reserve Note,$1,1939A,,YES,YES,1,$1 federal reserve star Note,f8410502-4f22-4ac6-a104-ce8c7d5ad0b4
+TYPE_017,Federal Reserve Note,$1,1959D,,YES,YES,1,$1 Federal Reserve Note,6c58710e-52f8-415c-8d6e-5c46884aef32
+TYPE_018,Federal Reserve Note,$1,1963,,YES,YES,4,$1 Federal Reserve Note,00d5f6a9-d781-4659-8de4-3c49f65ad655|90dfb6b0-23ba-46b2-8ed0-cec8357721d8|db32c602-6299-4498-b8a2-7c7167e8cd11|e3b8bbf9-4416-447d-a124-a1ce8c3d8335
+TYPE_019,Federal Reserve Note,$1,1963A,,YES,YES,9,$1 Federal Reserve Star Note,4ca0b227-da9f-47a7-8c7d-8f884abb4efa|4d73a2d7-19ee-4baa-88d6-d34c1c809a4e|71981b7b-fd61-4843-ac3e-905d79663bc9|736e295f-fb3e-4dd9-9cfe-5c70d5bae1ee|9fafab17-5eeb-478b-9935-156a8b525f08|bcaeb92a-c7f2-489f-8da4-7f423b8c812e|c33678b2-58b4-4778-b24c-4480a01f3e12|c35fa411-9f3b-4864-829f-d45fab43f053|c70e382f-ca6f-4702-8e41-c9d7cce4c425
+TYPE_020,Federal Reserve Note,$1,1963B,,YES,YES,9,$1 Federal Reserve Note,35843f61-f70a-4517-a683-14e542e84053|3fe512dc-0f10-47c7-9316-c963487db94c|4087d404-6155-4e83-be53-4532d4be65f1|44fc8897-4d07-414d-b660-e31cf4ed449d|653fc0f5-ad69-4ba3-b3f6-4f68e4b58157|8a12443b-5e5b-4035-be63-cfbdf7277e86|b6d22d4c-694a-4e98-b331-31f7c943d8ea|ccf39c49-31d9-4a5d-9e7b-7dbb60d44d7e|f3a6fb42-e0a4-4ce2-8de8-779354a37fba
+TYPE_021,Federal Reserve Note,$1,1969,,YES,YES,8,$1 federal reserve note,1342dc86-e12d-4f0b-9aa7-218b4f8e0c61|54cce273-e8b3-4f2d-a2f1-8903f8ca5fef|5da6f840-f718-438d-8da5-0d79b222c5c7|670d2624-2ec4-4eee-b1e3-361df0a947d5|78964ea8-f910-4c99-aad1-09b056a5da87|a590dc39-caf4-4854-b91f-587fd022c0c4|cf95f460-5165-473c-ab9d-d6736956b81a|d2f80645-f050-40f2-894f-fd4126c66c9c
+TYPE_022,Federal Reserve Note,$1,1969A,,YES,YES,3,$1 Federal Reserve Note,2cc5cf72-2f53-4046-9b93-4665f8199bc1|92b098d0-a20c-43bf-96d8-530355c6e2aa|b542e73a-3dd6-4722-a0b6-f96602067680
+TYPE_023,Federal Reserve Note,$1,1969B,,YES,YES,4,$1 Federal Reserve Note,588e615b-f9df-4cea-ae32-762ba042a9f8|72dd4025-dc06-4d6e-9f6e-f540d58f978c|a870b80d-bd71-458a-aa99-c0bdaff79464|b7d78c3f-079b-474f-ae8a-845acf1885bd
+TYPE_024,Federal Reserve Note,$1,1969C,,YES,YES,3,$1 Federal Reserve Star Note,6cad1a04-6b0d-4826-b6d2-2b0a54faf2b8|82830af1-ae4b-43f9-9f3d-f3e72c0da18f|bb0d8d9a-8549-482e-974e-ea0b776d9aa2
+TYPE_025,Federal Reserve Note,$1,1969D,,YES,YES,1,$1 Federal Reserve Note,f772e254-469e-42af-bc18-9bf15a85709a
+TYPE_026,Federal Reserve Note,$1,1974,,YES,YES,1,$1 Federal Reserve Note,8e566f52-1849-4925-820f-566c9c658513
+TYPE_027,Federal Reserve Note,$1,1977,,YES,YES,5,$1 Federal Reserve Note,5615c7fc-25e8-410d-9807-79d794bf7cfe|83d00497-0d52-4dc3-aab1-0bd191285a02|afa108d9-96e4-4840-b559-67f6b2785c21|d78f0dfe-24f3-4ab8-84d5-cea22772e09a|f649ca98-9389-4662-8426-b8d30fa1f5ec
+TYPE_028,Federal Reserve Note,$1,1988A,,YES,YES,2,$1 federal reserve  note,4744c145-d6eb-4137-991d-f08b152fe47a|e9c01036-cade-45cc-b959-99a0b9a9aa92
+TYPE_029,Federal Reserve Note,$1,1993,,YES,YES,2,$1 federal reserve note,d4d8e301-8238-4f81-93a8-70f5b04bb761|da5722c0-8b83-45f0-b0c2-779f05d21660
+TYPE_030,Federal Reserve Note,$1,1995,,YES,YES,1,$1 Federal Reserve Star Note,7bae5024-e8eb-49e3-9bef-dd692676dced
+TYPE_031,Federal Reserve Note,$1,1999,,YES,YES,2,$1 Federal Reserve Star Note,8a91b37c-d7e6-465a-b9e3-c9e1f39e3914|ddaffba8-1b0e-494e-a658-f42f5bccea62
+TYPE_032,Federal Reserve Note,$1,2001,,YES,YES,4,$1 Federal Reserve Star Note,146ea1ae-64f7-447c-b215-5f3498fdf360|646c999c-2492-4b7e-87ba-9895a1d2eb30|99b043be-b979-44b5-8014-96fc88985f8b|e07580e7-f19e-44ea-b8cc-dcc4ada27f32
+TYPE_033,Federal Reserve Note,$1,2003,,YES,YES,3,$1 federal reserve star note,76e16bf9-d317-4548-9051-13a3eb00fd89|9506c607-310c-4b9c-896c-1b5dc0f3720b|9a1cf314-9cab-4f8e-8fb6-581fb59b81ea
+TYPE_034,Federal Reserve Note,$1,2003A,,YES,YES,3,$1 Federal Reserve Star Note,2ba2e6f7-ebbc-43d3-a279-f38bce0b66c4|61c6df36-dde6-49b0-89e7-beae9aef4c22|6751ef19-bbd9-4e35-8390-765d6cd8f255
+TYPE_035,Federal Reserve Note,$1,2006,,YES,YES,3,$1 Federal Reserve Star Note,0baa8aa6-e268-4586-ba9a-6292ba8995f6|7c284f7d-dfb5-459e-bdcb-1ffc5dd0de4b|b9ac73ff-3e33-45d9-841e-555e2d4f4217
+TYPE_036,Federal Reserve Note,$1,2009,,YES,YES,2,$1 Federal Reserve Note,6bcd4e92-f7d0-44cf-9344-6bbb4da340aa|a5b47d85-cc8f-4b1a-9d16-0b4abb40e69e
+TYPE_037,Federal Reserve Note,$1,2013,,YES,YES,3,$1 Federal Reserve Star Note,1a726b24-aa24-4fce-ae60-74e9765eb9b9|90a93666-7791-4085-8ebb-6e3df9e90ef8|b5d0d3ff-ea58-474f-8510-400ff9620d26
+TYPE_038,Federal Reserve Note,$1,2017A,,YES,YES,1,$1 Federal Reserve Star Note,f1c7a84d-5ce3-4537-b846-01296a469d67
+TYPE_039,Federal Reserve Note,$10,1914,,YES,YES,2,$10 Federal Reserve Note,1b14218e-4bd4-40b6-bdc0-fd676f7cb136|26c67b3a-23c9-4148-b3a1-e1841e83ca5a
+TYPE_040,Federal Reserve Note,$10,1934,,YES,YES,1,$10 Federal Reserve Note,3cb72c6a-9ca1-40a6-aab3-9fbbe4cfdf1a
+TYPE_041,Federal Reserve Note,$10,1934A,,YES,YES,3,$10 Federal Reserve Note,382cf23c-b60d-4bff-8b1e-f0f96b1b1c60|a22becee-0cbd-459b-a3c1-cf8e321d9707|c8222810-d0aa-4e23-9ed7-fe3b246bf00f
+TYPE_042,Federal Reserve Note,$10,1934C,,YES,YES,1,$10 Federal Reserve Note,f30166f8-3f2c-4177-9050-79262b0d8f13
+TYPE_043,Federal Reserve Note,$10,1950C,,YES,YES,1,$10 Federal Reserve Note,498b1b5f-45e3-42c5-be38-4cbc3efea64d
+TYPE_044,Federal Reserve Note,$10,1999,,YES,YES,1,$10 Federal Reserve Star Note,18f617df-fd26-4eac-a5e6-02c38c3550c8
+TYPE_045,Federal Reserve Note,$100,1914,,YES,YES,1,$100 Federal Reserve note large size,e24971c5-2d60-465f-a7b2-5fb824b56e2d
+TYPE_046,Federal Reserve Note,$100,1934,,YES,YES,1,$100 Federal Reserve Note,16012432-73c3-4fa6-957b-2e45adade209
+TYPE_047,Federal Reserve Note,$14,1914,,YES,YES,1,$14 Federal Reserve Note,fca0055f-df47-4d7d-b0e1-0f447d337d52
+TYPE_048,Federal Reserve Note,$2,1976,,YES,YES,14,$2 Federal Reserve Star Note,1af738a8-4df5-4bfb-8609-031b867acf50|3370b2ba-7f9d-4750-8128-620d0cfd21f3|41e83d61-5845-4448-a2c0-faec23cca8a2|48ca39e0-9e3b-4f38-9a66-987f6cb3875f|4dabb022-435d-4c22-bd5e-37fb1cac6bb1|57d6d7d3-6422-4208-a397-9910da623526|6270e28f-43e0-4fbe-aa9a-c87966e98a58|698a8687-8ba9-444a-a5d0-ec15bd8bd95c|84847e94-c510-461e-826f-6f97148d1307|b8b96983-3928-4f0b-8af6-e0e3cd329fae|be431d7d-e9e8-475f-a13f-323b63808bf7|c3653ae1-e572-4db4-a088-6b3f4f430dae|c6553232-f82e-467c-aa0c-3fafe3adf980|ddad60d4-8497-4fca-96b7-f295dc145171
+TYPE_049,Federal Reserve Note,$2,1978,,YES,YES,1,$2 federal reserve Note,858bd0d0-3c85-468c-9644-87d89aa75e0e
+TYPE_050,Federal Reserve Note,$2,1995,1936F,YES,YES,1,$2 Federal Reserve Note with courtsey signed Mary Ellen Withrow Autograph (FR193,b4ab6acc-0e3d-4fbe-9fa1-7a657b05686b
+TYPE_051,Federal Reserve Note,$2,1995,,YES,YES,2,$2 Federal Reserve Note,f6b100d2-d353-488a-9fbb-486177e300cf|f9950251-a300-49b0-8ce0-9e8a7c34023e
+TYPE_052,Federal Reserve Note,$2,2003,,YES,YES,1,$2 Federal reserve star note,b4492142-593e-4f87-960a-536db5224c48
+TYPE_053,Federal Reserve Note,$2,2003A,,YES,YES,4,$2 Federal Reserve Note,3f6c909c-2825-4cfc-9ed0-db18c7bdd83d|be97b17d-e346-4213-b123-71f7a59fb3d6|c549ddae-778b-4eec-8b33-2010fc13355f|d3aabb05-5708-4ea5-b2d3-d6307d49c01b
+TYPE_054,Federal Reserve Note,$2,2013,,YES,YES,2,$2 federal reserve note,e71e9192-1ba6-4f18-a614-3b31b268b5eb|f7d7f452-e40b-4ed2-a45c-1a2e75d7af09
+TYPE_055,Federal Reserve Note,$20,1914,,YES,YES,2,$20 Federal Reserve Red Seal Note Large size,4e095c3d-e10a-46aa-ad6b-4b95196879c9|69a7acfb-a845-4af4-8913-72f39479323a
+TYPE_056,Federal Reserve Note,$20,1934,,YES,YES,2,$20 Federal Reserve Note Hawaii,262f5088-541a-4192-bf5c-05338eb37873|4132586e-7905-4f23-a102-b4c6a08d92c6
+TYPE_057,Federal Reserve Note,$20,1934A,,YES,YES,2,$20 Federal Reserve Note,4aac02fd-b73a-4048-891c-1e4eec816c54|a305e205-af44-460e-8d98-54e1ebd3891a
+TYPE_058,Federal Reserve Note,$20,1985,1978,NO,YES,1,$20 Federal Reserve Note small size DD Block Inverted Back error FR1978 PMG,841d190b-01de-43b8-8f5d-b1d496eebe7d
+TYPE_059,Federal Reserve Note,$5,,,YES,YES,1,$5 Federal Reserve Binary Repeated Note,5ebc8a7c-f4bc-4abc-9f45-470538d9e377
+TYPE_060,Federal Reserve Note,$5,$5 Federal Reserve Split Quad Note,,YES,YES,1,$5 Federal Reserve Split Quad Note,00b1cf06-18fb-4f28-b373-bed074a35341
+TYPE_061,Federal Reserve Note,$5,1914,,YES,YES,5,$5 Federal Reserve Note,5e2abea1-9fbc-4e1c-8f86-9ade1bcb1829|ad94e93f-1c47-4554-8003-eed0e4c9aef1|c1be944b-d999-41eb-a178-e8749c0418b2|d45fa07f-4370-43f8-aa43-e2569f84b570|dba43bd9-514a-4ef1-be59-71a35b6ed2a0
+TYPE_062,Federal Reserve Note,$5,1928A,,YES,YES,1,$5 Federal Reserve Note,9a1a7689-e753-4199-9db8-ea4d90ecc18d
+TYPE_063,Federal Reserve Note,$5,1934A,,YES,YES,1,$5 Federal Reserve Note Hawaii,a178a481-fdbd-4aa4-9814-8c9e98e53863
+TYPE_064,Federal Reserve Note,$5,1999,,YES,YES,1,$5 federal reserve star note,abce5a9c-25b1-4bbc-961f-50b0d1397521
+TYPE_065,Federal Reserve Note,$5,2001,,YES,YES,1,$5 Federal Reserve Star Note,6237c14b-50d7-42ad-bd87-13a521ebbc4b
+TYPE_066,Federal Reserve Note,$5,2003,,YES,YES,2,$5 Federal Reserve Note,44c4dbbf-eddd-4f94-a78c-b86b61577d73|e94f7f6a-d924-4930-aeee-0093045ad0ea
+TYPE_067,Federal Reserve Note,$5,2013,,YES,YES,1,$5 Federal Reserve Star Note,28a51acd-4908-4f61-aab6-4ed308a65d17
+TYPE_068,Federal Reserve Note,$50,1914,,YES,YES,1,$50 Federal Reserve Note Large Size,92a5779f-f1fc-4908-973f-f0d742366a31
+TYPE_069,Federal Reserve Note,$50,1934,,YES,YES,1,$50 Federal Reserve Note,a89c4662-dcbb-4b53-a4b3-171ff779e1a0
+TYPE_070,Federal Reserve Note,$500,1934,,YES,YES,1,$500 Federal Reserve Note,bdc7e4c8-e220-4714-917e-e65844c9a0e9
+TYPE_071,Fractional Currency,,1864-69,,NO,YES,1,% cents fractional currency PCGS,dc122fde-efab-454f-8c5d-423228facd9b
+TYPE_072,Fractional Currency,10,1862-76,,YES,YES,1,10C Fractional Currency,676c6a20-014d-484b-90d1-a63db856ce33
+TYPE_073,Fractional Currency,10,1863-97,,YES,YES,1,10C Fractional Currency,68b0d5e1-d993-4aca-bf79-61b7f3d0989b
+TYPE_074,Fractional Currency,10,1864-1869,,YES,YES,1,10C Fractional Currency,be40d2ef-1061-4611-8d6a-2c84fd29a439
+TYPE_075,Fractional Currency,10,1869-75,,YES,YES,2,10C Fractional currency,25b98a47-09f2-4bc8-a75c-42e85a1345a2|b0407c13-17fe-4400-997f-8a8fa9abeeaf
+TYPE_076,Fractional Currency,10,1874-76,,YES,YES,2,10C Fractional Currency,5244942c-f0e4-4bed-a0ab-d8de37c55bcd|f0e5fbe8-329a-4942-a665-cecd159d991e
+TYPE_077,Fractional Currency,10,1875-76,,YES,YES,1,10C Fractional currency,5594e24b-556f-4eb9-a37e-ad8f80c1bfe7
+TYPE_078,Fractional Currency,15,1869-1875,,YES,YES,2,15C Fractional Currency,d7d0414f-de22-4893-94cb-937a2bc3ebb4|f8738f58-afc1-4c59-98b2-d837b41a3941
+TYPE_079,Fractional Currency,15,1869-75,,YES,YES,1,15C Fractional Currency,2cfcc7b7-7afb-4618-b45c-612bcf7c4024
+TYPE_080,Fractional Currency,2,1864-69,,YES,YES,1,2C Fractional Currency,c5da0c2c-3160-4086-b40e-ce4a044dfaeb
+TYPE_081,Fractional Currency,25,1862-63,,YES,YES,2,25C Fractional Currency,761917c7-3508-49b8-ab5b-aa552204f1a6|f3f5514e-c53e-4a42-988d-8fd4c76ef45c
+TYPE_082,Fractional Currency,25,1862-76,,YES,YES,1,25C Fractional Currency,07923724-faa8-42de-b013-9a1c04c810ea
+TYPE_083,Fractional Currency,25,1874-1876,,YES,YES,2,25C Fractional Currency,e4abb3d1-6835-4134-9d96-8fefb14281a5|e5ca8883-d3d0-43b0-af70-d22289357b20
+TYPE_084,Fractional Currency,5,1862-63,,YES,YES,1,5C Fractional Currency,c21c58d7-7bfb-4ec8-926d-ca8b0a063be9
+TYPE_085,Fractional Currency,5,1863-67,,YES,YES,1,5C Fractional Currency,fa227719-755f-4306-8f27-94eea9f0501f
+TYPE_086,Fractional Currency,50,1862-76,,YES,YES,1,50C Fractional currency,a71f5749-c9ea-4fa3-8b82-59238b7e9c19
+TYPE_087,Fractional Currency,50,1864-69,,YES,YES,1,50C Fractional Currency,f8a40b38-36c4-44fb-852c-d7a31b7a10fe
+TYPE_088,Fractional Currency,50,1869-75,,NO,YES,1,50C Fractional Currency PMG EPQ CHUNC 63,329298f6-ecd7-46d7-9bae-026b3b559451
+TYPE_089,Gold Certificate,$10,1907-22,,YES,YES,1,$10 Gold Certificate Large Size,0bbb8757-2a9f-4d0d-9d25-8e0e961f7d7a
+TYPE_090,Gold Certificate,$10,1922,,YES,YES,1,$10 gold certificate large size,6c8f4b81-851b-44b7-ab9d-213c28eb8395
+TYPE_091,Gold Certificate,$10,1928,,YES,YES,1,$10 Gold Certificate,949919fa-ce5d-4db2-8265-bf424c4c24fb
+TYPE_092,Gold Certificate,$20,1906,,YES,YES,1,$20 Gold Certificate Latge size,299ef9a9-97e9-4721-9f57-1582a48fb36b
+TYPE_093,Gold Certificate,$20,1922,,YES,YES,1,$20 Gold Certificate Large Size,da735250-20a9-4f50-a215-6bf6728a727d
+TYPE_094,Gold Certificate,$20,1928,,YES,YES,1,$20 Gold Certificate,a7c7b0c3-5fb5-4255-ae4e-2fa788ba24f8
+TYPE_095,Gold Certificate,$50,1862,,YES,YES,1,$50 gold certificate large size,472fe365-3508-437a-8b4f-e86e10dea664
+TYPE_096,Legal Tender Note,,1928 C,,YES,YES,1,5 Legal Tender Note,8e0ac89a-d7be-4587-bc28-35b153ee841b
+TYPE_097,Legal Tender Note,$1,1917,,YES,YES,5,$1 Legal Tender Note Large Size,11eea9ed-470f-48ce-ae61-6b12bb57a24d|4db3fb0a-6b24-42b4-8d9a-da61e1edad16|591341bb-4e48-432f-8df1-2850b7d321ef|d235728c-9326-49f2-970e-0fab6dcc655f|dc94176a-8faf-4149-9b47-65173ec4fbb1
+TYPE_098,Legal Tender Note,$1,1923,,YES,YES,1,$1 Legal Tender Note Large Size,2703275c-04a1-402f-95b6-fefa991973a4
+TYPE_099,Legal Tender Note,$1,1928,,YES,YES,1,$1 Legal Tender Note Funny Back,57de6f90-cbe5-4471-b2c4-03fd8ed805ea
+TYPE_100,Legal Tender Note,$10,1880,,YES,YES,1,$10 Legal Tender Note Large Size,931605ae-2aa6-4b1d-a87a-98a6b32307a1
+TYPE_101,Legal Tender Note,$10,1901,,YES,YES,1,$10 legal tender Note Bison,2ff4b0dc-2b94-4ff1-a6c5-a88b3a8155b2
+TYPE_102,Legal Tender Note,$100,1966,,YES,YES,1,$100 Legal Tender Note,bd1d545f-52d3-4a19-95ad-af1412a41c98
+TYPE_103,Legal Tender Note,$2,1917,,YES,YES,2,$2 Legal Tender Note Large Size,639f2928-9b75-4237-a310-bcbe5d92dc94|9f7e5d43-c246-4c5b-9eed-12bfc40a3949
+TYPE_104,Legal Tender Note,$2,1928C,,YES,YES,1,$2 Legal Tender note,3fc92f3a-55ce-4894-87de-a03ff6648030
+TYPE_105,Legal Tender Note,$2,1928D,,YES,YES,1,$2 Legal Tender Note,425945a6-d082-4c8f-aefc-d03c4fa95ad0
+TYPE_106,Legal Tender Note,$2,1928E,,YES,YES,1,$2 Legal Tender Note,1fd6da68-d96f-4183-95b7-dfe5ea094e09
+TYPE_107,Legal Tender Note,$2,1928F,,YES,YES,1,$2 Legal Tender Note,7d4afa4b-1995-438e-94f8-1ca6074194e2
+TYPE_108,Legal Tender Note,$2,1928G,,YES,YES,1,$2 Legal Tender Note,145dccaf-5fcc-426b-82bc-2cf02b6cad7c
+TYPE_109,Legal Tender Note,$2,1953,,YES,YES,2,$2 legal tender note,0690d75a-931a-4c03-a8ea-b2c70f20e2c2|2e44c61a-c88f-4f92-9455-bf39d18e7af4
+TYPE_110,Legal Tender Note,$2,1953A,,YES,YES,1,$2 legal tender note,a42c9fcc-fb3e-4d31-b0c2-089594b46a16
+TYPE_111,Legal Tender Note,$2,1953B,,YES,YES,2,$2 Legal Tender Star Note,0ec4d582-1264-4da1-bfac-d712efe056fe|846f58f9-9736-4a9a-ac44-ce27f9447595
+TYPE_112,Legal Tender Note,$2,1953C,,YES,YES,2,$2 Legal Tender Star Note,b0a04f63-8daf-4bbe-9d63-8dfd4caf48a6|c79fcdc8-c79d-4d23-acd3-0b77870992a3
+TYPE_113,Legal Tender Note,$2,1963,,YES,YES,1,$2 legal tender note,5d491a05-d21c-496a-aeca-84916f2c72db
+TYPE_114,Legal Tender Note,$2,1963A,,YES,YES,2,$2 Legal Tender Star Note,2a8bb3b5-9ec5-48b1-bc24-35c506b4cbc1|faa775f5-873b-418d-9315-b23f4196b837
+TYPE_115,Legal Tender Note,$5,1907,,YES,YES,3,$5 Legal Tender Note Spelling Error Reverse P*C*BLIC EPQ,0342508c-19ff-4eb4-ab71-202498839396|39deb9dc-fc84-48bb-bf80-bc338472ab25|c12fbd3d-ced1-4ae6-864d-298fa940a09a
+TYPE_116,Legal Tender Note,$5,1917,,YES,YES,1,$5 Legal Tender Note Large Size,82f1cccd-23c1-4c70-9a77-a733ab04a3db
+TYPE_117,Legal Tender Note,$5,1928,,YES,YES,1,$5 Legal Tender Note,38295d75-d028-40fb-b736-d8a947189328
+TYPE_118,Legal Tender Note,$5,1928E,,YES,YES,1,$5 Legal Tender Note,f76398a8-328f-4ac8-b243-a11145e0d5c0
+TYPE_119,Legal Tender Note,$5,1928F,,YES,YES,2,$5 Legal Tender Note,05b2ca0f-3b28-4ad8-bb74-76bcc3473b0e|8b809532-3fcf-4940-a2ff-f5bfc749d709
+TYPE_120,Legal Tender Note,$5,1953,,YES,YES,2,$5 Legal Tender Note,542578a1-c29a-41bd-bec4-425eac6d5e1d|cfbe5c4b-ad5e-41e9-8fdc-374bb4d6dece
+TYPE_121,Legal Tender Note,$5,1953 B,,YES,YES,1,$5 Legal Tender Star Note,f708fe82-714c-4d24-b629-488ecef09db5
+TYPE_122,Legal Tender Note,$5,1953A,,YES,YES,2,$5 Legal Tender Star Note,6f21b915-7899-404f-8ff4-4456f0ecc032|cbec4d30-83f0-4961-bae4-ab8c69a3fca5
+TYPE_123,Legal Tender Note,$5,1953C,,YES,YES,1,$5 Legal Tender Star Note,9b09ff02-81c1-46c6-9c2f-b53ffa8bf53f
+TYPE_124,Legal Tender Note,$5,1963,,YES,YES,2,$5 Legal Tender Star Note,6f8e56f2-d103-4626-801b-39ca6a12623c|75313ed3-3b32-4fe1-b8b7-ab79a2b9c251
+TYPE_125,Military Payment Certificate,,1969-70,,YES,YES,1,$!  Military Payment certificate,8462ba93-c72d-4dcd-971f-de0ddbb1b509
+TYPE_126,Military Payment Certificate,$5,1968-69,,YES,YES,1,$5 Military Payment Certificate,99237bf6-b21c-433c-9ad3-262c2f6cb150
+TYPE_127,National Bank Note,,1929,,YES,YES,3,National Bank Note Type 1 Beatrice NE charter #2357,225340ee-e21d-433e-8b0c-0ac83414bbe9|80ca03d0-b340-4c16-bc7f-b877a9004c98|d9d75c78-21dc-4776-a872-44f8ac66dd34
+TYPE_128,National Bank Note,$10,1902,,YES,YES,1,$10 National bank note large size plainback,20999425-4077-4887-9ff0-e819dceb3086
+TYPE_129,National Bank Note,$10,1929,,YES,YES,4,$10 National Bank Note Type 1 Newport NH $3404,61bcfefd-bf62-4d10-add6-0030308a2e75|7da5e7f2-9f87-48d7-942e-9f463c499dde|d62d2ace-b967-40e3-84aa-5f45f6edfb5c|f282ec15-bcaf-4b7d-bdb5-297b597797aa
+TYPE_130,National Bank Note,$20,1902,,YES,YES,2,$20 National Bank Note Large size third issue (Plain back),bdd37684-5796-46b9-87b5-7240eabd21c7|dbf777f4-fba3-4f66-b9a5-15fc7bfd3d90
+TYPE_131,National Bank Note,$20,1929,,YES,YES,2,$20 National Bank Note T1,4d74ac8d-d73c-4ba7-a787-63d80a3531c4|ed88d202-b144-475a-83ac-7ae8e405b0d6
+TYPE_132,National Bank Note,$5,1902,,YES,YES,7,$5 National bank notr,4920074b-5bb5-4e9a-b2f8-26927c564083|52b37bdf-b876-47ef-904a-db30ee5eff6e|5c8d9883-6aa3-4cf2-aea7-9630adfe1260|70481d94-aa04-4dec-b9eb-3c9936258eab|8dc33722-02b1-4ed4-886c-9b65d3135c74|c1c65d19-ea92-4829-9baf-9962bba1c97f|d3f76b10-1455-42dc-bb89-c0e3b4696ece
+TYPE_133,National Bank Note,$5,1929,,YES,YES,4,$5 National Bank Note T2,42ae44e7-3673-49e4-a611-c5ffd2a173f6|6009ee2d-d8dd-4c20-98ac-b0b2c53f4788|9934eed2-537a-42b8-87ed-9806982bd3e9|a4970d83-0f18-47c4-b568-3343766109c6
+TYPE_134,Obsolete Currency,,,,YES,YES,2,19th Century Obsolete Currency,07969ed5-f14e-4e9d-9656-93458cda6302|fa5d4adf-6e69-4904-a06f-bf0665a80a19
+TYPE_135,Obsolete Currency,,1900 Century,,YES,YES,1,Obsolete Currency,7c7c4065-c113-4aeb-8c6b-a0321e6fbd5d
+TYPE_136,Obsolete Currency,$100,1826,1705,YES,YES,1,$100New York Marble Manufacturing Obsolete Bote NY 1705-024,8623bb2f-6d9f-4c85-88b4-eb9176f4b367
+TYPE_137,Silver Certificate,,1923,,NO,YES,2,$! Silver certificate large size PCGS PPQ64 2 consecutive serial #s (FR238),b7306c36-314e-451c-8b5c-8cc951f88f18|fb15284a-daa0-4a0a-9f4d-3b9e8cc71341
+TYPE_138,Silver Certificate,,1934A,,NO,YES,1,10 Silver Certificate Yellow Seal BA Block PMG EPQ65,3d3f7001-af69-47f2-b347-6c4137abda1b
+TYPE_139,Silver Certificate,,1934D,,YES,YES,1,10 Silver Certificate Star Note,3fb23610-e584-4ef7-8f49-936a54a99398
+TYPE_140,Silver Certificate,,1935A,,YES,YES,5,1 silver certificate Hawaii (FR2300) (SC Block) PMG CU64 EPQ,087b9066-7de9-43ee-b106-d01a58314f20|7498dc89-e0cf-458f-a1ec-88a4a15fff55|8a6d31c3-865b-4455-b7d1-4319ea7d7254|b0138b17-311a-45cc-9a93-9206b401a49e|fbad48a0-786d-4586-a772-fe6a4fab0e39
+TYPE_141,Silver Certificate,$1,1823,,YES,YES,1,$1 silver certificate large size Three consecutive Serial Numbers (FR237),7f6a8a62-63f0-4554-8e91-d94f242b5b2d
+TYPE_142,Silver Certificate,$1,1891,,YES,YES,1,$1 Silver Certificate Large Size Martha Washington,bca4f87f-3bec-45b6-b03c-c0dcd3149366
+TYPE_143,Silver Certificate,$1,1896,,YES,YES,3,$1 Silver Certificate large size Educational,3705fe86-132c-4542-a00c-0ebe2962fbe1|454d69cb-d53d-4630-87be-19f2be04fa80|9eadf37c-a7ae-4630-8723-6bc2ab77629e
+TYPE_144,Silver Certificate,$1,1899,,YES,YES,2,$1 silver certificate large size eagle,87189b96-278e-43de-8a20-efe597886f50|bf62e319-76b2-4897-af3f-a375682145c4
+TYPE_145,Silver Certificate,$1,1923,,YES,YES,9,$1 Silver Certificate large size 2 consecutive Serial #s (FR237) PCGS,076219f6-5198-4628-864d-dc17b932b719|0fa622a0-ba81-492d-bbcc-b070bc9ac79e|411ec589-ae64-49e9-98d7-516fff2e64a2|587ea6ab-87fe-443f-b219-f3bd8ef0f690|be0b5e30-8f6c-4b48-b30e-0f526a5c01af|ee958b47-da4f-46ef-aad9-280e44a23502|f0ab304f-4f6a-45b2-b7fe-37e2283fb22a|f35ef8cf-44bb-47ef-809d-48137dacde05|fc7982a2-327e-4879-8491-92c7833c5ea3
+TYPE_146,Silver Certificate,$1,1928,,YES,YES,1,$1 Silver Certificate Funnyback,ec3916df-8c41-4f7f-9bb2-a0a4f19cb91a
+TYPE_147,Silver Certificate,$1,1928$1,,YES,YES,1,$1 Silver Certificate Funnyback,3a267b43-b7f1-4f5e-a9b0-6845fb611870
+TYPE_148,Silver Certificate,$1,1928A,,YES,YES,1,$1 Silver Certificate Funnyback,1d0a722d-b9b0-4f5a-8a13-7ba145bdac01
+TYPE_149,Silver Certificate,$1,1928B,,YES,YES,2,$1 Silver Certificate Funnyback,3905a42b-53b9-4d07-8299-27a4f9d3e62b|d64b6f7d-e05f-4a7d-9e55-f1b3571777ed
+TYPE_150,Silver Certificate,$1,1928D,,YES,YES,1,$1 Silver Certificate Funnyback,38dbe211-2888-425d-aedb-c62756996087
+TYPE_151,Silver Certificate,$1,1934,,YES,YES,1,$1 silver certificatee funnyback,fc9c1d56-eaf1-4fd1-a92d-8acd5a0bd539
+TYPE_152,Silver Certificate,$1,1935,,YES,YES,1,$1 silver certificate,d540ffb6-aef7-456c-a30b-1075e715a4ab
+TYPE_153,Silver Certificate,$1,1935 C,,YES,YES,1,$1 Silver Certificate,57ac3665-0dc3-4bc2-9984-56b14541d9c9
+TYPE_154,Silver Certificate,$1,1935A,,YES,YES,5,$1 Silver Certificate,724ddaf4-b9ab-4d48-ba20-5ed6908778ef|a8a00966-e593-40b0-8856-4044a6609e56|d3d8b11d-d555-4d88-a292-5fa27b206fb4|d5cbb68d-a4e4-4f43-917b-0a5876899048|f76f719d-40ac-45db-91de-edc255716be0
+TYPE_155,Silver Certificate,$1,1935A-R,,YES,YES,1,$1 Silver Certificate,52a3f15d-84ac-42cf-8393-c51f9bf7277f
+TYPE_156,Silver Certificate,$1,1935B,,YES,YES,1,$1 Silver Certificate,94ea8b99-f9c1-43f4-b1cf-2a9083cec95e
+TYPE_157,Silver Certificate,$1,1935D,,YES,YES,2,$1 silver certificate wide design,cb6b1aeb-16aa-4ff9-b39f-a3a97633bd43|d4965885-02ee-4b7e-8348-e5eb3b25fac2
+TYPE_158,Silver Certificate,$1,1935E,,YES,YES,2,$1 silver certificate,01598715-3532-45d1-8636-d08d4e04ab35|0b7d4e18-8663-46e2-a15c-9fdbbbecfce6
+TYPE_159,Silver Certificate,$1,1935F,,YES,YES,1,$1 silver certificate,2a21b798-9aaa-4802-a1bf-789dbd959b71
+TYPE_160,Silver Certificate,$1,1935G,,YES,YES,2,$1 silver certificate,0f688f7c-0256-41dd-a343-25dceffcc454|dfb2d06a-7254-404f-9b3a-cb6d93b998d4
+TYPE_161,Silver Certificate,$1,1935H,,YES,YES,2,$1 Silver Certificate Star Note,463e04af-d451-4206-84a1-8041a347d174|c75463e5-ac86-438c-b717-02e4a7cad963
+TYPE_162,Silver Certificate,$1,1957,,YES,YES,3,$1 silver cert star note,417a6cce-7799-48a1-8538-966248dbf53c|bda5379d-d182-463d-b46f-945b9f97087f|be4dc957-dae7-491d-8279-d5013bd0a2ad
+TYPE_163,Silver Certificate,$1,1957A,,YES,YES,3,$1 Silver Certificate,a410eb60-daf4-4f6f-826b-25943ac6a4e4|a66cf39b-a92b-4c9e-8228-5804bd2f1e83|bf4391dc-95a6-47de-b5aa-76a752ad0316
+TYPE_164,Silver Certificate,$1,1957B,,YES,YES,2,$1 silver certificate,b427cec9-2631-4ba6-b994-5cce57a67fd1|de791f2c-48f3-48ed-af8c-8842140080b1
+TYPE_165,Silver Certificate,$10,1934,,YES,YES,5,$10 Silver Certificate,196efc9f-8f8f-43c4-8c01-5275f7e46756|29b89ec5-170a-4a04-b038-03b555639b2d|3bcee5ba-02a3-4636-98c0-483765d25b48|7bf39641-6a05-4ab3-b713-6d23bf5e3bb1|997f2950-8bda-4d90-a8ec-06b33a37e063
+TYPE_166,Silver Certificate,$10,1934A,,YES,YES,2,$10 Silver Certificate - No Yellow Seal,02f1f861-2578-42c9-bddf-afb58d9570c8|8fe20fb4-3ae9-45c1-9a44-c2d18c4156bb
+TYPE_167,Silver Certificate,$10,1934B,,YES,YES,1,$10 Silver Certificate,3c649910-6e54-4d7b-9e71-b2919979a92d
+TYPE_168,Silver Certificate,$10,1934C,,YES,YES,1,$10 Silver Certificate,714ac8a9-a2f5-4504-b67f-15f480e2815b
+TYPE_169,Silver Certificate,$10,1934D,,YES,YES,1,$10 Silver Certificate,c0f6ca0c-b618-4703-96f2-45735307b2d9
+TYPE_170,Silver Certificate,$10,1953,,YES,YES,1,$10 silver certificate Star note,90dc83e8-3467-43bf-86b3-695b2192a197
+TYPE_171,Silver Certificate,$2,1896,,YES,YES,1,$2 Silver Certificate Largensize Educational,42ee64e9-7340-4c66-854f-b727c3579570
+TYPE_172,Silver Certificate,$2,1899,,YES,YES,4,$2 Silver Certificate Large Size,0a256c7c-a7ea-4e02-9adb-67d10f09ceb0|8686be42-0159-48d8-a923-e341cfc7f342|c7bb2f5b-3afb-483d-b5d9-a12b8f31ceb2|c7fe1c85-7ab5-465e-a957-b6b8b807e4ce
+TYPE_173,Silver Certificate,$5,1899,,YES,YES,2,$5 Silver Certificate Indian Large size,b65865b8-2295-4f23-9c4b-47a30d7bbc22|e201deae-06b0-46a5-9206-bf024f2dd25a
+TYPE_174,Silver Certificate,$5,1934,,YES,YES,1,$5 Silver Certificate,ab9458d8-6487-4970-a8ce-38646717444a
+TYPE_175,Silver Certificate,$5,1934A,,YES,YES,2,$5 Silver Certificate,65819e0b-14ce-4941-aaeb-726ab07aaea8|f637e7d8-ef8b-4acf-87cc-26ecaed3b456
+TYPE_176,Silver Certificate,$5,1934B,,YES,YES,1,$5 Silver Certificate,8d727753-884c-4a40-af67-e33df1c4fbab
+TYPE_177,Silver Certificate,$5,1934C,,YES,YES,1,$5 Silver Certificate,9e7414d5-6ba0-4a67-b153-97d8f1d0d311
+TYPE_178,Silver Certificate,$5,1934D,,YES,YES,1,$5 Silver Certificate,da327acc-9708-4332-98c1-0fb0d82b9379
+TYPE_179,Silver Certificate,$5,1953,,YES,YES,1,$5 Silver Certificate,eeece5b0-292f-4371-a169-65d58683d83b
+TYPE_180,Silver Certificate,$5,1953A,,YES,YES,1,$5 silver certificate,b5694584-c8d3-48ed-bfe9-832846358029
+TYPE_181,Silver Certificate,$5,1953B,,YES,YES,1,$5 Silver Certificate,99d9085e-2896-427e-950a-f9e94b2e2939
+TYPE_182,Treasury Note,,1891,,YES,YES,1,$! Treasury Note Large size,d042604e-65e9-4bc6-bddf-67b13aeb8c49
+TYPE_183,Treasury Note,$1,1891,,YES,YES,1,$1 Treasury Note Large size,8c02cf6c-7cd7-423f-99e6-bc934e8bf4de
+TYPE_184,Unknown,,,,YES,YES,1,"W-CT- 250 CT Nank of NewEngland Uncut sheet 1,1,2,5 USO 20",92fe14e6-968e-456c-a80e-b8c40d5b2325
+TYPE_185,Unknown,,1776,,YES,YES,1,2 Continental Currency,51617d29-1663-49cb-ac07-d37d01fc8dab
+TYPE_186,Unknown,,1850's,,YES,YES,1,#3 West River Bank Vermont Note Jamaica,bf35ce79-068d-4d96-8b49-70efed55acdc
+TYPE_187,Unknown,,1850-60's,,YES,YES,1,7 note set West Riverbank Jamaica VT,f4aa820a-2f49-484e-987b-98fbc2a83188
+TYPE_188,Unknown,,1864,,YES,YES,1,50 Conferate Note,bb777fe7-7a21-49dd-aea3-77cbf34ef035
+TYPE_189,Unknown,,1886,,YES,YES,1,ilver Certificate Large Size,396a98c6-24d0-4208-b348-c13498690c49
+TYPE_190,Unknown,,1963,,YES,YES,1,#2 Leal Tender Star Note,d9d96ac1-417b-4088-96ea-7aa1f39aea10
+TYPE_191,Unknown,$1,1830's,,NO,YES,1,$1 Bamk of Windsor Vermont PMG,c0f11f40-29a8-4503-908a-5ba0d269e2c0
+TYPE_192,Unknown,$1,1850's-1860's,,YES,YES,1,"The West River Bank Jamaica Vermont Uncut sheet of 4 ($1, $2, $3, & $5)",8dd18743-92d4-4843-a98a-9c4b0b5e4281
+TYPE_193,Unknown,$1,1860,,YES,YES,1,$1 Bank of America State of Rhode Island W_RI-820-001-00108,ae619cb4-d90b-4bbd-9e63-56d90f24e5d7
+TYPE_194,Unknown,$1,1899,,YES,YES,3,$1 Silver Cerificate Large Size Eagle,5aa08b79-11af-4fda-b36f-3d3add60886d|6253c998-455f-4f21-9d5e-b9a852edd01f|673c2847-1ed3-4406-b29e-a8637fd7512a
+TYPE_195,Unknown,$1,1899-1918,,YES,YES,1,$1 large size note starter set,12df0fc6-5194-4c7b-8b62-4bea1efb25c4
+TYPE_196,Unknown,$1,1923,,YES,YES,1,$1 Silver Cerificate Large Size,d7833c80-d073-4949-94bc-c4d535d86107
+TYPE_197,Unknown,$1,1963A,,YES,YES,2,$1Federal Reserve Note,6a1c2e6d-08b4-4782-9862-f12a2f6110ab|b448cf38-44d7-4541-a32b-ac378c67c185
+TYPE_198,Unknown,$1,1969A,,YES,YES,1,$1Federal Reserve Note,5db38a87-41d9-45fb-a5c8-c5b8c0436672
+TYPE_199,Unknown,$1,1969B,,YES,YES,4,$1Federal Reserve Note,73ea66b9-1630-4572-bbce-5242c0c86389|cb217e2d-811f-48ca-87be-559b82694809|f4189966-2354-4e73-9d3c-f67cd095b365|ffb71e8c-3646-4d9e-b468-2d01b8d929d1
+TYPE_200,Unknown,$1,1969D,,YES,YES,1,$1 Ferderal Reserve Note,a8433dfe-cdef-4e97-ac88-97a27e592676
+TYPE_201,Unknown,$1,1988A,,YES,YES,1,$1Federal Reserve Note,425e75fa-21a2-413f-aa8b-e0ac6e7b4c09
+TYPE_202,Unknown,$1,1993,,YES,YES,1,$1Federal Reserve Note,59f0965f-0126-463f-a86b-ad5b847fbd8f
+TYPE_203,Unknown,$1,1999,,YES,YES,2,$1 Ferderal Reserve Star Note,14e86a13-2b34-431c-83ec-f67d97e47ef9|eb22cb95-582b-4a94-b78e-6d81ae7cb4a8
+TYPE_204,Unknown,$1,19th Century,,YES,YES,1,"Union County Bank of Plainfield NJ (2) $1, $2, $3 uncut sgeet of 4",5d4f37e3-026b-4af1-8c0d-e841fd64c08b
+TYPE_205,Unknown,$1,19th century,,YES,YES,1,State Bank of New Brunswick $1 Uncut sheet of 4,72b536b4-f6da-4ce5-bb67-d83ab14d0578
+TYPE_206,Unknown,$1,2003A,,YES,YES,2,$1Federal Reserve Star Note,0d686842-1033-4755-a635-c0317f2c1e0d|b79e9dcb-5626-44ce-a69d-0474e02faea1
+TYPE_207,Unknown,$10,1800's,,YES,YES,1,$10 canal Bank New Orleans Note with Bank,848ec127-f51c-4870-b438-5e468bf5168f
+TYPE_208,Unknown,$10,1850's-1860's,,NO,YES,1,$10 Falls Village Iton Bank (CT120G14C) PMG EDQ63,8a457305-0b05-4766-be46-f8aa48e8cc41
+TYPE_209,Unknown,$10,1865,,YES,YES,1,$10 State of Georgia Note From Milledgeville,b0efe82b-310a-4286-b5ef-73084dd0bcbf
+TYPE_210,Unknown,$1000,,,NO,YES,1,$1000 3rd Bank of the United States PMG New York Tear Repair Previously Mounted,0f2da1a0-1152-45bc-9eba-cae06f0f4a88
+TYPE_211,Unknown,$2,1861,,YES,YES,1,$2 New Orleans Jackson and Great Northern RR Co W-LA 380-002-G050,0e9eeec8-dfc5-418c-afc3-597898ff7652
+TYPE_212,Unknown,$20,1864,,YES,YES,1,$20 Confedwrate Note,3b8f8399-1d73-42f7-882e-d540b977ac0f
+TYPE_213,Unknown,$40,1778,,YES,YES,1,$40 continental currency,2ba8c63d-566a-424f-8616-15af3dc51390
+TYPE_214,Unknown,$5,1847-1850's,,YES,YES,1,$5 Falls Village Connecticut Iron Bank (CT120G8),1bff68c9-9147-4254-84e1-7e2dd743a18a
+TYPE_215,Unknown,$5,1850's-1860's,,YES,YES,1,$5 Falls Village Connecticut Iton Bank (CT120G10C),64182a73-681a-4d78-ab37-1af82e70e44b
+TYPE_216,Unknown,$5,1850's-1960's,,YES,YES,1,"$5, $10, and $20  Farmer's Bank of Kentucky three note set",39e15347-e2eb-4af6-a621-fa3650e9dbe4
+TYPE_217,Unknown,$5,1880,,NO,YES,1,$5 Legal TenderNote large size PMG,0449a33d-a22e-4018-8a79-5ad1b8a7e128
+TYPE_218,Unknown,$5,"1880""s",,YES,YES,1,$5 State of Louisiana Single Bond with red serial number,6d74462d-36de-45fb-bb15-cfac379602ec
+TYPE_219,Unknown,$5,1914,,YES,YES,1,$5 Federal Rserve Note,a4619e29-fd5c-4e2e-812b-b26d57288f21
+TYPE_220,Unknown,$5,1928B,,YES,YES,1,$5 egal Tender Note,21131bc4-b62d-4243-8fdb-e3155aeefbb7
+TYPE_221,Unknown,$5,1953B,,YES,YES,1,$5Legal Tender Note,793b8f3e-115e-4f9b-a70f-7c0a311c2e2e
+TYPE_222,Unknown,$5,1953C,,YES,YES,1,$5Legal Tender Note,dfea2ebd-8b66-43c8-a21a-02cc02b6aa64
+TYPE_223,Unknown,$500,,,NO,YES,1,$500 3rd Bank of the United States Philadelphia PA Haxby 3 PCGS,df2e6ec8-ca64-4930-afaa-76c7a55e38a4
+TYPE_224,Unknown,5,1862-1869,,YES,YES,1,5c Gractional currency,727a1c07-4b0f-46c0-81e7-9123bf8a44ff

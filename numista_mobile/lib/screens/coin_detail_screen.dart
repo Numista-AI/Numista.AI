@@ -457,7 +457,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
   // ── Manual Verification ────────────────────────────────────────────────────
   Future<void> _verifyManually() async {
     final email = AuthService.userEmail;
-    if (email == null || email.isEmpty) return;
+    if (email.isEmpty) return;
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -2065,21 +2065,30 @@ class _HistoryTabState extends State<_HistoryTab> {
     final theme  = widget.coin.themeSubject.toLowerCase();
 
     if (series.contains('state quarter') || series.contains('50 state') ||
-        series.contains('statehood quarter'))                          return '105-124';
+        series.contains('statehood quarter')) {
+      return '105-124';
+    }
     if (series.contains('america') && series.contains('beautiful'))    return '110-456';
-    if (series.contains('presidential dollar') || series.contains('president dollar'))
-                                                                       return '109-145';
+    if (series.contains('presidential dollar') || series.contains('president dollar')) {
+      return '109-145';
+    }
     if (series.contains('silver eagle') || series.contains('american silver eagle') ||
-        series.contains('gold eagle'))                                 return '99-61';
+        series.contains('gold eagle')) {
+      return '99-61';
+    }
     if (series.contains('susan b') || series.contains('anthony'))      return '95-447';
     if (series.contains('eisenhower'))                                 return '91-607';
-    if (series.contains('march of dimes') || theme.contains('march of dimes'))
-                                                                       return '112-209';
-    if (series.contains('sacagawea') || series.contains('native american dollar'))
-                                                                       return '106-445';
+    if (series.contains('march of dimes') || theme.contains('march of dimes')) {
+      return '112-209';
+    }
+    if (series.contains('sacagawea') || series.contains('native american dollar')) {
+      return '106-445';
+    }
     // Coinage Act 1965: affected all silver coins — halves, quarters, dimes
     if (denom.contains('half dollar') || denom.contains('quarter') ||
-        denom.contains('dime'))                                        return '89-81';
+        denom.contains('dime')) {
+      return '89-81';
+    }
     return null;
   }
 

@@ -139,7 +139,25 @@ class HardwareService {
     }
     return null;
   }
+
+  // ─── Confirm Flip ─────────────────────────────────────────────────────────
+  /// Called when the user clicks "I've flipped the coin — Scan Reverse".
+  /// Immediately clears the flip lockout on the hardware agent so the reverse
+  /// capture begins without waiting for the 8-second auto-timer to expire.
+  Future<bool> confirmFlip() async {
+    try {
+      final response = await http
+          .post(Uri.parse('https://localhost:5000/confirm-flip'))
+          .timeout(const Duration(seconds: 3));
+      debugPrint('[HW] confirmFlip → ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[HW] confirmFlip failed: $e');
+      return false;
+    }
+  }
 }
+
 
 
 // ─── Data Model ───────────────────────────────────────────────────────────────

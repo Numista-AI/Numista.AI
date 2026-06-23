@@ -1,7 +1,14 @@
 import os
+import sys
 from google.cloud import firestore
 import google.auth
 from google.auth.exceptions import DefaultCredentialsError
+
+# Force UTF-8 output so emoji/box-chars don't crash on Windows cp1252
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 # --- CONFIGURATION ---
 # Make sure this project ID is correct
@@ -41,8 +48,7 @@ def check_firestore_connection():
     # 2. Try to write to Firestore
     try:
         db = firestore.Client(credentials=credentials, project=PROJECT_ID)
-        print("
-✅ Firestore Client: Initialized successfully.")
+        print("✅ Firestore Client: Initialized successfully.")
         
         doc_ref = db.collection("debug_test").document("test_document")
         print("   - Attempting to write a test document to the 'debug_test' collection...")
@@ -67,9 +73,7 @@ def check_firestore_connection():
         print("     - The Firestore database not being created in your Google Cloud project.")
         print("     - Firestore Rules blocking the write (though your current rules are open).")
 
-    finally:
-        print("
---- Debug Finished ---")
+        print("--- Debug Finished ---")
 
 if __name__ == "__main__":
     check_firestore_connection()

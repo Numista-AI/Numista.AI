@@ -1,0 +1,18 @@
+type_id,category,denomination,year,series,need_obverse,need_reverse,doc_count,example_description,doc_ids
+TYPE_001,Bank Note,$1,,,YES,YES,1,$1 Farmers Bank of Bucks County Bank Note Hulmeville PA (181-Teen's),30e04d0e-972c-4d2e-815b-ae4fcd6b24f2
+TYPE_002,Bank Note,$10,1929,,YES,YES,1,$10 Fereral Reserve Bank Note,5c7a805d-ca39-4cd1-95d9-110fbe46c100
+TYPE_004,Error Note,$5,1907,,YES,YES,1,"$5 Ledal Tender Note ""PCBLIC"" Engraving error Reverse",433f9c5d-223d-4ba4-b6b7-df2be99957f0
+TYPE_125,Military Payment Certificate,,1969-70,,YES,YES,1,$!  Military Payment certificate,8462ba93-c72d-4dcd-971f-de0ddbb1b509
+TYPE_126,Military Payment Certificate,$5,1968-69,,YES,YES,1,$5 Military Payment Certificate,99237bf6-b21c-433c-9ad3-262c2f6cb150
+TYPE_127,National Bank Note,,1929,,YES,YES,3,National Bank Note Type 1 Beatrice NE charter #2357,225340ee-e21d-433e-8b0c-0ac83414bbe9|80ca03d0-b340-4c16-bc7f-b877a9004c98|d9d75c78-21dc-4776-a872-44f8ac66dd34
+TYPE_128,National Bank Note,$10,1902,,YES,YES,1,$10 National bank note large size plainback,20999425-4077-4887-9ff0-e819dceb3086
+TYPE_129,National Bank Note,$10,1929,,YES,YES,4,$10 National Bank Note Type 1 Newport NH $3404,61bcfefd-bf62-4d10-add6-0030308a2e75|7da5e7f2-9f87-48d7-942e-9f463c499dde|d62d2ace-b967-40e3-84aa-5f45f6edfb5c|f282ec15-bcaf-4b7d-bdb5-297b597797aa
+TYPE_130,National Bank Note,$20,1902,,YES,YES,2,$20 National Bank Note Large size third issue (Plain back),bdd37684-5796-46b9-87b5-7240eabd21c7|dbf777f4-fba3-4f66-b9a5-15fc7bfd3d90
+TYPE_131,National Bank Note,$20,1929,,YES,YES,2,$20 National Bank Note T1,4d74ac8d-d73c-4ba7-a787-63d80a3531c4|ed88d202-b144-475a-83ac-7ae8e405b0d6
+TYPE_132,National Bank Note,$5,1902,,YES,YES,7,$5 National bank notr,4920074b-5bb5-4e9a-b2f8-26927c564083|52b37bdf-b876-47ef-904a-db30ee5eff6e|5c8d9883-6aa3-4cf2-aea7-9630adfe1260|70481d94-aa04-4dec-b9eb-3c9936258eab|8dc33722-02b1-4ed4-886c-9b65d3135c74|c1c65d19-ea92-4829-9baf-9962bba1c97f|d3f76b10-1455-42dc-bb89-c0e3b4696ece
+TYPE_133,National Bank Note,$5,1929,,YES,YES,4,$5 National Bank Note T2,42ae44e7-3673-49e4-a611-c5ffd2a173f6|6009ee2d-d8dd-4c20-98ac-b0b2c53f4788|9934eed2-537a-42b8-87ed-9806982bd3e9|a4970d83-0f18-47c4-b568-3343766109c6
+TYPE_134,Obsolete Currency,,,,YES,YES,2,19th Century Obsolete Currency,07969ed5-f14e-4e9d-9656-93458cda6302|fa5d4adf-6e69-4904-a06f-bf0665a80a19
+TYPE_135,Obsolete Currency,,1900 Century,,YES,YES,1,Obsolete Currency,7c7c4065-c113-4aeb-8c6b-a0321e6fbd5d
+TYPE_136,Obsolete Currency,$100,1826,1705,YES,YES,1,$100New York Marble Manufacturing Obsolete Bote NY 1705-024,8623bb2f-6d9f-4c85-88b4-eb9176f4b367
+TYPE_182,Treasury Note,,1891,,YES,YES,1,$! Treasury Note Large size,d042604e-65e9-4bc6-bddf-67b13aeb8c49
+TYPE_183,Treasury Note,$1,1891,,YES,YES,1,$1 Treasury Note Large size,8c02cf6c-7cd7-423f-99e6-bc934e8bf4de

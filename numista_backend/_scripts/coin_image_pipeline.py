@@ -31,9 +31,8 @@ import google.auth
 from google.cloud import firestore
 from google.cloud import storage as gcs
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
-from vertexai.preview.vision_models import ImageGenerationModel
+from google import genai
+from google.genai import types as genai_types
 
 # ??? CONFIG ????????????????????????????????????????????????????????????????????
 PROJECT_ID      = "studio-9101802118-8c9a8"
@@ -228,22 +227,25 @@ def make_coin_image_prompt(coin: dict) -> str:
     return prompt
 
 
-def generate_coin_image(imagen_model, coin: dict) -> bytes | None:
+def generate_coin_image(client, coin: dict) -> bytes | None:
     """Generate an AI coin image using Imagen. Returns PNG bytes or None."""
     prompt = make_coin_image_prompt(coin)
     try:
-        result = imagen_model.generate_images(
+        result = client.models.generate_images(
+            model='imagen-3.0-generate-002',
             prompt=prompt,
-            number_of_images=1,
-            aspect_ratio="1:1",
-            safety_filter_level="block_few",
-            person_generation="dont_allow",
+            config=genai_types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="1:1",
+                safety_filter_level="block_few",
+                person_generation="dont_allow",
+            )
         )
-        if result.images:
-            return result.images[0]._image_bytes
+        if result.generated_images:
+            return result.generated_images[0].image.image_bytes
         return None
     except Exception as e:
-        print(f"    Imagen error: {e}")
+        print(f"      [AI] Generation failed: {e}")
         return None
 
 
@@ -279,14 +281,13 @@ def main():
     gcs_client = gcs.Client(credentials=credentials, project=PROJECT_ID)
     print("  Firestore + GCS connected ?")
 
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    imagen_model = None
+    genai_client = None
     if not args.scans_only:
         try:
-            imagen_model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-002")
-            print("  Imagen 3 model loaded")
+            genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+            print("  google-genai client initialized (Imagen 3 ready)")
         except Exception as e:
-            print(f"  WARNING: Could not load Imagen model: {e}")
+            print(f"  WARNING: Could not initialize google-genai client: {e}")
             print("  Will skip AI generation")
 
     # ?? Collect local scans ???????????????????????????????????????????????????
@@ -352,10 +353,10 @@ def main():
                 stats["scan_matched"] += 1
 
         # ?? Fallback: AI image generation ????????????????????????????????????
-        if not gcs_url and not args.scans_only and imagen_model:
+        if not gcs_url and not args.scans_only and genai_client:
             safe_name = re.sub(r'[^a-z0-9_\-]', '_', label.lower().replace(' ', '_'))
             blob_path = f"{GCS_AI_PREFIX}/{args.user}/{doc_id}_{safe_name}.png"
-
+ 
             if not args.dry_run:
                 if gcs_blob_exists(gcs_client, GCS_BUCKET, blob_path):
                     gcs_url = f"gs://{GCS_BUCKET}/{blob_path}"
@@ -363,7 +364,7 @@ def main():
                     method = "ai_cached"
                 else:
                     print(f"    ? Generating AI image...")
-                    img_bytes = generate_coin_image(imagen_model, coin)
+                    img_bytes = generate_coin_image(genai_client, coin)
                     if img_bytes:
                         gcs_url = upload_bytes_to_gcs(
                             gcs_client, img_bytes, GCS_BUCKET, blob_path

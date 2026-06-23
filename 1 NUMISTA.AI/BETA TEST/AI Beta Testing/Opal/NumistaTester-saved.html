@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Numista.Ai Beta Test Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 950: '#020617', 900: '#0f172a', 800: '#1e293b' },
+                        emerald: { 500: '#10b981' },
+                        amber: { 500: '#f59e0b' },
+                        rose: { 500: '#f43f5e' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans antialiased leading-relaxed">
+
+    <!-- Fixed Header -->
+    <header class="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Numista.Ai <span class="text-slate-500 font-light">Beta Test Results</span></h1>
+                <p class="text-xs text-slate-400 font-mono">Report Version: v1.0.4 | Oct 2023</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <span class="block text-[10px] uppercase tracking-widest text-slate-500">Site Health Score</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div class="w-[78%] h-full bg-emerald-500"></div>
+                        </div>
+                        <span class="font-mono font-bold text-emerald-500">78/100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto pt-32 pb-12 px-6">
+        
+        <!-- Executive Summary -->
+        <section class="mb-12 p-8 bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl">
+            <h2 class="text-2xl font-semibold mb-4 text-white">Executive Summary</h2>
+            <p class="text-slate-300 max-w-3xl">
+                The evaluation of the "Sign in with Google" integration and core feature set indicates a strong technical foundation, though key usability frictions exist in the onboarding flow. While core AI identification is performant, environmental factors significantly impact accuracy. Recommendations focus on balancing security, data usage, and UX fluidity to ensure optimal adoption.
+            </p>
+        </section>
+
+        <!-- Sectional Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            
+            <!-- UI/UX Design Analysis -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-slate-900 p-6 rounded-xl border-t-4 border-amber-500 shadow-lg">
+                    <h3 class="text-lg font-bold mb-2">UI/UX Design</h3>
+                    <ul class="text-sm space-y-3 text-slate-400">
+                        <li><strong class="text-slate-200">CTA Placement:</strong> Needs mobile-focal emphasis on Google sign-in.</li>
+                        <li><strong class="text-slate-200">Feature Weight:</strong> "Scan Coin" requires higher visual priority to establish primary value.</li>
+                        <li><strong class="text-slate-200">Onboarding:</strong> High friction found. Suggesting "Guest Mode" for demo preview.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature Functionality -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-slate-900 p-6 rounded-xl border-t-4 border-rose-500 shadow-lg">
+                    <h3 class="text-lg font-bold mb-2">Feature Functionality</h3>
+                    <ul class="text-sm space-y-3 text-slate-400">
+                        <li><strong class="text-slate-200">Google Auth:</strong> Account merging logic needed for existing email users.</li>
+                        <li><strong class="text-slate-200">AI Accuracy:</strong> Sensitive to light reflections in "Proof" coins.</li>
+                        <li><strong class="text-slate-200">Receipt OCR:</strong> High risk of inaccurate extraction with handwritten notes.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Performance Insights -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-slate-900 p-6 rounded-xl border-t-4 border-emerald-500 shadow-lg">
+                    <h3 class="text-lg font-bold mb-2">Performance Metrics</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1 font-mono"><span>Gemini API Response</span><span>3–7s</span></div>
+                            <div class="w-full h-1 bg-slate-800"><div class="w-2/3 h-full bg-amber-500"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1 font-mono"><span>Search Catalog</span><span><200ms</span></div>
+                            <div class="w-full h-1 bg-slate-800"><div class="w-full h-full bg-emerald-500"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Table -->
+        <section class="overflow-x-auto bg-slate-900 rounded-xl border border-slate-800">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800/50 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr>
+                        <th class="px-6 py-4">Category</th>
+                        <th class="px-6 py-4">Issue / Risk</th>
+                        <th class="px-6 py-4">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="px-6 py-4 font-semibold">UX</td>
+                        <td class="px-6 py-4">Login required before testing.</td>
+                        <td class="px-6 py-4 text-emerald-400">Enable "Free Scan" preview.</td>
+                    </tr>
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="px-6 py-4 font-semibold">QA</td>
+                        <td class="px-6 py-4">Misidentifying rare variants.</td>
+                        <td class="px-6 py-4 text-emerald-400">Add "Verify Manually" button.</td>
+                    </tr>
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="px-6 py-4 font-semibold">Security</td>
+                        <td class="px-6 py-4">PII capture in receipts.</td>
+                        <td class="px-6 py-4 text-emerald-400">Implement client-side masking.</td>
+                    </tr>
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="px-6 py-4 font-semibold">Performance</td>
+                        <td class="px-6 py-4">Lag during heavy uploads.</td>
+                        <td class="px-6 py-4 text-emerald-400">Client-side compression.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <!-- Minimalist Footer -->
+    <footer class="text-center py-12 border-t border-slate-900">
+        <p class="text-slate-600 text-xs">Generated for Numista.Ai Internal Review</p>
+    </footer>
+
+</body>
+</html>

@@ -1,44 +1,54 @@
-[19:49:08] ✅ PASS  Root health check                                       346ms  HTTP 200
-[19:49:08] ✅ PASS  FastAPI docs page                                       307ms  HTTP 200
-[19:49:08] ✅ PASS  GET /api/binder_scans/{email}                           362ms  HTTP 200
-[19:49:08] ✅ PASS  Binder scans returned                                     0 binder scan records
-[19:49:09] ✅ PASS  GET /api/admin/grade_flags                              339ms  HTTP 200
-[19:49:09] ✅ PASS  Admin grade flags returned                                0 open flag(s)
-[19:49:09] ✅ PASS  GET /api/coin_crop (non-existent coin → 404)              HTTP 404 — expected 404 ✓
-[19:49:09] ✅ PASS  Dedup sweep endpoint                                      POST-only — skipped in this suite (not a GET endpoint)
-[19:49:09] ✅ PASS  GET /api/template (CSV download)                        346ms  HTTP 200
-[19:49:09] ✅ PASS  Template headers check                                    22 columns all present
-[19:49:10] ✅ PASS  GET /api/nicknames (approved)                           353ms  HTTP 200
-[19:49:10] ✅ PASS  Approved nicknames returned                               20 terms
-[19:49:10] ✅ PASS  GET /api/nicknames/stats                                342ms  HTTP 200
-[19:49:10] ✅ PASS  Nickname stats fields                                     total=4 approved=0
-[19:49:10] ✅ PASS  POST /api/nicknames/submit 'Ike' (expect already_known) 336ms  HTTP 200
-[19:49:10] ✅ PASS  Ike already_known response                                ✨ Great minds think alike! "Ike" is already in the Numista.A
-[19:49:11] ✅ PASS  POST /api/nicknames/submit new term 'TestCoin_1780789750' 387ms  HTTP 200
-[19:49:11] ✅ PASS  New nickname submission status                            submitted
-[19:49:11] ✅ PASS  POST /api/nicknames/{id}/vote rating=5                  378ms  HTTP 200
-[19:49:11] ✅ PASS  Vote recorded                                             Vote recorded.
-[19:49:12] ✅ PASS  GET /api/grade_review/stats                             394ms  HTTP 200
-[19:49:12] ✅ PASS  Grade stats fields                                        total_ai=25 pending=25 flagged=0
-[19:49:12] ✅ PASS  GET /api/grade_review/queue                             392ms  HTTP 200
-[19:49:12] ✅ PASS  Grade review queue                                        19 coins awaiting review, returned 5
-[19:49:12] ✅ PASS    🟡 34c99831-448…                                         1929D | Grade=Average Circulated | Conf=90%
-[19:49:12] ✅ PASS    🟡 35eeb0f5-08f…                                         2024S | Grade=Ch Proof-63 | Conf=90%
-[19:49:12] ✅ PASS    🟡 44327617-0c6…                                         2024S | Grade=Choice Proof-63 | Conf=90%
-[19:49:12] ✅ PASS  POST /api/grade_review/submit confirmed (coin 1)        380ms  HTTP 200
-[19:49:12] ✅ PASS  Confirmed review response                                 ✓ Grade confirmed! Thank you for helping improve Numista.AI.
-[19:49:13] ✅ PASS  POST /api/grade_review/submit corrected (coin 2)        369ms  HTTP 200
-[19:49:13] ✅ PASS  Corrected review response                                 Correction submitted — "MS-63" has been noted.
-[19:49:13] ✅ PASS  GET /api/grade_review/stats (post-review)               379ms  HTTP 200
-[19:49:13] ⚠️  WARN  Stats may not have updated                                pending was 25, now 25
-[19:49:14] ⚠️  WARN  Normalization import skipped                              No module named 'fastapi'
-[19:49:15] ✅ PASS    /api/grade_review/queue                                 avg 473ms over 3 calls
-[19:49:16] ✅ PASS    /api/grade_review/stats                                 avg 399ms over 3 calls
-[19:49:17] ✅ PASS    /api/nicknames/stats                                    avg 378ms over 3 calls
-[19:49:18] ✅ PASS    /api/nicknames                                          avg 344ms over 3 calls
-[19:49:19] ✅ PASS    /api/template                                           avg 329ms over 3 calls
+[12:08:03] ✅ PASS  Root health check                                       2083ms  HTTP 200
+[12:08:05] ✅ PASS  FastAPI docs page                                       2065ms  HTTP 200
+[12:08:07] ✅ PASS  GET /api/binder_scans/{email}                           2139ms  HTTP 200
+[12:08:07] ✅ PASS  Binder scans returned                                     0 binder scan records
+[12:08:09] ✅ PASS  GET /api/admin/grade_flags                              2226ms  HTTP 200
+[12:08:09] ✅ PASS  Admin grade flags returned                                0 open flag(s)
+[12:08:11] ✅ PASS  GET /api/coin_crop (non-existent coin → 404)              HTTP 404 — expected 404 ✓
+[12:08:11] ✅ PASS  Dedup sweep endpoint                                      POST-only — skipped in this suite (not a GET endpoint)
+[12:08:13] ✅ PASS  GET /api/template (CSV download)                        2060ms  HTTP 200
+[12:08:13] ✅ PASS  Template headers check                                    22 columns all present
+[12:08:16] ✅ PASS  GET /api/nicknames (approved)                           2233ms  HTTP 200
+[12:08:16] ✅ PASS  Approved nicknames returned                               20 terms
+[12:08:18] ✅ PASS  GET /api/nicknames/stats                                2145ms  HTTP 200
+[12:08:18] ✅ PASS  Nickname stats fields                                     total=11 approved=0
+[12:08:20] ✅ PASS  POST /api/nicknames/submit 'Ike' (expect already_known) 2034ms  HTTP 200
+[12:08:20] ✅ PASS  Ike already_known response                                ✨ Great minds think alike! "Ike" is already in the Numista.A
+[12:08:22] ✅ PASS  POST /api/nicknames/submit new term 'TestCoin_1782230900' 2260ms  HTTP 200
+[12:08:22] ✅ PASS  New nickname submission status                            submitted
+[12:08:24] ✅ PASS  POST /api/nicknames/{id}/vote rating=5                  2287ms  HTTP 200
+[12:08:24] ✅ PASS  Vote recorded                                             Vote recorded.
+[12:08:27] ✅ PASS  GET /api/grade_review/stats                             2381ms  HTTP 200
+[12:08:27] ✅ PASS  Grade stats fields                                        total_ai=61 pending=61 flagged=0
+[12:08:29] ✅ PASS  GET /api/grade_review/queue                             2406ms  HTTP 200
+[12:08:29] ✅ PASS  Grade review queue                                        59 coins awaiting review, returned 5
+[12:08:29] ✅ PASS    🟡 04cec483-c64…                                         2024 | Grade=Uncirculated | Conf=90%
+[12:08:29] ✅ PASS    🟡 18ab1f7b-29c…                                         2024S | Grade=Proof-63 | Conf=90%
+[12:08:29] ✅ PASS    🟡 1c711f85-1fd…                                         1942S | Grade=Ungraded | Conf=90%
+[12:08:31] ✅ PASS  POST /api/grade_review/submit confirmed (coin 1)        2250ms  HTTP 200
+[12:08:32] ✅ PASS  Confirmed review response                                 ✓ Grade confirmed! Thank you for helping improve Numista.AI.
+[12:08:34] ✅ PASS  POST /api/grade_review/submit corrected (coin 2)        2315ms  HTTP 200
+[12:08:34] ✅ PASS  Corrected review response                                 Correction submitted — "MS-63" has been noted.
+[12:08:36] ✅ PASS  GET /api/grade_review/stats (post-review)               2367ms  HTTP 200
+[12:08:36] ⚠️  WARN  Stats may not have updated                                pending was 61, now 61
+[12:08:43] ✅ PASS    _norm_condition('BU')                                   → 'MS-63' ✓
+[12:08:43] ✅ PASS    _norm_condition('bu')                                   → 'MS-63' ✓
+[12:08:43] ✅ PASS    _norm_condition('proof69')                              → 'PF-69' ✓
+[12:08:43] ✅ PASS    _norm_condition('PR69')                                 → 'PF-69' ✓
+[12:08:43] ✅ PASS    _norm_condition('Ch Proof 63')                          → 'PF-63' ✓
+[12:08:43] ✅ PASS    _norm_condition('F-12')                                 → 'F-12' ✓
+[12:08:43] ✅ PASS    _norm_condition('vf30')                                 → 'VF-30' ✓
+[12:08:43] ✅ PASS    _norm_condition('AU58')                                 → 'AU-58' ✓
+[12:08:43] ✅ PASS    _norm_condition('MS65')                                 → 'MS-65' ✓
+[12:08:43] ✅ PASS    _norm_condition('uncirculated')                         → 'Uncirculated' ✓
+[12:08:43] ✅ PASS  Normalization edge case summary                           10/10 passed
+[12:08:50] ✅ PASS    /api/grade_review/queue                                 avg 2404ms over 3 calls
+[12:08:57] ✅ PASS    /api/grade_review/stats                                 avg 2299ms over 3 calls
+[12:09:03] ✅ PASS    /api/nicknames/stats                                    avg 2189ms over 3 calls
+[12:09:10] ✅ PASS    /api/nicknames                                          avg 2213ms over 3 calls
+[12:09:16] ✅ PASS    /api/template                                           avg 2063ms over 3 calls
 
 ======================================================================
- Test Complete: 2026-06-06 19:49:19
- ✅ PASS: 37   ❌ FAIL: 0   ⚠️  WARN: 2
+ Test Complete: 2026-06-23 12:09:16
+ ✅ PASS: 48   ❌ FAIL: 0   ⚠️  WARN: 1
 ======================================================================

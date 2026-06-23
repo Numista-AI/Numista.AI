@@ -1,8 +1,8 @@
 import os, sys, json, time, argparse, re
 from pathlib import Path
 from typing import Optional
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 from google.cloud import documentai_v1beta3 as documentai
 from google.cloud import storage as gcs
 import google.auth
@@ -89,13 +89,19 @@ def build_entity(type_, mention_text, start_idx, end_idx, properties=None, boole
     return entity
 
 
-def gemini_extract(gemini_model, pdf_bytes):
+def gemini_extract(client, model_name, pdf_bytes):
     try:
-        response = gemini_model.generate_content(
-            [Part.from_data(data=pdf_bytes, mime_type="application/pdf"),
-             Part.from_text(EXTRACTION_PROMPT)],
-            generation_config=GenerationConfig(
-                response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[
+                genai_types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
+                genai_types.Part.from_text(EXTRACTION_PROMPT)
+            ],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.0,
+                max_output_tokens=8192
+            ),
         )
         return json.loads(response.text)
     except json.JSONDecodeError as e:
@@ -130,7 +136,7 @@ def _repair_truncated_json(raw: str) -> dict:
         return None
 
 
-def gemini_extract_from_text(gemini_model, doc_text):
+def gemini_extract_from_text(client, model_name, doc_text):
     """
     Sends the OCR-extracted text to Gemini for entity extraction.
     Used when raw PDF bytes are not available in the Document AI dataset
@@ -157,10 +163,14 @@ def gemini_extract_from_text(gemini_model, doc_text):
         + clean_text[:14000]  # Generous limit; checklists are ~4k chars
     )
     try:
-        response = gemini_model.generate_content(
-            [Part.from_text(prompt)],
-            generation_config=GenerationConfig(
-                response_mime_type="application/json", temperature=0.0, max_output_tokens=16384),
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[genai_types.Part.from_text(prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.0,
+                max_output_tokens=16384
+            ),
         )
         raw = response.text or ""
         # Strip markdown fences if present
@@ -180,9 +190,13 @@ def gemini_extract_from_text(gemini_model, doc_text):
         print(f"    [Gemini] JSON parse error (JSON mode): {e}")
         # Retry without response_mime_type constraint
         try:
-            response2 = gemini_model.generate_content(
-                [Part.from_text(prompt)],
-                generation_config=GenerationConfig(temperature=0.0, max_output_tokens=16384),
+            response2 = client.models.generate_content(
+                model=model_name,
+                contents=[genai_types.Part.from_text(prompt)],
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.0,
+                    max_output_tokens=16384
+                ),
             )
             raw2 = response2.text or ""
             raw2 = raw2.strip()
@@ -260,11 +274,7 @@ def main():
     print(f"  Dry run   : {args.dry_run}")
     print("=" * 65)
 
-    print("\n[Init] Authenticating...")
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    vertexai.init(project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
-    gemini_model = GenerativeModel(args.model)
+    genai_client = genai.Client(vertexai=True, project=GCP_PROJECT_ID, location=VERTEX_LOCATION)
     doc_service  = documentai.DocumentServiceClient(
         credentials=credentials,
         client_options={"api_endpoint": f"{LOCATION}-documentai.googleapis.com"})
@@ -329,7 +339,7 @@ def main():
             # Training docs have no raw PDF bytes stored in the dataset.
             # Use OCR text (already fetched) directly with Gemini.
             print("    [Gemini] Extracting from OCR text...")
-            gemini_result = gemini_extract_from_text(gemini_model, doc_text)
+            gemini_result = gemini_extract_from_text(genai_client, args.model, doc_text)
             if not gemini_result:
                 print("    [Fail] No result from Gemini.")
                 progress["failed"].append(doc_id); save_progress(progress)

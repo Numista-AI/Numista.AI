@@ -261,7 +261,7 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _typeFilters.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    separatorBuilder: (_, _) => const SizedBox(width: 6),
                     itemBuilder: (ctx, i) {
                       final f = _typeFilters[i];
                       final active = _filterType == f;
@@ -412,7 +412,7 @@ class _NoteCard extends StatelessWidget {
                       child: Image.network(
                         imgObv,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        errorBuilder: (_, _, _) =>
                             _notePlaceholder(denomination, typeColor),
                       ),
                     )
@@ -783,7 +783,7 @@ class _NoteDetailDialog extends StatelessWidget {
                           url,
                           fit: BoxFit.cover,
                           width: double.infinity,
-                          errorBuilder: (_, __, ___) =>
+                          errorBuilder: (_, _, _) =>
                               _placeholder(color, denom),
                         ),
                       )

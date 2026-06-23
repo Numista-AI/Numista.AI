@@ -75,16 +75,31 @@ _latest_frame_jpg: bytes = b""
 
 # Event used to pause the idle preview while capture_worker owns the camera
 _idle_pause_event = _threading.Event()  # SET = idle thread should stop; CLEAR = run normally
+# Event set by idle thread once it has released the camera (capture_worker waits on this)
+_idle_stopped_event = _threading.Event()  # SET = idle thread has released camera
 
 # --- NEW GENERIC HARDWARE SELECTOR ---
 # OPTIONS: "AUTOFOCUS_WEBCAM", "MANUAL_MICROSCOPE"
-CAMERA_TYPE = "MANUAL_MICROSCOPE" 
+CAMERA_TYPE = "MANUAL_MICROSCOPE"
+
+# Set to True to show the local OpenCV window during scanning.
+# This is the preferred mode: the user uses the cv2 window to manually
+# focus the microscope, then the scan proceeds. The web UI shows step/
+# sharpness status but is NOT the primary camera view.
+SHOW_CV2_WINDOW = True
 
 def get_camera_settings(type):
     if type == "AUTOFOCUS_WEBCAM":
         return {"width": 1920, "height": 1080, "autofocus": 1}
     else: # Works for both Tomlov and Jiusion
         return {"width": 1920, "height": 1080, "autofocus": 0}
+
+def get_preview_camera_settings():
+    """Lower-resolution settings for the idle preview stream.
+    1280x720 is fast enough for a USB-2 microscope and still sharp
+    enough for the user to judge focus and framing.
+    """
+    return {"width": 1280, "height": 720, "autofocus": 0}
 
 # --- CLOUD SYNC HELPERS ---
 def upload_to_gcs_local(file_path, destination_blob_name):
@@ -159,22 +174,35 @@ capture_status = {
 def _idle_preview_worker():
     """
     Runs as a daemon thread from startup.
-    Continuously reads frames from the microscope and stores them in
-    _latest_frame_jpg so the Flutter app can show a live viewfinder at all
-    times — not just during an active scan.
+    Continuously reads frames from the microscope at a reduced resolution
+    (1280×720) and stores them in _latest_frame_jpg so the Flutter app can
+    show a live viewfinder at all times — not just during an active scan.
+
+    A digital 2× macro zoom is applied so the preview field-of-view matches
+    what the capture worker sees at the same microscope height — no need to
+    raise/lower the microscope between preview and scan.
+
+    The focus circle radius matches the capture overlay (cy * 0.85) so the
+    user knows exactly what will be captured.
 
     When capture_worker starts it sets _idle_pause_event; this thread detects
-    that, releases the camera, and waits.  When the scan finishes it clears
-    the event and this thread reopens the camera automatically.
+    that, signals _idle_stopped_event (so capture_worker knows the camera is
+    free), releases the camera, and waits.  When the scan finishes it clears
+    the events and this thread reopens the camera automatically.
     """
     global _latest_frame_jpg
     logging.info("[PREVIEW] Idle preview worker started.")
 
     while True:
         # ── Wait if a scan is in progress (capture_worker owns the camera) ──
+        # NOTE: threading.Event.wait() blocks until the flag is SET (True).
+        # Since _idle_pause_event is already SET when we get here, wait()
+        # would return immediately — not what we want.  We need to wait until
+        # it is CLEARED (scan done), so we use a spin-wait instead.
         if _idle_pause_event.is_set():
             logging.info("[PREVIEW] Paused — waiting for scan to finish.")
-            _idle_pause_event.wait()        # blocks until cleared
+            while _idle_pause_event.is_set():
+                time.sleep(0.5)
             # give capture_worker a moment to fully release the camera
             time.sleep(1.0)
             logging.info("[PREVIEW] Resuming idle preview.")
@@ -196,53 +224,75 @@ def _idle_preview_worker():
             time.sleep(5)
             continue
 
-        settings = get_camera_settings(CAMERA_TYPE)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  settings["width"])
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings["height"])
+        # Use lower resolution for a faster, lag-free viewfinder
+        preview_settings = get_preview_camera_settings()
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  preview_settings["width"])
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, preview_settings["height"])
+        # Clamp the OpenCV frame buffer to 1 frame so we always get the
+        # freshest image and avoid stale-frame lag buildup.
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         # Warm up
-        for _ in range(10):
+        for _ in range(6):
             cap.read()
 
-        logging.info("[PREVIEW] Streaming idle frames.")
+        logging.info("[PREVIEW] Streaming idle frames (1280×720, 2× zoom).")
         while not _idle_pause_event.is_set():
             ret, frame = cap.read()
             if not ret or frame is None:
                 logging.warning("[PREVIEW] Frame read failed — reopening camera.")
                 break
 
-            # Overlay a subtle 'PREVIEW' banner so the user knows it's idle
+            # Apply 2× digital macro zoom so the framing matches the capture
+            # view — the user should not need to adjust microscope height
+            # between preview and scan.
+            frame = apply_macro_zoom(frame, zoom_factor=2.0)
+
             h, w = frame.shape[:2]
+            cx, cy = w // 2, h // 2
+
+            # ── Overlay banner ──────────────────────────────────────────────
             cv2.putText(
-                frame, "PREVIEW — Adjust zoom, then press Start Scan",
+                frame, "PREVIEW -- Adjust zoom, then press Start Scan",
                 (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 220, 255), 2,
             )
-            # Focus ring guide
-            cx, cy = w // 2, h // 2
-            radius = min(w, h) // 4
+            # Focus ring — same radius formula as capture_worker so the user
+            # sees exactly what will be captured.
+            radius = int(cy * 0.85)
             cv2.circle(frame, (cx, cy), radius, (0, 220, 255), 2)
 
-            ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            # Lower JPEG quality (60) — the preview is for positioning, not
+            # archival; this halves encode time vs. quality=70.
+            ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
             if ok:
                 with _frame_lock:
                     _latest_frame_jpg = buf.tobytes()
+            # 10 fps is more than enough for a positioning viewfinder and
+            # keeps CPU load low between captures.
+            time.sleep(0.10)
 
-            time.sleep(0.05)  # ~20 fps is plenty for a viewfinder
-
+        # ── Streaming loop exited — release camera, signal capture_worker ────
+        # The cv2 window is the primary focusing/scanning display.
+        # The web UI only receives frames during an active scan (pushed by
+        # capture_worker). This keeps the web layout compact and eliminates
+        # idle-preview lag in the browser.
+        _idle_stopped_event.set()
         cap.release()
-        logging.info("[PREVIEW] Camera released.")
+        logging.info("[PREVIEW] Camera released — _idle_stopped_event set.")
 
-        # If we exited because a scan started, wait for the event to be cleared
-        # (capture_worker clears it when done)
+        # Wait for the scan to fully complete before reopening the camera.
+        # Same spin-wait: block until _idle_pause_event is CLEARED.
         if _idle_pause_event.is_set():
-            _idle_pause_event.wait()
+            while _idle_pause_event.is_set():
+                time.sleep(0.5)
+            _idle_stopped_event.clear()  # reset signal for next scan cycle
             time.sleep(1.0)
 
 def capture_worker():
     global capture_status
     # Signal the idle preview to yield the camera before we open it
     _idle_pause_event.set()
-    time.sleep(0.5)  # Brief pause so the idle thread can release
+    _idle_stopped_event.clear()  # will be set by idle thread when it releases
     capture_status["is_active"] = True
 
     # Force working directory to this script's location so all relative paths
@@ -250,6 +300,13 @@ def capture_worker():
     _script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(_script_dir)
     logging.info("[CAP] Working directory: %s", _script_dir)
+
+    # Wait for the idle preview thread to release the camera (max 2 s).
+    # This eliminates the race condition where both threads hold the camera
+    # simultaneously and the web preview shows the wrong side.
+    if not _idle_stopped_event.wait(timeout=2.0):
+        logging.warning("[CAP] Idle thread did not confirm release in 2 s — proceeding anyway.")
+    time.sleep(0.2)  # tiny extra cushion for the OS to free the device
 
     # --- Robust Camera Initialization ---
     cap = None
@@ -273,8 +330,13 @@ def capture_worker():
     if not cap:
         capture_status["error"] = "HARDWARE ERROR: No camera found on indices 0, 1, or 2. Check USB connection."
         capture_status["is_active"] = False
+        _idle_pause_event.clear()
         return
     # ------------------------------------
+
+    # Clamp the OpenCV frame buffer to prevent stale-frame lag and reduce the
+    # chance of 'Camera connection lost' errors caused by a full buffer queue.
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     settings = get_camera_settings(CAMERA_TYPE)
     logging.info(f"Applying settings for {CAMERA_TYPE}: {settings}")
@@ -334,9 +396,21 @@ def capture_worker():
         while current_state < 2:
             ret, frame = cap.read()
             if not ret or frame is None:
-                logging.warning("Primary frame read failed, retrying...")
-                ret, frame = cap.read()
-                if not ret:
+                # USB microscopes (especially Jiusion) can drop 1–3 frames due
+                # to USB bandwidth bursts.  Retry up to 5 times with a short
+                # sleep before declaring the connection lost.
+                logging.warning("Primary frame read failed — entering retry loop.")
+                _consecutive_fails = 0
+                _MAX_CONSECUTIVE_FAILS = 5
+                while _consecutive_fails < _MAX_CONSECUTIVE_FAILS:
+                    time.sleep(0.1)
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        logging.info(f"[CAP] Frame recovered after {_consecutive_fails + 1} retry(ies).")
+                        break
+                    _consecutive_fails += 1
+                    logging.warning(f"[CAP] Retry {_consecutive_fails}/{_MAX_CONSECUTIVE_FAILS} failed.")
+                if not ret or frame is None:
                     error_msg = f"Camera connection lost during {state_names[current_state]} scan."
                     logging.error(error_msg)
                     capture_status["error"] = error_msg
@@ -557,15 +631,19 @@ def capture_worker():
             if has_captured_this_side and (time.time() - last_capture_time < 0.5):
                 cv2.rectangle(frame, (0, 0), (frame.shape[1], frame.shape[0]), (0, 255, 0), 20)
 
-            cv2.imshow("Numista.AI - Hardware Agent Monitor", frame)
+            # Debug window — only shown when SHOW_CV2_WINDOW is True.
+            # In normal use the web UI is the authoritative display.
+            if SHOW_CV2_WINDOW:
+                cv2.imshow("Numista.AI - Hardware Agent Monitor [DEBUG]", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
             # Encode annotated frame for live web preview (/frame endpoint)
             _ok, _buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
             if _ok:
                 with _frame_lock:
                     global _latest_frame_jpg
                     _latest_frame_jpg = _buf.tobytes()
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
     finally:
         if cap:
@@ -632,6 +710,23 @@ def start_scan_route():
     thread.start()
     logging.info("[CMD] capture_worker started via HTTP")
     return jsonify({"status": "success"})
+
+@app.route('/confirm-flip', methods=['POST', 'OPTIONS'])
+def confirm_flip_route():
+    """Called by the web UI when the user clicks 'I've flipped the coin'.
+    Immediately clears the flip lockout so the reverse capture begins
+    without waiting for the auto-timer to expire."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not capture_status.get("is_active"):
+        return jsonify({"status": "error", "message": "No scan in progress"}), 400
+    if not capture_status.get("waiting_for_flip"):
+        return jsonify({"status": "noop", "message": "Not currently waiting for flip"})
+    # Clear the flip flag — capture_worker checks this each loop iteration
+    capture_status["waiting_for_flip"] = False
+    capture_status["flip_timer_start_ts"] = None
+    logging.info("[CMD] Flip confirmed by user via /confirm-flip")
+    return jsonify({"status": "success", "message": "Flip confirmed — scanning reverse"})
 
 @app.route('/add-to-collection', methods=['POST', 'OPTIONS'])
 def add_to_collection_route():

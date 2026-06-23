@@ -32,8 +32,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 try:
-    import vertexai
-    from vertexai.generative_models import GenerativeModel, Part
+    from google import genai
+    from google.genai import types as genai_types
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -362,13 +362,15 @@ def classify_with_gemini(blob, storage_client):
         ext  = Path(blob.name).suffix.lower()
         mime = "image/jpeg" if ext in (".jpg", ".jpeg") else f"image/{ext.lstrip('.')}"
 
-        vertexai.init(project=PROJECT, location="global")
-        model = GenerativeModel("gemini-3-flash-preview")
-        response = model.generate_content([
-            Part.from_text(GEMINI_VISION_PROMPT),
-            Part.from_data(data=image_bytes, mime_type=mime),
-        ])
-        raw = response.candidates[0].content.parts[0].text.strip()
+        client = genai.Client(vertexai=True, project=PROJECT, location="us-central1")
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                genai_types.Part.from_text(GEMINI_VISION_PROMPT),
+                genai_types.Part.from_bytes(data=image_bytes, mime_type=mime),
+            ]
+        )
+        raw = response.text.strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
             raw = re.sub(r"\s*```$", "", raw)

@@ -1,8 +1,14 @@
-
-import vertexai
-from vertexai.generative_models import GenerativeModel
+import sys
 import os
 from dotenv import load_dotenv
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
+# Force UTF-8 output so emoji don't crash on Windows cp1252
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 load_dotenv()
 PROJECT_ID = "studio-9101802118-8c9a8"
@@ -20,13 +26,7 @@ def test_model(model_name, location):
         print(f"❌ FAILED: {e}")
         return False
 
-# STRICTLY TESTING 2.5+ MODELS ONLY
-
-# 1. Preferred Region (us-east4)
-test_model("gemini-3.0-flash", "us-east4")
-# test_model("gemini-2.5-flash", "us-east4") # Commented out as likely same result, but can uncomment if needed
-
-# 2. Most likely valid region (us-central1)
-test_model("gemini-3.0-flash", "us-central1")
+# Test current model landscape
 test_model("gemini-2.5-flash", "us-central1")
 test_model("gemini-2.5-pro", "us-central1")
+test_model("gemini-3.5-flash", "us-central1")

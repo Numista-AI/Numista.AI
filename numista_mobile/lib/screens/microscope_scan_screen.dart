@@ -139,6 +139,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     _startPolling();
   }
 
+  Future<void> _confirmFlip() async {
+    // Tell the hardware agent to immediately clear the flip lockout and begin
+    // scanning the reverse side — no need to wait for the 8-second auto-timer.
+    await _hw.confirmFlip();
+    // Polling will pick up the updated state on the next tick.
+  }
+
   Future<void> _confirmAndSave() async {
     final report = _status?.lastReport;
     if (report == null) return;
@@ -196,10 +203,11 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           if (_serverOnline) ...[
             _buildScanControls(),
             const SizedBox(height: 24),
-            // ── Live camera preview (shown whenever a frame is available) ────────
-            // This lets you see and adjust the microscope zoom BEFORE
-            // pressing Start Scan, not just during an active scan.
-            if (_serverOnline && _liveFrameBytes != null) ...[
+            // ── Live camera feed (only shown during an active scan) ──────────
+            // The cv2 window on the desktop is the primary focusing display.
+            // The web frame here shows the annotated obverse/reverse overlay
+            // during scanning so the user can see step progress.
+            if (_serverOnline && _liveFrameBytes != null && _status?.isActive == true) ...[
               _buildLivePreview(),
               const SizedBox(height: 24),
             ],
@@ -598,51 +606,85 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             const SizedBox(height: 20),
           ],
 
-          // ── Flip-coin countdown ring ─────────────────────────────────────────
+          // ── Flip-coin: explicit button + auto-timer ring ─────────────────────
           if (isFlipping) ...[
+            // Instruction heading
+            const Center(
+              child: Text(
+                'Obverse captured — flip the coin over',
+                style: TextStyle(
+                  color: _warningAmber,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Explicit flip button — the primary CTA
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _confirmFlip,
+                icon: const Icon(Icons.flip, color: Colors.white, size: 22),
+                label: const Text(
+                  "I've flipped the coin — Scan Reverse",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _warningAmber,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 28, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  elevation: 6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Auto-timer ring (secondary — fires if user doesn't tap button)
+            const Center(
+              child: Text(
+                'Or wait for auto-advance:',
+                style: TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ),
+            const SizedBox(height: 8),
             Center(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 120,
-                    height: 120,
+                    width: 80,
+                    height: 80,
                     child: CircularProgressIndicator(
                       value: s.flipCountdownPct,
-                      strokeWidth: 8,
+                      strokeWidth: 6,
                       backgroundColor: Colors.white12,
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(_warningAmber),
                     ),
                   ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.flip, color: _warningAmber, size: 26),
-                      const SizedBox(height: 4),
-                      Text(
-                        s.flipTimeRemaining != null
-                            ? '${s.flipTimeRemaining!.toStringAsFixed(1)}s'
-                            : '…',
-                        style: const TextStyle(
-                            color: _warningAmber,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  Text(
+                    s.flipTimeRemaining != null
+                        ? '${s.flipTimeRemaining!.toStringAsFixed(1)}s'
+                        : '…',
+                    style: const TextStyle(
+                        color: _warningAmber,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                'Flip and place the coin in the circle',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-            ),
             const SizedBox(height: 20),
           ],
+
 
           // ── Status message (shown when not actively counting down) ────────────
           if (!isCounting && !isFlipping) ...[

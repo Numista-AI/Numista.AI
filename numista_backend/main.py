@@ -243,7 +243,7 @@ CONDITION_MAP: dict[str, str] = {
     'ms69': 'MS-69', 'ms-69': 'MS-69',
     'ms70': 'MS-70', 'ms-70': 'MS-70',
     # Uncirculated — descriptive
-    'bu': 'Uncirculated',
+    'bu': 'MS-63',
     'brilliant uncirculated': 'Uncirculated',
     'brilliant unc': 'Uncirculated',
     'unc': 'Uncirculated',
@@ -257,35 +257,35 @@ CONDITION_MAP: dict[str, str] = {
     'choice bu': 'MS-63',
     'choice brilliant uncirculated': 'MS-63',
     # Proof — numeric
-    'proof60': 'Proof-60', 'proof-60': 'Proof-60', 'pr60': 'Proof-60', 'pf60': 'Proof-60',
-    'proof61': 'Proof-61', 'proof-61': 'Proof-61', 'pr61': 'Proof-61', 'pf61': 'Proof-61',
-    'proof62': 'Proof-62', 'proof-62': 'Proof-62', 'pr62': 'Proof-62', 'pf62': 'Proof-62',
-    'proof63': 'Proof-63', 'proof-63': 'Proof-63', 'pr63': 'Proof-63', 'pf63': 'Proof-63',
-    'proof64': 'Proof-64', 'proof-64': 'Proof-64', 'pr64': 'Proof-64', 'pf64': 'Proof-64',
-    'proof65': 'Proof-65', 'proof-65': 'Proof-65', 'pr65': 'Proof-65', 'pf65': 'Proof-65',
-    'proof66': 'Proof-66', 'proof-66': 'Proof-66', 'pr66': 'Proof-66', 'pf66': 'Proof-66',
-    'proof67': 'Proof-67', 'proof-67': 'Proof-67', 'pr67': 'Proof-67', 'pf67': 'Proof-67',
-    'proof68': 'Proof-68', 'proof-68': 'Proof-68', 'pr68': 'Proof-68', 'pf68': 'Proof-68',
-    'proof69': 'Proof-69', 'proof-69': 'Proof-69', 'pr69': 'Proof-69', 'pf69': 'Proof-69',
-    'proof70': 'Proof-70', 'proof-70': 'Proof-70', 'pr70': 'Proof-70', 'pf70': 'Proof-70',
+    'proof60': 'PF-60', 'proof-60': 'PF-60', 'pr60': 'PF-60', 'pf60': 'PF-60',
+    'proof61': 'PF-61', 'proof-61': 'PF-61', 'pr61': 'PF-61', 'pf61': 'PF-61',
+    'proof62': 'PF-62', 'proof-62': 'PF-62', 'pr62': 'PF-62', 'pf62': 'PF-62',
+    'proof63': 'PF-63', 'proof-63': 'PF-63', 'pr63': 'PF-63', 'pf63': 'PF-63',
+    'proof64': 'PF-64', 'proof-64': 'PF-64', 'pr64': 'PF-64', 'pf64': 'PF-64',
+    'proof65': 'PF-65', 'proof-65': 'PF-65', 'pr65': 'PF-65', 'pf65': 'PF-65',
+    'proof66': 'PF-66', 'proof-66': 'PF-66', 'pr66': 'PF-66', 'pf66': 'PF-66',
+    'proof67': 'PF-67', 'proof-67': 'PF-67', 'pr67': 'PF-67', 'pf67': 'PF-67',
+    'proof68': 'PF-68', 'proof-68': 'PF-68', 'pr68': 'PF-68', 'pf68': 'PF-68',
+    'proof69': 'PF-69', 'proof-69': 'PF-69', 'pr69': 'PF-69', 'pf69': 'PF-69',
+    'proof70': 'PF-70', 'proof-70': 'PF-70', 'pr70': 'PF-70', 'pf70': 'PF-70',
     # Proof — descriptive
     'proof': 'Proof',
-    'gem proof': 'Proof-65',
-    'gem pf': 'Proof-65',
-    'ch proof': 'Proof-63',
-    'choice proof': 'Proof-63',
-    'ch proof 63': 'Proof-63',
-    'ch pf63': 'Proof-63',
-    'ch pr63': 'Proof-63',
-    'proof 63 cameo': 'Proof-63 Cameo',
-    'proof 65 cameo': 'Proof-65 Cameo',
-    'proof 65 dcam': 'Proof-65 Deep Cameo',
-    'pf63 cam': 'Proof-63 Cameo',
-    'pf65 cam': 'Proof-65 Cameo',
-    'pf65 dcam': 'Proof-65 Deep Cameo',
-    'pr63 cam': 'Proof-63 Cameo',
-    'pr65 cam': 'Proof-65 Cameo',
-    'pr65 dcam': 'Proof-65 Deep Cameo',
+    'gem proof': 'PF-65',
+    'gem pf': 'PF-65',
+    'ch proof': 'PF-63',
+    'choice proof': 'PF-63',
+    'ch proof 63': 'PF-63',
+    'ch pf63': 'PF-63',
+    'ch pr63': 'PF-63',
+    'proof 63 cameo': 'PF-63 Cameo',
+    'proof 65 cameo': 'PF-65 Cameo',
+    'proof 65 dcam': 'PF-65 Deep Cameo',
+    'pf63 cam': 'PF-63 Cameo',
+    'pf65 cam': 'PF-65 Cameo',
+    'pf65 dcam': 'PF-65 Deep Cameo',
+    'pr63 cam': 'PF-63 Cameo',
+    'pr65 cam': 'PF-65 Cameo',
+    'pr65 dcam': 'PF-65 Deep Cameo',
     'dcam': 'Deep Cameo',
     'deep cameo': 'Deep Cameo',
     'cameo': 'Cameo',
@@ -1341,11 +1341,12 @@ def grade_review_queue(user_email: str, limit: int = 30):
     for doc in raw_docs:
         d      = doc.to_dict()
         source = d.get('source', '')
-        conf   = float(d.get('confidence_score', 1.0))
+        conf_val = d.get('confidence_score')
+        conf   = float(conf_val) if conf_val is not None else 1.0
 
         # Skip already reviewed by this user
         reviews = d.get('grade_reviews', [])
-        if any(r.get('reviewer') == user_email for r in reviews):
+        if any((isinstance(r, dict) and r.get('reviewer') == user_email) or (isinstance(r, str) and r == user_email) for r in reviews):
             continue
 
         results.append({
@@ -1409,7 +1410,7 @@ async def submit_grade_review(
 
     # Prevent duplicate reviews
     reviews = list(d.get('grade_reviews', []))
-    if any(r.get('reviewer') == user_email for r in reviews):
+    if any((isinstance(r, dict) and r.get('reviewer') == user_email) or (isinstance(r, str) and r == user_email) for r in reviews):
         raise HTTPException(status_code=400,
                             detail="You have already reviewed this coin.")
 
@@ -1427,8 +1428,9 @@ async def submit_grade_review(
     })
 
     review_count  = len(reviews)
-    corrections   = [r for r in reviews if r['action'] == 'corrected']
-    confirmations = [r for r in reviews if r['action'] == 'confirmed']
+    dict_reviews  = [r for r in reviews if isinstance(r, dict)]
+    corrections   = [r for r in dict_reviews if r.get('action') == 'corrected']
+    confirmations = [r for r in dict_reviews if r.get('action') == 'confirmed']
 
     # Determine status
     new_status     = 'pending'
@@ -1441,7 +1443,7 @@ async def submit_grade_review(
             # Find most-suggested grade
             grade_counts: dict[str, int] = {}
             for r in corrections:
-                g = r['suggested_grade']
+                g = r.get('suggested_grade', '')
                 if g:
                     grade_counts[g] = grade_counts.get(g, 0) + 1
             if grade_counts:
@@ -1672,7 +1674,8 @@ def grade_review_stats(user_email: str):
     for doc in docs:
         d      = doc.to_dict()
         source = d.get('source', '')
-        conf   = float(d.get('confidence_score', 1.0))
+        conf_val = d.get('confidence_score')
+        conf   = float(conf_val) if conf_val is not None else 1.0
         is_ai  = source in AI_SOURCES or conf < 0.95
         if not is_ai:
             continue
@@ -1686,8 +1689,8 @@ def grade_review_stats(user_email: str):
         else:
             pending += 1
 
-        if any(r.get('reviewer') == user_email
-               for r in d.get('grade_reviews', [])):
+        reviews = d.get('grade_reviews', [])
+        if any((isinstance(r, dict) and r.get('reviewer') == user_email) or (isinstance(r, str) and r == user_email) for r in reviews):
             reviewed_by_me += 1
 
     return {
