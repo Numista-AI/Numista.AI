@@ -331,7 +331,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Text('Numista.AI v3.7',
+                    child: const Text('Numista.AI v3.8',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
@@ -1046,10 +1046,25 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v3.8',
+    date: '2026-06-23',
+    description: 'Microscope Scanner Reliability & UX',
+    isLatest: true,
+    changes: [
+      'Restored cv2 focus window: the desktop pop-up reappears when a scan starts so you can manually adjust the microscope before capture.',
+      'Eliminated idle-preview lag: the web browser no longer streams a live camera feed while idle, keeping the status pane always fully visible.',
+      'Fixed camera-ownership race condition: idle preview thread now correctly yields the camera before the scan worker opens it.',
+      'Camera connection resilience: up to 5 consecutive frame-read retries before reporting a connection error (was 1).',
+      'Added OpenCV frame-buffer limit (BUFFERSIZE=1) to prevent stale-frame accumulation and reduce lag.',
+      'New \'I have flipped the coin\' button: tap to immediately start the reverse scan instead of waiting for the 8-second auto-timer.',
+      'Preview resolution reduced to 1280x720 during idle to cut USB bandwidth and CPU usage.',
+    ],
+  ),
+  _Release(
     version: 'v3.7',
     date: '2026-06-12',
     description: 'Code Quality & Morgan UX Pass',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Morgan guide bubbles fully redesigned: concise narrations, explicit arrow directions, gold ← arrow points at search box.',
       'PDF invoice overlay: indeterminate bouncing progress bar replaces the frozen "0%" state; 10-30s timing hint added.',
