@@ -60,7 +60,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         working-directory: numista_mobile
-        run: firebase deploy --only hosting --project studio-9101802118-8c9a8
+        run: firebase deploy --only hosting --project numista-ai
 
       - name: Deployment complete
         run: |
