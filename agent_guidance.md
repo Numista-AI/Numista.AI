@@ -1,6 +1,21 @@
 # Numista.AI - Agent Guidance & Standing Rules
 > **ANTIGRAVITY: Read this file at the start of every session before making any changes.**
-> Last updated: 2026-06-18
+> Last updated: 2026-06-23
+
+---
+
+## 🔴 MANDATORY FIRST READ — Before Anything Else
+
+**Read `SOURCE_OF_TRUTH.md` in the project root before touching any file, config, or infrastructure.**
+
+```
+c:\Users\ericd\Documents\MyVertexProject\SOURCE_OF_TRUTH.md
+```
+
+This file contains the verified GCP project ID, Firebase Hosting site, Cloud Run service name, registry paths, and deployment commands — all confirmed from actual files on disk on 2026-06-23. Do not guess at any of these values. Do not rely on training data. Read the file.
+
+> There is exactly ONE active Firebase/GCP project: `studio-9101802118-8c9a8` ("AJ's AI Coin App").
+> The ghost project `numista-ai` was deleted 2026-06-23. Do not reference it.
 
 ---
 
