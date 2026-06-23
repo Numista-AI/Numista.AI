@@ -1728,7 +1728,7 @@ async def process_invoice(
         ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
         mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
         reported_type = file.content_type or ""
-        // Use reported type only if it's specific (not generic octet-stream)
+        # Use reported type only if it's specific (not generic octet-stream)
         if reported_type and reported_type not in ("application/octet-stream", "binary/octet-stream", ""):
             mime_type = reported_type
         elif ext in mime_map:

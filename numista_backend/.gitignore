@@ -41,3 +41,18 @@ serviceAccountKey.json.json
 
 # antigravity rules
 .agent/rules
+
+# One-off local scripts & credential cache files — never commit these
+ebay_token.txt
+test_new_credentials.py
+test_ebay_sold.py
+test_ebay_finding_sold.py
+test_pcgs_api.py
+test_pcgs_apr_and_congress.py
+test_pcgs_live_endpoints.py
+test_congress_api.py
+test_loc_apis.py
+test_wikimedia_urls.py
+test_new_credentials.py
+confirm_congress_key.py
+scratch/
