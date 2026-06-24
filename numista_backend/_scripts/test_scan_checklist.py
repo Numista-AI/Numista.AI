@@ -15,8 +15,8 @@ Output:
 """
 
 import sys, json, base64, pathlib, re, os
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # Deprecation chain (Gemini Deprecation Schedule, Apr 14 2026):
@@ -99,12 +99,12 @@ def build_coin_list(program: dict) -> str:
     return "\n".join(lines)
 
 
-def image_to_part(image_path: str) -> Part:
+def image_to_part(image_path: str) -> genai_types.Part:
     """Load image file and convert to Gemini Part."""
     path = pathlib.Path(image_path)
     data = path.read_bytes()
     mime = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
-    return Part.from_data(data=data, mime_type=mime)
+    return genai_types.Part.from_bytes(data=data, mime_type=mime)
 
 
 def parse_response(text: str) -> dict:
@@ -117,8 +117,7 @@ def parse_response(text: str) -> dict:
 
 
 def scan_checklist(image_path: str, program_name: str) -> dict:
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    model = GenerativeModel(MODEL)
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
 
     program  = load_program(program_name)
     coin_list = build_coin_list(program)
@@ -133,20 +132,21 @@ def scan_checklist(image_path: str, program_name: str) -> dict:
     print(f"Model      : {MODEL}")
     print("-" * 60)
 
-    response = model.generate_content(
-        [
-            Part.from_text(SYSTEM_PROMPT),
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[
+            genai_types.Part.from_text(text=SYSTEM_PROMPT),
             image_to_part(image_path),
-            Part.from_text(prompt),
+            genai_types.Part.from_text(text=prompt),
         ],
-        generation_config=GenerationConfig(
+        config=genai_types.GenerateContentConfig(
             temperature=0.0,        # deterministic — no creativity needed
             max_output_tokens=8192,
             response_mime_type="application/json",  # enforce JSON output
         ),
     )
 
-    raw = response.candidates[0].content.parts[0].text
+    raw = response.text
     result = parse_response(raw)
 
     # ── Confidence summary ────────────────────────────────────────────────────
@@ -165,6 +165,9 @@ def scan_checklist(image_path: str, program_name: str) -> dict:
 
 
 def main():
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding='utf-8')
+
     if len(sys.argv) < 3:
         print("Usage: python test_scan_checklist.py <image_path> <program_name_fragment>")
         print("  e.g. python test_scan_checklist.py scans/morgan.jpg 'Morgan'")

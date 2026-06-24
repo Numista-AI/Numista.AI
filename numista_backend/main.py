@@ -775,14 +775,16 @@ async def import_spreadsheet(
     mapping_prompt = f"""You are an expert data migration agent for a numismatic (coin collecting) application.
 
 Golden Schema keys:
-["Program/Series", "Theme/Subject", "Year", "Country", "Denomination",
- "Mint Mark", "Condition", "Cost", "Purchase Date", "Retailer Name",
- "Retailer Invoice #", "Retailer Item No.", "Storage Location", "Notes"]
+["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series", 
+ "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service", 
+ "Certification Number", "Metal Content", "Purchase Cost", "Purchase Date", 
+ "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety", 
+ "Personal Notes I", "Personal Reference #", "Storage Location", "Original Description from source"]
 
 User spreadsheet headers: {headers}
 
 Map each user header to the closest schema key. Common abbreviations:
-  Yr/Date → Year, Grade/Quality → Condition, Purchased For/Amount Paid/Price → Cost,
+  Yr/Date → Year, Grade/Quality → Condition, Purchased For/Amount Paid/Price → Purchase Cost,
   Series/Type/Kind → Program/Series, Desc/Description/Subject → Theme/Subject,
   Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location.
 
@@ -804,6 +806,27 @@ Omit any user headers with no reasonable match."""
         print(f"[import_spreadsheet] AI column-mapping error: {e}")
         mapping = {h: h for h in headers}   # 1-to-1 fallback
 
+    # Standardize column mappings based on known discrepancies and schema requirements
+    mapping_override = {
+        "grading cert #": "Certification Number",
+        "grading cert no": "Certification Number",
+        "cert #": "Certification Number",
+        "certification #": "Certification Number",
+        "cost": "Purchase Cost",
+        "price": "Purchase Cost",
+        "amount paid": "Purchase Cost",
+        "personal notes": "Personal Notes I",
+        "personal note": "Personal Notes I",
+        "notes": "Personal Notes I",
+        "personal ref #": "Personal Reference #",
+        "personal ref no": "Personal Reference #",
+        "personal reference #": "Personal Reference #",
+    }
+    for h in headers:
+        normalized_h = h.strip().lower()
+        if normalized_h in mapping_override:
+            mapping[h] = mapping_override[normalized_h]
+
     # ── 2. Per-row ingestion + rule-based normalization ──────────────────────
     added_count = 0
     ai_fallback_needed: list[tuple] = []   # (doc_ref, partial_doc) for AI pass
@@ -820,16 +843,26 @@ Omit any user headers with no reasonable match."""
             'Denomination':     '',
             'Condition':        'Ungraded',
             'Cost':             '',
+            'Purchase Cost':    '',
             'Purchase Date':    '',
             'Country':          'United States',
             'Quantity':         1,
             'deep_dive_status': 'PENDING',
+            'Certification Number': '',
+            'Personal Notes I': '',
+            'Personal Reference #': '',
         }
 
         # Apply column mapping (raw values)
         for user_col, schema_col in mapping.items():
             if user_col in row and pd.notna(row[user_col]):
-                new_doc[schema_col] = str(row[user_col]).strip()
+                val = str(row[user_col]).strip()
+                new_doc[schema_col] = val
+                # Keep 'Cost' and 'Purchase Cost' in sync
+                if schema_col == 'Purchase Cost':
+                    new_doc['Cost'] = val
+                elif schema_col == 'Cost':
+                    new_doc['Purchase Cost'] = val
 
         # ── Rule-based normalizations ──────────────────────────────────────
 
@@ -858,8 +891,8 @@ Omit any user headers with no reasonable match."""
         expanded_theme = _expand_series(raw_theme)
         new_doc['Theme/Subject'] = expanded_theme
 
-        # Strip leading $ from Cost/Denomination
-        for fld in ('Cost', 'Denomination'):
+        # Strip leading $ from Cost/Purchase Cost/Denomination
+        for fld in ('Cost', 'Purchase Cost', 'Denomination'):
             if new_doc.get(fld, '').startswith('$'):
                 new_doc[fld] = new_doc[fld][1:]
 
@@ -5075,9 +5108,11 @@ async def import_process(req: ImportProcessRequest):
                 # Reuse existing column-mapping logic
                 headers = list(df.columns)
                 mapping_prompt = f"""You are an expert data migration agent for a numismatic app.
-Golden Schema keys: ["Program/Series","Theme/Subject","Year","Country","Denomination",
-"Mint Mark","Condition","Cost","Purchase Date","Retailer Name","Retailer Invoice #",
-"Retailer Item No.","Storage Location","Notes"]
+Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series", 
+ "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service", 
+ "Certification Number", "Metal Content", "Purchase Cost", "Purchase Date", 
+ "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety", 
+ "Personal Notes I", "Personal Reference #", "Storage Location", "Original Description from source"]
 User spreadsheet headers: {headers}
 Map each user header to the closest schema key.
 Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
@@ -5089,6 +5124,27 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                 )
                 mapping: dict = json.loads(resp.text)
 
+                # Standardize column mappings based on known discrepancies and schema requirements
+                mapping_override = {
+                    "grading cert #": "Certification Number",
+                    "grading cert no": "Certification Number",
+                    "cert #": "Certification Number",
+                    "certification #": "Certification Number",
+                    "cost": "Purchase Cost",
+                    "price": "Purchase Cost",
+                    "amount paid": "Purchase Cost",
+                    "personal notes": "Personal Notes I",
+                    "personal note": "Personal Notes I",
+                    "notes": "Personal Notes I",
+                    "personal ref #": "Personal Reference #",
+                    "personal ref no": "Personal Reference #",
+                    "personal reference #": "Personal Reference #",
+                }
+                for h in headers:
+                    normalized_h = h.strip().lower()
+                    if normalized_h in mapping_override:
+                        mapping[h] = mapping_override[normalized_h]
+
                 col_ref  = db.collection("users").document(user_email).collection("review_queue")
                 batch    = db.batch()
                 count    = 0
@@ -5096,17 +5152,30 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     doc = {
                         "Program/Series": "", "Year": "", "Mint Mark": "",
                         "Denomination": "", "Condition": "Ungraded",
-                        "Cost": "", "Purchase Date": "", "Country": "United States",
+                        "Cost": "", "Purchase Cost": "", "Purchase Date": "", "Country": "United States",
                         "deep_dive_status": "PENDING",
                         "upload_method":    "spreadsheet_import",
                         "source_file":      fname,
                         "import_session_id": session_id,
                         "source_type":      "spreadsheet",
                         "created_at":       firestore.SERVER_TIMESTAMP,
+                        "Certification Number": "",
+                        "Personal Notes I": "",
+                        "Personal Reference #": "",
                     }
                     for uc, sc in mapping.items():
                         if uc in row and pd.notna(row[uc]):
-                            doc[sc] = str(row[uc]).strip()
+                            val = str(row[uc]).strip()
+                            doc[sc] = val
+                            if sc == "Purchase Cost":
+                                doc["Cost"] = val
+                            elif sc == "Cost":
+                                doc["Purchase Cost"] = val
+
+                    # Strip leading $ from Cost/Purchase Cost/Denomination
+                    for fld in ('Cost', 'Purchase Cost', 'Denomination'):
+                        if doc.get(fld, '').startswith('$'):
+                            doc[fld] = doc[fld][1:]
                     doc_ref = col_ref.document(str(uuid.uuid4()))
                     batch.set(doc_ref, doc)
                     new_coin_ids.append(doc_ref.id)

@@ -9,8 +9,8 @@ Usage:
 """
 
 import sys, json, re, pathlib, os
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Deprecation chain (Gemini Deprecation Schedule, Apr 14 2026):
@@ -106,7 +106,7 @@ def parse_json(text: str) -> dict:
     return json.loads(text)
 
 
-def scan_page(model, image_path: pathlib.Path, page_num: int,
+def scan_page(client, model_name: str, image_path: pathlib.Path, page_num: int,
               program: dict, coin_list: str) -> dict:
     img_bytes = image_path.read_bytes()
     mime = "image/jpeg" if image_path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
@@ -117,20 +117,21 @@ def scan_page(model, image_path: pathlib.Path, page_num: int,
         coin_list=coin_list,
     )
 
-    response = model.generate_content(
-        [
-            Part.from_text(SYSTEM_PROMPT),
-            Part.from_data(data=img_bytes, mime_type=mime),
-            Part.from_text(prompt),
+    response = client.models.generate_content(
+        model=model_name,
+        contents=[
+            genai_types.Part.from_text(text=SYSTEM_PROMPT),
+            genai_types.Part.from_bytes(data=img_bytes, mime_type=mime),
+            genai_types.Part.from_text(text=prompt),
         ],
-        generation_config=GenerationConfig(
+        config=genai_types.GenerateContentConfig(
             temperature=0.0,
             max_output_tokens=8192,
             response_mime_type="application/json",
         ),
     )
 
-    raw = response.candidates[0].content.parts[0].text
+    raw = response.text
     return parse_json(raw)
 
 
@@ -154,10 +155,12 @@ def main():
         print(f"ERROR: No JPEG/PNG images found in {folder_path}")
         sys.exit(1)
 
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding='utf-8')
+
     print(f"Found {len(images)} page(s): {[f.name for f in images]}")
 
-    vertexai.init(project=PROJECT_ID, location=LOCATION)
-    model = GenerativeModel(MODEL)
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
 
     program   = load_program(program_name)
     coin_list = build_coin_list(program)
@@ -174,7 +177,7 @@ def main():
     for i, img_path in enumerate(images, 1):
         print(f"\nScanning page {i}: {img_path.name} ...")
         try:
-            result = scan_page(model, img_path, i, program, coin_list)
+            result = scan_page(client, MODEL, img_path, i, program, coin_list)
         except Exception as e:
             print(f"  ERROR on page {i}: {e}")
             continue

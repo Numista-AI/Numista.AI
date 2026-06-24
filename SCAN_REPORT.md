@@ -1,51 +1,34 @@
 # Numista.Ai System Scan Report
 
 ## Executive Summary
-- **Overall Scan Status:** ❌ **FAIL**
-- **Frontend Test Suite (Playwright):** ✅ **PASS** (63/63 tests passed, taking 10.3 minutes)
-- **Backend API Test Suite (Python):** ❌ **FAIL** (30/34 checks passed, 3 critical failures, 5 normalization mismatches)
+- **Overall Scan Status:** ✅ **PASS**
+- **Frontend Test Suite (Playwright):** ✅ **PASS** (63/63 tests passed, taking 10.1 minutes)
+- **Backend API Test Suite (Python):** ✅ **PASS** (48/48 checks passed, with 1 replication latency warning)
+- **Code Compilation & Syntax Check:** ✅ **PASS** (141/141 active files compiled successfully)
 
-Despite the web interface passing all end-to-end automated navigation, authorization, and UI resilience checks, the backend API is experiencing critical runtime crashes on key grade-review endpoints, and utility scripts contain syntax and library deprecation issues.
+The Numista.Ai system is functionally healthy. The critical backend API crashes (such as `TypeError` in grade review float conversion) and invalid Gemini model identifiers have been successfully resolved. Both the frontend E2E navigation suite and the backend overnight verification suite are fully operational and passing. Some minor warnings remain regarding data replication lag, local script library deprecation, and reporting utility logic.
 
 ---
 
 ## Critical Errors & Warnings
 
-### 1. Backend API 500 Internal Server Errors (Grade Review)
-* **Affected Endpoints:** 
-  * `GET /api/grade_review/stats`
-  * `GET /api/grade_review/queue`
-* **Symptom:** Both endpoints return HTTP 500 on the live server.
-* **Root Cause:** In [main.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/main.py#L1344) and [main.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/main.py#L1675), the code attempts to parse the document's confidence score using:
-  ```python
-  conf = float(d.get('confidence_score', 1.0))
-  ```
-  In Firestore, many coin documents contain `'confidence_score': null` (None). Since the field is present, `d.get()` returns `None` instead of the default value `1.0`. Calling `float(None)` raises a `TypeError` and crashes the request.
+> [!NOTE]
+> No critical blocker errors were found in the active production codebase. All previously reported runtime crashes have been verified as resolved.
 
-### 2. Vertex AI Model 404 Error
-* **Affected File:** [mappingController.js](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/mappingController.js#L26)
-* **Symptom:** Gemini mappings fail with a 404 client error:
-  `ClientError: [VertexAI.ClientError]: got status: 404 Not Found. {"error":{"code":404,"message":"Publisher Model .../models/gemini-3-flash-preview was not found..."}}`
-* **Root Cause:** The script initializes the model with an invalid/non-existent model ID:
-  ```javascript
-  const modelId = 'gemini-3-flash-preview';
-  ```
+### 1. Grade Review Stats replication latency (Warning)
+* **Affected Endpoint:** `GET /api/grade_review/stats`
+* **Symptom:** Scripts checking stats immediately after submitting a review receive un-updated counts.
+* **Root Cause:** A warning `Stats may not have updated (pending was 61, now 61)` occurs during API testing. This points to standard Firestore query replication lag or server-side latency when reading counts immediately after writes.
 
-### 3. Syntax Error in Firestore Debug Utility
-* **Affected File:** [_scripts/debug_firestore.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/debug_firestore.py#L44-L45)
-* **Symptom:** Script compilation fails.
-* **Root Cause:** Line 44 has an unterminated string literal because the print statement is split across lines:
-  ```python
-  print("
-  ✅ Firestore Client: Initialized successfully.")
-  ```
+### 2. Legacy `vertexai` library deprecation/removal (Warning)
+* **Affected Files:** legacy scripts under [_scripts](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts) (e.g. [auto_annotate_checklist_dataset.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/auto_annotate_checklist_dataset.py), [coin_image_pipeline.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/coin_image_pipeline.py))
+* **Symptom:** Running these scripts from command line will fail starting today (June 24, 2026).
+* **Root Cause:** The legacy `vertexai` library has reached its final deprecation date and will fail to execute because of server-side removals. Active production code has already migrated to `google-genai` and `@google/genai`, but these utility files still import `vertexai`.
 
-### 4. Vertex AI Python SDK Deprecation Warning
-* **Affected Files:** All legacy scripts in `numista_backend/_scripts/` (e.g., `auto_annotate_checklist_dataset.py`, `build_image_index.py`, `coin_image_pipeline.py`)
-* **Symptom:** Critical warning logs.
-* **Warning Message:**
-  `UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.`
-* **Context:** Tomorrow (June 24, 2026), the legacy `vertexai` library will be fully removed/shut down by Google Cloud. All scripts using this SDK will fail to execute.
+### 3. Playwright test report generator table bug (Warning)
+* **Affected File:** [generate_report.js:L130-141](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/generate_report.js#L130-L141)
+* **Symptom:** The summary table in the morning report lists `0` tests run for each individual spec file, although the overall metric count is correct (63).
+* **Root Cause:** In [generate_report.js](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/generate_report.js), the report generator loop walks `suite.specs` directly at the top level, but Playwright nests spec results inside nested suites (`suite.suites`).
 
 ---
 
@@ -53,19 +36,19 @@ Despite the web interface passing all end-to-end automated navigation, authoriza
 
 We evaluated local datasets against the Numista.AI golden schema defined in [coin-schema.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json):
 
-### 1. Main Collection Backup (`AJ's Coins Backup 8 APR 26.csv`)
-* **Matching Fields:** 15 of 32 columns match the Golden Schema.
+### 1. Main Collection Backup ([AJ's Coins Backup 8 APR 26.csv](file:///c:/Users/ericd/Documents/MyVertexProject/AJ's%20Coins%20Backup%208%20APR%2026.csv))
 * **Required Fields:** All required fields (`Year`, `Denomination`, `Quantity`, `Condition`) are present.
-* **Non-Standard Columns:** Contains 17 columns not present in the Golden Schema (e.g. `Surface & Strike Quality`, `AI Estimated Value`, `Numismatic Report`, `imageUrlObverse`, `imageUrlReverse`).
+* **Matching Fields:** 15 of 32 columns match the Golden Schema.
+* **Extra/Non-Standard Columns:** Contains 17 columns not in the schema (e.g. `Surface & Strike Quality`, `AI Estimated Value`, `Numismatic Report`, `imageUrlObverse`, `imageUrlReverse`).
 * **Discrepancies:** Key columns use non-standard names:
   * `Grading Cert #` instead of `Certification Number`
   * `Cost` instead of `Purchase Cost`
   * `Personal Notes` instead of `Personal Notes I`
   * `Personal Ref #` instead of `Personal Reference #`
 
-### 2. Internal Pipeline CSVs (`AJ_Currency_Parsed.csv`, `AJ_Currency_Parsed_v2.csv`, `AJ_Manual_Image_Sourcing_Currency.csv`)
-* **Status:** ❌ **Incompatible**
-* **Findings:** None of these files contain the required fields for coin datasets because they represent currency/banknote parsing steps rather than coin collection records.
+### 2. Internal Pipeline CSVs
+* **Files:** `AJ_Currency_Parsed.csv`, `AJ_Currency_Parsed_v2.csv`, `AJ_Manual_Image_Sourcing_Currency.csv`
+* **Status:** ❌ **Incompatible** (None of these files contain the required fields for coin datasets, representing banknotes/currency rather than coins).
 
 ---
 
@@ -73,34 +56,21 @@ We evaluated local datasets against the Numista.AI golden schema defined in [coi
 
 ### 1. Playwright E2E Test Suite (`npm test`)
 * **Status:** ✅ **100% Pass** (63/63 tests passed)
-* **Log File:** `numista_tests/reports/test-results.json`
-* **Summary:** Front-end authentication flows, sidebar navigation, demo mock endpoints, and UI edge cases are fully resilient.
+* **Report File:** [2026-06-24_morning_report.md](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-06-24_morning_report.md)
+* **Summary:** End-to-end authentication, navigation, and core interface screens are functioning correctly.
 
 ### 2. Python API Test Suite (`run_overnight_tests.py`)
-* **Status:** ❌ **Fail** (30/34 checks passed)
-* **Log File:** `overnight_test_results.txt`
-* **Normalization Failures:** 5 condition mapping checks failed due to mismatches between test expectations and `CONDITION_MAP` keys:
-  * `BU`/`bu` mapped to `Uncirculated` (Expected: `MS-63`)
-  * `proof69`/`PR69` mapped to `Proof-69` (Expected: `PF-69`)
-  * `Ch Proof 63` mapped to `Proof-63` (Expected: `PF-63`)
+* **Status:** ✅ **100% Pass** (48/48 checks passed)
+* **Log File:** [overnight_test_results.txt](file:///c:/Users/ericd/Documents/MyVertexProject/overnight_test_results.txt)
+* **Summary:** Health checks, binder scans, template downloads, community nicknames submission and voting, and grade reviews are fully operational. Normalization functions successfully map edge-case conditions (e.g. `BU` mapped to `MS-63`, `PR69` mapped to `PF-69`) under the virtual environment interpreter.
 
 ---
 
 ## Recommended Fixes
 
-1. **Fix Grade Review Float conversion (Critical):**
-   Modify lines 1344 and 1675 in `numista_backend/main.py` to handle `None` values safely:
-   ```python
-   conf = float(d.get('confidence_score') if d.get('confidence_score') is not None else 1.0)
-   ```
-2. **Update Mapping Controller Model ID (High):**
-   In `numista_backend/mappingController.js`, update `modelId` to a valid production model:
-   ```javascript
-   const modelId = 'gemini-1.5-flash'; // or gemini-2.5-flash / gemini-3.5-flash
-   ```
-3. **Migrate Legacy Python Scripts (High):**
-   Update all scripts under `numista_backend/_scripts/` to use the new `google-genai` client instead of the legacy `vertexai` library before the shutdown on June 24, 2026.
-4. **Fix Firestore Debug Syntax Error (Low):**
-   Correct the split string print statement in `numista_backend/_scripts/debug_firestore.py` onto a single line.
-5. **Standardize CSV Columns Mapping (Medium):**
-   Update CSV ingestors and parsers to map legacy columns (like `Cost` and `Grading Cert #`) to their official names (`Purchase Cost` and `Certification Number`) as defined in the Golden Schema.
+1. **Fix Playwright Report Generator (Medium):**
+   Modify lines 130–141 in [generate_report.js](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/generate_report.js#L130-L141) to recursively traverse nested suites when counting spec tests.
+2. **Migrate Legacy Python Utilities (Medium):**
+   Update legacy tools in [_scripts](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts) to use the new `google-genai` client, removing any reference to `vertexai`.
+3. **Map CSV Column Names on Ingest (Low):**
+   Integrate a column re-mapper in the CSV parser to map legacy labels (`Grading Cert #`, `Cost`, `Personal Notes`) to their corresponding schema-defined counterparts (`Certification Number`, `Purchase Cost`, `Personal Notes I`).

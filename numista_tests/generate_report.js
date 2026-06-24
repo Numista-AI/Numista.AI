@@ -127,15 +127,28 @@ if (screenshotFiles.length > 0) {
 
 report += `---\n\n## Test Suites Run\n\n`;
 report += `| Suite | Tests | Status |\n|-------|-------|--------|\n`;
-for (const suite of results.suites || []) {
-  let suiteTotal = 0;
-  let suitePassed = 0;
+function countSuiteTests(suite) {
+  let total = 0;
+  let passed = 0;
   for (const spec of suite.specs || []) {
     for (const t of spec.tests || []) {
-      suiteTotal++;
-      if (t.results?.[0]?.status === 'passed') suitePassed++;
+      total++;
+      const status = t.results?.[0]?.status;
+      if (status === 'passed' || status === 'expected' || status === 'flaky') {
+        passed++;
+      }
     }
   }
+  for (const childSuite of suite.suites || []) {
+    const childCounts = countSuiteTests(childSuite);
+    total += childCounts.total;
+    passed += childCounts.passed;
+  }
+  return { total, passed };
+}
+
+for (const suite of results.suites || []) {
+  const { total: suiteTotal, passed: suitePassed } = countSuiteTests(suite);
   const suiteStatus = suiteTotal === suitePassed ? '✅ Pass' : `❌ ${suiteTotal - suitePassed} failed`;
   report += `| ${suite.title} | ${suiteTotal} | ${suiteStatus} |\n`;
 }
