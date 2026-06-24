@@ -775,18 +775,20 @@ async def import_spreadsheet(
     mapping_prompt = f"""You are an expert data migration agent for a numismatic (coin collecting) application.
 
 Golden Schema keys:
-["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series", 
- "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service", 
- "Certification Number", "Metal Content", "Purchase Cost", "Purchase Date", 
- "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety", 
- "Personal Notes I", "Personal Reference #", "Storage Location", "Original Description from source"]
+["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
+ "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
+ "Certification Number", "Metal Content", "Cost", "Purchase Date",
+ "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
+ "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source"]
 
 User spreadsheet headers: {headers}
 
 Map each user header to the closest schema key. Common abbreviations:
-  Yr/Date → Year, Grade/Quality → Condition, Purchased For/Amount Paid/Price → Purchase Cost,
+  Yr/Date → Year, Grade/Quality → Condition,
+  Purchased For/Amount Paid/Price/Cost/Purchase Price/Price Paid → Cost,
   Series/Type/Kind → Program/Series, Desc/Description/Subject → Theme/Subject,
-  Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location.
+  Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location,
+  Notes/Personal Notes/My Notes/Personal Note → Personal Notes.
 
 Coin nickname reference (first 20): {nickname_hint}
 
@@ -806,20 +808,30 @@ Omit any user headers with no reasonable match."""
         print(f"[import_spreadsheet] AI column-mapping error: {e}")
         mapping = {h: h for h in headers}   # 1-to-1 fallback
 
-    # Standardize column mappings based on known discrepancies and schema requirements
+    # Standardize column mappings based on known discrepancies and schema requirements.
+    # These overrides ensure beginner uploads with variant column names always land on
+    # the correct Golden Schema key regardless of what the AI mapped them to.
     mapping_override = {
-        "grading cert #": "Certification Number",
-        "grading cert no": "Certification Number",
-        "cert #": "Certification Number",
-        "certification #": "Certification Number",
-        "cost": "Purchase Cost",
-        "price": "Purchase Cost",
-        "amount paid": "Purchase Cost",
-        "personal notes": "Personal Notes I",
-        "personal note": "Personal Notes I",
-        "notes": "Personal Notes I",
-        "personal ref #": "Personal Reference #",
-        "personal ref no": "Personal Reference #",
+        "grading cert #":       "Certification Number",
+        "grading cert no":      "Certification Number",
+        "cert #":               "Certification Number",
+        "certification #":      "Certification Number",
+        # Cost variants → canonical "Cost"
+        "cost":                 "Cost",
+        "price":                "Cost",
+        "purchase price":       "Cost",
+        "price paid":           "Cost",
+        "amount paid":          "Cost",
+        "purchased for":        "Cost",
+        "purchase cost":        "Cost",
+        # Notes variants → canonical "Personal Notes"
+        "personal notes":       "Personal Notes",
+        "personal note":        "Personal Notes",
+        "my notes":             "Personal Notes",
+        "notes":                "Personal Notes",
+        # Reference number variants
+        "personal ref #":       "Personal Reference #",
+        "personal ref no":      "Personal Reference #",
         "personal reference #": "Personal Reference #",
     }
     for h in headers:
@@ -836,65 +848,67 @@ Omit any user headers with no reasonable match."""
 
     for _, row in df.iterrows():
         new_doc: dict = {
-            'Program/Series':   '',
-            'Theme/Subject':    '',
-            'Year':             '',
-            'Mint Mark':        '',
-            'Denomination':     '',
-            'Condition':        'Ungraded',
-            'Cost':             '',
-            'Purchase Cost':    '',
-            'Purchase Date':    '',
-            'Country':          'United States',
-            'Quantity':         1,
-            'deep_dive_status': 'PENDING',
+            'Program/Series':       '',
+            'Theme/Subject':        '',
+            'Year':                 '',
+            'Mint Mark':            '',
+            'Denomination':         '',
+            'Condition':            'Ungraded',
+            # Canonical cost field — "Cost" is the Golden Schema key.
+            # "Purchase Cost" and "Personal Notes I" are legacy names; do NOT add them.
+            'Cost':                 None,
+            'Purchase Date':        '',
+            'Country':              'United States',
+            'Quantity':             1,
+            'deep_dive_status':     'PENDING',
             'Certification Number': '',
-            'Personal Notes I': '',
+            'Personal Notes':       '',
             'Personal Reference #': '',
         }
 
-        # Apply column mapping (raw values)
+        # Apply column mapping (raw values).
+        # Use .get() on the row so optional/missing columns default to None gracefully.
         for user_col, schema_col in mapping.items():
-            if user_col in row and pd.notna(row[user_col]):
-                val = str(row[user_col]).strip()
-                new_doc[schema_col] = val
-                # Keep 'Cost' and 'Purchase Cost' in sync
-                if schema_col == 'Purchase Cost':
-                    new_doc['Cost'] = val
-                elif schema_col == 'Cost':
-                    new_doc['Purchase Cost'] = val
+            raw_val = row.get(user_col) if hasattr(row, 'get') else (
+                row[user_col] if user_col in row.index else None
+            )
+            if raw_val is not None and pd.notna(raw_val):
+                val = str(raw_val).strip()
+                if val:  # only write non-empty strings
+                    new_doc[schema_col] = val
 
         # ── Rule-based normalizations ──────────────────────────────────────
 
         # Year + Mint Mark: if Year field looks like "2007W", split it
-        raw_year = new_doc.get('Year', '')
+        raw_year = new_doc.get('Year') or ''
         yr, mm = _parse_year_mint(raw_year)
         new_doc['Year'] = yr
         # Only overwrite Mint Mark if it's empty (don't clobber explicit column)
-        if mm and not new_doc.get('Mint Mark', '').strip():
+        if mm and not (new_doc.get('Mint Mark') or '').strip():
             new_doc['Mint Mark'] = mm
 
         # Condition normalization
-        raw_cond = new_doc.get('Condition', '')
+        raw_cond = new_doc.get('Condition') or ''
         norm_cond = _norm_condition(raw_cond)
         new_doc['Condition'] = norm_cond
         cond_resolved = norm_cond != raw_cond or raw_cond.lower() in CONDITION_MAP
 
         # Program/Series nickname expansion
-        raw_series = new_doc.get('Program/Series', '')
+        raw_series = new_doc.get('Program/Series') or ''
         expanded = _expand_series(raw_series)
         new_doc['Program/Series'] = expanded
         series_resolved = expanded != raw_series
 
         # Theme/Subject nickname expansion (handles "Ike" in the wrong column)
-        raw_theme = new_doc.get('Theme/Subject', '')
+        raw_theme = new_doc.get('Theme/Subject') or ''
         expanded_theme = _expand_series(raw_theme)
         new_doc['Theme/Subject'] = expanded_theme
 
-        # Strip leading $ from Cost/Purchase Cost/Denomination
-        for fld in ('Cost', 'Purchase Cost', 'Denomination'):
-            if new_doc.get(fld, '').startswith('$'):
-                new_doc[fld] = new_doc[fld][1:]
+        # Strip leading $ from Cost / Denomination (no legacy "Purchase Cost" key exists)
+        for fld in ('Cost', 'Denomination'):
+            val = new_doc.get(fld)
+            if isinstance(val, str) and val.startswith('$'):
+                new_doc[fld] = val[1:]
 
         # ── Source provenance ──────────────────────────────────────────────
         new_doc['upload_method']       = 'spreadsheet_import'
@@ -5108,13 +5122,15 @@ async def import_process(req: ImportProcessRequest):
                 # Reuse existing column-mapping logic
                 headers = list(df.columns)
                 mapping_prompt = f"""You are an expert data migration agent for a numismatic app.
-Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series", 
- "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service", 
- "Certification Number", "Metal Content", "Purchase Cost", "Purchase Date", 
- "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety", 
- "Personal Notes I", "Personal Reference #", "Storage Location", "Original Description from source"]
+Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
+ "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
+ "Certification Number", "Metal Content", "Cost", "Purchase Date",
+ "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
+ "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source"]
 User spreadsheet headers: {headers}
 Map each user header to the closest schema key.
+  Cost/Purchase Price/Price Paid/Amount Paid/Price → Cost
+  Notes/Personal Notes/My Notes/Personal Note → Personal Notes
 Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
 
                 resp = genai_client.models.generate_content(
@@ -5124,20 +5140,29 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                 )
                 mapping: dict = json.loads(resp.text)
 
-                # Standardize column mappings based on known discrepancies and schema requirements
+                # Standardize column mappings — same rules as /api/import_spreadsheet.
+                # "Cost" and "Personal Notes" are the canonical Golden Schema keys.
                 mapping_override = {
-                    "grading cert #": "Certification Number",
-                    "grading cert no": "Certification Number",
-                    "cert #": "Certification Number",
-                    "certification #": "Certification Number",
-                    "cost": "Purchase Cost",
-                    "price": "Purchase Cost",
-                    "amount paid": "Purchase Cost",
-                    "personal notes": "Personal Notes I",
-                    "personal note": "Personal Notes I",
-                    "notes": "Personal Notes I",
-                    "personal ref #": "Personal Reference #",
-                    "personal ref no": "Personal Reference #",
+                    "grading cert #":       "Certification Number",
+                    "grading cert no":      "Certification Number",
+                    "cert #":               "Certification Number",
+                    "certification #":      "Certification Number",
+                    # Cost variants → canonical "Cost"
+                    "cost":                 "Cost",
+                    "price":                "Cost",
+                    "purchase price":       "Cost",
+                    "price paid":           "Cost",
+                    "amount paid":          "Cost",
+                    "purchased for":        "Cost",
+                    "purchase cost":        "Cost",
+                    # Notes variants → canonical "Personal Notes"
+                    "personal notes":       "Personal Notes",
+                    "personal note":        "Personal Notes",
+                    "my notes":             "Personal Notes",
+                    "notes":                "Personal Notes",
+                    # Reference number variants
+                    "personal ref #":       "Personal Reference #",
+                    "personal ref no":      "Personal Reference #",
                     "personal reference #": "Personal Reference #",
                 }
                 for h in headers:
@@ -5150,32 +5175,41 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                 count    = 0
                 for _, row in df.iterrows():
                     doc = {
-                        "Program/Series": "", "Year": "", "Mint Mark": "",
-                        "Denomination": "", "Condition": "Ungraded",
-                        "Cost": "", "Purchase Cost": "", "Purchase Date": "", "Country": "United States",
-                        "deep_dive_status": "PENDING",
-                        "upload_method":    "spreadsheet_import",
-                        "source_file":      fname,
-                        "import_session_id": session_id,
-                        "source_type":      "spreadsheet",
-                        "created_at":       firestore.SERVER_TIMESTAMP,
+                        "Program/Series":       "",
+                        "Year":                 "",
+                        "Mint Mark":            "",
+                        "Denomination":         "",
+                        "Condition":            "Ungraded",
+                        # Canonical cost/notes keys — no legacy duplicates.
+                        "Cost":                 None,
+                        "Purchase Date":        "",
+                        "Country":              "United States",
+                        "deep_dive_status":     "PENDING",
+                        "upload_method":        "spreadsheet_import",
+                        "source_file":          fname,
+                        "import_session_id":    session_id,
+                        "source_type":          "spreadsheet",
+                        "created_at":           firestore.SERVER_TIMESTAMP,
                         "Certification Number": "",
-                        "Personal Notes I": "",
+                        "Personal Notes":       "",
                         "Personal Reference #": "",
                     }
+                    # Apply column mapping — safe .get() so missing columns default cleanly.
                     for uc, sc in mapping.items():
-                        if uc in row and pd.notna(row[uc]):
-                            val = str(row[uc]).strip()
-                            doc[sc] = val
-                            if sc == "Purchase Cost":
-                                doc["Cost"] = val
-                            elif sc == "Cost":
-                                doc["Purchase Cost"] = val
+                        raw_val = row.get(uc) if hasattr(row, 'get') else (
+                            row[uc] if uc in row.index else None
+                        )
+                        if raw_val is not None and pd.notna(raw_val):
+                            val = str(raw_val).strip()
+                            if val:  # only write non-empty strings
+                                doc[sc] = val
 
-                    # Strip leading $ from Cost/Purchase Cost/Denomination
-                    for fld in ('Cost', 'Purchase Cost', 'Denomination'):
-                        if doc.get(fld, '').startswith('$'):
-                            doc[fld] = doc[fld][1:]
+                    # Strip leading $ from Cost / Denomination only (no legacy "Purchase Cost" key).
+                    for fld in ('Cost', 'Denomination'):
+                        val = doc.get(fld)
+                        if isinstance(val, str) and val.startswith('$'):
+                            doc[fld] = val[1:]
+
                     doc_ref = col_ref.document(str(uuid.uuid4()))
                     batch.set(doc_ref, doc)
                     new_coin_ids.append(doc_ref.id)
