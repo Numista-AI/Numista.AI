@@ -992,8 +992,8 @@ def download_template():
     headers_row = (
         "Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Country,"
         "Condition,Strike Type,Holder Type,Grading Service,Certification Number,"
-        "Metal Content,Purchase Cost,Purchase Date,Retailer/Website,"
-        "Retailer Invoice #,Retailer Item No.,Variety,Personal Notes I,"
+        "Metal Content,Cost,Purchase Date,Retailer/Website,"
+        "Retailer Invoice #,Retailer Item No.,Variety,Personal Notes,"
         "Personal Reference #,Storage Location,Original Description from source\n"
     )
     example_row = (
@@ -1822,7 +1822,7 @@ async def process_invoice(
             pii_rule = """
             CRITICAL SECURITY RULE (PII REDACTION):
             The user has requested to mask personal identifiable information (PII).
-            Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes I", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
+            Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
             """
 
         extraction_prompt = f"""
@@ -1871,7 +1871,7 @@ async def process_invoice(
                                                   ANACS
                                                   Taxable Item           Extremely Fi  $432.00
           → Extract as item_type "coin", Year "1871", Denomination "Liberty Seated Quarter",
-            Grading Service "ANACS", Condition "Extremely Fine", Purchase Cost "$432.00".
+            Grading Service "ANACS", Condition "Extremely Fine", Cost "$432.00".
           DO NOT skip these items. The coin IS purchasable — the "Club Selection" heading is just
           the program name, not a separate line item.
 
@@ -1935,13 +1935,13 @@ async def process_invoice(
             "Grading Service": "e.g. PCGS, NGC, PMG, None",
             "Certification Number": "if present",
             "Metal Content": "e.g. 90% Silver, Cupro-Nickel, 35% Silver Wartime",
-            "Purchase Cost": "formatted price like $10.00",
+            "Cost": "formatted price like $10.00",
             "Purchase Date": "found on invoice",
             "Retailer/Website": "Identified retailer name (see RETAILER IDENTIFICATION rules)",
             "Retailer Item No.": "The specific stock/item number",
             "Retailer Invoice #": "The invoice ID",
             "Variety": "CRITICAL: Look for Double Die, Mint Error, Repunched Mint Mark, or errors",
-            "Personal Notes I": "",
+            "Personal Notes": "",
             "Personal Reference #": "",
             "Storage Location": "",
             "Original Description from source": "THE EXACT FULL LINE DESCRIPTION FROM THE INVOICE",
@@ -2022,7 +2022,7 @@ async def process_invoice(
               "Denomination": "coin type (e.g. Liberty Seated Quarter, Morgan Dollar)",
               "Condition": "grade — complete any truncated words",
               "Grading Service": "PCGS / NGC / ANACS / ICG / or empty",
-              "Purchase Cost": "dollar amount formatted like $432.00",
+              "Cost": "dollar amount formatted like $432.00",
               "Retailer/Website": "seller name",
               "Retailer Item No.": "item or stock number if present",
               "Retailer Invoice #": "invoice number if present",
@@ -2100,7 +2100,7 @@ async def process_invoice(
                 n_coins = max(len(set_contents), 1)
                 item['set_id']         = set_id
                 item['set_size']       = n_coins
-                item['set_cost_label'] = f"{item.get('Purchase Cost', '$0.00')} total / {n_coins} coins"
+                item['set_cost_label'] = f"{item.get('Cost', '$0.00')} total / {n_coins} coins"
                 item['set_broken_up']  = False
                 doc_ref = col_ref.document(set_id)
                 batch.set(doc_ref, item)
@@ -2578,7 +2578,7 @@ async def break_up_set(request: Request):
             raise HTTPException(status_code=422, detail="set_contents is empty — cannot break up")
 
         set_name       = set_data.get('Original Description from source', set_data.get('Theme/Subject', 'Unknown Set'))
-        set_cost_label = set_data.get('set_cost_label', set_data.get('Purchase Cost', ''))
+        set_cost_label = set_data.get('set_cost_label', set_data.get('Cost', ''))
         n_coins        = len(set_contents)
 
         batch = db.batch()
@@ -3999,13 +3999,13 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
             "Grading Service":     "",
             "Certification Number": "",
             "Metal Content":       "Cupro-Nickel Clad Copper",  # Standard for 1999-2009 quarters
-            "Purchase Cost":       request.purchase_cost or "$0.00",
+            "Cost":                request.purchase_cost or "$0.00",
             "Purchase Date":       request.purchase_date or "",
             "Retailer/Website":    request.retailer or "",
             "Retailer Item No.":   "",
             "Retailer Invoice #":  "",
             "Variety":             slot.get("variant", ""),
-            "Personal Notes I":    request.personal_notes or "",
+            "Personal Notes":      request.personal_notes or "",
             "Personal Reference #": "",
             "Storage Location":    request.storage_location,
             "Original Description from source": (
@@ -5247,7 +5247,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     pii_rule = """
                     CRITICAL SECURITY RULE (PII REDACTION):
                     The user has requested to mask personal identifiable information (PII).
-                    Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes I", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
+                    Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
                     """
 
                 extraction_prompt = f"""You are an expert numismatic accountant.
@@ -5257,7 +5257,7 @@ Return JSON array. Each object must include:
   "item_type": "coin|set|stamp|supply|paper_currency|medal|other",
   "Program/Series": "...", "Year": "...", "Mint Mark": "...",
   "Denomination": "...", "Condition": "...",
-  "Purchase Cost": "$0.00", "Purchase Date": "YYYY-MM-DD or as printed",
+  "Cost": "$0.00", "Purchase Date": "YYYY-MM-DD or as printed",
   "Retailer Name": "...", "Retailer Invoice #": "...", "Retailer Item No.": "..."
 }}
 Ignore shipping, tax, subtotal rows.
