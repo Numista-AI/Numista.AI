@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import 'package:http/http.dart' as http;
@@ -17,9 +18,17 @@ import '../constants.dart';
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
   final VoidCallback? onAskMorgan;
+  /// Called when the user taps a Morgan suggestion chip — navigates to AI Deepdive
+  /// with the given query pre-populated in the chat.
+  final void Function(String query)? onAskMorganWithQuery;
   /// Called to navigate to My Collection (e.g. to run AI Valuation).
   final VoidCallback? onNavigateToCollection;
-  const HomeDashboard({super.key, this.onAskMorgan, this.onNavigateToCollection});
+  const HomeDashboard({
+    super.key,
+    this.onAskMorgan,
+    this.onAskMorganWithQuery,
+    this.onNavigateToCollection,
+  });
 
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
@@ -331,7 +340,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Text('Numista.AI v3.8',
+                    child: const Text('Numista.AI v3.9',
+
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
@@ -509,14 +519,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   dense: true,
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 4),
-                                  leading: Container(
-                                    width: 36, height: 36,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF0F2F6),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: const Icon(Icons.toll,
-                                        size: 18, color: Color(0xFF5A5C69)),
+                                  leading: _CoinThumbnail(
+                                    imageUrl: data['image_url_obverse']?.toString()
+                                        ?? data['imageUrlObverse']?.toString(),
                                   ),
                                   title: Text(coinName,
                                       overflow: TextOverflow.ellipsis,
@@ -544,6 +549,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _MorganDashboardCard(
                     totalCoins: totalCoins,
                     onAskMorgan: widget.onAskMorgan,
+                    onAskMorganWithQuery: widget.onAskMorganWithQuery,
                   ),
                   const SizedBox(height: 24),
 
@@ -1046,10 +1052,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v3.9',
+    date: '2026-06-24',
+    description: 'Ingestion Pipeline Hardening & Stability',
+    isLatest: true,
+    changes: [
+      'Aligned spreadsheet ingestion schema: all cost/price column variants now map to the canonical "Cost" field; all notes variants map to "Personal Notes".',
+      'Removed legacy back-compat sync logic that cross-populated deprecated Firestore fields.',
+      'Replaced direct dictionary access with safe .get() methods throughout ingestion to prevent KeyError on optional columns.',
+      'Pinned google-genai>=1.71.0 in requirements.txt and removed deprecated legacy AI libraries from the Docker build.',
+      'Interactive Morgan suggestion chips: tapping a chip now launches Morgan with that query pre-filled.',
+      'Legacy vertexai utility scripts migrated to google-genai SDK ahead of deprecation.',
+    ],
+  ),
+  _Release(
     version: 'v3.8',
     date: '2026-06-23',
     description: 'Microscope Scanner Reliability & UX',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Restored cv2 focus window: the desktop pop-up reappears when a scan starts so you can manually adjust the microscope before capture.',
       'Eliminated idle-preview lag: the web browser no longer streams a live camera feed while idle, keeping the status pane always fully visible.',
@@ -1319,10 +1339,13 @@ class _ReleaseNotesPanel extends StatelessWidget {
 class _MorganDashboardCard extends StatelessWidget {
   final int totalCoins;
   final VoidCallback? onAskMorgan;
+  /// Navigates to AI Deepdive with a specific query pre-filled.
+  final void Function(String query)? onAskMorganWithQuery;
 
   const _MorganDashboardCard({
     required this.totalCoins,
     this.onAskMorgan,
+    this.onAskMorganWithQuery,
   });
 
   static const _teal = Color(0xFF2DD4BF);
@@ -1435,13 +1458,29 @@ class _MorganDashboardCard extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _chip(totalCoins == 0
-                          ? 'How do I add my first coin?'
-                          : 'What\'s my most valuable coin?'),
+                      _chip(
+                        totalCoins == 0
+                            ? 'How do I add my first coin?'
+                            : 'What\'s my most valuable coin?',
+                        onAskMorganWithQuery: onAskMorganWithQuery,
+                        onAskMorgan: onAskMorgan,
+                      ),
                       const SizedBox(width: 8),
-                      _chip(totalCoins == 0
-                          ? 'What can Morgan help me with?'
-                          : 'Give me a collection summary'),
+                      _chip(
+                        totalCoins == 0
+                            ? 'What can Morgan help me with?'
+                            : 'Give me a collection summary',
+                        onAskMorganWithQuery: onAskMorganWithQuery,
+                        onAskMorgan: onAskMorgan,
+                      ),
+                      if (totalCoins > 0) ...[
+                        const SizedBox(width: 8),
+                        _chip(
+                          'Am I missing any coins from my sets?',
+                          onAskMorganWithQuery: onAskMorganWithQuery,
+                          onAskMorgan: onAskMorgan,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1474,16 +1513,91 @@ class _MorganDashboardCard extends StatelessWidget {
     );
   }
 
-  Widget _chip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(10),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(30)),
+  Widget _chip(
+    String label, {
+    void Function(String query)? onAskMorganWithQuery,
+    VoidCallback? onAskMorgan,
+  }) {
+    void handleTap() {
+      if (onAskMorganWithQuery != null) {
+        onAskMorganWithQuery(label);
+      } else {
+        onAskMorgan?.call();
+      }
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: handleTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withAlpha(30)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: const TextStyle(color: _sub, fontSize: 11)),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 8, color: _sub),
+            ],
+          ),
+        ),
       ),
-      child: Text(label,
-          style: const TextStyle(color: _sub, fontSize: 11)),
+    );
+  }
+}
+
+// ─── Coin Thumbnail ────────────────────────────────────────────────────────────
+/// Circular 36×36 coin image for use in list tiles.
+/// Shows the actual coin photo when [imageUrl] is available;
+/// falls back to a generic coin icon on null / error.
+class _CoinThumbnail extends StatelessWidget {
+  final String? imageUrl;
+  const _CoinThumbnail({this.imageUrl});
+
+  static const _placeholder = BoxDecoration(
+    color: Color(0xFFF0F2F6),
+    shape: BoxShape.circle,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) {
+      return Container(
+        width: 36, height: 36,
+        decoration: _placeholder,
+        child: const Icon(Icons.toll, size: 18, color: Color(0xFF5A5C69)),
+      );
+    }
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: 36, height: 36,
+        fit: BoxFit.cover,
+        placeholder: (ctx, _) => Container(
+          width: 36, height: 36,
+          decoration: _placeholder,
+          child: const SizedBox(
+            width: 18, height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: Color(0xFF5A5C69),
+            ),
+          ),
+        ),
+        errorWidget: (ctx, _, __) => Container(
+          width: 36, height: 36,
+          decoration: _placeholder,
+          child: const Icon(Icons.toll, size: 18, color: Color(0xFF5A5C69)),
+        ),
+      ),
     );
   }
 }

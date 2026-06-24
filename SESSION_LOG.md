@@ -80,3 +80,29 @@ See `launch_readiness_plan.md` for the full 35-hour sprint. Block 1 complete. Bl
 - **Unit Testing**: Ran division partitioning and lock overrides tests (`test_division.py`) with all 4 tests passing in 10ms.
 - **Deployments**: Both the Firebase Hosting web app (https://numista.ai) and the FastAPI Cloud Run backend (https://numista-backend-568985927038.us-central1.run.app) are updated and fully serving production traffic.
 
+---
+
+## Session — June 24, 2026 (Autonomous Improvement)
+
+*User was away. Agent identified high-value improvements and executed them autonomously.*
+
+### Changes Made
+
+#### `numista_mobile/lib/screens/home_dashboard.dart`
+- **Interactive Morgan Suggestion Chips**: Converted static `_chip()` decorator text into tappable `GestureDetector` + `MouseRegion` widgets. Chips now navigate directly to Morgan AI chat with the chip text pre-filled as the opening query. Added a small arrow icon `›` on each chip for affordance.
+- **Third Suggestion Chip**: Added "Am I missing any coins from my sets?" chip (shown when user has coins) — a highly relevant collector question.
+- **Version Badge Update**: Dashboard version badge updated from `v3.8` → `v3.9` to match `pubspec.yaml` (3.9.0+37).
+- **v3.9 Release Notes Entry**: Added v3.9 entry to `_versionHistory`, marked as `isLatest: true`. Updated v3.8 to `isLatest: false`. Documents schema hardening, google-genai pin, and interactive chips.
+- **Coin Photo Thumbnails in Recently Added**: "Recently Added" list now shows actual coin obverse photo in a circular thumbnail when available (`CachedNetworkImage`). Falls back to the generic coin icon. Added `_CoinThumbnail` widget class.
+- **New `onAskMorganWithQuery` callback**: Added to `HomeDashboard` widget to carry chip text through to navigation.
+
+#### `numista_mobile/lib/screens/base_layout.dart`
+- **Wired Morgan chip navigation**: `HomeDashboard` now passes `onAskMorganWithQuery` which sets `_aiInitialQuery` and routes to `'AI Deepdive'` — same mechanism used by the "AI Deep Dive" button on coin detail pages.
+- **Fixed Beta Feedback version**: "Send Beta Feedback" mailto body updated from `Version: Beta v1.0` → `Version: v3.9`.
+
+#### `numista_mobile/lib/screens/login_screen.dart`
+- **Stats Strip Improvement**: Replaced `'23 Schema Fields'` (technical jargon) with `'1,900+ Reference Coins'` (collector-relevant value prop) in both desktop and mobile stats strips.
+- **PIN Auth Hint**: Added "Instead of a password" italic hint next to the PIN label on the Sign In tab, reducing friction for new users.
+
+### Verification
+- `flutter analyze` run on all changed files to confirm zero errors.

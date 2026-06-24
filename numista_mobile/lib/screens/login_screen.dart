@@ -249,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen>
                               children: [
                                 _StatBadge(value: '100+', label: 'Coin\nTypes'),
                                 _StatDivider(),
-                                _StatBadge(value: '31', label: 'Series\nTracked'),
+                                _StatBadge(value: '1,900+', label: 'Reference\nCoins'),
                                 _StatDivider(),
                                 _StatBadge(value: 'AI+', label: 'Community\nVerified'),
                               ],
@@ -368,7 +368,7 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   _StatBadge(value: '100+', label: 'Coin Types\nRecognized'),
                   _StatDivider(),
-                  _StatBadge(value: '23', label: 'Schema\nFields'),
+                  _StatBadge(value: '1,900+', label: 'Reference\nCoins'),
                   _StatDivider(),
                   _StatBadge(value: 'AI+', label: 'Community\nVerified'),
                 ],
@@ -523,7 +523,15 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 6),
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 16),
-          _label('6-Digit PIN'),
+          Row(
+            children: [
+              Expanded(child: _label('6-Digit PIN')),
+              const Text(
+                'Instead of a password',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
           const SizedBox(height: 6),
           _pinField(_pinCtrl, _pinSignInVisible, () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
           const SizedBox(height: 20),

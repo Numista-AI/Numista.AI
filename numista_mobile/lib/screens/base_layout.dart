@@ -91,6 +91,10 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Home Dashboard':
         return HomeDashboard(
           onAskMorgan: () => setState(() => _activeRoute = 'AI Deepdive'),
+          onAskMorganWithQuery: (query) => setState(() {
+            _aiInitialQuery = query;
+            _activeRoute = 'AI Deepdive';
+          }),
           onNavigateToCollection: () => setState(() => _activeRoute = 'My Collection'),
         );
       case 'My Collection':
@@ -408,7 +412,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
                         final body = Uri.encodeComponent(
                           'Beta tester: $email\n'
-                          'Version: Beta v1.0\n\n'
+                          'Version: v3.9\n\n'
                           'Feedback / Bug Report:\n\n'
                           '---\n'
                           '(Please describe what happened, what you expected, and any steps to reproduce)\n',
