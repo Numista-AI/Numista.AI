@@ -1592,7 +1592,7 @@ class _CoinThumbnail extends StatelessWidget {
             ),
           ),
         ),
-        errorWidget: (ctx, _, __) => Container(
+        errorWidget: (ctx, _, err) => Container(
           width: 36, height: 36,
           decoration: _placeholder,
           child: const Icon(Icons.toll, size: 18, color: Color(0xFF5A5C69)),
