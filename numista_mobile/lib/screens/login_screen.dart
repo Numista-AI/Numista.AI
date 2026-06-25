@@ -249,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen>
                               children: [
                                 _StatBadge(value: '100+', label: 'Coin\nTypes'),
                                 _StatDivider(),
-                  _StatBadge(value: '968', label: 'Reference\nCoins'),
+                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
                                 _StatDivider(),
                                 _StatBadge(value: 'AI+', label: 'Community\nVerified'),
                               ],
@@ -368,7 +368,7 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   _StatBadge(value: '100+', label: 'Coin Types\nRecognized'),
                   _StatDivider(),
-                  _StatBadge(value: '968', label: 'Reference\nCoins'),
+                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
                   _StatDivider(),
                   _StatBadge(value: 'AI+', label: 'Community\nVerified'),
                 ],
