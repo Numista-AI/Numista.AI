@@ -1,0 +1,954 @@
+[
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue of the inaugural year of the Morgan Dollar series."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "8 Tail Feathers",
+    "note": "The first design type of 1878, featuring eight tail feathers on the eagle. This design was quickly replaced because previous US silver dollars historically featured an odd number of tail feathers."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "7/8 Tail Feathers",
+    "note": "An overdie variety where a 7 tail feathers die was impressed over an 8 tail feathers hub, leaving tips of the original 8 feathers visible beneath the 7 new feathers."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "7 Tail Feathers (Second Reverse - parallel top arrow feather)",
+    "note": "Also known as the Reverse of 1878. Features a concave breast on the eagle and a parallel top arrow feather (PAF)."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "7 Tail Feathers (Third Reverse - slanted top arrow feather)",
+    "note": "Also known as the Reverse of 1879. Features a convex breast on the eagle and a slanted top arrow feather (SAF). This design became the standard for subsequent years."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint. Features the Second Reverse (parallel top arrow feather)."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint. Features the Second Reverse (parallel top arrow feather)."
+  },
+  {
+    "year": "1878",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Reverse of 1879",
+    "note": "A scarce variety for the San Francisco Mint in 1878, featuring the Third Reverse with a slanted top arrow feather and a convex eagle breast."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue featuring the Third Reverse (slanted top arrow feather)."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Reverse of 1878",
+    "note": "A scarce variety struck using leftover dies from 1878, featuring the Second Reverse with a parallel top arrow feather and concave eagle breast."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint with normal mint mark."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "Capped CC",
+    "note": "A major variety where the Carson City mint mark appears 'capped' or doubled, caused by punching a Large CC over a Small CC or repunching the mint mark."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue. This represents the first year of Morgan Dollar production at the reopened New Orleans Mint."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue featuring the Third Reverse (slanted top arrow feather)."
+  },
+  {
+    "year": "1879",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Reverse of 1878",
+    "note": "A scarce variety struck at the San Francisco Mint using the Second Reverse (parallel top arrow feather, concave breast)."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "80 over 79",
+    "note": "An overdate variety showing remnants of the underlying '79' digit within the '80' of the date."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "80 over 79",
+    "note": "A famous overdate variety for Carson City. Multiple die states exist, including 'Low 8' and 'High 8' variations, showing clear remnants of the 79 underdate."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "80 over 79",
+    "note": "An overdate variety showing remnants of the 79 underdate, struck at the New Orleans Mint."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint, known for exceptionally proof-like and well-struck examples."
+  },
+  {
+    "year": "1880",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "80 over 79",
+    "note": "An overdate variety showing remnants of the 79 underdate, struck at the San Francisco Mint."
+  },
+  {
+    "year": "1881",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1881",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint. A highly desirable Carson City issue with a relatively low mintage of 296,000."
+  },
+  {
+    "year": "1881",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1881",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint. Renowned among numismatists for possessing the most consistently beautiful strikes and lustrous surfaces of the entire series."
+  },
+  {
+    "year": "1882",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1882",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint."
+  },
+  {
+    "year": "1882",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1882",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "O over S",
+    "note": "A major mint mark variety where an 'O' mint mark was punched over an 'S' mint mark on a die originally intended for the San Francisco Mint."
+  },
+  {
+    "year": "1882",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint."
+  },
+  {
+    "year": "1883",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1883",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint. A large portion of the original mintage was distributed in the GSA hoard sales of the 1970s."
+  },
+  {
+    "year": "1883",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1883",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint. Highly prized in Mint State grades due to low survival rates."
+  },
+  {
+    "year": "1884",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1884",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Doubled Die Obverse",
+    "note": "A prominent doubled die variety, most easily identified by strong doubling on Liberty's ear, profile, and the stars on the left."
+  },
+  {
+    "year": "1884",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint. Like the 1883-CC, many uncirculated specimens were preserved in the GSA hoard."
+  },
+  {
+    "year": "1884",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1884",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint. Extremely rare in high uncirculated grades, representing one of the premier condition rarities of the series."
+  },
+  {
+    "year": "1885",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard regular strike issue."
+  },
+  {
+    "year": "1885",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the Carson City Mint. This is one of the lowest mintage Carson City Morgan Dollars, with only 228,000 struck."
+  },
+  {
+    "year": "1885",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the New Orleans Mint."
+  },
+  {
+    "year": "1885",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard regular strike issue minted at the San Francisco Mint."
+  },
+  {
+    "year": "1886",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 19,963,000. Common in all grades up to MS65."
+  },
+  {
+    "year": "1886",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 10,710,000. Extremely difficult to find in high uncirculated grades due to poor strike quality and heavy circulation."
+  },
+  {
+    "year": "1886",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 750,000. A semi-key date that is highly prized in uncirculated conditions."
+  },
+  {
+    "year": "1887",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 20,290,000. Very common in all grades."
+  },
+  {
+    "year": "1887",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "7 over 6",
+    "note": "Major overdate variety. The underdigit 6 is clearly visible inside the upper loop and loop base of the 7. Highly popular Red Book variety."
+  },
+  {
+    "year": "1887",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 11,550,000. Common in circulated grades but scarce in Gem Uncirculated."
+  },
+  {
+    "year": "1887",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "7 over 6",
+    "note": "Major overdate variety struck at the New Orleans Mint. The underdigit 6 is visible within the 7. Highly sought after by variety collectors."
+  },
+  {
+    "year": "1887",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 1,771,000. Moderately scarce, especially in high grades."
+  },
+  {
+    "year": "1888",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 19,183,000. Common and easily obtainable in most grades."
+  },
+  {
+    "year": "1888",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 9,278,000. Common in circulated and lower uncirculated grades."
+  },
+  {
+    "year": "1888",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "Doubled Die Obverse (Hot Lips)",
+    "note": "Famous 'Hot Lips' variety (VAM-4). Features dramatic doubling on Liberty's lips, nose, and chin, giving the appearance of double lips."
+  },
+  {
+    "year": "1888",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 657,000. A scarce, lower-mintage issue highly valued in Mint State."
+  },
+  {
+    "year": "1889",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 21,726,000. One of the most common dates in the entire series."
+  },
+  {
+    "year": "1889",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of only 350,000. The premier key date of the Carson City Mint Morgan dollars, highly coveted in all grades."
+  },
+  {
+    "year": "1889",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 11,875,000. Common in circulated grades, but surprisingly scarce in Gem Uncirculated."
+  },
+  {
+    "year": "1889",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 700,000. A scarce branch mint issue that commands a premium in all grades."
+  },
+  {
+    "year": "1890",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 16,802,000. Common and widely available."
+  },
+  {
+    "year": "1890",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 2,309,041. Popular Carson City issue."
+  },
+  {
+    "year": "1890",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "Tail Bar",
+    "note": "Major variety (VAM-4) featuring a prominent raised bar running from the eagle's tail feathers to the wreath, caused by a deep gouge on the die."
+  },
+  {
+    "year": "1890",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 10,701,100. Common in circulated grades."
+  },
+  {
+    "year": "1890",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 8,230,373. Readily available in most grades."
+  },
+  {
+    "year": "1891",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 8,693,556. Common in circulated grades, moderately scarce in high Mint State."
+  },
+  {
+    "year": "1891",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 1,618,000. Popular Carson City issue."
+  },
+  {
+    "year": "1891",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "Spitting Eagle",
+    "note": "Popular variety (VAM-3) showing a die gouge resembling spit coming from the eagle's beak."
+  },
+  {
+    "year": "1891",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 7,954,529. Common in circulated grades."
+  },
+  {
+    "year": "1891",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 5,296,000. Common in circulated grades, but scarce in Gem Uncirculated."
+  },
+  {
+    "year": "1892",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 1,036,000. A lower mintage Philadelphia issue that is scarce in all grades."
+  },
+  {
+    "year": "1892",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 1,352,000. Highly popular Carson City issue, scarce in high grades."
+  },
+  {
+    "year": "1892",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 2,744,000. Scarce in Mint State grades."
+  },
+  {
+    "year": "1892",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 1,200,000. While common in circulated grades, it is an extreme rarity in Mint State, representing one of the key condition rarities of the series."
+  },
+  {
+    "year": "1893",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of only 378,000. A major key date of the series, highly prized in all grades."
+  },
+  {
+    "year": "1893",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 677,000. The final year of Carson City Mint Morgan dollars, highly sought after."
+  },
+  {
+    "year": "1893",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of 300,000. A key date issue, very scarce in all grades and extremely rare in Mint State."
+  },
+  {
+    "year": "1893",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike issue. Mintage of only 100,000. The absolute key date of the entire Morgan Dollar series, highly valuable in any condition."
+  },
+  {
+    "year": "1894",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Low mintage of 110,000 coins, making it a major key date in the series."
+  },
+  {
+    "year": "1894",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 1,723,000."
+  },
+  {
+    "year": "1894",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 1,260,000."
+  },
+  {
+    "year": "1895",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 450,000. Highly elusive in uncirculated grades."
+  },
+  {
+    "year": "1895",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 400,000. A key semi-key date in the series."
+  },
+  {
+    "year": "1896",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Common date with a mintage of 9,976,000."
+  },
+  {
+    "year": "1896",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,900,000. Difficult to find in high grades with a strong strike."
+  },
+  {
+    "year": "1896",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 5,000,000. Highly prized in Mint State."
+  },
+  {
+    "year": "1897",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 2,822,000."
+  },
+  {
+    "year": "1897",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,004,000."
+  },
+  {
+    "year": "1897",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 5,842,000."
+  },
+  {
+    "year": "1898",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 5,884,000."
+  },
+  {
+    "year": "1898",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,440,000."
+  },
+  {
+    "year": "1898",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,102,000."
+  },
+  {
+    "year": "1899",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Low mintage of 330,000, making it a key date."
+  },
+  {
+    "year": "1899",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 12,290,000."
+  },
+  {
+    "year": "1899",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "Micro O",
+    "note": "Features an abnormally small mint mark, struck using a punch intended for quarter dollars. Highly popular Red Book variety."
+  },
+  {
+    "year": "1899",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 2,562,000."
+  },
+  {
+    "year": "1900",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 8,830,000."
+  },
+  {
+    "year": "1900",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 12,590,000."
+  },
+  {
+    "year": "1900",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "O over CC",
+    "note": "Struck from dies where the New Orleans 'O' mint mark was punched over a Carson City 'CC' mint mark. Distinct remnants of the CC are visible under magnification."
+  },
+  {
+    "year": "1900",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 3,540,000."
+  },
+  {
+    "year": "1901",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 6,962,000. Extremely rare in high uncirculated grades."
+  },
+  {
+    "year": "1901",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Doubled Die Reverse",
+    "note": "VAM-3 variety. Features prominent doubling on the reverse, most notably on the eagle's wings, tail feathers, and the letters of 'UNITED STATES OF AMERICA'."
+  },
+  {
+    "year": "1901",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 13,320,000."
+  },
+  {
+    "year": "1901",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 2,284,000."
+  },
+  {
+    "year": "1902",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 7,994,000."
+  },
+  {
+    "year": "1902",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 8,636,000."
+  },
+  {
+    "year": "1902",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 1,530,000."
+  },
+  {
+    "year": "1903",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,652,000."
+  },
+  {
+    "year": "1903",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 4,450,000. Historically a legendary rarity until Treasury bag releases in the early 1960s."
+  },
+  {
+    "year": "1903",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 1,241,000. Highly valued key date in all grades."
+  },
+  {
+    "year": "1904",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 2,788,000. The final year of the original Morgan Dollar production run before the 1921 resumption."
+  },
+  {
+    "year": "1904",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 3,720,000."
+  },
+  {
+    "year": "1904",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike. Mintage of 2,304,000."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Standard business strike. First year of the Morgan dollar design's resumption, featuring modified low-relief dies by George T. Morgan."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Zerbe Proof",
+    "note": "Special strike produced for numismatist Farran Zerbe during his visit to the Philadelphia Mint. Characterized by reflective fields and weak details."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Chapman Proof",
+    "note": "Special proof-like strikes prepared for dealer Henry Chapman. Features deeply mirrored fields and fully struck details, far superior to Zerbe proofs."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "D",
+    "variety": "",
+    "note": "Standard business strike. The only year the Morgan dollar was struck at the Denver Mint."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "D",
+    "variety": "Micro D",
+    "note": "VAM-1A. Features an unusually small 'D' mint mark, measuring only 0.8mm, compared to the standard 1.0mm mint mark."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Standard business strike struck at the San Francisco Mint."
+  },
+  {
+    "year": "1921",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Micro S",
+    "note": "Features a noticeably smaller 'S' mint mark than standard issues."
+  },
+  {
+    "year": "2021",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Struck at the Philadelphia Mint to commemorate the 100th anniversary of the transition from the Morgan dollar to the Peace dollar. Features no mint mark."
+  },
+  {
+    "year": "2021",
+    "denomination": "1 Dollar",
+    "mint_mark": "D",
+    "variety": "",
+    "note": "Struck at the Denver Mint to commemorate the centennial of the last year of the Morgan dollar series."
+  },
+  {
+    "year": "2021",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "",
+    "note": "Struck at the San Francisco Mint to commemorate the centennial of the last year of the Morgan dollar series."
+  },
+  {
+    "year": "2021",
+    "denomination": "1 Dollar",
+    "mint_mark": "O",
+    "variety": "O Privy Mark",
+    "note": "Struck at Philadelphia Mint with New Orleans Privy Mark to commemorate the New Orleans Mint."
+  },
+  {
+    "year": "2021",
+    "denomination": "1 Dollar",
+    "mint_mark": "CC",
+    "variety": "CC Privy Mark",
+    "note": "Struck at Philadelphia Mint with Carson City Privy Mark to commemorate the Carson City Mint."
+  },
+  {
+    "year": "2023",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Uncirculated finish. Struck at the Philadelphia Mint as part of the modern resumption of the Morgan Dollar series."
+  },
+  {
+    "year": "2023",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Proof",
+    "note": "Proof finish. Struck at the San Francisco Mint."
+  },
+  {
+    "year": "2023",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Reverse Proof",
+    "note": "Struck at the San Francisco Mint. Issued as part of the two-coin Morgan and Peace Dollar Reverse Proof Set."
+  },
+  {
+    "year": "2024",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "",
+    "note": "Uncirculated finish. Struck at the Philadelphia Mint."
+  },
+  {
+    "year": "2024",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Proof",
+    "note": "Proof finish. Struck at the San Francisco Mint."
+  },
+  {
+    "year": "2024",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Reverse Proof",
+    "note": "Reverse Proof finish. Struck at the San Francisco Mint."
+  },
+  {
+    "year": "2026",
+    "denomination": "1 Dollar",
+    "mint_mark": "P",
+    "variety": "Liberty Bell 250 Privy Mark",
+    "note": "Struck to commemorate the United States Semiquincentennial (250th Anniversary). Features obverse/reverse dual date '1776 ~ 2026' and a Liberty Bell privy mark. Uncirculated finish."
+  },
+  {
+    "year": "2026",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Liberty Bell 250 Privy Mark - Proof",
+    "note": "Struck to commemorate the United States Semiquincentennial (250th Anniversary). Features obverse/reverse dual date '1776 ~ 2026' and a Liberty Bell privy mark. Proof finish."
+  },
+  {
+    "year": "2026",
+    "denomination": "1 Dollar",
+    "mint_mark": "S",
+    "variety": "Liberty Bell 250 Privy Mark - Reverse Proof",
+    "note": "Struck to commemorate the United States Semiquincentennial (250th Anniversary). Features obverse/reverse dual date '1776 ~ 2026' and a Liberty Bell privy mark. Reverse Proof finish."
+  },
+  {
+    "year": "2026",
+    "denomination": "1 Dollar",
+    "mint_mark": "W",
+    "variety": "Liberty Bell 250 Privy Mark - Enhanced Uncirculated",
+    "note": "Struck to commemorate the United States Semiquincentennial (250th Anniversary). Features obverse/reverse dual date '1776 ~ 2026' and a Liberty Bell privy mark. Enhanced Uncirculated finish."
+  }
+]

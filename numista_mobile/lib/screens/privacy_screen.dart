@@ -80,58 +80,65 @@ class PrivacyScreen extends StatelessWidget {
 
                     _SectionHeader(title: '1. Information We Collect'),
                     _BulletPoint(
-                      boldText: 'Account Information: ',
-                      text: 'When you create an account, you provide us with your email address, name (optional), and a security PIN.',
+                      boldText: 'Desktop Agent Data: ',
+                      text: 'The optional local Desktop Agent accesses your microscope camera (processed entirely locally) and secures account pairing using your email address and an optional device name. High-resolution coin images captured are uploaded directly to your private Google Cloud Storage folder.',
+                    ),
+                    _BulletPoint(
+                      boldText: 'Account & Profile: ',
+                      text: 'We utilize Firebase Authentication to securely manage your account via email, optional alias, and a password or 6-digit security PIN.',
                     ),
                     _BulletPoint(
                       boldText: 'Coin Collection Data: ',
-                      text: 'We store information about the coins you add to your collection, including images, grades, costs, and notes. This data is stored securely in Firebase Firestore.',
-                    ),
-                    _BulletPoint(
-                      boldText: 'Usage Data: ',
-                      text: 'We collect standard analytical data to improve the application performance and user experience.',
+                      text: 'We store your cataloged coins, images, grades, costs, and personal notes securely in Firebase Firestore.',
                     ),
                     SizedBox(height: 20),
 
-                    _SectionHeader(title: '2. How We Use Your Information'),
-                    _BulletPoint(
-                      boldText: 'Provide & Maintain: ',
-                      text: 'To run the service and sync your coin collection data across all your logged-in devices.',
-                    ),
-                    _BulletPoint(
-                      boldText: 'AI Estimations: ',
-                      text: 'To calibrate and improve our coin valuation models.',
-                    ),
-                    _BulletPoint(
-                      boldText: 'Communications: ',
-                      text: 'To email you regarding updates, system announcements, or security alerts.',
-                    ),
-                    SizedBox(height: 20),
-
-                    _SectionHeader(title: '3. Sharing Your Information'),
+                    _SectionHeader(title: '2. Local Loopback Connectivity'),
                     Text(
-                      'We do not sell, rent, or trade your personal data. We only share information with third-party service providers (such as Google Firebase) necessary to execute core app features, or if legally required to comply with law enforcement.',
+                      'The Desktop Agent runs a local loopback server on localhost:5000 using local SSL/TLS encryption. This connection stays entirely within your machine\'s memory space (isolated from external internet traffic) and enforces strict CORS policies to restrict requests exclusively to Numista.AI.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
-                    _SectionHeader(title: '4. Data Security'),
+                    _SectionHeader(title: '3. How We Use Your Information'),
+                    _BulletPoint(
+                      boldText: 'Collection Syncing: ',
+                      text: 'To upload microscope scans and log coin records to your personal collection database.',
+                    ),
+                    _BulletPoint(
+                      boldText: 'AI Coin Identification: ',
+                      text: 'To analyze coin images securely via Google Cloud\'s Gemini enterprise platform to detect coin type, year, mint mark, and varieties.',
+                    ),
+                    _BulletPoint(
+                      boldText: 'Enrichment & Metrics: ',
+                      text: 'To enrich collection records with metadata from numismatic databases (such as PCGS) and estimate valuations.',
+                    ),
+                    SizedBox(height: 20),
+
+                    _SectionHeader(title: '4. Sharing Your Information'),
                     Text(
-                      'We implement industry-standard security measures to safeguard your information. However, no electronic transmission or storage method is 100% secure, and we cannot guarantee absolute security.',
+                      'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Captured images are sent securely to Google Cloud\'s Gemini enterprise platform for classification; under Google\'s enterprise policies, your uploads are strictly protected and are never used to train public machine learning models.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
-                    _SectionHeader(title: '5. Your Choices & Data Deletion'),
+                    _SectionHeader(title: '5. Data Security'),
                     Text(
-                      'You can update, edit, or delete your account and coin collection database directly in the application settings at any time. When you choose to delete your account, your data is wiped permanently from Firebase.',
+                      'We implement industry-standard security measures including HTTPS/TLS encryption for all data transfers. Database access is isolated per-user via Firebase rules, ensuring only you can read or write to your personal coin collection.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
-                    _SectionHeader(title: '6. Changes to this Policy'),
+                    _SectionHeader(title: '6. Your Choices & Data Deletion'),
                     Text(
-                      'We may update this Privacy Policy from time to time. We will notify you of any changes by posting the revised version inside the application.',
+                      'You can edit or delete coin records in the app at any time. Accounts can be permanently deleted by contacting support, which wipes all collection history and images from Firebase. Local Desktop Agent settings can be deleted by removing the AppData configuration directory.',
+                      style: TextStyle(color: _text, fontSize: 14, height: 1.5),
+                    ),
+                    SizedBox(height: 20),
+
+                    _SectionHeader(title: '7. Changes to this Policy'),
+                    Text(
+                      'We may update this Privacy Policy from time to time. We will notify you of any changes by posting the revised version inside the application and on our website.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 28),

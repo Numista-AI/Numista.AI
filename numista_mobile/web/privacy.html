@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — Numista.AI</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #0B1220;
+            --card: #1A2540;
+            --accent: #4C8CDA;
+            --gold: #C9A84C;
+            --text-main: #FFFFFF;
+            --text-muted: #94A3B8;
+            --border: #2E3E66;
+            --success: #00C853;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        /* Premium Gradient Header */
+        header {
+            background: linear-gradient(135deg, #101B35 0%, #0B1220 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 24px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-coin {
+            font-size: 28px;
+            filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.4));
+        }
+
+        .logo-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        .logo-text span {
+            color: var(--gold);
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            background-color: rgba(26, 37, 64, 0.5);
+        }
+
+        .back-link:hover {
+            color: var(--text-main);
+            border-color: var(--accent);
+        }
+
+        /* Container & Layout */
+        main {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 0 24px;
+        }
+
+        .policy-card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .last-updated {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--border);
+            margin: 32px 0;
+        }
+
+        .intro {
+            font-size: 16px;
+            color: #E2E8F0;
+            margin-bottom: 32px;
+        }
+
+        /* Sections */
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 36px 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background-color: var(--gold);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            color: #CBD5E1;
+            margin-bottom: 16px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        ul {
+            list-style: none;
+            margin-bottom: 24px;
+            padding-left: 8px;
+        }
+
+        li {
+            color: #CBD5E1;
+            margin-bottom: 12px;
+            font-size: 15px;
+            position: relative;
+            padding-left: 24px;
+        }
+
+        li::before {
+            content: "●";
+            color: var(--gold);
+            font-size: 10px;
+            position: absolute;
+            left: 4px;
+            top: 2px;
+        }
+
+        li strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Highlights & Alerts */
+        .highlight-box {
+            background-color: rgba(76, 140, 218, 0.08);
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 24px 0;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+            font-size: 14.5px;
+        }
+
+        /* Footer contact */
+        .contact-section {
+            background-color: rgba(201, 168, 76, 0.05);
+            border: 1px dashed var(--gold);
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 48px;
+        }
+
+        .contact-section h3 {
+            margin-top: 0;
+            color: var(--gold);
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+        }
+
+        .contact-section a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .contact-section a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            main {
+                margin: 30px auto;
+            }
+            .policy-card {
+                padding: 28px;
+            }
+            h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="https://numista.ai" class="logo-container">
+            <span class="logo-coin">🪙</span>
+            <span class="logo-text">Numista<span>.AI</span></span>
+        </a>
+        <a href="https://numista.ai" class="back-link">Back to Numista.AI</a>
+    </header>
+
+    <main>
+        <div class="policy-card">
+            <h1>Privacy Policy</h1>
+            <div class="last-updated">Last Updated: June 25, 2026</div>
+            
+            <p class="intro">
+                Numista.AI ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy describes how we collect, use, store, and share information when you use our mobile/web application ("Service") and the <strong>Numista.AI Desktop Agent</strong> ("Desktop Agent"), which is the software downloaded to connect a physical microscope to the Service.
+            </p>
+
+            <hr>
+
+            <h2>1. Information We Collect and Access</h2>
+            <p>We limit our data collection to only what is strictly necessary to run the Service and identify your numismatic specimens.</p>
+
+            <h3>A. Information Collected via the Desktop Agent (Microscope Connector)</h3>
+            <p>The Desktop Agent is a local utility that runs on your personal computer to interface with your USB microscope or webcam. It collects and accesses:</p>
+            <ul>
+                <li><strong>Account Association (Email Address):</strong> The Desktop Agent requires your Numista.AI account email address. This is entered during the initial setup wizard or sent via the local pairing protocol when you link the agent to the web interface. It is used solely to route scanner commands and associate captured images with your account.</li>
+                <li><strong>Device Alias (Optional):</strong> You may optionally provide a friendly name for your computer (e.g., "Main PC" or "Coin Room Desktop"). This is stored locally and used in your user dashboard to identify which hardware agent is sending scans.</li>
+                <li><strong>Local Video Stream & Viewfinder:</strong> The Desktop Agent accesses your connected USB microscope or camera to calculate image sharpness and display a centering viewfinder. <strong>This live video feed is processed entirely locally on your machine.</strong> We do not stream or record your live camera feed to our servers.</li>
+                <li><strong>Captured Coin Images:</strong> When the Desktop Agent detects that a coin is stable and in focus, it captures high-resolution static snapshots (Obverse and Reverse). These images are saved temporarily in a local directory before being uploaded to your private folder on Google Cloud Storage.</li>
+                <li><strong>Operational Logs:</strong> The agent writes status and diagnostic logs locally to your system configuration folder. These logs remain on your local computer and are not transmitted to us unless you manually provide them to support for troubleshooting.</li>
+            </ul>
+
+            <h3>B. Information Collected via the Web/Mobile Application</h3>
+            <ul>
+                <li><strong>Basic Profile Information:</strong> When you register, we utilize Firebase Authentication and security protocols to securely manage your account via your email address, an optional user-defined name or alias, a password or 6-digit security PIN, and encrypted third-party authentication tokens (such as Google Sign-In).</li>
+                <li><strong>Numismatic Collection Data:</strong> We store the coin collection data you input, including year, denomination, mint mark, variety, purchase cost, storage location, grades, custom notes, and image URLs. This data is securely saved in Google Cloud Firestore.</li>
+                <li><strong>AI Analysis Results:</strong> We retain the metadata generated by our AI models (such as estimated grade, series, and attributes) to show you details about your collection.</li>
+            </ul>
+
+            <h2>2. How the Desktop Agent Operates (Local Loopback Connectivity)</h2>
+            <p>To communicate with the web browser application (running on https://numista.ai) without transmitting your private, live camera feed over the public internet, the Desktop Agent establishes a lightweight local loopback server on localhost:5000.</p>
+            <ul>
+                <li><strong>Local HTTPS / TLS Security:</strong> This connection is secured using local SSL/TLS certificates, ensuring all local transit between your web browser and the Desktop Agent is encrypted to prevent local sniffing or interception.</li>
+                <li><strong>Local Isolation:</strong> This connection operates strictly within your local machine's loopback interface. No external internet traffic can access this port, preventing external entities from intercepting local hardware data.</li>
+                <li><strong>CORS Safeguards:</strong> The local server enforces strict Cross-Origin Resource Sharing (CORS) rules that restrict connection requests to official Numista.AI web domains and local developer addresses, ignoring any incoming requests from unauthorized third-party sites.</li>
+            </ul>
+
+            <h2>3. How We Use Your Information</h2>
+            <p>We use the information we collect to operate, maintain, and improve our services, specifically:</p>
+            <ul>
+                <li><strong>Collection Syncing:</strong> To upload microscope captures and automatically log coin records to your personal "My Collection" database.</li>
+                <li><strong>AI Numismatic Identification:</strong> To send captured coin images to our secure AI processing pipeline (using Google Cloud's Gemini enterprise platform) to identify the coin's type, year, mint mark, and die varieties.</li>
+                <li><strong>Third-Party Database Enrichment:</strong> To query numismatic databases (such as PCGS) using identified attributes to retrieve structural values, melt estimates, and historical data.</li>
+                <li><strong>Service Diagnostics:</strong> To troubleshoot hardware connection issues, optimize camera autofocus/manual-focus calculations, and improve the accuracy of our visual classification models.</li>
+            </ul>
+
+            <h2>4. Sharing Your Information</h2>
+            <p>We do not sell, rent, trade, or share your personal data with third-party advertisers or marketers. We only share information with trusted third-party service providers who help us operate our platform:</p>
+            <ul>
+                <li><strong>Cloud Infrastructure Providers:</strong> Your account information, collection data, and uploaded microscope images are stored securely on <strong>Google Firebase</strong> (Google Cloud Firestore and Google Cloud Storage).</li>
+                <li><strong>AI and Numismatic Enrichment Partners:</strong> Scanned images are transmitted securely to <strong>Google Cloud's Gemini enterprise platform</strong> (via the Google Gen AI SDK) for image classification, structural analysis, and variety detection. Because we utilize Google Cloud's enterprise infrastructure, your uploaded images and metadata are strictly protected under enterprise data governance policies and are <strong>never</strong> used by Google to train public machine learning models. Coin metadata is sent to PCGS APIs to retrieve coin records. These partners do not use your data for any purposes outside of performing these services for Numista.AI.</li>
+                <li><strong>Legal Compliance:</strong> We may disclose your information if required to do so by law or in the good faith belief that such action is necessary to comply with a legal obligation, protect our rights, or prevent fraud.</li>
+            </ul>
+
+            <h2>5. Data Security</h2>
+            <p>We implement standard administrative, technical, and physical safeguards to secure your personal information:</p>
+            <ul>
+                <li>All communications between the Desktop Agent, the web application, and our cloud databases are encrypted using <strong>Transport Layer Security (TLS/HTTPS)</strong>.</li>
+                <li>Database isolation is enforced at the database level: Firestore security rules prevent any user from reading, writing, or accessing coin records or image URLs belonging to another user.</li>
+                <li>Microscope images are uploaded to a private Google Cloud Storage bucket with authenticated-only read access.</li>
+            </ul>
+
+            <h2>6. Your Choices and Data Control</h2>
+            <p>You maintain full control over the data you provide to Numista.AI:</p>
+            <ul>
+                <li><strong>Deleting Coins:</strong> You can delete individual coin records and their associated microscope images from your collection at any time via the web app.</li>
+                <li><strong>Deleting Your Account:</strong> You can permanently delete your Numista.AI account and erase your entire database record from Firebase by contacting support or using the delete feature in the web application settings.</li>
+                <li><strong>Local Agent Data Deletion:</strong> You can delete the Desktop Agent's local files at any time by uninstalling the software and deleting the configuration directory located in your AppData directory.</li>
+            </ul>
+
+            <div class="contact-section">
+                <h3>Contact Us</h3>
+                <p>If you have any questions or concerns about this Privacy Policy or our data handling practices, please contact us at:</p>
+                <p><strong>Numista.AI Support</strong><br>
+                Email: <a href="mailto:support@numista.ai">support@numista.ai</a><br>
+                Website: <a href="https://numista.ai" target="_blank">https://numista.ai</a></p>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
