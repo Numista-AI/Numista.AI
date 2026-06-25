@@ -1,0 +1,8 @@
+- `[x]` Scale orchestration pipeline in `generate_definitive_catalog.py` to all circulating coin series
+- `[x]` Create `ingest_banknotes.py` for BEP banknote varieties using Friedberg (FR) Numbers
+- `[x]` Create `load_definitive_catalog.py` to merge all assets and populate Firestore `coins_reference`
+- `[x]` Compile the catalog into the local SQLite table `definitive_reference` in `numista_coins.db`
+- `[x]` Verify consolidated outputs and catalog data structures
+- `[x]` Modify `coin_search_screen.dart` to show `✅` (Owned) or `➕` (Not Owned) and wire wishlist adding with live eBay sold price lookup
+- `[x]` Modify `program_manager_screen.dart` to integrate sub-progress rings and advancement math for the overall record
+- `[x]` Run build checks and verify mobile client compilation

@@ -1,0 +1,134 @@
+============================================================
+NUMISTA.AI -- Coin Image Fix Script v3 (Cache-Busting & Exact Mappings)
+User: eric@numista.ai
+Run at: 2026-06-25 18:55:43
+Total coins to fix: 12
+============================================================
+
+============================================================
+GROUP 1a: 2007 James Madison Presidential $1
+============================================================
+  Doc ID: 6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689
+  Source obverse: GCS ref (Berlin Madison LEFT)
+  Source reverse: GCS ref (Berlin Madison RIGHT - Statue of Liberty)
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689/obverse.jpg
+  [DEL] Deleted existing reverse: users/eric@numista.ai/coins/6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689/reverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 1a Madison - 6ee1bdb5-47cd-4fe1-b9fb-033f5bf45689
+
+============================================================
+GROUP 1b: 1999 New Jersey State Quarter
+============================================================
+  Doc ID: b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6
+  Source obverse: GCS ref (Denver State Quarter Washington obverse)
+  Source reverse: GCS ref (1999 NJ uncirculated reverse)
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6/obverse.jpg
+  [DEL] Deleted existing reverse: users/eric@numista.ai/coins/b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6/reverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 1b New Jersey - b5f9c5ae-11dd-44b6-9f1f-b0113cf9cbf6
+
+============================================================
+GROUP 1c: 1976 Kennedy Bicentennial Half Dollar
+============================================================
+  Doc ID: f0b1984b-0ebf-496e-93fd-aa5ea63f04b8
+  Source obverse: GCS ref library (1976-S_50C_Clad_Deep_Cameo obverse)
+  Source reverse: GCS ref library (1976 bicentennial half dollar reverse)
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/f0b1984b-0ebf-496e-93fd-aa5ea63f04b8/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/f0b1984b-0ebf-496e-93fd-aa5ea63f04b8/obverse.jpg
+  [DEL] Deleted existing reverse: users/eric@numista.ai/coins/f0b1984b-0ebf-496e-93fd-aa5ea63f04b8/reverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/f0b1984b-0ebf-496e-93fd-aa5ea63f04b8/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 1c Kennedy Bicentennial - f0b1984b-0ebf-496e-93fd-aa5ea63f04b8
+
+============================================================
+GROUP 1d: 1936 Lincoln Cent (Wheat Penny)
+============================================================
+  Doc ID: 80103054-84e3-45ab-aebd-322c01e723b9
+  Source obverse: GCS ref library (1937 Wheat Penny obverse - date-accurate fallback)
+  Source reverse: GCS ref library (1937 Wheat Penny reverse)
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/80103054-84e3-45ab-aebd-322c01e723b9/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/80103054-84e3-45ab-aebd-322c01e723b9/obverse.jpg
+  [DEL] Deleted existing reverse: users/eric@numista.ai/coins/80103054-84e3-45ab-aebd-322c01e723b9/reverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/80103054-84e3-45ab-aebd-322c01e723b9/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 1d Lincoln Wheat 1936 - 80103054-84e3-45ab-aebd-322c01e723b9
+
+============================================================
+GROUP 2: SBA Dollars - Wrong Year Obverse (1979-P, 1979-D, 1980-D)
+============================================================
+  Source 1979 obverse: GCS ref library (1_us_dollar_1979_LEFT.jpg)
+
+  Processing 1979-P SBA: 0a7be39a-8210-4524-985a-fe8e87de440a
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/0a7be39a-8210-4524-985a-fe8e87de440a/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/0a7be39a-8210-4524-985a-fe8e87de440a/obverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_source_obverse', 'image_attribution_obverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] SBA 1979-P - 0a7be39a-8210-4524-985a-fe8e87de440a
+
+  Processing 1979-D SBA: dee46559-9787-4fac-8e02-96f0ea6cfb43
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/dee46559-9787-4fac-8e02-96f0ea6cfb43/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/dee46559-9787-4fac-8e02-96f0ea6cfb43/obverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_source_obverse', 'image_attribution_obverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] SBA 1979-D - dee46559-9787-4fac-8e02-96f0ea6cfb43
+
+  Processing 1980-D SBA: 0ff72932-2a36-4cad-b1de-4a5deb2d295a
+  [DEL] Deleted existing obverse: users/eric@numista.ai/coins/0ff72932-2a36-4cad-b1de-4a5deb2d295a/obverse.jpg
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/0ff72932-2a36-4cad-b1de-4a5deb2d295a/obverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_source_obverse', 'image_attribution_obverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] SBA 1980-D - 0ff72932-2a36-4cad-b1de-4a5deb2d295a
+
+  [DONE] GROUP 2: All 3 SBA coins updated
+
+============================================================
+GROUP 3a: 2026 Half Dollar (SemiQuincentennial)
+============================================================
+  Doc ID: b22f8905-4eca-45e9-ba57-920fb5427b22
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/b22f8905-4eca-45e9-ba57-920fb5427b22/obverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/b22f8905-4eca-45e9-ba57-920fb5427b22/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 3a 2026 SemiQ Half - b22f8905-4eca-45e9-ba57-920fb5427b22
+
+============================================================
+GROUP 3b: 2015 Abraham Lincoln / Union Shield One Cent
+============================================================
+  Doc ID: dd851d66-227f-45af-9aff-c0adb69b8bd4
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/dd851d66-227f-45af-9aff-c0adb69b8bd4/obverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/dd851d66-227f-45af-9aff-c0adb69b8bd4/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 3b Lincoln Shield 2015 - dd851d66-227f-45af-9aff-c0adb69b8bd4
+
+============================================================
+GROUP 3c: 1973 Kennedy Half Dollar
+============================================================
+  Doc ID: 9d06e94d-eb85-48c2-b4ba-38a47c9ed39f
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/9d06e94d-eb85-48c2-b4ba-38a47c9ed39f/obverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/9d06e94d-eb85-48c2-b4ba-38a47c9ed39f/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 3c Kennedy Half 1973 - 9d06e94d-eb85-48c2-b4ba-38a47c9ed39f
+
+============================================================
+GROUP 3d: 1963 Roosevelt Dime
+============================================================
+  Doc ID: fccc89c5-3d05-4dcd-8f28-f9acadff4d72
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/fccc89c5-3d05-4dcd-8f28-f9acadff4d72/obverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/fccc89c5-3d05-4dcd-8f28-f9acadff4d72/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 3d Roosevelt Dime 1963 - fccc89c5-3d05-4dcd-8f28-f9acadff4d72
+
+============================================================
+GROUP 3e: 1943 Abraham Lincoln Steel Cent
+============================================================
+  Doc ID: 6057acbd-ec5b-4f52-9a2c-fa21534267d8
+  [OK] Uploaded obverse -> users/eric@numista.ai/coins/6057acbd-ec5b-4f52-9a2c-fa21534267d8/obverse.jpg
+  [OK] Uploaded reverse -> users/eric@numista.ai/coins/6057acbd-ec5b-4f52-9a2c-fa21534267d8/reverse.jpg
+  [OK] Firestore updated: ['image_url_obverse', 'image_url_reverse', 'image_source_obverse', 'image_source_reverse', 'image_attribution_obverse', 'image_attribution_reverse', 'image_attribution', 'image_fix_reason', 'last_image_fix', 'updated_at']
+  [DONE] 3e Steel Cent 1943 - 6057acbd-ec5b-4f52-9a2c-fa21534267d8
+
+============================================================
+FINAL SUMMARY
+============================================================
+Coins fixed: 12/12
+[DONE] All fixes completed successfully!
