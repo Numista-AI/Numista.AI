@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/coin_search_service.dart';
+import '../services/wishlist_service.dart';
+import '../services/epn_service.dart';
+import '../models/coin_model.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 /// Full-screen Vertex AI-powered coin reference library search.
 ///
@@ -624,25 +629,59 @@ class _CoinResultCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Category badge
-                if (result.category.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _categoryColor(result.category).withAlpha(40),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                          color: _categoryColor(result.category).withAlpha(80)),
-                    ),
-                    child: Text(
-                      result.category,
-                      style: TextStyle(
-                          color: _categoryColor(result.category),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (result.category.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _categoryColor(result.category).withAlpha(40),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: _categoryColor(result.category).withAlpha(80)),
+                        ),
+                        child: Text(
+                          result.category,
+                          style: TextStyle(
+                              color: _categoryColor(result.category),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (result.isOwned)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E).withAlpha(20),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFF22C55E).withAlpha(50)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'Owned',
+                              style: TextStyle(color: Color(0xFF22C55E), fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFFF63366), size: 22),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => _addToWishlistWithEbay(context),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -672,6 +711,265 @@ class _CoinResultCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CoinDetailSheet(result: result),
+    );
+  }
+
+  void _addToWishlistWithEbay(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => _AddToWishlistDialog(result: result),
+    ).then((added) {
+      if (added == true && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Added ${result.displayTitle} to your Wish List!'),
+            backgroundColor: const Color(0xFF00C853),
+          ),
+        );
+      }
+    });
+  }
+}
+
+class _AddToWishlistDialog extends StatefulWidget {
+  final CoinSearchResult result;
+  const _AddToWishlistDialog({required this.result});
+
+  @override
+  State<_AddToWishlistDialog> createState() => _AddToWishlistDialogState();
+}
+
+class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _ebayResults = [];
+  final TextEditingController _priceCtrl = TextEditingController(text: '\$0.00');
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPrices();
+  }
+
+  @override
+  void dispose() {
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchPrices() async {
+    try {
+      final coin = CoinModel(
+        id: widget.result.id,
+        year: widget.result.coinYear,
+        mintMark: widget.result.mintMarks,
+        denomination: widget.result.denomination,
+        programSeries: widget.result.programName,
+        variety: widget.result.coinName,
+        personalNotes: widget.result.notes,
+      );
+
+      final results = await EpnService.fetchEbayResults(coin);
+      if (!mounted) return;
+
+      double sum = 0;
+      int count = 0;
+      for (final res in results) {
+        final priceMap = res['price'] as Map<String, dynamic>?;
+        if (priceMap != null) {
+          final valStr = priceMap['value']?.toString() ?? '';
+          final val = double.tryParse(valStr);
+          if (val != null) {
+            sum += val;
+            count++;
+          }
+        }
+      }
+
+      setState(() {
+        _ebayResults = results;
+        _loading = false;
+        if (count > 0) {
+          final avg = sum / count;
+          _priceCtrl.text = '\$${avg.toStringAsFixed(2)}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    final targetPrice = _priceCtrl.text.trim();
+    final coin = CoinModel(
+      id: widget.result.id,
+      year: widget.result.coinYear,
+      mintMark: widget.result.mintMarks,
+      denomination: widget.result.denomination,
+      programSeries: widget.result.programName,
+      variety: widget.result.coinName,
+      personalNotes: widget.result.notes,
+      purchaseCost: targetPrice.isNotEmpty ? targetPrice : '\$0.00',
+    );
+
+    try {
+      await WishlistService.addToWishlist(coin);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add to wishlist: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        'Add to Wish List',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      content: SizedBox(
+        width: 320,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.result.displayTitle,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              if (widget.result.displaySubtitle.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  widget.result.displaySubtitle,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 16),
+              const Text(
+                'Target Price',
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _priceCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  fillColor: const Color(0xFF0F172A),
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  hintText: '\$0.00',
+                  hintStyle: const TextStyle(color: Colors.white30),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_loading) ...[
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: CircularProgressIndicator(color: Color(0xFFF63366)),
+                  ),
+                ),
+                const Center(
+                  child: Text(
+                    'Fetching live eBay market value...',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ] else if (_error != null) ...[
+                Text(
+                  'Error fetching eBay prices: $_error',
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+              ] else if (_ebayResults.isEmpty) ...[
+                const Text(
+                  'No active listings found on eBay. Target price defaulted.',
+                  style: TextStyle(color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ] else ...[
+                const Text(
+                  'Live Reference Listings on eBay:',
+                  style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 90,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _ebayResults.length,
+                    itemBuilder: (context, idx) {
+                      final item = _ebayResults[idx];
+                      final img = item['image']?['imageUrl'] ?? item['thumbnailImages']?[0]?['imageUrl'] ?? '';
+                      final price = '${item['price']['currency']} ${item['price']['value']}';
+                      return GestureDetector(
+                        onTap: () async {
+                          final settings = await EpnService.getSettings();
+                          final mkrid = settings['rotationId'] ?? '711-53200-19255-0';
+                          final campId = settings['campaignId'] ?? '';
+                          final url = '${item['itemWebUrl']}&mkevt=1&mkcid=1&mkrid=$mkrid&campid=$campId&toolid=10001';
+                          if (await canLaunchUrl(Uri.parse(url))) { await launchUrl(Uri.parse(url)); }
+                        },
+                        child: Container(
+                          width: 80,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                  child: img.isNotEmpty
+                                      ? Image.network(img, fit: BoxFit.cover, width: double.infinity)
+                                      : const Icon(Icons.image_not_supported, size: 20, color: Colors.white24),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  price,
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00C853)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF63366),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: _save,
+          child: const Text('Add to Wish List', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }

@@ -5994,9 +5994,340 @@ def collection_clear(req: ClearCollectionRequest):
         print(f"[collection_clear] Error for {req.user_email}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  DEFINITIVE CATALOG & COMPLETION METRICS ENDPOINTS                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+import sqlite3
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "database", "numista_coins.db")
+
+def _normalize_denom_stats(raw):
+    if not raw:
+        return ""
+    s = str(raw).lower().strip()
+    if "cent" in s or "penny" in s or "pennies" in s or "one cent" in s:
+        return "cent"
+    if "nickel" in s or "five cents" in s:
+        return "nickel"
+    if "dime" in s or "one dime" in s:
+        return "dime"
+    if "quarter" in s or "twenty-five" in s:
+        return "quarter"
+    if "half dollar" in s or "fifty cents" in s:
+        return "half dollar"
+    if "dollar" in s or "one dollar" in s:
+        return "dollar"
+    return s
+
+def _normalize_mint_stats(raw):
+    if not raw:
+        return ""
+    s = str(raw).upper().strip()
+    if s in ["NONE", "NULL", "P", "P-MINT", "P_MINT", ""]:
+        return "P"
+    return s
+
+def _extract_fr_number_stats(variety):
+    if not variety:
+        return ""
+    match = re.search(r"Fr\.\s*(\d+[a-zA-Z]?)", variety, re.IGNORECASE)
+    if match:
+        return f"fr. {match.group(1).lower()}"
+    return variety.lower().strip()
+
+def _get_user_owned_doc_ids(user_email: str) -> set:
+    if not user_email:
+        return set()
+    
+    # 1. Fetch user coins from Firestore
+    try:
+        coins_ref = db.collection("users").document(user_email).collection("coins")
+        user_coins = [doc.to_dict() for doc in coins_ref.stream()]
+    except Exception as e:
+        print(f"[get_user_owned_doc_ids] Error fetching coins: {e}")
+        user_coins = []
+
+    # 2. Fetch user banknotes from Firestore
+    try:
+        currency_ref = db.collection("users").document(user_email).collection("currency")
+        user_notes = [doc.to_dict() for doc in currency_ref.stream()]
+    except Exception as e:
+        print(f"[get_user_owned_doc_ids] Error fetching banknotes: {e}")
+        user_notes = []
+
+    # 3. Load reference catalog from SQLite
+    if not os.path.exists(DB_PATH):
+        print(f"[get_user_owned_doc_ids] DB not found at {DB_PATH}")
+        return set()
+        
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT year, denomination, mint_mark, variety, series, category, doc_id FROM definitive_reference")
+        ref_rows = [dict(row) for row in cur.fetchall()]
+        conn.close()
+    except Exception as e:
+        print(f"[get_user_owned_doc_ids] SQLite error: {e}")
+        return set()
+
+    # Build reference matching sets
+    ref_coins = {}
+    ref_notes = {}
+    ref_medals = {}
+
+    for r in ref_rows:
+        cat = r["category"]
+        year = str(r["year"]).strip()
+        denom = _normalize_denom_stats(r["denomination"])
+        mint = _normalize_mint_stats(r["mint_mark"])
+        variety = str(r["variety"]).lower().strip()
+
+        if cat == "coin":
+            key = (year, denom, mint, variety)
+            ref_coins[key] = r["doc_id"]
+        elif cat == "banknote":
+            fr_num = _extract_fr_number_stats(r["variety"])
+            key = (year, denom, fr_num)
+            ref_notes[key] = r["doc_id"]
+        elif cat == "medal":
+            key = (year, variety)
+            ref_medals[key] = r["doc_id"]
+
+    owned_doc_ids = set()
+    
+    # Match user coins
+    for uc in user_coins:
+        denom = _normalize_denom_stats(uc.get("Denomination"))
+        year = str(uc.get("Year") or "").strip()
+        mint = _normalize_mint_stats(uc.get("Mint Mark"))
+        theme = str(uc.get("Theme/Subject") or "").lower().strip()
+        u_variety = str(uc.get("variety") or "").lower().strip()
+
+        if denom == "medal" or uc.get("category") == "medal":
+            for (myear, mvariety), doc_id in ref_medals.items():
+                if myear == year and (mvariety in theme or theme in mvariety or mvariety in u_variety):
+                    owned_doc_ids.add(doc_id)
+                    break
+        else:
+            key_std = (year, denom, mint, "")
+            if key_std in ref_coins:
+                owned_doc_ids.add(ref_coins[key_std])
+            
+            for (ryear, rdenom, rmint, rvariety), doc_id in ref_coins.items():
+                if rvariety == "":
+                    continue
+                if ryear == year and rdenom == denom and rmint == mint:
+                    if rvariety in theme or rvariety in u_variety:
+                        owned_doc_ids.add(doc_id)
+
+    # Match user banknotes
+    for un in user_notes:
+        year = str(un.get("Year") or "").strip()
+        denom = _normalize_denom_stats(un.get("Denomination"))
+        desc = str(un.get("Description") or "").lower().strip()
+        notes = str(un.get("Personal Notes") or "").lower().strip()
+        
+        fr_num = _extract_fr_number_stats(desc)
+        if not fr_num or "fr." not in fr_num:
+            fr_num = _extract_fr_number_stats(notes)
+
+        key = (year, denom, fr_num)
+        if key in ref_notes:
+            owned_doc_ids.add(ref_notes[key])
+        else:
+            for (ryear, rdenom, rvariety), doc_id in ref_notes.items():
+                if ryear == year and rdenom == denom:
+                    if rvariety in desc or rvariety in notes:
+                        owned_doc_ids.add(doc_id)
+
+    return owned_doc_ids
+
+
+@app.get("/api/reference/stats")
+def reference_stats():
+    """
+    Returns counts of all active items in the reference catalog.
+    """
+    if not os.path.exists(DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+        
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE category = 'coin'")
+        coins_cnt = cur.fetchone()[0]
+        
+        cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE category = 'banknote'")
+        notes_cnt = cur.fetchone()[0]
+        
+        cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE category = 'medal'")
+        medals_cnt = cur.fetchone()[0]
+        
+        conn.close()
+        
+        return {
+            "coins": coins_cnt,
+            "banknotes": notes_cnt,
+            "medals": medals_cnt,
+            "total": coins_cnt + notes_cnt + medals_cnt
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/collection/completion_stats")
+def collection_completion_stats(user_email: str):
+    """
+    Returns overall and categorical completion metrics for a user.
+    """
+    if not os.path.exists(DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+        
+    try:
+        owned_ids = _get_user_owned_doc_ids(user_email)
+        
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT doc_id, category FROM definitive_reference")
+        rows = cur.fetchall()
+        conn.close()
+        
+        totals = {"coin": 0, "banknote": 0, "medal": 0}
+        owned = {"coin": 0, "banknote": 0, "medal": 0}
+        
+        for r in rows:
+            cat = r["category"]
+            doc_id = r["doc_id"]
+            if cat in totals:
+                totals[cat] += 1
+                if doc_id in owned_ids:
+                    owned[cat] += 1
+                    
+        total_ref = len(rows)
+        total_owned = len(owned_ids)
+        overall_percentage = (total_owned / total_ref * 100) if total_ref > 0 else 0.0
+        
+        breakdown = {}
+        for cat in ["coin", "banknote", "medal"]:
+            cat_total = totals[cat]
+            cat_owned = owned[cat]
+            cat_pct = (cat_owned / cat_total * 100) if cat_total > 0 else 0.0
+            breakdown[cat] = {
+                "owned": cat_owned,
+                "total": cat_total,
+                "percentage": round(cat_pct, 2)
+            }
+            
+        return {
+            "completion_percentage": round(overall_percentage, 2),
+            "owned_count": total_owned,
+            "total_count": total_ref,
+            "breakdown": breakdown
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reference/search")
+def reference_search(q: str, user_email: Optional[str] = None, page_size: int = 10, offset: int = 0):
+    """
+    Returns search results from the definitive catalog with ownership status.
+    """
+    if not os.path.exists(DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+        
+    q = q.strip()
+    if not q:
+        return {"query": q, "total": 0, "offset": offset, "results": []}
+        
+    try:
+        owned_ids = _get_user_owned_doc_ids(user_email) if user_email else set()
+        
+        terms = q.lower().split()
+        conditions = []
+        params = {}
+        for idx, term in enumerate(terms):
+            conditions.append(f"(year LIKE :t{idx} OR denomination LIKE :t{idx} OR variety LIKE :t{idx} OR series LIKE :t{idx} OR note LIKE :t{idx})")
+            params[f"t{idx}"] = f"%{term}%"
+            
+        where_clause = " AND ".join(conditions)
+        
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        
+        cur.execute(f"SELECT COUNT(*) FROM definitive_reference WHERE {where_clause}", params)
+        total = cur.fetchone()[0]
+        
+        cur.execute(
+            f"SELECT doc_id, year, denomination, mint_mark, variety, note, series, category "
+            f"FROM definitive_reference WHERE {where_clause} "
+            f"LIMIT :limit OFFSET :offset",
+            {**params, "limit": page_size, "offset": offset}
+        )
+        rows = [dict(row) for row in cur.fetchall()]
+        conn.close()
+        
+        results = []
+        for r in rows:
+            doc_id = r["doc_id"]
+            results.append({
+                "doc_id": doc_id,
+                "year": r["year"],
+                "denomination": r["denomination"],
+                "mint_mark": r["mint_mark"],
+                "variety": r["variety"],
+                "note": r["note"],
+                "series": r["series"],
+                "category": r["category"],
+                "is_owned": doc_id in owned_ids
+            })
+            
+        return {
+            "query": q,
+            "total": total,
+            "offset": offset,
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reference/db_update_check")
+def reference_db_update_check():
+    """
+    Checks the version status of the SQLite catalog.
+    """
+    try:
+        storage_client = gcs.Client()
+        bucket = storage_client.bucket("numista-reference-library")
+        blob = bucket.get_blob("numista_coins.db")
+        if blob:
+            return {
+                "version": blob.updated.isoformat(),
+                "size_bytes": blob.size,
+                "md5_hash": blob.md5_hash
+            }
+    except Exception:
+        pass
+        
+    if os.path.exists(DB_PATH):
+        mtime = os.path.getmtime(DB_PATH)
+        return {
+            "version": datetime.utcfromtimestamp(mtime).isoformat() + "Z",
+            "size_bytes": os.path.getsize(DB_PATH),
+            "md5_hash": ""
+        }
+    return {"version": "unknown", "size_bytes": 0}
+
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
 

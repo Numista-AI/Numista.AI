@@ -36,6 +36,31 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   bool _isScanning = false;
   final ImagePicker _imagePicker = ImagePicker();
 
+  int _totalReferenceCount = 2834; // default fallback matching SQLite seeded catalog
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTotalReferenceCount();
+  }
+
+  Future<void> _loadTotalReferenceCount() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('coins_reference')
+          .count()
+          .get();
+      if (mounted && snap.count != null) {
+        setState(() {
+          _totalReferenceCount = snap.count!;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching total reference count: $e');
+    }
+  }
+
+
   /// Returns the denomination family expected for a given program name.
   /// e.g. "Presidential Dollars" → "dollar", "50 State Quarters" → "quarter"
   String _expectedDenomFamily(String programName) {
@@ -269,6 +294,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   }
 
   Widget _buildProgramCard(CoinProgram program, int collected, int total, double pct) {
+    final programOverallAdvancement = _totalReferenceCount > 0 ? (collected / _totalReferenceCount) * 100 : 0.0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -324,7 +351,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             borderRadius: BorderRadius.circular(4),
             minHeight: 6,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          Text(
+            'Advances overall record by ${programOverallAdvancement.toStringAsFixed(2)}%',
+            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 10),
           
           SizedBox(
             width: double.infinity,
@@ -352,6 +384,23 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // --------------------------------------------------------------------------
 
   Widget _buildProgramDetailView(List<QueryDocumentSnapshot> docs, CoinProgram program) {
+    int collectedCount = 0;
+    int totalCount = 0;
+    for (var coin in program.coins) {
+      if (coin.name.contains("Pending")) continue;
+      totalCount++;
+      bool isMatched = false;
+      for (var doc in docs) {
+        if (_isMatch(doc.data() as Map<String, dynamic>, program, coin.name)) {
+          isMatched = true;
+          break;
+        }
+      }
+      if (isMatched) collectedCount++;
+    }
+    final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
+    final programOverallAdvancement = _totalReferenceCount > 0 ? (collectedCount / _totalReferenceCount) * 100 : 0.0;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -503,6 +552,81 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       color: Color(0xFFD4A843), size: 22),
                 ],
               ),
+            ),
+          ),
+          
+          // Program Progress Dashboard Banner
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE2E6E9)),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Sub-progress ring
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: totalCount > 0 ? collectedCount / totalCount : 0,
+                        strokeWidth: 6,
+                        backgroundColor: const Color(0xFFE2E8F0),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                      ),
+                      Center(
+                        child: Text(
+                          '${pct.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Program Progress: $collectedCount of $totalCount Collected',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'You have completed ${pct.toStringAsFixed(0)}% of ${program.name}, '
+                        'advancing overall U.S. Currency System of Record completion by ${programOverallAdvancement.toStringAsFixed(2)}%.',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF475569),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           

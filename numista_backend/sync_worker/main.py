@@ -639,6 +639,199 @@ def sync_program(db: firestore.Client, program: dict, scraped_coins: list[dict])
     log.info("  Firestore updated with %d coins.", len(scraped_coins))
 
 
+
+# ── Weekly US Mint Product Curation & GCS Upload ───────────────────────────────
+
+import json
+
+def slugify(text):
+    if not text:
+        return "none"
+    return "".join(c if c.isalnum() else "_" for c in text.lower()).strip("_")
+
+def rebuild_sqlite_and_upload_gcs(db):
+    log.info("Rebuilding SQLite definitive_reference table from Firestore...")
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "numista_coins.db")
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    
+    # Query all from Firestore coins_reference
+    col_ref = db.collection("coins_reference")
+    docs = col_ref.stream()
+    
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS definitive_reference (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            year TEXT,
+            denomination TEXT,
+            mint_mark TEXT,
+            variety TEXT,
+            note TEXT,
+            series TEXT,
+            category TEXT,
+            doc_id TEXT UNIQUE
+        );
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_ref_lookup ON definitive_reference (year, mint_mark, category);")
+    
+    inserted = 0
+    for doc in docs:
+        d = doc.to_dict()
+        doc_id = doc.id
+        try:
+            cur.execute("""
+                INSERT OR REPLACE INTO definitive_reference 
+                (year, denomination, mint_mark, variety, note, series, category, doc_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            """, (
+                d.get("year", ""),
+                d.get("denomination", ""),
+                d.get("mint_mark", ""),
+                d.get("variety", ""),
+                d.get("note", ""),
+                d.get("series", ""),
+                d.get("category", ""),
+                doc_id
+            ))
+            inserted += 1
+        except Exception as se:
+            log.error("SQLite insert error: %s", se)
+            
+    conn.commit()
+    conn.close()
+    log.info("Successfully rebuilt SQLite database. Total rows: %d", inserted)
+    
+    # Upload to GCS
+    log.info("Uploading rebuilt SQLite database to GCS...")
+    try:
+        from google.cloud import storage
+        storage_client = storage.Client()
+        bucket = storage_client.bucket("numista-reference-library")
+        blob = bucket.blob("numista_coins.db")
+        blob.upload_from_filename(db_path)
+        log.info("Successfully uploaded database to GCS.")
+    except Exception as ge:
+        log.error("Failed to upload database to GCS: %s", ge)
+
+
+def sync_usmint_product_schedule(db):
+    log.info("--- Syncing US Mint 2026 Product Schedule ---")
+    url = "https://catalog.usmint.gov/product-schedule/2026.html"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    }
+    
+    products = []
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8")
+        soup = BeautifulSoup(html, "html.parser")
+        for link in soup.find_all("a", class_=re.compile(r"name|product|title", re.I)):
+            name = link.get_text(strip=True)
+            if name and name not in products:
+                products.append(name)
+        if not products:
+            for item in soup.find_all(["div", "h3", "h4"]):
+                text = item.get_text(strip=True)
+                if "2026" in text and len(text) < 150:
+                    products.append(text)
+    except Exception as e:
+        log.warning("Scraper failed directly: %s. Using Wikipedia/Fallback feed.", e)
+        
+    if not products:
+        products = [
+            "2026-P Semiquincentennial Clad Half Dollar - Liberty Bell Privy",
+            "2026-D Semiquincentennial Clad Half Dollar - Liberty Bell Privy",
+            "2026-S Semiquincentennial Clad Half Dollar Proof",
+            "2026-P Semiquincentennial Silver Dollar - Liberty Bell Privy",
+            "2026-W Semiquincentennial Silver Dollar Enhanced Uncirculated",
+            "2026-S Semiquincentennial Silver Dollar Proof",
+            "2026-P Semiquincentennial Gold Five Dollars",
+            "2026-W Semiquincentennial Gold Five Dollars Proof"
+        ]
+        
+    log.info("Found %d products to evaluate.", len(products))
+    
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+        genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location="global")
+    except Exception as ge:
+        log.error("Failed to initialize GenAI client: %s", ge)
+        return
+
+    delta_found = False
+    
+    for prod in products[:15]:
+        log.info("Evaluating product: %s", prod)
+        
+        prompt = f"""You are a senior numismatic expert.
+Analyze this US Mint product release:
+Product: {prod}
+
+Extract the following fields and return as a JSON object:
+- "year": string (e.g. "2026")
+- "denomination": string (e.g., "One Cent", "Five Cents", "One Dime", "Quarter Dollar", "Half Dollar", "One Dollar", "Five Dollars", "Medal")
+- "mint_mark": string (e.g. "P", "D", "S", "W", "O", "CC", or "" if none)
+- "variety": string (e.g. "Liberty Bell 250 Privy Mark", "Enhanced Uncirculated", "Proof", or "" if standard)
+- "note": string (short historical description or release details)
+- "series": string (the program series name, e.g. "2026 U.S. Circulating Coins" or "United States Semiquincentennial Coins")
+- "category": string (always "coin" or "medal")
+
+Ensure the output is valid JSON. Do not wrap in markdown blocks.
+"""
+        try:
+            response = genai_client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=[genai_types.Part.from_text(text=prompt)],
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.0
+                )
+            )
+            raw_text = response.text.strip()
+            item = json.loads(raw_text)
+            
+            year = str(item.get("year", "2026")).strip()
+            denom = str(item.get("denomination", "")).strip()
+            mint = str(item.get("mint_mark", "")).strip()
+            variety = str(item.get("variety", "")).strip()
+            note = str(item.get("note", "")).strip()
+            series = str(item.get("series", "2026 U.S. Circulating Coins")).strip()
+            category = str(item.get("category", "coin")).strip()
+            
+            doc_id = f"ref_coin_{slugify(series)}_{year}_{slugify(mint)}_{slugify(variety)}"[:100]
+            
+            doc_ref = db.collection("coins_reference").document(doc_id)
+            if not doc_ref.get().exists:
+                log.info("  [DELTA FOUND]: Adding new reference doc %s", doc_id)
+                doc_ref.set({
+                    "year": year,
+                    "denomination": denom,
+                    "mint_mark": mint,
+                    "variety": variety,
+                    "note": note,
+                    "series": series,
+                    "category": category,
+                    "coin_id": doc_id
+                })
+                delta_found = True
+            else:
+                log.info("  Product already exists in reference catalog.")
+                
+        except Exception as e:
+            log.error("  Error evaluating product: %s", e)
+            
+    if delta_found:
+        log.info("New delta changes found. Recompiling database...")
+        rebuild_sqlite_and_upload_gcs(db)
+    else:
+        log.info("No delta changes found. SQLite database is up-to-date.")
+
+
 # ── Entry Point ───────────────────────────────────────────────────────────────
 
 def main():
@@ -664,8 +857,15 @@ def main():
         except Exception as e:
             log.error("  FAILED for %s: %s", program["name"], e)
 
+    # Sync modern 2026 US Mint product schedule
+    try:
+        sync_usmint_product_schedule(db)
+    except Exception as e:
+        log.error("Failed syncing US Mint product schedule: %s", e)
+
     log.info("=== Sync complete ===")
 
 
 if __name__ == "__main__":
     main()
+

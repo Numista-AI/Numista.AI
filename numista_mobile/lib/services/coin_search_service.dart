@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import 'auth_service.dart';
 
-/// A single coin result from the Vertex AI Search reference library.
+/// A single coin result from the definitive reference library.
 class CoinSearchResult {
   final String id;
   final String programName;
@@ -17,6 +18,7 @@ class CoinSearchResult {
   final String imageUrl;
   final String content;
   final String snippet;
+  final bool isOwned;
 
   const CoinSearchResult({
     required this.id,
@@ -32,23 +34,25 @@ class CoinSearchResult {
     required this.imageUrl,
     required this.content,
     required this.snippet,
+    required this.isOwned,
   });
 
   factory CoinSearchResult.fromJson(Map<String, dynamic> j) {
     return CoinSearchResult(
-      id:          j['id']           as String? ?? '',
-      programName: j['program_name'] as String? ?? '',
-      coinYear:    j['coin_year']    as String? ?? '',
-      coinName:    j['coin_name']    as String? ?? '',
+      id:          j['doc_id']       as String? ?? '',
+      programName: j['series']       as String? ?? '',
+      coinYear:    j['year']         as String? ?? '',
+      coinName:    j['variety']      as String? ?? '',
       denomination:j['denomination'] as String? ?? '',
       category:    j['category']     as String? ?? '',
-      mintMarks:   j['mint_marks']   as String? ?? '',
+      mintMarks:   j['mint_mark']    as String? ?? '',
       metal:       j['metal']        as String? ?? '',
       designer:    j['designer']     as String? ?? '',
-      notes:       j['notes']        as String? ?? '',
+      notes:       j['note']         as String? ?? '',
       imageUrl:    j['image_url']    as String? ?? '',
       content:     j['content']      as String? ?? '',
-      snippet:     j['snippet']      as String? ?? '',
+      snippet:     j['note']         as String? ?? '',
+      isOwned:     j['is_owned']     as bool?   ?? false,
     );
   }
 
@@ -56,8 +60,11 @@ class CoinSearchResult {
   String get displayTitle {
     final parts = <String>[];
     if (coinYear.isNotEmpty) parts.add(coinYear);
-    if (coinName.isNotEmpty && coinName != programName) parts.add(coinName);
-    if (programName.isNotEmpty) parts.add(programName);
+    if (coinName.isNotEmpty) {
+      parts.add(coinName);
+    } else if (programName.isNotEmpty) {
+      parts.add(programName);
+    }
     return parts.isEmpty ? id : parts.join(' ');
   }
 
@@ -71,7 +78,7 @@ class CoinSearchResult {
   }
 }
 
-/// Response envelope from /api/coin_search
+/// Response envelope from /api/reference/search
 class CoinSearchResponse {
   final String query;
   final int total;
@@ -111,16 +118,11 @@ class CoinSearchResponse {
         query: q, total: 0, offset: 0, results: [], summary: '', error: err);
 }
 
-/// Calls GET /api/coin_search on the Numista.AI Cloud Run backend.
-/// Open endpoint — no auth header needed.
+/// Calls GET /api/reference/search on the Numista.AI backend.
 class CoinSearchService {
   static const String _baseUrl = kApiBaseUrl;
 
-  /// Searches the Vertex AI-indexed coin reference library.
-  ///
-  /// [query]    — natural language search term
-  /// [pageSize] — number of results (1–25, default 10)
-  /// [offset]   — pagination offset (default 0)
+  /// Searches the definitive reference library.
   static Future<CoinSearchResponse> search({
     required String query,
     int pageSize = 10,
@@ -130,9 +132,11 @@ class CoinSearchService {
     if (q.isEmpty) return CoinSearchResponse.empty(q);
 
     try {
-      final uri = Uri.parse('$_baseUrl/api/coin_search').replace(
+      final userEmail = AuthService.userEmail;
+      final uri = Uri.parse('$_baseUrl/api/reference/search').replace(
         queryParameters: {
           'q': q,
+          'user_email': userEmail,
           'page_size': pageSize.toString(),
           'offset': offset.toString(),
         },

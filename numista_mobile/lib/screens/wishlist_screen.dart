@@ -668,7 +668,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ListTile(
             contentPadding: const EdgeInsets.all(16),
             title: Text('${coin.year} ${coin.denomination}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            subtitle: Text('${coin.country} • ${coin.condition}'),
+            subtitle: Text('${coin.country} • ${coin.condition}${coin.purchaseCost != '\$0.00' && coin.purchaseCost.isNotEmpty ? ' • Target: ${coin.purchaseCost}' : ''}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
