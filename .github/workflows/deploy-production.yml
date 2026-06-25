@@ -51,6 +51,7 @@ jobs:
         run: flutter build web --release --base-href "/"
 
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -60,6 +61,8 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         working-directory: numista_mobile
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: firebase deploy --only hosting --project studio-9101802118-8c9a8
 
       - name: Deployment complete
