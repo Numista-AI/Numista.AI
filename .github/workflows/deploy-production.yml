@@ -6,6 +6,7 @@ on:
     paths:
       - 'numista_mobile/**'
       - 'numista_backend/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
