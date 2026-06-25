@@ -129,6 +129,11 @@ COIN_NICKNAMES: dict[str, str] = {
     'flowing hair': 'Flowing Hair Dollar',
     'draped bust': 'Draped Bust Dollar',
     'gobrecht': 'Gobrecht Dollar',
+    'presidential dollars': 'Presidential $1 Coin Program',
+    'presidential dollar': 'Presidential $1 Coin Program',
+    'presidential $1 coin': 'Presidential $1 Coin Program',
+    'presidential $1 coin program': 'Presidential $1 Coin Program',
+    'presidential $1': 'Presidential $1 Coin Program',
     # Half Dollars
     'walker': 'Walking Liberty Half Dollar',
     'walking liberty': 'Walking Liberty Half Dollar',
@@ -441,6 +446,219 @@ def _expand_series(text: str) -> str:
     key = str(text).strip().lower()
     return _community_nicknames().get(key, text)
 
+
+PRESIDENTIAL_DOLLARS_MAP: dict[str, str] = {
+    "washington": "George Washington",
+    "george washington": "George Washington",
+    "john adams": "John Adams",
+    "adams, john": "John Adams",
+    "jefferson": "Thomas Jefferson",
+    "thomas jefferson": "Thomas Jefferson",
+    "madison": "James Madison",
+    "james madison": "James Madison",
+    "monroe": "James Monroe",
+    "james monroe": "James Monroe",
+    "john quincy adams": "John Quincy Adams",
+    "john q adams": "John Quincy Adams",
+    "john q. adams": "John Quincy Adams",
+    "adams, john q": "John Quincy Adams",
+    "adams, john q.": "John Quincy Adams",
+    "jackson": "Andrew Jackson",
+    "andrew jackson": "Andrew Jackson",
+    "van buren": "Martin Van Buren",
+    "martin van buren": "Martin Van Buren",
+    "william henry harrison": "William Henry Harrison",
+    "william h harrison": "William Henry Harrison",
+    "william h. harrison": "William Henry Harrison",
+    "harrison, william henry": "William Henry Harrison",
+    "tyler": "John Tyler",
+    "john tyler": "John Tyler",
+    "polk": "James K. Polk",
+    "james polk": "James K. Polk",
+    "james k polk": "James K. Polk",
+    "james k. polk": "James K. Polk",
+    "taylor": "Zachary Taylor",
+    "zachary taylor": "Zachary Taylor",
+    "fillmore": "Millard Fillmore",
+    "millard fillmore": "Millard Fillmore",
+    "pierce": "Franklin Pierce",
+    "franklin pierce": "Franklin Pierce",
+    "buchanan": "James Buchanan",
+    "james buchanan": "James Buchanan",
+    "lincoln": "Abraham Lincoln",
+    "abraham lincoln": "Abraham Lincoln",
+    "andrew johnson": "Andrew Johnson",
+    "grant": "Ulysses S. Grant",
+    "ulysses grant": "Ulysses S. Grant",
+    "ulysses s grant": "Ulysses S. Grant",
+    "ulysses s. grant": "Ulysses S. Grant",
+    "hayes": "Rutherford B. Hayes",
+    "rutherford hayes": "Rutherford B. Hayes",
+    "rutherford b hayes": "Rutherford B. Hayes",
+    "rutherford b. hayes": "Rutherford B. Hayes",
+    "garfield": "James A. Garfield",
+    "james garfield": "James A. Garfield",
+    "james a garfield": "James A. Garfield",
+    "james a. garfield": "James A. Garfield",
+    "james garﬁed": "James A. Garfield",
+    "james garﬁ eld": "James A. Garfield",
+    "arthur": "Chester A. Arthur",
+    "chester arthur": "Chester A. Arthur",
+    "chester a arthur": "Chester A. Arthur",
+    "chester a. arthur": "Chester A. Arthur",
+    "grover cleveland": "Grover Cleveland (First Term)",
+    "grover cleveland (term 1)": "Grover Cleveland (First Term)",
+    "grover cleveland (term 2)": "Grover Cleveland (Second Term)",
+    "grover cleveland (1st term)": "Grover Cleveland (First Term)",
+    "grover cleveland (2nd term)": "Grover Cleveland (Second Term)",
+    "cleveland (term 1)": "Grover Cleveland (First Term)",
+    "cleveland (term 2)": "Grover Cleveland (Second Term)",
+    "cleveland (1st term)": "Grover Cleveland (First Term)",
+    "cleveland (2nd term)": "Grover Cleveland (Second Term)",
+    "cleveland first term": "Grover Cleveland (First Term)",
+    "cleveland second term": "Grover Cleveland (Second Term)",
+    "benjamin harrison": "Benjamin Harrison",
+    "mckinley": "William McKinley",
+    "william mckinley": "William McKinley",
+    "theodore roosevelt": "Theodore Roosevelt",
+    "t roosevelt": "Theodore Roosevelt",
+    "teddy roosevelt": "Theodore Roosevelt",
+    "taft": "William Howard Taft",
+    "william howard taft": "William Howard Taft",
+    "william h taft": "William Howard Taft",
+    "william h. taft": "William Howard Taft",
+    "wilson": "Woodrow Wilson",
+    "woodrow wilson": "Woodrow Wilson",
+    "harding": "Warren G. Harding",
+    "warren harding": "Warren G. Harding",
+    "warren g harding": "Warren G. Harding",
+    "warren g. harding": "Warren G. Harding",
+    "coolidge": "Calvin Coolidge",
+    "calvin coolidge": "Calvin Coolidge",
+    "hoover": "Herbert Hoover",
+    "herbert hoover": "Herbert Hoover",
+    "franklin d roosevelt": "Franklin D. Roosevelt",
+    "franklin d. roosevelt": "Franklin D. Roosevelt",
+    "franklin d, roosevelt": "Franklin D. Roosevelt",
+    "fdr": "Franklin D. Roosevelt",
+    "truman": "Harry S. Truman",
+    "harry truman": "Harry S. Truman",
+    "harry s truman": "Harry S. Truman",
+    "harry s. truman": "Harry S. Truman",
+    "eisenhower": "Dwight D. Eisenhower",
+    "dwight eisenhower": "Dwight D. Eisenhower",
+    "dwight d eisenhower": "Dwight D. Eisenhower",
+    "dwight d. eisenhower": "Dwight D. Eisenhower",
+    "ike": "Dwight D. Eisenhower",
+    "kennedy": "John F. Kennedy",
+    "john kennedy": "John F. Kennedy",
+    "john f kennedy": "John F. Kennedy",
+    "john f. kennedy": "John F. Kennedy",
+    "jfk": "John F. Kennedy",
+    "lyndon johnson": "Lyndon B. Johnson",
+    "lyndon b johnson": "Lyndon B. Johnson",
+    "lyndon b. johnson": "Lyndon B. Johnson",
+    "lbj": "Lyndon B. Johnson",
+    "nixon": "Richard M. Nixon",
+    "richard nixon": "Richard M. Nixon",
+    "richard m nixon": "Richard M. Nixon",
+    "richard m. nixon": "Richard M. Nixon",
+    "ford": "Gerald R. Ford",
+    "gerald ford": "Gerald R. Ford",
+    "gerald r ford": "Gerald R. Ford",
+    "gerald r. ford": "Gerald R. Ford",
+    "reagan": "Ronald Reagan",
+    "ronald reagan": "Ronald Reagan",
+    "george h w bush": "George H.W. Bush",
+    "george h.w. bush": "George H.W. Bush",
+    "george hw bush": "George H.W. Bush",
+    "george h. w. bush": "George H.W. Bush",
+    "bush, george h.w.": "George H.W. Bush",
+}
+
+def _normalize_presidential_theme(theme_raw: str, year_raw: str) -> str:
+    cleaned = str(theme_raw).strip().lower()
+    y_str = str(year_raw).strip() if year_raw else ""
+    
+    if cleaned in PRESIDENTIAL_DOLLARS_MAP:
+        return PRESIDENTIAL_DOLLARS_MAP[cleaned]
+        
+    if cleaned in ("adams", "adams, john"):
+        if y_str == "2008":
+            return "John Quincy Adams"
+        else:
+            return "John Adams"
+            
+    if cleaned == "harrison":
+        if y_str == "2012":
+            return "Benjamin Harrison"
+        else:
+            return "William Henry Harrison"
+            
+    if cleaned == "johnson":
+        if y_str == "2011":
+            return "Andrew Johnson"
+        else:
+            return "Lyndon B. Johnson"
+            
+    if cleaned == "roosevelt":
+        if y_str == "2013":
+            return "Theodore Roosevelt"
+        elif y_str == "2014":
+            return "Franklin D. Roosevelt"
+            
+    if cleaned in ("cleveland", "grover cleveland"):
+        if "1893" in cleaned or "term 2" in cleaned or "second" in cleaned or "2nd" in cleaned or y_str == "1893":
+            return "Grover Cleveland (Second Term)"
+        else:
+            return "Grover Cleveland (First Term)"
+            
+    if "cleveland" in cleaned:
+        if "1893" in cleaned or "term 2" in cleaned or "second" in cleaned or "2nd" in cleaned or "93-97" in cleaned:
+            return "Grover Cleveland (Second Term)"
+        elif "1885" in cleaned or "term 1" in cleaned or "first" in cleaned or "1st" in cleaned or "85-89" in cleaned:
+            return "Grover Cleveland (First Term)"
+        else:
+            return "Grover Cleveland (First Term)"
+
+def _classify_item_type(doc: dict) -> str:
+    # If item_type is already explicitly mapped and is one of the valid types, return it
+    current_type = str(doc.get("item_type") or "").strip().lower()
+    valid_types = {"coin", "paper_currency", "medal", "stamp", "supply", "other"}
+    if current_type in valid_types:
+        return current_type
+    if current_type == "banknote":
+        return "paper_currency"
+
+    # Rule-based classification based on other fields
+    text_to_scan = " ".join([
+        str(doc.get("Program/Series") or ""),
+        str(doc.get("Theme/Subject") or ""),
+        str(doc.get("Denomination") or ""),
+        str(doc.get("Original Description from source") or ""),
+        str(doc.get("Variety") or ""),
+        str(doc.get("Personal Notes") or ""),
+    ]).lower()
+
+    if any(w in text_to_scan for w in ("banknote", "note", "bill", "dollar bill", "currency", "silver certificate", "legal tender", "fractional", "gold certificate", "fr.", "friedberg")):
+        if "coin" in text_to_scan or "quarter" in text_to_scan or "penny" in text_to_scan or "cent" in text_to_scan or "dime" in text_to_scan or "nickel" in text_to_scan:
+            if "bill" in text_to_scan or "note" in text_to_scan:
+                if any(w in text_to_scan for w in ("silver certificate", "dollar bill", "federal reserve note", "fr.")):
+                    return "paper_currency"
+            return "coin"
+        if any(w in text_to_scan for w in ("bill", "note", "certificate", "currency")) and not any(w in text_to_scan for w in ("dollar coin", "presidential dollar", "sacagawea", "morgan", "peace dollar")):
+            return "paper_currency"
+            
+    if any(w in text_to_scan for w in ("medal", "medallion", "token", "so-called dollar", "so called dollar", "award", "ingot", "round", "bar")):
+        return "medal"
+        
+    if any(w in text_to_scan for w in ("stamp", "postage", "first day cover")):
+        return "stamp"
+        
+    if any(w in text_to_scan for w in ("supply", "album", "folder", "holder", "capsule", "slab", "box", "case")):
+        return "supply"
+
+    return "coin"
 
 
 class CommitReviewsRequest(BaseModel):
@@ -779,7 +997,7 @@ Golden Schema keys:
  "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
  "Certification Number", "Metal Content", "Cost", "Purchase Date",
  "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
- "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source"]
+ "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source", "Item Type"]
 
 User spreadsheet headers: {headers}
 
@@ -788,7 +1006,8 @@ Map each user header to the closest schema key. Common abbreviations:
   Purchased For/Amount Paid/Price/Cost/Purchase Price/Price Paid → Cost,
   Series/Type/Kind → Program/Series, Desc/Description/Subject → Theme/Subject,
   Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location,
-  Notes/Personal Notes/My Notes/Personal Note → Personal Notes.
+  Notes/Personal Notes/My Notes/Personal Note → Personal Notes,
+  Type/Category/Class → Item Type.
 
 Coin nickname reference (first 20): {nickname_hint}
 
@@ -833,6 +1052,13 @@ Omit any user headers with no reasonable match."""
         "personal ref #":       "Personal Reference #",
         "personal ref no":      "Personal Reference #",
         "personal reference #": "Personal Reference #",
+        # Item Type variants -> canonical "item_type"
+        "item type":            "item_type",
+        "itemtype":             "item_type",
+        "type":                 "item_type",
+        "category":             "item_type",
+        "class":                "item_type",
+        "format":               "item_type",
     }
     for h in headers:
         normalized_h = h.strip().lower()
@@ -864,6 +1090,7 @@ Omit any user headers with no reasonable match."""
             'Certification Number': '',
             'Personal Notes':       '',
             'Personal Reference #': '',
+            'item_type':            'coin',
         }
 
         # Apply column mapping (raw values).
@@ -902,6 +1129,8 @@ Omit any user headers with no reasonable match."""
         # Theme/Subject nickname expansion (handles "Ike" in the wrong column)
         raw_theme = new_doc.get('Theme/Subject') or ''
         expanded_theme = _expand_series(raw_theme)
+        if "presidential" in str(new_doc.get('Program/Series', '')).lower():
+            expanded_theme = _normalize_presidential_theme(expanded_theme, new_doc.get('Year'))
         new_doc['Theme/Subject'] = expanded_theme
 
         # Strip leading $ from Cost / Denomination (no legacy "Purchase Cost" key exists)
@@ -909,6 +1138,30 @@ Omit any user headers with no reasonable match."""
             val = new_doc.get(fld)
             if isinstance(val, str) and val.startswith('$'):
                 new_doc[fld] = val[1:]
+
+        # Capture unmapped columns and append them to Personal Notes
+        unmapped_notes = []
+        for col in headers:
+            # If the column was NOT mapped to any Golden Schema key
+            if col not in mapping:
+                val = row.get(col) if hasattr(row, 'get') else (
+                    row[col] if col in row.index else None
+                )
+                if val is not None and pd.notna(val):
+                    val_str = str(val).strip()
+                    if val_str:
+                        unmapped_notes.append(f"{col}: {val_str}")
+        
+        if unmapped_notes:
+            existing_notes = new_doc.get("Personal Notes") or ""
+            additional = " | ".join(unmapped_notes)
+            if existing_notes:
+                new_doc["Personal Notes"] = f"{existing_notes} | {additional}"
+            else:
+                new_doc["Personal Notes"] = additional
+
+        # Classify the item type based on row contents
+        new_doc['item_type'] = _classify_item_type(new_doc)
 
         # ── Source provenance ──────────────────────────────────────────────
         new_doc['upload_method']       = 'spreadsheet_import'
@@ -1055,6 +1308,10 @@ async def normalize_backfill(user_email: str = Form(...)):
         # ── Theme/Subject ────────────────────────────────────────────────
         raw_theme  = str(d.get('Theme/Subject', '')).strip()
         exp_theme  = _expand_series(raw_theme)
+        series_for_theme_check = exp_series if (exp_series != raw_series) else raw_series
+        if "presidential" in str(series_for_theme_check).lower():
+            theme_yr = updates.get('Year') or d.get('Year')
+            exp_theme = _normalize_presidential_theme(exp_theme, theme_yr)
         if exp_theme != raw_theme:
             updates['Theme/Subject'] = exp_theme
 
@@ -4295,6 +4552,9 @@ Image A and Image B are provided — the collector may have uploaded them in any
 YOUR TASKS:
 1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE.
 2. IDENTIFICATION: Identify the coin precisely — Year, Country, Denomination, Program/Series, Theme/Subject.
+   - For Presidential $1 Coins:
+     - "program_series" MUST be exactly "Presidential $1 Coin Program".
+     - "theme_subject" MUST be the official title used by the US Mint (including middle initials, e.g. "Ulysses S. Grant", "Chester A. Arthur", "James A. Garfield", "Richard M. Nixon", "Gerald R. Ford", "George H.W. Bush", and term suffixes for Grover Cleveland, i.e. "Grover Cleveland (First Term)" or "Grover Cleveland (Second Term)"). NEVER shorten names to "Grant", "Lincoln", "Monroe", etc.
 3. MINT MARK (critical): Examine the obverse extremely carefully for a mint mark letter.
    Common locations: below the date, near the portrait neck, near "IN GOD WE TRUST", along the lower rim.
    US Mint codes: P=Philadelphia, D=Denver, S=San Francisco, W=West Point, CC=Carson City, O=New Orleans.
@@ -4491,12 +4751,17 @@ async def identify_coin_photo(
     rev_mime     = mime_b  if obverse_is_a else mime_a
 
     # Apply user overrides (from review screen)
+    resolved_series = _expand_series(override_series or final_series)
+    resolved_theme = override_theme or pass1.get("theme_subject", "")
+    if "presidential" in str(resolved_series).lower():
+        resolved_theme = _normalize_presidential_theme(resolved_theme, override_year or final_year)
+
     ai_coin = {
         "Year":           override_year    or final_year,
         "Country":        pass1.get("country", "USA"),
         "Denomination":   override_denom   or final_denom,
-        "Program/Series": override_series  or final_series,
-        "Theme/Subject":  override_theme   or pass1.get("theme_subject", ""),
+        "Program/Series": resolved_series,
+        "Theme/Subject":  resolved_theme,
         "Mint Mark":      override_mint    or pass1.get("mint_mark", ""),
         "Condition":      override_grade   or final_grade,
         "Metal Content":  override_metal   or pass1.get("metal_content", ""),
@@ -5126,11 +5391,12 @@ Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity",
  "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
  "Certification Number", "Metal Content", "Cost", "Purchase Date",
  "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
- "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source"]
+ "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source", "Item Type"]
 User spreadsheet headers: {headers}
 Map each user header to the closest schema key.
   Cost/Purchase Price/Price Paid/Amount Paid/Price → Cost
   Notes/Personal Notes/My Notes/Personal Note → Personal Notes
+  Type/Category/Class → Item Type
 Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
 
                 resp = genai_client.models.generate_content(
@@ -5164,6 +5430,13 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     "personal ref #":       "Personal Reference #",
                     "personal ref no":      "Personal Reference #",
                     "personal reference #": "Personal Reference #",
+                    # Item Type variants -> canonical "item_type"
+                    "item type":            "item_type",
+                    "itemtype":             "item_type",
+                    "type":                 "item_type",
+                    "category":             "item_type",
+                    "class":                "item_type",
+                    "format":               "item_type",
                 }
                 for h in headers:
                     normalized_h = h.strip().lower()
@@ -5193,6 +5466,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                         "Certification Number": "",
                         "Personal Notes":       "",
                         "Personal Reference #": "",
+                        "item_type":            "coin",
                     }
                     # Apply column mapping — safe .get() so missing columns default cleanly.
                     for uc, sc in mapping.items():
@@ -5209,6 +5483,30 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                         val = doc.get(fld)
                         if isinstance(val, str) and val.startswith('$'):
                             doc[fld] = val[1:]
+
+                    # Capture unmapped columns and append them to Personal Notes
+                    unmapped_notes = []
+                    for col in headers:
+                        # If the column was NOT mapped to any Golden Schema key
+                        if col not in mapping:
+                            val = row.get(col) if hasattr(row, 'get') else (
+                                row[col] if col in row.index else None
+                            )
+                            if val is not None and pd.notna(val):
+                                val_str = str(val).strip()
+                                if val_str:
+                                    unmapped_notes.append(f"{col}: {val_str}")
+                    
+                    if unmapped_notes:
+                        existing_notes = doc.get("Personal Notes") or ""
+                        additional = " | ".join(unmapped_notes)
+                        if existing_notes:
+                            doc["Personal Notes"] = f"{existing_notes} | {additional}"
+                        else:
+                            doc["Personal Notes"] = additional
+
+                    # Classify the item type based on row contents
+                    doc['item_type'] = _classify_item_type(doc)
 
                     doc_ref = col_ref.document(str(uuid.uuid4()))
                     batch.set(doc_ref, doc)

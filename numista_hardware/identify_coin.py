@@ -2,7 +2,6 @@ import os
 import json
 import logging
 import tempfile
-import pandas as pd
 import requests as _requests
 from google import genai
 from dotenv import load_dotenv
@@ -31,15 +30,25 @@ def _get_ref_db():
         return _ref_db
     try:
         from google.cloud import firestore as _fs
-        _here = os.path.dirname(os.path.abspath(__file__))
-        key_file = os.path.abspath(
-            os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
-        )
+        import sys
+        
+        # 1. Try bundled path (if running inside PyInstaller bundle)
+        if hasattr(sys, "_MEIPASS"):
+            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
+        else:
+            # 2. Try development path relative to this script
+            _here = os.path.dirname(os.path.abspath(__file__))
+            key_file = os.path.abspath(
+                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
+            )
+            
         if os.path.exists(key_file):
             import google.oauth2.service_account as sa
             creds = sa.Credentials.from_service_account_file(key_file)
             _ref_db = _fs.Client(credentials=creds, project="studio-9101802118-8c9a8")
+            logger.info(f"[REF] Firestore client initialized with service account key: {key_file}")
         else:
+            logger.warning(f"[REF] Service account key not found at {key_file}. Falling back to ADC.")
             _ref_db = _fs.Client(project="studio-9101802118-8c9a8")
         return _ref_db
     except Exception as e:
@@ -346,8 +355,6 @@ def run_numista_report(img_path_a, img_path_b):
     logger.info("[GEMINI] Analyzing Image A (%s) and Image B (%s)", img_path_a, img_path_b)
     
     try:
-        df = pd.read_csv(MANIFEST_PATH)
-        
         # Upload images WITHOUT telling Gemini which is which
         img_a = client.files.upload(file=img_path_a)
         img_b = client.files.upload(file=img_path_b)

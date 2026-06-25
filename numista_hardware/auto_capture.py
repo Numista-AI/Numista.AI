@@ -26,15 +26,30 @@ _db = None
 def get_firestore_client():
     global _db
     if _db is None:
-        key_file = os.path.abspath(os.path.join(os.getcwd(), "..", "numista_backend", "serviceAccountKey.json.json"))
+        import sys
+        # 1. Try bundled path (if running inside PyInstaller bundle)
+        if hasattr(sys, "_MEIPASS"):
+            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
+        else:
+            # 2. Try development path relative to this script
+            _here = os.path.dirname(os.path.abspath(__file__))
+            key_file = os.path.abspath(
+                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
+            )
+            if not os.path.exists(key_file):
+                # Fallback to CWD-based path
+                key_file = os.path.abspath(
+                    os.path.join(os.getcwd(), "..", "numista_backend", "serviceAccountKey.json.json")
+                )
+                
         if os.path.exists(key_file):
             import google.oauth2.service_account as sa
             creds = sa.Credentials.from_service_account_file(key_file)
             _db = firestore.Client(credentials=creds, project="studio-9101802118-8c9a8")
+            logging.info(f"Firestore client initialized with service account key: {key_file}")
         else:
-            # Fallback: use Application Default Credentials
+            logging.warning(f"Service account key not found at {key_file}. Falling back to ADC.")
             _db = firestore.Client(project="studio-9101802118-8c9a8")
-        logging.info("Firestore client initialized.")
     return _db
 
 USER_EMAIL = None
@@ -105,11 +120,17 @@ def get_preview_camera_settings():
 def upload_to_gcs_local(file_path, destination_blob_name):
     """Uploads a local file to GCS using the project's service account key."""
     try:
-        # Use __file__ so the path is always correct regardless of CWD
-        _here = os.path.dirname(os.path.abspath(__file__))
-        key_file = os.path.abspath(
-            os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
-        )
+        import sys
+        # 1. Try bundled path (if running inside PyInstaller bundle)
+        if hasattr(sys, "_MEIPASS"):
+            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
+        else:
+            # 2. Try development path relative to this script
+            _here = os.path.dirname(os.path.abspath(__file__))
+            key_file = os.path.abspath(
+                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
+            )
+            
         if os.path.exists(key_file):
             client = storage.Client.from_service_account_json(key_file)
         else:
@@ -237,7 +258,26 @@ def _idle_preview_worker():
             cap.read()
 
         logging.info("[PREVIEW] Streaming idle frames (1280×720, 2× zoom).")
+        last_microscope_check = time.time()
         while not _idle_pause_event.is_set():
+            # If currently using built-in webcam (idx == 0), check if a microscope (1 or 2) is now connected
+            if idx == 0 and time.time() - last_microscope_check > 5.0:
+                last_microscope_check = time.time()
+                for test_idx in [1, 2]:
+                    test_cap = cv2.VideoCapture(test_idx, cv2.CAP_DSHOW)
+                    if test_cap.isOpened():
+                        test_ret, _ = test_cap.read()
+                        if test_ret:
+                            logging.info(f"[PREVIEW] Microscope detected at index {test_idx}! Switching from webcam...")
+                            test_cap.release()
+                            cap.release()
+                            cap = None
+                            break
+                    test_cap.release()
+                if cap is None:
+                    # Break the streaming loop to reopen the camera using the standard selection order
+                    break
+
             ret, frame = cap.read()
             if not ret or frame is None:
                 logging.warning("[PREVIEW] Frame read failed — reopening camera.")
