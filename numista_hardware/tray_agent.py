@@ -15,6 +15,15 @@ Build:        See build_agent.ps1
 import threading
 import sys
 import os
+
+# Force stdout/stderr to use UTF-8 and handle encoding errors gracefully (especially on Windows)
+for stream in (sys.stdout, sys.stderr):
+    if stream is not None:
+        try:
+            stream.reconfigure(encoding='utf-8', errors='backslashreplace')
+        except Exception:
+            pass
+
 import logging
 import time
 import webbrowser
@@ -36,14 +45,15 @@ _cfg = AgentConfig()
 
 # ─── Setup logging to %APPDATA%\NumistaAI\numista_agent.log ─────────────────
 LOG_FILE = str(AgentConfig.get_log_path())
+_handlers = [logging.FileHandler(LOG_FILE, encoding="utf-8")]
+if sys.stdout is not None:
+    _handlers.append(logging.StreamHandler(sys.stdout))
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[
-        logging.FileHandler(LOG_FILE, encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
+    handlers=_handlers,
 )
 
 import pystray

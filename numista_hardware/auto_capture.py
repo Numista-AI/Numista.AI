@@ -334,9 +334,9 @@ def _idle_preview_worker():
         # The web UI only receives frames during an active scan (pushed by
         # capture_worker). This keeps the web layout compact and eliminates
         # idle-preview lag in the browser.
-        _idle_stopped_event.set()
         cap.release()
         logging.info("[PREVIEW] Camera released — _idle_stopped_event set.")
+        _idle_stopped_event.set()
 
         # Wait for the scan to fully complete before reopening the camera.
         # Same spin-wait: block until _idle_pause_event is CLEARED.
@@ -352,111 +352,115 @@ def capture_worker():
     _idle_pause_event.set()
     _idle_stopped_event.clear()  # will be set by idle thread when it releases
     capture_status["is_active"] = True
+    capture_status["current_step"] = "STARTING"
+    capture_status["error"] = None
+    capture_status["status_message"] = "Initializing camera..."
 
-    # Force working directory to this script's location so all relative paths
-    # (captures/, CSV manifest) work correctly even when run as a hidden process.
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(_script_dir)
-    logging.info("[CAP] Working directory: %s", _script_dir)
-
-    # Wait for the idle preview thread to release the camera (max 2 s).
-    # This eliminates the race condition where both threads hold the camera
-    # simultaneously and the web preview shows the wrong side.
-    if not _idle_stopped_event.wait(timeout=2.0):
-        logging.warning("[CAP] Idle thread did not confirm release in 2 s — proceeding anyway.")
-    time.sleep(0.2)  # tiny extra cushion for the OS to free the device
-
-    # --- Robust Camera Initialization ---
     cap = None
-    successful_idx = -1
-    default_res = (640, 480)
-    
-    # Try USB indices (1, 2) before the integrated webcam (0)
-    search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
-    if preferred_camera_idx is not None:
-        fallback = [1, 2, 0]
-        if preferred_camera_idx in fallback:
-            fallback.remove(preferred_camera_idx)
-        search_order.extend(fallback)
-
-    for idx in search_order:
-        temp_cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-        if temp_cap.isOpened():
-            # Quick check to see if we can actually read a frame
-            ret, _ = temp_cap.read()
-            if ret:
-                cap = temp_cap
-                successful_idx = idx
-                default_res = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-                logging.info(f"SUCCESS: Connected to camera at index {idx} (Default: {default_res[0]}x{default_res[1]})")
-                break
-        temp_cap.release()
-
-    if not cap:
-        capture_status["error"] = "HARDWARE ERROR: No camera found on indices 0, 1, or 2. Check USB connection."
-        capture_status["is_active"] = False
-        _idle_pause_event.clear()
-        return
-    # ------------------------------------
-
-    # Clamp the OpenCV frame buffer to prevent stale-frame lag and reduce the
-    # chance of 'Camera connection lost' errors caused by a full buffer queue.
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-    settings = get_camera_settings(CAMERA_TYPE)
-    logging.info(f"Applying settings for {CAMERA_TYPE}: {settings}")
-    
-    # Attempt resolution setup 
-    s1 = cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings["width"])
-    s2 = cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings["height"])
-    logging.info(f"Requested {settings['width']}x{settings['height']}. Results: W={s1}, H={s2}")
-
-    if CAMERA_TYPE == "AUTOFOCUS_WEBCAM":
-        cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
-        capture_status["status_message"] = "WEBCAM: WAITING FOR AF LOCK..."
-        time.sleep(2)
-    else:
-        capture_status["status_message"] = "MICROSCOPE: WARMING UP..."
-        for i in range(20):
-            ret, _ = cap.read()
-            if not ret:
-                logging.warning(f"Warning: Warming up frame {i} failed. Stream may be broken.")
-                if i == 0:
-                    logging.info("Attempting to reset to default resolution...")
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, default_res[0])
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, default_res[1])
-            if i % 10 == 0:
-                logging.info(f"Warming up... {i}/20")
-        
-        capture_status["status_message"] = "MICROSCOPE: MANUAL FOCUS REQUIRED"
-
-
-    # Ensure captures directory exists
-    if not os.path.exists("captures"):
-        os.makedirs("captures")
-
-    # Workflow Variables
-    current_state = 0 
+    current_state = 0
     state_names = ["OBVERSE", "REVERSE", "COMPLETE"]
-    max_sharpness = 0.0
-    MIN_SHARPNESS_FLOOR = 2000.0
-    stability_threshold = 2.0 
-    stable_frames_count = 0
-    STABLE_RECORDS_MANDATORY = 45  # ~1.5 seconds of total stillness required
-    last_blurred = None
-    motion_score = 0.0
-    has_captured_this_side = False
-    last_capture_time = 0.0
-    side_lockout_duration = 3.0
-    capture_cooldown = 5.0
-    FLIP_LOCKOUT_SECS = 8.0
-    PRE_CAPTURE_DELAY = 3.0  # Seconds of locked-in holding before the shutter fires
-    pre_capture_start = None  # None = not yet armed; float = timestamp when countdown started
-    waiting_for_flip = False
-    flip_timer_start = 0.0
-    db_loaded = os.path.exists("numista_database_ready (1).csv")
 
     try:
+        # Force working directory to this script's location so all relative paths
+        # (captures/, CSV manifest) work correctly even when run as a hidden process.
+        _script_dir = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(_script_dir)
+        logging.info("[CAP] Working directory: %s", _script_dir)
+
+        # Wait for the idle preview thread to release the camera (max 5 s).
+        # This eliminates the race condition where both threads hold the camera
+        # simultaneously and the web preview shows the wrong side.
+        if not _idle_stopped_event.wait(timeout=5.0):
+            logging.warning("[CAP] Idle thread did not confirm release in 5 s — proceeding anyway.")
+        time.sleep(0.5)  # cushion for OS to free the device
+
+        # --- Robust Camera Initialization ---
+        successful_idx = -1
+        default_res = (640, 480)
+        
+        # Try USB indices (1, 2) before the integrated webcam (0)
+        search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
+        if preferred_camera_idx is not None:
+            fallback = [1, 2, 0]
+            if preferred_camera_idx in fallback:
+                fallback.remove(preferred_camera_idx)
+            search_order.extend(fallback)
+
+        for idx in search_order:
+            logging.info(f"[CAP] Probing camera index {idx}...")
+            temp_cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            if temp_cap.isOpened():
+                # Quick check to see if we can actually read a frame
+                ret, _ = temp_cap.read()
+                if ret:
+                    cap = temp_cap
+                    successful_idx = idx
+                    default_res = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+                    logging.info(f"SUCCESS: Connected to camera at index {idx} (Default: {default_res[0]}x{default_res[1]})")
+                    break
+            if temp_cap:
+                temp_cap.release()
+
+        if not cap:
+            capture_status["error"] = "HARDWARE ERROR: No camera found on indices 0, 1, or 2. Check USB connection."
+            logging.error("[CAP] No camera found.")
+            return
+        # ------------------------------------
+
+        # Clamp the OpenCV frame buffer to prevent stale-frame lag and reduce the
+        # chance of 'Camera connection lost' errors caused by a full buffer queue.
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        settings = get_camera_settings(CAMERA_TYPE)
+        logging.info(f"Applying settings for {CAMERA_TYPE}: {settings}")
+        
+        # Attempt resolution setup 
+        s1 = cap.set(cv2.CAP_PROP_FRAME_WIDTH, settings["width"])
+        s2 = cap.set(cv2.CAP_PROP_FRAME_HEIGHT, settings["height"])
+        logging.info(f"Requested {settings['width']}x{settings['height']}. Results: W={s1}, H={s2}")
+
+        if CAMERA_TYPE == "AUTOFOCUS_WEBCAM":
+            cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+            capture_status["status_message"] = "WEBCAM: WAITING FOR AF LOCK..."
+            time.sleep(2)
+        else:
+            capture_status["status_message"] = "MICROSCOPE: WARMING UP..."
+            for i in range(20):
+                ret, _ = cap.read()
+                if not ret:
+                    logging.warning(f"Warning: Warming up frame {i} failed. Stream may be broken.")
+                    if i == 0:
+                        logging.info("Attempting to reset to default resolution...")
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, default_res[0])
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, default_res[1])
+                if i % 10 == 0:
+                    logging.info(f"Warming up... {i}/20")
+            
+            capture_status["status_message"] = "MICROSCOPE: MANUAL FOCUS REQUIRED"
+
+        # Ensure captures directory exists
+        if not os.path.exists("captures"):
+            os.makedirs("captures")
+
+        # Workflow Variables
+        max_sharpness = 0.0
+        MIN_SHARPNESS_FLOOR = 2000.0
+        stability_threshold = 2.0 
+        stable_frames_count = 0
+        STABLE_RECORDS_MANDATORY = 45  # ~1.5 seconds of total stillness required
+        last_blurred = None
+        motion_score = 0.0
+        has_captured_this_side = False
+        last_capture_time = 0.0
+        side_lockout_duration = 3.0
+        capture_cooldown = 5.0
+        FLIP_LOCKOUT_SECS = 8.0
+        PRE_CAPTURE_DELAY = 3.0  # Seconds of locked-in holding before the shutter fires
+        pre_capture_start = None  # None = not yet armed; float = timestamp when countdown started
+        waiting_for_flip = False
+        flip_timer_start = 0.0
+        db_loaded = os.path.exists("numista_database_ready (1).csv")
+
         logging.info("Starting main capture loop...")
         while current_state < 2:
             ret, frame = cap.read()
@@ -710,12 +714,16 @@ def capture_worker():
                     global _latest_frame_jpg
                     _latest_frame_jpg = _buf.tobytes()
 
+    except Exception as e:
+        logging.error(f"[CAP] Exception in capture_worker: {e}", exc_info=True)
+        capture_status["error"] = f"CRITICAL ERROR: {e}"
+        capture_status["status_message"] = "SCAN ERROR"
     finally:
         if cap:
             cap.release()
         cv2.destroyAllWindows()
         
-        if current_state >= 2:
+        if current_state >= 2 and not capture_status.get("error"):
             capture_status["status_message"] = "ANALYZING IMAGES..."
             obv_path = "captures/obverse_peak.jpg"
             rev_path = "captures/reverse_peak.jpg"
@@ -727,33 +735,37 @@ def capture_worker():
                 else:
                     logging.error(f"[GEMINI] MISSING input file: {_p} — Gemini call will fail!")
 
-            coin_data = run_numista_report(obv_path, rev_path)
-            
-            if coin_data and "file_slug" in coin_data:
-                # ── PCGS Enrichment: silver detection + melt value + CoinFacts ──
-                capture_status["status_message"] = "ENRICHING WITH PCGS DATA..."
-                try:
-                    coin_data = _pcgs.enrich_coin(coin_data)
-                    silver_flag = "🥈 SILVER" if coin_data.get("is_silver") else "🔵 Not Silver"
-                    logging.info(f"[PCGS] Enrichment complete — {silver_flag}  |  Metal: {coin_data.get('metal_content')}  |  Melt: {coin_data.get('melt_value_estimate')}")
-                except Exception as pcgs_err:
-                    logging.warning(f"[PCGS] Enrichment failed (non-fatal): {pcgs_err}")
+            try:
+                coin_data = run_numista_report(obv_path, rev_path)
+                
+                if coin_data and "file_slug" in coin_data:
+                    # ── PCGS Enrichment: silver detection + melt value + CoinFacts ──
+                    capture_status["status_message"] = "ENRICHING WITH PCGS DATA..."
+                    try:
+                        coin_data = _pcgs.enrich_coin(coin_data)
+                        silver_flag = "🥈 SILVER" if coin_data.get("is_silver") else "🔵 Not Silver"
+                        logging.info(f"[PCGS] Enrichment complete — {silver_flag}  |  Metal: {coin_data.get('metal_content')}  |  Melt: {coin_data.get('melt_value_estimate')}")
+                    except Exception as pcgs_err:
+                        logging.warning(f"[PCGS] Enrichment failed (non-fatal): {pcgs_err}")
 
-                slug = coin_data["file_slug"]
-                timestamp = time.strftime("%Y%m%d_%H%M")
-                new_obv = f"captures/{slug}_Obverse_{timestamp}.jpg"
-                new_rev = f"captures/{slug}_Reverse_{timestamp}.jpg"
-                try:
-                    os.rename(obv_path, new_obv)
-                    os.rename(rev_path, new_rev)
-                    coin_data["image_obverse"] = os.path.abspath(new_obv)
-                    coin_data["image_reverse"] = os.path.abspath(new_rev)
-                    capture_status["last_report"] = coin_data
-                    capture_status["status_message"] = "SESSION COMPLETE"
-                except Exception as e:
-                    capture_status["error"] = f"Rename error: {e}"
-            else:
-                capture_status["error"] = "Gemini analysis failed or returned no data."
+                    slug = coin_data["file_slug"]
+                    timestamp = time.strftime("%Y%m%d_%H%M")
+                    new_obv = f"captures/{slug}_Obverse_{timestamp}.jpg"
+                    new_rev = f"captures/{slug}_Reverse_{timestamp}.jpg"
+                    try:
+                        os.rename(obv_path, new_obv)
+                        os.rename(rev_path, new_rev)
+                        coin_data["image_obverse"] = os.path.abspath(new_obv)
+                        coin_data["image_reverse"] = os.path.abspath(new_rev)
+                        capture_status["last_report"] = coin_data
+                        capture_status["status_message"] = "SESSION COMPLETE"
+                    except Exception as e:
+                        capture_status["error"] = f"Rename error: {e}"
+                else:
+                    capture_status["error"] = "Gemini analysis failed or returned no data."
+            except Exception as e:
+                logging.error(f"[CAP] Exception in report/save pipeline: {e}", exc_info=True)
+                capture_status["error"] = f"Analysis error: {e}"
 
         capture_status["is_active"] = False
         # Signal idle preview to restart (clears the pause so the thread
