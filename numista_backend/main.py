@@ -1443,19 +1443,16 @@ def list_nicknames(status: str = 'pending', limit: int = 50, offset: int = 0):
     if status != 'all':
         col = col.where('status', '==', status)
 
-    # order_by + where requires a composite index that may not exist yet.
-    # Gracefully fall back to unordered if the index is missing.
+    # Fetch using single-field index and sort in-memory to avoid missing composite index timeouts
     try:
-        docs = list(
-            col.order_by('submitted_at', direction=firestore.Query.DESCENDING)
-               .limit(limit + offset).stream()
-        )
+        docs = list(col.stream())
+        def _get_ts(d):
+            ts = d.to_dict().get('submitted_at')
+            return ts if ts is not None else ""
+        docs.sort(key=lambda d: str(_get_ts(d)), reverse=True)
+        docs = docs[offset:offset+limit]
     except Exception:
-        try:
-            docs = list(col.limit(limit + offset).stream())
-        except Exception:
-            docs = []
-    docs = docs[offset:]
+        docs = []
 
     results = []
     for doc in docs:
@@ -1607,39 +1604,19 @@ def grade_review_queue(user_email: str, limit: int = 30):
     """
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
-    # ── Server-side filter: only pull AI-sourced coins (avoids full-collection scan) ──
+    # ── Server-side filter: only pull explicitly pending coins (avoids full-collection scan) ──
     seen_ids: set[str] = set()
     raw_docs: list     = []
+    
     try:
-        q1 = coins_ref.where('source', 'in', list(AI_SOURCES)).stream()
-        for doc in q1:
+        # Capped to 200 to prevent OOM / timeouts on massive collections
+        q = coins_ref.where('grade_review_status', '==', 'pending').limit(200).stream()
+        for doc in q:
             if doc.id not in seen_ids:
                 seen_ids.add(doc.id)
                 raw_docs.append(doc)
     except Exception as e:
-        print(f"[grade_review_queue] source query failed: {e}, falling back to full scan")
-        raw_docs = list(coins_ref.stream())
-        seen_ids = {d.id for d in raw_docs}
-
-    # Also catch low-confidence coins from other sources (e.g. AI-fixed CSV rows)
-    try:
-        q2 = coins_ref.where('confidence_score', '<', 0.95).stream()
-        for doc in q2:
-            if doc.id not in seen_ids:
-                seen_ids.add(doc.id)
-                raw_docs.append(doc)
-    except Exception:
-        pass  # Index may not exist yet — source filter above handles main cases
-
-    # Also catch manually flagged coins
-    try:
-        q3 = coins_ref.where('grade_review_status', '==', 'pending').stream()
-        for doc in q3:
-            if doc.id not in seen_ids:
-                seen_ids.add(doc.id)
-                raw_docs.append(doc)
-    except Exception:
-        pass
+        print(f"[grade_review_queue] query failed: {e}")
 
     results = []
     for doc in raw_docs:
@@ -1949,53 +1926,27 @@ def grade_review_stats(user_email: str):
     """Per-user grade review statistics for the Human AI Trainer dashboard."""
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
-    # Server-side filter — same two-query approach as queue endpoint
-    seen_ids: set[str] = set()
-    docs: list         = []
-    try:
-        for doc in coins_ref.where('source', 'in', list(AI_SOURCES)).stream():
-            if doc.id not in seen_ids:
-                seen_ids.add(doc.id)
-                docs.append(doc)
-    except Exception as e:
-        print(f"[grade_review_stats] source query failed: {e}, falling back")
-        docs     = list(coins_ref.stream())
-        seen_ids = {d.id for d in docs}
-    try:
-        for doc in coins_ref.where('confidence_score', '<', 0.95).stream():
-            if doc.id not in seen_ids:
-                seen_ids.add(doc.id)
-                docs.append(doc)
-    except Exception:
-        pass
-
+    # Use Count aggregations to prevent pulling thousands of documents into memory
     total_ai      = 0
     pending       = 0
     confirmed_ct  = 0
     flagged_ct    = 0
     reviewed_by_me = 0
 
-    for doc in docs:
-        d      = doc.to_dict()
-        source = d.get('source', '')
-        conf_val = d.get('confidence_score')
-        conf   = float(conf_val) if conf_val is not None else 1.0
-        is_ai  = source in AI_SOURCES or conf < 0.95
-        if not is_ai:
-            continue
-
-        total_ai += 1
-        status = d.get('grade_review_status', 'pending')
-        if status == 'confirmed':
-            confirmed_ct += 1
-        elif status == 'flagged_for_admin_review':
-            flagged_ct += 1
-        else:
-            pending += 1
-
-        reviews = d.get('grade_reviews', [])
-        if any((isinstance(r, dict) and r.get('reviewer') == user_email) or (isinstance(r, str) and r == user_email) for r in reviews):
-            reviewed_by_me += 1
+    try:
+        pending_agg = coins_ref.where('grade_review_status', '==', 'pending').count().get()
+        pending = pending_agg[0][0].value if pending_agg else 0
+        
+        conf_agg = coins_ref.where('grade_review_status', '==', 'confirmed').count().get()
+        confirmed_ct = conf_agg[0][0].value if conf_agg else 0
+        
+        flag_agg = coins_ref.where('grade_review_status', '==', 'flagged_for_admin_review').count().get()
+        flagged_ct = flag_agg[0][0].value if flag_agg else 0
+        
+        reviewed_by_me = confirmed_ct + flagged_ct
+        total_ai = pending + reviewed_by_me
+    except Exception as e:
+        print(f"[grade_review_stats] count failed: {e}")
 
     return {
         'total_ai_graded':  total_ai,
@@ -2177,7 +2128,7 @@ async def process_invoice(
         Return ONLY a JSON list of objects. Every object MUST include item_type.
         Schema (all fields apply to coins; use relevant fields for other types):
         [
-          {
+          {{
             "item_type": "coin | set | paper_currency | medal | stamp | supply | other",
             "Country": "Country of origin (USA for US items)",
             "Year": "numeric year or year range",
@@ -2203,7 +2154,7 @@ async def process_invoice(
             "Storage Location": "",
             "Original Description from source": "THE EXACT FULL LINE DESCRIPTION FROM THE INVOICE",
             "set_contents": []
-          }
+          }}
         ]
 
         NOTE: set_contents is ONLY populated when item_type is "set". It is an array of coin objects
@@ -2335,6 +2286,7 @@ async def process_invoice(
             item['source']      = 'PDF Invoice'
             item['source_file'] = file.filename
             item['created_at']  = firestore.SERVER_TIMESTAMP
+            item['grade_review_status'] = 'pending'
             # Paper Trail back-references
             if import_session_id:
                 item['import_session_id'] = import_session_id
@@ -3911,7 +3863,8 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
             "present":             False,   # Treat null/unlabeled as not owned
             "partially_visible":   False,
             "slot_condition_note": "",
-            "source":              "document_ai",
+            "source":              "Binder Checklist",
+            "grade_review_status": "pending",
         }
 
         for prop in entity.properties:
@@ -4280,6 +4233,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
 
             # Internal tracking
             "source":              "Binder Scan",
+            "grade_review_status": "pending",
             "source_file":         request.scan_uuid,
             "scan_uuid":           request.scan_uuid,           # For crop endpoint
             "binder_doc_id":       request.binder_doc_id,
@@ -6006,23 +5960,110 @@ def _normalize_denom_stats(raw):
     if not raw:
         return ""
     s = str(raw).lower().strip()
-    if "cent" in s or "penny" in s or "pennies" in s or "one cent" in s:
-        return "cent"
-    if "nickel" in s or "five cents" in s:
-        return "nickel"
-    if "dime" in s or "one dime" in s:
-        return "dime"
-    if "quarter" in s or "twenty-five" in s:
-        return "quarter"
-    if "half dollar" in s or "fifty cents" in s:
-        return "half dollar"
-    if "dollar" in s or "one dollar" in s:
-        return "dollar"
-    return s
+    
+    # 1. Handle dollar sign with numbers anywhere in the string
+    match_ds = re.search(r"\$(\d+(?:\.\d+)?)", s)
+    if match_ds:
+        val_str = match_ds.group(1)
+        val_map = {
+            "0.01": "One Cent",
+            "0.05": "Five Cents",
+            "0.10": "One Dime",
+            "0.1": "One Dime",
+            "0.25": "Quarter Dollar",
+            "0.50": "Half Dollar",
+            "0.5": "Half Dollar",
+            "1": "One Dollar",
+            "2": "Two Dollars",
+            "2.5": "Two and a Half Dollars",
+            "3": "Three Dollars",
+            "4": "Four Dollars",
+            "5": "Five Dollars",
+            "10": "Ten Dollars",
+            "20": "Twenty Dollars",
+            "25": "Twenty-Five Dollars",
+            "50": "Fifty Dollars",
+            "100": "One Hundred Dollars",
+            "500": "Five Hundred Dollars",
+            "1000": "One Thousand Dollars",
+            "5000": "Five Thousand Dollars",
+            "10000": "Ten Thousand Dollars",
+            "100000": "One Hundred Thousand Dollars"
+        }
+        if val_str in val_map:
+            return val_map[val_str]
+            
+    # 2. Check specific multi-digit or compound names first to avoid collision
+    if "half cent" in s or "½ cent" in s or "1/2 cent" in s:
+        return "Half Cent"
+    if "quarter cent" in s or "1/4 cent" in s:
+        return "Quarter Cent"
+    if "two cent" in s or "2 cent" in s:
+        return "Two Cents"
+    if "three cent" in s or "3 cent" in s:
+        return "Three Cents"
+        
+    # Check half dimes BEFORE dime and nickel!
+    if "half dime" in s or "½ dime" in s or "1/2 dime" in s:
+        return "Half Dime"
+        
+    if "five cent" in s or "5 cent" in s or "nickel" in s:
+        return "Five Cents"
+        
+    # Check two and a half dollars/quarter eagles BEFORE half dollar/dollar!
+    if "two and a half dollar" in s or "2.5 dollar" in s or "2-1/2 dollar" in s or "2½ dollar" in s or "quarter eagle" in s:
+        return "Two and a Half Dollars"
+        
+    if "fifty cent" in s or "50 cent" in s or "half dollar" in s or "½ dollar" in s or "1/2 dollar" in s:
+        return "Half Dollar"
+    if "quarter dollar" in s or "¼ dollar" in s or "1/4 dollar" in s or "twenty-five cent" in s or "25 cent" in s or "quarter" in s:
+        return "Quarter Dollar"
+    if "twenty cent" in s or "20 cent" in s:
+        return "Twenty Cents"
+    if "one dime" in s or "1 dime" in s or "ten cent" in s or "10 cent" in s or "dime" in s:
+        return "One Dime"
+    if "one cent" in s or "1 cent" in s or "penny" in s or "pennies" in s or "cent" in s:
+        return "One Cent"
+        
+    # 3. Check dollar coins (after checking half/quarter dollar/two and a half dollar)
+    if "dollar" in s or "stella" in s or "double eagle" in s or "eagle" in s or "half eagle" in s or "gold clause" in s:
+        if "double eagle" in s or "twenty dollar" in s or "20 dollar" in s:
+            return "Twenty Dollars"
+        if "half eagle" in s or "five dollar" in s or "5 dollar" in s:
+            return "Five Dollars"
+        if "eagle" in s or "ten dollar" in s or "10 dollar" in s:
+            return "Ten Dollars"
+        if "fifty dollar" in s or "50 dollar" in s:
+            return "Fifty Dollars"
+        if "hundred dollar" in s or "100 dollar" in s:
+            return "One Hundred Dollars"
+        if "five hundred dollar" in s or "500 dollar" in s:
+            return "Five Hundred Dollars"
+        if "thousand dollar" in s or "1000 dollar" in s:
+            return "One Thousand Dollars"
+        if "five thousand dollar" in s or "5000 dollar" in s:
+            return "Five Thousand Dollars"
+        if "ten thousand dollar" in s or "10000 dollar" in s:
+            return "Ten Thousand Dollars"
+        if "one hundred thousand dollar" in s or "100000 dollar" in s:
+            return "One Hundred Thousand Dollars"
+        if "two dollar" in s or "2 dollar" in s:
+            return "Two Dollars"
+        if "three dollar" in s or "3 dollar" in s:
+            return "Three Dollars"
+        if "four dollar" in s or "4 dollar" in s or "stella" in s:
+            return "Four Dollars"
+            
+        return "One Dollar"
+        
+    if "medal" in s:
+        return "Medal"
+        
+    return s.title()
 
 def _normalize_mint_stats(raw):
     if not raw:
-        return ""
+        return "P"
     s = str(raw).upper().strip()
     if s in ["NONE", "NULL", "P", "P-MINT", "P_MINT", ""]:
         return "P"
@@ -6031,13 +6072,37 @@ def _normalize_mint_stats(raw):
 def _extract_fr_number_stats(variety):
     if not variety:
         return ""
-    match = re.search(r"Fr\.\s*(\d+[a-zA-Z]?)", variety, re.IGNORECASE)
+    match = re.search(r"fr\.?\s*(\d+[a-zA-Z]?)", variety, re.IGNORECASE)
     if match:
         return f"fr. {match.group(1).lower()}"
     return variety.lower().strip()
 
-def _get_user_owned_doc_ids(user_email: str) -> set:
+def get_note_type(text):
+    text = text.lower()
+    if "green seal" in text:
+        return "federal_reserve_note"
+    if "blue seal" in text:
+        return "silver_certificate"
+    if "red seal" in text:
+        return "legal_tender"
+    if "yellow seal" in text or "gold seal" in text:
+        return "gold_certificate"
+        
+    if "federal reserve" in text or "federal" in text or "reserve" in text or "frn" in text or "frbn" in text or "star note" in text:
+        if "silver certificate" not in text and "silver cert" not in text and "blue seal" not in text and "gold certificate" not in text:
+            return "federal_reserve_note"
+    if "silver certificate" in text or "silver cert" in text:
+        return "silver_certificate"
+    if "gold certificate" in text or "orange back" in text or "gold clause" in text:
+        return "gold_certificate"
+    if "legal tender" in text or "united states note" in text:
+        return "legal_tender"
+    return "unknown"
+
+def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
     if not user_email:
+        if return_raw_counts:
+            return set(), 0
         return set()
     
     # 1. Fetch user coins from Firestore
@@ -6065,15 +6130,18 @@ def _get_user_owned_doc_ids(user_email: str) -> set:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute("SELECT year, denomination, mint_mark, variety, series, category, doc_id FROM definitive_reference")
+        cur.execute("SELECT year, denomination, mint_mark, variety, series, category, note, doc_id FROM definitive_reference")
         ref_rows = [dict(row) for row in cur.fetchall()]
         conn.close()
     except Exception as e:
         print(f"[get_user_owned_doc_ids] SQLite error: {e}")
         return set()
 
+    ref_rows_dict = {r["doc_id"]: r for r in ref_rows}
+
     # Build reference matching sets
     ref_coins = {}
+    base_coin_types = []
     ref_notes = {}
     ref_medals = {}
 
@@ -6085,8 +6153,11 @@ def _get_user_owned_doc_ids(user_email: str) -> set:
         variety = str(r["variety"]).lower().strip()
 
         if cat == "coin":
-            key = (year, denom, mint, variety)
-            ref_coins[key] = r["doc_id"]
+            if r["doc_id"].startswith("ref_coin_type_"):
+                base_coin_types.append(r)
+            else:
+                key = (year, denom, mint, variety)
+                ref_coins[key] = r["doc_id"]
         elif cat == "banknote":
             fr_num = _extract_fr_number_stats(r["variety"])
             key = (year, denom, fr_num)
@@ -6104,6 +6175,17 @@ def _get_user_owned_doc_ids(user_email: str) -> set:
         mint = _normalize_mint_stats(uc.get("Mint Mark"))
         theme = str(uc.get("Theme/Subject") or "").lower().strip()
         u_variety = str(uc.get("variety") or "").lower().strip()
+        series_val = str(uc.get("Program/Series") or "").lower().strip()
+
+        # Normalize year/mint-mark if year contains embedded mint (e.g., 2016S or 2020-D)
+        match_yr = re.match(r"^(\d{4})[-_]?([a-zA-Z]+)$", year)
+        if match_yr:
+            extracted_yr = match_yr.group(1)
+            extracted_mint = match_yr.group(2).upper()
+            if extracted_mint in ['P', 'D', 'S', 'W', 'O', 'CC', 'C']:
+                year = extracted_yr
+                if mint in ["", "P", "NONE"]:
+                    mint = extracted_mint
 
         if denom == "medal" or uc.get("category") == "medal":
             for (myear, mvariety), doc_id in ref_medals.items():
@@ -6111,16 +6193,32 @@ def _get_user_owned_doc_ids(user_email: str) -> set:
                     owned_doc_ids.add(doc_id)
                     break
         else:
+            matched = False
             key_std = (year, denom, mint, "")
             if key_std in ref_coins:
                 owned_doc_ids.add(ref_coins[key_std])
+                matched = True
             
             for (ryear, rdenom, rmint, rvariety), doc_id in ref_coins.items():
                 if rvariety == "":
                     continue
                 if ryear == year and rdenom == denom and rmint == mint:
-                    if rvariety in theme or rvariety in u_variety:
+                    if rvariety in theme or rvariety in u_variety or rvariety in series_val or rvariety == "standard issue":
                         owned_doc_ids.add(doc_id)
+                        matched = True
+                        
+            # Fallback to match base coin types if no variety is matched
+            if not matched:
+                for bt in base_coin_types:
+                    bt_denom = _normalize_denom_stats(bt["denomination"])
+                    bt_variety = str(bt["variety"]).lower().strip()
+                    bt_series = str(bt["series"]).lower().strip()
+                    
+                    if bt_denom == denom:
+                        if (bt_series != "" and bt_series in series_val) or \
+                           (bt_variety != "" and (series_val in bt_variety or theme in bt_variety or u_variety in bt_variety)):
+                            owned_doc_ids.add(bt["doc_id"])
+                            break
 
     # Match user banknotes
     for un in user_notes:
@@ -6129,19 +6227,70 @@ def _get_user_owned_doc_ids(user_email: str) -> set:
         desc = str(un.get("Description") or "").lower().strip()
         notes = str(un.get("Personal Notes") or "").lower().strip()
         
-        fr_num = _extract_fr_number_stats(desc)
-        if not fr_num or "fr." not in fr_num:
-            fr_num = _extract_fr_number_stats(notes)
+        fr_num = re.search(r"fr\.?\s*(\d+[a-zA-Z]?)", desc, re.IGNORECASE)
+        if not fr_num:
+            fr_num = re.search(r"fr\.?\s*(\d+[a-zA-Z]?)", notes, re.IGNORECASE)
+        
+        fr_val = f"fr. {fr_num.group(1).lower()}" if fr_num else desc
 
-        key = (year, denom, fr_num)
+        # Match by key (year, denom, fr_val)
+        key = (year, denom, fr_val)
+        matched = False
         if key in ref_notes:
             owned_doc_ids.add(ref_notes[key])
+            matched = True
         else:
+            # Fallback variety match
             for (ryear, rdenom, rvariety), doc_id in ref_notes.items():
                 if ryear == year and rdenom == denom:
+                    if rvariety in desc or rvariety in notes or desc in rvariety:
+                        owned_doc_ids.add(doc_id)
+                        matched = True
+                        break
+
+        # Fallback to match general banknote types if still unmatched
+        if not matched:
+            user_type = get_note_type(desc + " " + notes)
+            for rkey, doc_id in ref_notes.items():
+                ryear, rdenom, rvariety = rkey
+                if ryear == year and rdenom == denom:
+                    ref_r = ref_rows_dict.get(doc_id)
+                    if ref_r:
+                        ref_note_desc_and_note = ref_r["variety"] + " " + ref_r["note"]
+                        ref_type = get_note_type(ref_note_desc_and_note)
+                        if user_type != "unknown" and user_type == ref_type:
+                            owned_doc_ids.add(doc_id)
+                            matched = True
+                            break
+
+        # Fallback 2: Match general banknote types by denomination only if year matches
+        if not matched:
+            for rkey, doc_id in ref_notes.items():
+                ryear, rdenom, rvariety = rkey
+                if rdenom == denom:
                     if rvariety in desc or rvariety in notes:
                         owned_doc_ids.add(doc_id)
+                        matched = True
+                        break
 
+        # Fallback 3: Match general banknote types by denomination regardless of year
+        if not matched:
+            user_type = get_note_type(desc + " " + notes)
+            if user_type != "unknown":
+                for rkey, doc_id in ref_notes.items():
+                    ryear, rdenom, rvariety = rkey
+                    if rdenom == denom:
+                        ref_r = ref_rows_dict.get(doc_id)
+                        if ref_r:
+                            ref_note_desc_and_note = ref_r["variety"] + " " + ref_r["note"]
+                            ref_type = get_note_type(ref_note_desc_and_note)
+                            if user_type == ref_type:
+                                owned_doc_ids.add(doc_id)
+                                matched = True
+                                break
+
+    if return_raw_counts:
+        return owned_doc_ids, len(user_coins) + len(user_notes)
     return owned_doc_ids
 
 
@@ -6187,7 +6336,7 @@ def collection_completion_stats(user_email: str):
         raise HTTPException(status_code=404, detail="Reference database not found")
         
     try:
-        owned_ids = _get_user_owned_doc_ids(user_email)
+        owned_ids, raw_count = _get_user_owned_doc_ids(user_email, return_raw_counts=True)
         
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
@@ -6226,6 +6375,7 @@ def collection_completion_stats(user_email: str):
             "completion_percentage": round(overall_percentage, 2),
             "owned_count": total_owned,
             "total_count": total_ref,
+            "user_collection_count": raw_count,
             "breakdown": breakdown
         }
     except Exception as e:
@@ -6323,6 +6473,316 @@ def reference_db_update_check():
             "md5_hash": ""
         }
     return {"version": "unknown", "size_bytes": 0}
+
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  LITTLETON COIN COMPANY INTEGRATION                                          ║
+# ║  POST /api/import/littleton_sync                                             ║
+# ║                                                                              ║
+# ║  Accepts a JSON array of scraped Littleton order records and resolves each   ║
+# ║  item against the hybrid 3-layer SKU cache before writing to review_queue.  ║
+# ║                                                                              ║
+# ║  Layer 1 → SQLite static seed   (numista.db, deploy-time pre-populated)     ║
+# ║  Layer 2 → Firestore shared cache (global_metadata/littleton_sku_dictionary) ║
+# ║  Layer 3 → Gemini 3.5-flash fallback + Firestore write-back                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Lazy import guard — only loaded on first request to avoid startup penalty
+_littleton_helper = None
+
+def _get_littleton_helper():
+    global _littleton_helper
+    if _littleton_helper is None:
+        try:
+            import littleton_sku_helper as _lh
+            _littleton_helper = _lh
+        except ImportError as _imp_err:
+            print(f"[littleton_sync] WARNING: littleton_sku_helper not available: {_imp_err}")
+    return _littleton_helper
+
+
+# ─── numista.db path (writable SKU asset — separate from read-only reference catalog) ─
+# Cloud Run containers include this file baked into the image at deploy time.
+# seed_littleton_skus.py pre-populates it before each deploy.
+_NUMISTA_DB_PATH = os.path.join(os.path.dirname(__file__), "database", "numista.db")
+
+
+# ─── Pydantic Models ──────────────────────────────────────────────────────────
+
+class LittletonOrderRecord(BaseModel):
+    """
+    One line item from a scraped Littleton Coin Company order.
+    Mirrors the shape emitted by littleton_order_scraper.js.
+    """
+    purchase_date:  str            # ISO date or Littleton format, e.g. "06/03/2026"
+    littleton_sku:  str            # Catalog SKU, e.g. "ME-6100"
+    description:    str            # Full product title from the order table
+    cost:           str            # Raw price string, e.g. "$14.95" or "14.95"
+    qty:            int = 1        # Line-item quantity (default 1)
+
+
+class LittletonSyncRequest(BaseModel):
+    """
+    Full request body for POST /api/import/littleton_sync.
+    """
+    user_email:        str
+    orders:            List[LittletonOrderRecord]
+    import_session_id: Optional[str] = None   # Links records to a bulk import session
+
+
+# ─── Cost normalization helper ────────────────────────────────────────────────
+
+def _normalize_lcc_cost(raw_cost: str) -> str:
+    """
+    Strip currency symbols and normalize the cost string.
+    e.g. "$14.95" → "14.95", "  $3.00 " → "3.00"
+    Returns empty string on blank/invalid input — never raises.
+    """
+    if not raw_cost:
+        return ""
+    cleaned = str(raw_cost).strip().lstrip("$").strip()
+    # Remove thousands separators
+    cleaned = cleaned.replace(",", "")
+    return cleaned
+
+
+# ─── Endpoint ─────────────────────────────────────────────────────────────────
+
+@app.post("/api/import/littleton_sync")
+async def littleton_sync(request: LittletonSyncRequest):
+    """
+    Ingest a batch of scraped Littleton Coin Company order records into the
+    authenticated user's review_queue.
+
+    Pipeline per record
+    ───────────────────
+    1.  Open numista.db (Layer-1 static seed), call ensure_sku_table.
+    2.  resolve_sku() → 3-layer hybrid lookup:
+          SQLite hit   → instant return, no network
+          Firestore hit → shared runtime cache
+          Gemini miss  → classify description, write result to Firestore
+    3.  Map all resolved + incoming fields to the 23-column Golden Schema.
+    4.  Write document to Firestore: users/{email}/review_queue/{uuid}
+    5.  Return structured summary: counts of total / from_cache_sqlite /
+        from_cache_firestore / gemini_resolved / errors.
+
+    Golden Schema field mapping
+    ───────────────────────────
+    purchase_date   → "Purchase Date"
+    littleton_sku   → "Retailer Item No."
+    description     → "Original Description from source"
+    cost (stripped) → "Cost"
+    qty             → "Quantity"
+    Gemini series   → "Program/Series"
+    Gemini year     → "Year"
+    Gemini mint     → "Mint Mark"
+    Gemini denom    → "Denomination"
+    Gemini cond     → "Condition"
+    Gemini type     → "item_type"
+    canonical_ref   → "Personal Reference #"
+    fixed           → "Retailer/Website" = "Littleton Coin Company"
+    fixed           → "upload_method"    = "littleton_sync"
+    """
+    lh = _get_littleton_helper()
+    if lh is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Littleton SKU helper module not available. Check server logs."
+        )
+
+    user_email = (request.user_email or "").strip()
+    if not user_email:
+        raise HTTPException(status_code=400, detail="user_email is required.")
+
+    orders = request.orders or []
+    if not orders:
+        return {
+            "status":               "success",
+            "message":              "No order records received.",
+            "total":                0,
+            "committed":            0,
+            "from_cache_sqlite":    0,
+            "from_cache_firestore": 0,
+            "gemini_resolved":      0,
+            "errors":               0,
+        }
+
+    # ── Open SQLite connection for the duration of this request ───────────────
+    # The DB is opened read-write so ensure_sku_table can CREATE TABLE IF NOT
+    # EXISTS on first run. No runtime INSERTs happen here — those go to Firestore.
+    conn = None
+    try:
+        conn = sqlite3.connect(_NUMISTA_DB_PATH)
+        lh.ensure_sku_table(conn)
+    except Exception as db_err:
+        print(f"[littleton_sync] SQLite open/init error: {db_err}")
+        # Non-fatal: continue without SQLite layer (Firestore + Gemini still work)
+        conn = None
+
+    # ── Firestore batch setup ─────────────────────────────────────────────────
+    review_queue_ref = (
+        db.collection("users")
+          .document(user_email)
+          .collection("review_queue")
+    )
+    batch       = db.batch()
+    batch_size  = 0
+
+    # ── Counters ──────────────────────────────────────────────────────────────
+    committed            = 0
+    from_cache_sqlite    = 0
+    from_cache_firestore = 0
+    gemini_resolved      = 0
+    errors               = 0
+
+    for order in orders:
+        try:
+            sku         = str(order.littleton_sku  or "").strip()
+            description = str(order.description   or "").strip()
+            raw_cost    = str(order.cost           or "").strip()
+            purchase_date = str(order.purchase_date or "").strip()
+            qty         = max(1, int(order.qty or 1))
+
+            if not sku:
+                print(f"[littleton_sync] Skipping record with empty SKU: {description[:60]}")
+                errors += 1
+                continue
+
+            # ── 3-layer SKU resolution ────────────────────────────────────────
+            resolution = lh.resolve_sku(
+                sku          = sku,
+                description  = description,
+                conn         = conn,          # may be None if DB unavailable
+                db           = db,
+                genai_client = genai_client,
+                model        = PRIMARY_MODEL,
+            )
+
+            # Tally source metric
+            source = resolution.get("source", "gemini")
+            if source == "sqlite":
+                from_cache_sqlite += 1
+            elif source == "firestore":
+                from_cache_firestore += 1
+            else:
+                gemini_resolved += 1
+
+            # ── Map to Golden Schema ──────────────────────────────────────────
+            # All field access uses .get() — no KeyError possible.
+            new_doc: dict = {
+                # Provenance fields
+                "upload_method":                  "littleton_sync",
+                "Retailer/Website":               "Littleton Coin Company",
+                "import_session_id":              request.import_session_id or "",
+                "created_at":                     firestore.SERVER_TIMESTAMP,
+                "deep_dive_status":               "PENDING",
+
+                # From order record (safe .get() already applied above)
+                "Purchase Date":                  purchase_date,
+                "Retailer Item No.":              sku,
+                "Original Description from source": description,
+                "Cost":                           _normalize_lcc_cost(raw_cost),
+                "Quantity":                       qty,
+
+                # From SKU resolution (all .get() with explicit defaults)
+                "Personal Reference #":           resolution.get("canonical_ref_id",  ""),
+                "Condition":                      resolution.get("implied_condition",  "Uncirculated"),
+                "Program/Series":                 resolution.get("program_series",    ""),
+                "Year":                           resolution.get("year",              ""),
+                "Mint Mark":                      resolution.get("mint_mark",         ""),
+                "Denomination":                   resolution.get("denomination",      ""),
+                "item_type":                      resolution.get("item_type",         "coin"),
+
+                # Golden Schema defaults for fields not applicable to Littleton imports
+                "Country":                        "United States",
+                "Theme/Subject":                  "",
+                "Variety":                        "",
+                "Strike Type":                    "Business",
+                "Holder Type":                    "Raw",
+                "Grading Service":                "None",
+                "Certification Number":           "",
+                "Metal Content":                  "",
+                "Retailer Invoice #":             "",
+                "Storage Location":               "",
+                "Personal Notes":                 "",
+
+                # Resolution metadata
+                "lcc_sku_resolution_source":      source,
+                "confidence_score":               (
+                    0.98 if source == "sqlite"
+                    else 0.90 if source == "firestore"
+                    else 0.80
+                ),
+            }
+
+            # Run rule-based normalizations consistent with import_spreadsheet
+            # Year + Mint Mark split (e.g. "1921D" → Year=1921, Mint=D)
+            raw_year = new_doc.get("Year") or ""
+            if raw_year:
+                yr, mm = _parse_year_mint(raw_year)
+                new_doc["Year"] = yr
+                if mm and not (new_doc.get("Mint Mark") or "").strip():
+                    new_doc["Mint Mark"] = mm
+
+            # Condition normalization (e.g. "BU" → "MS-63")
+            raw_cond = new_doc.get("Condition") or ""
+            new_doc["Condition"] = _norm_condition(raw_cond) if raw_cond else "Uncirculated"
+
+            # Program/Series nickname expansion
+            raw_series = new_doc.get("Program/Series") or ""
+            if raw_series:
+                new_doc["Program/Series"] = _expand_series(raw_series)
+
+            # ── Write to Firestore batch ──────────────────────────────────────
+            doc_ref = review_queue_ref.document(str(uuid.uuid4()))
+            batch.set(doc_ref, new_doc)
+            batch_size  += 1
+            committed   += 1
+
+            # Commit in chunks of 490 to stay under Firestore's 500-op batch limit
+            if batch_size >= 490:
+                batch.commit()
+                batch = db.batch()
+                batch_size = 0
+
+        except Exception as record_err:
+            print(f"[littleton_sync] Error processing record '{order.littleton_sku}': {record_err}")
+            errors += 1
+
+    # ── Flush remaining batch ─────────────────────────────────────────────────
+    if batch_size > 0:
+        try:
+            batch.commit()
+        except Exception as commit_err:
+            print(f"[littleton_sync] Final batch commit error: {commit_err}")
+            errors += batch_size
+            committed -= batch_size
+
+    # ── Close SQLite connection ───────────────────────────────────────────────
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    print(
+        f"[littleton_sync] user={user_email} | committed={committed} | "
+        f"sqlite={from_cache_sqlite} | firestore={from_cache_firestore} | "
+        f"gemini={gemini_resolved} | errors={errors}"
+    )
+
+    return {
+        "status":               "success",
+        "total":                len(orders),
+        "committed":            committed,
+        "from_cache_sqlite":    from_cache_sqlite,
+        "from_cache_firestore": from_cache_firestore,
+        "gemini_resolved":      gemini_resolved,
+        "errors":               errors,
+        "destination":          f"users/{user_email}/review_queue",
+    }
+
+# ─── END LITTLETON COIN COMPANY INTEGRATION ───────────────────────────────────
 
 
 if __name__ == "__main__":
