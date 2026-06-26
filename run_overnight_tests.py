@@ -12,7 +12,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-API  = "https://numista-backend-568985927038.us-central1.run.app"
+API  = "https://numista-app-568985927038.us-central1.run.app"
 EMAIL = "jseaman1204@gmail.com"        # Test user
 LOG   = "overnight_test_results.txt"
 
@@ -227,19 +227,28 @@ if len(queue_coins) >= 2:
         d = r.json()
         log(PASS, "Corrected review response", d.get("message","")[:60])
 
-# Verify stats changed
-r = get("/api/grade_review/stats", params={"user_email": EMAIL},
-        label="GET /api/grade_review/stats (post-review)")
-if r:
-    new_stats = r.json()
-    prev_pending = grade_stats.get("pending_review", -1)
-    new_pending  = new_stats.get("pending_review", -1)
-    if new_pending < prev_pending or prev_pending == -1:
-        log(PASS, "Stats updated after review",
-            f"pending: {prev_pending} → {new_pending}")
-    else:
-        log(WARN, "Stats may not have updated",
-            f"pending was {prev_pending}, now {new_pending}")
+# Verify stats changed (with retry for Firestore eventual consistency)
+prev_pending = grade_stats.get("pending_review", -1)
+new_pending = prev_pending
+prev_reviewed = grade_stats.get("reviewed_by_me", -1)
+new_reviewed = prev_reviewed
+
+for attempt in range(4):
+    if attempt > 0:
+        time.sleep(1.0)
+    r = get("/api/grade_review/stats", params={"user_email": EMAIL},
+            label=f"GET /api/grade_review/stats (post-review, attempt {attempt+1})")
+    if r:
+        new_stats = r.json()
+        new_pending  = new_stats.get("pending_review", -1)
+        new_reviewed = new_stats.get("reviewed_by_me", -1)
+        if new_reviewed > prev_reviewed or new_pending < prev_pending or prev_pending == -1:
+            log(PASS, "Stats updated after review",
+                f"pending: {prev_pending} → {new_pending}, reviewed: {prev_reviewed} → {new_reviewed}")
+            break
+else:
+    log(WARN, "Stats may not have updated",
+        f"pending was {prev_pending}, now {new_pending}; reviewed was {prev_reviewed}, now {new_reviewed}")
 
 # ── 6. Normalization edge cases ────────────────────────────────────────────────
 print("\n── SECTION 6: Normalization Edge Cases (spot-check dict) ────────────")

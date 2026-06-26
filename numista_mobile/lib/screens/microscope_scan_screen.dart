@@ -45,6 +45,11 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   List<ReferenceImage> _similarCoins = [];
   bool _loadingSimilar = false;
 
+  // ─── Camera Selector State ─────────────────────────────────────────────────
+  List<int> _availableCameras = [];
+  int _activeCameraIdx = -1;
+  bool _loadingCameras = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +74,23 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     final online = await _hw.isServerRunning();
     if (mounted) {
       setState(() => _serverOnline = online);
-      if (online) _startPolling();
+      if (online) {
+        _startPolling();
+        _loadCameras();
+      }
+    }
+  }
+
+  Future<void> _loadCameras() async {
+    if (!mounted) return;
+    setState(() => _loadingCameras = true);
+    final res = await _hw.listCameras();
+    if (mounted) {
+      setState(() {
+        _availableCameras = List<int>.from(res['cameras'] ?? []);
+        _activeCameraIdx = res['active'] as int? ?? -1;
+        _loadingCameras = false;
+      });
     }
   }
 
@@ -450,7 +471,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   // ─── Scan Controls ────────────────────────────────────────────────────────
   Widget _buildScanControls() {
     final isScanning = _status?.isActive == true;
-    return Row(
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _buildActionButton(
           label: isScanning ? 'Scanning...' : '▶  Start Microscope Scan',
@@ -464,6 +488,57 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               : const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
           onPressed: isScanning ? null : _startScan,
         ),
+        if (_availableCameras.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: _darkCard,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _electricBlue.withValues(alpha: 0.3)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _activeCameraIdx != -1 && _availableCameras.contains(_activeCameraIdx) ? _activeCameraIdx : null,
+                dropdownColor: _darkCard,
+                icon: const Icon(Icons.arrow_drop_down, color: _electricBlue),
+                hint: const Text('Select Camera', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                items: _availableCameras.map((int idx) {
+                  String label = 'Camera $idx';
+                  if (idx == 0) {
+                    label = 'Camera 0 (Built-in Webcam)';
+                  } else if (idx == 1 || idx == 2) {
+                    label = 'Camera $idx (USB Microscope)';
+                  }
+                  return DropdownMenuItem<int>(
+                    value: idx,
+                    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  );
+                }).toList(),
+                onChanged: isScanning
+                    ? null
+                    : (int? newIdx) async {
+                        if (newIdx != null) {
+                          final ok = await _hw.setCameraIndex(newIdx);
+                          if (ok) {
+                            setState(() => _activeCameraIdx = newIdx);
+                          }
+                        }
+                      },
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: isScanning ? null : _loadCameras,
+            icon: _loadingCameras
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(color: _electricBlue, strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh, color: _electricBlue),
+            tooltip: 'Refresh camera list',
+          ),
+        ],
       ],
     );
   }

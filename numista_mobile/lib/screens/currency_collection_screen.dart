@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 /// ─────────────────────────────────────────────────────────────────────────────
 ///  CurrencyCollectionScreen
 ///  Browsable list of the user's paper-money / banknote sub-collection.
-///  Data lives in:  users/<email>/currency
+///  Data lives in:  `users/<email>/currency`
 /// ─────────────────────────────────────────────────────────────────────────────
 
 class CurrencyCollectionScreen extends StatefulWidget {

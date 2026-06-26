@@ -1,11 +1,15 @@
 """Debug: print raw Gemini response to diagnose JSON parse error."""
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 import google.auth
+import sys
+
+# Force UTF-8 output
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-vertexai.init(project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
-model = GenerativeModel("gemini-2.5-flash")
+client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
 
 sample_text = """
 Liberty Head Nickels 1883-1912
@@ -56,9 +60,10 @@ PROMPT = (
 
 try:
     # Try with JSON mode
-    response = model.generate_content(
-        [Part.from_text(PROMPT)],
-        generation_config=GenerationConfig(
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=PROMPT,
+        config=genai_types.GenerateContentConfig(
             response_mime_type="application/json",
             temperature=0.0,
             max_output_tokens=8192,
@@ -69,9 +74,10 @@ try:
 except Exception as e:
     print(f"JSON mode failed: {e}")
     # Fall back to text mode
-    response = model.generate_content(
-        [Part.from_text(PROMPT)],
-        generation_config=GenerationConfig(
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=PROMPT,
+        config=genai_types.GenerateContentConfig(
             temperature=0.0,
             max_output_tokens=8192,
         ),

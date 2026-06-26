@@ -110,13 +110,13 @@ export const CoinTable: React.FC<CoinTableProps> = ({
   const isActionDisabled = Object.values(isEstimating).some(v => v);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full relative">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col h-full relative transition-colors duration-300">
       
-      <div className={`p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center transition-colors ${selectedIds.size > 0 ? 'bg-blue-50' : 'bg-slate-50/50'}`}>
+      <div className={`p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-center transition-colors ${selectedIds.size > 0 ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-slate-50/50 dark:bg-slate-800/50'}`}>
         {selectedIds.size > 0 ? (
           <div className="flex items-center justify-between w-full animate-in fade-in duration-200">
             <div className="flex items-center gap-4">
-              <span className="font-semibold text-blue-900">{selectedIds.size} selected</span>
+              <span className="font-semibold text-blue-900 dark:text-blue-300">{selectedIds.size} selected</span>
               <button onClick={() => setSelectedIds(new Set())} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
                 <X className="w-4 h-4" /> Clear
               </button>
@@ -132,7 +132,7 @@ export const CoinTable: React.FC<CoinTableProps> = ({
           </div>
         ) : (
           <>
-            <h2 className="text-lg font-bold text-slate-800 whitespace-nowrap hidden sm:block">Collection ({coins.length})</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap hidden sm:block">Collection ({coins.length})</h2>
             <div className="flex items-center gap-2 w-full sm:w-auto">
                 <div className="relative flex-1 sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -141,7 +141,7 @@ export const CoinTable: React.FC<CoinTableProps> = ({
                         placeholder="Search coins, years, or storage..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                 </div>
             </div>
@@ -151,7 +151,7 @@ export const CoinTable: React.FC<CoinTableProps> = ({
 
       <div className="overflow-x-auto flex-1">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200 sticky top-0 z-10">
+          <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
             <tr>
               <th className="px-6 py-4 w-12 cursor-pointer select-none" onClick={handleSelectAll}>
                 <div className="flex items-center justify-center">
@@ -169,7 +169,7 @@ export const CoinTable: React.FC<CoinTableProps> = ({
                 { label: 'Storage', key: 'storageLocation' },
                 { label: 'Actions', key: 'id' },
               ].map((col) => (
-                <th key={col.key} onClick={() => col.key !== 'id' && handleSort(col.key as keyof Coin | 'grade')} className={`px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap`}>
+                <th key={col.key} onClick={() => col.key !== 'id' && handleSort(col.key as keyof Coin | 'grade')} className={`px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors whitespace-nowrap`}>
                   <div className="flex items-center gap-2">
                     {col.label}
                     {col.key !== 'id' && getSortIcon(col.key as keyof Coin | 'grade')}
@@ -178,50 +178,50 @@ export const CoinTable: React.FC<CoinTableProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {sortedCoins.length === 0 ? (
-              <tr><td colSpan={10} className="px-6 py-12 text-center text-slate-400 font-medium">No coins found in your collection.</td></tr>
+              <tr><td colSpan={10} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 font-medium">No coins found in your collection.</td></tr>
             ) : (
               sortedCoins.map((coin) => (
-                <tr key={coin.id} className={`transition-colors group ${selectedIds.has(coin.id) ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`}>
+                <tr key={coin.id} className={`transition-colors group ${selectedIds.has(coin.id) ? 'bg-blue-50/50 dark:bg-blue-900/20' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/60'}`}>
                   <td className="px-6 py-4 cursor-pointer" onClick={() => handleSelectRow(coin.id)}>
                     <div className="flex items-center justify-center">
                         <input type="checkbox" checked={selectedIds.has(coin.id)} readOnly className="rounded border-slate-300 text-blue-600 w-4 h-4" />
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-slate-900">{coin.year} {coin.mintMark && `(${coin.mintMark})`}</td>
-                  <td className="px-6 py-4 text-slate-700 font-medium">{coin.denomination}</td>
-                  <td className="px-6 py-4 text-indigo-700 font-bold">{coin.series || '-'}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">{coin.year} {coin.mintMark && `(${coin.mintMark})`}</td>
+                  <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-medium">{coin.denomination}</td>
+                  <td className="px-6 py-4 text-indigo-700 dark:text-indigo-400 font-bold">{coin.series || '-'}</td>
                   <td className="px-6 py-4">
                     {coin.certification ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200">
                             <Award className="w-3 h-3" /> {coin.certification.service} {coin.certification.grade || coin.condition}
                         </span>
                     ) : (
-                        <span className="text-slate-500 font-medium">{coin.condition}</span>
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">{coin.condition}</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 font-mono text-slate-500">${coin.meltValue?.toFixed(2) || '0.00'}</td>
-                  <td className="px-6 py-4 font-mono text-slate-600">${coin.purchaseCost?.toFixed(2) || '0.00'}</td>
+                  <td className="px-6 py-4 font-mono text-slate-500 dark:text-slate-400">${coin.meltValue?.toFixed(2) || '0.00'}</td>
+                  <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">${coin.purchaseCost?.toFixed(2) || '0.00'}</td>
                   <td className="px-6 py-4">
                     {coin.estimatedValueMax !== undefined ? (
-                        <span className="font-black text-emerald-600">${coin.estimatedValueMax.toLocaleString()}</span>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400">${coin.estimatedValueMax.toLocaleString()}</span>
                     ) : (
-                        <span className="text-slate-300 italic text-xs">Pending</span>
+                        <span className="text-slate-300 dark:text-slate-600 italic text-xs">Pending</span>
                     )}
                   </td>
                   <td className="px-6 py-4">
                     {coin.storageLocation ? (
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-lg">
                             <Shield className="w-3 h-3 text-slate-400" /> {coin.storageLocation}
                         </span>
                     ) : '-'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                        <button onClick={() => onViewDetails(coin)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"><BookOpen className="w-4 h-4" /></button>
-                        <button onClick={() => onEstimateValue(coin)} disabled={isActionDisabled} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"><RefreshCw className={`w-4 h-4 ${isEstimating[coin.id] ? 'animate-spin' : ''}`} /></button>
-                        <button onClick={() => onEditCoin(coin)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => onViewDetails(coin)} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"><BookOpen className="w-4 h-4" /></button>
+                        <button onClick={() => onEstimateValue(coin)} disabled={isActionDisabled} className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><RefreshCw className={`w-4 h-4 ${isEstimating[coin.id] ? 'animate-spin' : ''}`} /></button>
+                        <button onClick={() => onEditCoin(coin)} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>

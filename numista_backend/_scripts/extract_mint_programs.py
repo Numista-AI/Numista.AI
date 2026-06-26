@@ -3,8 +3,8 @@ import sys
 import json
 import time
 import google.auth
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 
 GCP_PROJECT_ID = "studio-9101802118-8c9a8"
 VERTEX_LOCATION = "us-central1"
@@ -12,16 +12,18 @@ VERTEX_LOCATION = "us-central1"
 PDF_DIR = r"C:\Users\ericd\Documents\MyVertexProject\US Mint Coin Programs"
 OUTPUT_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\master_coin_programs.json"
 
+# Force UTF-8 output
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 def main():
     print(f"[Init] Authenticating...")
     try:
         credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-        vertexai.init(project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
+        client = genai.Client(vertexai=True, project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
     except Exception as e:
         print(f"[Error] Failed to authenticate: {e}")
         sys.exit(1)
-
-    model = GenerativeModel("gemini-2.5-pro")
 
     schema = {
         "type": "OBJECT",
@@ -46,11 +48,7 @@ def main():
         }
     }
 
-    generation_config = GenerationConfig(
-        response_mime_type="application/json",
-        response_schema=schema,
-        temperature=0.0
-    )
+    # Config block will be created inline in the call
 
     pdf_files = [f for f in os.listdir(PDF_DIR) if f.lower().endswith('.pdf')]
     print(f"[Dataset] Found {len(pdf_files)} PDF files to process in {PDF_DIR}.")
@@ -89,10 +87,15 @@ def main():
                 "Return ONLY structured JSON adhering exactly to the provided schema."
             )
 
-            pdf_part = Part.from_data(data=pdf_bytes, mime_type="application/pdf")
-            response = model.generate_content(
-                [pdf_part, Part.from_text(prompt)],
-                generation_config=generation_config
+            pdf_part = genai_types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+            response = client.models.generate_content(
+                model="gemini-2.5-pro",
+                contents=[pdf_part, prompt],
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                    temperature=0.0
+                )
             )
             
             data = json.loads(response.text)

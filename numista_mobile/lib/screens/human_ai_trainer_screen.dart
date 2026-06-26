@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import '../constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/coin_model.dart';
 
 const _apiUrl = kApiBaseUrl;
 
@@ -125,14 +127,35 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 4, vsync: this);
+    _tab = TabController(length: 5, vsync: this);
     _loadStats();
+    _loadImageStats();
+  }
+
+  int _pendingImageQc = 0;
+
+  Future<void> _loadImageStats() async {
+    final email = AuthService.userEmail;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .where('image_verification_status', whereIn: ['unverified', 'flagged'])
+          .get();
+      if (mounted) {
+        setState(() {
+          _pendingImageQc = snap.docs.length;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() { _tab.dispose(); super.dispose(); }
 
   Future<void> _loadStats() async {
+    _loadImageStats();
     final email = Uri.encodeComponent(AuthService.userEmail);
     try {
       final results = await Future.wait([
@@ -164,9 +187,10 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
       _buildTabBar(),
       Expanded(
         child: TabBarView(controller: _tab, children: [
+          _ImageQcQueueTab(onReviewed: _loadStats),
           _GradeReviewTab(onReviewed: _loadStats),
           _CommunityReviewTab(onVoted: _loadStats),
-          _SubmitTab(onSubmitted: () { _loadStats(); _tab.animateTo(1); }),
+          _SubmitTab(onSubmitted: () { _loadStats(); _tab.animateTo(2); }),
           _ApprovedDictTab(),
         ]),
       ),
@@ -206,6 +230,8 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+      _sc('🖼️', '$_pendingImageQc',     'Image QC'),
+      _vd(),
       _sc('🪙', '$_totalAiGraded',     'AI Graded'),
       _vd(),
       _sc('⏳', '$_pendingGradeReview', 'Awaiting'),
@@ -243,6 +269,15 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
       isScrollable: true,
       tabAlignment: TabAlignment.start,
       tabs: [
+        Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.image_search_outlined, size: 16),
+          const SizedBox(width: 6),
+          const Text('Image QC'),
+          if (_pendingImageQc > 0) ...[
+            const SizedBox(width: 6),
+            _badge(_pendingImageQc, const Color(0xFFF63366)),
+          ],
+        ])),
         Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.verified_outlined, size: 16),
           const SizedBox(width: 6),
@@ -1412,6 +1447,257 @@ class _DictCard extends StatelessWidget {
                 style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
         ]),
       ]),
+    );
+  }
+}
+
+// ─── Image QC Queue Tab ───────────────────────────────────────────────────────
+
+class _ImageQcQueueTab extends StatefulWidget {
+  final VoidCallback onReviewed;
+  const _ImageQcQueueTab({required this.onReviewed});
+
+  @override
+  State<_ImageQcQueueTab> createState() => _ImageQcQueueTabState();
+}
+
+class _ImageQcQueueTabState extends State<_ImageQcQueueTab> {
+  bool _loading = true;
+  List<CoinModel> _coins = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      final email = AuthService.userEmail;
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .where('image_verification_status', whereIn: ['unverified', 'flagged'])
+          .get();
+      final list = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+      if (mounted) {
+        setState(() {
+          _coins = list;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _approve(CoinModel coin) async {
+    await FirebaseFirestore.instance
+        .doc('${AuthService.coinsPath}/${coin.id}')
+        .update({'image_verification_status': 'human_verified'});
+    _load();
+    widget.onReviewed();
+  }
+
+  Future<void> _purgeAndReSource(CoinModel coin) async {
+    await FirebaseFirestore.instance
+        .doc('${AuthService.coinsPath}/${coin.id}')
+        .update({
+      'image_url_obverse': '',
+      'image_url_reverse': '',
+      'image_verification_status': 'unverified',
+      'image_verification_reason': 'Purged for rescan/re-sourcing by trainer.',
+    });
+    _load();
+    widget.onReviewed();
+  }
+
+  void _editMetadata(CoinModel coin) {
+    final yearCtrl = TextEditingController(text: coin.year);
+    final mintCtrl = TextEditingController(text: coin.mintMark);
+    final varCtrl = TextEditingController(text: coin.variety);
+    final denomCtrl = TextEditingController(text: coin.denomination);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Metadata'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: yearCtrl, decoration: const InputDecoration(labelText: 'Year')),
+            TextField(controller: mintCtrl, decoration: const InputDecoration(labelText: 'Mint Mark')),
+            TextField(controller: denomCtrl, decoration: const InputDecoration(labelText: 'Denomination')),
+            TextField(controller: varCtrl, decoration: const InputDecoration(labelText: 'Variety')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .doc('${AuthService.coinsPath}/${coin.id}')
+                  .update({
+                'Year': yearCtrl.text.trim(),
+                'Mint Mark': mintCtrl.text.trim(),
+                'Denomination': denomCtrl.text.trim(),
+                'Variety': varCtrl.text.trim(),
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+              _load();
+              widget.onReviewed();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
+    }
+    if (_coins.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF22C55E)),
+            SizedBox(height: 16),
+            Text('No images to verify!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('All coin images are verified or checked.', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _coins.length,
+        itemBuilder: (context, index) {
+          final coin = _coins[index];
+          final reason = coin.imageVerificationReason;
+          final isFlagged = coin.imageVerificationStatus == 'flagged';
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isFlagged ? const Color(0xFFEF4444) : const Color(0xFFE2E6E9),
+                width: isFlagged ? 1.5 : 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${coin.year} ${coin.mintMark} ${coin.denomination}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isFlagged ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          coin.imageVerificationStatus.toUpperCase(),
+                          style: TextStyle(
+                            color: isFlagged ? const Color(0xFFEF4444) : const Color(0xFF64748B),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (coin.variety.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('Variety: ${coin.variety}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  ],
+                  if (reason.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Text(
+                        'Reason: $reason',
+                        style: const TextStyle(color: Color(0xFFB45309), fontSize: 12),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (coin.imageUrlObverse.isNotEmpty)
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(coin.imageUrlObverse, height: 120, fit: BoxFit.cover),
+                          ),
+                        ),
+                      if (coin.imageUrlObverse.isNotEmpty && coin.imageUrlReverse.isNotEmpty)
+                        const SizedBox(width: 8),
+                      if (coin.imageUrlReverse.isNotEmpty)
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(coin.imageUrlReverse, height: 120, fit: BoxFit.cover),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => _editMetadata(coin),
+                        child: const Text('Edit Metadata'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFEF4444),
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        ),
+                        onPressed: () => _purgeAndReSource(coin),
+                        child: const Text('Purge & Re-Source'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E)),
+                        onPressed: () => _approve(coin),
+                        child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

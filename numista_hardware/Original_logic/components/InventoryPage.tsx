@@ -205,11 +205,11 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
       <div className="space-y-6">
         <div className="flex justify-between items-start">
             <div>
-                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <Filter className="w-6 h-6 text-blue-600" />
                     Inventory Manager
                 </h2>
-                <p className="text-slate-500 mt-1">Generate lists, track condition, and audit your collection.</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">Generate lists, track condition, and audit your collection.</p>
             </div>
             <div className="flex gap-3">
                  <button 
@@ -223,13 +223,13 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-500 uppercase">Country</label>
                 <select 
                     value={filterCountry} 
                     onChange={e => setFilterCountry(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg text-sm"
                 >
                     <option value="">All Countries</option>
                     {uniqueCountries.map(c => <option key={c} value={c}>{c}</option>)}
@@ -241,7 +241,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                 <label className="text-xs font-semibold text-slate-500 uppercase">Series / Type</label>
                 <button 
                     onClick={() => setIsSeriesDropdownOpen(!isSeriesDropdownOpen)}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm text-left bg-white flex justify-between items-center"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg text-sm text-left flex justify-between items-center"
                 >
                     <span className="truncate">
                         {filterSeries.length === 0 ? 'All Series' : `${filterSeries.length} selected`}
@@ -249,16 +249,16 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                     <span className="text-xs text-slate-400">▼</span>
                 </button>
                 {isSeriesDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto p-2">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto p-2">
                         {uniqueSeries.map(s => (
-                            <label key={s} className="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer">
+                            <label key={s} className="flex items-center gap-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     checked={filterSeries.includes(s)}
                                     onChange={() => toggleSeriesFilter(s)}
                                     className="rounded text-blue-600"
                                 />
-                                <span className="text-sm text-slate-700">{s}</span>
+                                <span className="text-sm text-slate-700 dark:text-slate-300">{s}</span>
                             </label>
                         ))}
                     </div>
@@ -344,10 +344,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
         </div>
 
         {/* Live Inventory Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium">
                         <tr>
                             <th className="px-4 py-3">Status</th>
                             <th className="px-4 py-3">Coin Details</th>
@@ -358,7 +358,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {filteredCoins.map(coin => (
-                            <tr key={coin.id} className={coin.inventoryStatus === 'MISSING' ? 'bg-red-50' : coin.inventoryStatus === 'ACCOUNTED' ? 'bg-emerald-50/30' : ''}>
+                            <tr key={coin.id} className={`${coin.inventoryStatus === 'MISSING' ? 'bg-red-50 dark:bg-red-900/20' : coin.inventoryStatus === 'ACCOUNTED' ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : 'dark:bg-slate-800'}`}>
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-1">
                                         <button 
@@ -385,10 +385,10 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                                     </div>
                                 </td>
                                 <td className="px-4 py-3">
-                                    <p className="font-bold text-slate-900">{coin.year} {coin.denomination}</p>
-                                    <p className="text-slate-500 text-xs">{coin.country} {coin.mintMark ? `(${coin.mintMark})` : ''}</p>
-                                    {coin.series && <p className="text-blue-600 text-xs mt-0.5">{coin.series}</p>}
-                                    <p className="text-slate-400 text-xs mt-0.5">Grade: {coin.condition}</p>
+                                    <p className="font-bold text-slate-900 dark:text-slate-100">{coin.year} {coin.denomination}</p>
+                                    <p className="text-slate-500 dark:text-slate-400 text-xs">{coin.country} {coin.mintMark ? `(${coin.mintMark})` : ''}</p>
+                                    {coin.series && <p className="text-blue-600 dark:text-blue-400 text-xs mt-0.5">{coin.series}</p>}
+                                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5">Grade: {coin.condition}</p>
                                 </td>
                                 <td className="px-4 py-3 font-mono">
                                     {coin.estimatedValueMax ? `$${coin.estimatedValueMax.toLocaleString()}` : '-'}
@@ -407,7 +407,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ coins, onBatchUpda
                                     <input 
                                         type="text" 
                                         placeholder="Add note..."
-                                        className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none text-sm py-1"
+                                        className="w-full bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-500 focus:border-blue-500 outline-none text-sm dark:text-slate-200 py-1"
                                         value={coin.inventoryNotes || ''}
                                         onChange={(e) => handleNotesChange(coin, e.target.value)}
                                     />

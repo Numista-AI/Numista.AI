@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { LayoutDashboard, Coins, PlusCircle, PiggyBank, ClipboardList, Download, Gift, FileSpreadsheet, Settings, ShieldCheck, AlertCircle, Save, Check, UploadCloud } from 'lucide-react';
+import { LayoutDashboard, Coins, PlusCircle, PiggyBank, ClipboardList, Download, Gift, FileSpreadsheet, Settings, ShieldCheck, AlertCircle, Save, Check, UploadCloud, Sun, Moon } from 'lucide-react';
 import { AppView, Coin } from '../types';
 import { exportCollectionToExcel } from '../utils/excelParser';
 
@@ -12,6 +12,8 @@ interface SidebarProps {
   hasUnsavedChanges: boolean;
   onSaveToComputer: () => void;
   onRestoreFromJson: (file: File) => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -21,7 +23,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings, 
   hasUnsavedChanges,
   onSaveToComputer,
-  onRestoreFromJson
+  onRestoreFromJson,
+  isDark,
+  onToggleTheme,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navItems = [
@@ -54,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 border-r border-slate-800 z-50 shadow-2xl">
+    <div className="w-64 bg-slate-900 dark:bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 border-r border-slate-800 z-50 shadow-2xl transition-colors duration-300">
       <div className="p-8 flex items-center gap-3 border-b border-slate-800">
         <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/40">
             <PiggyBank className="w-6 h-6 text-white" />
@@ -136,6 +140,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Settings className="w-3.5 h-3.5" />
           App Settings
+        </button>
+
+        {/* Light / Dark Toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="w-full flex items-center justify-center gap-3 px-4 py-2 hover:bg-slate-800 text-slate-500 hover:text-slate-200 rounded-xl transition-colors text-[10px] font-bold"
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {isDark ? (
+            <><Sun className="w-3.5 h-3.5 text-amber-400" /> Light Mode</>
+          ) : (
+            <><Moon className="w-3.5 h-3.5 text-blue-400" /> Dark Mode</>
+          )}
         </button>
 
         <div className="flex items-center justify-center gap-2 pt-2">

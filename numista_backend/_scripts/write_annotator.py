@@ -4,19 +4,19 @@ code = """\
 import os, sys, json, time, argparse, re
 from pathlib import Path
 from typing import Optional
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 from google.cloud import documentai_v1beta3 as documentai
 from google.cloud import storage as gcs
 import google.auth
 
 GCP_PROJECT_NUMBER = "568985927038"
-GCP_PROJECT_ID     = "studio-dev-project"
+GCP_PROJECT_ID     = "studio-9101802118-8c9a8"
 LOCATION           = "us"
 PROCESSOR_ID       = "261d6897c84ca28b"
 VERTEX_LOCATION    = "us-central1"
-GEMINI_MODEL       = "gemini-2.0-flash-001"
-REQUESTS_PER_MIN   = 12
+GEMINI_MODEL       = "gemini-2.5-pro"
+REQUESTS_PER_MIN   = 30
 SLEEP_BETWEEN_DOCS = 60.0 / REQUESTS_PER_MIN
 ANNOTATION_BUCKET  = "numista-training-docs"
 ANNOTATION_PREFIX  = "auto_annotations/"
@@ -63,26 +63,27 @@ def save_progress(progress):
 def find_text_anchor(doc_text, search_text, start_from=0):
     idx = doc_text.find(search_text, start_from)
     if idx != -1:
-        return idx, idx + len(search_text)
+        return idx, min(idx + len(search_text), len(doc_text))
     idx = doc_text.lower().find(search_text.lower(), start_from)
     if idx != -1:
-        return idx, idx + len(search_text)
+        return idx, min(idx + len(search_text), len(doc_text))
     m = re.match(r"(\\d{4})", search_text.strip())
     if m:
         idx = doc_text.find(m.group(1), start_from)
         if idx != -1:
-            return idx, idx + 4
-    return 0, 1
-
+            return idx, min(idx + 4, len(doc_text))
+    return -1, -1
 
 def build_entity(type_, mention_text, start_idx, end_idx, properties=None, boolean_value=None):
-    entity = documentai.Document.Entity(
-        type_=type_, mention_text=mention_text, confidence=1.0,
-        text_anchor=documentai.Document.TextAnchor(
+    kwargs = {
+        "type_": type_, "mention_text": mention_text[:(end_idx-start_idx)] if start_idx>=0 and mention_text else mention_text, "confidence": 1.0
+    }
+    if start_idx >= 0 and end_idx > start_idx:
+        kwargs["text_anchor"] = documentai.Document.TextAnchor(
             text_segments=[documentai.Document.TextAnchor.TextSegment(
                 start_index=start_idx, end_index=end_idx)]
-        ),
-    )
+        )
+    entity = documentai.Document.Entity(**kwargs)
     if properties:
         entity.properties.extend(properties)
     if boolean_value is not None:
@@ -91,18 +92,130 @@ def build_entity(type_, mention_text, start_idx, end_idx, properties=None, boole
     return entity
 
 
-def gemini_extract(gemini_model, pdf_bytes):
+def gemini_extract(client, model_name, pdf_bytes):
     try:
-        response = gemini_model.generate_content(
-            [Part.from_data(data=pdf_bytes, mime_type="application/pdf"),
-             Part.from_text(EXTRACTION_PROMPT)],
-            generation_config=GenerationConfig(
-                response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[
+                genai_types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
+                genai_types.Part.from_text(EXTRACTION_PROMPT)
+            ],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.0,
+                max_output_tokens=8192
+            ),
         )
         return json.loads(response.text)
     except json.JSONDecodeError as e:
         print(f"    [Gemini] JSON parse error: {e}")
         return None
+    except Exception as e:
+        print(f"    [Gemini] Error: {e}")
+        return None
+
+
+def _repair_truncated_json(raw: str) -> dict:
+    \"\"\"
+    Attempts to repair a truncated JSON response from Gemini.
+    Gemini sometimes cuts off mid-entry when token limits are hit.
+    Strategy: find the last complete {"coin_subject": ..., "is_owned": ...} entry
+    and close the JSON array and object properly.
+    Returns a repaired dict or None if can't be salvaged.
+    \"\"\"
+    # Find the last complete entry by scanning for the last }  in the entries array
+    # A complete entry ends with: "is_owned": true} or "is_owned": false}
+    last_complete = max(
+        raw.rfind('"is_owned": true}'),
+        raw.rfind('"is_owned": false}'),
+    )
+    if last_complete == -1:
+        return None
+    end_pos = last_complete + len('"is_owned": true}' if '"is_owned": true}' in raw[last_complete:last_complete+20] else '"is_owned": false}')
+    truncated = raw[:end_pos] + "\\n  ]\\n}"
+    try:
+        return json.loads(truncated)
+    except json.JSONDecodeError:
+        return None
+
+
+def gemini_extract_from_text(client, model_name, doc_text):
+    \"\"\"
+    Sends the OCR-extracted text to Gemini for entity extraction.
+    Used when raw PDF bytes are not available in the Document AI dataset
+    (training docs stored without content bytes).
+    Returns {series_name, entries} dict or None.
+    \"\"\"
+    # Sanitize OCR text: Littleton checklist OCR contains non-ASCII characters
+    # (Greek Omicron U+039F as empty circles, copyright ©, Japanese katakana, etc.)
+    # that cause Gemini to truncate its JSON response mid-output.
+    # Strategy: replace specific circle chars with ASCII equivalents, then remove
+    # all remaining non-ASCII characters to ensure clean JSON output.
+    clean_text = doc_text
+    # Circle characters: empty -> 'o', filled -> 'x'
+    for char in "\\u039f\\u25cb\\u25ef\\u2022\\u2218\\u00b0":   # Greek O, circles, bullet, ring, degree
+        clean_text = clean_text.replace(char, "o")
+    for char in "\\u25cf\\u2715\\u00d7\\u2022\\u2713\\u2714":   # Black circle, X marks, checkmarks
+        clean_text = clean_text.replace(char, "x")
+    # Remove all remaining non-ASCII characters (OCR noise)
+    clean_text = clean_text.encode("ascii", errors="ignore").decode("ascii")
+
+    prompt = (
+        EXTRACTION_PROMPT
+        + "\\n\\n=== DOCUMENT TEXT (OCR extracted) ===\\n"
+        + clean_text[:14000]  # Generous limit; checklists are ~4k chars
+    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[genai_types.Part.from_text(prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.0,
+                max_output_tokens=16384
+            ),
+        )
+        raw = response.text or ""
+        # Strip markdown fences if present
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\\n", 1)[-1]
+            raw = raw.rsplit("```", 1)[0]
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            # Attempt to repair truncated JSON by trimming to last complete entry
+            repaired = _repair_truncated_json(raw)
+            if repaired:
+                return repaired
+            raise  # Re-raise to hit the outer except
+    except json.JSONDecodeError as e:
+        print(f"    [Gemini] JSON parse error (JSON mode): {e}")
+        # Retry without response_mime_type constraint
+        try:
+            response2 = client.models.generate_content(
+                model=model_name,
+                contents=[genai_types.Part.from_text(prompt)],
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.0,
+                    max_output_tokens=16384
+                ),
+            )
+            raw2 = response2.text or ""
+            raw2 = raw2.strip()
+            if raw2.startswith("```"):
+                raw2 = raw2.split("\\n", 1)[-1]
+                raw2 = raw2.rsplit("```", 1)[0]
+            try:
+                return json.loads(raw2)
+            except json.JSONDecodeError:
+                repaired2 = _repair_truncated_json(raw2)
+                if repaired2:
+                    return repaired2
+                raise
+        except Exception as e2:
+            print(f"    [Gemini] Retry also failed: {e2}")
+            return None
     except Exception as e:
         print(f"    [Gemini] Error: {e}")
         return None
@@ -143,7 +256,7 @@ def make_doc_id_request(doc_id, mask):
     return documentai.GetDocumentRequest(
         dataset=DATASET_PATH,
         document_id=documentai.DocumentId(
-            managed_doc_id=documentai.DocumentId.ManagedDocId(document_id=doc_id)),
+            unmanaged_doc_id=documentai.DocumentId.UnmanagedDocumentId(doc_id=doc_id)),
         read_mask=mask,
     )
 
@@ -164,11 +277,7 @@ def main():
     print(f"  Dry run   : {args.dry_run}")
     print("=" * 65)
 
-    print("\\n[Init] Authenticating...")
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    vertexai.init(project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
-    gemini_model = GenerativeModel(args.model)
+    genai_client = genai.Client(vertexai=True, project=GCP_PROJECT_ID, location=VERTEX_LOCATION)
     doc_service  = documentai.DocumentServiceClient(
         credentials=credentials,
         client_options={"api_endpoint": f"{LOCATION}-documentai.googleapis.com"})
@@ -195,7 +304,7 @@ def main():
                     labeled_count += 1
                     continue
                 try:
-                    doc_id = meta.document_id.managed_doc_id.document_id
+                    doc_id = meta.document_id.unmanaged_doc_id.doc_id
                 except Exception:
                     continue
                 if not doc_id or doc_id in already_done:
@@ -230,16 +339,10 @@ def main():
                 time.sleep(SLEEP_BETWEEN_DOCS); continue
             print(f"    Text: {len(doc_text)} chars")
 
-            pdf_bytes = doc_service.get_document(
-                request=make_doc_id_request(doc_id, "content")).document.content
-            if not pdf_bytes:
-                print("    [Skip] No PDF bytes.")
-                progress["skipped"].append(doc_id); save_progress(progress)
-                time.sleep(SLEEP_BETWEEN_DOCS); continue
-            print(f"    PDF:  {len(pdf_bytes)} bytes")
-
-            print("    [Gemini] Extracting...")
-            gemini_result = gemini_extract(gemini_model, pdf_bytes)
+            # Training docs have no raw PDF bytes stored in the dataset.
+            # Use OCR text (already fetched) directly with Gemini.
+            print("    [Gemini] Extracting from OCR text...")
+            gemini_result = gemini_extract_from_text(genai_client, args.model, doc_text)
             if not gemini_result:
                 print("    [Fail] No result from Gemini.")
                 progress["failed"].append(doc_id); save_progress(progress)

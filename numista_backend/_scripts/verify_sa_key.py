@@ -1,9 +1,15 @@
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
 from google.oauth2 import service_account
 import os
+import sys
 from dotenv import load_dotenv
+
+# Force UTF-8 output so emoji don't crash on Windows cp1252
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 load_dotenv()
 PROJECT_ID = "studio-9101802118-8c9a8"
@@ -15,10 +21,9 @@ def test_model_with_sa(model_name):
     try:
         key_path = "serviceAccountKey.json.json"
         creds = service_account.Credentials.from_service_account_file(key_path)
-        vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=creds)
+        client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION, credentials=creds)
         
-        model = GenerativeModel(model_name)
-        chat = model.start_chat()
+        chat = client.chats.create(model=model_name)
         response = chat.send_message("Ping")
         print(f"✅ SUCCESS: {model_name} RESPONSE: {response.text}")
         return True

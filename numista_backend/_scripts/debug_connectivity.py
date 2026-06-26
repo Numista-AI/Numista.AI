@@ -1,6 +1,4 @@
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
 import google.cloud.aiplatform as aip
 
 PROJECT_ID = "studio-9101802118-8c9a8"

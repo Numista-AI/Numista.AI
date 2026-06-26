@@ -71,14 +71,14 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl overflow-hidden">
-        <div className="bg-slate-50 p-6 border-b border-slate-100 flex items-start gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden">
+        <div className="bg-slate-50 dark:bg-slate-700/50 p-6 border-b border-slate-100 dark:border-slate-700 flex items-start gap-4">
           <div className="p-3 bg-indigo-100 rounded-full flex-shrink-0">
             <Layers className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Add to Set</h3>
-            <p className="text-slate-500 mt-1 text-sm">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add to Set</h3>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
               Group {selectedIds.length} selected coins into a named collection (Set).
             </p>
           </div>
@@ -86,7 +86,7 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
 
         <div className="p-6 space-y-6">
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-2">Set / Program Name</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Set / Program Name</label>
             <div className="relative">
                 <input 
                     type="text" 
@@ -94,7 +94,7 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
                     value={setName}
                     onChange={(e) => setSetName(e.target.value)}
                     placeholder="e.g. Barber Silver Half Dollars"
-                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     autoFocus
                 />
                 <datalist id="existing-sets">
@@ -105,9 +105,9 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
 
           {/* AI Suggestion Section */}
           {setName.length > 3 && (
-            <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800">
                 <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-semibold text-indigo-900 flex items-center gap-2 text-sm">
+                    <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 text-sm">
                         <Sparkles className="w-4 h-4" />
                         AI Set Completion
                     </h4>
@@ -135,14 +135,14 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
                          <p className="text-xs font-bold text-indigo-800 mb-2">Found {suggestedIds.length} potential matches:</p>
                          <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                             {suggestedIds.map(id => (
-                                <label key={id} className="flex items-center gap-2 p-2 bg-white rounded border border-indigo-100 cursor-pointer hover:bg-indigo-50">
+                                <label key={id} className="flex items-center gap-2 p-2 bg-white dark:bg-slate-700 rounded border border-indigo-100 dark:border-indigo-800 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
                                     <input 
                                         type="checkbox"
                                         checked={confirmedSuggestions.has(id)}
                                         onChange={() => toggleSuggestion(id)}
                                         className="rounded text-indigo-600 focus:ring-indigo-500"
                                     />
-                                    <span className="text-xs text-slate-700 truncate">{getCoinLabel(id)}</span>
+                                    <span className="text-xs text-slate-700 dark:text-slate-300 truncate">{getCoinLabel(id)}</span>
                                 </label>
                             ))}
                          </div>
@@ -152,10 +152,10 @@ export const SetAssignmentModal: React.FC<SetAssignmentModalProps> = ({
           )}
         </div>
 
-        <div className="bg-slate-50 p-4 flex justify-end gap-3 border-t border-slate-100">
+        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 font-medium rounded-lg transition-colors shadow-sm text-sm"
+            className="px-4 py-2 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 font-medium rounded-lg transition-colors shadow-sm text-sm"
           >
             Cancel
           </button>

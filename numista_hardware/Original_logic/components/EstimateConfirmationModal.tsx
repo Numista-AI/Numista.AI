@@ -19,30 +19,30 @@ export const EstimateConfirmationModal: React.FC<EstimateConfirmationModalProps>
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all scale-100">
+      <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all scale-100">
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-emerald-100 rounded-full flex-shrink-0">
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex-shrink-0">
               <Sparkles className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Start Bulk Valuation?</h3>
-              <p className="text-slate-500 mt-2 text-sm leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Start Bulk Valuation?</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm leading-relaxed">
                 You are about to estimate the value of <strong>{count} coins</strong>.
               </p>
-              <div className="mt-4 bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-600">
+              <div className="mt-4 bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300">
                 <p className="font-medium mb-1">Estimated Time: ~{estTimeDisplay}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   To ensure accuracy and prevent errors, we process one coin every few seconds. Please keep this tab open.
                 </p>
               </div>
             </div>
           </div>
         </div>
-        <div className="bg-slate-50 p-4 flex justify-end gap-3 border-t border-slate-100">
+        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 font-medium rounded-lg transition-colors shadow-sm text-sm"
+            className="px-4 py-2 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 font-medium rounded-lg transition-colors shadow-sm text-sm"
           >
             Cancel
           </button>

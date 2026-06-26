@@ -1,0 +1,741 @@
+UNHEALED COINS REPORT (Count: 82)
+======================================================================
+
+#1 | ID: 03153afb-9f63-4c3c-b30b-0973c47e679f
+  Coin Name   :    - 103-76BC Alexander Jannaeus Bronze Widow's Mite H469-70,72
+  Denom       : 
+  Program     : 103-76BC Alexander Jannaeus Bronze Widow's Mite H469-70,72
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#2 | ID: 05e24b62-a3a9-4fb9-b1fa-5e6c671aae1e
+  Coin Name   : 2019 W $1 - Destination Silver Eagle Signed by Tom Cleveland
+  Denom       : $1
+  Program     : Destination Silver Eagle Signed by Tom Cleveland
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2019 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-laser-privy-silver-proof-reverse.jpg
+--------------------------------------------------
+#3 | ID: 07d4031a-a0bd-42a2-a702-a4e81b5b01e7
+  Coin Name   : 1989S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#4 | ID: 0ae1daa6-c92a-4b2b-99c2-1c04bee4d227
+  Coin Name   : 1968-98   - 31 different US proof sets
+  Denom       : 
+  Program     : 31 different US proof sets
+  Theme       : 
+  Mismatches  : Missing obverse image
+  Current Obv : None
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204@gmail.com/coins/0ae1daa6-c92a-4b2b-99c2-1c04bee4d227/reverse.jpg
+--------------------------------------------------
+#5 | ID: 0ae6ce64-6ec6-4599-92dc-2413ef43b60c
+  Coin Name   : 2006S   - Clad Proof Set 14 Coins
+  Denom       : 
+  Program     : Clad Proof Set 14 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#6 | ID: 0bf6bbd0-e486-4b3b-b2c9-73f4aaecfc0b
+  Coin Name   : 1825  Quarter - Capped Bust
+  Denom       : Quarter
+  Program     : Capped Bust
+  Theme       : 
+  Mismatches  : Obverse: Quarter coin but URL has 'dollar'; Obverse: Year mismatch: coin is 1825 but URL contains 1795; Reverse: Year mismatch: coin is 1825 but URL contains 1795
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-dollar-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-reverse.jpg
+--------------------------------------------------
+#7 | ID: 0d7b3a6d-cd7e-4faf-88f7-6d03653b08c9
+  Coin Name   : 1976S   - Clad  Proof Set 6 coins
+  Denom       : 
+  Program     : Clad  Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#8 | ID: 16514dac-1400-4c41-8b91-9a22ea5c5191
+  Coin Name   : 1983S   - Clad  Proof Set 6 coins
+  Denom       : 
+  Program     : Clad  Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#9 | ID: 177f55ad-f9ac-4e32-89d3-c98b1ee924a9
+  Coin Name   : 2007 D $1 - Presidential $1 Coin Program
+  Denom       : $1
+  Program     : Presidential $1 Coin Program
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2007 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/kaggle/state_quarters/2007_MT_Proof.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-presidential-dollar-coin-george-hw-bush-uncirculated-reverse.jpg
+--------------------------------------------------
+#10 | ID: 24712445-a2b9-477f-ab46-4663d5834f35
+  Coin Name   : 2014S   - Clad  Proof Set 14 coins
+  Denom       : 
+  Program     : Clad  Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#11 | ID: 25e4fcd7-1017-4d40-ad47-59a5ad8359b5
+  Coin Name   : 1893  $5 - Liberty Head Gold Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Gold Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1893 but URL contains 1834; Reverse: Year mismatch: coin is 1893 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#12 | ID: 281ba0e9-69f6-432e-816e-654438ba6fd4
+  Coin Name   : 2006  $5 - American Eagle Gold Coin
+  Denom       : $5
+  Program     : American Eagle Gold Coin
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 2006 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-gold-one-ounce-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2006-50-state-quarters-coin-north-dakota-uncirculated-reverse.jpg
+--------------------------------------------------
+#13 | ID: 2e662442-0da2-49b9-ad80-9d3c5acaba2d
+  Coin Name   : 2007 D $1 - Presidential $1 Coin Program
+  Denom       : $1
+  Program     : Presidential $1 Coin Program
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2007 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/kaggle/state_quarters/2007_MT_Proof.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-presidential-dollar-coin-george-hw-bush-uncirculated-reverse.jpg
+--------------------------------------------------
+#14 | ID: 31cf4601-c9b1-4da1-bfd3-da27619c50c1
+  Coin Name   : 2020S   - AI$ Proof Set
+  Denom       : 
+  Program     : AI$ Proof Set
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#15 | ID: 32e4e658-a1c1-444f-a7f6-6b296bda2bdc
+  Coin Name   : 2007 D $1 - Presidential $1 Coin Program
+  Denom       : $1
+  Program     : Presidential $1 Coin Program
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2007 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/kaggle/state_quarters/2007_MT_Proof.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-presidential-dollar-coin-george-hw-bush-uncirculated-reverse.jpg
+--------------------------------------------------
+#16 | ID: 38092792-a476-4587-ac00-84637033bbd5
+  Coin Name   : 1866  $5 - Liberty Head Gold Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Gold Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1866 but URL contains 1834; Reverse: Year mismatch: coin is 1866 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#17 | ID: 39b04e68-45a8-4b80-9c88-d0901d621e20
+  Coin Name   : 2021   - Celebrating America Coin Collection
+  Denom       : 
+  Program     : Celebrating America Coin Collection
+  Theme       : Zitkala-Sa
+  Mismatches  : Obverse: Year mismatch: coin is 2021 but URL contains 1994
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1994-women-in-military-service-for-america-commemorative-silver-one-dollar-proof-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204@gmail.com/coins/39b04e68-45a8-4b80-9c88-d0901d621e20/reverse.jpg
+--------------------------------------------------
+#18 | ID: 3ac52092-ab2a-454d-9823-5a62daebf5c8
+  Coin Name   : 2018S   - Clad  Proof Set 10 coins
+  Denom       : 
+  Program     : Clad  Proof Set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#19 | ID: 3baddf53-e57c-4280-9c12-25f6aa3935b1
+  Coin Name   : 2006S   - Silver Proof set 10 coins
+  Denom       : 
+  Program     : Silver Proof set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#20 | ID: 3c85311b-2391-4b6f-84ba-52a2cef9d096
+  Coin Name   : 2000S   - Clad Proof Set 10 Coins
+  Denom       : 
+  Program     : Clad Proof Set 10 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#21 | ID: 3cd50285-6219-4745-8550-8c71aea23682
+  Coin Name   : 1879  $1 - Schoolgirl Dollar
+  Denom       : $1
+  Program     : Schoolgirl Dollar
+  Theme       : Liberty Head / Eagle
+  Mismatches  : Obverse: Year mismatch: coin is 1879 but URL contains 1795
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-dollar-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204@gmail.com/coins/3cd50285-6219-4745-8550-8c71aea23682/reverse.jpg
+--------------------------------------------------
+#22 | ID: 3df3e2fd-f041-4893-94f9-51843388bb94
+  Coin Name   : 2017  $1 - Silver Eagle signed by Tom Cleveland
+  Denom       : $1
+  Program     : Silver Eagle signed by Tom Cleveland
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 2017 but URL contains 2019; Reverse: Year mismatch: coin is 2017 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-laser-privy-silver-proof-reverse.jpg
+--------------------------------------------------
+#23 | ID: 4599d1ab-fd58-44c6-ad2f-82d72c4a704e
+  Coin Name   : 1880  $5 - Liberty Head Gold Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Gold Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1880 but URL contains 1834; Reverse: Year mismatch: coin is 1880 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#24 | ID: 4648dbc9-96d4-42fe-abc7-4a6885784cf6
+  Coin Name   : 1926  $2.5 - 2.50 American Sesquicentennial Gold
+  Denom       : $2.5
+  Program     : 2.50 American Sesquicentennial Gold
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 1926 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-buffalo-one-ounce-gold-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1926-sesquicentennial-gold-reverse.jpg
+--------------------------------------------------
+#25 | ID: 49fa041d-325d-4cb7-b2cf-82e24d7add33
+  Coin Name   : 1828  Quarter - Capped Bust
+  Denom       : Quarter
+  Program     : Capped Bust
+  Theme       : 
+  Mismatches  : Obverse: Quarter coin but URL has 'dollar'; Obverse: Year mismatch: coin is 1828 but URL contains 1795; Reverse: Year mismatch: coin is 1828 but URL contains 1795
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-dollar-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-reverse.jpg
+--------------------------------------------------
+#26 | ID: 4b608086-063a-4f7e-870b-14538d71d791
+  Coin Name   : 1883   - Hawaiian Silver Quarter PCGS
+  Denom       : 
+  Program     : Hawaiian Silver Quarter PCGS
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#27 | ID: 50fd7f72-4416-4779-be91-5ca3b5d82381
+  Coin Name   : 1972S   - Clad Proof set 5 coins
+  Denom       : 
+  Program     : Clad Proof set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#28 | ID: 530211bf-d177-40a1-b84c-e759d045103b
+  Coin Name   : 2021S   - Clad Proof Set7 coins
+  Denom       : 
+  Program     : Clad Proof Set7 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#29 | ID: 537b08c8-95c6-4311-9599-fbd96fe5f16c
+  Coin Name   : 1916-1920   - 5 Different Mint Weat Cents
+  Denom       : 
+  Program     : 5 Different Mint Weat Cents
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#30 | ID: 5620bc6b-1206-486f-bbae-5b4bec6fca5f
+  Coin Name   : 1978S   - Clad  Proof Set 6 coins
+  Denom       : 
+  Program     : Clad  Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#31 | ID: 56965cd9-fcd6-4110-9db1-1de8bd398505
+  Coin Name   : 2003S   - Clad Proof Set 10 Coins
+  Denom       : 
+  Program     : Clad Proof Set 10 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#32 | ID: 594aaaef-70f6-4d77-8443-4da736df9153
+  Coin Name   : 1996S   - Clad proof set 5 coins
+  Denom       : 
+  Program     : Clad proof set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#33 | ID: 5bfd2a89-7bbd-4f78-b828-a88e574e340a
+  Coin Name   : 1998S   - Clad Proof Set 5 coins
+  Denom       : 
+  Program     : Clad Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#34 | ID: 5cfd9020-ef60-4a9c-b8e8-6ccfc4eb1b45
+  Coin Name   : 2005S   - Clad Proof set  11 coins
+  Denom       : 
+  Program     : Clad Proof set  11 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#35 | ID: 5de66bea-05b5-4c3c-9ce4-620689d8852b
+  Coin Name   : 1968S   - Clad Proof Set 5 coins
+  Denom       : 
+  Program     : Clad Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#36 | ID: 628a6f98-7257-4414-963c-6be327f20228
+  Coin Name   : 1833  Capped Bust Silver Quarter - Capped Bust Silver Quarter Series
+  Denom       : Capped Bust Silver Quarter
+  Program     : Capped Bust Silver Quarter Series
+  Theme       : Capped Bust Design
+  Mismatches  : Obverse: Quarter coin but URL has 'dollar'; Obverse: Year mismatch: coin is 1833 but URL contains 1795; Reverse: Year mismatch: coin is 1833 but URL contains 1795
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-dollar-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1795-draped-bust-liberty-reverse.jpg
+--------------------------------------------------
+#37 | ID: 6a4b0ac2-123e-42c4-9a0b-fe97ff49c7c4
+  Coin Name   : 2022S   - Clad Proof Set 10 coins
+  Denom       : 
+  Program     : Clad Proof Set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#38 | ID: 6f526eb1-8cec-440f-91ed-9f1a71ed712f
+  Coin Name   : 1992  $1 - American Eagle Silver Dollar
+  Denom       : $1
+  Program     : American Eagle Silver Dollar
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 1992 but URL contains 2019; Reverse: Year mismatch: coin is 1992 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-laser-privy-silver-proof-reverse.jpg
+--------------------------------------------------
+#39 | ID: 71692645-e377-4760-b4f5-814b888016b5
+  Coin Name   : 1979S   - Clad Proof Set 6 coins
+  Denom       : 
+  Program     : Clad Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#40 | ID: 767bca45-aabb-46ea-ac10-14c94118134c
+  Coin Name   : 2007S   - Clad Proof Set 14 coins
+  Denom       : 
+  Program     : Clad Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#41 | ID: 782d600f-041e-4d29-bb2f-819205fe4260
+  Coin Name   : 2009   - Lincoln Bicentennial cents colorized and gold plated 8 coin set
+  Denom       : 
+  Program     : Lincoln Bicentennial cents colorized and gold plated 8 coin set
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#42 | ID: 7afa9416-4e1e-45c6-9c86-242716e90e3e
+  Coin Name   : 2013S   - Clad Proof Set 14 coins
+  Denom       : 
+  Program     : Clad Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#43 | ID: 7d33a2ce-c0cd-40d8-a2d3-906cc80617cd
+  Coin Name   : 2006S   - Clad Proof Set 10 Coins
+  Denom       : 
+  Program     : Clad Proof Set 10 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#44 | ID: 80bdf654-7187-46cd-8b29-025af073c16d
+  Coin Name   : 1971S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#45 | ID: 83203916-5509-47aa-9131-d639ba17ed4e
+  Coin Name   : 2013S   - Clad Proof Set 14 coins
+  Denom       : 
+  Program     : Clad Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#46 | ID: 83ba22b0-4bb3-43cf-8560-d27e65a694bd
+  Coin Name   : 2015S   - Clad Proof Set 14 coins
+  Denom       : 
+  Program     : Clad Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#47 | ID: 89b41513-ccc0-4cb6-9b3d-cfa991e630d7
+  Coin Name   : 2019 P Quarter - National Park Quarters
+  Denom       : Quarter
+  Program     : National Park Quarters
+  Theme       : Michigan Pictured Rocks National Lakeshore
+  Mismatches  : Reverse: Quarter coin but URL has 'dollar'
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-apollo-11-50th-anniversary-commemorative-gold-proof-five-dollar-reverse.jpg
+--------------------------------------------------
+#48 | ID: 99046f2e-7d32-4957-acce-01f8e46399dc
+  Coin Name   : 1995S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#49 | ID: 9e9cc96d-e1e0-401a-b2db-3f4d324696b6
+  Coin Name   : 1980S   - Clad  Proof Set 6 coins
+  Denom       : 
+  Program     : Clad  Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing obverse image
+  Current Obv : None
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204@gmail.com/coins/9e9cc96d-e1e0-401a-b2db-3f4d324696b6/reverse.jpg
+--------------------------------------------------
+#50 | ID: a34d398d-792c-40b8-a35e-4cb895462543
+  Coin Name   : 2001S   - Clad  Proof Set 10 coins
+  Denom       : 
+  Program     : Clad  Proof Set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#51 | ID: a51a5054-788f-457f-b29f-54d787de7acc
+  Coin Name   : 1982S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#52 | ID: a63599b5-c355-4310-ab3c-edfb58f7f277
+  Coin Name   : 2021  $1 - American Eagle Silver Dollar
+  Denom       : $1
+  Program     : American Eagle Silver Dollar
+  Theme       : Mercanti
+  Mismatches  : Reverse: Dollar coin but URL has 'quarter'
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2021-american-eagle-silver-one-ounce-reverse-proof-coin-obverse-new-design.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2021-general-george-washington-crossing-the-delaware-quarter-uncirculated-reverse.jpg
+--------------------------------------------------
+#53 | ID: a7e2f803-1ccd-46ea-a7c1-7be33f4ee08b
+  Coin Name   : 1981S   - Filled S Proof Set 6 Coins
+  Denom       : 
+  Program     : Filled S Proof Set 6 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#54 | ID: ac6bb748-b5e9-46e2-b37f-06c67b56bb20
+  Coin Name   : 1977S   - Clad  Proof Set 6 coins
+  Denom       : 
+  Program     : Clad  Proof Set 6 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#55 | ID: af62b4a0-0c0f-415b-8d4b-151b90dc13ef
+  Coin Name   : 1866  $5 - Liberty Head Gold Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Gold Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1866 but URL contains 1834; Reverse: Year mismatch: coin is 1866 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#56 | ID: b0db4df7-d921-4897-b304-29daff76b2d3
+  Coin Name   : 1926  $2.5 - US Commemorative Gold Coinage
+  Denom       : $2.5
+  Program     : US Commemorative Gold Coinage
+  Theme       : American Sesquicentennial Gold Quarter Eagle
+  Mismatches  : Obverse: Year mismatch: coin is 1926 but URL contains 1986
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1986-statue-of-liberty-commemorative-gold-obverse-2000x2000.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1926-sesquicentennial-gold-reverse.jpg
+--------------------------------------------------
+#57 | ID: b2cffe39-88c2-4dd6-b09b-cff247e99883
+  Coin Name   : 2009S   - Clad US Mint Proof set 18 coins
+  Denom       : 
+  Program     : Clad US Mint Proof set 18 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#58 | ID: b3adf0c3-5c6b-4a65-892a-accf5bc3c813
+  Coin Name   : 2002S   - Clad Proof Set 10 Coins
+  Denom       : 
+  Program     : Clad Proof Set 10 Coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#59 | ID: b97b09d3-c61a-482b-9311-63cf8cbeac7f
+  Coin Name   : 2008S   - Clad Proof Set 14 coins
+  Denom       : 
+  Program     : Clad Proof Set 14 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#60 | ID: bca640d6-4949-4ed5-b531-275d78638b4b
+  Coin Name   : 2010 S Quarter - National Park Quarters
+  Denom       : Quarter
+  Program     : National Park Quarters
+  Theme       : Connecticut Weir Farm National Historic Site
+  Mismatches  : Obverse: Year mismatch: coin is 2010 but URL contains 2016
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2016-national-park-service-centennial-commemorative-silver-uncirculated-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2010-america-the-beautiful-quarters-coin-yellowstone-wyoming-uncirculated-reverse.jpg
+--------------------------------------------------
+#61 | ID: c0699946-4625-46ef-ad1e-32dec04f60f9
+  Coin Name   : 2004S   - Clad  Proof Set 11 coins
+  Denom       : 
+  Program     : Clad  Proof Set 11 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#62 | ID: c3439d5a-b9c2-497f-a6ac-21a32bc94821
+  Coin Name   : 2016S   - Clad  Proof Set 13 coins
+  Denom       : 
+  Program     : Clad  Proof Set 13 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#63 | ID: c5244bae-0f9c-460b-b86b-4ee9b58e1798
+  Coin Name   : 1942  Coin Set - Birth Year Coin and Silver Commemorative Set
+  Denom       : Coin Set
+  Program     : Birth Year Coin and Silver Commemorative Set
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 1942 but URL contains 1983; Reverse: Year mismatch: coin is 1942 but URL contains 1920
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1983-olympics-Los-Angeles-dollar-discus-throw-commemorative-silver-dollar-proof-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1920-pilgrim-tercentenary-commemorative-silver-half-dollar-coin-reverse.jpg
+--------------------------------------------------
+#64 | ID: c57b2abf-8876-41a3-88d6-c35ac6b3a540
+  Coin Name   : 2019 PDS Quarter - America the Beautiful Quarters
+  Denom       : Quarter
+  Program     : America the Beautiful Quarters
+  Theme       : National Parks
+  Mismatches  : Reverse: Quarter coin but URL has 'dollar'
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-apollo-11-50th-anniversary-commemorative-gold-proof-five-dollar-reverse.jpg
+--------------------------------------------------
+#65 | ID: c81c7942-47c0-49c5-a53f-b1a1a9420a68
+  Coin Name   : 1989S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#66 | ID: c88df2f6-830f-4246-8dea-db43d5c47c42
+  Coin Name   :    - George Washimgtom Coin Note and stamp set
+  Denom       : 
+  Program     : George Washimgtom Coin Note and stamp set
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#67 | ID: cad31f3d-3385-4923-b5b4-60f1c260290b
+  Coin Name   : 1979-99   - Susan B. Anthony 4 coin Year Set
+  Denom       : 
+  Program     : Susan B. Anthony 4 coin Year Set
+  Theme       : 
+  Mismatches  : Missing obverse image
+  Current Obv : None
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/jseaman1204@gmail.com/coins/cad31f3d-3385-4923-b5b4-60f1c260290b/reverse.jpg
+--------------------------------------------------
+#68 | ID: cb23c3dd-b320-4b2f-8c4b-30750587340d
+  Coin Name   : 2017S   - Clad Proof Set 10 coins
+  Denom       : 
+  Program     : Clad Proof Set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#69 | ID: d0550a1d-dc0a-41b8-a168-1469b85ea464
+  Coin Name   : 1880  $5 - Liberty Head Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1880 but URL contains 1834; Reverse: Year mismatch: coin is 1880 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#70 | ID: d1eff7aa-7484-4297-94fd-8675609d6ccb
+  Coin Name   : 1985S   - Clad  Proof Set 5 coins
+  Denom       : 
+  Program     : Clad  Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#71 | ID: d487d5ae-6cf6-483a-af8e-979b32f64709
+  Coin Name   : 2007 P $1 - Presidential $1 Coin Program
+  Denom       : $1
+  Program     : Presidential $1 Coin Program
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2007 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/kaggle/state_quarters/2007_MT_Proof.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-presidential-dollar-coin-george-hw-bush-uncirculated-reverse.jpg
+--------------------------------------------------
+#72 | ID: db37a3ab-2b83-4d0b-a082-9ed7115d8017
+  Coin Name   : 1989 W $50 - American Gold Eagle
+  Denom       : $50
+  Program     : American Gold Eagle
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 1989 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-gold-one-ounce-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/new_coin_images/1989W Gold American Eagle $50 Reverse.jpg
+--------------------------------------------------
+#73 | ID: dbaced33-6b8a-409a-b312-07d9d5702cd6
+  Coin Name   : 2021S   - Clad Silver Proof Set 7 coins
+  Denom       : 
+  Program     : Clad Silver Proof Set 7 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#74 | ID: dc0d80b9-84cb-4f1d-a494-9d1adfd56a2c
+  Coin Name   : 2007 P $1 - Presidential $1 Coin Program
+  Denom       : $1
+  Program     : Presidential $1 Coin Program
+  Theme       : 
+  Mismatches  : Reverse: Year mismatch: coin is 2007 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/kaggle/state_quarters/2007_MT_Proof.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-presidential-dollar-coin-george-hw-bush-uncirculated-reverse.jpg
+--------------------------------------------------
+#75 | ID: e2af6882-80ee-4b9d-b59a-5398e4148e5b
+  Coin Name   : 2012 S Quarter - National Park Quarters
+  Denom       : Quarter
+  Program     : National Park Quarters
+  Theme       : Indiana George Rogers Clark National Historical Park
+  Mismatches  : Obverse: Year mismatch: coin is 2012 but URL contains 2016; Reverse: Year mismatch: coin is 2012 but URL contains 2020
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2016-national-park-service-centennial-commemorative-silver-uncirculated-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2020-america-the-beautiful-quarters-coin-national-park-of-american-samoa-uncirculated-reverse.jpg
+--------------------------------------------------
+#76 | ID: e8356cde-97ea-4283-93e9-b7d997269730
+  Coin Name   : 2001S   - Silver Proof set 10 coins
+  Denom       : 
+  Program     : Silver Proof set 10 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#77 | ID: e914d030-594e-4715-91a1-9b26d3820c58
+  Coin Name   : 1987S   - Clad Proof Set 5 coins
+  Denom       : 
+  Program     : Clad Proof Set 5 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#78 | ID: eb1510e8-07f6-4ac4-9b00-e43bce8c4f70
+  Coin Name   : 2019S   - Clad Proof Set 11 coins
+  Denom       : 
+  Program     : Clad Proof Set 11 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#79 | ID: f3cdc8e8-b34b-466e-9051-fab47dec21be
+  Coin Name   : 1866  $5 - Liberty Head Gold Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Gold Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1866 but URL contains 1834; Reverse: Year mismatch: coin is 1866 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------
+#80 | ID: f3de19c6-bb92-41c9-9291-e4a0267678bd
+  Coin Name   : 1992  $1 - American Eagle Silver Dollar
+  Denom       : $1
+  Program     : American Eagle Silver Dollar
+  Theme       : 
+  Mismatches  : Obverse: Year mismatch: coin is 1992 but URL contains 2019; Reverse: Year mismatch: coin is 1992 but URL contains 2025
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2019-american-eagle-silver-one-ounce-enhanced-reverse-proof-coin-obverse.jpg
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2025-american-eagle-laser-privy-silver-proof-reverse.jpg
+--------------------------------------------------
+#81 | ID: f55555a4-2e15-4551-bba4-a3f03863a97a
+  Coin Name   : 1999S   - Clad  Proof Set 9 coins
+  Denom       : 
+  Program     : Clad  Proof Set 9 coins
+  Theme       : 
+  Mismatches  : Missing both images
+  Current Obv : None
+  Current Rev : None
+--------------------------------------------------
+#82 | ID: f661569d-1314-4114-bfce-c25b7fe6fe8c
+  Coin Name   : 1893  $5 - Liberty Head Half Eagle
+  Denom       : $5
+  Program     : Liberty Head Half Eagle
+  Theme       : Liberty Head
+  Mismatches  : Obverse: Year mismatch: coin is 1893 but URL contains 1834; Reverse: Year mismatch: coin is 1893 but URL contains 2009
+  Current Obv : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/1834-classic-head-half-eagle-coins.png
+  Current Rev : https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2009-ultra-high-relief-double-eagle-gold-coin-reverse.jpg
+--------------------------------------------------

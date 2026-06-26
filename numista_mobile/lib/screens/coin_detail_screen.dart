@@ -23,6 +23,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../services/auth_service.dart';
+import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
@@ -155,6 +156,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
   bool _aiLoaded = false;
   String _aiInsight = '';
   String? _aiError;
+  bool _isInspectorMode = false;
 
   // Edit-mode controllers
   final Map<String, TextEditingController> _editCtrl = {};
@@ -169,6 +171,104 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
         _loadAiInsight();
       }
     });
+    _loadInspectorMode();
+  }
+
+  void _loadInspectorMode() async {
+    final enabled = await InspectorService.isEnabled();
+    if (mounted) {
+      setState(() {
+        _isInspectorMode = enabled;
+      });
+    }
+  }
+
+  void _showDiscrepancyDialog(String fieldName, String currentValue) {
+    final commentCtrl = TextEditingController();
+    final reportedCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.bug_report, color: _kAccent),
+            SizedBox(width: 8),
+            Text('Report Discrepancy'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Field: $fieldName',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 6),
+            Text('Current value: "$currentValue"',
+                style: const TextStyle(fontSize: 13, color: _kSubtext)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reportedCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Corrected Value (Optional)',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: commentCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Notes / Reason for discrepancy',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _kAccent),
+            onPressed: () async {
+              final comment = commentCtrl.text.trim();
+              final corrected = reportedCtrl.text.trim();
+              if (comment.isEmpty && corrected.isEmpty) return;
+
+              // Save to Firestore
+              await FirebaseFirestore.instance.collection('tester_feedback').add({
+                'coin_id': _coin.id,
+                'user_email': AuthService.userEmail,
+                'target_field': fieldName,
+                'reported_value': corrected,
+                'user_comment': comment,
+                'associated_image': _coin.imageUrlObverse,
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+
+              // Flag the coin's status in Firestore
+              await FirebaseFirestore.instance
+                  .doc('${AuthService.coinsPath}/${_coin.id}')
+                  .update({
+                'image_verification_status': 'flagged',
+                'image_verification_reason': 'Tester metadata discrepancy on $fieldName: $comment',
+              });
+
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Thank you! Feedback logged successfully.')),
+                );
+              }
+            },
+            child: const Text('Submit Report', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -588,7 +688,11 @@ Write in an engaging, authoritative style like a respected numismatic reference.
           child: TabBarView(
             controller: _tabCtrl,
             children: [
-              _DetailsTab(coin: _coin),
+              _DetailsTab(
+                coin: _coin,
+                isInspectorMode: _isInspectorMode,
+                onInspectField: _showDiscrepancyDialog,
+              ),
               _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices),
               _ProvenanceTab(coin: _coin),
               _AiInsightsTab(
@@ -892,8 +996,141 @@ class _CoinImagePairState extends State<_CoinImagePair> {
     }
   }
 
+  void _reportImageError(BuildContext context, String side) {
+    final commentCtrl = TextEditingController();
+    final denom = widget.coin.denomination.toLowerCase();
+    final series = widget.coin.programSeries.toLowerCase();
+    final isCurrency = denom.contains('note') || denom.contains('bill') || denom.contains('certificate') || series.contains('note') || series.contains('currency');
+    final isMedal = denom.contains('medal') || series.contains('medal');
+
+    final String assetType = isCurrency ? 'Currency' : isMedal ? 'Medal' : 'Coin';
+
+    final List<(String, String)> options = isCurrency
+        ? [
+            ('wrong_catalog_no', 'Wrong Friedberg/Catalog Number'),
+            ('mismatched_denom_year', 'Mismatched Denomination/Series Year'),
+            ('signature_discrepancy', 'Signature discrepancy'),
+            ('swapped_sides', 'Swapped Obverse/Reverse'),
+            ('other', 'Other'),
+          ]
+        : isMedal
+            ? [
+                ('mismatched_medal_design', 'Mismatched Medal design'),
+                ('wrong_metal_composition', 'Wrong metal composition indicator'),
+                ('other', 'Other'),
+              ]
+            : [
+                ('mismatched_design', 'Mismatched Design'),
+                ('wrong_mint_mark', 'Wrong Mint Mark position'),
+                ('swapped_sides', 'Swapped Obverse/Reverse'),
+                ('render_artifact', 'AI Render Artifact (garbled text, etc.)'),
+                ('other', 'Other'),
+              ];
+
+    String selectedType = options.first.$1;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: const [
+              Icon(Icons.warning_amber_rounded, color: _kRed),
+              SizedBox(width: 8),
+              Text('Report Image Error'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Reporting error on $side image for this $assetType.',
+                  style: const TextStyle(fontSize: 13, color: _kSubtext)),
+              const SizedBox(height: 16),
+              const Text('What is wrong with this image?',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: selectedType,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: options
+                    .map((opt) => DropdownMenuItem(
+                          value: opt.$1,
+                          child: Text(opt.$2, style: const TextStyle(fontSize: 13)),
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setDialogState(() {
+                      selectedType = val;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Optional comments / details',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _kRed),
+              onPressed: () async {
+                final comment = commentCtrl.text.trim();
+                final issueLabel = options.firstWhere((o) => o.$1 == selectedType).$2;
+
+                await FirebaseFirestore.instance.collection('tester_image_reports').add({
+                  'coin_id': widget.coin.id,
+                  'user_email': AuthService.userEmail,
+                  'image_side': side,
+                  'issue_type': selectedType,
+                  'user_comment': comment.isEmpty ? issueLabel : '$issueLabel: $comment',
+                  'timestamp': FieldValue.serverTimestamp(),
+                });
+
+                await FirebaseFirestore.instance
+                    .doc('${AuthService.coinsPath}/${widget.coin.id}')
+                    .update({
+                  'image_verification_status': 'flagged',
+                  'image_verification_reason': 'Tester reported $side image: $issueLabel. $comment',
+                });
+
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Thank you! Image flag logged successfully.'),
+                      backgroundColor: _kRed,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Submit Flag', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showFlag = AuthService.isBetaTester;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -903,6 +1140,7 @@ class _CoinImagePairState extends State<_CoinImagePair> {
           heroTag: 'coin_obv_${widget.coin.id}',
           isLoading: _loadingRef,
           attribution: _attribution,
+          onFlag: showFlag ? () => _reportImageError(context, 'obverse') : null,
         ),
         const SizedBox(width: 8),
         _CoinImageTile(
@@ -911,6 +1149,7 @@ class _CoinImagePairState extends State<_CoinImagePair> {
           heroTag: 'coin_rev_${widget.coin.id}',
           isLoading: _loadingRef,
           attribution: _attribution,
+          onFlag: showFlag ? () => _reportImageError(context, 'reverse') : null,
         ),
       ],
     );
@@ -923,45 +1162,71 @@ class _CoinImageTile extends StatelessWidget {
   final String heroTag;
   final bool isLoading;
   final String? attribution;
+  final VoidCallback? onFlag;
   const _CoinImageTile({
     required this.url,
     required this.label,
     required this.heroTag,
     this.isLoading = false,
     this.attribution,
+    this.onFlag,
   });
 
   @override
   Widget build(BuildContext context) {
     const size = 120.0;
-    return GestureDetector(
-      onTap: url.isNotEmpty ? () => _openZoom(context) : null,
-      child: Hero(
-        tag: heroTag,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha(12),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withAlpha(30), width: 1),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(9),
-            child: isLoading && url.isEmpty
-                ? _skeleton()   // Show shimmer while reference lookup is in flight
-                : url.isNotEmpty
-                    ? Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, st) => _placeholder(),
-                        loadingBuilder: (ctx, child, progress) =>
-                          progress == null ? child : _skeleton(),
-                      )
-                    : _placeholder(),
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: url.isNotEmpty ? () => _openZoom(context) : null,
+          child: Hero(
+            tag: heroTag,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withAlpha(30), width: 1),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: isLoading && url.isEmpty
+                    ? _skeleton()   // Show shimmer while reference lookup is in flight
+                    : url.isNotEmpty
+                        ? Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, st) => _placeholder(),
+                            loadingBuilder: (ctx, child, progress) =>
+                              progress == null ? child : _skeleton(),
+                          )
+                        : _placeholder(),
+              ),
+            ),
           ),
         ),
-      ),
+        if (onFlag != null && url.isNotEmpty)
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onFlag,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.flag,
+                  color: Color(0xFFDC3545),
+                  size: 14,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1104,7 +1369,14 @@ class _ActionBtn extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _DetailsTab extends StatelessWidget {
   final CoinModel coin;
-  const _DetailsTab({required this.coin});
+  final bool isInspectorMode;
+  final Function(String fieldName, String currentValue) onInspectField;
+
+  const _DetailsTab({
+    required this.coin,
+    this.isInspectorMode = false,
+    required this.onInspectField,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1135,7 +1407,16 @@ class _DetailsTab extends StatelessWidget {
       child: Wrap(
         spacing: 12,
         runSpacing: 12,
-        children: fields.map((f) => _DetailTile(label: f.$1, value: f.$2)).toList(),
+        children: fields.map((f) {
+          final isAuditable = const ['Year', 'Mint Mark', 'Variety / Error', 'Denomination'].contains(f.$1);
+          return _DetailTile(
+            label: f.$1,
+            value: f.$2,
+            onInspect: (isInspectorMode && isAuditable)
+                ? () => onInspectField(f.$1, f.$2)
+                : null,
+          );
+        }).toList(),
       ),
     );
   }
@@ -1258,83 +1539,25 @@ class _FinancialsTab extends StatelessWidget {
 
   double _parseAiValue(String raw) {
     if (raw.isEmpty || raw == 'Pending') return 0;
-    final clean = raw.replaceAll(',', '');
-    if (clean.contains(' - ')) {
-      final parts = clean.split(' - ');
-      final a = double.tryParse(parts[0].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
-      final b = double.tryParse(parts[1].replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
-      return (a + b) / 2;
+    // Normalise all dash variants and strip commas
+    final norm = raw
+        .replaceAll(',', '')
+        .replaceAll('\u2013', '-')   // en-dash
+        .replaceAll('\u2014', '-')   // em-dash
+        .replaceAll('\u2012', '-');  // figure dash
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc. allowing optional leading $ or non-digits on second part
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
+    if (rangeMatch != null) {
+      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
+      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
+      final mid = (a + b) / 2;
+      return mid > 100000 ? 0.0 : mid;   // sanity cap
     }
-    return double.tryParse(clean.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
+    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return v > 100000 ? 0.0 : v;          // sanity cap
   }
 }
 
-class _ProfitLossCard extends StatelessWidget {
-  final double purchaseCost;
-  final double aiValue;
-  final double profit;
-  final double? profitPct;
-
-  const _ProfitLossCard({
-    required this.purchaseCost,
-    required this.aiValue,
-    required this.profit,
-    this.profitPct,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isGain = profit >= 0;
-    final color = isGain ? _kGreen : _kRed;
-    final sign = isGain ? '+' : '';
-    String fmt(double v) => '\$${v.abs().toStringAsFixed(2)}';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withAlpha(18),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withAlpha(60)),
-      ),
-      child: Row(children: [
-        Icon(isGain ? Icons.trending_up : Icons.trending_down, color: color, size: 28),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(isGain ? 'Unrealised Gain' : 'Unrealised Loss',
-              style: const TextStyle(fontSize: 11, color: _kSubtext)),
-            const SizedBox(height: 2),
-            Text('$sign${fmt(profit)}',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-          ]),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          _FinRow('Paid', fmt(purchaseCost)),
-          _FinRow('Est.', fmt(aiValue), bold: true),
-          if (profitPct != null)
-            _FinRow('%', '$sign${profitPct!.toStringAsFixed(1)}%', color: color),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _FinRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? color;
-  final bool bold;
-  const _FinRow(this.label, this.value, {this.color, this.bold = false});
-
-  @override
-  Widget build(BuildContext context) => Row(children: [
-    Text('$label ', style: const TextStyle(fontSize: 11, color: _kSubtext)),
-    Text(value, style: TextStyle(
-      fontSize: 11, fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-      color: color ?? _kText)),
-  ]);
-}
 
 class _SpotPriceRow extends StatelessWidget {
   final Map<String, double> spotPrices;
@@ -2287,8 +2510,8 @@ class _HistoryRow extends StatelessWidget {
 class _DetailTile extends StatelessWidget {
   final String label;
   final String value;
-  final bool accent;
-  const _DetailTile({required this.label, required this.value, this.accent = false});
+  final VoidCallback? onInspect;
+  const _DetailTile({required this.label, required this.value, this.onInspect});
 
   @override
   Widget build(BuildContext context) {
@@ -2297,19 +2520,29 @@ class _DetailTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: accent ? _kAccent.withAlpha(18) : _kSurface,
+          color: _kSurface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: accent ? _kAccent.withAlpha(80) : _kBorder),
+          border: Border.all(color: _kBorder),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: _kSubtext,
-              fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 10, color: _kSubtext,
+                  fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+              if (onInspect != null)
+                GestureDetector(
+                  onTap: onInspect,
+                  child: const Icon(Icons.comment_outlined, size: 12, color: _kAccent),
+                ),
+            ],
+          ),
           const SizedBox(height: 4),
           GestureDetector(
             onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
             child: Text(value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                  color: accent ? _kAccent : _kText)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                  color: _kText)),
           ),
         ]),
       ),

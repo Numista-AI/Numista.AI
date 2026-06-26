@@ -149,23 +149,85 @@ class BatchValuationService {
   Future<void> _run() async {
     final coinsRef = FirebaseFirestore.instance
         .collection(AuthService.coinsPath);
+    final currencyRef = FirebaseFirestore.instance
+        .collection(AuthService.currencyPath);
 
-    // Fetch all coins where AI Estimated Value is missing/Pending
-    // (photo-scanned coins with ai_value_source == 'photo_scan' are skipped)
-    final snap = await coinsRef.get();
-    final unvalued = snap.docs.where((d) {
-      final data   = d.data();
+    // 1. Fetch unvalued coins
+    final coinsSnap = await coinsRef.get();
+    final List<_ValuationTask> tasks = [];
+
+    for (final doc in coinsSnap.docs) {
+      final data   = doc.data();
       final val    = data['AI Estimated Value']?.toString() ?? '';
       final source = data['ai_value_source']?.toString() ?? '';
-      // Skip if already photo-scanned (those are more accurate)
-      if (source == 'photo_scan') return false;
-      // Skip if already has a text estimate
-      if (source == 'text_estimator') return false;
-      // Process if value is empty or Pending
-      return val.isEmpty || val == 'Pending' || val == 'null';
-    }).toList();
+      if (source == 'photo_scan' || source == 'text_estimator') continue;
+      if (val.isEmpty || val == 'Pending' || val == 'null') {
+        final year   = data['Year']?.toString()             ?? '';
+        final denom  = data['Denomination']?.toString()     ?? '';
+        final mint   = data['Mint Mark']?.toString()        ?? '';
+        final cond   = data['Condition']?.toString()        ?? '';
+        final series = data['Program/Series']?.toString()   ?? '';
+        final metal  = data['Metal Content']?.toString()    ?? '';
+        final country = data['Country']?.toString()         ?? 'USA';
 
-    final total = unvalued.length;
+        final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
+        final coinName = [
+          if (year.isNotEmpty) '$year$mintStr',
+          if (denom.isNotEmpty) denom,
+        ].join(' ').trim();
+
+        tasks.add(_ValuationTask(
+          collection: 'coins',
+          docId: doc.id,
+          itemType: 'coin',
+          name: coinName.isEmpty ? 'Unknown coin' : coinName,
+          year: year,
+          denomination: denom,
+          condition: cond,
+          country: country,
+          details: 'Program: $series, Metal: $metal',
+          extraData: {
+            'mint_mark': mint,
+            'program_series': series,
+            'metal_content': metal,
+          },
+        ));
+      }
+    }
+
+    // 2. Fetch unvalued currency/banknotes
+    final currencySnap = await currencyRef.get();
+    for (final doc in currencySnap.docs) {
+      final data = doc.data();
+      final val = data['AI Estimated Value']?.toString() ?? '';
+      final source = data['ai_value_source']?.toString() ?? '';
+      if (source == 'photo_scan' || source == 'text_estimator') continue;
+      if (val.isEmpty || val == 'Pending' || val == 'null' || val == 'None') {
+        final year   = data['Year']?.toString()             ?? '';
+        final denom  = data['Denomination']?.toString()     ?? '';
+        final cond   = data['Condition']?.toString()        ?? '';
+        final country = data['Country']?.toString()         ?? 'USA';
+        final desc   = data['Description']?.toString()       ?? '';
+        final issuer = data['Series/Issuer']?.toString()     ?? '';
+        final notes  = data['Personal Notes']?.toString()    ?? '';
+
+        final name = desc.isNotEmpty ? desc : '$denom Banknote';
+
+        tasks.add(_ValuationTask(
+          collection: 'currency',
+          docId: doc.id,
+          itemType: 'banknote',
+          name: name,
+          year: year,
+          denomination: denom,
+          condition: cond,
+          country: country,
+          details: 'Issuer/Series: $issuer. Notes: $notes',
+        ));
+      }
+    }
+
+    final total = tasks.length;
     int completed = _progress.completed; // resume from last position
     int failed    = _progress.failed;
 
@@ -176,50 +238,59 @@ class BatchValuationService {
 
     if (total == 0) {
       _running = false;
+      final totalItemsCount = coinsSnap.docs.length + currencySnap.docs.length;
       _emit(BatchValuationProgress(
-        total: snap.docs.length, completed: snap.docs.length,
+        total: totalItemsCount, completed: totalItemsCount,
         isRunning: false,
       ));
       return;
     }
 
-    for (final doc in unvalued) {
+    for (final task in tasks) {
       if (_pauseRequested) {
         _running = false;
         _emit(_progress.copyWith(isRunning: false, isPaused: true));
         return;
       }
 
-      final data = doc.data();
-      final year   = data['Year']?.toString()             ?? '';
-      final denom  = data['Denomination']?.toString()     ?? '';
-      final mint   = data['Mint Mark']?.toString()        ?? '';
-      final cond   = data['Condition']?.toString()        ?? '';
-      final series = data['Program/Series']?.toString()   ?? '';
-      final metal  = data['Metal Content']?.toString()    ?? '';
-      final country = data['Country']?.toString()         ?? 'USA';
-
-      // Build human-readable coin name for the progress display
-      final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
-      final coinName = [
-        if (year.isNotEmpty) '$year$mintStr',
-        if (denom.isNotEmpty) denom,
-      ].join(' ');
-
       _emit(_progress.copyWith(
         total: total, isRunning: true, isPaused: false,
-        currentCoinName: coinName.trim().isEmpty ? 'Unknown coin' : coinName,
+        currentCoinName: task.name,
       ));
 
       try {
-        final result = await _callApi(
-          year: year, denomination: denom, mintMark: mint,
-          condition: cond, programSeries: series,
-          metalContent: metal, country: country,
-        );
+        Map<String, dynamic> result;
+        if (task.collection == 'coins') {
+          final ed = task.extraData ?? {};
+          result = await _callApi(
+            year: task.year,
+            denomination: task.denomination,
+            mintMark: ed['mint_mark'] ?? '',
+            condition: task.condition,
+            programSeries: ed['program_series'] ?? '',
+            metalContent: ed['metal_content'] ?? '',
+            country: task.country,
+          );
+        } else {
+          result = await _callGeneralApi(
+            itemType: task.itemType,
+            name: task.name,
+            year: task.year,
+            denomination: task.denomination,
+            condition: task.condition,
+            country: task.country,
+            details: task.details,
+          );
+        }
 
         // Write result back to Firestore immediately
-        await coinsRef.doc(doc.id).update({
+        final docRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(AuthService.userEmail)
+            .collection(task.collection)
+            .doc(task.docId);
+
+        await docRef.update({
           'AI Estimated Value': result['estimated_value'] ?? 'Pending',
           'ai_value_source':   'text_estimator',
           'ai_value_basis':    result['basis'] ?? '',
@@ -228,7 +299,7 @@ class BatchValuationService {
         });
         completed++;
       } catch (e) {
-        debugPrint('[BatchValuation] Error on ${doc.id}: $e');
+        debugPrint('[BatchValuation] Error on task (${task.collection}/${task.docId}): $e');
         failed++;
       }
 
@@ -281,6 +352,35 @@ class BatchValuationService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> _callGeneralApi({
+    required String itemType,
+    required String name,
+    required String year,
+    required String denomination,
+    required String condition,
+    required String country,
+    required String details,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$kApiBaseUrl/api/estimate_value_general'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'item_type':    itemType,
+        'name':         name,
+        'year':         year,
+        'denomination': denomination,
+        'condition':    condition,
+        'country':      country,
+        'details':      details,
+      }),
+    ).timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      throw Exception('API ${response.statusCode}: ${response.body}');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   void _emit(BatchValuationProgress p) {
     _progress = p;
     if (!_controller.isClosed) _controller.add(p);
@@ -323,3 +423,30 @@ class BatchValuationService {
 
   void dispose() => _controller.close();
 }
+
+class _ValuationTask {
+  final String collection; // 'coins' or 'currency'
+  final String docId;
+  final String itemType;
+  final String name;
+  final String year;
+  final String denomination;
+  final String condition;
+  final String country;
+  final String details;
+  final Map<String, dynamic>? extraData;
+
+  _ValuationTask({
+    required this.collection,
+    required this.docId,
+    required this.itemType,
+    required this.name,
+    required this.year,
+    required this.denomination,
+    required this.condition,
+    required this.country,
+    required this.details,
+    this.extraData,
+  });
+}
+

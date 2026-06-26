@@ -58,19 +58,19 @@ export const AddCoinPage: React.FC<AddCoinPageProps> = ({ onImport, onRestore, e
     return (
       <div className="max-w-4xl mx-auto mt-12 px-4 space-y-12 pb-20">
         <div className="text-center space-y-4">
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Expand Collection</h2>
-          <p className="text-slate-500 text-lg">Choose a way to catalog your new coins.</p>
+          <h2 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Expand Collection</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-lg">Choose a way to catalog your new coins.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button onClick={() => setMode('MANUAL')} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all text-center">
+          <button onClick={() => setMode('MANUAL')} className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all text-center">
             <PenTool className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold">Manual Entry</h3>
-            <p className="text-slate-500 text-sm mt-2">Type in your coin details directly.</p>
+            <h3 className="text-xl font-bold dark:text-slate-100">Manual Entry</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Type in your coin details directly.</p>
           </button>
-          <button onClick={() => setMode('EXCEL')} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all text-center">
+          <button onClick={() => setMode('EXCEL')} className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all text-center">
             <FileSpreadsheet className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold">Import Spreadsheet</h3>
-            <p className="text-slate-500 text-sm mt-2">Upload multiple coins using Excel.</p>
+            <h3 className="text-xl font-bold dark:text-slate-100">Import Spreadsheet</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Upload multiple coins using Excel.</p>
           </button>
         </div>
         {error && <p className="text-center text-red-500 font-bold">{error}</p>}
@@ -80,12 +80,12 @@ export const AddCoinPage: React.FC<AddCoinPageProps> = ({ onImport, onRestore, e
 
   if (mode === 'EXCEL') {
     return (
-      <div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded-3xl border border-slate-200 shadow-xl">
+      <div className="max-w-2xl mx-auto mt-12 p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl">
         <button onClick={() => setMode('SELECTION')} className="flex items-center gap-2 mb-8 text-slate-500 hover:text-slate-900"><ArrowLeft className="w-4 h-4" /> Back</button>
         <div className="text-center space-y-6">
-          <h2 className="text-2xl font-bold">Import from Excel</h2>
+          <h2 className="text-2xl font-bold dark:text-slate-100">Import from Excel</h2>
           <input type="file" accept=".xlsx" className="hidden" id="excel-input" onChange={(e) => e.target.files?.[0] && handleExcelUpload(e.target.files[0])} />
-          <label htmlFor="excel-input" className="cursor-pointer block border-2 border-dashed border-slate-200 rounded-2xl p-12 hover:border-emerald-400 transition-colors">
+          <label htmlFor="excel-input" className="cursor-pointer block border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-2xl p-12 hover:border-emerald-400 transition-colors">
             <Upload className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="font-bold text-emerald-600">Click to Select Spreadsheet</p>
             <p className="text-slate-400 text-sm mt-2">Supports .xlsx and .xls formats</p>
@@ -105,20 +105,20 @@ export const AddCoinPage: React.FC<AddCoinPageProps> = ({ onImport, onRestore, e
     return (
       <div className="max-w-4xl mx-auto mt-8 space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Review Imported Items</h2>
+          <h2 className="text-2xl font-bold dark:text-slate-100">Review Imported Items</h2>
           <button onClick={finalizeImport} className="bg-blue-600 text-white px-8 py-2 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors">Finalize ({importCandidates.length})</button>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
               <tr><th className="px-6 py-4">Item</th><th className="px-6 py-4">Qty</th><th className="px-6 py-4 text-right">Cost</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {importCandidates.map((c, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-bold text-slate-800">{c.year} {c.denomination}</td>
-                  <td className="px-6 py-4 text-slate-600">{c.quantity}</td>
-                  <td className="px-6 py-4 text-right text-slate-600 font-mono">${c.purchaseCost?.toFixed(2)}</td>
+                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{c.year} {c.denomination}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{c.quantity}</td>
+                  <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400 font-mono">${c.purchaseCost?.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -130,9 +130,9 @@ export const AddCoinPage: React.FC<AddCoinPageProps> = ({ onImport, onRestore, e
 
   if (mode === 'MANUAL') {
       return (
-          <div className="max-w-2xl mx-auto mt-12 p-10 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl">
-              <button onClick={() => setMode('SELECTION')} className="flex items-center gap-2 mb-8 text-slate-500 hover:text-slate-900 font-bold uppercase text-xs tracking-widest"><ArrowLeft className="w-4 h-4" /> Back to Selection</button>
-              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-8">Direct Cataloging</h2>
+          <div className="max-w-2xl mx-auto mt-12 p-10 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 shadow-xl">
+              <button onClick={() => setMode('SELECTION')} className="flex items-center gap-2 mb-8 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-bold uppercase text-xs tracking-widest"><ArrowLeft className="w-4 h-4" /> Back to Selection</button>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight mb-8">Direct Cataloging</h2>
               
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">

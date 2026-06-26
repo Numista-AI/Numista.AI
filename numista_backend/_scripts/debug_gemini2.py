@@ -1,12 +1,16 @@
 """Debug: print raw Gemini response from actual dataset document."""
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 from google.cloud import documentai_v1beta3 as documentai
 import google.auth, json
+import sys
+
+# Force UTF-8 output
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-vertexai.init(project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
-model = GenerativeModel("gemini-2.5-flash")
+client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
 
 doc_service = documentai.DocumentServiceClient(
     credentials=creds,
@@ -37,9 +41,10 @@ EXTRACTION_PROMPT = (
 )
 prompt = EXTRACTION_PROMPT + doc_text[:12000]
 
-response = model.generate_content(
-    [Part.from_text(prompt)],
-    generation_config=GenerationConfig(
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    config=genai_types.GenerateContentConfig(
         response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),
 )
 raw = response.text or ""

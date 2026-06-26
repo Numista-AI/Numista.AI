@@ -1,6 +1,7 @@
 import os
 import json
 import sqlite3
+import re
 import google.auth
 from google import genai
 from google.genai import types as genai_types
@@ -14,6 +15,128 @@ DB_PATH = os.path.join("database", "numista_coins.db")
 COINS_JSON = "definitive_catalog_full.json"
 BANKNOTES_JSON = "banknotes_expanded.json"
 KEY_PATH = "serviceAccountKey.json.json"
+
+def normalize_denom(raw, default="One Dollar"):
+    if not raw:
+        return default
+    s = str(raw).lower().strip()
+    
+    # 1. Handle dollar sign with numbers anywhere in the string
+    match_ds = re.search(r"\$(\d+(?:\.\d+)?)", s)
+    if match_ds:
+        val_str = match_ds.group(1)
+        val_map = {
+            "0.01": "One Cent",
+            "0.05": "Five Cents",
+            "0.10": "One Dime",
+            "0.1": "One Dime",
+            "0.25": "Quarter Dollar",
+            "0.50": "Half Dollar",
+            "0.5": "Half Dollar",
+            "1": "One Dollar",
+            "2": "Two Dollars",
+            "2.5": "Two and a Half Dollars",
+            "3": "Three Dollars",
+            "4": "Four Dollars",
+            "5": "Five Dollars",
+            "10": "Ten Dollars",
+            "20": "Twenty Dollars",
+            "25": "Twenty-Five Dollars",
+            "50": "Fifty Dollars",
+            "100": "One Hundred Dollars",
+            "500": "Five Hundred Dollars",
+            "1000": "One Thousand Dollars",
+            "5000": "Five Thousand Dollars",
+            "10000": "Ten Thousand Dollars",
+            "100000": "One Hundred Thousand Dollars"
+        }
+        if val_str in val_map:
+            return val_map[val_str]
+            
+    # 2. Check specific multi-digit or compound names first to avoid collision
+    if "half cent" in s or "½ cent" in s or "1/2 cent" in s:
+        return "Half Cent"
+    if "quarter cent" in s or "1/4 cent" in s:
+        return "Quarter Cent"
+    if "two cent" in s or "2 cent" in s:
+        return "Two Cents"
+    if "three cent" in s or "3 cent" in s:
+        return "Three Cents"
+        
+    # Check half dimes BEFORE dime and nickel!
+    if "half dime" in s or "½ dime" in s or "1/2 dime" in s:
+        return "Half Dime"
+        
+    if "five cent" in s or "5 cent" in s or "nickel" in s:
+        return "Five Cents"
+        
+    # Check two and a half dollars/quarter eagles BEFORE half dollar/dollar!
+    if "two and a half dollar" in s or "2.5 dollar" in s or "2-1/2 dollar" in s or "2½ dollar" in s or "quarter eagle" in s:
+        return "Two and a Half Dollars"
+        
+    if "fifty cent" in s or "50 cent" in s or "half dollar" in s or "½ dollar" in s or "1/2 dollar" in s:
+        return "Half Dollar"
+    if "quarter dollar" in s or "¼ dollar" in s or "1/4 dollar" in s or "twenty-five cent" in s or "25 cent" in s or "quarter" in s:
+        return "Quarter Dollar"
+    if "twenty cent" in s or "20 cent" in s:
+        return "Twenty Cents"
+    if "one dime" in s or "1 dime" in s or "ten cent" in s or "10 cent" in s or "dime" in s:
+        return "One Dime"
+    if "one cent" in s or "1 cent" in s or "penny" in s or "pennies" in s or "cent" in s:
+        return "One Cent"
+        
+    # 3. Check dollar coins (after checking half/quarter dollar/two and a half dollar)
+    if "dollar" in s or "stella" in s or "double eagle" in s or "eagle" in s or "half eagle" in s or "gold clause" in s:
+        if "double eagle" in s or "twenty dollar" in s or "20 dollar" in s:
+            return "Twenty Dollars"
+        if "half eagle" in s or "five dollar" in s or "5 dollar" in s:
+            return "Five Dollars"
+        if "eagle" in s or "ten dollar" in s or "10 dollar" in s:
+            return "Ten Dollars"
+        if "fifty dollar" in s or "50 dollar" in s:
+            return "Fifty Dollars"
+        if "hundred dollar" in s or "100 dollar" in s:
+            return "One Hundred Dollars"
+        if "five hundred dollar" in s or "500 dollar" in s:
+            return "Five Hundred Dollars"
+        if "thousand dollar" in s or "1000 dollar" in s:
+            return "One Thousand Dollars"
+        if "five thousand dollar" in s or "5000 dollar" in s:
+            return "Five Thousand Dollars"
+        if "ten thousand dollar" in s or "10000 dollar" in s:
+            return "Ten Thousand Dollars"
+        if "one hundred thousand dollar" in s or "100000 dollar" in s:
+            return "One Hundred Thousand Dollars"
+        if "two dollar" in s or "2 dollar" in s:
+            return "Two Dollars"
+        if "three dollar" in s or "3 dollar" in s:
+            return "Three Dollars"
+        if "four dollar" in s or "4 dollar" in s or "stella" in s:
+            return "Four Dollars"
+            
+        return "One Dollar"
+        
+    if "medal" in s:
+        return "Medal"
+        
+    return s.title()
+
+
+def normalize_mint(raw):
+    if not raw:
+        return "P"
+    s = str(raw).upper().strip()
+    if s in ["NONE", "NULL", "P", "P-MINT", "P_MINT", ""]:
+        return "P"
+    return s
+
+def extract_fr_number(variety):
+    if not variety:
+        return ""
+    match = re.search(r"Fr\.\s*(\d+[a-zA-Z]?)", variety, re.IGNORECASE)
+    if match:
+        return f"fr. {match.group(1).lower()}"
+    return variety.lower().strip()
 
 def get_medals_list(genai_client):
     print("\nGenerating definitive U.S. Medals list via Gemini...")
@@ -63,6 +186,13 @@ def main():
     print("  Numista.AI - Definitive Catalog Consolidation & Loading")
     print("="*60)
 
+    # Initialize Firebase Admin early to retrieve user collection records for self-healing
+    print("Initializing Firebase Admin Client...")
+    if not _apps:
+        cred = credentials.Certificate(KEY_PATH)
+        initialize_app(cred)
+    db = firestore.client()
+
     # 1. Load Coins
     coins = []
     if os.path.exists(COINS_JSON):
@@ -88,15 +218,177 @@ def main():
     genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=GEMINI_LOCATION)
     medals = get_medals_list(genai_client)
 
+    # User-owned self-healing is disabled to prevent reference pollution in canonical master catalog
+    user_coins = []
+    user_notes = []
+
     # 4. Consolidate Everything
     consolidated_catalog = []
+
+    # 4.0 Load the baseline 10,007 coins from the SQLite database
+    baseline_coins_count = 0
+    baseline_medals_count = 0
+    baseline_rejected_count = 0
     
-    # Process Coins
+    print("\nLoading baseline coins from SQLite table 'coins'...")
+    try:
+        db_conn = sqlite3.connect(DB_PATH)
+        db_conn.row_factory = sqlite3.Row
+        db_cursor = db_conn.cursor()
+        db_cursor.execute("SELECT id, title, issuer, value, composition, mintage, also_known_as, category FROM coins")
+        baseline_rows = db_cursor.fetchall()
+        db_conn.close()
+        print(f"  Loaded {len(baseline_rows)} baseline coin rows.")
+
+        # Load baseline series map
+        baseline_map = {}
+        map_path = "baseline_series_map.json"
+        if os.path.exists(map_path):
+            print(f"  Loading baseline series mapping from {map_path}...")
+            with open(map_path, "r", encoding="utf-8") as f:
+                baseline_map = json.load(f)
+            print(f"    Loaded mapping for {len(baseline_map)} unique baseline titles.")
+        else:
+            print(f"    WARNING: {map_path} not found. Running baseline coins with default mapping.")
+
+        REJECT_KEYWORDS = [
+            "token", "privately struck", "private issue", "merchant", 
+            "municipal", "exonumia", "wooden nickel", "poker chip", 
+            "gaming", "replica", "copy", "novelty", "play money",
+            "counterfeit", "souvenir medal", "fantasy issue", "reproduction"
+        ]
+
+        ACCEPT_MEDAL_KEYWORDS = [
+            "congressional gold", 
+            "presidential medal", 
+            "us mint national", 
+            "u.s. mint national",
+            "official medal",
+            "united states mint bicentennial",
+            "u.s. centennial exposition (official medal)",
+            "us centennial exposition (official medal)",
+            "united states mint, philadelphia"
+        ]
+
+        def parse_denom_baseline(title):
+            match = re.match(r"^([\d¼½¾⅓⅔⅛\s\-\/\u00bc\u00bd\u00be]+(?:Cent|Cents|Dollar|Dollars|Mill|Mills|Stella|Stellas|Dime|Dimes|Nickel|Nickels))\b", title, re.IGNORECASE)
+            if match:
+                val = match.group(1).strip()
+                val = re.sub(r'\s*\-\s*$', '', val)
+                return normalize_denom(val)
+                
+            lower_title = title.lower()
+            if "one cent" in lower_title or "1 cent" in lower_title or "penny" in lower_title:
+                return "One Cent"
+            if "five cents" in lower_title or "5 cents" in lower_title or "nickel" in lower_title:
+                return "Five Cents"
+            if "one dime" in lower_title or "1 dime" in lower_title or "10 cents" in lower_title or "dime" in lower_title:
+                return "One Dime"
+            if "quarter" in lower_title or "25 cents" in lower_title or "¼ dollar" in lower_title:
+                return "Quarter Dollar"
+            if "half dollar" in lower_title or "50 cents" in lower_title or "½ dollar" in lower_title:
+                return "Half Dollar"
+            if "one dollar" in lower_title or "1 dollar" in lower_title or "dollar" in lower_title:
+                return "One Dollar"
+                
+            match_ds = re.search(r"\$(\d+(?:\.\d+)?)", title)
+            if match_ds:
+                return normalize_denom(f"${match_ds.group(1)}")
+                
+            return "One Dollar"
+
+        for r in baseline_rows:
+            title = r["title"] or ""
+            aka = r["also_known_as"] or ""
+            issuer = r["issuer"] or ""
+            combined = (title + " " + aka + " " + issuer).lower()
+            
+            # Check rejected
+            is_rejected = False
+            for kw in REJECT_KEYWORDS:
+                if kw in combined:
+                    is_rejected = True
+                    break
+                    
+            if is_rejected:
+                baseline_rejected_count += 1
+                continue
+                
+            # Check medal
+            is_medal = "medal" in combined or "medallion" in combined
+            
+            if is_medal:
+                is_official_medal = False
+                for kw in ACCEPT_MEDAL_KEYWORDS:
+                    if kw in combined:
+                        is_official_medal = True
+                        break
+                if "congressional" in combined or "presidential" in combined:
+                    is_official_medal = True
+                    
+                if is_official_medal:
+                    baseline_medals_count += 1
+                    # Merge official medals from baseline
+                    map_entry = baseline_map.get(title, {})
+                    series_val = map_entry.get("series", "U.S. Medals")
+                    year_val = map_entry.get("year", "")
+                    mint_val = map_entry.get("mint_mark", "")
+
+                    consolidated_catalog.append({
+                        "doc_id": f"ref_coin_type_{r['id']}",
+                        "year": year_val,
+                        "denomination": "Medal",
+                        "mint_mark": mint_val,
+                        "variety": title,
+                        "note": aka or f"Official U.S. Medal: {title}",
+                        "series": series_val,
+                        "category": "medal"
+                    })
+                else:
+                    baseline_rejected_count += 1
+            else:
+                # Mapped baseline coin
+                baseline_coins_count += 1
+                denom_val = parse_denom_baseline(title)
+                if not denom_val:
+                    denom_val = r["category"].title() if r["category"] else "Coin"
+                
+                map_entry = baseline_map.get(title, {})
+                series_val = map_entry.get("series", r["category"].title() if r["category"] else "U.S. Coins")
+                year_val = map_entry.get("year", "")
+                mint_val = map_entry.get("mint_mark", "")
+                    
+                consolidated_catalog.append({
+                    "doc_id": f"ref_coin_type_{r['id']}",
+                    "year": year_val,
+                    "denomination": denom_val,
+                    "mint_mark": mint_val,
+                    "variety": title,
+                    "note": aka or f"Base coin type: {title}",
+                    "series": series_val,
+                    "category": "coin"
+                })
+        print(f"  Baseline classification completed:")
+        print(f"    Coins Mapped: {baseline_coins_count}")
+        print(f"    Medals Mapped: {baseline_medals_count}")
+        print(f"    Rejected/Filtered: {baseline_rejected_count}")
+        
+    except Exception as db_e:
+        print(f"  ERROR loading baseline coins from SQLite: {db_e}")
+
+    # Process Coins from definitive_catalog_full.json
+    ref_coin_keys = set()
     for c in coins:
+        year = str(c.get("year", "")).strip()
+        denom = normalize_denom(c.get("denomination", ""), default="One Dollar")
+        mint = normalize_mint(c.get("mint_mark", ""))
+        variety = str(c.get("variety", "")).lower().strip()
+        ref_coin_keys.add((year, denom, mint, variety))
+        
         consolidated_catalog.append({
-            "doc_id": f"ref_coin_{slugify(c.get('series'))}_{c.get('year')}_{slugify(c.get('mint_mark'))}_{slugify(c.get('variety'))}"[:100],
+            "doc_id": f"ref_coin_{slugify(c.get('series'))}_{slugify(denom)}_{slugify(c.get('year'))}_{slugify(c.get('mint_mark'))}_{slugify(c.get('variety'))}"[:100],
             "year": c.get("year", ""),
-            "denomination": c.get("denomination", ""),
+            "denomination": denom,
             "mint_mark": c.get("mint_mark", ""),
             "variety": c.get("variety", ""),
             "note": c.get("note", ""),
@@ -104,12 +396,19 @@ def main():
             "category": "coin"
         })
 
-    # Process Notes
+    # Process Notes from banknotes_expanded.json
+    ref_note_keys = set()
     for n in notes:
+        year = str(n.get("year", "")).strip()
+        denom = normalize_denom(n.get("denomination", ""), default="One Dollar")
+        variety = str(n.get("variety", "")).lower().strip()
+        fr_num = extract_fr_number(variety)
+        ref_note_keys.add((year, denom, fr_num))
+        
         consolidated_catalog.append({
-            "doc_id": f"ref_note_{slugify(n.get('denomination'))}_{n.get('year')}_{slugify(n.get('variety'))}"[:100],
+            "doc_id": f"ref_note_{slugify(denom)}_{slugify(n.get('year'))}_{slugify(n.get('variety'))}"[:100],
             "year": n.get("year", ""),
-            "denomination": n.get("denomination", ""),
+            "denomination": denom,
             "mint_mark": "",
             "variety": n.get("variety", ""),
             "note": n.get("note", ""),
@@ -119,10 +418,11 @@ def main():
 
     # Process Medals
     for m in medals:
+        denom = normalize_denom(m.get("denomination", ""), default="Medal")
         consolidated_catalog.append({
-            "doc_id": f"ref_medal_{slugify(m.get('series'))}_{m.get('year')}_{slugify(m.get('variety'))}"[:100],
+            "doc_id": f"ref_medal_{slugify(m.get('series'))}_{slugify(m.get('year'))}_{slugify(m.get('variety'))}"[:100],
             "year": m.get("year", ""),
-            "denomination": m.get("denomination", "Medal"),
+            "denomination": denom,
             "mint_mark": "",
             "variety": m.get("variety", ""),
             "note": m.get("note", ""),
@@ -138,6 +438,7 @@ def main():
     db_cursor = db_conn.cursor()
     
     # Create Table
+    db_cursor.execute("DROP TABLE IF EXISTS definitive_reference;")
     db_cursor.execute("""
         CREATE TABLE IF NOT EXISTS definitive_reference (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -187,6 +488,26 @@ def main():
     db = firestore.client()
     
     col_ref = db.collection("coins_reference")
+    
+    # Wipe the collection first to prevent reference pollution from previous runs
+    print("Wiping existing documents in 'coins_reference' collection...")
+    deleted_count = 0
+    try:
+        doc_refs = list(col_ref.list_documents())
+        print(f"  Found {len(doc_refs)} existing reference documents to delete.")
+        batch = db.batch()
+        for doc_ref in doc_refs:
+            batch.delete(doc_ref)
+            deleted_count += 1
+            if deleted_count % 400 == 0:
+                batch.commit()
+                batch = db.batch()
+                print(f"  Deleted {deleted_count} documents from Firestore...")
+        if deleted_count % 400 != 0:
+            batch.commit()
+        print(f"  Wipe complete. Total deleted: {deleted_count} documents.")
+    except Exception as wipe_e:
+        print(f"  WARNING: Error during Firestore wipe (continuing anyway): {wipe_e}")
     
     # Batch write in chunks of 400
     chunk_size = 400

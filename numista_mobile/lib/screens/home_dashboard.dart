@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' as intl;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
+import '../services/guest_seed_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
@@ -34,7 +35,72 @@ class HomeDashboard extends StatefulWidget {
   State<HomeDashboard> createState() => _HomeDashboardState();
 }
 
+class CombinedDashboardData {
+  final List<Map<String, dynamic>> coins;
+  final List<Map<String, dynamic>> currency;
+  final List<Map<String, dynamic>> worldItems;
+
+  CombinedDashboardData({
+    required this.coins,
+    required this.currency,
+    required this.worldItems,
+  });
+}
+
 class _HomeDashboardState extends State<HomeDashboard> {
+  Stream<CombinedDashboardData> _getCombinedStream() {
+    final controller = StreamController<CombinedDashboardData>();
+    List<Map<String, dynamic>> coins = [];
+    List<Map<String, dynamic>> currency = [];
+    List<Map<String, dynamic>> worldItems = [];
+
+    StreamSubscription? subCoins;
+    StreamSubscription? subCurrency;
+    StreamSubscription? subWorldItems;
+
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(CombinedDashboardData(
+          coins: coins,
+          currency: currency,
+          worldItems: worldItems,
+        ));
+      }
+    }
+
+    final coinsStream = GuestSeedService.isBrowseDemoMode
+        ? GuestSeedService.getDemoCoinsStream()
+        : FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots();
+    subCoins = coinsStream.listen((snap) {
+      coins = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      emit();
+    }, onError: (e) => controller.addError(e));
+
+    final currencyStream = GuestSeedService.isBrowseDemoMode
+        ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
+        : FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots();
+    subCurrency = currencyStream.listen((snap) {
+      currency = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      emit();
+    }, onError: (e) => controller.addError(e));
+
+    final worldItemsStream = GuestSeedService.isBrowseDemoMode
+        ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
+        : FirebaseFirestore.instance.collection(AuthService.coinsPath.replaceAll('/coins', '/world_items')).snapshots();
+    subWorldItems = worldItemsStream.listen((snap) {
+      worldItems = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      emit();
+    }, onError: (e) => controller.addError(e));
+
+    controller.onCancel = () {
+      subCoins?.cancel();
+      subCurrency?.cancel();
+      subWorldItems?.cancel();
+    };
+
+    return controller.stream;
+  }
+
   Map<String, double> _spotPrices = {};
   bool _isLoadingPrices = true;
   DateTime? _pricesLastUpdated;
@@ -211,6 +277,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final pct = (_completionStats['completion_percentage'] as num?)?.toDouble() ?? 0.0;
     final owned = (_completionStats['owned_count'] as num?)?.toInt() ?? 0;
     final total = (_completionStats['total_count'] as num?)?.toInt() ?? 0;
+    final userCount = (_completionStats['user_collection_count'] as num?)?.toInt() ?? 0;
 
     return InkWell(
       onTap: () => _showCompletionBreakdownBottomSheet(),
@@ -283,7 +350,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Collected $owned of $total catalog items (Tap to explore)',
+                    'Collected $owned of $total varieties ($userCount total items)',
                     style: const TextStyle(
                       color: Color(0xFFF63366),
                       fontSize: 10,
@@ -409,17 +476,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
     if (raw == 'Pending' || raw.isEmpty) return 0.0;
     // Normalise all dash variants and strip commas
     final norm = raw
-        .replaceAll('\u2013', '-')   // en-dash –
-        .replaceAll('\u2014', '-')   // em-dash —
+        .replaceAll('\u2013', '-')   // en-dash
+        .replaceAll('\u2014', '-')   // em-dash
         .replaceAll('\u2012', '-')   // figure dash
         .replaceAll(',', '');
-    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
-    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc. allowing optional leading $ or non-digits on second part
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
     if (rangeMatch != null) {
       final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
-      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
-      final mid = (a + b) / 2;
-      return mid > 100000 ? 0.0 : mid;   // sanity cap: skip runaway AI estimates
+      return a > 100000 ? 0.0 : a;   // sanity cap: skip runaway AI estimates
     }
     final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     return v > 100000 ? 0.0 : v;
@@ -458,10 +523,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, outerConstraints) {
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection(AuthService.coinsPath)
-              .snapshots(),
+        return StreamBuilder<CombinedDashboardData>(
+          stream: _getCombinedStream(),
           builder: (context, snapshot) {
             // Only show the spinner on the very first load (no cached data).
             // On subsequent Firestore updates keep showing the last known
@@ -489,21 +552,30 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             }
 
-            final docs = snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+            final coins = snapshot.data?.coins ?? [];
+            final currency = snapshot.data?.currency ?? [];
+            final worldItems = snapshot.data?.worldItems ?? [];
 
             // ── Compute portfolio metrics ──────────────────────────────────
-            int totalCoins = docs.length;
+            int totalItems = coins.length + currency.length + worldItems.length;
             double portfolioValue  = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
 
+            double coinsVal = 0;
+            double currencyVal = 0;
+            double medalsVal = 0;
+            double othersVal = 0;
+
             Map<String, double> programValues = {};
 
-            for (final doc in docs) {
-              final data = doc.data();
-              final coinValue = _parseCurrency(data['AI Estimated Value']);
-              // A coin is always worth at least its melt value — floor AI value at melt.
+            // 1. Process Coins collection
+            for (final data in coins) {
+              final valStr = data['AI Estimated Value'];
+              final coinValue = _parseCurrency(valStr);
+
+              // Melt Value
               final liveMelt = _spotPrices.isNotEmpty
                   ? (MeltValueService.compute(
                         metalContent: data['Metal Content']?.toString() ?? '',
@@ -511,7 +583,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         spotPrices: _spotPrices,
                       ) ?? 0.0)
                   : _parseCurrency(data['Melt Value']);
-              portfolioValue  += math.max(coinValue, liveMelt);
+              
+              final finalVal = math.max(coinValue, liveMelt);
+
+              // Classification
+              final itemType = (data['item_type'] ?? '').toString().toLowerCase();
+              final prog = (data['Program/Series'] ?? '').toString().toLowerCase();
+              final desc = (data['description'] ?? '').toString().toLowerCase();
+              final theme = (data['Theme/Subject'] ?? '').toString().toLowerCase();
+
+              final isMedal = itemType.contains('medal') || prog.contains('medal') || desc.contains('medal') || theme.contains('medal');
+              final isCurrency = itemType == 'paper_currency';
+
+              if (isMedal) {
+                medalsVal += finalVal;
+              } else if (isCurrency) {
+                currencyVal += finalVal;
+              } else {
+                coinsVal += finalVal;
+              }
+
+              portfolioValue  += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
@@ -521,10 +613,57 @@ class _HomeDashboardState extends State<HomeDashboard> {
               programValues[program] = (programValues[program] ?? 0) + coinValue;
             }
 
+            // 2. Process Currency collection
+            for (final data in currency) {
+              final rawAi = data['AI Estimated Value'];
+              double finalVal = 0.0;
+              if (rawAi != null && rawAi != 'None' && rawAi != 'Pending' && rawAi.toString().isNotEmpty) {
+                finalVal = _parseCurrency(rawAi);
+              } else {
+                finalVal = _parseCurrency(data['Cost']);
+              }
+
+              currencyVal += finalVal;
+              portfolioValue += finalVal;
+              acquisitionCost += _parseCurrency(data['Cost']);
+              faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
+            }
+
+            // 3. Process World Items collection
+            for (final data in worldItems) {
+              final estVal = (data['estimated_value'] as num?)?.toDouble() ?? 0.0;
+              final purchPrice = (data['purchase_price'] as num?)?.toDouble() ?? 0.0;
+              final finalVal = estVal > 0 ? estVal : purchPrice;
+
+              final catStr = (data['item_type'] ?? '').toString().toLowerCase();
+              final name = (data['name'] ?? '').toString().toLowerCase();
+              final notes = (data['notes'] ?? '').toString().toLowerCase();
+
+              final isMedal = catStr.contains('medal') || name.contains('medal') || notes.contains('medal');
+
+              if (isMedal) {
+                medalsVal += finalVal;
+              } else if (catStr == 'banknote') {
+                currencyVal += finalVal;
+              } else if (catStr == 'coin') {
+                coinsVal += finalVal;
+              } else {
+                othersVal += finalVal;
+              }
+
+              portfolioValue += finalVal;
+              acquisitionCost += purchPrice;
+              final spotEntry = (data['spot_value_at_entry'] as num?)?.toDouble() ?? 0.0;
+              if (spotEntry > 0) {
+                meltValue += spotEntry;
+              }
+              faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
+            }
+
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
-            if (totalCoins > 0) {
+            if (totalItems > 0) {
               PortfolioSnapshotService.maybeTakeSnapshot(
-                totalCoins: totalCoins,
+                totalCoins: totalItems,
                 portfolioValue: portfolioValue,
                 meltValue: meltValue,
                 acquisitionCost: acquisitionCost,
@@ -536,24 +675,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
               });
             }
 
-            // ── Last 3 added ───────────────────────────────────────────────
-            final sorted = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
+            // ── Last 3 added (using coins) ──────────────────────────────────
+            final sorted = List<Map<String, dynamic>>.from(coins);
             sorted.sort((a, b) {
-              final ad = a.data();
-              final bd = b.data();
-              // Check all three timestamp field names used across import methods
-              final aTs = ad['Added'] ?? ad['timestamp'] ?? ad['created_at'];
-              final bTs = bd['Added'] ?? bd['timestamp'] ?? bd['created_at'];
+              final aTs = a['Added'] ?? a['timestamp'] ?? a['created_at'];
+              final bTs = b['Added'] ?? b['timestamp'] ?? b['created_at'];
 
               final aHas = aTs is Timestamp;
               final bHas = bTs is Timestamp;
 
-              if (aHas && bHas) return bTs.compareTo(aTs); // both: newest first
-              // Mixed: the timestamped coin is the newer one — put it first
-              if (aHas && !bHas) return -1;   // a has timestamp → a first
-              if (!aHas && bHas) return 1;    // b has timestamp → b first
-              // Neither: stable fallback by doc ID
-              return b.id.compareTo(a.id);
+              if (aHas && bHas) return bTs.compareTo(aTs);
+              if (aHas && !bHas) return -1;
+              if (!aHas && bHas) return 1;
+              return (b['id']?.toString() ?? '').compareTo(a['id']?.toString() ?? '');
             });
             final last5 = sorted.take(5).toList();
 
@@ -574,7 +708,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
                     child: const Text('Numista.AI v3.9',
-
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
@@ -607,12 +740,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(width: 12),
                       Flexible(
-                        child: _buildPortfolioValueSection(portfolioValue, fmt, totalCoins),
+                        child: _buildPortfolioValueSection(portfolioValue, fmt, totalItems),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   _buildCompletionGauge(),
+                  const SizedBox(height: 24),
+
+                  // ── Category Breakdown ─────────────────────────────────────
+                  _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
                   const SizedBox(height: 24),
 
                    // ── Metric cards ──────────────────────────────────────────
@@ -626,7 +763,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     if (narrow) {
                       return Column(children: [
                         Row(children: [
-                          Expanded(child: _metricCard('Total Coins', totalCoins.toString())),
+                          Expanded(child: _metricCard('Total Items', totalItems.toString())),
                           const SizedBox(width: 10),
                           Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
                         ]),
@@ -645,7 +782,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _metricCardFlex('Total Coins', totalCoins.toString()),
+                        _metricCardFlex('Total Items', totalItems.toString()),
                         _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
                         _metricCardFlex('Melt Value', fmt.format(meltValue)),
                         _metricCardFlex('Face Value', fmt.format(faceValue)),
@@ -686,7 +823,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 style: TextStyle(color: Color(0xFF5A5C69))))
                         : Column(
                             children: last5.asMap().entries.map((entry) {
-                              final data = entry.value.data();
+                              final data = entry.value;
                               final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
                               final mint   = data['Mint Mark']?.toString() ?? '';
                               final denom  = data['Denomination']?.toString() ?? '';
@@ -782,7 +919,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                   // ── Morgan Widget ─────────────────────────────────────────
                   _MorganDashboardCard(
-                    totalCoins: totalCoins,
+                    totalCoins: totalItems,
                     onAskMorgan: widget.onAskMorgan,
                     onAskMorganWithQuery: widget.onAskMorganWithQuery,
                   ),
@@ -1261,6 +1398,151 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return SizedBox(
       width: 160,
       child: _metricCard(label, value, valueColor: valueColor),
+    );
+  }
+
+  Widget _buildCategoryBreakdown(double coins, double currency, double medals, double others, intl.NumberFormat fmt) {
+    final total = coins + currency + medals + others;
+    final coinsPct = total > 0 ? (coins / total) * 100 : 0.0;
+    final currencyPct = total > 0 ? (currency / total) * 100 : 0.0;
+    final medalsPct = total > 0 ? (medals / total) * 100 : 0.0;
+    final othersPct = total > 0 ? (others / total) * 100 : 0.0;
+
+    Widget buildLegendItem(String label, double value, double pct, Color color) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B).withOpacity(0.4),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  fmt.format(value),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${pct.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'VALUATION BREAKDOWN',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Combined Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              height: 14,
+              child: Row(
+                children: [
+                  if (coins > 0)
+                    Expanded(
+                      flex: (coinsPct * 100).round(),
+                      child: Container(color: const Color(0xFF6366F1)), // Indigo
+                    ),
+                  if (currency > 0)
+                    Expanded(
+                      flex: (currencyPct * 100).round(),
+                      child: Container(color: const Color(0xFF10B981)), // Emerald
+                    ),
+                  if (medals > 0)
+                    Expanded(
+                      flex: (medalsPct * 100).round(),
+                      child: Container(color: const Color(0xFFF59E0B)), // Amber
+                    ),
+                  if (others > 0)
+                    Expanded(
+                      flex: (othersPct * 100).round(),
+                      child: Container(color: const Color(0xFFEC4899)), // Pink
+                    ),
+                  if (total == 0)
+                    Expanded(
+                      child: Container(color: const Color(0xFF334155)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Legend / Breakdown details
+          Column(
+            children: [
+              buildLegendItem('Coins', coins, coinsPct, const Color(0xFF6366F1)),
+              const SizedBox(height: 8),
+              buildLegendItem('Currency', currency, currencyPct, const Color(0xFF10B981)),
+              const SizedBox(height: 8),
+              buildLegendItem('Medals', medals, medalsPct, const Color(0xFFF59E0B)),
+              const SizedBox(height: 8),
+              buildLegendItem('Others', others, othersPct, const Color(0xFFEC4899)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

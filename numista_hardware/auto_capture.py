@@ -97,6 +97,10 @@ _idle_stopped_event = _threading.Event()  # SET = idle thread has released camer
 # OPTIONS: "AUTOFOCUS_WEBCAM", "MANUAL_MICROSCOPE"
 CAMERA_TYPE = "MANUAL_MICROSCOPE"
 
+# Active and preferred camera indices
+active_camera_idx = -1
+preferred_camera_idx = None
+
 # Set to True to show the local OpenCV window during scanning.
 # This is the preferred mode: the user uses the cv2 window to manually
 # focus the microscope, then the scan proceeds. The web UI shows step/
@@ -230,12 +234,21 @@ def _idle_preview_worker():
 
         # ── Open camera ──────────────────────────────────────────────────────
         cap = None
-        for idx in [1, 2, 0]:
+        search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
+        if preferred_camera_idx is not None:
+            fallback = [1, 2, 0]
+            if preferred_camera_idx in fallback:
+                fallback.remove(preferred_camera_idx)
+            search_order.extend(fallback)
+
+        for idx in search_order:
             temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
             if temp.isOpened():
                 ret, _ = temp.read()
                 if ret:
                     cap = temp
+                    global active_camera_idx
+                    active_camera_idx = idx
                     logging.info(f"[PREVIEW] Camera opened at index {idx}")
                     break
             temp.release()
@@ -260,6 +273,11 @@ def _idle_preview_worker():
         logging.info("[PREVIEW] Streaming idle frames (1280×720, 2× zoom).")
         last_microscope_check = time.time()
         while not _idle_pause_event.is_set():
+            # If preferred camera index changed, break loop to reopen
+            if preferred_camera_idx is not None and idx != preferred_camera_idx:
+                logging.info(f"[PREVIEW] Preferred camera changed to {preferred_camera_idx}. Reopening...")
+                break
+
             # If currently using built-in webcam (idx == 0), check if a microscope (1 or 2) is now connected
             if idx == 0 and time.time() - last_microscope_check > 5.0:
                 last_microscope_check = time.time()
@@ -354,7 +372,14 @@ def capture_worker():
     default_res = (640, 480)
     
     # Try USB indices (1, 2) before the integrated webcam (0)
-    for idx in [1, 2, 0]:
+    search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
+    if preferred_camera_idx is not None:
+        fallback = [1, 2, 0]
+        if preferred_camera_idx in fallback:
+            fallback.remove(preferred_camera_idx)
+        search_order.extend(fallback)
+
+    for idx in search_order:
         temp_cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
         if temp_cap.isOpened():
             # Quick check to see if we can actually read a frame
@@ -741,9 +766,11 @@ def capture_worker():
 # The website writes to Firestore; the agent picks up the command here.
 # This makes the trigger HTTPS-safe (no mixed-content browser errors).
 
-@app.route('/start-scan', methods=['POST'])
+@app.route('/start-scan', methods=['POST', 'OPTIONS'])
 def start_scan_route():
     """Local legacy endpoint to trigger a scan from local index.html."""
+    if request.method == 'OPTIONS':
+        return '', 204
     if capture_status["is_active"]:
         return jsonify({"status": "error", "message": "Scan already in progress"})
     thread = threading.Thread(target=capture_worker, daemon=True)
@@ -826,6 +853,35 @@ def pair_agent_route():
         set_user_email(email)
         return jsonify({"status": "success", "paired_email": email})
     return jsonify({"status": "error", "message": "Email not provided"}), 400
+
+@app.route('/list-cameras', methods=['GET'])
+def list_cameras_route():
+    available = []
+    for idx in range(5):
+        if active_camera_idx == idx:
+            available.append(idx)
+            continue
+        temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+        if temp.isOpened():
+            ret, _ = temp.read()
+            if ret:
+                available.append(idx)
+        temp.release()
+    return jsonify({"cameras": available, "active": active_camera_idx})
+
+@app.route('/set-camera', methods=['POST', 'OPTIONS'])
+def set_camera_route():
+    if request.method == 'OPTIONS':
+        return '', 204
+    data = request.json or {}
+    idx = data.get("index")
+    if idx is None:
+        return jsonify({"status": "error", "message": "Index not provided"}), 400
+    
+    global preferred_camera_idx
+    preferred_camera_idx = int(idx)
+    logging.info(f"[CMD] Preferred camera index set to {preferred_camera_idx}")
+    return jsonify({"status": "success", "active": preferred_camera_idx})
 
 # ─── Firestore Command Watcher ────────────────────────────────────────────────
 def _process_coin_save(data: dict):

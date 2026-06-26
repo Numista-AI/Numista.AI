@@ -14,6 +14,7 @@ import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../services/checklist_generator_service.dart';
 import 'coin_search_screen.dart';
+import '../services/guest_seed_service.dart';
 
 class ProgramManagerScreen extends StatefulWidget {
   const ProgramManagerScreen({super.key});
@@ -147,7 +148,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         final allProgramsMap = refSnapshot.data ?? CoinProgramsData.usPrograms;
 
         return FutureBuilder<QuerySnapshot>(
-          future: FirebaseFirestore.instance.collection(AuthService.coinsPath).limit(2000).get(),
+          future: GuestSeedService.isBrowseDemoMode
+              ? GuestSeedService.getDemoCoinsFuture()
+              : FirebaseFirestore.instance.collection(AuthService.coinsPath).limit(2000).get(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFFF63366)));

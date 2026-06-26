@@ -1,4 +1,4 @@
-"""
+r"""
 build_installer_fallback.py
 ============================
 Creates NumistaAgentSetup.exe using Python's zipfile + a bootstrap stub,

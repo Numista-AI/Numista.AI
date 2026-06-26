@@ -36,6 +36,21 @@ const App: React.FC = () => {
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [selectedForSetIds, setSelectedForSetIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDark, setIsDark] = useState<boolean>(
+    () => document.documentElement.classList.contains('dark')
+  );
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('numisma-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('numisma-theme', 'light');
+    }
+  };
 
   const coinsRef = useRef(coins);
   const wishlistRef = useRef(wishlist);
@@ -230,14 +245,14 @@ Warning: This will completely replace your current local database.`;
   };
 
   if (isDbLoading) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
       <Loader2 className="w-10 h-10 animate-spin text-blue-600 mb-4" />
       <p className="font-bold tracking-tight italic">Processing Workspace Data...</p>
     </div>
   );
 
   return (
-    <div className="flex bg-slate-50 min-h-screen font-sans text-slate-900">
+    <div className="flex bg-slate-50 dark:bg-slate-950 min-h-screen font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <Sidebar 
         currentView={currentView} 
         onChangeView={setCurrentView} 
@@ -246,6 +261,8 @@ Warning: This will completely replace your current local database.`;
         hasUnsavedChanges={hasUnsavedChanges} 
         onSaveToComputer={handleSaveToComputer}
         onRestoreFromJson={handleRestoreFromJson}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
       />
       <main className="flex-1 ml-64 p-10 overflow-y-auto h-screen">
         <div className="max-w-6xl mx-auto space-y-10">
@@ -264,18 +281,18 @@ Warning: This will completely replace your current local database.`;
 
           <div className="flex justify-between items-end">
              <div>
-                <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-slate-100 uppercase italic">
                     {currentView === AppView.DASHBOARD && 'Dashboard'}
                     {currentView === AppView.COLLECTION && 'My Coins'}
                     {currentView === AppView.ADD_COINS && 'Add Items'}
                     {currentView === AppView.INVENTORY && 'Inventory'}
                     {currentView === AppView.WISHLIST && 'Wishlist'}
                 </h1>
-                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-1 ml-1">Coin Collection AI Manager</p>
+                <p className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em] mt-1 ml-1">Coin Collection AI Manager</p>
              </div>
              <div className="text-right pb-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Portfolio Value</p>
-                <p className="text-4xl font-black text-emerald-600 tracking-tighter">${totalValueMax.toLocaleString()}</p>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Portfolio Value</p>
+                <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter">${totalValueMax.toLocaleString()}</p>
              </div>
           </div>
 
@@ -286,11 +303,9 @@ Warning: This will completely replace your current local database.`;
                 <StatsCard title="AI Estimated Value" value={`$${totalValueMax.toLocaleString()}`} icon={Sparkles} />
                 <StatsCard title="Acquisition Cost" value={`$${totalAcquisitionCost.toLocaleString()}`} icon={Wallet} />
                 <StatsCard title="Melt Value" value={`$${totalMeltValue.toLocaleString()}`} icon={TrendingUp} />
-                {/* <StatsCard title="Face Value" value={`$${totalFaceValue.toLocaleString()}`} icon={DollarSign} /> */}
-
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                 <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 italic">
+                 <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-400 dark:text-slate-500 italic">
                     Analytics Dashboard
                  </div>
                  <AiAssistant coins={coins} />

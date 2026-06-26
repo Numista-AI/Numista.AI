@@ -33,6 +33,10 @@ class CoinModel {
   final String imageUrlReverse;
   final DateTime? timestamp;
 
+  // Image QC / Verification status
+  final String imageVerificationStatus; // 'unverified', 'grok_verified', 'human_verified', 'flagged'
+  final String imageVerificationReason;
+
   // Scan origin (Binder Scan coins only)
   final String source;        // e.g. 'Binder Scan', 'Manual Entry'
   final String sourceFile;    // scan_uuid — raw scan identifier
@@ -81,6 +85,8 @@ class CoinModel {
     this.receiptGcsPath = '',
     this.importSessionId = '',
     this.importBatch = '',
+    this.imageVerificationStatus = 'unverified',
+    this.imageVerificationReason = '',
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -144,6 +150,8 @@ class CoinModel {
       receiptGcsPath: (data['paper_trail'] as Map<String, dynamic>?)?['gcs_path']?.toString() ?? '',
       importSessionId: data['import_session_id']?.toString() ?? '',
       importBatch: data['import_batch']?.toString() ?? '',
+      imageVerificationStatus: data['image_verification_status']?.toString() ?? 'unverified',
+      imageVerificationReason: data['image_verification_reason']?.toString() ?? '',
     );
   }
 
@@ -175,6 +183,8 @@ class CoinModel {
       'Melt Value': meltValue,
       'image_url_obverse': imageUrlObverse,
       'image_url_reverse': imageUrlReverse,
+      'image_verification_status': imageVerificationStatus,
+      'image_verification_reason': imageVerificationReason,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };

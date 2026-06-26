@@ -349,6 +349,39 @@ CONDITION_MAP: dict[str, str] = {
 }
 
 
+def clean_valuation_value(value) -> float:
+    """
+    Safely converts a valuation string or range (e.g. "$15-$20", "$150 - $350", "$1,250.00")
+    into a float. Strips out dollar signs, commas, and spaces.
+    If it detects a range, it returns the lower bound float (e.g. "$15-$20" -> 15.0).
+    Uses robust regex to extract numbers, returning 0.0 on fallback.
+    """
+    if value is None:
+        return 0.0
+    val_str = str(value).strip()
+    if not val_str or val_str.lower() in ('none', 'pending', 'null', '—', '--'):
+        return 0.0
+
+    # Replace en-dash, em-dash, and figure-dash with standard hyphen
+    val_str = val_str.replace('\u2013', '-').replace('\u2014', '-').replace('\u2012', '-')
+    val_str = val_str.replace('$', '').replace(',', '').replace(' ', '')
+
+    # Check for range: e.g. "15-20" or "150-350"
+    if '-' in val_str:
+        parts = val_str.split('-')
+        if parts:
+            val_str = parts[0].strip()
+
+    # Extract the first float-like number sequence
+    match = re.search(r'(\d+\.?\d*)', val_str)
+    if match:
+        try:
+            return float(match.group(1))
+        except Exception:
+            return 0.0
+    return 0.0
+
+
 def _parse_year_mint(raw: str) -> tuple[str, str]:
     """
     Parse a combined or standalone year+mint string into (year, mint_mark).
@@ -2001,10 +2034,7 @@ async def process_invoice(
         # ─── Helper functions ─────────────────────────────────────────────────
         def _parse_cost(cost_str: str) -> float:
             """'$10.00' → 10.0. Returns 0.0 on any parse failure."""
-            try:
-                return float(str(cost_str).replace('$', '').replace(',', '').strip())
-            except Exception:
-                return 0.0
+            return clean_valuation_value(cost_str)
 
         def _apply_defaults(it: dict):
             """Apply schema defaults in-place."""
@@ -2188,7 +2218,41 @@ async def process_invoice(
         raw_text = response.text or ""
         print(f"[process_invoice] raw_snippet={raw_text[:400]!r}")
 
-        items = json.loads(raw_text) if raw_text.strip() else []
+        def _repair_gemini_json(text: str) -> str:
+            """
+            Repair Gemini JSON output before parsing.
+            Primary:  json_repair library (handles unescaped quotes, truncation, all defects)
+            Fallback: regex-based lightweight repair
+            """
+            import re as _re
+            t = text.strip()
+            # Strip markdown fences first
+            t = _re.sub(r'^```(?:json)?\s*', '', t, flags=_re.IGNORECASE)
+            t = _re.sub(r'\s*```$', '', t)
+            t = t.strip()
+            # Primary: try json_repair
+            try:
+                from json_repair import repair_json
+                repaired = repair_json(t, return_objects=False)
+                if repaired:
+                    return repaired
+            except Exception:
+                pass
+            # Fallback: regex-based repair
+            def _fix_string_literals(m):
+                inner = m.group(1)
+                inner = inner.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                return '"' + inner + '"'
+            t = _re.sub(r'"((?:[^"\\]|\\.)*)"', _fix_string_literals, t, flags=_re.DOTALL)
+            t = _re.sub(r',\s*([\]}])', r'\1', t)
+            stripped = t.rstrip()
+            if stripped.startswith('[') and not stripped.endswith(']'):
+                last_brace = stripped.rfind('}')
+                if last_brace != -1:
+                    t = stripped[:last_brace + 1] + ']'
+            return t
+
+        items = json.loads(_repair_gemini_json(raw_text)) if raw_text.strip() else []
         if isinstance(items, dict):
             # Gemini sometimes wraps the list in an outer object —
             # try every known wrapper key before falling back to [the dict itself].
@@ -2249,7 +2313,7 @@ async def process_invoice(
                 )
                 retry_text = retry_response.text or ""
                 print(f"[process_invoice] retry_snippet={retry_text[:400]!r}")
-                retry_items = json.loads(retry_text) if retry_text.strip() else []
+                retry_items = json.loads(_repair_gemini_json(retry_text)) if retry_text.strip() else []
                 if isinstance(retry_items, dict):
                     for _key in ('items', 'coins', 'line_items', 'results', 'data',
                                  'extracted_items', 'invoice_items'):
@@ -4882,6 +4946,95 @@ async def estimate_value_text(request: TextValuationRequest):
         raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
 
 
+# ─── Generic Text-Only Valuation ──────────────────────────────────────────────
+
+class GeneralValuationRequest(BaseModel):
+    item_type:      str
+    name:           str
+    year:           Optional[str] = ""
+    denomination:   Optional[str] = ""
+    condition:      Optional[str] = ""
+    country:        Optional[str] = "USA"
+    details:        Optional[str] = ""
+
+GENERAL_VALUATION_PROMPT = """\
+You are a professional numismatist and exonumia dealer with 30+ years experience pricing coins, paper currency/banknotes, medals, tokens, bullion, and collectibles.
+
+A user has a {item_type} with these details:
+  Name/Title:    {name}
+  Year/Era:      {year}
+  Denomination:  {denomination}
+  Grade/Condition: {condition}
+  Country:       {country}
+  Additional details: {details}
+
+Estimate the current retail market value range for this item in USD.
+Return ONLY valid JSON with exactly these fields:
+{{
+  "estimated_value": "string — a price RANGE in USD, e.g. '$15 – $35' or '$1,200 – $1,800'. Never a single point value.",
+  "confidence": "HIGH, MEDIUM, or LOW",
+  "basis": "one sentence explaining your estimate (grade, rarity, demand, metal content, or catalog reference)"
+}}
+
+Rules:
+- Always return a RANGE (low – high), never a single number.
+- If grade/condition is unknown, widen the range accordingly.
+- If the item is common and low-value, '$1 – $3' is a valid answer.
+- If you cannot estimate (unknown item, insufficient data), return estimated_value: 'Pending' and confidence: 'LOW'.
+- Do NOT add any text outside the JSON object.
+"""
+
+@app.post("/api/estimate_value_general")
+async def estimate_value_general(request: GeneralValuationRequest):
+    """
+    Generic text-only valuation for any item type (banknote, medal, specialty, coin, etc.).
+    """
+    prompt = GENERAL_VALUATION_PROMPT.format(
+        item_type    = request.item_type,
+        name         = request.name or "Unknown",
+        year         = request.year or "Unknown",
+        denomination = request.denomination or "Unknown",
+        condition    = request.condition or "Unknown",
+        country      = request.country or "USA",
+        details      = request.details or "None",
+    )
+    try:
+        resp = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        raw = resp.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        result: dict = json.loads(raw)
+
+        estimated = result.get("estimated_value", "Pending")
+        confidence = result.get("confidence", "LOW")
+        basis      = result.get("basis", "")
+
+        print(f"[estimate_value_general] {request.item_type}: {request.name} -> {estimated} ({confidence})")
+
+        return {
+            "estimated_value": estimated,
+            "confidence":      confidence,
+            "basis":           basis,
+            "needs_photo":     True,
+            "source":          "text_estimator",
+        }
+    except Exception as e:
+        print(f"[estimate_value_general] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BULK IMPORT & PAPER TRAIL  (Add Coins — unified tab)
@@ -5559,10 +5712,7 @@ Ignore shipping, tax, subtotal rows.
                         continue
                     item_type = str(item.get("item_type", "coin")).lower()
                     cost_str  = item.get("Purchase Cost") or item.get("Cost") or "0"
-                    try:
-                        cost_val = float(str(cost_str).replace("$", "").replace(",", "").strip())
-                    except Exception:
-                        cost_val = 0.0
+                    cost_val = clean_valuation_value(cost_str)
                     total_val += cost_val
 
                     if item_type in ("coin", "paper_currency", "medal", "other", ""):

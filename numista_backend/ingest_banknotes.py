@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import google.auth
 from google import genai
 from google.genai import types as genai_types
@@ -9,6 +10,111 @@ PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
 PRIMARY_MODEL = "gemini-3.5-flash"
 OUTPUT_JSON_PATH = "banknotes_expanded.json"
+
+def normalize_denom(raw, default="One Dollar"):
+    if not raw:
+        return default
+    s = str(raw).lower().strip()
+    
+    # 1. Handle dollar sign with numbers anywhere in the string
+    match_ds = re.search(r"\$(\d+(?:\.\d+)?)", s)
+    if match_ds:
+        val_str = match_ds.group(1)
+        val_map = {
+            "0.01": "One Cent",
+            "0.05": "Five Cents",
+            "0.10": "One Dime",
+            "0.1": "One Dime",
+            "0.25": "Quarter Dollar",
+            "0.50": "Half Dollar",
+            "0.5": "Half Dollar",
+            "1": "One Dollar",
+            "2": "Two Dollars",
+            "2.5": "Two and a Half Dollars",
+            "3": "Three Dollars",
+            "4": "Four Dollars",
+            "5": "Five Dollars",
+            "10": "Ten Dollars",
+            "20": "Twenty Dollars",
+            "25": "Twenty-Five Dollars",
+            "50": "Fifty Dollars",
+            "100": "One Hundred Dollars",
+            "500": "Five Hundred Dollars",
+            "1000": "One Thousand Dollars",
+            "5000": "Five Thousand Dollars",
+            "10000": "Ten Thousand Dollars",
+            "100000": "One Hundred Thousand Dollars"
+        }
+        if val_str in val_map:
+            return val_map[val_str]
+            
+    # 2. Check specific multi-digit or compound names first to avoid collision
+    if "half cent" in s or "½ cent" in s or "1/2 cent" in s:
+        return "Half Cent"
+    if "quarter cent" in s or "1/4 cent" in s:
+        return "Quarter Cent"
+    if "two cent" in s or "2 cent" in s:
+        return "Two Cents"
+    if "three cent" in s or "3 cent" in s:
+        return "Three Cents"
+        
+    # Check half dimes BEFORE dime and nickel!
+    if "half dime" in s or "½ dime" in s or "1/2 dime" in s:
+        return "Half Dime"
+        
+    if "five cent" in s or "5 cent" in s or "nickel" in s:
+        return "Five Cents"
+        
+    # Check two and a half dollars/quarter eagles BEFORE half dollar/dollar!
+    if "two and a half dollar" in s or "2.5 dollar" in s or "2-1/2 dollar" in s or "2½ dollar" in s or "quarter eagle" in s:
+        return "Two and a Half Dollars"
+        
+    if "fifty cent" in s or "50 cent" in s or "half dollar" in s or "½ dollar" in s or "1/2 dollar" in s:
+        return "Half Dollar"
+    if "quarter dollar" in s or "¼ dollar" in s or "1/4 dollar" in s or "twenty-five cent" in s or "25 cent" in s or "quarter" in s:
+        return "Quarter Dollar"
+    if "twenty cent" in s or "20 cent" in s:
+        return "Twenty Cents"
+    if "one dime" in s or "1 dime" in s or "ten cent" in s or "10 cent" in s or "dime" in s:
+        return "One Dime"
+    if "one cent" in s or "1 cent" in s or "penny" in s or "pennies" in s or "cent" in s:
+        return "One Cent"
+        
+    # 3. Check dollar coins (after checking half/quarter dollar/two and a half dollar)
+    if "dollar" in s or "stella" in s or "double eagle" in s or "eagle" in s or "half eagle" in s or "gold clause" in s:
+        if "double eagle" in s or "twenty dollar" in s or "20 dollar" in s:
+            return "Twenty Dollars"
+        if "half eagle" in s or "five dollar" in s or "5 dollar" in s:
+            return "Five Dollars"
+        if "eagle" in s or "ten dollar" in s or "10 dollar" in s:
+            return "Ten Dollars"
+        if "fifty dollar" in s or "50 dollar" in s:
+            return "Fifty Dollars"
+        if "hundred dollar" in s or "100 dollar" in s:
+            return "One Hundred Dollars"
+        if "five hundred dollar" in s or "500 dollar" in s:
+            return "Five Hundred Dollars"
+        if "thousand dollar" in s or "1000 dollar" in s:
+            return "One Thousand Dollars"
+        if "five thousand dollar" in s or "5000 dollar" in s:
+            return "Five Thousand Dollars"
+        if "ten thousand dollar" in s or "10000 dollar" in s:
+            return "Ten Thousand Dollars"
+        if "one hundred thousand dollar" in s or "100000 dollar" in s:
+            return "One Hundred Thousand Dollars"
+        if "two dollar" in s or "2 dollar" in s:
+            return "Two Dollars"
+        if "three dollar" in s or "3 dollar" in s:
+            return "Three Dollars"
+        if "four dollar" in s or "4 dollar" in s or "stella" in s:
+            return "Four Dollars"
+            
+        return "One Dollar"
+        
+    if "medal" in s:
+        return "Medal"
+        
+    return s.title()
 
 def run_banknotes_ingestion():
     print("="*60)
@@ -77,7 +183,7 @@ Your output MUST be a valid JSON array of objects. Do not wrap the JSON output i
             valid_entries = []
             for item in batch_results:
                 year = str(item.get("year", "")).strip()
-                denom_val = str(item.get("denomination", denom['name'])).strip()
+                denom_val = normalize_denom(item.get("denomination", denom['name']))
                 variety = str(item.get("variety", "")).strip()
                 note = str(item.get("note", "")).strip()
                 
@@ -89,16 +195,44 @@ Your output MUST be a valid JSON array of objects. Do not wrap the JSON output i
                         # Skip if it is not a valid variety
                         continue
 
-                valid_entries.append({
+                entry = {
                     "year": year,
                     "denomination": denom_val,
                     "mint_mark": "",
                     "variety": variety,
                     "note": note,
                     "series": "US Banknotes"
-                })
+                }
+
+                # Check if it's a Federal Reserve Note (or Federal Reserve Bank Note)
+                is_frn = "federal reserve note" in variety.lower() or "federal reserve note" in note.lower() or \
+                         "federal reserve bank note" in variety.lower() or "federal reserve bank note" in note.lower()
+
+                if is_frn:
+                    match = re.search(r"Fr\.\s*(\d+)(?:-[A-L])?", variety, re.IGNORECASE)
+                    if match:
+                        base_num = match.group(1)
+                        districts = {
+                            'A': 'Boston', 'B': 'New York', 'C': 'Philadelphia', 'D': 'Cleveland',
+                            'E': 'Richmond', 'F': 'Atlanta', 'G': 'Chicago', 'H': 'St. Louis',
+                            'I': 'Minneapolis', 'J': 'Kansas City', 'K': 'Dallas', 'L': 'San Francisco'
+                        }
+                        for letter, name in districts.items():
+                            new_entry = dict(entry)
+                            old_fr = match.group(0)
+                            new_fr = f"Fr. {base_num}-{letter}"
+                            new_variety = variety.replace(old_fr, new_fr)
+                            if name.lower() not in new_variety.lower():
+                                new_variety = f"{new_variety} - {name} [{letter}]"
+                            new_entry["variety"] = new_variety
+                            new_entry["note"] = f"{note} Issued by the Federal Reserve Bank of {name} ({letter})."
+                            valid_entries.append(new_entry)
+                    else:
+                        valid_entries.append(entry)
+                else:
+                    valid_entries.append(entry)
             
-            print(f"  Valid entries: {len(valid_entries)}")
+            print(f"  Valid and expanded entries: {len(valid_entries)}")
             all_banknotes.extend(valid_entries)
             
         except Exception as e:

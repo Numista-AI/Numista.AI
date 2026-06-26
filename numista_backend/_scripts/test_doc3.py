@@ -1,6 +1,6 @@
 import os, sys, json
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+from google import genai
+from google.genai import types as genai_types
 from google.cloud import documentai_v1beta3 as documentai
 import google.auth
 
@@ -12,8 +12,7 @@ DOC_ID = "c90443241b3945d4"
 ANNOTATION_BUCKET  = "numista-training-docs"
 
 credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-vertexai.init(project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
-gemini_model = GenerativeModel("gemini-2.5-pro")
+client = genai.Client(vertexai=True, project=GCP_PROJECT_ID, location=VERTEX_LOCATION, credentials=credentials)
 doc_service = documentai.DocumentServiceClient(
     credentials=credentials, client_options={"api_endpoint": "us-documentai.googleapis.com"})
 
@@ -44,8 +43,12 @@ schema = {
 }
 
 try:
-    response = gemini_model.generate_content([Part.from_text(prompt)], 
-        generation_config=GenerationConfig(response_mime_type="application/json", response_schema=schema, temperature=0.0))
+    response = client.models.generate_content(
+        model="gemini-2.5-pro",
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
+            response_mime_type="application/json", response_schema=schema, temperature=0.0)
+    )
     gemini_result = json.loads(response.text)
 except Exception as e:
     print("Gemini Fail:", e)

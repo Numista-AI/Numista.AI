@@ -24,8 +24,8 @@ from pathlib import Path
 from google.cloud import storage, documentai_v1beta3 as docai
 from google.protobuf import field_mask_pb2
 import google.auth
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from google import genai
+from google.genai import types as genai_types
 
 # ── Config ────────────────────────────────────────────────────────────────────
 PROJECT_ID        = "568985927038"
@@ -126,12 +126,15 @@ def upload_to_gcs(local_path: Path, bucket, gcs_dir: str) -> str:
     return f"gs://{GCS_BUCKET}/{gcs_path}"
 
 
-def call_gemini(model: GenerativeModel, pdf_path: Path) -> dict | None:
+def call_gemini(client, model_name: str, pdf_path: Path) -> dict | None:
     try:
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
-        pdf_part = Part.from_data(mime_type="application/pdf", data=pdf_bytes)
-        response = model.generate_content([GEMINI_PROMPT, pdf_part])
+        pdf_part = genai_types.Part.from_bytes(mime_type="application/pdf", data=pdf_bytes)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=[GEMINI_PROMPT, pdf_part]
+        )
         text = response.text.strip()
         # Strip markdown code fences if present
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
@@ -250,8 +253,7 @@ def main():
         credentials=creds,
         client_options={"api_endpoint": f"{LOCATION}-documentai.googleapis.com"}
     )
-    vertexai.init(project=VERTEX_PROJECT, location=VERTEX_REGION)
-    model = GenerativeModel(MODEL_ID)
+    client = genai.Client(vertexai=True, project=VERTEX_PROJECT, location=VERTEX_REGION)
 
     # Step 1: Collect PDFs
     print("\nStep 1: Collecting PDFs...")
@@ -273,7 +275,7 @@ def main():
 
         # Gemini extraction
         print(f"    Calling Gemini...")
-        extraction = call_gemini(model, pdf_path)
+        extraction = call_gemini(client, MODEL_ID, pdf_path)
         if extraction:
             inv = extraction.get("invoice_number", "N/A")
             items = len(extraction.get("line_items", []))

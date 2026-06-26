@@ -30,6 +30,7 @@ import 'mint_error_library_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
+import '../services/inspector_service.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -44,6 +45,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
+  bool _inspectorMode = false;
 
   // ── Show Morgan as a full-screen dialog (doesn't lose current screen) ──────
   void _showMorganDialog() {
@@ -54,6 +56,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   @override
   void initState() {
     super.initState();
+    _loadInspectorMode();
 
     // ── Morgan deep-link: if the user tapped a tile in the greeter,
     // navigate directly to that screen instead of Home Dashboard.
@@ -83,6 +86,15 @@ class _BaseLayoutState extends State<BaseLayout> {
       WizardService.setNavigateCallback(
         (route) => setState(() => _activeRoute = route),
       );
+    }
+  }
+
+  void _loadInspectorMode() async {
+    final enabled = await InspectorService.isEnabled();
+    if (mounted) {
+      setState(() {
+        _inspectorMode = enabled;
+      });
     }
   }
 
@@ -323,6 +335,48 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ]),
                   ),
                 ),
+                const SizedBox(height: 10),
+                if (AuthService.isBetaTester) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(5),
+                        border: Border.all(color: Colors.white.withAlpha(12)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.bug_report, size: 14, color: Color(0xFF4C8CDA)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Inspector',
+                                style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                            height: 20,
+                            child: Switch.adaptive(
+                              value: _inspectorMode,
+                              activeThumbColor: const Color(0xFFF63366),
+                              onChanged: (val) async {
+                                await InspectorService.setEnabled(val);
+                                setState(() {
+                                  _inspectorMode = val;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Expanded(
                   child: ValueListenableBuilder<WizardState?>(

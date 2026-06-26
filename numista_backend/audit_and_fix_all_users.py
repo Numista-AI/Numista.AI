@@ -110,9 +110,14 @@ for row in REF_ROWS:
             _kw_index[seg].append(row)
 
 # ─── HELPERS FOR MATCHING ────────────────────────────────────────────────────
-def gcs_find(keywords: list[str], side_hints: list[str] = None) -> dict | None:
+def gcs_find(keywords: list[str], side_hints: list[str] = None, exclude_keywords: list[str] = None) -> dict | None:
     kw_lower = [k.lower() for k in keywords]
     sh_lower = [s.lower() for s in (side_hints or [])]
+    ex_lower = [e.lower() for e in (exclude_keywords or [])]
+
+    # Obverse/reverse side mutual exclusions
+    is_obv_search = any(x in sh_lower for x in ["obverse", "obv", "front", "left"])
+    is_rev_search = any(x in sh_lower for x in ["reverse", "rev", "back", "right"])
 
     def score(row):
         p = row["path"].lower()
@@ -122,6 +127,15 @@ def gcs_find(keywords: list[str], side_hints: list[str] = None) -> dict | None:
     for row in REF_ROWS:
         p = row["path"].lower()
         if all(k in p for k in kw_lower):
+            if ex_lower and any(e in p for e in ex_lower):
+                continue
+            
+            # Mutual exclusion check
+            if is_obv_search and any(x in p for x in ["reverse", "-rev", "_rev", "/rev", "back", "right"]):
+                continue
+            if is_rev_search and any(x in p for x in ["obverse", "-obv", "_obv", "/obv", "front", "left"]):
+                continue
+
             if sh_lower:
                 if any(s in p for s in sh_lower):
                     candidates.append(row)
@@ -130,83 +144,180 @@ def gcs_find(keywords: list[str], side_hints: list[str] = None) -> dict | None:
     candidates.sort(key=score)
     return candidates[0] if candidates else None
 
+
 def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+def check_year_discrepancy(coin_year_str, row):
+    if not coin_year_str or not row:
+        return False
+    coin_year_match = re.search(r'(?<!\d)\d{4}(?!\d)', str(coin_year_str))
+    if not coin_year_match:
+        return False
+    c_yr = coin_year_match.group(0)
+    
+    for field in ["path", "public_url"]:
+        val = row.get(field, "")
+        if val:
+            path_years = re.findall(r'(?<!\d)\d{4}(?!\d)', val)
+            for p_yr in path_years:
+                if p_yr != c_yr:
+                    return True
+    return False
 
 def classify_coin(denom: str, program: str, year: str) -> str:
     d = (denom or "").lower().strip()
     p = (program or "").lower().strip()
     y = str(year or "").strip()
 
-    if "morgan" in p: return "morgan_dollar"
-    if "peace" in p and ("dollar" in d or "dollar" in p): return "peace_dollar"
-    if any(x in p for x in ["eisenhower", "ike"]) and "presidential" not in p: return "eisenhower_dollar"
-    if "presidential" in p: return "presidential_dollar"
-    if any(x in p for x in ["native american", "sacagawea", "native_american"]): return "native_american_dollar"
+    # 1. Quarters
+    if "quarter" in d or "25c" in d or "25 cent" in d or "quarter" in p:
+        if "state" in p or "state" in d or "50 state" in p or "50 state" in d:
+            return "state_quarter"
+        if "american women" in p or "american women" in d:
+            return "american_women_quarter"
+        if "america the beautiful" in p or "america the beautiful" in d or "atb" in p or "atb" in d:
+            return "america_beautiful"
+        if "barber" in p or "barber" in d:
+            return "barber_quarter"
+        if "capped" in p or "capped" in d:
+            return "capped_bust_quarter"
+        if "seated" in p or "seated" in d:
+            return "seated_liberty_quarter"
+        return "washington_quarter"
 
-    if "kennedy" in p: return "kennedy_half"
-    if "franklin" in p and ("half" in d or "half" in p): return "franklin_half"
-    if any(x in p for x in ["walking liberty", "walking"]): return "walking_liberty"
-
-    if any(x in p for x in ["state quarter", "50 state", "statehood", "50-state"]): return "state_quarter"
-    if "american women" in p: return "american_women_quarter"
-    if any(x in p for x in ["america the beautiful", "america beautiful", "national park", "atb", "america_beautiful"]): return "america_beautiful"
-    if "barber" in p and ("quarter" in d or "25" in d or "quarter" in p): return "barber_quarter"
-    if "capped bust" in p and "quarter" in d: return "capped_bust_quarter"
-    if "seated liberty" in p and "quarter" in d: return "seated_liberty_quarter"
-    if "washington" in p and "quarter" in d: return "washington_quarter"
-    if "quarter" in d: return "washington_quarter"
-
-    if any(x in p for x in ["barber dime", "barber series dime"]) or ("barber" in d and "dime" in d): return "barber_dime"
-    if "mercury" in p: return "mercury_dime"
-    if "roosevelt" in p and "dime" in d: return "roosevelt_dime"
-    if "dime" in d:
-        if y.isdigit() and int(y) < 1916: return "barber_dime"
-        if y.isdigit() and 1916 <= int(y) <= 1945: return "mercury_dime"
+    # 2. Dimes
+    if "dime" in d or "10c" in d or "10 cent" in d or "dime" in p:
+        if "barber" in p or "barber" in d:
+            return "barber_dime"
+        if "capped" in p or "capped" in d:
+            return "capped_bust_dime"
+        if "seated" in p or "seated" in d:
+            return "seated_liberty_dime"
+        if "mercury" in p or "mercury" in d:
+            return "mercury_dime"
+        if "roosevelt" in p or "roosevelt" in d:
+            return "roosevelt_dime"
+        if y.isdigit():
+            y_int = int(y)
+            if y_int < 1916: return "barber_dime"
+            if 1916 <= y_int <= 1945: return "mercury_dime"
+            return "roosevelt_dime"
         return "roosevelt_dime"
 
-    if any(x in p for x in ["buffalo", "indian head nickel"]): return "buffalo_nickel"
-    if any(x in p for x in ["three-cent nickel", "three cent nickel", "3 cent"]): return "three_cent_nickel"
-    if "jefferson" in p: return "jefferson_nickel"
-    if "nickel" in d:
-        if y.isdigit() and int(y) <= 1938: return "buffalo_nickel"
+    # 3. Half Dollars (Check this before generic dollar check!)
+    if "half dollar" in d or "50c" in d or "fifty cents" in d or "50 cent" in d or ("half" in d and "cent" not in d) or "half dollar" in p:
+        if "seated" in d or "seated" in p: return "seated_liberty_half"
+        if "capped" in d or "capped" in p: return "capped_bust_half"
+        if "kennedy" in d or "kennedy" in p: return "kennedy_half"
+        if "franklin" in d or "franklin" in p: return "franklin_half"
+        if "walking" in d or "walking" in p: return "walking_liberty"
+        if "barber" in d or "barber" in p: return "barber_half"
+        # Fallbacks by year
+        if y.isdigit():
+            y_int = int(y)
+            if y_int < 1839: return "capped_bust_half"
+            if 1839 <= y_int <= 1891: return "seated_liberty_half"
+            if 1892 <= y_int <= 1915: return "barber_half"
+            if 1916 <= y_int <= 1947: return "walking_liberty"
+            if 1948 <= y_int <= 1963: return "franklin_half"
+            return "kennedy_half"
+        return "kennedy_half"
+
+    # 4. Nickels (make sure pre-1866 nickels are handled correctly)
+    if "nickel" in d or "5c" in d or "five cents" in d or "5 cent" in d or "nickel" in p:
+        if "three" in d or "three" in p or "3" in d or "3" in p:
+            return "three_cent_nickel"
+        if "buffalo" in d or "buffalo" in p or "indian head" in d or "indian head" in p:
+            return "buffalo_nickel"
+        if "shield" in d or "shield" in p:
+            return "shield_nickel"
+        if "liberty" in d or "liberty" in p:
+            return "liberty_head_nickel"
+        if "jefferson" in d or "jefferson" in p:
+            return "jefferson_nickel"
+        # Fallbacks by year
+        if y.isdigit():
+            y_int = int(y)
+            if y_int < 1866:
+                if "capped" in d or "capped" in p:
+                    return "capped_bust_half_dime"
+                if "seated" in d or "seated" in p:
+                    return "seated_liberty_half_dime"
+                return "capped_bust_half_dime"
+            if 1866 <= y_int <= 1883:
+                return "shield_nickel"
+            if 1883 <= y_int <= 1913:
+                return "liberty_head_nickel"
+            if 1913 <= y_int <= 1938:
+                return "buffalo_nickel"
+            return "jefferson_nickel"
         return "jefferson_nickel"
 
-    if any(x in p for x in ["indian head cent", "indian head"]): return "indian_head_cent"
-    if any(x in d for x in ["1 cent", "cent", "penny"]):
-        if "indian" in p: return "indian_head_cent"
-        if "wheat" in p or (y.isdigit() and 1909 <= int(y) <= 1958): return "wheat_cent"
-        if "memorial" in p or (y.isdigit() and int(y) >= 1959): return "memorial_cent"
+    # 5. Dollar coins
+    if "dollar" in d or "1$" in d or "dollar" in p:
+        if "presidential" in p or "presidential" in d: return "presidential_dollar"
+        if "morgan" in p or "morgan" in d: return "morgan_dollar"
+        if "peace" in p or "peace" in d: return "peace_dollar"
+        if any(x in p for x in ["eisenhower", "ike"]) or any(x in d for x in ["eisenhower", "ike"]):
+            return "eisenhower_dollar"
+        if any(x in p for x in ["native american", "sacagawea", "native_american"]) or any(x in d for x in ["native american", "sacagawea", "native_american"]):
+            return "native_american_dollar"
+        if y.isdigit():
+            y_int = int(y)
+            if y_int <= 1921: return "morgan_dollar"
+            if 1921 <= y_int <= 1935: return "peace_dollar"
+            if 1971 <= y_int <= 1978: return "eisenhower_dollar"
+            return "native_american_dollar"
+        return "morgan_dollar"
+
+    # 6. Cents/Pennies
+    if "cent" in d or "penny" in d or "1c" in d or "cent" in p or "penny" in p:
+        if "indian head" in p or "indian head" in d or "indian cent" in d or "indian cent" in p:
+            return "indian_head_cent"
+        if "wheat" in p or "wheat" in d or (y.isdigit() and 1909 <= int(y) <= 1958):
+            return "wheat_cent"
+        if "memorial" in p or "memorial" in d or (y.isdigit() and int(y) >= 1959):
+            return "memorial_cent"
         return "wheat_cent"
 
-    if "half cent" in d: return "half_cent_classic_head"
-    if "dollar" in d: return "morgan_dollar"
+    if "half cent" in d or "half cent" in p: return "half_cent_classic_head"
     return ""
 
 COIN_GCS_MAP = {
-    "morgan_dollar": {"obverse": ["morgan", "obverse"], "reverse": ["morgan", "reverse"]},
-    "peace_dollar": {"obverse": ["peace", "obverse"], "reverse": ["peace", "reverse"]},
-    "eisenhower_dollar": {"obverse": ["eisenhower", "obverse"], "reverse": ["eisenhower", "reverse"]},
-    "kennedy_half": {"obverse": ["kennedy", "obverse"], "reverse": ["kennedy", "reverse"]},
-    "franklin_half": {"obverse": ["franklin", "obverse"], "reverse": ["franklin", "reverse"]},
-    "walking_liberty": {"obverse": ["walking", "obverse"], "reverse": ["walking", "reverse"]},
-    "barber_dime": {"obverse": ["barber", "dime", "obverse"], "reverse": ["barber", "dime", "reverse"]},
-    "barber_quarter": {"obverse": ["barber", "quarter", "obverse"], "reverse": ["barber", "quarter", "reverse"]},
-    "mercury_dime": {"obverse": ["mercury", "obverse"], "reverse": ["mercury", "reverse"]},
-    "roosevelt_dime": {"obverse": ["roosevelt", "dime", "obverse"], "reverse": ["roosevelt", "dime", "reverse"]},
-    "buffalo_nickel": {"obverse": ["buffalo", "obverse"], "reverse": ["buffalo", "reverse"]},
-    "jefferson_nickel": {"obverse": ["jefferson", "nickel", "obverse"], "reverse": ["jefferson", "nickel", "reverse"]},
-    "lincoln_wheat_cent": {"obverse": ["wheat", "obverse"], "reverse": ["wheat", "reverse"]},
-    "wheat_cent": {"obverse": ["wheat", "obverse"], "reverse": ["wheat", "reverse"]},
-    "memorial_cent": {"obverse": ["lincoln", "memorial", "obverse"], "reverse": ["lincoln", "memorial", "reverse"]},
-    "indian_head_cent": {"obverse": ["indian", "cent", "obverse"], "reverse": ["indian", "cent", "reverse"]},
-    "washington_quarter": {"obverse": ["washington", "quarter", "obverse"], "reverse": ["washington", "quarter", "reverse"]},
-    "american_women_quarter": {"obverse": ["american", "women", "obverse"], "reverse": ["american", "women", "reverse"]},
-    "america_beautiful": {"obverse": ["america", "beautiful", "obverse"], "reverse": ["america", "beautiful", "reverse"]},
-    "native_american_dollar": {"obverse": ["native", "obverse"], "reverse": ["native", "reverse"]},
-    "three_cent_nickel": {"obverse": ["three", "cent", "obverse"], "reverse": ["three", "cent", "reverse"]},
-    "seated_liberty_quarter": {"obverse": ["seated", "obverse"], "reverse": ["seated", "reverse"]},
-    "half_cent_classic_head": {"obverse": ["half", "cent", "obverse"], "reverse": ["half", "cent", "reverse"]},
+    "morgan_dollar": {"obverse": ["morgan", "dollar", "obv"], "reverse": ["morgan", "dollar", "rev"]},
+    "peace_dollar": {"obverse": ["peace", "dollar", "obv"], "reverse": ["peace", "dollar", "rev"]},
+    "eisenhower_dollar": {"obverse": ["eisenhower", "dollar", "obv"], "reverse": ["eisenhower", "dollar", "rev"]},
+    "kennedy_half": {"obverse": ["kennedy", "half", "obv"], "reverse": ["kennedy", "half", "rev"]},
+    "franklin_half": {"obverse": ["franklin", "half", "obv"], "reverse": ["franklin", "half", "rev"]},
+    "walking_liberty": {"obverse": ["walking", "half", "obv"], "reverse": ["walking", "half", "rev"]},
+    "barber_dime": {"obverse": ["barber", "dime", "obv"], "reverse": ["barber", "dime", "rev"]},
+    "barber_quarter": {"obverse": ["barber", "quarter", "obv"], "reverse": ["barber", "quarter", "rev"]},
+    "barber_half": {"obverse": ["barber", "half", "obv"], "reverse": ["barber", "half", "rev"]},
+    "mercury_dime": {"obverse": ["mercury", "dime", "obv"], "reverse": ["mercury", "dime", "rev"]},
+    "roosevelt_dime": {"obverse": ["roosevelt", "dime", "obv"], "reverse": ["roosevelt", "dime", "rev"]},
+    "buffalo_nickel": {"obverse": ["buffalo", "nickel", "obv"], "reverse": ["buffalo", "nickel", "rev"]},
+    "jefferson_nickel": {"obverse": ["1938", "jefferson", "left"], "reverse": ["1938", "jefferson", "right"]},
+    "lincoln_wheat_cent": {"obverse": ["wheat", "penny", "left"], "reverse": ["wheat", "penny", "right"]},
+    "wheat_cent": {"obverse": ["wheat", "penny", "left"], "reverse": ["wheat", "penny", "right"]},
+    "memorial_cent": {"obverse": ["obverses_of_united_states_cents", "2005-penny-uncirculated-obverse.png"], "reverse": ["lincoln_memorial_cent", "2005_penny_rev"]},
+    "indian_head_cent": {"obverse": ["indian_head_cent", "obv"], "reverse": ["indian_head_cent", "rev"]},
+    "washington_quarter": {"obverse": ["1932", "washington", "quarter", "obv"], "reverse": ["1932", "washington", "quarter", "rev"]},
+    "american_women_quarter": {"obverse": ["american", "women", "quarter", "obv"], "reverse": ["american", "women", "quarter", "rev"]},
+    "america_beautiful": {"obverse": ["america", "beautiful", "quarter", "obv"], "reverse": ["america", "beautiful", "quarter", "rev"]},
+    "native_american_dollar": {"obverse": ["native", "american", "dollar", "obv"], "reverse": ["native", "american", "dollar", "rev"]},
+    "three_cent_nickel": {"obverse": ["three", "cent", "nickel", "obv"], "reverse": ["three", "cent", "nickel", "rev"]},
+    "seated_liberty_quarter": {"obverse": ["seated", "quarter", "obv"], "reverse": ["seated", "quarter", "rev"]},
+    "seated_liberty_dime": {"obverse": ["seated", "dime", "obv"], "reverse": ["seated", "dime", "rev"]},
+    "seated_liberty_half": {"obverse": ["seated", "half", "obv"], "reverse": ["seated", "half", "rev"]},
+    "capped_bust_quarter": {"obverse": ["capped", "quarter", "obv"], "reverse": ["capped", "quarter", "rev"]},
+    "capped_bust_dime": {"obverse": ["capped", "dime", "obv"], "reverse": ["capped", "dime", "rev"]},
+    "capped_bust_half": {"obverse": ["capped", "half", "obv"], "reverse": ["capped", "half", "rev"]},
+    "capped_bust_half_dime": {"obverse": ["capped", "dime", "obv"], "reverse": ["capped", "dime", "rev"]},
+    "seated_liberty_half_dime": {"obverse": ["seated", "dime", "obv"], "reverse": ["seated", "dime", "rev"]},
+    "half_cent_classic_head": {"obverse": ["classic_head_half_cent", "left"], "reverse": ["classic_head_half_cent", "right"]},
+    "shield_nickel": {"obverse": ["shield", "nickel", "obv"], "reverse": ["shield", "nickel", "rev"]},
+    "liberty_head_nickel": {"obverse": ["liberty", "head", "nickel", "obv"], "reverse": ["liberty", "head", "nickel", "rev"]},
 }
 
 def match_state_quarter(coin: dict) -> tuple[dict | None, dict | None]:
@@ -221,9 +332,11 @@ def match_state_quarter(coin: dict) -> tuple[dict | None, dict | None]:
     if not state:
         return None, None
     state_slug = slugify(state)
-    obv = gcs_find(["50_state_quarters", state_slug], ["obverse", "uncirculated"])
+    obv = gcs_find(["50_state_quarters", state_slug], ["obverse"])
     if not obv:
         obv = gcs_find(["50_state_quarters"], ["obverse", "Denver"])
+    if not obv:
+        obv = gcs_find(["bulk_programs", "generic_quarters", "1932", "washington", "obverse"])
     rev = gcs_find(["50_state_quarters", state_slug], ["reverse"])
     return obv, rev
 
@@ -314,12 +427,28 @@ def match_generic(coin_type: str) -> tuple[dict | None, dict | None]:
         return None, None
     obv_kw = spec.get("obverse", [])
     rev_kw = spec.get("reverse", [])
-    obv = gcs_find(obv_kw)
+    
+    exclude = []
+    if "quarter" in coin_type:
+        exclude = ["dollar", "half", "dime", "nickel", "cent", "penny"]
+    elif "dime" in coin_type:
+        exclude = ["dollar", "half", "quarter", "nickel", "cent", "penny"]
+    elif "half" in coin_type:
+        exclude = ["quarter", "dime", "nickel", "cent", "penny"]
+    elif "nickel" in coin_type:
+        exclude = ["dollar", "half", "quarter", "dime", "cent", "penny"]
+    elif "cent" in coin_type or "penny" in coin_type:
+        exclude = ["dollar", "half", "quarter", "dime", "nickel"]
+
+    if coin_type == "washington_quarter":
+        exclude.extend(["50_state", "state_quarter", "america_beautiful", "atb", "american_women"])
+
+    obv = gcs_find(obv_kw, exclude_keywords=exclude)
     if not obv and len(obv_kw) > 2:
-        obv = gcs_find(obv_kw[:-1])
-    rev = gcs_find(rev_kw)
+        obv = gcs_find(obv_kw[:-1], exclude_keywords=exclude)
+    rev = gcs_find(rev_kw, exclude_keywords=exclude)
     if not rev and len(rev_kw) > 2:
-        rev = gcs_find(rev_kw[:-1])
+        rev = gcs_find(rev_kw[:-1], exclude_keywords=exclude)
     return obv, rev
 
 def gcs_match_coin(coin: dict) -> tuple[dict | None, dict | None]:
@@ -749,7 +878,19 @@ def main():
 
                     fs_updates["updated_at"] = datetime.now(timezone.utc).isoformat()
                     fs_updates["last_image_fix"] = datetime.now(timezone.utc).isoformat()
-                    fs_updates["image_fix_reason"] = "Auto-healed by audit pipeline: corrected mismatch/missing image."
+                    
+                    has_mismatch = False
+                    if obv_row and check_year_discrepancy(item["year"], obv_row):
+                        has_mismatch = True
+                    if rev_row and check_year_discrepancy(item["year"], rev_row):
+                        has_mismatch = True
+                    
+                    base_reason = "Auto-healed by audit pipeline: corrected mismatch/missing image."
+                    if has_mismatch:
+                        fs_updates["image_fix_reason"] = base_reason + " *While the year listed is different, the design is correct."
+                    else:
+                        fs_updates["image_fix_reason"] = base_reason
+
 
                     doc_ref = db.collection("users").document(user_email).collection("coins").document(doc_id)
                     doc_ref.update(fs_updates)

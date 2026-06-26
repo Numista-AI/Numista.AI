@@ -1,8 +1,7 @@
 import sys
 import os
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
 
 # Force UTF-8 output so emoji don't crash on Windows cp1252
 if hasattr(sys.stdout, 'reconfigure'):
@@ -16,11 +15,10 @@ PROJECT_ID = "studio-9101802118-8c9a8"
 def test_model(model_name, location):
     print(f"\n--- Testing {model_name} in {location} ---")
     try:
-        vertexai.init(project=PROJECT_ID, location=location)
-        model = GenerativeModel(model_name)
-        chat = model.start_chat()
+        client = genai.Client(vertexai=True, project=PROJECT_ID, location=location)
+        chat = client.chats.create(model=model_name)
         response = chat.send_message("Ping")
-        print(f"✅ SUCCESS: {model_name} working in {location}")
+        print(f"✅ SUCCESS: {model_name} working in {location} -> response: {response.text}")
         return True
     except Exception as e:
         print(f"❌ FAILED: {e}")

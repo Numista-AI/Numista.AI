@@ -9,9 +9,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
-// wishlist_service removed from this screen — wishlist action is in CoinDetailScreen
 import '../models/coin_model.dart';
 import '../services/epn_service.dart';
+import '../services/guest_seed_service.dart';
 import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
 import '../widgets/coin_set_viewer.dart';
@@ -237,6 +237,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _buildCoinsStream() {
+    if (GuestSeedService.isBrowseDemoMode) {
+      return GuestSeedService.getDemoCoinsStream();
+    }
     Query<Map<String, dynamic>> q =
         FirebaseFirestore.instance.collection(AuthService.coinsPath);
     if (_limit > 0) q = q.limit(_limit);
@@ -660,16 +663,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Normalise all dash variants and strip commas
     final norm = raw
         .replaceAll(',', '')
-        .replaceAll('\u2013', '-')   // en-dash  –
-        .replaceAll('\u2014', '-')   // em-dash  —
+        .replaceAll('\u2013', '-')   // en-dash
+        .replaceAll('\u2014', '-')   // em-dash
         .replaceAll('\u2012', '-');  // figure dash
-    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
-    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc. allowing optional leading $ or non-digits on second part
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
     if (rangeMatch != null) {
       final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
-      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
-      final mid = (a + b) / 2;
-      return mid > 100000 ? 0.0 : mid;   // sanity cap
+      return a > 100000 ? 0.0 : a;   // sanity cap
     }
     final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     return v > 100000 ? 0.0 : v;          // sanity cap

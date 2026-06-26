@@ -156,6 +156,38 @@ class HardwareService {
       return false;
     }
   }
+
+  // ─── List Cameras ─────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> listCameras() async {
+    try {
+      final response = await http
+          .get(Uri.parse('https://localhost:5000/list-cameras'))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('[HW] /list-cameras failed: $e');
+    }
+    return {'cameras': <int>[], 'active': -1};
+  }
+
+  // ─── Set Camera Index ─────────────────────────────────────────────────────
+  Future<bool> setCameraIndex(int index) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('https://localhost:5000/set-camera'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'index': index}),
+          )
+          .timeout(const Duration(seconds: 3));
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('[HW] /set-camera failed: $e');
+      return false;
+    }
+  }
 }
 
 

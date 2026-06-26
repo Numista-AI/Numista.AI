@@ -170,20 +170,134 @@ def format_coin_for_context(coin: dict) -> str:
 
 # ─── PUBLIC API ───────────────────────────────────────────────────────────────
 
+def _extract_struct(struct_data) -> dict:
+    """Convert a protobuf Struct to a plain Python dict, handling both Protobuf Value objects and raw values."""
+    out = {}
+    if not struct_data:
+        return out
+    try:
+        for key, value in struct_data.items():
+            if hasattr(value, "WhichOneof"):
+                try:
+                    kind = value.WhichOneof("kind")
+                    if kind == "string_value":
+                        out[key] = value.string_value
+                    elif kind == "number_value":
+                        out[key] = value.number_value
+                    elif kind == "bool_value":
+                        out[key] = value.bool_value
+                    else:
+                        out[key] = str(value)
+                except Exception:
+                    out[key] = str(value)
+            else:
+                out[key] = value
+    except Exception as e:
+        print(f"[morgan_knowledge] Error extracting struct: {e}")
+    return out
+
+
+def get_coin_context_vertex(query: str, max_results: int = MAX_RESULTS) -> Optional[str]:
+    """Query the Vertex AI Search engine (Discovery Engine) using configuration in ids.json."""
+    try:
+        from google.cloud import discoveryengine_v1 as de
+        import os
+        import json
+        
+        # Load configuration
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        ids_path = os.path.join(current_dir, "vertex_search", "ids.json")
+        if not os.path.exists(ids_path):
+            print(f"[morgan_knowledge] ids.json not found at: {ids_path}")
+            return None
+            
+        with open(ids_path) as f:
+            config = json.load(f)
+            
+        serving_config = config.get("serving_config")
+        if not serving_config:
+            print("[morgan_knowledge] serving_config missing from ids.json")
+            return None
+            
+        client = de.SearchServiceClient()
+        request = de.SearchRequest(
+            serving_config=serving_config,
+            query=query,
+            page_size=max_results,
+            query_expansion_spec=de.SearchRequest.QueryExpansionSpec(
+                condition=de.SearchRequest.QueryExpansionSpec.Condition.AUTO,
+            ),
+            spell_correction_spec=de.SearchRequest.SpellCorrectionSpec(
+                mode=de.SearchRequest.SpellCorrectionSpec.Mode.AUTO,
+            ),
+            content_search_spec=de.SearchRequest.ContentSearchSpec(
+                snippet_spec=de.SearchRequest.ContentSearchSpec.SnippetSpec(
+                    return_snippet=True,
+                    max_snippet_count=1,
+                ),
+            ),
+        )
+        
+        response = client.search(request=request)
+        if not response.results:
+            return None
+            
+        header = (
+            "NUMISMATIC REFERENCE DATA (from Vertex AI Search knowledge base):\n"
+            "Use the following verified coin information to answer the user's question accurately.\n"
+            "If the user's question matches one of these coins, cite these facts.\n"
+        )
+        
+        formatted_entries = []
+        for hit in response.results:
+            doc = hit.document
+            sd = _extract_struct(doc.struct_data)
+            
+            entry_lines = [
+                f"COIN: {sd.get('program_name', 'Unknown Series')} — {sd.get('coin_year', '')} {sd.get('coin_name', '')}",
+                f"  Category:      {sd.get('category', '')}",
+                f"  Denomination:  {sd.get('denomination', '')}",
+                f"  Metal:         {sd.get('metal', '')}",
+                f"  Mint marks:    {sd.get('mint_marks', '')}",
+            ]
+            if sd.get('designer'):
+                entry_lines.append(f"  Designer:      {sd.get('designer')}")
+            if sd.get('notes'):
+                entry_lines.append(f"  Description:   {sd.get('notes')}")
+                
+            formatted_entries.append("\n".join(entry_lines))
+            
+        return f"{header}\n" + "\n\n".join(formatted_entries) + "\n"
+        
+    except Exception as e:
+        print(f"[morgan_knowledge] Vertex AI Search lookup error: {e}")
+        return None
+
+
 def get_coin_context(
     db: firestore.Client,
     query: str,
     max_results: int = MAX_RESULTS,
 ) -> Optional[str]:
     """
-    Given a user query, search coins_reference for relevant entries
-    and return a formatted context block to inject into Morgan's prompt.
-
-    Returns None if no relevant coins found (avoids polluting the prompt).
+    Given a user query, search coins_reference for relevant entries.
+    Attempts to use Vertex AI Search (Discovery Engine) first to leverage
+    semantic capabilities and utilize GenAI App Builder credits.
+    Falls back to Firestore keyword matching if Vertex Search is not configured,
+    returns no results, or fails.
     """
     if not query or not query.strip():
         return None
 
+    # 1. Try Vertex AI Search first
+    vertex_context = get_coin_context_vertex(query, max_results)
+    if vertex_context:
+        print(f"[morgan_knowledge] Successfully retrieved RAG context from Vertex AI Search for: {query!r}")
+        return vertex_context
+
+    print(f"[morgan_knowledge] Vertex AI Search unavailable or empty for {query!r}; falling back to Firestore keyword match.")
+
+    # 2. Fallback to Firestore keyword matching
     keywords = extract_keywords(query)
     if not keywords:
         return None

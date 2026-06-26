@@ -1,0 +1,26 @@
+=================================================================
+  AJ Littleton Batch — Final Summary
+=================================================================
+  Session ID:       lcc-aj-batch-20260626-181154
+  Files processed:  213 / 213
+  Successful:       200
+  Failed:           13
+  Total items:      1048 (landed in review_queue)
+  Avg response:     32.4s per file
+  Total time:       122.3 minutes
+  Log:              C:\Users\ericd\Documents\MyVertexProject\numista_backend\batch_invoice_log.json
+
+  ERRORS:
+    [http_500] Scan_20260128 (6).pdf — {"detail":"Expecting ',' delimiter: line 245 column 1 (char 7242)"}
+    [http_500] Scan_20260129 (115).pdf — {"detail":"Expecting ',' delimiter: line 29 column 1 (char 811)"}
+    [http_500] Scan_20260129 (122)_Part1.pdf — {"detail":"Expecting ',' delimiter: line 60 column 1 (char 1608)"}
+    [http_500] Scan_20260129 (24).pdf — {"detail":"Expecting ',' delimiter: line 262 column 1 (char 7748)"}
+    [http_500] Scan_20260129 (37).pdf — {"detail":"Expecting ',' delimiter: line 29 column 1 (char 913)"}
+    [http_500] Scan_20260129 (56).pdf — {"detail":"Expecting ',' delimiter: line 29 column 1 (char 851)"}
+    [http_500] Scan_20260129 (61).pdf — {"detail":"Extra data: line 29 column 2 (char 844)"}
+    [http_500] Scan_20260129 (76).pdf — {"detail":"Expecting ',' delimiter: line 28 column 1 (char 781)"}
+    [http_500] Receipt_2026-06-03_094249.pdf — {"detail":"Expecting ',' delimiter: line 326 column 1 (char 9962)"}
+    [http_500] Receipt_2026-06-03_100549.pdf — {"detail":"Expecting ',' delimiter: line 158 column 1 (char 4941)"}
+    [http_500] Receipt_2026-06-03_102540.pdf — {"detail":"Expecting ',' delimiter: line 307 column 1 (char 9708)"}
+    [timeout] Receipt_2026-06-03_094010.pdf — Request timed out after 120s
+    [http_500] Receipt_2026-06-03_095349.pdf — {"detail":"Expecting ',' delimiter: line 974 column 1 (char 27378)"}

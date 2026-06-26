@@ -86,4 +86,60 @@ class GuestSeedService {
     final byteData = await rootBundle.load('assets/demo_spreadsheet.csv');
     return byteData.buffer.asUint8List();
   }
+
+  /// Returns a stream that emits a single `DemoQuerySnapshot` containing the
+  /// in-memory cached demo coins.
+  static Stream<QuerySnapshot<Map<String, dynamic>>> getDemoCoinsStream() {
+    final snapshots = _demoCoinCache.asMap().entries.map((e) {
+      return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
+    }).toList();
+    return Stream.value(DemoQuerySnapshot(snapshots));
+  }
+
+  /// Returns a future that resolves to a `DemoQuerySnapshot` containing the
+  /// in-memory cached demo coins.
+  static Future<QuerySnapshot<Map<String, dynamic>>> getDemoCoinsFuture() async {
+    final snapshots = _demoCoinCache.asMap().entries.map((e) {
+      return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
+    }).toList();
+    return Future.value(DemoQuerySnapshot(snapshots));
+  }
+}
+
+class DemoDocumentSnapshot implements QueryDocumentSnapshot<Map<String, dynamic>> {
+  @override
+  final String id;
+  final Map<String, dynamic> _data;
+
+  DemoDocumentSnapshot(this.id, this._data);
+
+  @override
+  Map<String, dynamic> data([SnapshotOptions? options]) => _data;
+
+  @override
+  dynamic operator [](Object field) => _data[field];
+
+  @override
+  dynamic get(Object field) => _data[field];
+
+  @override
+  bool get exists => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class DemoQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
+  @override
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+
+  DemoQuerySnapshot(this.docs);
+
+  bool get isEmpty => docs.isEmpty;
+
+  @override
+  int get size => docs.length;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

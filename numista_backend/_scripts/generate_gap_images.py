@@ -15,8 +15,8 @@ from datetime import datetime, timezone
 
 import google.auth
 from google.cloud import firestore, storage as gcs
-import vertexai
-from vertexai.preview.vision_models import ImageGenerationModel
+from google import genai
+from google.genai import types as genai_types
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 PROJECT    = 'studio-9101802118-8c9a8'
@@ -91,8 +91,7 @@ def main():
     gcs_client = gcs.Client(credentials=creds, project=PROJECT)
     bucket     = gcs_client.bucket(BUCKET)
 
-    vertexai.init(project=PROJECT, location=LOCATION, credentials=creds)
-    model = ImageGenerationModel.from_pretrained(MODEL_ID)
+    client = genai.Client(vertexai=True, project=PROJECT, location=LOCATION)
 
     coins_ref = (fs_client.collection('users')
                  .document(USER_EMAIL)
@@ -125,19 +124,23 @@ def main():
         max_retries = 4
         for attempt in range(max_retries):
             try:
-                response = model.generate_images(
+                response = client.models.generate_images(
+                    model=MODEL_ID,
                     prompt=prompt,
-                    number_of_images=1,
-                    aspect_ratio='1:1',
-                    safety_filter_level='block_few',
+                    config=genai_types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="1:1",
+                        safety_filter_level="block_few",
+                        person_generation="dont_allow",
+                    )
                 )
 
-                if not response.images:
+                if not response.generated_images:
                     print(f"         SKIP — no image returned")
                     errors += 1
                     break
 
-                img_bytes = response.images[0]._image_bytes
+                img_bytes = response.generated_images[0].image.image_bytes
 
                 # Save to GCS
                 safe_label = re.sub(r'[^\w\-]', '_', label.lower())[:50]

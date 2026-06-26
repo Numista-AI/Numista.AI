@@ -9,9 +9,9 @@ service cloud.firestore {
       return request.auth != null && !request.auth.token.firebase.sign_in_provider.matches('anonymous');
     }
 
-    // Returns true if the signed-in user's email matches the {email} path segment.
+    // Returns true if the signed-in user's email or UID matches the {email} path segment.
     function isOwner(email) {
-      return isAuthenticated() && request.auth.token.email == email;
+      return request.auth != null && (request.auth.token.email == email || request.auth.uid == email);
     }
 
     // ── Estate reports — attorney portal token access ─────────────────────────

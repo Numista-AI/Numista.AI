@@ -1,0 +1,56 @@
+[14:57:20] ❌ FAIL  Root health check                                         HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: / (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+[14:57:24] ❌ FAIL  FastAPI docs page                                         HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /docs (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+[14:57:28] ❌ FAIL  GET /api/binder_scans/{email}                             HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/binder_scans/jseaman1204@gmail.com (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+[14:57:34] ✅ PASS  GET /api/admin/grade_flags                              5379ms  HTTP 200
+[14:57:34] ✅ PASS  Admin grade flags returned                                0 open flag(s)
+[14:57:36] ✅ PASS  GET /api/coin_crop (non-existent coin → 404)              HTTP 404 — expected 404 ✓
+[14:57:36] ✅ PASS  Dedup sweep endpoint                                      POST-only — skipped in this suite (not a GET endpoint)
+[14:57:38] ✅ PASS  GET /api/template (CSV download)                        2061ms  HTTP 200
+[14:57:38] ✅ PASS  Template headers check                                    22 columns all present
+[14:57:40] ✅ PASS  GET /api/nicknames (approved)                           2194ms  HTTP 200
+[14:57:40] ✅ PASS  Approved nicknames returned                               20 terms
+[14:57:42] ✅ PASS  GET /api/nicknames/stats                                2215ms  HTTP 200
+[14:57:42] ✅ PASS  Nickname stats fields                                     total=23 approved=0
+[14:57:44] ✅ PASS  POST /api/nicknames/submit 'Ike' (expect already_known) 2075ms  HTTP 200
+[14:57:44] ✅ PASS  Ike already_known response                                ✨ Great minds think alike! "Ike" is already in the Numista.A
+[14:57:47] ✅ PASS  POST /api/nicknames/submit new term 'TestCoin_1782500264' 2318ms  HTTP 200
+[14:57:47] ✅ PASS  New nickname submission status                            submitted
+[14:57:49] ✅ PASS  POST /api/nicknames/{id}/vote rating=5                  2322ms  HTTP 200
+[14:57:49] ✅ PASS  Vote recorded                                             Vote recorded.
+[14:57:51] ✅ PASS  GET /api/grade_review/stats                             2420ms  HTTP 200
+[14:57:51] ✅ PASS  Grade stats fields                                        total_ai=61.0 pending=61 flagged=0.0
+[14:57:54] ✅ PASS  GET /api/grade_review/queue                             2213ms  HTTP 200
+[14:57:54] ✅ PASS  Grade review queue                                        37 coins awaiting review, returned 5
+[14:57:54] ✅ PASS    🟡 3ba91d40-d1e…                                         1964 | Grade=Ungraded | Conf=92%
+[14:57:54] ✅ PASS    🟡 1339742c-737…                                         2024S | Grade=Proof-63 | Conf=100%
+[14:57:54] ✅ PASS    🟡 164dd6b9-e04…                                         2023S | Grade=Proof-63 | Conf=100%
+[14:57:56] ✅ PASS  POST /api/grade_review/submit confirmed (coin 1)        2271ms  HTTP 200
+[14:57:56] ✅ PASS  Confirmed review response                                 ✓ Grade confirmed! Thank you for helping improve Numista.AI.
+[14:57:58] ✅ PASS  POST /api/grade_review/submit corrected (coin 2)        2260ms  HTTP 200
+[14:57:58] ✅ PASS  Corrected review response                                 Correction submitted — "MS-63" has been noted.
+[14:58:00] ✅ PASS  GET /api/grade_review/stats (post-review, attempt 1)    2317ms  HTTP 200
+[14:58:04] ✅ PASS  GET /api/grade_review/stats (post-review, attempt 2)    2357ms  HTTP 200
+[14:58:07] ✅ PASS  GET /api/grade_review/stats (post-review, attempt 3)    2311ms  HTTP 200
+[14:58:10] ✅ PASS  GET /api/grade_review/stats (post-review, attempt 4)    2316ms  HTTP 200
+[14:58:10] ⚠️  WARN  Stats may not have updated                                pending was 61, now 61; reviewed was 0.0, now 0.0
+[14:58:18] ✅ PASS    _norm_condition('BU')                                   → 'MS-63' ✓
+[14:58:18] ✅ PASS    _norm_condition('bu')                                   → 'MS-63' ✓
+[14:58:18] ✅ PASS    _norm_condition('proof69')                              → 'PF-69' ✓
+[14:58:18] ✅ PASS    _norm_condition('PR69')                                 → 'PF-69' ✓
+[14:58:18] ✅ PASS    _norm_condition('Ch Proof 63')                          → 'PF-63' ✓
+[14:58:18] ✅ PASS    _norm_condition('F-12')                                 → 'F-12' ✓
+[14:58:18] ✅ PASS    _norm_condition('vf30')                                 → 'VF-30' ✓
+[14:58:18] ✅ PASS    _norm_condition('AU58')                                 → 'AU-58' ✓
+[14:58:18] ✅ PASS    _norm_condition('MS65')                                 → 'MS-65' ✓
+[14:58:18] ✅ PASS    _norm_condition('uncirculated')                         → 'Uncirculated' ✓
+[14:58:18] ✅ PASS  Normalization edge case summary                           10/10 passed
+[14:58:25] ✅ PASS    /api/grade_review/queue                                 avg 2229ms over 3 calls
+[14:58:32] ✅ PASS    /api/grade_review/stats                                 avg 2433ms over 3 calls
+[14:58:39] ✅ PASS    /api/nicknames/stats                                    avg 2177ms over 3 calls
+[14:58:45] ✅ PASS    /api/nicknames                                          avg 2183ms over 3 calls
+[14:58:52] ✅ PASS    /api/template                                           avg 2062ms over 3 calls
+
+======================================================================
+ Test Complete: 2026-06-26 14:58:52
+ ✅ PASS: 47   ❌ FAIL: 3   ⚠️  WARN: 1
+======================================================================

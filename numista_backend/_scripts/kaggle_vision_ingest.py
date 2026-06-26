@@ -29,28 +29,21 @@ import google.auth
 import google.auth.transport.requests
 from google.cloud import storage, firestore
 
-# ── Gemini SDK (prefer google.genai, fall back to vertexai) ───────────────────
+# ── Gemini SDK ──────────────────────────────────────────────────────────────
+from google import genai as _genai
+from google.genai import types as genai_types
+
 try:
-    from google import genai as _genai
-    from google.genai import types as genai_types
     _credentials, _ = google.auth.default()
     GENAI_CLIENT = _genai.Client(
         vertexai=True,
         project="studio-9101802118-8c9a8",
         location="global",
     )
-    USE_NEW_SDK = True
     print("[init] Using google.genai SDK")
-except Exception as _e1:
-    try:
-        import vertexai
-        from vertexai.generative_models import GenerativeModel, Part as VxPart
-        vertexai.init(project="studio-9101802118-8c9a8", location="us-central1")
-        USE_NEW_SDK = False
-        print("[init] Using vertexai SDK")
-    except Exception as _e2:
-        print(f"ERROR: Cannot initialize Gemini: {_e1} / {_e2}")
-        sys.exit(1)
+except Exception as e:
+    print(f"ERROR: Cannot initialize Gemini SDK: {e}")
+    sys.exit(1)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 PROJECT    = "studio-9101802118-8c9a8"
@@ -115,16 +108,12 @@ def save_checkpoint(cp):
 def probe_model():
     """Try each candidate model with a tiny text prompt and return first that works."""
     global MODEL
-    test_bytes = b"\xff\xd8\xff"  # minimal JPEG header
     for candidate in MODEL_CANDIDATES:
         try:
-            if USE_NEW_SDK:
-                GENAI_CLIENT.models.generate_content(
-                    model=candidate,
-                    contents=["Say: OK"]
-                )
-            else:
-                GenerativeModel(candidate).generate_content("Say: OK")
+            GENAI_CLIENT.models.generate_content(
+                model=candidate,
+                contents=["Say: OK"]
+            )
             MODEL = candidate
             print(f"[model] Using {MODEL}")
             return
@@ -139,22 +128,14 @@ def classify(blob):
     ext  = Path(blob.name).suffix.lower().lstrip(".")
     mime = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
 
-    if USE_NEW_SDK:
-        response = GENAI_CLIENT.models.generate_content(
-            model=MODEL,
-            contents=[
-                genai_types.Part.from_bytes(data=image_bytes, mime_type=mime),
-                PROMPT,
-            ],
-        )
-        raw = response.text.strip()
-    else:
-        mdl  = GenerativeModel(MODEL)
-        resp = mdl.generate_content([
-            VxPart.from_text(PROMPT),
-            VxPart.from_data(data=image_bytes, mime_type=mime),
-        ])
-        raw = resp.candidates[0].content.parts[0].text.strip()
+    response = GENAI_CLIENT.models.generate_content(
+        model=MODEL,
+        contents=[
+            genai_types.Part.from_bytes(data=image_bytes, mime_type=mime),
+            PROMPT,
+        ],
+    )
+    raw = response.text.strip()
 
     # Strip markdown fences
     raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.I)

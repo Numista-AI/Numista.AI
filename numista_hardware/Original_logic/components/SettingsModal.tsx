@@ -60,19 +60,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[80] p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl flex flex-col">
         
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-700/50 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl shadow-slate-200">
                 <Shield className="w-6 h-6" />
             </div>
             <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">App Settings</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest opacity-60">Manage your connections</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">App Settings</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest opacity-60">Manage your connections</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full text-slate-500 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -91,7 +91,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             type="text" 
                             value={ebayClientId}
                             onChange={(e) => setEbayClientId(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                            className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                         />
                     </div>
                     <div className="space-y-2">
@@ -100,13 +100,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             type="text" 
                             value={numistaToken}
                             onChange={(e) => setNumistaToken(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                            className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                         />
                     </div>
                 </div>
             </div>
 
-            <div className="border-t border-slate-100"></div>
+            <div className="border-t border-slate-100 dark:border-slate-700"></div>
 
             {/* PCGS Section */}
             <div className="space-y-6">
@@ -114,14 +114,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <Key className="w-4 h-4 text-slate-600" />
                     PCGS Grading Account
                 </h4>
-                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div className="bg-slate-50 dark:bg-slate-700/50 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-600 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                      <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email Address</label>
-                        <input type="text" value={pcgsUser} onChange={(e) => setPcgsUser(e.target.value)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl" />
+                        <input type="text" value={pcgsUser} onChange={(e) => setPcgsUser(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
                      </div>
                      <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
-                        <input type="password" value={pcgsPass} onChange={(e) => setPcgsPass(e.target.value)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl" />
+                        <input type="password" value={pcgsPass} onChange={(e) => setPcgsPass(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" />
                      </div>
                      <button 
                         onClick={handlePcgsLogin}
@@ -136,7 +136,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
         </div>
 
-        <div className="bg-slate-50 p-10 flex justify-end gap-3 border-t border-slate-100">
+        <div className="bg-slate-50 dark:bg-slate-700/50 p-10 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
           <button onClick={handleSave} className="px-16 py-5 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-2xl shadow-blue-200 flex items-center gap-3 uppercase text-xs tracking-widest active:scale-95">
             <Save className="w-5 h-5" />
             Apply Changes

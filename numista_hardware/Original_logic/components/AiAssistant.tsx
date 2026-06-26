@@ -37,23 +37,23 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ coins }) => {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-6 text-white shadow-xl border border-slate-700">
+    <div className="bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 rounded-xl p-6 text-slate-900 dark:text-white shadow-xl border border-slate-200 dark:border-slate-700 transition-colors duration-300">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-blue-600 rounded-lg">
           <Sparkles className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-bold">Collection Intelligence</h3>
-          <p className="text-slate-400 text-xs">Ask specific questions about your inventory</p>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Collection Intelligence</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs">Ask specific questions about your inventory</p>
         </div>
       </div>
 
       <div className="space-y-4">
         {response && (
-          <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600 animate-in fade-in slide-in-from-bottom-2">
+          <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-200 dark:border-slate-600 animate-in fade-in slide-in-from-bottom-2">
             <div className="flex gap-3">
-              <Bot className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
-              <p className="text-slate-200 text-sm leading-relaxed">{response}</p>
+              <Bot className="w-6 h-6 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-1" />
+              <p className="text-slate-700 dark:text-slate-200 text-sm leading-relaxed">{response}</p>
             </div>
           </div>
         )}
@@ -64,7 +64,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ coins }) => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ex: How much are my American Eagle silver dollars worth?"
-            className="w-full bg-slate-950/50 border border-slate-700 rounded-lg pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-white placeholder-slate-500"
+            className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-lg pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
             aria-label="Ask a question about your collection"
           />
           <button
@@ -87,7 +87,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ coins }) => {
               <button
                 key={i}
                 onClick={() => setQuery(s)}
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 transition-colors"
+                className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 transition-colors"
               >
                 {s}
               </button>

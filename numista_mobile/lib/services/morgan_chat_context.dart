@@ -150,13 +150,11 @@ class MorganChatContextService {
         .replaceAll('\u2013', '-')   // en-dash
         .replaceAll('\u2014', '-')   // em-dash
         .replaceAll('\u2012', '-');  // figure dash
-    // Match any range: "$15-$25", "$15 - $25", "15-25", etc.
-    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*(\d+\.?\d*)').firstMatch(norm);
+    // Match any range: "$15-$25", "$15 - $25", "15-25", etc. allowing optional leading $ or non-digits on second part
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
     if (rangeMatch != null) {
       final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
-      final b = double.tryParse(rangeMatch.group(2)!) ?? 0.0;
-      final mid = (a + b) / 2;
-      return mid > 100000 ? 0.0 : mid;   // sanity cap
+      return a > 100000 ? 0.0 : a;   // sanity cap: skip runaway AI estimates
     }
     final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     return v > 100000 ? 0.0 : v;         // sanity cap

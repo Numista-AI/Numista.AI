@@ -38,48 +38,28 @@ export const EditCoinModal: React.FC<EditCoinModalProps> = ({ coin, onClose, onS
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-hidden animate-in fade-in duration-200">
-      <div className="bg-white rounded-[2.5rem] max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-700/50 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-200">
                 <PenTool className="w-6 h-6" />
             </div>
             <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Edit Coin Entry</h2>
-                <p className="text-xs text-slate-400 font-black uppercase tracking-widest">{coin.year} {coin.denomination} ({coin.id.slice(0,8)})</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight italic uppercase">Edit Coin Entry</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest">{coin.year} {coin.denomination} ({coin.id.slice(0,8)})</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X className="w-6 h-6" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full text-slate-400 transition-colors"><X className="w-6 h-6" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 md:p-12 space-y-16 custom-scrollbar">
             {/* Identity & Physicals */}
             <div className="space-y-8">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-3 flex items-center gap-2">
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b dark:border-slate-700 pb-3 flex items-center gap-2">
                     <Tag className="w-4 h-4" /> Identity & Classification
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Country</label>
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" value={formData.country} onChange={e => handleChange('country', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Year</label>
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" value={formData.year} onChange={e => handleChange('year', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mint Mark</label>
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" value={formData.mintMark || ''} onChange={e => handleChange('mintMark', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Qty</label>
-                        <input type="number" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" value={formData.quantity} onChange={e => handleChange('quantity', parseInt(e.target.value))} />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Denomination</label>
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-lg" value={formData.denomination} onChange={e => handleChange('denomination', e.target.value)} />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Program / Series</label>
@@ -100,7 +80,7 @@ export const EditCoinModal: React.FC<EditCoinModalProps> = ({ coin, onClose, onS
 
             {/* Quality & Certification */}
             <div className="space-y-8">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-3 flex items-center gap-2">
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b dark:border-slate-700 pb-3 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4" /> Condition & Certification
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -113,7 +93,7 @@ export const EditCoinModal: React.FC<EditCoinModalProps> = ({ coin, onClose, onS
                         <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" value={formData.surfaceQuality || ''} onChange={e => handleChange('surfaceQuality', e.target.value)} />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-700/50 rounded-[2rem] border border-slate-200 dark:border-slate-600">
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Grading Service</label>
                         <input className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold" value={formData.certification?.service || ''} onChange={e => handleCertChange('service', e.target.value)} placeholder="PCGS, NGC, etc." />
@@ -127,7 +107,7 @@ export const EditCoinModal: React.FC<EditCoinModalProps> = ({ coin, onClose, onS
 
             {/* Financials & Acquisition */}
             <div className="space-y-8">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-3 flex items-center gap-2">
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b dark:border-slate-700 pb-3 flex items-center gap-2">
                     <DollarSign className="w-4 h-4" /> Financials & Retailer
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -195,8 +175,8 @@ export const EditCoinModal: React.FC<EditCoinModalProps> = ({ coin, onClose, onS
                 </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
-                <button type="button" onClick={onClose} className="px-8 py-4 text-slate-500 font-black uppercase tracking-widest hover:bg-slate-50 rounded-2xl transition-all">Cancel</button>
+            <div className="flex justify-end gap-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <button type="button" onClick={onClose} className="px-8 py-4 text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl transition-all">Cancel</button>
                 <button type="submit" className="px-12 py-4 bg-blue-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-3">
                     <Save className="w-5 h-5" /> Update Record
                 </button>

@@ -12,6 +12,16 @@ class AuthService {
 
   static bool get isGuest => _auth.currentUser?.isAnonymous == true;
 
+  static bool get isBetaTester {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    // Every user now and in the next 30 days defaults to a Beta Tester.
+    // Cutoff: July 27, 2026.
+    final limit = DateTime(2026, 7, 27);
+    if (DateTime.now().isBefore(limit)) return true;
+    return false;
+  }
+
   static String get userEmail {
     final user = _auth.currentUser;
     if (user?.isAnonymous == true) return 'guest';
