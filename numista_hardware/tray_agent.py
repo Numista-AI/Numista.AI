@@ -16,6 +16,18 @@ import threading
 import sys
 import os
 
+# If running on Windows, hide the console window immediately to act like a windowless background service
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        kernel32 = ctypes.WinDLL('kernel32')
+        user32 = ctypes.WinDLL('user32')
+        hWnd = kernel32.GetConsoleWindow()
+        if hWnd != 0:
+            user32.ShowWindow(hWnd, 0)  # SW_HIDE = 0
+    except Exception:
+        pass
+
 # Force stdout/stderr to use UTF-8 and handle encoding errors gracefully (especially on Windows)
 for stream in (sys.stdout, sys.stderr):
     if stream is not None:
