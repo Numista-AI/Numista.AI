@@ -7,6 +7,8 @@ on:
       - 'numista_mobile/**'
       - 'numista_backend/**'
       - '.github/workflows/**'
+      - '!**.md'
+      - '!**/docs/**'
   workflow_dispatch:
 
 env:
