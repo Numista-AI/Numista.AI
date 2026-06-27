@@ -16,6 +16,7 @@ import '../utils/file_saver_stub.dart'
     if (dart.library.io) '../utils/file_saver_io.dart';
 
 import '../services/epn_service.dart';
+import '../services/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -105,40 +106,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final sectionHeaderColor = isDark ? Colors.white70 : const Color(0xFF0F172A);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          const Text(
+          Text(
             'Settings & Backup',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic, color: Color(0xFF31333F)),
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic, color: headerColor),
           ),
           const SizedBox(height: 8),
-          const Text('Manage your account preferences and export data.', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+          Text('Manage your account preferences and export data.', style: TextStyle(color: descColor, fontSize: 14)),
           const SizedBox(height: 32),
           
           // ── Morgan Settings Section ───────────────────────────────────
           _buildMorganCard(context),
           const SizedBox(height: 24),
-          const Divider(color: Color(0xFFE2E6E9)),
+          Divider(color: borderColor),
           const SizedBox(height: 24),
 
+          // ── Theme Configuration Section ───────────────────────────────
+          _buildThemeConfigCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+ 
           // ── Privacy & Photo Sharing Card ───────────────────────────
           _buildPrivacyCard(context),
           const SizedBox(height: 24),
-          const Divider(color: Color(0xFFE2E6E9)),
+          Divider(color: borderColor),
           const SizedBox(height: 24),
-
-          if (AuthService.isBetaTester) ...[
-            // ── Beta Inspector Mode Card ───────────────────────────
-            _buildBetaInspectorCard(context),
-            const SizedBox(height: 24),
-            const Divider(color: Color(0xFFE2E6E9)),
-            const SizedBox(height: 24),
-          ],
-
+ 
           // ── Data Export Card ───────────────────────────────────────
           _buildSettingsCard(
             context,
@@ -151,11 +157,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Create a Free Account'),
-                    content: const Text(
-                        'CSV export is available to registered users. Create a free account to download your collection — your current session will be saved automatically.'),
+                    backgroundColor: cardBg,
+                    title: Text('Create a Free Account', style: TextStyle(color: headerColor)),
+                    content: Text(
+                        'CSV export is available to registered users. Create a free account to download your collection — your current session will be saved automatically.',
+                        style: TextStyle(color: descColor)),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Not Now')),
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Not Now', style: TextStyle(color: descColor))),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
                         onPressed: () => Navigator.pop(ctx),
@@ -170,11 +178,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             isPrimary: true,
           ),
-
+ 
           const SizedBox(height: 16),
           // ── Dedup Sweep card ───────────────────────────────────────────────
           _buildDedupCard(context),
-
+ 
           const SizedBox(height: 16),
           _buildSettingsCard(
             context,
@@ -200,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Could not open email client. Please send feedback to eric@numista.ai.'),
                     ),
                   );
@@ -211,24 +219,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFFE2E6E9)),
+          Divider(color: borderColor),
           const SizedBox(height: 32),
-
+ 
           // EPN / Affiliate Section -- only visible to admin (eric@numista.ai)
           if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') ...[
-          const Text('eBay Partner Network (EPN)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          Text('eBay Partner Network (EPN)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: sectionHeaderColor)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Monetize your shared wishlist. Enter your EPN credentials to earn commissions when others buy coins through your links.',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+            style: TextStyle(color: descColor, fontSize: 14),
           ),
           const SizedBox(height: 16),
           
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E6E9)),
+              color: cardBg,
+              border: Border.all(color: borderColor),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -236,19 +244,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 TextField(
                   controller: _campIdController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: headerColor),
+                  decoration: InputDecoration(
                     labelText: 'Campaign ID',
+                    labelStyle: TextStyle(color: descColor),
                     hintText: 'e.g. 5339055376',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(color: descColor.withAlpha(120)),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1565C0))),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _mkridController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: headerColor),
+                  decoration: InputDecoration(
                     labelText: 'Rotation ID (Marketplace)',
+                    labelStyle: TextStyle(color: descColor),
                     hintText: 'e.g. 711-53200-19255-0',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(color: descColor.withAlpha(120)),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1565C0))),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -260,29 +278,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text('eBay Developer API (Optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                Text('eBay Developer API (Optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: sectionHeaderColor)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Enter these to enable live price lookups and current listings in your collection and wishlist.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                  style: TextStyle(color: descColor, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _appIdController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: headerColor),
+                  decoration: InputDecoration(
                     labelText: 'App ID (Client ID)',
+                    labelStyle: TextStyle(color: descColor),
                     hintText: 'e.g. SGroup-NumismaA-PRD-f18f0640-...',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(color: descColor.withAlpha(120)),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1565C0))),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _certIdController,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: headerColor),
+                  decoration: InputDecoration(
                     labelText: 'Cert ID (Client Secret)',
+                    labelStyle: TextStyle(color: descColor),
                     hintText: 'PRD-118f0640b6a9-...',
-                    border: OutlineInputBorder(),
+                    hintStyle: TextStyle(color: descColor.withAlpha(120)),
+                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1565C0))),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -299,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: ElevatedButton(
                     onPressed: _saveEpnSettings,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F172A),
+                      backgroundColor: isDark ? const Color(0xFF1565C0) : const Color(0xFF0F172A),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text('Save Affiliate Settings', style: TextStyle(color: Colors.white)),
@@ -311,51 +339,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ], // end admin-only EPN section
           
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFFE2E6E9)),
+          Divider(color: borderColor),
           const SizedBox(height: 32),
           
           // Account Settings
-          const Text('Account Management', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+          Text('Account Management', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: sectionHeaderColor)),
           const SizedBox(height: 16),
           
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E6E9)),
+              color: cardBg,
+              border: Border.all(color: borderColor),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 32,
-                  backgroundColor: Color(0xFFF1F5F9),
-                  child: Icon(Icons.person, size: 32, color: Color(0xFF94A3B8)),
+                  backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                  child: const Icon(Icons.person, size: 32, color: Color(0xFF94A3B8)),
                 ),
                 const SizedBox(width: 24),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(AuthService.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A))),
-                    Text(AuthService.userEmail, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(AuthService.displayName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: sectionHeaderColor)),
+                      Text(AuthService.userEmail, style: TextStyle(color: descColor, fontSize: 14)),
+                    ],
+                  ),
                 ),
-                const Spacer(),
                 OutlinedButton.icon(
                   onPressed: () => AuthService.resetPin(AuthService.userEmail),
                   icon: const Icon(Icons.lock_reset, size: 16),
                   label: const Text('Reset PIN'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF31333F),
+                    foregroundColor: isDark ? Colors.white : const Color(0xFF31333F),
+                    side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                   ),
                 ),
               ],
             ),
           ),
+ 
+          // ── Developer & Auditing Tools ─────────────────────────────────────
+          const SizedBox(height: 32),
+          _buildAdvancedTools(context),
 
           // ── Danger Zone (all signed-in users) ──────────────────────────────
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFFE2E6E9)),
+          Divider(color: borderColor),
           const SizedBox(height: 32),
           _buildDangerZoneCard(context),
           const SizedBox(height: 32),
@@ -540,10 +574,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildBetaInspectorCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(15),
@@ -569,25 +610,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Color(0xFF4C8CDA), size: 22),
                 ),
                 const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Beta Inspector Mode',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF31333F)),
-                    ),
-                    Text(
-                      'Audits coin metadata discrepancies',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B)),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Beta Inspector Mode',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Audits coin metadata discrepancies',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: descColor),
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 16),
                 Switch.adaptive(
                   value: _inspectorMode,
                   activeThumbColor: const Color(0xFFF63366),
@@ -611,10 +654,132 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'When enabled, you will see speech bubble icons next to coin details (Year, Mint Mark, Variety, Denomination). Tap them to submit corrections directly to the AI Training team.',
-              style: TextStyle(color: Color(0xFF5A5C69), fontSize: 13, height: 1.4),
+              style: TextStyle(color: descColor, fontSize: 13, height: 1.4),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeConfigCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.palette_outlined,
+                      color: Color(0xFFF59E0B), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Application Theme',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Choose between Light and Dark mode',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Switch.adaptive(
+                  value: ThemeProvider.instance.isDarkMode,
+                  activeThumbColor: const Color(0xFFF63366),
+                  onChanged: (val) {
+                    ThemeProvider.instance.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Force Light Mode or enable Dark Mode across the entire application.',
+              style: TextStyle(color: descColor, fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdvancedTools(BuildContext context) {
+    if (!AuthService.isBetaTester) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: Text(
+            'Developer & Auditing Tools',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: headerColor),
+          ),
+          subtitle: Text(
+            'Access internal diagnostics and beta features',
+            style: TextStyle(fontSize: 12, color: descColor),
+          ),
+          leading: const Icon(Icons.developer_mode, color: Color(0xFFF63366)),
+          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          children: [
+            _buildBetaInspectorCard(context),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -623,9 +788,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildPrivacyCard(BuildContext context) {
     final opted = _photoSharingOptedIn;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+    final toggleBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -653,22 +826,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Color(0xFFF63366), size: 22),
                 ),
                 const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Privacy & Photo Sharing',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF31333F)),
-                    ),
-                    Text(
-                      'Control how your coin photos are used',
-                      style: TextStyle(
-                          fontSize: 12, color: Color(0xFF64748B)),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Privacy & Photo Sharing',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Control how your coin photos are used',
+                        style: TextStyle(
+                            fontSize: 12, color: descColor),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -678,9 +853,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: toggleBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E6E9)),
+                border: Border.all(color: borderColor),
               ),
               child: Row(
                 children: [
@@ -688,12 +863,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Contribute photos to reference library',
                           style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
-                              color: Color(0xFF31333F)),
+                              color: headerColor),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -704,8 +879,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     'images for other collectors. No personal info is shared.'
                                   : 'Your personal photos are kept private and '
                                     'will not be shared with other users.',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                          style: TextStyle(
+                              fontSize: 12, color: descColor, height: 1.4),
                         ),
                       ],
                     ),
@@ -761,7 +936,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'Images are reviewed before being added to the library.',
                     style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade500,
+                        color: descColor,
                         height: 1.4),
                   ),
                 ),
@@ -872,11 +1047,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ─── Dedup Sweep ─────────────────────────────────────────────────────────
 
   Widget _buildDedupCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE2E6E9)),
+        color: cardBg,
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -884,7 +1065,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
+              color: isDark ? const Color(0xFFF97316).withAlpha(30) : const Color(0xFFFFF7ED),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.find_replace_rounded,
@@ -895,18 +1076,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Find & Merge Duplicates',
+                Text('Find & Merge Duplicates',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Color(0xFF0F172A))),
+                        color: headerColor)),
                 const SizedBox(height: 4),
                 Text(
                   _dedupResults == null
                       ? 'Scan your collection for coins that may have been imported more than once.'
                       : 'Found ${_dedupResults!["duplicate_groups"]} duplicate group(s) in ${_dedupResults!["total_coins"]} coins.',
-                  style:
-                      const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                  style: TextStyle(color: descColor, fontSize: 14),
                 ),
               ],
             ),
@@ -1076,12 +1256,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSettingsCard(BuildContext context, {required IconData icon, required String title, required String description, required String actionLabel, required VoidCallback onAction, bool isPrimary = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    final iconBgColor = isPrimary 
+        ? (isDark ? const Color(0xFF1E3A8A).withAlpha(50) : const Color(0xFFEFF6FF))
+        : (isDark ? const Color(0xFF334155).withAlpha(50) : const Color(0xFFF1F5F9));
+        
+    final iconColor = isPrimary 
+        ? const Color(0xFF3B82F6) 
+        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE2E6E9)),
+        color: cardBg,
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1089,19 +1282,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isPrimary ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+              color: iconBgColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: isPrimary ? const Color(0xFF3B82F6) : const Color(0xFF64748B)),
+            child: Icon(icon, color: iconColor),
           ),
           const SizedBox(width: 24),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headerColor)),
                 const SizedBox(height: 4),
-                Text(description, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+                Text(description, style: TextStyle(color: descColor, fontSize: 14)),
               ],
             ),
           ),
@@ -1109,10 +1302,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: onAction,
             style: ElevatedButton.styleFrom(
-              backgroundColor: isPrimary ? const Color(0xFF3B82F6) : Colors.white,
-              foregroundColor: isPrimary ? Colors.white : const Color(0xFF0F172A),
+              backgroundColor: isPrimary 
+                  ? const Color(0xFF3B82F6) 
+                  : (isDark ? const Color(0xFF334155) : Colors.white),
+              foregroundColor: isPrimary 
+                  ? Colors.white 
+                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
               elevation: isPrimary ? 2 : 0,
-              side: isPrimary ? null : const BorderSide(color: Color(0xFFE2E6E9)),
+              side: isPrimary 
+                  ? null 
+                  : BorderSide(color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E6E9)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
             child: Text(actionLabel),

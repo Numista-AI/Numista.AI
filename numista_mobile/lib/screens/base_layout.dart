@@ -31,7 +31,6 @@ import 'glossary_academy_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
-import '../services/inspector_service.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -46,7 +45,6 @@ class _BaseLayoutState extends State<BaseLayout> {
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
-  bool _inspectorMode = false;
 
   // ── Show Morgan as a full-screen dialog (doesn't lose current screen) ──────
   void _showMorganDialog() {
@@ -57,7 +55,6 @@ class _BaseLayoutState extends State<BaseLayout> {
   @override
   void initState() {
     super.initState();
-    _loadInspectorMode();
 
     // ── Morgan deep-link: if the user tapped a tile in the greeter,
     // navigate directly to that screen instead of Home Dashboard.
@@ -87,15 +84,6 @@ class _BaseLayoutState extends State<BaseLayout> {
       WizardService.setNavigateCallback(
         (route) => setState(() => _activeRoute = route),
       );
-    }
-  }
-
-  void _loadInspectorMode() async {
-    final enabled = await InspectorService.isEnabled();
-    if (mounted) {
-      setState(() {
-        _inspectorMode = enabled;
-      });
     }
   }
 
@@ -197,7 +185,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     final currentIndex = mobileRoutes.indexOf(_activeRoute).clamp(0, 4);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -284,14 +272,22 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   // ─── Desktop/tablet layout: sidebar ──────────────────────────────────────
   Widget _buildDesktopLayout(String email, String displayName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
           // ─── Sidebar ─────────────────────────────────────────────────────
           Container(
             width: 200,
-            color: const Color(0xFF0E1117),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC),
+              border: Border(
+                right: BorderSide(
+                  color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(12),
+                ),
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -307,9 +303,10 @@ class _BaseLayoutState extends State<BaseLayout> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(8),
+                      color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white.withAlpha(20)),
+                      border: Border.all(
+                          color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20)),
                     ),
                     child: Row(children: [
                       const CircleAvatar(
@@ -324,8 +321,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                           children: [
                             Text(displayName,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
+                                style: TextStyle(
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     fontWeight: FontWeight.w600,
                                     fontSize: 11)),
                             Text(email,
@@ -338,48 +335,6 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ]),
                   ),
                 ),
-                const SizedBox(height: 10),
-                if (AuthService.isBetaTester) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(5),
-                        border: Border.all(color: Colors.white.withAlpha(12)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.bug_report, size: 14, color: Color(0xFF4C8CDA)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Inspector',
-                                style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 20,
-                            child: Switch.adaptive(
-                              value: _inspectorMode,
-                              activeThumbColor: const Color(0xFFF63366),
-                              onChanged: (val) async {
-                                await InspectorService.setEnabled(val);
-                                setState(() {
-                                  _inspectorMode = val;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 10),
                 Expanded(
                   child: ValueListenableBuilder<WizardState?>(
@@ -489,8 +444,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
+                        foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                        side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       ),
@@ -545,6 +500,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   // ─── Nav item builder ────────────────────────────────────────────────────
   Widget _buildNavItem(String title, {IconData? icon, int badgeCount = 0}) {
     final bool isActive = _activeRoute == title;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     // Items without a backing screen are disabled
     final bool isEnabled = const {
       'Home Dashboard',
@@ -578,7 +534,7 @@ class _BaseLayoutState extends State<BaseLayout> {
           padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
           decoration: BoxDecoration(
             color: isActive
-                ? Colors.white.withAlpha(16)
+                ? (isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(12))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
@@ -588,7 +544,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   size: 14,
                   color: isActive
                       ? const Color(0xFFF63366)
-                      : Colors.white54)
+                      : (isDark ? Colors.white54 : Colors.black54))
             else
               Container(
                 width: 16,
@@ -601,7 +557,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   border: Border.all(
                     color: isActive
                         ? const Color(0xFFF63366)
-                        : Colors.white38,
+                        : (isDark ? Colors.white38 : Colors.black38),
                     width: isActive ? 4 : 1,
                   ),
                 ),
@@ -612,7 +568,9 @@ class _BaseLayoutState extends State<BaseLayout> {
                 title,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isActive ? Colors.white : Colors.white60,
+                  color: isActive
+                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                      : (isDark ? Colors.white60 : const Color(0xFF475569)),
                   fontSize: 11,
                   fontWeight:
                       isActive ? FontWeight.w600 : FontWeight.normal,
@@ -645,20 +603,21 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   // ─── Sign-out confirmation ────────────────────────────────────────────────
   Future<void> _confirmSignOut(BuildContext ctx) async {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
     final confirm = await showDialog<bool>(
       context: ctx,
       builder: (dctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1D27),
-        title: const Text('Sign Out',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        title: Text('Sign Out',
+            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A))),
+        content: Text(
             'Are you sure you want to sign out of your vault?',
-            style: TextStyle(color: Colors.white70)),
+            style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel',
+                style: TextStyle(color: isDark ? Colors.white54 : Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dctx, true),
@@ -702,7 +661,12 @@ class _SidebarDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Divider(color: Colors.white.withAlpha(20), thickness: 1),
+        child: Divider(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withAlpha(20)
+              : Colors.black.withAlpha(20),
+          thickness: 1,
+        ),
       );
 }
 

@@ -16,14 +16,14 @@ Write-Host "  Numista.AI Dev Launcher" -ForegroundColor Cyan
 Write-Host "  =====================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── PRE-LAUNCH CLEANUP ─────────────────────────────────────────────────────────
+# --- PRE-LAUNCH CLEANUP ----------------------------------------------------
 Write-Host "  [0/2] Cleaning up stale processes and locked build cache..." -ForegroundColor Yellow
 
 # Kill any lingering Dart / Flutter processes that lock build\flutter_assets
 Get-Process -Name "dart","flutter" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 800
 
-# ⚠️  Only wipe the WINDOWS native build artifacts that cause file locks.
+# [WARNING] Only wipe the WINDOWS native build artifacts that cause file locks.
 #    build\web is intentionally EXCLUDED so the production web build is preserved.
 #    Deleting build\web here would break https://numista.ai after every dev session!
 $pathsToClean = @(
@@ -40,7 +40,7 @@ foreach ($p in $pathsToClean) {
     }
 }
 
-# Run pub get (NOT flutter clean — that would delete build\web)
+# Run pub get (NOT flutter clean - that would delete build\web)
 Push-Location $MobileDir
     & flutter pub get | Out-Null
 Pop-Location
@@ -49,19 +49,19 @@ Pop-Location
 $webBuildExists = Test-Path (Join-Path $MobileDir "build\web\index.html")
 if (-not $webBuildExists) {
     Write-Host ""
-    Write-Host "  ⚠️  No production build found." -ForegroundColor Yellow
+    Write-Host "  [WARNING] No production build found." -ForegroundColor Yellow
     Write-Host "     Run this before deploying to numista.ai:" -ForegroundColor Yellow
-    Write-Host "       flutter build web --release --base-href \"/\"" -ForegroundColor Cyan
+    Write-Host "       flutter build web --release --base-href '/'" -ForegroundColor Cyan
     Write-Host "       firebase deploy --only hosting" -ForegroundColor Cyan
     Write-Host ""
 } else {
-    Write-Host "  ✅ Web build present (build\web) — ready to deploy." -ForegroundColor Green
+    Write-Host "  [SUCCESS] Web build present (build\web) - ready to deploy." -ForegroundColor Green
 }
 
 Write-Host "  Pre-launch cleanup complete." -ForegroundColor Green
 Write-Host ""
 
-# ── DEPENDENCY CHECKS ──────────────────────────────────────────────────────────
+# --- DEPENDENCY CHECKS -----------------------------------------------------
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     Write-Host "  [ERROR] Python not found. Please install Python 3." -ForegroundColor Red
     Read-Host "Press Enter to exit"
@@ -74,7 +74,7 @@ if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# ── START HARDWARE SERVER ──────────────────────────────────────────────────────
+# --- START HARDWARE SERVER -------------------------------------------------
 Write-Host "  [1/2] Starting Hardware Server (microscope)..." -ForegroundColor Yellow
 $HardwareDir = Join-Path $ProjectRoot "numista_hardware"
 $VenvPython  = Join-Path $ProjectRoot "numista_backend\.venv\Scripts\python.exe"
@@ -85,7 +85,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", $hwCmd -WindowStyl
 Write-Host "  Waiting 3 seconds for hardware server to start..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 3
 
-# ── START FLUTTER (Chrome device) ─────────────────────────────────────────────
+# --- START FLUTTER (Chrome device) -----------------------------------------
 Write-Host "  [2/2] Starting Flutter (Chrome)..." -ForegroundColor Yellow
 Write-Host "  Chrome will open automatically in ~30 seconds." -ForegroundColor DarkGray
 

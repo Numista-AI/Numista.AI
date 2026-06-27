@@ -5,9 +5,13 @@ import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'currency_collection_screen.dart';
+import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
 import '../models/coin_model.dart';
 import '../services/epn_service.dart';
@@ -73,10 +77,11 @@ class _ColDef {
 }
 
 class MyCollectionScreen extends StatefulWidget {
+  final String? initialTab;
   final Function(String)? onNavigate;
   /// Navigate to a screen AND pass an initial query (used for AI Deep Dive).
   final Function(String route, String query)? onNavigateWithQuery;
-  const MyCollectionScreen({super.key, this.onNavigate, this.onNavigateWithQuery});
+  MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery});
   @override
   State<MyCollectionScreen> createState() => _MyCollectionScreenState();
 }
@@ -84,6 +89,7 @@ class MyCollectionScreen extends StatefulWidget {
 class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- UI / filter state ---------------------------------------------------
+  String _currentTab = 'All';
   String? _selectedCoinId;
   int     _limit            = 50;
   String  _searchQuery      = '';
@@ -104,7 +110,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   late Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
   
   // ── Batch valuation progress ────────────────────────────────────────────────
-  BatchValuationProgress _valuation = const BatchValuationProgress();
+  BatchValuationProgress _valuation = BatchValuationProgress();
   StreamSubscription<BatchValuationProgress>? _valuationSub;
 
   // Scroll controllers for the TableView (horizontal + vertical)
@@ -126,6 +132,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- Live spot prices (fetched once on mount, same endpoint as dashboard) --
   Map<String, double> _spotPrices = {};
+  Map<String, dynamic> _completionStats = {};
+  bool _isLoadingCompletion = true;
 
   Future<void> _fetchSpotPrices() async {
     try {
@@ -146,17 +154,46 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (_) {}
   }
 
-  // --- Colours (match Streamlit palette) ----------------------------------
-  static const _bg        = Color(0xFFF0F2F6);
-  static const _surface   = Colors.white;
-  static const _text      = Color(0xFF31333F);
-  static const _subtext   = Color(0xFF5A5C69);
+  Future<void> _fetchCompletionStats() async {
+    try {
+      final userEmail = AuthService.userEmail;
+      if (userEmail.isEmpty) return;
+      
+      final response = await http.get(
+        Uri.parse('$kApiBaseUrl/api/collection/completion_stats?user_email=$userEmail')
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          _completionStats = data;
+          _isLoadingCompletion = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoadingCompletion = false);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingCompletion = false);
+    }
+  }
+
+  // --- Colours (match dynamic dark/light brightness toggle) ----------------
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0E1117) : Color(0xFFF1F5F9);
+  Color get _surface => Theme.of(context).brightness == Brightness.dark ? Color(0xFF1A1D27) : Colors.white;
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Color(0xFFE8EAF0) : Color(0xFF0F172A);
+  Color get _subtext => Theme.of(context).brightness == Brightness.dark ? Color(0xFF8B92B4) : Color(0xFF475569);
+  Color get _border => Theme.of(context).brightness == Brightness.dark ? Color(0xFF2D3143) : Color(0xFFE2E8F0);
+
   static const _accent    = Color(0xFF4C8CDA);
   static const _green     = Color(0xFF28A745);
   static const _greenBg   = Color(0xFFD4EED8);
   static const _greenText = Color(0xFF155724);
-  static const _border    = Color(0xFFE2E6E9);
   static const _red       = Color(0xFFDC3545);
+
+  final _fmt =
+      intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
   // --- Column definitions (widths tuned so Value col is visible ≥1200px) --
   static const _columns = [
@@ -188,6 +225,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDefaultTab();
     // Create the Firestore stream ONCE -- reusing it in build() ensures
     // StreamBuilder never re-subscribes on setState, so the TextField
     // keeps its focus between keystrokes on Flutter Web.
@@ -202,11 +240,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     BatchValuationService.instance.restoreFromFirestore();
 
     _fetchSpotPrices();
+    _fetchCompletionStats();
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
     _searchCtrl.addListener(() {
       _searchDebounce?.cancel();
-      _searchDebounce = Timer(const Duration(milliseconds: 150), () {
+      _searchDebounce = Timer(Duration(milliseconds: 150), () {
         if (mounted) {
           setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
           // Re-request focus after setState to guard against Flutter Web
@@ -220,6 +259,34 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
       });
     });
+  }
+
+  void _loadDefaultTab() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTab = prefs.getString('my_collection_default_tab');
+    if (mounted) {
+      setState(() {
+        _currentTab = widget.initialTab ?? savedTab ?? 'All';
+      });
+    }
+  }
+
+  void _onTabChanged(String tab) async {
+    setState(() {
+      _currentTab = tab;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('my_collection_default_tab', tab);
+  }
+
+  @override
+  void didUpdateWidget(MyCollectionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != null && widget.initialTab != oldWidget.initialTab) {
+      setState(() {
+        _currentTab = widget.initialTab!;
+      });
+    }
   }
 
   /// Advances the Morgan guide from Step 1 (search-box tutorial) to Step 2
@@ -404,153 +471,852 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- Root build ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+
+    return Scaffold(
+      backgroundColor: _bg,
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header & Segmented Tab Picker
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 800;
+                final headerText = Text(
+                  'My Collection',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: _text,
+                  ),
+                );
+                final picker = MyCollectionSegmentedControl(
+                  selectedTab: _currentTab,
+                  onTabChanged: _onTabChanged,
+                );
+
+                if (isWide) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      headerText,
+                      picker,
+                    ],
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      headerText,
+                      SizedBox(height: 12),
+                      picker,
+                    ],
+                  );
+                }
+              },
+            ),
+            SizedBox(height: 16),
+
+            // Beta banner
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              decoration: BoxDecoration(
+                  color: _accent, borderRadius: BorderRadius.circular(4)),
+              child: Text('BETA TESTING', style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 10,
+                  color: Colors.white, letterSpacing: 1.0)),
+            ),
+            SizedBox(height: 24),
+
+            // Tab View Dispatcher
+            _buildTabContent(email),
+            SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent(String email) {
+    switch (_currentTab) {
+      case 'Coins':
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _coinsStream,
+          builder: (context, snap) {
+            if (!snap.hasData && snap.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator(color: _accent));
+            }
+            if (snap.hasError) {
+              return _buildErrorState();
+            }
+            final allDocs = snap.data?.docs ?? [];
+            final docs    = _sorted(_filtered(allDocs));
+
+            if (_selectedCoinId == null && docs.isNotEmpty) {
+              _selectedCoinId = docs.first.id;
+            }
+            final selDoc = docs.isNotEmpty
+                ? (docs.any((d) => d.id == _selectedCoinId)
+                    ? docs.firstWhere((d) => d.id == _selectedCoinId)
+                    : docs.first)
+                : null;
+            if (selDoc != null) _selectedCoinId = selDoc.id;
+
+            return _buildCoinsTab(docs, allDocs);
+          },
+        );
+      case 'Currency':
+        return CurrencyCollectionScreen(showAppBar: false);
+      case 'World & Specialty':
+        return _buildWorldItemsTab();
+      case 'All':
+      default:
+        return _buildUnifiedDashboard(email);
+    }
+  }
+
+  Widget _buildCoinsTab(List<QueryDocumentSnapshot> docs, List<QueryDocumentSnapshot> allDocs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFiltersRow(allDocs),
+        SizedBox(height: 24),
+        Divider(color: _border),
+        SizedBox(height: 16),
+
+        _buildStatsRow(docs),
+        SizedBox(height: 16),
+
+        // Toolbar: section label + toggle + AI Report button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Inventory List', style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
+            Row(children: [
+              // Column visibility toggle
+              _columnToggleButton(),
+              SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: widget.onNavigate != null
+                    ? () => widget.onNavigate!('Estate Planning')
+                    : null,
+                icon: Icon(Icons.auto_awesome, size: 16),
+                label: Text('Generate AI Report Now'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFF63366),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                ),
+              ),
+            ]),
+          ],
+        ),
+        SizedBox(height: 12),
+
+        // Data table -- three distinct states
+        if (allDocs.isEmpty)
+          _buildCollectionEmptyState()
+        else if (docs.isEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('No coins match your filter.',
+                style: TextStyle(color: _subtext))))
+        else
+          SizedBox(
+            height: 520,
+            child: _buildDataTable(docs),
+          ),
+
+        SizedBox(height: 16),
+
+        // Save Grid Changes
+        ElevatedButton.icon(
+          onPressed: _onSaveGridChanges,
+          icon: Icon(Icons.save, size: 16),
+          label: Text('Save Grid Changes'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _red,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4)),
+            padding: EdgeInsets.symmetric(
+                horizontal: 20, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnifiedDashboard(String email) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _coinsStream,
-      builder: (context, snap) {
-        // Only show spinner on the very first load (no cached data yet).
-        // On subsequent Firestore updates, keep showing the last known
-        // content so the widget tree is not unmounted between updates.
-        if (!snap.hasData && snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: _accent));
+      builder: (context, coinsSnap) {
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: email.isNotEmpty
+              ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
+              : Stream.empty(),
+          builder: (context, currencySnap) {
+            return StreamBuilder<List<WorldItem>>(
+              stream: WorldItemService.worldItemsStream(),
+              builder: (context, worldSnap) {
+                final coinsDocs = coinsSnap.data?.docs ?? [];
+                final currencyDocs = currencySnap.data?.docs ?? [];
+                final worldDocs = worldSnap.data ?? [];
+
+                final coinsCount = coinsDocs.length;
+                final currencyCount = currencyDocs.length;
+                final worldCount = worldDocs.length;
+                final totalCount = coinsCount + currencyCount + worldCount;
+
+                double coinsValue = 0;
+                for (final doc in coinsDocs) {
+                  try {
+                    final data = doc.data() as Map<String, dynamic>;
+                    coinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
+                  } catch (_) {}
+                }
+
+                double currencyValue = 0;
+                for (final doc in currencyDocs) {
+                  try {
+                    final data = doc.data() as Map<String, dynamic>;
+                    currencyValue += _parseNumber(data['Cost']);
+                  } catch (_) {}
+                }
+
+                double worldValue = 0;
+                for (final item in worldDocs) {
+                  worldValue += item.estimatedValue ?? 0.0;
+                }
+                
+                final grandTotalValue = coinsValue + currencyValue + worldValue;
+
+                // Merge and map for the combined additions feed
+                final coinItems = coinsDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
+                  DateTime? addedDate;
+                  if (addedTs is Timestamp) {
+                    addedDate = addedTs.toDate();
+                  } else if (addedTs is String) {
+                    addedDate = DateTime.tryParse(addedTs);
+                  }
+                  final denom = data['Denomination']?.toString() ?? '';
+                  final year = data['Year']?.toString() ?? '';
+                  final title = '$year $denom'.trim();
+                  return UnifiedCollectionItem(
+                    title: title.isNotEmpty ? title : 'Coin',
+                    category: 'Coin',
+                    emoji: '🪙',
+                    country: data['Country']?.toString() ?? 'US',
+                    dateAdded: addedDate,
+                    value: _parseAiValue(data['AI Estimated Value']?.toString() ?? ''),
+                  );
+                }).toList();
+
+                final currencyItems = currencyDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
+                  DateTime? addedDate;
+                  if (addedTs is Timestamp) {
+                    addedDate = addedTs.toDate();
+                  } else if (addedTs is String) {
+                    addedDate = DateTime.tryParse(addedTs);
+                  }
+                  return UnifiedCollectionItem(
+                    title: data['Description']?.toString() ?? 'Banknote',
+                    category: 'Currency',
+                    emoji: '💵',
+                    country: data['Country']?.toString() ?? 'US',
+                    dateAdded: addedDate,
+                    value: _parseNumber(data['Cost']),
+                  );
+                }).toList();
+
+                final worldItems = worldDocs.map((item) {
+                  return UnifiedCollectionItem(
+                    title: item.name.isNotEmpty ? item.name : 'World Item',
+                    category: 'World & Specialty',
+                    emoji: item.itemCategory.emoji,
+                    country: item.country,
+                    dateAdded: item.createdAt,
+                    value: item.estimatedValue ?? 0.0,
+                  );
+                }).toList();
+
+                // Combine and sort by date added, newest first
+                final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
+                combinedItems.sort((a, b) {
+                  if (a.dateAdded == null && b.dateAdded == null) return 0;
+                  if (a.dateAdded == null) return 1;
+                  if (b.dateAdded == null) return -1;
+                  return b.dateAdded!.compareTo(a.dateAdded!);
+                });
+
+                // Take top 10
+                final recentAdditions = combinedItems.take(10).toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Portfolio Stats Grid
+                    GridView(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 280,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 2.0,
+                      ),
+                      children: [
+                        _buildDashboardCard(
+                          'Total Inventory Value',
+                          'ESTIMATED PORTFOLIO VALUE',
+                          '\$${grandTotalValue.toStringAsFixed(2)}',
+                          'Based on AI, cost, and specialty appraisals',
+                          Icons.account_balance_wallet_rounded,
+                          _accent,
+                        ),
+                        _buildDashboardCard(
+                          'Coins',
+                          'COIN COLLECTION',
+                          '$coinsCount Items',
+                          'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                          Icons.monetization_on_rounded,
+                          Colors.amber,
+                        ),
+                        _buildDashboardCard(
+                          'Currency',
+                          'PAPER BANKNOTES',
+                          '$currencyCount Items',
+                          'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                          Icons.money_rounded,
+                          Colors.green,
+                        ),
+                        _buildDashboardCard(
+                          'World & Specialty',
+                          'OTHER ITEMS',
+                          '$worldCount Items',
+                          'Valued at \$${worldValue.toStringAsFixed(2)}',
+                          Icons.language_rounded,
+                          Colors.teal,
+                        ),
+                        _buildCompletionCard(),
+                      ],
+                    ),
+                    SizedBox(height: 32),
+
+                    // Recent Additions Title
+                    Text(
+                      'Recent Additions (${combinedItems.length} total)',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _text,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+
+                    // Combined Feed List
+                    if (recentAdditions.isEmpty)
+                      Card(
+                        color: _surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: _border),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: Text('No items in your collection yet.')),
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: recentAdditions.length,
+                        itemBuilder: (context, index) {
+                          final item = recentAdditions[index];
+                          return Card(
+                            color: _surface,
+                            margin: EdgeInsets.symmetric(vertical: 4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(color: _border),
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: _bg,
+                                child: Text(item.emoji, style: TextStyle(fontSize: 18)),
+                              ),
+                              title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
+                              subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
+                              trailing: Text(
+                                '\$${item.value.toStringAsFixed(2)}',
+                                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDashboardCard(String title, String subtitle, String value, String description, IconData icon, Color color) {
+    return Card(
+      color: _surface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _border),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Text(subtitle, style: TextStyle(color: _subtext, fontSize: 11)),
+              ],
+            ),
+            SizedBox(height: 10),
+            Text(
+              value,
+              style: TextStyle(
+                color: _text,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(description, style: TextStyle(color: _subtext, fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletionCard() {
+    if (_isLoadingCompletion || _completionStats.isEmpty) {
+      return Card(
+        color: _surface,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: _border),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
+          ),
+        ),
+      );
+    }
+
+    final pct = (_completionStats['completion_percentage'] as num?)?.toDouble() ?? 0.0;
+    final owned = (_completionStats['owned_count'] as num?)?.toInt() ?? 0;
+    final total = (_completionStats['total_count'] as num?)?.toInt() ?? 0;
+
+    return Card(
+      color: _surface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _border),
+      ),
+      child: InkWell(
+        onTap: () => _showCompletionBreakdownBottomSheet(),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Icon(Icons.check_circle_outline, color: _green, size: 24),
+                  Text('U.S. CURRENCY COMPLETION', style: TextStyle(color: _subtext, fontSize: 11)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${pct.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: _text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '($owned / $total varieties)',
+                    style: TextStyle(
+                      color: _subtext,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('Collection coverage across all legal tender', style: TextStyle(color: _subtext, fontSize: 10)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCompletionBreakdownBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final breakdown = _completionStats['breakdown'] as Map<String, dynamic>? ?? {};
+        
+        Widget buildRow(String title, String key, IconData icon, Color color) {
+          final data = breakdown[key] as Map<String, dynamic>? ?? {};
+          final bPct = (data['percentage'] as num?)?.toDouble() ?? 0.0;
+          final bOwned = (data['owned'] as num?)?.toInt() ?? 0;
+          final bTotal = (data['total'] as num?)?.toInt() ?? 0;
+          
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 18),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(color: _text, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Collected $bOwned of $bTotal varieties',
+                        style: TextStyle(color: _subtext, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${bPct.toStringAsFixed(1)}%',
+                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: 80,
+                      height: 4,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: bPct / 100,
+                          backgroundColor: _border,
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
         }
-        if (snap.hasError) {
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'U.S. Legal Tender Breakdown',
+                style: TextStyle(color: _text, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              buildRow('Coins', 'coin', Icons.circle_outlined, const Color(0xFF2DD4BF)),
+              Divider(color: _border),
+              buildRow('Banknotes', 'banknote', Icons.wallet_membership_outlined, const Color(0xFF3B82F6)),
+              Divider(color: _border),
+              buildRow('Medals', 'medal', Icons.military_tech_outlined, const Color(0xFFFFD700)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWorldItemsTab() {
+    return StreamBuilder<List<WorldItem>>(
+      stream: WorldItemService.worldItemsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        final items = snapshot.data ?? [];
+        if (items.isEmpty) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(40),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.cloud_off_rounded, size: 48, color: _red),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Could not load your collection',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _text),
+                  Icon(Icons.language_rounded, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No World & Specialty items yet',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _text),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Check your internet connection and try refreshing the page.\nIf the problem persists, contact support at beta@numista.ai',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _subtext, height: 1.5),
+                  SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (widget.onNavigate != null) {
+                        widget.onNavigate!('Add World Item');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: _accent),
+                    child: Text('Add Your First Item', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
             ),
           );
         }
-
-        final allDocs = snap.data?.docs ?? [];
-        final docs    = _sorted(_filtered(allDocs));
-
-        if (_selectedCoinId == null && docs.isNotEmpty) {
-          _selectedCoinId = docs.first.id;
-        }
-        final selDoc = docs.isNotEmpty
-            ? (docs.any((d) => d.id == _selectedCoinId)
-                ? docs.firstWhere((d) => d.id == _selectedCoinId)
-                : docs.first)
-            : null;
-        if (selDoc != null) _selectedCoinId = selDoc.id;
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              const Text('My Collection', style: TextStyle(
-                  fontSize: 36, fontWeight: FontWeight.w900, color: _text)),
-              const SizedBox(height: 16),
-
-              // Beta banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                decoration: BoxDecoration(
-                    color: _accent, borderRadius: BorderRadius.circular(4)),
-                child: const Text('BETA TESTING', style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 10,
-                    color: Colors.white, letterSpacing: 1.0)),
-              ),
-              const SizedBox(height: 24),
-
-              _buildFiltersRow(allDocs),
-              const SizedBox(height: 24),
-              const Divider(color: _border),
-              const SizedBox(height: 16),
-
-              _buildStatsRow(docs),
-              const SizedBox(height: 16),
-
-              // Toolbar: section label + toggle + AI Report button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Inventory List', style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
-                  Row(children: [
-                    // Column visibility toggle
-                    _columnToggleButton(),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: widget.onNavigate != null
-                          ? () => widget.onNavigate!('Estate Planning')
-                          : null,
-                      icon: const Icon(Icons.auto_awesome, size: 16),
-                      label: const Text('Generate AI Report Now'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF63366),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                  ]),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Data table -- three distinct states
-              if (allDocs.isEmpty)
-                _buildCollectionEmptyState()
-              else if (docs.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('No coins match your filter.',
-                      style: TextStyle(color: _subtext))))
-              else
-                // SizedBox height sets the visible viewport -- the TableView
-                // scrolls vertically AND horizontally internally, with the
-                // header row and Actions column pinned.
-                SizedBox(
-                  height: 520,
-                  child: _buildDataTable(docs),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${items.length} Items Found', style: TextStyle(color: _subtext, fontSize: 14)),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (widget.onNavigate != null) {
+                      widget.onNavigate!('Add World Item');
+                    }
+                  },
+                  icon: Icon(Icons.add, size: 16, color: Colors.white),
+                  label: Text('Add World Item', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _accent,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
-
-              const SizedBox(height: 16),
-
-              // Save Grid Changes -- red button at bottom matching Streamlit
-              ElevatedButton.icon(
-                onPressed: _onSaveGridChanges,
-                icon: const Icon(Icons.save, size: 16),
-                label: const Text('Save Grid Changes'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _red,
-                  foregroundColor: Colors.white,
+              ],
+            ),
+            SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 280,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Card(
+                  color: _surface,
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4)),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-            ],
-          ),
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: _border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                          ),
+                          child: Center(
+                            child: item.imageObverse != null
+                                ? Image.network(
+                                    item.imageObverse!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
+                                  )
+                                : Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name.isNotEmpty ? item.name : 'Unnamed Item',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '${item.country} · ${item.era}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _subtext,
+                                fontSize: 11,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _accent.withAlpha(20),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    item.itemCategory.displayLabel,
+                                    style: TextStyle(
+                                      color: _accent,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (item.estimatedValue != null)
+                                  Text(
+                                    '\$${item.estimatedValue!.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'No Value',
+                                    style: TextStyle(
+                                      color: _subtext,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
         );
       },
     );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 48, color: _red),
+            SizedBox(height: 16),
+            Text(
+              'Could not load your collection',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _text),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Check your internet connection and try refreshing the page.\nIf the problem persists, contact support at beta@numista.ai',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _subtext, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _parseNumber(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    final s = val.toString().replaceAll(RegExp(r'[^\d.]'), '');
+    return double.tryParse(s) ?? 0.0;
+  }
+
+  static double _parseAiValue(String raw) {
+    if (raw.isEmpty || raw == 'Pending' || raw == 'null') return 0.0;
+    final norm = raw
+        .replaceAll(',', '')
+        .replaceAll('\u2013', '-')
+        .replaceAll('\u2014', '-')
+        .replaceAll('\u2012', '-');
+    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
+    if (rangeMatch != null) {
+      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
+      return a > 100000 ? 0.0 : a;
+    }
+    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    return v > 100000 ? 0.0 : v;
   }
 
   // --- Filters row --------------------------------------------------------
@@ -566,8 +1332,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       SizedBox(
         width: 140,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Show:', style: TextStyle(color: _text, fontSize: 14)),
-          const SizedBox(height: 8),
+          Text('Show:', style: TextStyle(color: _text, fontSize: 14)),
+          SizedBox(height: 8),
           _styledDropdown<String>(
             value: _limit == 0 ? 'All' : (_limit == 100 ? 'Last 100' : 'Last 50'),
             items: const ['Last 50', 'Last 100', 'All'],
@@ -579,40 +1345,40 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      const SizedBox(width: 24),
+      SizedBox(width: 24),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Row(children: [
+          Row(children: [
             Icon(Icons.search, size: 16, color: _text),
             SizedBox(width: 4),
             Text('Search', style: TextStyle(color: _text, fontSize: 14)),
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           SizedBox(
             height: 44,
             child: TextField(
               controller: _searchCtrl,
               focusNode: _searchFocus,
-              style: const TextStyle(color: _text, fontSize: 14),
+              style: TextStyle(color: _text, fontSize: 14),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: _border, width: 1.5)),
+                    borderSide: BorderSide(color: _border, width: 1.5)),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: _border, width: 1.5)),
+                    borderSide: BorderSide(color: _border, width: 1.5)),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: _accent, width: 2.0)),
+                    borderSide: BorderSide(color: _accent, width: 2.0)),
                 hintText: 'Search by year, series, grade...',
-                hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFFADB5BD)),
+                hintStyle: TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFFADB5BD)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16),
+                        icon: Icon(Icons.clear, size: 16),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _searchQuery = '');
@@ -623,58 +1389,35 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      const SizedBox(width: 24),
+      SizedBox(width: 24),
       Expanded(
         child: _buildValuationBadge(allEstimated, estimated, total),
       ),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       // ── Vertex AI Reference Search button ─────────────────────────────
       if (widget.onNavigate != null)
         Container(
-          margin: const EdgeInsets.only(top: 22),
+          margin: EdgeInsets.only(top: 22),
           child: Tooltip(
             message: 'Search 1,913 coin reference entries with Vertex AI',
             child: ElevatedButton.icon(
               onPressed: () => widget.onNavigate!('Coin Search'),
-              icon: const Icon(Icons.manage_search, size: 16),
-              label: const Text('AI Reference Search'),
+              icon: Icon(Icons.manage_search, size: 16),
+              label: Text('AI Reference Search'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D9488),
+                backgroundColor: Color(0xFF0D9488),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6)),
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                     horizontal: 14, vertical: 12),
-                textStyle: const TextStyle(
+                textStyle: TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
           ),
         ),
     ]);
-  }
-
-  // --- AI value parser -- mirrors home_dashboard._parseCurrency -------------
-  // Handles both hyphen ranges ("$15 - $35") and em-dash ranges ("$15 – $35")
-  // from the text estimator.  Returns the midpoint for ranges.
-  // Sanity cap: any single-coin AI estimate > $100,000 is treated as 0 to
-  // prevent a runaway Gemini response from inflating the portfolio total.
-  static double _parseAiValue(String raw) {
-    if (raw.isEmpty || raw == 'Pending' || raw == 'null') return 0.0;
-    // Normalise all dash variants and strip commas
-    final norm = raw
-        .replaceAll(',', '')
-        .replaceAll('\u2013', '-')   // en-dash
-        .replaceAll('\u2014', '-')   // em-dash
-        .replaceAll('\u2012', '-');  // figure dash
-    // Match any range: "$15-$25", "$15 - $25", "15-25", etc. allowing optional leading $ or non-digits on second part
-    final rangeMatch = RegExp(r'(\d+\.?\d*)\s*-\s*[^0-9]*(\d+\.?\d*)').firstMatch(norm);
-    if (rangeMatch != null) {
-      final a = double.tryParse(rangeMatch.group(1)!) ?? 0.0;
-      return a > 100000 ? 0.0 : a;   // sanity cap
-    }
-    final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-    return v > 100000 ? 0.0 : v;          // sanity cap
   }
 
 
@@ -710,11 +1453,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
     return Row(children: [
       _statChip('Showing', '${docs.length} coins'),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}'),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}'),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       _statChip('Est. Value', '\$${aiTotal.toStringAsFixed(2)}'),
     ]);
   }
@@ -726,11 +1469,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // ─ All done ──────────────────────────────────────────────────────────────
     if (allEstimated) {
       return Container(
-        margin: const EdgeInsets.only(top: 22),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.only(top: 22),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
             color: _greenBg, borderRadius: BorderRadius.circular(4)),
-        child: const Row(children: [
+        child: Row(children: [
           Icon(Icons.check_box, color: _green, size: 20),
           SizedBox(width: 8),
           Expanded(
@@ -744,52 +1487,52 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // ─ Running ───────────────────────────────────────────────────────────────
     if (v.isRunning) {
       return Container(
-        margin: const EdgeInsets.only(top: 22),
-        padding: const EdgeInsets.all(10),
+        margin: EdgeInsets.only(top: 22),
+        padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: const Color(0xFFECFDF5),
-            border: Border.all(color: const Color(0xFF86EFAC)),
+            color: Color(0xFFECFDF5),
+            border: Border.all(color: Color(0xFF86EFAC)),
             borderRadius: BorderRadius.circular(4)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const SizedBox(
+              SizedBox(
                 width: 12, height: 12,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: Color(0xFF0D9488)),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(v.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: _text,
                         fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis),
               ),
               GestureDetector(
                 onTap: BatchValuationService.instance.pause,
-                child: const Text('\u25a0 Pause',
+                child: Text('\u25a0 Pause',
                     style: TextStyle(
                         fontSize: 11,
                         color: Color(0xFFF59E0B),
                         fontWeight: FontWeight.w600)),
               ),
             ]),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
                 value: v.pct, minHeight: 4,
-                backgroundColor: const Color(0xFFD1FAE5),
+                backgroundColor: Color(0xFFD1FAE5),
                 valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFF0D9488)),
               ),
             ),
             if (v.etaLabel.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(v.etaLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 10, color: Color(0xFF6B7280))),
             ],
           ],
@@ -800,41 +1543,41 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // ─ Paused with progress ──────────────────────────────────────────────────
     if (v.isPaused && v.total > 0) {
       return Container(
-        margin: const EdgeInsets.only(top: 22),
-        padding: const EdgeInsets.all(10),
+        margin: EdgeInsets.only(top: 22),
+        padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: const Color(0xFFFFFBEB),
-            border: Border.all(color: const Color(0xFFFDE68A)),
+            color: Color(0xFFFFFBEB),
+            border: Border.all(color: Color(0xFFFDE68A)),
             borderRadius: BorderRadius.circular(4)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.pause_circle_outline,
+              Icon(Icons.pause_circle_outline,
                   size: 14, color: Color(0xFFF59E0B)),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Expanded(
                 child: Text('Paused — ${v.label}',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: _text,
                         fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis),
               ),
               GestureDetector(
                 onTap: BatchValuationService.instance.resume,
-                child: const Text('\u25ba Resume',
+                child: Text('\u25ba Resume',
                     style: TextStyle(
                         fontSize: 11,
                         color: Color(0xFF0D9488),
                         fontWeight: FontWeight.w600)),
               ),
             ]),
-            const SizedBox(height: 5),
+            SizedBox(height: 5),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
                 value: v.pct, minHeight: 4,
-                backgroundColor: const Color(0xFFFEF3C7),
+                backgroundColor: Color(0xFFFEF3C7),
                 valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFFF59E0B)),
               ),
@@ -846,25 +1589,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // ─ Not started ───────────────────────────────────────────────────────────
     return Container(
-      margin: const EdgeInsets.only(top: 22),
-      padding: const EdgeInsets.all(10),
+      margin: EdgeInsets.only(top: 22),
+      padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-          color: const Color(0xFFFFF3CD),
-          border: Border.all(color: const Color(0xFFFDE68A)),
+          color: Color(0xFFFFF3CD),
+          border: Border.all(color: Color(0xFFFDE68A)),
           borderRadius: BorderRadius.circular(4)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.info_outline,
+            Icon(Icons.info_outline,
                 size: 14, color: Color(0xFF856404)),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Expanded(
               child: Text(
                 total == 0
                     ? 'No coins loaded.'
                     : '$estimated of $total estimated.',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF664D03),
                     fontWeight: FontWeight.w600),
@@ -872,25 +1615,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
             ),
           ]),
-          const SizedBox(height: 6),
-          const Text(
+          SizedBox(height: 6),
+          Text(
             'Our AI needs ~2 sec per coin to estimate value from year, grade & mint mark — no photos needed.',
             style: TextStyle(fontSize: 10, color: Color(0xFF92400E), height: 1.4),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           ElevatedButton.icon(
             onPressed: () => BatchValuationService.instance.start(),
-            icon: const Icon(Icons.play_arrow_rounded, size: 14),
-            label: const Text('Run AI Valuation'),
+            icon: Icon(Icons.play_arrow_rounded, size: 14),
+            label: Text('Run AI Valuation'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D9488),
+              backgroundColor: Color(0xFF0D9488),
               foregroundColor: Colors.white,
-              minimumSize: const Size(0, 30),
+              minimumSize: Size(0, 30),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(4)),
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                   horizontal: 12, vertical: 6),
-              textStyle: const TextStyle(
+              textStyle: TextStyle(
                   fontSize: 11, fontWeight: FontWeight.w600),
             ),
           ),
@@ -900,15 +1643,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _statChip(String label, String value) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(
         color: _surface,
         border: Border.all(color: _border),
         borderRadius: BorderRadius.circular(6)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 11, color: _subtext)),
-      const SizedBox(height: 2),
-      Text(value, style: const TextStyle(
+      Text(label, style: TextStyle(fontSize: 11, color: _subtext)),
+      SizedBox(height: 2),
+      Text(value, style: TextStyle(
           fontSize: 15, fontWeight: FontWeight.bold, color: _text)),
     ]),
   );
@@ -950,20 +1693,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        duration: Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: active ? _accent : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft:     isLeft  ? const Radius.circular(5) : Radius.zero,
-            bottomLeft:  isLeft  ? const Radius.circular(5) : Radius.zero,
-            topRight:    !isLeft ? const Radius.circular(5) : Radius.zero,
-            bottomRight: !isLeft ? const Radius.circular(5) : Radius.zero,
+            topLeft:     isLeft  ? Radius.circular(5) : Radius.zero,
+            bottomLeft:  isLeft  ? Radius.circular(5) : Radius.zero,
+            topRight:    !isLeft ? Radius.circular(5) : Radius.zero,
+            bottomRight: !isLeft ? Radius.circular(5) : Radius.zero,
           ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 14, color: active ? Colors.white : _subtext),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(label,
               style: TextStyle(
                 fontSize: 12,
@@ -1002,9 +1745,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           trackVisibility: true,
           thickness: 8,
           scrollbarOrientation: ScrollbarOrientation.top,
-          thumbColor: const Color(0xFFB0B8C8),
-          trackColor: const Color(0xFFF0F2F5),
-          trackBorderColor: const Color(0xFFE0E4EA),
+          thumbColor: Color(0xFFB0B8C8),
+          trackColor: Color(0xFFF0F2F5),
+          trackBorderColor: Color(0xFFE0E4EA),
           child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
@@ -1023,10 +1766,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 : visCols[col - 1].width.toDouble();
             return TableSpan(
               extent: FixedTableSpanExtent(width),
-              padding: const TableSpanPadding(
+              padding: TableSpanPadding(
                   leading: colPadding, trailing: colPadding),
               foregroundDecoration: col == 0
-                  ? const TableSpanDecoration(
+                  ? TableSpanDecoration(
                       border: TableSpanBorder(
                         trailing: BorderSide(color: _border, width: 0.8),
                       ))
@@ -1039,7 +1782,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             extent: FixedTableSpanExtent(row == 0 ? headerH : dataH),
             backgroundDecoration: TableSpanDecoration(
               color: row == 0
-                  ? const Color(0xFFF8F9FB)
+                  ? Color(0xFFF8F9FB)
                   : (docs.length > row - 1 &&
                           docs[row - 1].id == _selectedCoinId
                       ? _accent.withAlpha(28)
@@ -1090,7 +1833,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 child: InkWell(
                   onTap: onTap,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: EdgeInsets.symmetric(horizontal: 2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1199,14 +1942,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       String label, VoidCallback? onTap, {required bool? sortAsc}) {
     return TableViewCell(
       child: Material(
-        color: const Color(0xFFF8F9FB),
+        color: Color(0xFFF8F9FB),
         child: InkWell(
           onTap: onTap,
           mouseCursor: onTap != null
               ? SystemMouseCursors.click
               : SystemMouseCursors.basic,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1214,14 +1957,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Text(
                     label,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: _text),
                   ),
                 ),
                 if (sortAsc != null) ...[
-                  const SizedBox(width: 2),
+                  SizedBox(width: 2),
                   Icon(
                     sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
                     size: 11,
@@ -1312,20 +2055,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     tooltip: tip,
     color: _subtext,
     padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(maxWidth: 32, maxHeight: 32),
+    constraints: BoxConstraints(maxWidth: 32, maxHeight: 32),
     onPressed: onTap,
   );
 
   // --- Empty state (zero coins in collection) -------------------------------
   Widget _buildCollectionEmptyState() {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 32),
-      padding: const EdgeInsets.all(48),
+      margin: EdgeInsets.symmetric(vertical: 32),
+      padding: EdgeInsets.all(48),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 20, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 20, offset: Offset(0, 4))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1335,47 +2078,47 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             width: 88, height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [Color(0xFFF63366), Color(0xFFFF8C42)],
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
               ),
               boxShadow: [BoxShadow(color: _accent.withAlpha(60), blurRadius: 20, spreadRadius: 2)],
             ),
-            child: const Icon(Icons.toll_rounded, size: 44, color: Colors.white),
+            child: Icon(Icons.toll_rounded, size: 44, color: Colors.white),
           ),
-          const SizedBox(height: 24),
-          const Text(
+          SizedBox(height: 24),
+          Text(
             'Your collection is empty',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _text),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             'Add your first coin using any of the methods below.\nYou can scan an invoice, enter it manually, import from PCGS,\nor add a whole roll in one step.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: _subtext, height: 1.6),
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: 32),
           Wrap(
             spacing: 12, runSpacing: 12,
             alignment: WrapAlignment.center,
             children: [
               ElevatedButton.icon(
-                icon: const Icon(Icons.edit_note, size: 18),
-                label: const Text('Add Manually'),
+                icon: Icon(Icons.edit_note, size: 18),
+                label: Text('Add Manually'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _accent, foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () => widget.onNavigate?.call('Add New Coins'),
               ),
               OutlinedButton.icon(
-                icon: const Icon(Icons.auto_awesome_motion, size: 18),
-                label: const Text('Browse Add Methods'),
+                icon: Icon(Icons.auto_awesome_motion, size: 18),
+                label: Text('Browse Add Methods'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _accent,
-                  side: const BorderSide(color: _accent),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  side: BorderSide(color: _accent),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () => widget.onNavigate?.call('Add New Coins'),
@@ -1440,7 +2183,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           return Dialog(
             backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            insetPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: 1100,
@@ -1449,53 +2192,53 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               child: Column(children: [
                 // -- Header -----------------------------------------------
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: const BoxDecoration(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: BoxDecoration(
                     color: Color(0xFFF8F9FB),
                     border: Border(bottom: BorderSide(color: _border)),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.book_outlined, size: 18, color: _text),
-                    const SizedBox(width: 8),
+                    Icon(Icons.book_outlined, size: 18, color: _text),
+                    SizedBox(width: 8),
                     Text('Coin Inspector -- $title',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
-                    const Spacer(),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
+                    Spacer(),
                     // Google Images search
                     Tooltip(
                       message: 'Opens Google Images: searches for this coin',
                       child: OutlinedButton.icon(
                         onPressed: () => _onSearchGoogle(data),
-                        icon: const Icon(Icons.image_search, size: 15),
-                        label: const Text('Google Images'),
+                        icon: Icon(Icons.image_search, size: 15),
+                        label: Text('Google Images'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: _text, side: const BorderSide(color: _border),
+                          foregroundColor: _text, side: BorderSide(color: _border),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: TextStyle(fontSize: 12),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     // eBay search -- opens eBay in browser
                     Tooltip(
                       message: 'Search eBay sold listings for this coin',
                       child: ElevatedButton.icon(
                         onPressed: () => _onSearchEbay(data),
-                        icon: const Icon(Icons.shopping_cart_outlined, size: 15),
-                        label: const Text('eBay Search'),
+                        icon: Icon(Icons.shopping_cart_outlined, size: 15),
+                        label: Text('eBay Search'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _accent, foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: TextStyle(fontSize: 12),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close, size: 20, color: _subtext),
+                      icon: Icon(Icons.close, size: 20, color: _subtext),
                       tooltip: 'Close',
                     ),
                   ]),
@@ -1507,11 +2250,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     // Left panel: image (300px)
                     Container(
                       width: 300,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Color(0xFFF8F9FB),
                         border: Border(right: BorderSide(color: _border)),
                       ),
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       child: refFuture != null
                           // No user photo -- show reference image via FutureBuilder
                           ? FutureBuilder<CoinImageResult>(
@@ -1532,15 +2275,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   // Badge (above toggles, centered)
                                   if (hasRef) Container(
                                     alignment: Alignment.center,
-                                    margin: const EdgeInsets.only(bottom: 6),
+                                    margin: EdgeInsets.only(bottom: 6),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF1A237E).withAlpha(20),
+                                        color: Color(0xFF1A237E).withAlpha(20),
                                         borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: const Color(0xFF1A237E), width: 1),
+                                        border: Border.all(color: Color(0xFF1A237E), width: 1),
                                       ),
-                                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
                                         Icon(Icons.collections_outlined, size: 11, color: Color(0xFF1A237E)),
                                         SizedBox(width: 4),
                                         Text('REFERENCE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF1A237E), letterSpacing: 0.8)),
@@ -1555,7 +2298,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                         setState(() => _vaultShowObverse = true);
                                         setDlg(() {});
                                       }),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       _vaultToggleButton('Reverse', !showObv, hasRefRev, () {
                                         setState(() => _vaultShowObverse = false);
                                         setDlg(() {});
@@ -1563,7 +2306,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                     ],
                                   ),
 
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   // Image
                                   Expanded(
                                     child: GestureDetector(
@@ -1579,15 +2322,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                                 Image.network(refUrl, fit: BoxFit.contain,
                                                   loadingBuilder: (ctx, child, prog) => prog == null
                                                       ? child
-                                                      : const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
+                                                      : Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
                                                   errorBuilder: (ctx, err, st) => _vaultPlaceholder(
                                                       showObv ? 'Obverse' : 'Reverse', isError: true),
                                                 ),
                                                 Positioned(bottom: 8, right: 8,
                                                   child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                                     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                                                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
                                                       Icon(Icons.zoom_in, size: 12, color: Colors.white),
                                                       SizedBox(width: 3),
                                                       Text('Enlarge', style: TextStyle(fontSize: 10, color: Colors.white)),
@@ -1596,19 +2339,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                                 ),
                                               ])
                                             : snap.connectionState == ConnectionState.waiting
-                                                ? const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2))
+                                                ? Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2))
                                                 : _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse'),
                                       ),
                                     ),
                                   ),
                                   // Attribution
                                   if (hasRef && ref!.attribution != null) ...[
-                                    const SizedBox(height: 6),
+                                    SizedBox(height: 6),
                                     Text(ref.attribution!,
-                                        style: const TextStyle(fontSize: 9, color: _subtext, fontStyle: FontStyle.italic),
+                                        style: TextStyle(fontSize: 9, color: _subtext, fontStyle: FontStyle.italic),
                                         textAlign: TextAlign.center),
                                   ],
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   // Upload buttons
                                   Row(children: [
                                     Expanded(child: _vaultUploadButton(
@@ -1620,7 +2363,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                           setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
                                       },
                                     )),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     Expanded(child: _vaultUploadButton(
                                       label: '+ Add Reverse',
                                       icon: Icons.add_photo_alternate_outlined,
@@ -1641,13 +2384,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   setState(() => _vaultShowObverse = true);
                                   setDlg(() {});
                                 }),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 _vaultToggleButton('Reverse', !showObv, hasRev, () {
                                   setState(() => _vaultShowObverse = false);
                                   setDlg(() {});
                                 }),
                               ]),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Expanded(
                                 child: GestureDetector(
                                   onTap: hasActive ? () => _showImageLightbox(activeUrl,
@@ -1659,7 +2402,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                         ? Stack(fit: StackFit.expand, children: [
                                             Image.network(activeUrl, fit: BoxFit.contain,
                                               loadingBuilder: (ctx, child, prog) => prog == null ? child
-                                                  : const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
+                                                  : Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
                                               errorBuilder: (ctx, err, st) {
                                                 debugPrint('Image load error: $err  url: $activeUrl');
                                                 return _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse', isError: true);
@@ -1667,9 +2410,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                             ),
                                             Positioned(bottom: 8, right: 8,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                                 decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                                                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                                child: Row(mainAxisSize: MainAxisSize.min, children: [
                                                   Icon(Icons.zoom_in, size: 12, color: Colors.white),
                                                   SizedBox(width: 3),
                                                   Text('Enlarge', style: TextStyle(fontSize: 10, color: Colors.white)),
@@ -1681,7 +2424,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Row(children: [
                                 Expanded(child: _vaultUploadButton(
                                   label: hasObv ? 'Replace Obverse' : '+ Obverse',
@@ -1692,7 +2435,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
                                   },
                                 )),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Expanded(child: _vaultUploadButton(
                                   label: hasRev ? 'Replace Reverse' : '+ Reverse',
                                   icon: hasRev ? Icons.refresh : Icons.add_photo_alternate_outlined,
@@ -1709,12 +2452,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     // Right: scrollable details
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _buildMetricStrip(data),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           _buildPcgsBar(data),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20),
                           _buildDetailGrid(data),
                           _buildCoinSetSection(data),
                           _buildRollBanner(data),
@@ -1748,16 +2491,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? data[_F.meltValue].toString()
             : 'N/A');
     return Row(children: [
-      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '--', const Color(0xFF1A73E8), Icons.attach_money)),
-      const SizedBox(width: 10),
-      Expanded(child: _metricCard('Melt Value', meltStr, const Color(0xFF34A853), Icons.blur_circular_outlined)),
-      const SizedBox(width: 10),
-      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? '--', const Color(0xFFF9AB00), Icons.grade_outlined)),
-      const SizedBox(width: 10),
+      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
+      SizedBox(width: 10),
+      Expanded(child: _metricCard('Melt Value', meltStr, Color(0xFF34A853), Icons.blur_circular_outlined)),
+      SizedBox(width: 10),
+      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? '--', Color(0xFFF9AB00), Icons.grade_outlined)),
+      SizedBox(width: 10),
       Expanded(child: _metricCard(
           'Live eBay',
           _ebayPrices[_selectedCoinId] ?? 'Check >',
-          const Color(0xFFE53935),
+          Color(0xFFE53935),
           Icons.shopping_cart_outlined,
           onTap: _ebayPrices[_selectedCoinId] != null
               ? null
@@ -1770,7 +2513,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: accent.withAlpha(15),
         borderRadius: BorderRadius.circular(8),
@@ -1778,11 +2521,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
       child: Row(children: [
         Icon(icon, color: accent, size: 20),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text)),
+          SizedBox(height: 2),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text)),
         ]),
       ]),
     ));
@@ -1791,7 +2534,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- PCGS feature bar ----------------------------------------------------
   Widget _buildPcgsBar(Map<String, dynamic> data) {
     final svc = data[_F.gradingService]?.toString() ?? '';
-    if (!svc.toUpperCase().contains('PCGS')) return const SizedBox.shrink();
+    if (!svc.toUpperCase().contains('PCGS')) return SizedBox.shrink();
 
     final isNfc  = data[_F.isNfcSecure] == true;
     final pop    = data[_F.population]?.toString() ?? '';
@@ -1799,15 +2542,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF003087).withAlpha(12),
+        color: Color(0xFF003087).withAlpha(12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF003087).withAlpha(50)),
+        border: Border.all(color: Color(0xFF003087).withAlpha(50)),
       ),
       child: Wrap(spacing: 16, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
         // PCGS label
-        const Row(mainAxisSize: MainAxisSize.min, children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.verified_outlined, size: 16, color: Color(0xFF003087)),
           SizedBox(width: 5),
           Text('PCGS Certified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF003087))),
@@ -1815,13 +2558,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         // NFC badge
         if (isNfc)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFF34A853).withAlpha(20),
+              color: Color(0xFF34A853).withAlpha(20),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: const Color(0xFF34A853).withAlpha(80)),
+              border: Border.all(color: Color(0xFF34A853).withAlpha(80)),
             ),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.nfc, size: 13, color: Color(0xFF34A853)),
               SizedBox(width: 4),
               Text('NFC Secured', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF34A853))),
@@ -1830,9 +2573,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         // Population
         if (pop.isNotEmpty)
           Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.bar_chart, size: 14, color: _subtext),
-            const SizedBox(width: 4),
-            Text('Pop: $pop', style: const TextStyle(fontSize: 12, color: _subtext, fontWeight: FontWeight.w500)),
+            Icon(Icons.bar_chart, size: 14, color: _subtext),
+            SizedBox(width: 4),
+            Text('Pop: $pop', style: TextStyle(fontSize: 12, color: _subtext, fontWeight: FontWeight.w500)),
           ]),
         // CoinFacts link
         if (pcgsNo.isNotEmpty)
@@ -1840,10 +2583,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             onTap: () async {
               final uri = Uri.parse('https://www.pcgs.com/coinfacts/coin/$pcgsNo');
               if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open browser.')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open browser.')));
               }
             },
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.open_in_new, size: 13, color: _accent),
               SizedBox(width: 4),
               Text('CoinFacts', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
@@ -1857,13 +2600,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Widget _buildDetailGrid(Map<String, dynamic> data) {
     Widget section(String title, List<List<String?>> fields) {
       final cells = fields.where((f) => (f[1] ?? '').isNotEmpty).toList();
-      if (cells.isEmpty) return const SizedBox.shrink();
+      if (cells.isEmpty) return SizedBox.shrink();
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _subtext, letterSpacing: 1.0)),
-        const SizedBox(height: 8),
+        Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _subtext, letterSpacing: 1.0)),
+        SizedBox(height: 8),
         Wrap(spacing: 16, runSpacing: 12,
           children: cells.map((f) => _fieldCell(f[0]!, f[1]!)).toList()),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
       ]);
     }
 
@@ -1924,9 +2667,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Widget _fieldCell(String label, String value) => SizedBox(
     width: 160,
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 10, color: _subtext)),
-      const SizedBox(height: 2),
-      Text(value, style: const TextStyle(fontSize: 13, color: _text, fontWeight: FontWeight.w500)),
+      Text(label, style: TextStyle(fontSize: 10, color: _subtext)),
+      SizedBox(height: 2),
+      Text(value, style: TextStyle(fontSize: 13, color: _text, fontWeight: FontWeight.w500)),
     ]),
   );
 
@@ -1941,19 +2684,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }) =>
       Container(
         height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
             color: _bg, borderRadius: BorderRadius.circular(4)),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
             value: value,
             isExpanded: true,
-            icon: const Icon(Icons.keyboard_arrow_down, color: _text),
+            icon: Icon(Icons.keyboard_arrow_down, color: _text),
             items: items
                 .map((v) => DropdownMenuItem<T>(
                     value: v,
                     child: Text(label(v),
-                        style: const TextStyle(color: _text, fontSize: 14))))
+                        style: TextStyle(color: _text, fontSize: 14))))
                 .toList(),
             onChanged: onChanged,
           ),
@@ -2004,12 +2747,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   controller: controllers[fieldKeys[i]],
                   decoration: InputDecoration(
                     labelText: fieldLabels[i],
-                    border: const OutlineInputBorder(),
+                    border: OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
+                    contentPadding: EdgeInsets.symmetric(
                         horizontal: 10, vertical: 10),
                   ),
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 13),
                 ),
               )),
             ),
@@ -2021,7 +2764,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 for (final c in controllers.values) { c.dispose(); }
                 Navigator.pop(ctx);
               },
-              child: const Text('Cancel')),
+              child: Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _accent, foregroundColor: Colors.white),
@@ -2042,7 +2785,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 for (final c in controllers.values) { c.dispose(); }
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Coin updated.'),
                       backgroundColor: _green));
                 }
@@ -2051,11 +2794,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Save failed: $e'),
                       backgroundColor: _red,
-                      duration: const Duration(seconds: 6)));
+                      duration: Duration(seconds: 6)));
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text('Save'),
           ),
         ],
       ),
@@ -2092,13 +2835,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Coin'),
+        title: Text('Delete Coin'),
         content: Text('Remove ${_yearMint(data)} '
             '${data[_F.denomination] ?? ''} from your collection?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _red, foregroundColor: Colors.white),
@@ -2106,7 +2849,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               Navigator.pop(ctx);
               // Show snackbar IMMEDIATELY -- don't wait for Firestore round-trip
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Coin deleted.'),
                     backgroundColor: _red,
                     duration: Duration(seconds: 2)));
@@ -2118,7 +2861,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   .doc(id)
                   .delete();
             },
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -2160,13 +2903,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Could not open browser.'), backgroundColor: _red));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Couldn\'t open the browser. Please try again.'), backgroundColor: _red));
       }
     }
@@ -2181,13 +2924,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       final uri  = Uri.parse(url);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Could not open eBay.'), backgroundColor: _red));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Couldn\'t open eBay. Please try again.'), backgroundColor: _red));
       }
     }
@@ -2197,7 +2940,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // _onGenerateReport removed — navigation to Estate Planning is now inline on the button.
 
   void _onSaveGridChanges() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('All changes saved to Firestore.'),
       backgroundColor: _green,
     ));
@@ -2263,15 +3006,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 children: [
                   if (hasRef) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A237E).withAlpha(25),
+                        color: Color(0xFF1A237E).withAlpha(25),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                            color: const Color(0xFF1A237E), width: 1),
+                            color: Color(0xFF1A237E), width: 1),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.collections_outlined,
@@ -2287,20 +3030,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         ],
                       ),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     _vaultToggleButton('Obverse', _vaultShowObverse,
                         hasRefObv, () {
                       setState(() => _vaultShowObverse = true);
                     }),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     _vaultToggleButton('Reverse', !_vaultShowObverse,
                         hasRefRev, () {
                       setState(() => _vaultShowObverse = false);
                     }),
                   ] else ...[
-                    const Icon(Icons.add_photo_alternate_outlined,
+                    Icon(Icons.add_photo_alternate_outlined,
                         size: 14, color: _subtext),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text('Personal Coin Photos',
                         style: TextStyle(
                             fontSize: 13,
@@ -2309,7 +3052,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ],
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
               // -- Image panel ------------------------------------------------
               GestureDetector(
@@ -2319,7 +3062,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           isMicroscope: false)
                     : null,
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
+                  duration: Duration(milliseconds: 300),
                   child: hasRefActive
                       ? ClipRRect(
                           key: ValueKey(refUrl),
@@ -2336,8 +3079,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                         ? child
                                         : Container(
                                             height: 220,
-                                            color: const Color(0xFFF0F2F6),
-                                            child: const Center(
+                                            color: Color(0xFFF0F2F6),
+                                            child: Center(
                                                 child:
                                                     CircularProgressIndicator(
                                                         color: _accent,
@@ -2350,13 +3093,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               Positioned(
                                 bottom: 8, right: 8,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 3),
                                   decoration: BoxDecoration(
                                     color: Colors.black54,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.zoom_in,
@@ -2377,10 +3120,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           ? Container(
                               height: 220,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0F2F6),
+                                color: Color(0xFFF0F2F6),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Center(
+                              child: Center(
                                   child: CircularProgressIndicator(
                                       color: _accent, strokeWidth: 2)),
                             )
@@ -2392,17 +3135,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               // Attribution caption
               if (hasRef && ref!.attribution != null &&
                   ref.attribution!.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   ref.attribution!,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 9,
                       color: _subtext,
                       fontStyle: FontStyle.italic),
                 ),
               ],
 
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
               // -- Upload buttons ----------------------------------------------
               Row(
@@ -2420,7 +3163,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: _vaultUploadButton(
                       label: '+ Add Reverse',
@@ -2450,15 +3193,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           children: [
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isMicroscope
-                    ? const Color(0xFFFFC107).withAlpha(30)
+                    ? Color(0xFFFFC107).withAlpha(30)
                     : _accent.withAlpha(30),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                     color: isMicroscope
-                        ? const Color(0xFFFFC107)
+                        ? Color(0xFFFFC107)
                         : _accent,
                     width: 1),
               ),
@@ -2471,17 +3214,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         : Icons.photo_outlined,
                     size: 12,
                     color: isMicroscope
-                        ? const Color(0xFFFFC107)
+                        ? Color(0xFFFFC107)
                         : _accent,
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     isMicroscope ? 'YOUR SCAN' : 'YOUR PHOTO',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: isMicroscope
-                          ? const Color(0xFFFFC107)
+                          ? Color(0xFFFFC107)
                           : _accent,
                       letterSpacing: 0.8,
                     ),
@@ -2489,17 +3232,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ],
               ),
             ),
-            const Spacer(),
+            Spacer(),
             _vaultToggleButton('Obverse', _vaultShowObverse, hasObv, () {
               setState(() => _vaultShowObverse = true);
             }),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             _vaultToggleButton('Reverse', !_vaultShowObverse, hasRev, () {
               setState(() => _vaultShowObverse = false);
             }),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
 
         GestureDetector(
           onTap: hasActive
@@ -2508,7 +3251,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     isMicroscope: isMicroscope)
               : null,
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
+            duration: Duration(milliseconds: 300),
             child: hasActive
                 ? ClipRRect(
                     key: ValueKey(activeUrl),
@@ -2524,8 +3267,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ? child
                               : Container(
                                   height: 220,
-                                  color: const Color(0xFFF0F2F6),
-                                  child: const Center(
+                                  color: Color(0xFFF0F2F6),
+                                  child: Center(
                                       child: CircularProgressIndicator(
                                           color: _accent, strokeWidth: 2)),
                                 ),
@@ -2537,13 +3280,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           bottom: 8,
                           right: 8,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
                               color: Colors.black54,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.zoom_in,
@@ -2563,7 +3306,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ),
 
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
 
         Row(
           children: [
@@ -2582,7 +3325,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: _vaultUploadButton(
                 label: hasRev ? 'Replace Reverse' : '+ Reverse',
@@ -2610,8 +3353,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GestureDetector(
       onTap: hasImage ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        duration: Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: active ? _accent : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
@@ -2635,7 +3378,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       height: 220,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F2F6),
+        color: Color(0xFFF0F2F6),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
             color: isError ? _red.withAlpha(80) : _border, width: 1.5),
@@ -2648,7 +3391,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             size: 40,
             color: isError ? _red.withAlpha(120) : _border,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             isError ? 'Image unavailable' : 'No $side photo yet',
             style: TextStyle(
@@ -2656,7 +3399,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 color: isError ? _red.withAlpha(160) : _subtext),
           ),
           if (!isError) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               'Use the button below to upload',
               style: TextStyle(fontSize: 10, color: _subtext.withAlpha(160)),
@@ -2676,10 +3419,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GestureDetector(
       onTap: progress == null ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F2F6),
+          color: Color(0xFFF0F2F6),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: _border),
         ),
@@ -2696,19 +3439,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       minHeight: 3,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text('${(progress * 100).toInt()}%',
                       style:
-                          const TextStyle(fontSize: 10, color: _subtext)),
+                          TextStyle(fontSize: 10, color: _subtext)),
                 ],
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, size: 14, color: _accent),
-                  const SizedBox(width: 5),
+                  SizedBox(width: 5),
                   Text(label,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11,
                           color: _accent,
                           fontWeight: FontWeight.w600)),
@@ -2736,15 +3479,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (isMobile) {
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
         builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            ListTile(leading: const Icon(Icons.camera_alt, color: Color(0xFFF63366)), title: const Text('Take Photo'), onTap: () => Navigator.pop(context, ImageSource.camera)),
-            ListTile(leading: const Icon(Icons.photo_library, color: Color(0xFF4C8CDA)),  title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
-            const SizedBox(height: 8),
+            SizedBox(height: 16),
+            ListTile(leading: Icon(Icons.camera_alt, color: Color(0xFFF63366)), title: Text('Take Photo'), onTap: () => Navigator.pop(context, ImageSource.camera)),
+            ListTile(leading: Icon(Icons.photo_library, color: Color(0xFF4C8CDA)),  title: Text('Choose from Gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
+            SizedBox(height: 8),
           ]),
         ),
       );
@@ -2849,20 +3592,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            titlePadding: EdgeInsets.fromLTRB(20, 20, 20, 0),
             title: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF63366).withAlpha(25),
+                    color: Color(0xFFF63366).withAlpha(25),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.volunteer_activism,
+                  child: Icon(Icons.volunteer_activism,
                       color: Color(0xFFF63366), size: 22),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
+                SizedBox(width: 12),
+                Expanded(
                   child: Text(
                     'Help Other Collectors',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -2874,33 +3617,33 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: 4),
+                Text(
                   'Your photo looks great! 🎉',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
-                const SizedBox(height: 10),
-                const Text(
+                SizedBox(height: 10),
+                Text(
                   'Would you like to contribute it to the Numista.AI reference '
                   'library? Other collectors will see it when they view the same '
                   'coin — no personal info is shared.',
                   style: TextStyle(fontSize: 13, height: 1.5),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50).withAlpha(20),
+                    color: Color(0xFF4CAF50).withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: const Color(0xFF4CAF50).withAlpha(100)),
+                        color: Color(0xFF4CAF50).withAlpha(100)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline,
+                      Icon(Icons.info_outline,
                           color: Color(0xFF388E3C), size: 16),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'You\'ll never be asked this again. '  
@@ -2917,19 +3660,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ],
             ),
             actionsPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('No thanks',
+                child: Text('No thanks',
                     style: TextStyle(color: Colors.grey, fontSize: 13)),
               ),
               ElevatedButton.icon(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: const Text('Yes, Contribute!'),
+                icon: Icon(Icons.check_circle_outline, size: 18),
+                label: Text('Yes, Contribute!'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
+                  backgroundColor: Color(0xFFF63366),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -2951,7 +3694,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         onTap: () => Navigator.pop(dialogCtx),
         child: Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
+          insetPadding: EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2961,16 +3704,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 children: [
                   if (isMicroscope)
                     Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
+                      margin: EdgeInsets.only(bottom: 8),
+                      padding: EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFC107).withAlpha(30),
+                        color: Color(0xFFFFC107).withAlpha(30),
                         borderRadius: BorderRadius.circular(4),
                         border:
-                            Border.all(color: const Color(0xFFFFC107)),
+                            Border.all(color: Color(0xFFFFC107)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.camera_alt,
@@ -2996,7 +3739,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Image.network(
                     url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Padding(
+                    errorBuilder: (_, _, _) => Padding(
                       padding: EdgeInsets.all(40),
                       child: Icon(Icons.broken_image_outlined,
                           color: Colors.white30, size: 60),
@@ -3004,9 +3747,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text('$label  *  Tap anywhere to close',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Colors.white54, fontSize: 11)),
             ],
           ),
@@ -3042,7 +3785,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// Shows a compact info strip when the selected coin is part of a roll/batch.
   Widget _buildRollBanner(Map<String, dynamic> data) {
     final rollId   = data['roll_id'] as String?;
-    if (rollId == null || rollId.isEmpty) return const SizedBox.shrink();
+    if (rollId == null || rollId.isEmpty) return SizedBox.shrink();
     final rollType = data['roll_type'] as String? ?? 'roll';
     final typeLabel = switch (rollType) {
       'identical'  => 'Identical Roll',
@@ -3058,8 +3801,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     };
     const purple = Color(0xFF8B5CF6);
     return Container(
-      margin: const EdgeInsets.only(top: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: EdgeInsets.only(top: 24),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: purple.withAlpha(15),
         borderRadius: BorderRadius.circular(8),
@@ -3067,15 +3810,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
       child: Row(children: [
         Icon(typeIcon, color: purple, size: 18),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(typeLabel, style: const TextStyle(fontWeight: FontWeight.w700, color: purple, fontSize: 13)),
+          Text(typeLabel, style: TextStyle(fontWeight: FontWeight.w700, color: purple, fontSize: 13)),
           Text('Roll ID: $rollId', style: TextStyle(color: purple.withAlpha(160), fontSize: 11)),
         ])),
         TextButton(
           style: TextButton.styleFrom(foregroundColor: purple),
           onPressed: () => setState(() => _searchQuery = rollId),
-          child: const Text('View All >', style: TextStyle(fontSize: 12)),
+          child: Text('View All >', style: TextStyle(fontSize: 12)),
         ),
       ]),
     );
@@ -3089,7 +3832,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final rawContents = data['set_contents'];
     if (rawContents is List && rawContents.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+        padding: EdgeInsets.fromLTRB(0, 4, 0, 0),
         child: SetContentsPanel(data: data),
       );
     }
@@ -3097,15 +3840,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Pre-cataloged sets (e.g. Jamul Sovereign, Birth Year) use set_id
     // to look up coin_set_index in Firestore.
     final setId = data['set_id'] as String?;
-    if (setId == null || setId.isEmpty) return const SizedBox.shrink();
+    if (setId == null || setId.isEmpty) return SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+      padding: EdgeInsets.fromLTRB(0, 16, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Divider(color: _border),
-          const SizedBox(height: 16),
+          Divider(color: _border),
+          SizedBox(height: 16),
           CoinSetViewer(setId: setId),
         ],
       ),
@@ -3115,19 +3858,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- Similar Coins widget for the inspector ------------------------------
   Widget _buildSimilarCoinsInspector() {
     if (!_loadingInspectorSimilar && _inspectorSimilar.isEmpty) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
-        const Divider(color: _border),
-        const SizedBox(height: 16),
+        SizedBox(height: 24),
+        Divider(color: _border),
+        SizedBox(height: 16),
         Row(
           children: [
-            const Icon(Icons.photo_library_outlined, color: _accent, size: 16),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.photo_library_outlined, color: _accent, size: 16),
+            SizedBox(width: 8),
+            Text(
               'Similar in Reference Library',
               style: TextStyle(
                   color: _text,
@@ -3135,8 +3878,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   fontWeight: FontWeight.w600),
             ),
             if (_loadingInspectorSimilar) ...[
-              const SizedBox(width: 12),
-              const SizedBox(
+              SizedBox(width: 12),
+              SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
@@ -3145,14 +3888,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ],
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         if (!_loadingInspectorSimilar && _inspectorSimilar.isNotEmpty)
           SizedBox(
             height: 120,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _inspectorSimilar.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              separatorBuilder: (_, _) => SizedBox(width: 10),
               itemBuilder: (ctx, i) {
                 final img = _inspectorSimilar[i];
                 return GestureDetector(
@@ -3168,7 +3911,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           Image.network(
                             img.gcsUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Icon(
+                            errorBuilder: (_, _, _) => Icon(
                                 Icons.broken_image_outlined,
                                 color: _subtext,
                                 size: 28),
@@ -3180,12 +3923,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               left: 0,
                               right: 0,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding: EdgeInsets.symmetric(
                                     vertical: 2, horizontal: 4),
                                 color: Colors.black54,
                                 child: Text(
                                   img.year!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold),
@@ -3201,7 +3944,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               },
             ),
           ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           'Tap to expand  *  Kaggle reference datasets',
           style: TextStyle(fontSize: 10, color: _subtext.withAlpha(160),
@@ -3215,18 +3958,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     showDialog(
       context: ctx,
       builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.all(24),
+        insetPadding: EdgeInsets.all(24),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 380),
+                constraints: BoxConstraints(maxHeight: 380),
                 child: Image.network(
                   img.gcsUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Padding(
+                  errorBuilder: (_, _, _) => Padding(
                     padding: EdgeInsets.all(40),
                     child: Icon(Icons.broken_image_outlined,
                         color: _subtext, size: 56),
@@ -3234,15 +3977,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Text(img.caption,
-                    style: const TextStyle(fontSize: 12, color: _subtext)),
+                    style: TextStyle(fontSize: 12, color: _subtext)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close'),
+                child: Text('Close'),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
             ],
           ),
         ),
@@ -3250,3 +3993,88 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 }
+
+// ── Segmented Tab Selection Control ──────────────────────────────────────────
+class MyCollectionSegmentedControl extends StatelessWidget {
+  final String selectedTab;
+  final ValueChanged<String> onTabChanged;
+
+  MyCollectionSegmentedControl({
+    super.key,
+    required this.selectedTab,
+    required this.onTabChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Color(0xFF1E293B) : Color(0xFFE2E8F0);
+    final selectedColor = isDark ? Color(0xFF0F172A) : Colors.white;
+    final textColor = isDark ? Colors.white70 : Color(0xFF475569);
+    final activeTextColor = isDark ? Colors.white : Color(0xFF0F172A);
+
+    final tabs = ['All', 'Coins', 'Currency', 'World & Specialty'];
+
+    return Container(
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: tabs.map((tab) {
+          final isSelected = selectedTab == tab;
+          return GestureDetector(
+            onTap: () => onTabChanged(tab),
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? selectedColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(20),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        )
+                      ]
+                    : [],
+              ),
+              child: Text(
+                tab,
+                style: TextStyle(
+                  color: isSelected ? activeTextColor : textColor,
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Unified Portfolio Additions Model ─────────────────────────────────────────
+class UnifiedCollectionItem {
+  final String title;
+  final String category;
+  final String emoji;
+  final String country;
+  final DateTime? dateAdded;
+  final double value;
+
+  UnifiedCollectionItem({
+    required this.title,
+    required this.category,
+    required this.emoji,
+    required this.country,
+    this.dateAdded,
+    required this.value,
+  });
+}
+

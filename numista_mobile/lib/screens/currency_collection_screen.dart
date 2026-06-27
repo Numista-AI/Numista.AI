@@ -9,7 +9,8 @@ import '../services/auth_service.dart';
 /// ─────────────────────────────────────────────────────────────────────────────
 
 class CurrencyCollectionScreen extends StatefulWidget {
-  const CurrencyCollectionScreen({super.key});
+  final bool showAppBar;
+  const CurrencyCollectionScreen({super.key, this.showAppBar = true});
 
   @override
   State<CurrencyCollectionScreen> createState() =>
@@ -18,11 +19,12 @@ class CurrencyCollectionScreen extends StatefulWidget {
 
 class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
   // ── colour tokens (mirrors coin_detail_screen) ──────────────────────────
-  static const _kBg      = Color(0xFF0E1117);
-  static const _kSurface = Color(0xFF1A1D27);
-  static const _kBorder  = Color(0xFF2D3143);
-  static const _kText    = Color(0xFFE8EAF0);
-  static const _kSubtext = Color(0xFF8B92B4);
+  Color get _kBg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0E1117) : Color(0xFFF1F5F9);
+  Color get _kSurface => Theme.of(context).brightness == Brightness.dark ? Color(0xFF1A1D27) : Colors.white;
+  Color get _kBorder => Theme.of(context).brightness == Brightness.dark ? Color(0xFF2D3143) : Color(0xFFE2E8F0);
+  Color get _kText => Theme.of(context).brightness == Brightness.dark ? Color(0xFFE8EAF0) : Color(0xFF0F172A);
+  Color get _kSubtext => Theme.of(context).brightness == Brightness.dark ? Color(0xFF8B92B4) : Color(0xFF475569);
+  
   static const _kAccent  = Color(0xFF6366F1);
   static const _kGreen   = Color(0xFF10B981);
   static const _kGold    = Color(0xFFFFD700);
@@ -123,11 +125,11 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
 
   Color _colorForType(String? raw) {
     switch ((raw ?? '').toLowerCase()) {
-      case 'federal_reserve_note': return const Color(0xFF059669);
-      case 'silver_certificate':  return const Color(0xFF3B82F6);
+      case 'federal_reserve_note': return Color(0xFF059669);
+      case 'silver_certificate':  return Color(0xFF3B82F6);
       case 'gold_certificate':    return _kGold;
-      case 'legal_tender':        return const Color(0xFFEF4444);
-      case 'national_bank_note':  return const Color(0xFF8B5CF6);
+      case 'legal_tender':        return Color(0xFFEF4444);
+      case 'national_bank_note':  return Color(0xFF8B5CF6);
       default:                    return _kAccent;
     }
   }
@@ -175,19 +177,19 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
-      appBar: AppBar(
+      backgroundColor: widget.showAppBar ? _kBg : Colors.transparent,
+      appBar: widget.showAppBar ? AppBar(
         backgroundColor: _kSurface,
         elevation: 0,
         title: Row(
           children: [
-            const Icon(Icons.account_balance_wallet_outlined,
+            Icon(Icons.account_balance_wallet_outlined,
                 color: _kGold, size: 22),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Currency Collection',
+                Text('Currency Collection',
                     style: TextStyle(
                         color: _kText,
                         fontWeight: FontWeight.w700,
@@ -195,7 +197,7 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
                 Text(
                   '$_totalCount note${_totalCount != 1 ? "s" : ""}  ·  '
                   '\$${_totalCost.toStringAsFixed(0)} invested',
-                  style: const TextStyle(color: _kSubtext, fontSize: 11),
+                  style: TextStyle(color: _kSubtext, fontSize: 11),
                 ),
               ],
             ),
@@ -203,30 +205,30 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: _kSubtext),
+            icon: Icon(Icons.refresh_rounded, color: _kSubtext),
             tooltip: 'Refresh',
             onPressed: _loadNotes,
           ),
         ],
-      ),
+      ) : null,
       body: Column(
         children: [
           // ── Search + filter bar ──────────────────────────────────────────
           Container(
             color: _kSurface,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Column(
               children: [
                 TextField(
                   controller: _searchCtrl,
-                  style: const TextStyle(color: _kText, fontSize: 13),
+                  style: TextStyle(color: _kText, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Search descriptions, years, conditions…',
-                    hintStyle: const TextStyle(color: _kSubtext, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: _kSubtext, size: 18),
+                    hintStyle: TextStyle(color: _kSubtext, fontSize: 13),
+                    prefixIcon: Icon(Icons.search, color: _kSubtext, size: 18),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.close, color: _kSubtext, size: 16),
+                            icon: Icon(Icons.close, color: _kSubtext, size: 16),
                             onPressed: () {
                               _searchCtrl.clear();
                               setState(() {
@@ -239,29 +241,29 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
                     fillColor: _kBg,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: _kBorder)),
+                        borderSide: BorderSide(color: _kBorder)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: _kBorder)),
+                        borderSide: BorderSide(color: _kBorder)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: _kAccent)),
+                        borderSide: BorderSide(color: _kAccent)),
                     contentPadding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   ),
                   onChanged: (v) => setState(() {
                     _query = v;
                     _applyFilter();
                   }),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 // Type filter chips
                 SizedBox(
                   height: 28,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _typeFilters.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 6),
+                    separatorBuilder: (_, _) => SizedBox(width: 6),
                     itemBuilder: (ctx, i) {
                       final f = _typeFilters[i];
                       final active = _filterType == f;
@@ -271,7 +273,7 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
                           _applyFilter();
                         }),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: active ? _kAccent : _kBg,
@@ -298,28 +300,28 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
           // ── List ─────────────────────────────────────────────────────────
           Expanded(
             child: _loading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(color: _kAccent))
                 : _filtered.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.account_balance_wallet_outlined,
+                            Icon(Icons.account_balance_wallet_outlined,
                                 color: _kSubtext, size: 48),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Text(
                               _query.isEmpty
                                   ? 'No currency notes found'
                                   : 'No notes match "$_query"',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: _kSubtext, fontSize: 14),
                             ),
                           ],
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         itemCount: _filtered.length,
                         itemBuilder: (ctx, i) {
                           final note = _filtered[i];
@@ -384,7 +386,7 @@ class _NoteCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: kSurface,
           borderRadius: BorderRadius.circular(10),
@@ -398,14 +400,14 @@ class _NoteCard extends StatelessWidget {
               height: 72,
               decoration: BoxDecoration(
                 color: typeColor.withAlpha(20),
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(10),
                   bottomLeft: Radius.circular(10),
                 ),
               ),
               child: imgObv.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: const BorderRadius.only(
+                      borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(10),
                         bottomLeft: Radius.circular(10),
                       ),
@@ -423,7 +425,7 @@ class _NoteCard extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -431,7 +433,7 @@ class _NoteCard extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: typeColor.withAlpha(30),
@@ -445,7 +447,7 @@ class _NoteCard extends StatelessWidget {
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600)),
                         ),
-                        const Spacer(),
+                        Spacer(),
                         if (refNo.isNotEmpty)
                           Text('#$refNo',
                               style: TextStyle(
@@ -453,7 +455,7 @@ class _NoteCard extends StatelessWidget {
                                   fontSize: 10)),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     // Description
                     Text(
                       desc,
@@ -464,17 +466,17 @@ class _NoteCard extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     // Year · Condition · Cost
                     Row(
                       children: [
                         if (isValidYear)
                           _chip(yr, kSubtext),
                         if (isValidYear && cond.isNotEmpty)
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                         if (cond.isNotEmpty)
                           _chip(cond, kSubtext),
-                        const Spacer(),
+                        Spacer(),
                         if (cost.isNotEmpty && cost != r'$0.00')
                           Text(cost,
                               style: TextStyle(
@@ -490,7 +492,7 @@ class _NoteCard extends StatelessWidget {
 
             // ── Chevron ──────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.only(right: 10),
+              padding: EdgeInsets.only(right: 10),
               child: Icon(Icons.chevron_right, color: kSubtext, size: 18),
             ),
           ],
@@ -500,7 +502,7 @@ class _NoteCard extends StatelessWidget {
   }
 
   Widget _chip(String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
     decoration: BoxDecoration(
       color: color.withAlpha(20),
       borderRadius: BorderRadius.circular(4),
@@ -515,7 +517,7 @@ class _NoteCard extends StatelessWidget {
     children: [
       Icon(Icons.account_balance_wallet_outlined,
           color: color, size: 22),
-      const SizedBox(height: 2),
+      SizedBox(height: 2),
       Text(denom,
           style: TextStyle(
               color: color,
@@ -564,9 +566,9 @@ class _NoteDetailDialog extends StatelessWidget {
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(20),
+      insetPadding: EdgeInsets.all(20),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        constraints: BoxConstraints(maxWidth: 500, maxHeight: 700),
         decoration: BoxDecoration(
           color: kBg,
           borderRadius: BorderRadius.circular(16),
@@ -577,10 +579,10 @@ class _NoteDetailDialog extends StatelessWidget {
           children: [
             // ── Header ─────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: kSurface,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                     top: Radius.circular(16)),
               ),
               child: Row(
@@ -588,7 +590,7 @@ class _NoteDetailDialog extends StatelessWidget {
                 children: [
                   // Type badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: typeColor.withAlpha(30),
@@ -601,12 +603,12 @@ class _NoteDetailDialog extends StatelessWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.w600)),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   if (refNo.isNotEmpty)
                     Text('Ref #$refNo',
                         style: TextStyle(
                             color: kSubtext, fontSize: 11)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Icon(Icons.close, color: kSubtext, size: 20),
@@ -617,7 +619,7 @@ class _NoteDetailDialog extends StatelessWidget {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -629,26 +631,26 @@ class _NoteDetailDialog extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             height: 1.3)),
                     if (yr.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(yr,
                           style:
                               TextStyle(color: kSubtext, fontSize: 13)),
                     ],
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // ── Images ──────────────────────────────────────────
                     Row(
                       children: [
                         _imageBox(context, imgObv, 'Obverse', typeColor, denomination),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _imageBox(context, imgRev, 'Reverse', typeColor, denomination),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // ── Key metrics ─────────────────────────────────────
                     _sectionHeader('Details', kSubtext),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -668,12 +670,12 @@ class _NoteDetailDialog extends StatelessWidget {
 
                     // ── Personal Notes ───────────────────────────────────
                     if (pNotes.isNotEmpty) ...[
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _sectionHeader('Notes', kSubtext),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: kSurface,
                           borderRadius: BorderRadius.circular(8),
@@ -687,12 +689,12 @@ class _NoteDetailDialog extends StatelessWidget {
 
                     // ── Provenance ───────────────────────────────────────
                     if (sourceFile.isNotEmpty) ...[
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _sectionHeader('Record Source', kSubtext),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: kAccent.withAlpha(12),
                           borderRadius: BorderRadius.circular(8),
@@ -702,7 +704,7 @@ class _NoteDetailDialog extends StatelessWidget {
                           children: [
                             Icon(Icons.insert_drive_file_outlined,
                                 color: kAccent, size: 16),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 sourceFile.split('/').last,
@@ -717,12 +719,12 @@ class _NoteDetailDialog extends StatelessWidget {
                       ),
                     ],
 
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     // "No image yet" notice
                     if (imgObv.isEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: Colors.amber.withAlpha(15),
                           borderRadius: BorderRadius.circular(8),
@@ -731,14 +733,14 @@ class _NoteDetailDialog extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.image_not_supported_outlined,
+                            Icon(Icons.image_not_supported_outlined,
                                 color: Colors.amber, size: 14),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'No images yet for this note. '
                                 'Photos can be added via the invoice scanner.',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.amber,
                                     fontSize: 11),
                               ),
@@ -766,7 +768,7 @@ class _NoteDetailDialog extends StatelessWidget {
                     color: kSubtext,
                     fontSize: 10,
                     fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             GestureDetector(
               onTap: url.isNotEmpty ? () => _openZoom(ctx, url) : null,
               child: Container(
@@ -822,7 +824,7 @@ class _NoteDetailDialog extends StatelessWidget {
       children: [
         Icon(Icons.account_balance_wallet_outlined,
             color: color, size: 26),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(denom,
             style: TextStyle(
                 color: color,
@@ -845,7 +847,7 @@ class _NoteDetailDialog extends StatelessWidget {
       Color bgColor, Color borderColor) =>
       Container(
         padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(6),
@@ -860,7 +862,7 @@ class _NoteDetailDialog extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5)),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(value,
                 style: TextStyle(
                     color: textColor,

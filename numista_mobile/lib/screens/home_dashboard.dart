@@ -108,10 +108,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _isLoadingNews = true;
   Set<String> _dismissedNewsIds = {};
 
-  // ── Completion Stats state ─────────────────────────────────────────────
-  Map<String, dynamic> _completionStats = {};
-  bool _isLoadingCompletion = true;
-
   // ── Portfolio Insights state ───────────────────────────────────────────
   List<PortfolioSnapshot> _snapshots = [];
 
@@ -125,7 +121,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     _fetchSpotPrices();
     _fetchNews();
     _loadDismissedNews();
-    _fetchCompletionStats();
     // Listen to batch valuation progress so the dashboard updates live
     _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
       if (mounted) setState(() => _valuation = p);
@@ -241,234 +236,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  Future<void> _fetchCompletionStats() async {
-    try {
-      final userEmail = AuthService.userEmail;
-      if (userEmail.isEmpty) return;
-      
-      final response = await http.get(
-        Uri.parse('$kApiBaseUrl/api/collection/completion_stats?user_email=$userEmail')
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          _completionStats = data;
-          _isLoadingCompletion = false;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() => _isLoadingCompletion = false);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoadingCompletion = false);
-    }
-  }
-
-  Widget _buildCompletionGauge() {
-    if (_isLoadingCompletion || _completionStats.isEmpty) {
-      return const SizedBox(
-        height: 80,
-        child: Center(child: CircularProgressIndicator(color: Color(0xFFF63366))),
-      );
-    }
-
-    final pct = (_completionStats['completion_percentage'] as num?)?.toDouble() ?? 0.0;
-    final owned = (_completionStats['owned_count'] as num?)?.toInt() ?? 0;
-    final total = (_completionStats['total_count'] as num?)?.toInt() ?? 0;
-    final userCount = (_completionStats['user_collection_count'] as num?)?.toInt() ?? 0;
-
-    return InkWell(
-      onTap: () => _showCompletionBreakdownBottomSheet(),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF63366).withAlpha(50)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFF63366).withAlpha(15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 64,
-              height: 64,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CircularProgressIndicator(
-                    value: pct / 100,
-                    strokeWidth: 6,
-                    backgroundColor: Colors.white.withAlpha(20),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF63366)),
-                  ),
-                  Center(
-                    child: Text(
-                      '${pct.toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'U.S. Currency System of Record',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Your collection covers ${pct.toStringAsFixed(1)}% of all U.S. legal tender.',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(160),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Collected $owned of $total varieties ($userCount total items)',
-                    style: const TextStyle(
-                      color: Color(0xFFF63366),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 14),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCompletionBreakdownBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final breakdown = _completionStats['breakdown'] as Map<String, dynamic>? ?? {};
-        
-        Widget buildRow(String title, String key, IconData icon, Color color) {
-          final data = breakdown[key] as Map<String, dynamic>? ?? {};
-          final bPct = (data['percentage'] as num?)?.toDouble() ?? 0.0;
-          final bOwned = (data['owned'] as num?)?.toInt() ?? 0;
-          final bTotal = (data['total'] as num?)?.toInt() ?? 0;
-          
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(30),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Collected $bOwned of $bTotal varieties',
-                        style: TextStyle(color: Colors.white.withAlpha(160), fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${bPct.toStringAsFixed(1)}%',
-                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: 80,
-                      height: 4,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: bPct / 100,
-                          backgroundColor: Colors.white.withAlpha(15),
-                          valueColor: AlwaysStoppedAnimation<Color>(color),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(40),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'U.S. Legal Tender Breakdown',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 20),
-              buildRow('Coins', 'coin', Icons.circle_outlined, const Color(0xFF2DD4BF)),
-              const Divider(color: Colors.white10),
-              buildRow('Banknotes', 'banknote', Icons.wallet_membership_outlined, const Color(0xFF3B82F6)),
-              const Divider(color: Colors.white10),
-              buildRow('Medals', 'medal', Icons.military_tech_outlined, const Color(0xFFFFD700)),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   double _parseCurrency(dynamic value) {
     if (value == null) return 0.0;
@@ -744,8 +511,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  _buildCompletionGauge(),
                   const SizedBox(height: 24),
 
                   // ── Category Breakdown ─────────────────────────────────────

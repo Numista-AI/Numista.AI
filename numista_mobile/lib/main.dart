@@ -7,6 +7,7 @@ import 'screens/base_layout.dart';
 import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
+import 'services/theme_provider.dart';
 
 
 Future<void> main() async {
@@ -109,28 +110,51 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Numista.AI',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF0F2F6),
-        primaryColor: const Color(0xFF1565C0),  // Blue -- matches new login screen
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1565C0),
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'sans-serif',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF0F172A),
-          elevation: 0,
-        ),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Color(0xFF0F172A)),
-          bodyLarge:  TextStyle(color: Color(0xFF0F172A)),
-        ),
-      ),
+    return ListenableBuilder(
+      listenable: ThemeProvider.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'Numista.AI',
+          debugShowCheckedModeBanner: false,
+          themeMode: ThemeProvider.instance.themeMode,
+          theme: ThemeData(
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF8FAFC), // High-contrast clean light bg
+            primaryColor: const Color(0xFF1565C0),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF1565C0),
+              brightness: Brightness.light,
+            ),
+            fontFamily: 'sans-serif',
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Color(0xFF0F172A),
+              elevation: 0,
+            ),
+            textTheme: const TextTheme(
+              bodyMedium: TextStyle(color: Color(0xFF0F172A)),
+              bodyLarge:  TextStyle(color: Color(0xFF0F172A)),
+            ),
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF0E1117), // Target premium dark bg
+            primaryColor: const Color(0xFF1565C0),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF1565C0),
+              brightness: Brightness.dark,
+            ),
+            fontFamily: 'sans-serif',
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1A1D27),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            textTheme: const TextTheme(
+              bodyMedium: TextStyle(color: Color(0xFFE8EAF0)),
+              bodyLarge:  TextStyle(color: Color(0xFFE8EAF0)),
+            ),
+          ),
       // --- Auth Gate ---------------------------------------------------------
       // StreamBuilder on authStateChanges: shows LoginScreen until Firebase
       // confirms a signed-in user, then drops into the main app.
@@ -253,6 +277,8 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
           return const LoginScreen();
         },
       ),
+    );
+      },
     );
   }
 }
