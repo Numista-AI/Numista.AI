@@ -316,16 +316,15 @@
                 <li><strong>AI Numismatic Identification:</strong> To send captured coin images to our secure AI processing pipeline (using Google Cloud's Gemini enterprise platform) to identify the coin's type, year, mint mark, and die varieties.</li>
                 <li><strong>Third-Party Database Enrichment:</strong> To query numismatic databases (such as PCGS) using identified attributes to retrieve structural values, melt estimates, and historical data.</li>
                 <li><strong>Estate Planning PDF Generation:</strong> To process your estate profile, collection inventory, and beneficiary allocations to compile legal estate reports and tangible personal property memoranda.</li>
-                <li><strong>Attorney Portal Authorization:</strong> To verify secure, token-based read-only access for your designated attorney if you choose to share your reports via the secure Attorney Portal.</li>
+                <li><strong>Direct Sharing Facilitation:</strong> To generate local email layout templates and clipboard text packages allowing you to quickly share your downloaded inventory directly with your legal counsel via your own email client.</li>
                 <li><strong>Service Diagnostics:</strong> To troubleshoot hardware connection issues, optimize camera autofocus/manual-focus calculations, and improve the accuracy of our visual classification models.</li>
             </ul>
 
             <h2>4. Sharing Your Information</h2>
             <p>We do not sell, rent, trade, or share your personal data with third-party advertisers or marketers. We only share information with trusted third-party service providers who help us operate our platform:</p>
             <ul>
-                <li><strong>Cloud Infrastructure Providers:</strong> Your account details, coin collection, estate profiles, and generated estate PDF reports are stored securely on <strong>Google Firebase</strong> (Google Cloud Firestore and Google Cloud Storage).</li>
+                <li><strong>Cloud Infrastructure Providers:</strong> Your account details, coin collection, and estate profiles are stored securely on <strong>Google Firebase</strong> (Google Cloud Firestore and Google Cloud Storage).</li>
                 <li><strong>AI and Numismatic Enrichment Partners:</strong> Scanned images are transmitted securely to <strong>Google Cloud's Gemini enterprise platform</strong> (via the Google Gen AI SDK) for image classification, structural analysis, and variety detection. Because we utilize Google Cloud's enterprise infrastructure, your uploaded images and metadata are strictly protected under enterprise data governance policies and are <strong>never</strong> used by Google to train public machine learning models. Coin metadata is sent to PCGS APIs to retrieve coin records. These partners do not use your data for any purposes outside of performing these services for Numista.AI.</li>
-                <li><strong>Attorney Sharing & Portal Access:</strong> If you generate an access token for your attorney, we grant secure, read-only access to your estate reports to that specific attorney through our portal. We never share your estate information with any other legal portal or third party unless explicitly directed by you.</li>
                 <li><strong>Legal Compliance:</strong> We may disclose your information if required to do so by law or in the good faith belief that such action is necessary to comply with a legal obligation, protect our rights, or prevent fraud.</li>
             </ul>
 
@@ -334,8 +333,7 @@
             <ul>
                 <li>All communications between the Desktop Agent, the web application, and our cloud databases are encrypted using <strong>Transport Layer Security (TLS/HTTPS)</strong>.</li>
                 <li>Database isolation is enforced at the database level: Firestore security rules prevent any user from reading, writing, or accessing coin records, estate profiles, or image URLs belonging to another user.</li>
-                <li><strong>Attorney Portal Security:</strong> Attorney Portal tokens are cryptographically secured, ensuring that only the specific attorney holding the matching token can fetch the designated estate report document.</li>
-                <li><strong>Report Storage:</strong> Estate report PDFs are stored in private, authenticated-only Google Cloud Storage directories with restricted Signed URL access.</li>
+                <li><strong>Volatile PDF Rendering:</strong> Estate reports are rendered via temporary server infrastructure, ensuring that high-value inventory results combined with real personal identities never exist on static disk storage.</li>
             </ul>
 
             <h2>6. Your Choices and Data Control</h2>

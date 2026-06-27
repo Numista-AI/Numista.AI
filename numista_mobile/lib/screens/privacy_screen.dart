@@ -93,7 +93,7 @@ class PrivacyScreen extends StatelessWidget {
                     ),
                     _BulletPoint(
                       boldText: 'Estate Planning Profiles (Zero-Knowledge): ',
-                      text: 'To protect your privacy, we store only your jurisdiction, marital status, and anonymous beneficiary aliases (e.g. "Daughter") in our database. Sensitive names and contact details for yourself, your executors, your attorneys, and your heirs are processed strictly in-memory to generate your PDF report and are never written to our database. Compiled PDFs are stored securely in private Google Cloud Storage folders.',
+                      text: 'To protect your privacy, we store only your jurisdiction, marital status, and anonymous beneficiary aliases (e.g. "Primary Heir") in our database. Sensitive names and contact details for yourself, your executors, your attorneys, and your heirs are processed strictly in-memory during generation and are never written to our database. Numista.AI does not retain a copy of your completed PDF report on our servers or Google Cloud Storage.',
                     ),
                     SizedBox(height: 20),
 
@@ -122,21 +122,21 @@ class PrivacyScreen extends StatelessWidget {
                       text: 'To compile your legal instructions and coin inventory into formatted PDFs for your heirs, executors, or attorneys.',
                     ),
                     _BulletPoint(
-                      boldText: 'Attorney Portal Access: ',
-                      text: 'To authenticate secure, token-based read-only access for your designated attorney if you choose to share your reports.',
+                      boldText: 'Direct Sharing Facilitation: ',
+                      text: 'To generate local email templates and clipboard text packages to easily share your downloaded inventory directly with your legal counsel.',
                     ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '4. Sharing Your Information'),
                     Text(
-                      'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Scanned images are processed securely using Google Cloud\'s Gemini enterprise platform (your data is never used to train public models). If you invite your attorney, we grant token-based read-only access to your estate reports via the Attorney Portal. No data is shared with third-party advertisers.',
+                      'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Scanned images are processed securely using Google Cloud\'s Gemini enterprise platform (your data is never used to train public models). No data is shared with third-party advertisers.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '5. Data Security'),
                     Text(
-                      'We implement industry-standard security measures including HTTPS/TLS encryption for all data transfers. Database access is isolated per-user via Firebase rules, ensuring only you can read or write to your personal coin collection. Attorney Portal tokens are cryptographically secured, and estate PDF reports are hosted in private, signed-URL directories on Google Cloud Storage.',
+                      'We implement industry-standard security measures including HTTPS/TLS encryption for all data transfers. Database access is isolated per-user via Firebase rules, ensuring only you can read or write to your personal coin collection. Estate reports are rendered via temporary server infrastructure, ensuring that high-value inventory results combined with real personal identities never exist on static disk storage.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
