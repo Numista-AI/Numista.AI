@@ -565,6 +565,8 @@ class _BaseLayoutState extends State<BaseLayout> {
       'Our Team',
       'Customer Service',
       'Inventory',
+      'Error Library',
+      'Glossary Academy',
     }.contains(title);
 
     return Opacity(

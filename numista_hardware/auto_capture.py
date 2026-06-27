@@ -1,3 +1,5 @@
+import os
+os.environ["OPENCV_VIDEOIO_LOG_LEVEL"] = "0"
 import cv2
 import logging
 
@@ -7,7 +9,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S"
 )
 import numpy as np
-import os
 import time
 
 # --- SET PERSISTENT WORKING DIRECTORY ---
@@ -214,153 +215,23 @@ capture_status = {
 # ─── Idle Preview Worker ───────────────────────────────────────────────────────
 def _idle_preview_worker():
     """
-    Runs as a daemon thread from startup.
-    Continuously reads frames from the microscope at a reduced resolution
-    (1280×720) and stores them in _latest_frame_jpg so the Flutter app can
-    show a live viewfinder at all times — not just during an active scan.
-
-    A digital 2× macro zoom is applied so the preview field-of-view matches
-    what the capture worker sees at the same microscope height — no need to
-    raise/lower the microscope between preview and scan.
-
-    The focus circle radius matches the capture overlay (cy * 0.85) so the
-    user knows exactly what will be captured.
-
-    When capture_worker starts it sets _idle_pause_event; this thread detects
-    that, signals _idle_stopped_event (so capture_worker knows the camera is
-    free), releases the camera, and waits.  When the scan finishes it clears
-    the events and this thread reopens the camera automatically.
+    Disabled/bypassed (Delayed Activation) to prevent camera opening on startup.
+    Camera is lazily initialized ONLY inside capture_worker when explicitly triggered.
     """
     global _latest_frame_jpg
-    logging.info("[PREVIEW] Idle preview worker started.")
-
+    logging.info("[PREVIEW] Idle preview worker started (Delayed Activation).")
+    
+    # capture_worker waits on _idle_stopped_event to ensure the camera is free.
+    # Since we do not open the camera here, we set this event immediately.
+    _idle_stopped_event.set()
+    
     while True:
-        # ── Wait if a scan is in progress (capture_worker owns the camera) ──
-        # NOTE: threading.Event.wait() blocks until the flag is SET (True).
-        # Since _idle_pause_event is already SET when we get here, wait()
-        # would return immediately — not what we want.  We need to wait until
-        # it is CLEARED (scan done), so we use a spin-wait instead.
         if _idle_pause_event.is_set():
             logging.info("[PREVIEW] Paused — waiting for scan to finish.")
             while _idle_pause_event.is_set():
                 time.sleep(0.5)
-            # give capture_worker a moment to fully release the camera
-            time.sleep(1.0)
-            logging.info("[PREVIEW] Resuming idle preview.")
-
-        # ── Open camera ──────────────────────────────────────────────────────
-        cap = None
-        search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
-        if preferred_camera_idx is not None:
-            fallback = [1, 2, 0]
-            if preferred_camera_idx in fallback:
-                fallback.remove(preferred_camera_idx)
-            search_order.extend(fallback)
-
-        for idx in search_order:
-            temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-            if temp.isOpened():
-                ret, _ = temp.read()
-                if ret:
-                    cap = temp
-                    global active_camera_idx
-                    active_camera_idx = idx
-                    logging.info(f"[PREVIEW] Camera opened at index {idx}")
-                    break
-            temp.release()
-
-        if cap is None:
-            logging.warning("[PREVIEW] No camera found — retrying in 5 s.")
-            time.sleep(5)
-            continue
-
-        # Use lower resolution for a faster, lag-free viewfinder
-        preview_settings = get_preview_camera_settings()
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  preview_settings["width"])
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, preview_settings["height"])
-        # Clamp the OpenCV frame buffer to 1 frame so we always get the
-        # freshest image and avoid stale-frame lag buildup.
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-        # Warm up
-        for _ in range(6):
-            cap.read()
-
-        logging.info("[PREVIEW] Streaming idle frames (1280×720, 2× zoom).")
-        last_microscope_check = time.time()
-        while not _idle_pause_event.is_set():
-            # If preferred camera index changed, break loop to reopen
-            if preferred_camera_idx is not None and idx != preferred_camera_idx:
-                logging.info(f"[PREVIEW] Preferred camera changed to {preferred_camera_idx}. Reopening...")
-                break
-
-            # If currently using built-in webcam (idx == 0), check if a microscope (1 or 2) is now connected
-            if idx == 0 and time.time() - last_microscope_check > 5.0:
-                last_microscope_check = time.time()
-                for test_idx in [1, 2]:
-                    test_cap = cv2.VideoCapture(test_idx, cv2.CAP_DSHOW)
-                    if test_cap.isOpened():
-                        test_ret, _ = test_cap.read()
-                        if test_ret:
-                            logging.info(f"[PREVIEW] Microscope detected at index {test_idx}! Switching from webcam...")
-                            test_cap.release()
-                            cap.release()
-                            cap = None
-                            break
-                    test_cap.release()
-                if cap is None:
-                    # Break the streaming loop to reopen the camera using the standard selection order
-                    break
-
-            ret, frame = cap.read()
-            if not ret or frame is None:
-                logging.warning("[PREVIEW] Frame read failed — reopening camera.")
-                break
-
-            # Apply 2× digital macro zoom so the framing matches the capture
-            # view — the user should not need to adjust microscope height
-            # between preview and scan.
-            frame = apply_macro_zoom(frame, zoom_factor=2.0)
-
-            h, w = frame.shape[:2]
-            cx, cy = w // 2, h // 2
-
-            # ── Overlay banner ──────────────────────────────────────────────
-            cv2.putText(
-                frame, "PREVIEW -- Adjust zoom, then press Start Scan",
-                (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 220, 255), 2,
-            )
-            # Focus ring — same radius formula as capture_worker so the user
-            # sees exactly what will be captured.
-            radius = int(cy * 0.85)
-            cv2.circle(frame, (cx, cy), radius, (0, 220, 255), 2)
-
-            # Lower JPEG quality (60) — the preview is for positioning, not
-            # archival; this halves encode time vs. quality=70.
-            ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
-            if ok:
-                with _frame_lock:
-                    _latest_frame_jpg = buf.tobytes()
-            # 10 fps is more than enough for a positioning viewfinder and
-            # keeps CPU load low between captures.
-            time.sleep(0.10)
-
-        # ── Streaming loop exited — release camera, signal capture_worker ────
-        # The cv2 window is the primary focusing/scanning display.
-        # The web UI only receives frames during an active scan (pushed by
-        # capture_worker). This keeps the web layout compact and eliminates
-        # idle-preview lag in the browser.
-        cap.release()
-        logging.info("[PREVIEW] Camera released — _idle_stopped_event set.")
-        _idle_stopped_event.set()
-
-        # Wait for the scan to fully complete before reopening the camera.
-        # Same spin-wait: block until _idle_pause_event is CLEARED.
-        if _idle_pause_event.is_set():
-            while _idle_pause_event.is_set():
-                time.sleep(0.5)
-            _idle_stopped_event.clear()  # reset signal for next scan cycle
-            time.sleep(1.0)
+            logging.info("[PREVIEW] Resuming idle preview wait.")
+        time.sleep(1.0)
 
 def capture_worker():
     global capture_status, _latest_frame_jpg
