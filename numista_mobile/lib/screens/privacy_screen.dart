@@ -67,7 +67,7 @@ class PrivacyScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Last updated: May 24, 2026',
+                      'Last updated: June 27, 2026',
                       style: TextStyle(color: _sub, fontSize: 13),
                     ),
                     Divider(height: 32, color: Color(0xFFE2E8F0)),
@@ -91,6 +91,10 @@ class PrivacyScreen extends StatelessWidget {
                       boldText: 'Coin Collection Data: ',
                       text: 'We store your cataloged coins, images, grades, costs, and personal notes securely in Firebase Firestore.',
                     ),
+                    _BulletPoint(
+                      boldText: 'Estate Planning Profiles: ',
+                      text: 'If you use the Estate Planning feature, we collect and store highly detailed legal, financial, and family records. This includes executor details, attorney credentials, list of heirs/beneficiaries (names, emails, relationships, state tax categories, division notes), and liquidation preferences. Generated PDF estate reports are stored securely in Google Cloud Storage.',
+                    ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '2. Local Loopback Connectivity'),
@@ -113,25 +117,33 @@ class PrivacyScreen extends StatelessWidget {
                       boldText: 'Enrichment & Metrics: ',
                       text: 'To enrich collection records with metadata from numismatic databases (such as PCGS) and estimate valuations.',
                     ),
+                    _BulletPoint(
+                      boldText: 'Estate PDF Reports: ',
+                      text: 'To compile your legal instructions and coin inventory into formatted PDFs for your heirs, executors, or attorneys.',
+                    ),
+                    _BulletPoint(
+                      boldText: 'Attorney Portal Access: ',
+                      text: 'To authenticate secure, token-based read-only access for your designated attorney if you choose to share your reports.',
+                    ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '4. Sharing Your Information'),
                     Text(
-                      'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Captured images are sent securely to Google Cloud\'s Gemini enterprise platform for classification; under Google\'s enterprise policies, your uploads are strictly protected and are never used to train public machine learning models.',
+                      'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Scanned images are processed securely using Google Cloud\'s Gemini enterprise platform (your data is never used to train public models). If you invite your attorney, we grant token-based read-only access to your estate reports via the Attorney Portal. No data is shared with third-party advertisers.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '5. Data Security'),
                     Text(
-                      'We implement industry-standard security measures including HTTPS/TLS encryption for all data transfers. Database access is isolated per-user via Firebase rules, ensuring only you can read or write to your personal coin collection.',
+                      'We implement industry-standard security measures including HTTPS/TLS encryption for all data transfers. Database access is isolated per-user via Firebase rules, ensuring only you can read or write to your personal coin collection. Attorney Portal tokens are cryptographically secured, and estate PDF reports are hosted in private, signed-URL directories on Google Cloud Storage.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '6. Your Choices & Data Deletion'),
                     Text(
-                      'You can edit or delete coin records in the app at any time. Accounts can be permanently deleted by contacting support, which wipes all collection history and images from Firebase. Local Desktop Agent settings can be deleted by removing the AppData configuration directory.',
+                      'You can edit or delete coin records and estate planning profiles in the app at any time. Accounts can be permanently deleted by contacting support, which wipes all collection history, estate reports, and images from Firebase. Local Desktop Agent settings can be deleted by removing the AppData configuration directory.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
