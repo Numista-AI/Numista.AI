@@ -92,8 +92,8 @@ class PrivacyScreen extends StatelessWidget {
                       text: 'We store your cataloged coins, images, grades, costs, and personal notes securely in Firebase Firestore.',
                     ),
                     _BulletPoint(
-                      boldText: 'Estate Planning Profiles: ',
-                      text: 'If you use the Estate Planning feature, we collect and store highly detailed legal, financial, and family records. This includes executor details, attorney credentials, list of heirs/beneficiaries (names, emails, relationships, state tax categories, division notes), and liquidation preferences. Generated PDF estate reports are stored securely in Google Cloud Storage.',
+                      boldText: 'Estate Planning Profiles (Zero-Knowledge): ',
+                      text: 'To protect your privacy, we store only your jurisdiction, marital status, and anonymous beneficiary aliases (e.g. "Daughter") in our database. Sensitive names and contact details for yourself, your executors, your attorneys, and your heirs are processed strictly in-memory to generate your PDF report and are never written to our database. Compiled PDFs are stored securely in private Google Cloud Storage folders.',
                     ),
                     SizedBox(height: 20),
 
