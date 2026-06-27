@@ -18,38 +18,21 @@ class EstateReportResult {
 
 /// Service for generating estate report PDFs and retrieving report history.
 class EstateReportService {
-  static const String _baseUrl = kApiBaseUrl;
+  static const String _baseUrl = kScanServiceUrl;
 
   /// Calls the backend to generate a PDF report.
   /// Returns [EstateReportResult] with raw PDF bytes and report ID on success.
   static Future<EstateReportResult> generateReport({
     required String uid,
-    required EstateProfile profile,
+    required EphemeralReportIdentity identity,
     required String mode, // 'living_inventory' | 'estate_settlement'
-    String? dateOfDeath,  // ISO date, estate_settlement only
     bool includePhotos = true,
   }) async {
     final body = {
       'uid': uid,
       'mode': mode,
       'include_photos': includePhotos,
-      'owner_name': profile.ownerName,
-      'owner_email': profile.ownerEmail,
-      'jurisdiction': profile.jurisdiction,
-      'marital_status': profile.maritalStatus,
-      'will_or_trust_status': profile.willOrTrustStatus,
-      'attorney_name': profile.attorneyName,
-      'attorney_email': profile.attorneyEmail,
-      'attorney_firm': profile.attorneyFirm,
-      'attorney_phone': profile.attorneyPhone,
-      'executor_name': profile.executorName,
-      'executor_email': profile.executorEmail,
-      'executor_phone': profile.executorPhone,
-      'beneficiaries': profile.beneficiaries.map((b) => b.toMap()).toList(),
-      'liquidation_preference': profile.liquidationPreference,
-      'preferred_consignor': profile.preferredConsignor,
-      'heirs_count': profile.heirsCount,
-      'date_of_death': dateOfDeath,
+      ...identity.toJson(),
     };
 
     final response = await http.post(
@@ -97,6 +80,21 @@ class EstateReportService {
         ClipboardData(text: attorneyPortalUrl(uid, reportId)));
   }
 
+  /// Generates a professional email template to send to the attorney.
+  static String emailTemplateText({
+    required String ownerName,
+    required String portalUrl,
+    required String reportId,
+  }) {
+    return 'Dear Estate Counsel,\n\n'
+        'Please find attached my detailed numismatic collection inventory report generated for my estate planning.\n\n'
+        'For reference, a live, searchable view of the collection details (with high-resolution photos and certification documentation) is available via the secure Numista.AI Attorney Portal:\n'
+        '$portalUrl\n\n'
+        'Report Token ID: $reportId\n\n'
+        'Best regards,\n'
+        '$ownerName';
+  }
+
   /// Fetches the list of previously generated estate reports from Firestore.
   static Future<List<EstateReportRecord>> getReportHistory(String uid) async {
     try {
@@ -104,12 +102,24 @@ class EstateReportService {
           .collection('users')
           .doc(uid)
           .collection('estate_reports')
-          .orderBy('generated_at', descending: true)
+          .orderBy('generated_at_ts', descending: true)
           .limit(50)
           .get();
       return snap.docs.map((d) => EstateReportRecord.fromFirestore(d)).toList();
     } catch (_) {
-      return [];
+      try {
+        // Fallback if generated_at_ts is missing from older metadata doc
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('estate_reports')
+            .orderBy('generated_at', descending: true)
+            .limit(50)
+            .get();
+        return snap.docs.map((d) => EstateReportRecord.fromFirestore(d)).toList();
+      } catch (_) {
+        return [];
+      }
     }
   }
 

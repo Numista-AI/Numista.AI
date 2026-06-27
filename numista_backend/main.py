@@ -1081,6 +1081,7 @@ Omit any user headers with no reasonable match."""
         "personal note":        "Personal Notes",
         "my notes":             "Personal Notes",
         "notes":                "Personal Notes",
+        "personal notes i":     "Personal Notes",
         # Reference number variants
         "personal ref #":       "Personal Reference #",
         "personal ref no":      "Personal Reference #",
@@ -1113,15 +1114,16 @@ Omit any user headers with no reasonable match."""
             'Mint Mark':            '',
             'Denomination':         '',
             'Condition':            'Ungraded',
-            # Canonical cost field — "Cost" is the Golden Schema key.
-            # "Purchase Cost" and "Personal Notes I" are legacy names; do NOT add them.
+            # Canonical and Schema cost/notes fields
             'Cost':                 None,
+            'Purchase Cost':        None,
             'Purchase Date':        '',
             'Country':              'United States',
             'Quantity':             1,
             'deep_dive_status':     'PENDING',
             'Certification Number': '',
             'Personal Notes':       '',
+            'Personal Notes I':     '',
             'Personal Reference #': '',
             'item_type':            'coin',
         }
@@ -1166,7 +1168,7 @@ Omit any user headers with no reasonable match."""
             expanded_theme = _normalize_presidential_theme(expanded_theme, new_doc.get('Year'))
         new_doc['Theme/Subject'] = expanded_theme
 
-        # Strip leading $ from Cost / Denomination (no legacy "Purchase Cost" key exists)
+        # Strip leading $ from Cost / Denomination
         for fld in ('Cost', 'Denomination'):
             val = new_doc.get(fld)
             if isinstance(val, str) and val.startswith('$'):
@@ -1192,6 +1194,19 @@ Omit any user headers with no reasonable match."""
                 new_doc["Personal Notes"] = f"{existing_notes} | {additional}"
             else:
                 new_doc["Personal Notes"] = additional
+
+        # Cost and Notes synchronization to maintain backwards compatibility
+        cost_val = new_doc.get('Cost') or new_doc.get('Purchase Cost')
+        if cost_val is not None:
+            if isinstance(cost_val, str) and cost_val.startswith('$'):
+                cost_val = cost_val[1:]
+            new_doc['Cost'] = cost_val
+            new_doc['Purchase Cost'] = cost_val
+
+        notes_val = new_doc.get('Personal Notes') or new_doc.get('Personal Notes I')
+        if notes_val is not None:
+            new_doc['Personal Notes'] = notes_val
+            new_doc['Personal Notes I'] = notes_val
 
         # Classify the item type based on row contents
         new_doc['item_type'] = _classify_item_type(new_doc)
@@ -1968,15 +1983,30 @@ def grade_review_stats(user_email: str):
 
     try:
         pending_agg = coins_ref.where('grade_review_status', '==', 'pending').count().get()
-        pending = pending_agg[0][0].value if pending_agg else 0
+        total_pending = pending_agg[0][0].value if pending_agg else 0
+        
+        reviewed_agg = coins_ref.where('grade_review_count', '>', 0).count().get()
+        reviewed_by_me = reviewed_agg[0][0].value if reviewed_agg else 0
         
         conf_agg = coins_ref.where('grade_review_status', '==', 'confirmed').count().get()
         confirmed_ct = conf_agg[0][0].value if conf_agg else 0
         
         flag_agg = coins_ref.where('grade_review_status', '==', 'flagged_for_admin_review').count().get()
         flagged_ct = flag_agg[0][0].value if flag_agg else 0
+
+        resolved_agg = coins_ref.where('grade_review_status', '==', 'admin_resolved').count().get()
+        resolved_ct = resolved_agg[0][0].value if resolved_agg else 0
         
-        reviewed_by_me = confirmed_ct + flagged_ct
+        # Coins that are still status='pending' but already reviewed by the user
+        reviewed_pending = reviewed_by_me - confirmed_ct - flagged_ct - resolved_ct
+        if reviewed_pending < 0:
+            reviewed_pending = 0
+            
+        # Pending review means status='pending' and not reviewed yet
+        pending = total_pending - reviewed_pending
+        if pending < 0:
+            pending = 0
+            
         total_ai = pending + reviewed_by_me
     except Exception as e:
         print(f"[grade_review_stats] count failed: {e}")
@@ -5533,6 +5563,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     "personal note":        "Personal Notes",
                     "my notes":             "Personal Notes",
                     "notes":                "Personal Notes",
+                    "personal notes i":     "Personal Notes",
                     # Reference number variants
                     "personal ref #":       "Personal Reference #",
                     "personal ref no":      "Personal Reference #",
@@ -5560,8 +5591,9 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                         "Mint Mark":            "",
                         "Denomination":         "",
                         "Condition":            "Ungraded",
-                        # Canonical cost/notes keys — no legacy duplicates.
+                        # Canonical and Schema cost/notes fields
                         "Cost":                 None,
+                        "Purchase Cost":        None,
                         "Purchase Date":        "",
                         "Country":              "United States",
                         "deep_dive_status":     "PENDING",
@@ -5572,6 +5604,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                         "created_at":           firestore.SERVER_TIMESTAMP,
                         "Certification Number": "",
                         "Personal Notes":       "",
+                        "Personal Notes I":     "",
                         "Personal Reference #": "",
                         "item_type":            "coin",
                     }
@@ -5585,7 +5618,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                             if val:  # only write non-empty strings
                                 doc[sc] = val
 
-                    # Strip leading $ from Cost / Denomination only (no legacy "Purchase Cost" key).
+                    # Strip leading $ from Cost / Denomination
                     for fld in ('Cost', 'Denomination'):
                         val = doc.get(fld)
                         if isinstance(val, str) and val.startswith('$'):
@@ -5611,6 +5644,19 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                             doc["Personal Notes"] = f"{existing_notes} | {additional}"
                         else:
                             doc["Personal Notes"] = additional
+
+                    # Cost and Notes synchronization to maintain backwards compatibility
+                    cost_val = doc.get('Cost') or doc.get('Purchase Cost')
+                    if cost_val is not None:
+                        if isinstance(cost_val, str) and cost_val.startswith('$'):
+                            cost_val = cost_val[1:]
+                        doc['Cost'] = cost_val
+                        doc['Purchase Cost'] = cost_val
+
+                    notes_val = doc.get('Personal Notes') or doc.get('Personal Notes I')
+                    if notes_val is not None:
+                        doc['Personal Notes'] = notes_val
+                        doc['Personal Notes I'] = notes_val
 
                     # Classify the item type based on row contents
                     doc['item_type'] = _classify_item_type(doc)
@@ -6655,6 +6701,199 @@ def _get_littleton_helper():
 # Cloud Run containers include this file baked into the image at deploy time.
 # seed_littleton_skus.py pre-populates it before each deploy.
 _NUMISTA_DB_PATH = os.path.join(os.path.dirname(__file__), "database", "numista.db")
+
+
+# ─── Pydantic Models for Reference Guide ──────────────────────────────────────
+
+class GradeReferenceResponse(BaseModel):
+    grade_code: str
+    grade_name: str
+    min_score: int
+    max_score: int
+    wear_description: str
+    luster_description: str
+    inspection_tips: str
+    illustration_url: Optional[str] = None
+
+class GlossaryTermResponse(BaseModel):
+    term: str
+    definition: str
+    category: str
+    colloquial_mappings: List[str]
+    illustration_url: Optional[str] = None
+
+class ReferenceSearchRequest(BaseModel):
+    query: str
+
+class ReferenceSearchResponse(BaseModel):
+    matched: bool
+    source: str  # "sqlite" | "gemini" | "none"
+    term: Optional[GlossaryTermResponse] = None
+
+
+# ─── Reference endpoints helper ───────────────────────────────────────────────
+
+def _gcs_to_http_url(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return ""
+    if url.startswith("gs://"):
+        return url.replace("gs://", "https://storage.googleapis.com/")
+    return url
+
+
+# ─── Reference API endpoints ──────────────────────────────────────────────────
+
+@app.get("/api/reference/grade/{grade_code}", response_model=GradeReferenceResponse)
+def get_reference_grade(grade_code: str):
+    if not os.path.exists(_NUMISTA_DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+    try:
+        conn = sqlite3.connect(_NUMISTA_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT grade_code, grade_name, min_score, max_score, wear_description, luster_description, inspection_tips, illustration_url "
+            "FROM grading_scale WHERE UPPER(grade_code) = ?",
+            (grade_code.strip().upper(),)
+        )
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Grade code '{grade_code}' not found")
+        
+        data = dict(row)
+        data["illustration_url"] = _gcs_to_http_url(data["illustration_url"])
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reference/glossary", response_model=List[GlossaryTermResponse])
+def get_reference_glossary():
+    if not os.path.exists(_NUMISTA_DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+    try:
+        conn = sqlite3.connect(_NUMISTA_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT term, definition, category, colloquial_mappings, illustration_url "
+            "FROM numismatic_glossary"
+        )
+        rows = cur.fetchall()
+        conn.close()
+        
+        results = []
+        for row in rows:
+            data = dict(row)
+            try:
+                data["colloquial_mappings"] = json.loads(data["colloquial_mappings"])
+            except Exception:
+                data["colloquial_mappings"] = []
+            data["illustration_url"] = _gcs_to_http_url(data["illustration_url"])
+            results.append(data)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/reference/search", response_model=ReferenceSearchResponse)
+def search_reference(request: ReferenceSearchRequest):
+    query = request.query.strip()
+    if not query:
+        return {"matched": False, "source": "none"}
+        
+    if not os.path.exists(_NUMISTA_DB_PATH):
+        raise HTTPException(status_code=404, detail="Reference database not found")
+        
+    try:
+        conn = sqlite3.connect(_NUMISTA_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT term, definition, category, colloquial_mappings, illustration_url "
+            "FROM numismatic_glossary"
+        )
+        rows = cur.fetchall()
+        conn.close()
+        
+        terms_list = []
+        for row in rows:
+            data = dict(row)
+            try:
+                data["colloquial_mappings"] = json.loads(data["colloquial_mappings"])
+            except Exception:
+                data["colloquial_mappings"] = []
+            data["illustration_url"] = _gcs_to_http_url(data["illustration_url"])
+            terms_list.append(data)
+            
+        # Step 1: SQLite case-insensitive exact/substring matching
+        query_lower = query.lower()
+        
+        # 1.1: Exact match on term
+        for t in terms_list:
+            if t["term"].lower() == query_lower:
+                return {"matched": True, "source": "sqlite", "term": t}
+                
+        # 1.2: Exact match in colloquial mappings
+        for t in terms_list:
+            if any(m.lower() == query_lower for m in t["colloquial_mappings"]):
+                return {"matched": True, "source": "sqlite", "term": t}
+                
+        # 1.3: Substring match on term or colloquial mappings
+        for t in terms_list:
+            if query_lower in t["term"].lower() or any(query_lower in m.lower() for m in t["colloquial_mappings"]):
+                return {"matched": True, "source": "sqlite", "term": t}
+
+        # Step 2: AI Quest Fallback (Gemini 3.5 Flash)
+        seeded_terms_str = ", ".join([f"'{t['term']}'" for t in terms_list])
+        system_instruction = (
+            f"You are a numismatic search assistant for Numista.AI.\n"
+            f"Your job is to map a user's search query to the single closest key term from this list of numismatic glossary terms: {seeded_terms_str}.\n"
+            f"If the query describes or relates to one of these terms (for example, if they ask 'what is heads called?' or describe the 'frosty look on a new coin'), select the corresponding key term.\n"
+            f"If the query does not map to any of the terms, respond with 'unknown'.\n"
+            f"Provide your response in JSON format matching the schema: {{\"mapped_term\": \"<term>\"}}"
+        )
+        
+        prompt = f"User search query: '{query}'"
+        
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=prompt)],
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.1,
+                response_mime_type="application/json",
+                max_output_tokens=1000,
+            ),
+        )
+        
+        print(f"[DEBUG] Gemini search fallback response: {response}")
+        raw_text = (response.text or "").strip()
+        if not raw_text:
+            return {"matched": False, "source": "none"}
+        mapped_term = None
+        try:
+            res_json = json.loads(raw_text)
+            mapped_term = res_json.get("mapped_term")
+        except Exception:
+            m = re.search(r'"mapped_term"\s*:\s*"([^"]+)"', raw_text)
+            if m:
+                mapped_term = m.group(1)
+                
+        if mapped_term and mapped_term != "unknown":
+            mapped_term_lower = mapped_term.lower()
+            for t in terms_list:
+                if t["term"].lower() == mapped_term_lower:
+                    return {"matched": True, "source": "gemini", "term": t}
+                    
+        return {"matched": False, "source": "none"}
+        
+    except Exception as e:
+        print(f"[search_reference] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ─── Pydantic Models ──────────────────────────────────────────────────────────

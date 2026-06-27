@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../constants.dart';
+import '../widgets/grade_badge_widget.dart';
 
 
 class ReviewHubScreen extends StatefulWidget {
@@ -1072,6 +1073,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
                       ),
+                      const SizedBox(width: 8),
+                      if (data['Condition'] != null && data['Condition'].toString().isNotEmpty)
+                        GradeBadgeWidget(gradeCode: data['Condition'].toString()),
                       const Spacer(),
                       // item_type badge (only shown for non-coin types)
                       if (typeMeta != null) ...[

@@ -3,7 +3,21 @@ Numista.AI -- Overnight API Test Suite
 Run: python run_overnight_tests.py
 Results written to: overnight_test_results.txt
 """
-import sys, json, time, csv, io, requests, traceback
+import os
+import sys
+
+import subprocess
+
+# Bootstrapper: transparently re-execute inside the venv if available
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_venv_python = os.path.join(_script_dir, "numista_backend", ".venv", "Scripts", "python.exe")
+if os.path.exists(_venv_python) and sys.executable.lower() != os.path.abspath(_venv_python).lower():
+    if "RUNNING_IN_VENV" not in os.environ:
+        os.environ["RUNNING_IN_VENV"] = "1"
+        rc = subprocess.call([_venv_python] + sys.argv)
+        sys.exit(rc)
+
+import json, time, csv, io, requests, traceback
 from datetime import datetime
 
 # Force UTF-8 output so emoji/box-chars don't crash on Windows cp1252

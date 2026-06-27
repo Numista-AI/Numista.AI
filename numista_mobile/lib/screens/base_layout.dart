@@ -27,6 +27,7 @@ import 'supplies_screen.dart';
 import 'coin_search_screen.dart';
 import 'currency_collection_screen.dart';
 import 'mint_error_library_screen.dart';
+import 'glossary_academy_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
@@ -157,6 +158,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const CurrencyCollectionScreen();
       case 'Error Library':
         return const MintErrorLibraryScreen();
+      case 'Glossary Academy':
+        return const GlossaryAcademyScreen();
       default:
         return const _UnderConstruction();
     }
@@ -387,6 +390,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
                         _buildNavItem('Currency Collection', icon: Icons.account_balance_wallet_outlined),
                         _buildNavItem('Error Library', icon: Icons.manage_search_outlined),
+                        _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'My Collection',
                           child: _buildNavItem('My Collection', icon: Icons.collections_bookmark_outlined),

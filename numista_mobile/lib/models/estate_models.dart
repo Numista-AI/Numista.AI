@@ -10,75 +10,61 @@ const Set<String> _communityPropertyStates = {'CA', 'TX', 'NV', 'WA', 'AZ', 'ID'
 // ─────────────────────────────────────────────────────────────────────────────
 class EstateBeneficiary {
   final String id;
-  final String name;
+  final String alias;        // Replaces name (e.g. "Primary Heir", "Daughter")
   final String relationship; // 'Spouse', 'Child', 'Sibling', 'Friend', 'Charity', 'Other'
   final String njClass;      // 'A', 'C', 'D', 'E' — NJ inheritance tax class
-  final String email;
   final String notes;
 
   const EstateBeneficiary({
     required this.id,
-    required this.name,
+    required this.alias,
     this.relationship = 'Other',
     this.njClass = 'D',
-    this.email = '',
     this.notes = '',
   });
 
   factory EstateBeneficiary.fromMap(Map<String, dynamic> m) {
     return EstateBeneficiary(
       id:           m['id']?.toString() ?? '',
-      name:         m['name']?.toString() ?? '',
+      alias:        m['alias']?.toString() ?? m['name']?.toString() ?? '',
       relationship: m['relationship']?.toString() ?? 'Other',
       njClass:      m['njClass']?.toString() ?? 'D',
-      email:        m['email']?.toString() ?? '',
       notes:        m['notes']?.toString() ?? '',
     );
   }
 
   Map<String, dynamic> toMap() => {
     'id':           id,
-    'name':         name,
+    'alias':        alias,
     'relationship': relationship,
     'njClass':      njClass,
-    'email':        email,
     'notes':        notes,
   };
 
   EstateBeneficiary copyWith({
     String? id,
-    String? name,
+    String? alias,
     String? relationship,
     String? njClass,
-    String? email,
     String? notes,
   }) {
     return EstateBeneficiary(
       id:           id ?? this.id,
-      name:         name ?? this.name,
+      alias:        alias ?? this.alias,
       relationship: relationship ?? this.relationship,
       njClass:      njClass ?? this.njClass,
-      email:        email ?? this.email,
       notes:        notes ?? this.notes,
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EstateProfile — stored at users/{uid}/estate_profile (single document)
+// EstateProfile — stored at users/{uid}/estate_profile/data (single document)
 // ─────────────────────────────────────────────────────────────────────────────
 class EstateProfile {
-  final String ownerName;
-  final String ownerEmail;
+  // PII fields ownerName, ownerEmail, executor*, attorney* removed
   final String jurisdiction;          // state code: 'NY', 'NC', etc.
   final String maritalStatus;         // 'Single', 'Married', 'Widowed', 'Divorced'
-  final String executorName;
-  final String executorEmail;
-  final String executorPhone;
-  final String attorneyName;
-  final String attorneyEmail;
-  final String attorneyFirm;
-  final String attorneyPhone;
   final String willOrTrustStatus;     // 'Has Will', 'Has Trust', 'Has Both', 'Neither', 'Unknown'
   final List<EstateBeneficiary> beneficiaries;
   final bool isMarried;
@@ -89,17 +75,8 @@ class EstateProfile {
   final String preferredConsignor;    // 'GreatCollections' | 'Heritage' | 'StacksBowers' | 'None'
 
   const EstateProfile({
-    this.ownerName = '',
-    this.ownerEmail = '',
     this.jurisdiction = '',
     this.maritalStatus = 'Single',
-    this.executorName = '',
-    this.executorEmail = '',
-    this.executorPhone = '',
-    this.attorneyName = '',
-    this.attorneyEmail = '',
-    this.attorneyFirm = '',
-    this.attorneyPhone = '',
     this.willOrTrustStatus = 'Unknown',
     this.beneficiaries = const [],
     this.isMarried = false,
@@ -115,17 +92,8 @@ class EstateProfile {
   factory EstateProfile.fromFirestore(DocumentSnapshot doc) {
     final m = doc.data() as Map<String, dynamic>? ?? {};
     return EstateProfile(
-      ownerName:          m['ownerName']?.toString() ?? '',
-      ownerEmail:         m['ownerEmail']?.toString() ?? '',
       jurisdiction:       m['jurisdiction']?.toString() ?? '',
       maritalStatus:      m['maritalStatus']?.toString() ?? 'Single',
-      executorName:       m['executorName']?.toString() ?? '',
-      executorEmail:      m['executorEmail']?.toString() ?? '',
-      executorPhone:      m['executorPhone']?.toString() ?? '',
-      attorneyName:       m['attorneyName']?.toString() ?? '',
-      attorneyEmail:      m['attorneyEmail']?.toString() ?? '',
-      attorneyFirm:       m['attorneyFirm']?.toString() ?? '',
-      attorneyPhone:      m['attorneyPhone']?.toString() ?? '',
       willOrTrustStatus:  m['willOrTrustStatus']?.toString() ?? 'Unknown',
       beneficiaries: (m['beneficiaries'] as List<dynamic>? ?? [])
           .map((e) => EstateBeneficiary.fromMap(e as Map<String, dynamic>))
@@ -142,17 +110,8 @@ class EstateProfile {
   }
 
   Map<String, dynamic> toFirestore() => {
-    'ownerName':          ownerName,
-    'ownerEmail':         ownerEmail,
     'jurisdiction':       jurisdiction,
     'maritalStatus':      maritalStatus,
-    'executorName':       executorName,
-    'executorEmail':      executorEmail,
-    'executorPhone':      executorPhone,
-    'attorneyName':       attorneyName,
-    'attorneyEmail':      attorneyEmail,
-    'attorneyFirm':       attorneyFirm,
-    'attorneyPhone':      attorneyPhone,
     'willOrTrustStatus':  willOrTrustStatus,
     'beneficiaries':      beneficiaries.map((b) => b.toMap()).toList(),
     'isMarried':          isMarried,
@@ -164,17 +123,8 @@ class EstateProfile {
   };
 
   EstateProfile copyWith({
-    String? ownerName,
-    String? ownerEmail,
     String? jurisdiction,
     String? maritalStatus,
-    String? executorName,
-    String? executorEmail,
-    String? executorPhone,
-    String? attorneyName,
-    String? attorneyEmail,
-    String? attorneyFirm,
-    String? attorneyPhone,
     String? willOrTrustStatus,
     List<EstateBeneficiary>? beneficiaries,
     bool? isMarried,
@@ -185,17 +135,8 @@ class EstateProfile {
     String? preferredConsignor,
   }) {
     return EstateProfile(
-      ownerName:          ownerName ?? this.ownerName,
-      ownerEmail:         ownerEmail ?? this.ownerEmail,
       jurisdiction:       jurisdiction ?? this.jurisdiction,
       maritalStatus:      maritalStatus ?? this.maritalStatus,
-      executorName:       executorName ?? this.executorName,
-      executorEmail:      executorEmail ?? this.executorEmail,
-      executorPhone:      executorPhone ?? this.executorPhone,
-      attorneyName:       attorneyName ?? this.attorneyName,
-      attorneyEmail:      attorneyEmail ?? this.attorneyEmail,
-      attorneyFirm:       attorneyFirm ?? this.attorneyFirm,
-      attorneyPhone:      attorneyPhone ?? this.attorneyPhone,
       willOrTrustStatus:  willOrTrustStatus ?? this.willOrTrustStatus,
       beneficiaries:      beneficiaries ?? this.beneficiaries,
       isMarried:          isMarried ?? this.isMarried,
@@ -206,6 +147,48 @@ class EstateProfile {
       preferredConsignor:  preferredConsignor ?? this.preferredConsignor,
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EphemeralReportIdentity — RAM only, never written to persistent store
+// ─────────────────────────────────────────────────────────────────────────────
+class EphemeralReportIdentity {
+  final String ownerLegalName;
+  final String executorName;
+  final String attorneyName;
+  final String attorneyFirm;
+  final String attorneyEmail;
+  final Map<String, String> aliasToLegalName; // "Primary Heir" -> "Jane Smith"
+  final String reportDate;
+  final String? dateOfDeath;
+  final bool includeContactsInPdf;
+
+  const EphemeralReportIdentity({
+    required this.ownerLegalName,
+    this.executorName = '',
+    this.attorneyName = '',
+    this.attorneyFirm = '',
+    this.attorneyEmail = '',
+    this.aliasToLegalName = const {},
+    required this.reportDate,
+    this.dateOfDeath,
+    this.includeContactsInPdf = true,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'owner_name': ownerLegalName, // maps to expected backend field 'owner_name'
+    'executor_name': executorName,
+    'attorney_name': attorneyName,
+    'attorney_firm': attorneyFirm,
+    'attorney_email': attorneyEmail,
+    'beneficiaries': aliasToLegalName.entries.map((e) => {
+      'alias': e.key,
+      'name': e.value,
+    }).toList(), // maps aliases to legal names for backend pdf generation
+    'report_date': reportDate,
+    'date_of_death': dateOfDeath,
+    'include_contacts_in_pdf': includeContactsInPdf,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -246,20 +229,22 @@ class CoinEstateData {
     final m = doc.data() as Map<String, dynamic>? ?? {};
     return CoinEstateData(
       coinId:               doc.id,
-      beneficiaryId:        m['beneficiaryId']?.toString(),
-      beneficiaryName:      m['beneficiaryName']?.toString(),
-      fmvOverride:          (m['fmvOverride'] as num?)?.toDouble(),
-      appraiserName:        m['appraiserName']?.toString(),
-      formalAppraisalValue: (m['formalAppraisalValue'] as num?)?.toDouble(),
+      beneficiaryId:        m['beneficiaryId']?.toString() ?? m['beneficiary_id']?.toString(),
+      beneficiaryName:      m['beneficiaryName']?.toString() ?? m['beneficiary_name']?.toString(),
+      fmvOverride:          (m['fmvOverride'] ?? m['fmv_override'] as num?)?.toDouble(),
+      appraiserName:        m['appraiserName']?.toString() ?? m['appraiser_name']?.toString(),
+      formalAppraisalValue: (m['formalAppraisalValue'] ?? m['formal_appraisal_value'] as num?)?.toDouble(),
       appraisalDate: m['appraisalDate'] is Timestamp
           ? (m['appraisalDate'] as Timestamp).toDate()
-          : null,
-      appraisalCertNumber: m['appraisalCertNumber']?.toString(),
-      estateNotes:         m['estateNotes']?.toString(),
-      isHeirloom:          m['isHeirloom'] == true,
-      excludeFromReport:   m['excludeFromReport'] == true,
-      assignedHeirId:       m['assignedHeirId']?.toString(),
-      divisionLocked:       m['divisionLocked'] == true,
+          : m['appraisal_date'] is Timestamp
+              ? (m['appraisal_date'] as Timestamp).toDate()
+              : null,
+      appraisalCertNumber: m['appraisalCertNumber']?.toString() ?? m['appraisal_cert_number']?.toString(),
+      estateNotes:         m['estateNotes']?.toString() ?? m['estate_notes']?.toString(),
+      isHeirloom:          m['isHeirloom'] == true || m['is_heirloom'] == true,
+      excludeFromReport:   m['excludeFromReport'] == true || m['exclude_from_report'] == true,
+      assignedHeirId:       m['assignedHeirId']?.toString() ?? m['assigned_heir_id']?.toString(),
+      divisionLocked:       m['divisionLocked'] == true || m['division_locked'] == true,
     );
   }
 
@@ -357,28 +342,35 @@ class EstateReportRecord {
       state:      m['state']?.toString() ?? '',
       generatedAt: m['generatedAt'] is Timestamp
           ? (m['generatedAt'] as Timestamp).toDate()
-          : DateTime.now(),
-      totalCoins: (m['totalCoins'] as num?)?.toInt() ?? 0,
-      totalFmv:   (m['totalFmv'] as num?)?.toDouble() ?? 0.0,
-      downloadUrl:   m['downloadUrl']?.toString(),
-      portalToken:   m['portalToken']?.toString(),
-      portalUrl:     m['portalUrl']?.toString(),
+          : m['generated_at'] is String
+              ? DateTime.tryParse(m['generated_at'].toString()) ?? DateTime.now()
+              : m['generated_at_ts'] is Timestamp
+                  ? (m['generated_at_ts'] as Timestamp).toDate()
+                  : DateTime.now(),
+      totalCoins: (m['totalCoins'] ?? m['total_coins'] as num?)?.toInt() ?? 0,
+      totalFmv:   (m['totalFmv'] ?? m['total_fmv'] as num?)?.toDouble() ?? 0.0,
+      downloadUrl:   m['downloadUrl']?.toString() ?? m['download_url']?.toString(),
+      portalToken:   m['portalToken']?.toString() ?? m['portal_token']?.toString(),
+      portalUrl:     m['portalUrl']?.toString() ?? m['portal_url']?.toString(),
       linkExpiresAt: m['linkExpiresAt'] is Timestamp
           ? (m['linkExpiresAt'] as Timestamp).toDate()
-          : null,
+          : m['link_expires_at'] is Timestamp
+              ? (m['link_expires_at'] as Timestamp).toDate()
+              : null,
     );
   }
 
   Map<String, dynamic> toFirestore() => {
     'mode':       mode,
     'state':      state,
-    'generatedAt': FieldValue.serverTimestamp(),
-    'totalCoins': totalCoins,
-    'totalFmv':   totalFmv,
-    'downloadUrl':   downloadUrl,
-    'portalToken':   portalToken,
-    'portalUrl':     portalUrl,
-    'linkExpiresAt': linkExpiresAt != null
+    'generated_at_ts': FieldValue.serverTimestamp(),
+    'generated_at': DateTime.now().toUtc().toIso8601String() + 'Z',
+    'total_coins': totalCoins,
+    'total_fmv':   totalFmv,
+    'download_url':   downloadUrl,
+    'portal_token':   portalToken,
+    'portal_url':     portalUrl,
+    'link_expires_at': linkExpiresAt != null
         ? Timestamp.fromDate(linkExpiresAt!)
         : null,
   };

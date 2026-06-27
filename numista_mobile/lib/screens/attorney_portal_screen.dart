@@ -294,7 +294,6 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         ? 'Estate Settlement Report'
         : 'Living Inventory Report';
     final state = r['state'] ?? '';
-    final ownerName = r['owner_name'] ?? 'Collection Owner';
     final reportDate = r['report_date'] ?? '';
 
     return Container(
@@ -324,8 +323,8 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(ownerName,
-              style: const TextStyle(
+          const Text('Secure Client Collection',
+              style: TextStyle(
                   color: _kTextPrimary,
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
@@ -344,20 +343,21 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _kAmber.withAlpha(15),
+              color: const Color(0xFF10B981).withAlpha(15),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _kAmber.withAlpha(40)),
+              border: Border.all(color: const Color(0xFF10B981).withAlpha(40)),
             ),
             child: Row(
               children: [
                 const Icon(Icons.lock_outline_rounded,
-                    color: _kAmber, size: 16),
+                    color: Color(0xFF10B981), size: 16),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'This is a confidential estate document provided for attorney review only. '
-                    'Do not distribute. All values are estimates unless noted as formally appraised.',
-                    style: TextStyle(color: _kAmber, fontSize: 11),
+                    'Confidential Zero-Knowledge Client Database. '
+                    'To protect user physical security, legal names are not stored on our servers. '
+                    'Please cross-reference this database view with your client\'s PDF report (Token: ${widget.token.length > 15 ? widget.token.substring(0, 15) : widget.token}...).',
+                    style: const TextStyle(color: Color(0xFF10B981), fontSize: 11),
                   ),
                 ),
               ],

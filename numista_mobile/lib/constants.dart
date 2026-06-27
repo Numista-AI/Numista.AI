@@ -12,3 +12,7 @@
 // Region:   us-central1
 const String kApiBaseUrl =
     'https://numista-backend-568985927038.us-central1.run.app';
+
+// Dedicated Cloud Run service for layout recognition, checklist scan, and PDF generation
+const String kScanServiceUrl =
+    'https://numista-scan-service-568985927038.us-central1.run.app';

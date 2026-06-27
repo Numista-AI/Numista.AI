@@ -1,4 +1,4 @@
-﻿# Numista.AI - Deployment SOP (Standard Operating Procedure)
+# Numista.AI - Deployment SOP (Standard Operating Procedure)
 > **Read this before every production push.**
 > Last updated: 2026-06-22
 
@@ -123,10 +123,16 @@ gcloud run deploy numista-backend `
   --region us-central1 `
   --project studio-9101802118-8c9a8 `
   --quiet
+
+# From project root - EMERGENCY SCAN SERVICE DEPLOY ONLY
+gcloud run deploy numista-scan-service `
+  --source ./numista_backend/scan_service `
+  --project studio-9101802118-8c9a8 `
+  --region us-central1
 ```
 
 > **Registry:** Always use `us-central1-docker.pkg.dev` (Artifact Registry). NEVER use `gcr.io`.
-> **Service:** Always deploy to `numista-backend`. The retired `numista-app` service no longer exists.
+> **Service:** `numista-backend` is our main low-latency FastAPI app. `numista-scan-service` is our dedicated Flask scan and PDF generation app. Do not overwrite one with the other.
 
 ---
 

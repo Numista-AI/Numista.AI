@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import vertexai
-from vertexai.generative_models import GenerativeModel
+# import vertexai
+# from vertexai.generative_models import GenerativeModel
 from google.cloud import firestore
 import json
 import uuid
@@ -58,9 +58,9 @@ if os.path.exists(key_path):
         vertex_creds = service_account.Credentials.from_service_account_file(key_path)
     except: pass
 
-if "vertex_init" not in st.session_state:
-    vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=vertex_creds)
-    st.session_state.vertex_init = True
+# if "vertex_init" not in st.session_state:
+#     vertexai.init(project=PROJECT_ID, location=LOCATION, credentials=vertex_creds)
+#     st.session_state.vertex_init = True
     
 # --- CREDENTIALS (ADC) ---
 # Use Application Default Credentials (works on Cloud Run & Local with `gcloud auth application-default login`)
@@ -2434,7 +2434,7 @@ def render_ai_photo_identifier():
                     path_b = _write_tmp(file_b)
 
                     # ── Use Vertex AI model (already initialised at app startup) ─
-                    from vertexai.generative_models import Part, GenerationConfig
+                    # from vertexai.generative_models import Part, GenerationConfig
                     _client = model
 
                     # ── Read image bytes ──────────────────────────────────────

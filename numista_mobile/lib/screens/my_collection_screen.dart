@@ -16,6 +16,7 @@ import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
+import '../widgets/grade_badge_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -1155,6 +1156,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ? TextDecoration.underline
                               : TextDecoration.none),
                     ),
+                  ),
+                ),
+              );
+            }
+
+            if (colDef.field == _F.condition && value.isNotEmpty) {
+              return TableViewCell(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: GradeBadgeWidget(
+                    gradeCode: value,
                   ),
                 ),
               );

@@ -99,7 +99,6 @@ numista_hardware/build/
 numista_hardware/*.exe
 numista_hardware/*.msi
 numista_hardware/*.dmg
-numista_backend/scan_service/
 numista_backend/scans/
 numista_backend/receipt_labels/
 

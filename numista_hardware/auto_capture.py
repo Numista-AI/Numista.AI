@@ -9,6 +9,22 @@ logging.basicConfig(
 import numpy as np
 import os
 import time
+
+# --- SET PERSISTENT WORKING DIRECTORY ---
+def get_base_dir():
+    from pathlib import Path
+    dev_path = Path(r"C:\Users\ericd\Documents\MyVertexProject\numista_hardware")
+    if dev_path.exists() and dev_path.is_dir():
+        return str(dev_path)
+    user_dir = Path.home() / "NumistaAI"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return str(user_dir)
+
+_base_dir = get_base_dir()
+os.chdir(_base_dir)
+# Ensure directories exist
+os.makedirs("captures", exist_ok=True)
+os.makedirs("verified_images", exist_ok=True)
 import uuid
 import threading
 from flask import Flask, jsonify, request
@@ -111,7 +127,7 @@ def get_camera_settings(type):
     if type == "AUTOFOCUS_WEBCAM":
         return {"width": 1920, "height": 1080, "autofocus": 1}
     else: # Works for both Tomlov and Jiusion
-        return {"width": 1920, "height": 1080, "autofocus": 0}
+        return {"width": 1280, "height": 720, "autofocus": 0}
 
 def get_preview_camera_settings():
     """Lower-resolution settings for the idle preview stream.
@@ -347,7 +363,7 @@ def _idle_preview_worker():
             time.sleep(1.0)
 
 def capture_worker():
-    global capture_status
+    global capture_status, _latest_frame_jpg
     # Signal the idle preview to yield the camera before we open it
     _idle_pause_event.set()
     _idle_stopped_event.clear()  # will be set by idle thread when it releases
@@ -361,18 +377,18 @@ def capture_worker():
     state_names = ["OBVERSE", "REVERSE", "COMPLETE"]
 
     try:
-        # Force working directory to this script's location so all relative paths
-        # (captures/, CSV manifest) work correctly even when run as a hidden process.
-        _script_dir = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(_script_dir)
-        logging.info("[CAP] Working directory: %s", _script_dir)
+        # Force working directory to the persistent base directory so all relative paths
+        # (captures/, verified_images/) work correctly even when run as a hidden process.
+        _base_dir = get_base_dir()
+        os.chdir(_base_dir)
+        logging.info("[CAP] Working directory: %s", _base_dir)
 
         # Wait for the idle preview thread to release the camera (max 5 s).
         # This eliminates the race condition where both threads hold the camera
         # simultaneously and the web preview shows the wrong side.
         if not _idle_stopped_event.wait(timeout=5.0):
             logging.warning("[CAP] Idle thread did not confirm release in 5 s — proceeding anyway.")
-        time.sleep(0.5)  # cushion for OS to free the device
+        time.sleep(1.5)  # cushion for OS to free the device
 
         # --- Robust Camera Initialization ---
         successful_idx = -1
@@ -426,13 +442,19 @@ def capture_worker():
         else:
             capture_status["status_message"] = "MICROSCOPE: WARMING UP..."
             for i in range(20):
-                ret, _ = cap.read()
-                if not ret:
+                ret, frame = cap.read()
+                if not ret or frame is None:
                     logging.warning(f"Warning: Warming up frame {i} failed. Stream may be broken.")
                     if i == 0:
                         logging.info("Attempting to reset to default resolution...")
                         cap.set(cv2.CAP_PROP_FRAME_WIDTH, default_res[0])
                         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, default_res[1])
+                else:
+                    # Feed the live frame to the web preview queue during warmup
+                    _ok, _buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                    if _ok:
+                        with _frame_lock:
+                            _latest_frame_jpg = _buf.tobytes()
                 if i % 10 == 0:
                     logging.info(f"Warming up... {i}/20")
             
@@ -454,10 +476,11 @@ def capture_worker():
         last_capture_time = 0.0
         side_lockout_duration = 3.0
         capture_cooldown = 5.0
-        FLIP_LOCKOUT_SECS = 8.0
+        FLIP_LOCKOUT_SECS = 5.0
         PRE_CAPTURE_DELAY = 3.0  # Seconds of locked-in holding before the shutter fires
         pre_capture_start = None  # None = not yet armed; float = timestamp when countdown started
         waiting_for_flip = False
+        has_seen_flip_motion = False
         flip_timer_start = 0.0
         db_loaded = os.path.exists("numista_database_ready (1).csv")
 
@@ -530,8 +553,16 @@ def capture_worker():
                     pre_capture_start = None
 
                 if waiting_for_flip:
-                    if (time.time() - flip_timer_start > FLIP_LOCKOUT_SECS):
+                    # Sync from global status in case user clicked 'confirm-flip' in UI
+                    if not capture_status.get("waiting_for_flip", True):
                         waiting_for_flip = False
+                        has_seen_flip_motion = True  # Explicit user confirmation bypasses motion check
+                    elif (time.time() - flip_timer_start > FLIP_LOCKOUT_SECS):
+                        waiting_for_flip = False
+                        
+                # Sequential State Gate: register flip motion if motion is significant during the reverse scan
+                if current_state == 1 and motion_score >= 4.0:
+                    has_seen_flip_motion = True
                         
                 if stable_frames_count >= STABLE_RECORDS_MANDATORY:
                     is_stable = True
@@ -542,9 +573,11 @@ def capture_worker():
             current_time = time.time()
 
             # --- PRE-CAPTURE COUNTDOWN ---
-            # Only arm the countdown when the coin is locked-in, stable, not yet captured, and past cooldown
+            # Only arm the countdown when the coin is locked-in, stable, not yet captured, and past cooldown.
+            # If scanning the reverse (current_state == 1), we MUST have registered a flip motion first.
             ready_to_arm = (is_in_focus and is_stable and not has_captured_this_side
-                            and not waiting_for_flip and (current_time - last_capture_time > capture_cooldown))
+                            and not waiting_for_flip and (current_time - last_capture_time > capture_cooldown)
+                            and (current_state == 0 or has_seen_flip_motion))
 
             if ready_to_arm:
                 if pre_capture_start is None:
@@ -579,6 +612,7 @@ def capture_worker():
                         max_sharpness = 0.0
                         has_captured_this_side = False
                         waiting_for_flip = True
+                        has_seen_flip_motion = False
                         flip_timer_start = time.time()
                         capture_status["flip_timer_start_ts"] = flip_timer_start
 
@@ -598,6 +632,8 @@ def capture_worker():
                 status_msg = f"HOLD STILL — {capture_countdown_remaining:.1f}s"
             elif waiting_for_flip:
                 status_msg = "FLIP COIN NOW"
+            elif current_state == 1 and not has_seen_flip_motion:
+                status_msg = "WAITING FOR FLIP..."
             elif is_in_focus and is_stable:
                 status_msg = "READY!"
             else:
@@ -711,8 +747,10 @@ def capture_worker():
             _ok, _buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
             if _ok:
                 with _frame_lock:
-                    global _latest_frame_jpg
                     _latest_frame_jpg = _buf.tobytes()
+            
+            # Prevent CPU pegging and yield to backend API threads
+            time.sleep(0.01)
 
     except Exception as e:
         logging.error(f"[CAP] Exception in capture_worker: {e}", exc_info=True)
@@ -777,6 +815,24 @@ def capture_worker():
 # NOTE: /start-scan is now handled by the Firestore command watcher below.
 # The website writes to Firestore; the agent picks up the command here.
 # This makes the trigger HTTPS-safe (no mixed-content browser errors).
+
+@app.route('/', methods=['GET'])
+def index_route():
+    try:
+        # Serve the local index.html diagnostic page if it exists
+        _here = os.path.dirname(os.path.abspath(__file__))
+        index_path = os.path.join(_here, "index.html")
+        if os.path.exists(index_path):
+            with open(index_path, "r", encoding="utf-8") as f:
+                return f.read(), 200, {'Content-Type': 'text/html'}
+    except Exception:
+        pass
+    return jsonify({
+        "status": "online",
+        "agent": "Numista.AI Hardware Agent",
+        "version": "2.0",
+        "paired_email": USER_EMAIL
+    })
 
 @app.route('/start-scan', methods=['POST', 'OPTIONS'])
 def start_scan_route():

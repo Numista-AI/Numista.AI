@@ -274,6 +274,91 @@ BOOTSTRAP_RECORDS = [
         "sources": ["PMG Currency Error Guide", "PCGS Currency", "Heritage Auctions Archives"],
         "isPublished": True,
     },
+    # ── 1999 NJ Quarter Errors ────────────────────────────────────────────────
+    {
+        "id": "1999-nj-quarter-die-gouge",
+        "name": "1999 New Jersey Crossroads of the Revolution Quarter Die Gouge",
+        "shortName": "1999 NJ Die Gouge / Extra Tree",
+        "category": "Die Gouge",
+        "subcategory": "Die Errors",
+        "denominations": ["quarter"],
+        "years": [1999],
+        "mintMarks": ["P", "D"],
+        "designation": "",
+        "estValueLow": 5,
+        "estValueHigh": 50,
+        "rarity": "Uncommon",
+        "description": (
+            "The 1999 New Jersey State Quarter contains a documented variety known as "
+            "the 'Die Gouge' or 'Extra Tree' variety. This error appears on the reverse of the "
+            "coin, showing up as a small, raised vertical flow of metal that resembles a branch "
+            "or portion of a tree trunk near the row of trees behind the soldiers in the boat.\n\n"
+            "While not as dramatic or expensive as major doubled dies, it is widely "
+            "sought after by State Quarter error collectors."
+        ),
+        "howToSpot": (
+            "Examine the reverse of the coin, specifically the area near the row of trees "
+            "directly above the words 'CROSSROADS OF THE REVOLUTION'. Look for a distinct, "
+            "raised vertical line of metal (a die gouge) that looks out of place among "
+            "the standard design lines of the trees. A loupe of 5-10x magnification is recommended."
+        ),
+        "datasets": ["collectible", "common"],
+        "images": [
+            {
+                "url": "",
+                "source": "error_ref",
+                "attributionText": "Error-Ref.com — Die Gouges",
+                "attributionUrl": "https://www.error-ref.com/",
+                "isVerified": False,
+                "hotspot": {"x": 0.50, "y": 0.60, "radius": 0.08, "label": "Raised die gouge line near trees"},
+            }
+        ],
+        "relatedCoinIds": [],
+        "sources": ["Error-Ref.com", "Cherrypickers' Guide", "CONECA Error Database"],
+        "isPublished": True,
+    },
+    {
+        "id": "1999-nj-quarter-struck-through",
+        "name": "1999 New Jersey Quarter Struck-Through Grease",
+        "shortName": "1999 NJ Struck-Through",
+        "category": "Striking",
+        "subcategory": "Striking Errors",
+        "denominations": ["quarter"],
+        "years": [1999],
+        "mintMarks": ["P", "D"],
+        "designation": "",
+        "estValueLow": 10,
+        "estValueHigh": 100,
+        "rarity": "Common",
+        "description": (
+            "Struck-through errors occur when foreign debris, typically heavy grease or oil "
+            "from the minting machinery, gets lodged in the crevices of the die. When the planchet "
+            "is struck, the grease prevents the metal from flowing into the details of the die.\n\n"
+            "For the 1999 New Jersey quarter, this often results in missing letters in the words "
+            "'CROSSROADS OF THE REVOLUTION' or 'UNITED STATES OF AMERICA', or missing elements "
+            "of the soldiers or boat in the center design."
+        ),
+        "howToSpot": (
+            "Look for areas of the design that are unusually smooth, weak, or completely missing, "
+            "even though the surrounding rim and details are sharp and fully struck. The missing "
+            "details should show no signs of post-mint wear or scratching, but rather a flat, "
+            "dull surface."
+        ),
+        "datasets": ["common"],
+        "images": [
+            {
+                "url": "",
+                "source": "pcgs",
+                "attributionText": "PCGS CoinFacts",
+                "attributionUrl": "https://www.pcgs.com/",
+                "isVerified": False,
+                "hotspot": {"x": 0.50, "y": 0.80, "radius": 0.15, "label": "Weak/missing text in legend"},
+            }
+        ],
+        "relatedCoinIds": [],
+        "sources": ["Error-Ref.com", "PCGS CoinFacts"],
+        "isPublished": True,
+    },
 ]
 
 

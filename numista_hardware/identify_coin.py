@@ -5,6 +5,8 @@ import tempfile
 import requests as _requests
 from google import genai
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,122 @@ if not api_key:
     raise EnvironmentError("GOOGLE_API_KEY is not set. Check your .env file.")
 
 client = genai.Client(api_key=api_key)
+
+# ─── Pydantic Models for Response Schemas ─────────────────────────────────────
+
+class Pass1CoinData(BaseModel):
+    obverse_image: str = Field(description="Must be 'A' or 'B'")
+    year: Optional[int] = Field(description="The 4-digit mint year of the coin, or null if unknown/unreadable")
+    country: str = Field(description="The country of issue, e.g. 'United States'")
+    denomination: str = Field(description="The denomination of the coin, e.g. 'Quarter Dollar'")
+    program_series: str = Field(description="The program or series name, e.g. '50 State Quarters' or 'None'")
+    theme_subject: str = Field(description="The theme or subject, e.g. 'New Jersey - Crossroads of the Revolution'")
+    mint_mark: str = Field(description="The mint mark letter(s) found on the coin, e.g. 'P', 'D', 'S', or 'None (P)'")
+    grade: str = Field(description="The estimated grade of the coin, e.g. 'AU-58', 'MS-63', 'VF-20', etc.")
+    is_silver: bool = Field(description="True if the coin contains silver, False otherwise")
+    metal_content: str = Field(description="The metal composition string, e.g. 'Clad (Copper-Nickel)' or '90% Silver, 10% Copper'")
+    file_slug: str = Field(description="A clean filename-safe slug, e.g. '1999_New_Jersey_State_Quarter'")
+    report: str = Field(description="A brief paragraph summarizing the coin's key features, history, and numismatic significance.")
+
+class Pass2VerificationData(BaseModel):
+    identification_confirmed: bool = Field(description="True if the user's scan matches the initial identification, False if it is a different coin")
+    corrected_denomination: Optional[str] = Field(default=None, description="The corrected denomination if the initial ID was wrong, otherwise null")
+    corrected_year: Optional[int] = Field(default=None, description="The corrected year if the initial ID was wrong, otherwise null")
+    refined_grade: str = Field(description="The refined grade estimate, e.g. 'MS-64' or 'VF-30'")
+    errors_detected: List[str] = Field(default_factory=list, description="List of any die errors or varieties detected, e.g. ['DDO', 'DDR'], or empty list if none")
+    condition_notes: str = Field(description="Brief assessment of the coin's condition, wear, or damage")
+    confidence: str = Field(description="Confidence level: 'HIGH', 'MEDIUM', or 'LOW'")
+    verification_report: str = Field(description="A detailed paragraph summarizing the verification comparison")
+
+# ─── Robust JSON Parsing & Truncation Repair Helper ────────────────────────────
+
+def safe_parse_json(text: str) -> dict:
+    """Attempts to parse JSON from the raw text, applying custom repairs if it fails."""
+    try:
+        # Standard attempt
+        return json.loads(text)
+    except Exception as e:
+        logger.warning(f"[JSON-REPAIR] Standard JSON load failed: {e}. Trying cleanup...")
+        
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        # Strip markdown fences
+        first_nl = cleaned.find("\n")
+        if first_nl != -1:
+            cleaned = cleaned[first_nl:].strip()
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3].strip()
+            
+    # Attempt parsing cleaned string
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+        
+    # Apply repeating pattern repair
+    # Check for repeating suffix of size 2 to 50 characters repeating 3+ times
+    for sz in range(2, 50):
+        if len(cleaned) < sz * 3:
+            continue
+        chunk1 = cleaned[-sz:]
+        chunk2 = cleaned[-2*sz:-sz]
+        chunk3 = cleaned[-3*sz:-2*sz]
+        if chunk1 == chunk2 == chunk3:
+            logger.info(f"[JSON-REPAIR] Detected repeating suffix of size {sz}: {repr(chunk1)}")
+            while cleaned.endswith(chunk1):
+                cleaned = cleaned[:-sz].strip()
+            break
+            
+    # Scan characters to close unclosed strings and braces
+    in_string = False
+    escape = False
+    for char in cleaned:
+        if char == '\\' and not escape:
+            escape = True
+        elif char == '"' and not escape:
+            in_string = not in_string
+            escape = False
+        else:
+            escape = False
+            
+    if in_string:
+        cleaned += '"'
+        
+    open_braces = 0
+    open_brackets = 0
+    in_string = False
+    escape = False
+    for char in cleaned:
+        if char == '\\' and not escape:
+            escape = True
+        elif char == '"' and not escape:
+            in_string = not in_string
+            escape = False
+        elif not in_string:
+            if char == '{':
+                open_braces += 1
+            elif char == '}':
+                open_braces = max(0, open_braces - 1)
+            elif char == '[':
+                open_brackets += 1
+            elif char == ']':
+                open_brackets = max(0, open_brackets - 1)
+            escape = False
+        else:
+            escape = False
+            
+    if open_brackets > 0:
+        cleaned += ']' * open_brackets
+    if open_braces > 0:
+        cleaned += '}' * open_braces
+        
+    try:
+        repaired = json.loads(cleaned)
+        logger.info("[JSON-REPAIR] Successfully repaired malformed JSON output!")
+        return repaired
+    except Exception as repair_err:
+        logger.error(f"[JSON-REPAIR] Repair failed: {repair_err}. Cleaned input: {cleaned}")
+        raise repair_err
 
 MANIFEST_PATH = 'numista_database_ready (1).csv'
 
@@ -279,11 +397,13 @@ Return ONLY a valid JSON object:
             model="gemini-3.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
-                response_mime_type='application/json'
+                response_mime_type='application/json',
+                response_schema=Pass2VerificationData,
+                temperature=0.2
             )
         )
 
-        vdata = json.loads(response.text)
+        vdata = safe_parse_json(response.text)
         logger.info(f"[REF] Verification pass complete — "
                      f"confirmed={vdata.get('identification_confirmed')}, "
                      f"grade={vdata.get('refined_grade')}, "
@@ -404,22 +524,18 @@ def run_numista_report(img_path_a, img_path_b):
             model="gemini-3.5-flash",
             contents=[prompt, img_a, img_b],
             config=types.GenerateContentConfig(
-                response_mime_type='application/json'
+                response_mime_type='application/json',
+                response_schema=Pass1CoinData,
+                temperature=0.2
             )
         )
         
         try:
-            res_data = json.loads(response.text)
+            res_data = safe_parse_json(response.text)
         except Exception as json_err:
-            # Some models wrap JSON in markdown fences — strip and retry
-            cleaned = response.text.strip().lstrip('`').lstrip('json').lstrip('`').rstrip('`').strip()
-            try:
-                res_data = json.loads(cleaned)
-                logger.info("[GEMINI] JSON parsed after stripping markdown fences")
-            except Exception:
-                logger.error("[GEMINI] JSON parse failed (%s). Raw response (first 300): %s",
-                             json_err, response.text[:300] if response.text else "(empty)")
-                res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
+            logger.error("[GEMINI] JSON parse/repair failed (%s). Raw response (first 300): %s",
+                         json_err, response.text[:300] if response.text else "(empty)")
+            res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
 
 
         # Route image paths based on Gemini's side determination

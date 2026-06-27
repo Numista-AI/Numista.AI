@@ -490,15 +490,6 @@ class _ProfileTabState extends State<_ProfileTab> {
   bool _saving = false;
 
   // Form controllers
-  final _ownerNameCtrl    = TextEditingController();
-  final _ownerEmailCtrl   = TextEditingController();
-  final _execNameCtrl     = TextEditingController();
-  final _execEmailCtrl    = TextEditingController();
-  final _execPhoneCtrl    = TextEditingController();
-  final _attNameCtrl      = TextEditingController();
-  final _attEmailCtrl     = TextEditingController();
-  final _attFirmCtrl      = TextEditingController();
-  final _attPhoneCtrl     = TextEditingController();
   final _maritalNotesCtrl = TextEditingController();
 
   String _maritalStatus    = 'Single';
@@ -526,15 +517,6 @@ class _ProfileTabState extends State<_ProfileTab> {
   }
 
   void _applyProfile(EstateProfile p) {
-    _ownerNameCtrl.text    = p.ownerName;
-    _ownerEmailCtrl.text   = p.ownerEmail;
-    _execNameCtrl.text     = p.executorName;
-    _execEmailCtrl.text    = p.executorEmail;
-    _execPhoneCtrl.text    = p.executorPhone;
-    _attNameCtrl.text      = p.attorneyName;
-    _attEmailCtrl.text     = p.attorneyEmail;
-    _attFirmCtrl.text      = p.attorneyFirm;
-    _attPhoneCtrl.text     = p.attorneyPhone;
     _maritalNotesCtrl.text = p.maritalPropertyNotes;
     _maritalStatus         = p.maritalStatus;
     _jurisdiction          = p.jurisdiction;
@@ -549,13 +531,7 @@ class _ProfileTabState extends State<_ProfileTab> {
   @override
   void dispose() {
     _sub?.cancel();
-    for (final c in [
-      _ownerNameCtrl, _ownerEmailCtrl, _execNameCtrl, _execEmailCtrl,
-      _execPhoneCtrl, _attNameCtrl, _attEmailCtrl, _attFirmCtrl,
-      _attPhoneCtrl, _maritalNotesCtrl,
-    ]) {
-      c.dispose();
-    }
+    _maritalNotesCtrl.dispose();
     super.dispose();
   }
 
@@ -564,17 +540,8 @@ class _ProfileTabState extends State<_ProfileTab> {
     setState(() => _saving = true);
     try {
       final updated = EstateProfile(
-        ownerName:          _ownerNameCtrl.text.trim(),
-        ownerEmail:         _ownerEmailCtrl.text.trim(),
         jurisdiction:       _jurisdiction,
         maritalStatus:      _maritalStatus,
-        executorName:       _execNameCtrl.text.trim(),
-        executorEmail:      _execEmailCtrl.text.trim(),
-        executorPhone:      _execPhoneCtrl.text.trim(),
-        attorneyName:       _attNameCtrl.text.trim(),
-        attorneyEmail:      _attEmailCtrl.text.trim(),
-        attorneyFirm:       _attFirmCtrl.text.trim(),
-        attorneyPhone:      _attPhoneCtrl.text.trim(),
         willOrTrustStatus:  _willTrustStatus,
         beneficiaries:      _beneficiaries,
         isMarried:          _maritalStatus == 'Married',
@@ -616,16 +583,20 @@ class _ProfileTabState extends State<_ProfileTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Privacy & Security Banner ──────────────────────────────────
+          _InfoBanner(
+            color: const Color(0xFF10B981),
+            icon: Icons.lock_outline,
+            title: 'Zero-Knowledge Privacy Active',
+            body: 'To protect your physical security, Numista.AI does not save '
+                'legal names, executor details, or attorney contacts on our servers. '
+                'You will enter this information locally in memory when generating your report PDF.',
+          ),
+          const SizedBox(height: 16),
+
           // ── Personal Information ──────────────────────────────────────
           _SectionHeader(title: 'Personal Information', icon: Icons.person_outline),
           _EstateCard(children: [
-            _formField('Owner Full Legal Name', _ownerNameCtrl,
-                hint: 'As it appears on legal documents',
-                required: true),
-            _formField('Email', _ownerEmailCtrl,
-                hint: 'owner@example.com',
-                keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 12),
             _label('Marital Status'),
             const SizedBox(height: 6),
             _SegmentedPicker(
@@ -697,36 +668,6 @@ class _ProfileTabState extends State<_ProfileTab> {
               value: _willTrustStatus,
               onChanged: (v) => setState(() => _willTrustStatus = v),
             ),
-            const SizedBox(height: 16),
-            _label('Attorney'),
-            const SizedBox(height: 8),
-            _formField('Attorney Full Name', _attNameCtrl,
-                hint: 'John Smith, Esq.'),
-            _formField('Law Firm', _attFirmCtrl,
-                hint: 'Smith & Associates, LLP'),
-            _formField('Attorney Email', _attEmailCtrl,
-                hint: 'attorney@lawfirm.com',
-                keyboardType: TextInputType.emailAddress),
-            _formField('Attorney Phone', _attPhoneCtrl,
-                hint: '(212) 555-0100',
-                keyboardType: TextInputType.phone),
-          ]),
-
-          const SizedBox(height: 16),
-
-          // ── Executor ──────────────────────────────────────────────────
-          _SectionHeader(
-              title: 'Executor / Personal Representative',
-              icon: Icons.manage_accounts_outlined),
-          _EstateCard(children: [
-            _formField('Executor Full Name', _execNameCtrl,
-                hint: 'Jane Doe'),
-            _formField('Executor Email', _execEmailCtrl,
-                hint: 'executor@example.com',
-                keyboardType: TextInputType.emailAddress),
-            _formField('Executor Phone', _execPhoneCtrl,
-                hint: '(212) 555-0200',
-                keyboardType: TextInputType.phone),
           ]),
 
           const SizedBox(height: 16),
@@ -1259,7 +1200,7 @@ class _DivisionTabState extends State<_DivisionTab> {
       final assignedCoinIds = <String>{};
       _simulatedLots.forEach((heirId, coins) {
         final heir = _profile?.beneficiaries.firstWhere((h) => h.id == heirId);
-        final heirName = heir?.name ?? 'Unknown';
+        final heirName = heir?.alias ?? 'Unknown';
 
         for (final coin in coins) {
           assignedCoinIds.add(coin.id);
@@ -1405,7 +1346,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  heir.name,
+                                  heir.alias,
                                   style: const TextStyle(color: _kTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(height: 2),
@@ -1472,7 +1413,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                   clipBehavior: Clip.antiAlias,
                   child: ExpansionTile(
                     title: Text(
-                      heir.name,
+                      heir.alias,
                       style: const TextStyle(color: _kTextPrimary, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
@@ -1542,7 +1483,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                                         divisionLocked: !isLocked,
                                         assignedHeirId: heir.id,
                                         beneficiaryId: heir.id,
-                                        beneficiaryName: heir.name,
+                                        beneficiaryName: heir.alias,
                                       );
                                       await EstateDataService.saveCoinEstateData(widget.uid, updated);
                                     },
@@ -1641,6 +1582,7 @@ class _GenerateTabState extends State<_GenerateTab> {
   String _progressMsg = '';
   List<EstateReportRecord> _history = [];
   bool _loadingHistory = false;
+  String? _lastOwnerName;
 
   static const _progressMessages = [
     'Analyzing your collection...',
@@ -1697,7 +1639,6 @@ class _GenerateTabState extends State<_GenerateTab> {
   bool get _canGenerate {
     final p = _profile;
     if (p == null) return false;
-    if (p.ownerName.isEmpty) return false;
     if (p.jurisdiction.isEmpty) return false;
     if (_coinCount == 0) return false;
     if (_mode == 'estate_settlement' && _dateOfDeath == null) return false;
@@ -1706,10 +1647,26 @@ class _GenerateTabState extends State<_GenerateTab> {
 
   Future<void> _generate() async {
     if (_profile == null || !_canGenerate) return;
+
+    // Trigger local Ephemeral pre-generation Wizard
+    final identity = await showDialog<EphemeralReportIdentity>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _EphemeralWizardDialog(
+        profile: _profile!,
+        mode: _mode,
+        dateOfDeath: _dateOfDeath,
+        includePhotos: _includePhotos,
+      ),
+    );
+
+    if (identity == null) return; // User cancelled
+
     setState(() {
       _generating = true;
       _progressStep = 0;
       _progressMsg = _progressMessages[0];
+      _lastOwnerName = identity.ownerLegalName;
     });
 
     // Animate progress messages
@@ -1724,11 +1681,8 @@ class _GenerateTabState extends State<_GenerateTab> {
     try {
       final result = await EstateReportService.generateReport(
         uid: widget.uid,
-        profile: _profile!,
+        identity: identity,
         mode: _mode,
-        dateOfDeath: _dateOfDeath != null
-            ? DateFormat('yyyy-MM-dd').format(_dateOfDeath!)
-            : null,
         includePhotos: _includePhotos,
       );
 
@@ -1818,6 +1772,33 @@ class _GenerateTabState extends State<_GenerateTab> {
                   messenger.showSnackBar(
                     const SnackBar(
                       content: Text('Attorney portal link copied! Valid for 30 days.'),
+                      backgroundColor: Color(0xFF161B27),
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Copy Email Template
+            _ShareOption(
+              icon: Icons.email_outlined,
+              color: const Color(0xFF3B82F6),
+              title: 'Copy Attorney Email Template',
+              subtitle: 'Copies a professional email draft to send to your attorney',
+              onTap: () async {
+                final portalUrl = EstateReportService.attorneyPortalUrl(uid, reportId);
+                final text = EstateReportService.emailTemplateText(
+                  ownerName: _lastOwnerName ?? 'Collection Owner',
+                  portalUrl: portalUrl,
+                  reportId: reportId,
+                );
+                await Clipboard.setData(ClipboardData(text: text));
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Email template copied to clipboard!'),
                       backgroundColor: Color(0xFF161B27),
                     ),
                   );
@@ -1954,19 +1935,6 @@ class _GenerateTabState extends State<_GenerateTab> {
                 ),
               ),
             ),
-            if (_profile?.executorName.isNotEmpty == true) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.manage_accounts_outlined,
-                      size: 14, color: _kTextSecondary),
-                  const SizedBox(width: 6),
-                  Text('Executor: ${_profile!.executorName}',
-                      style: const TextStyle(
-                          color: _kTextSecondary, fontSize: 12)),
-                ],
-              ),
-            ],
           ]),
         ],
 
@@ -2129,7 +2097,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
       final data = CoinEstateData(
         coinId:               widget.coin.id,
         beneficiaryId:        _beneficiaryId,
-        beneficiaryName:      bene?.name,
+        beneficiaryName:      bene?.alias,
         fmvOverride:          _useFmvOverride
             ? double.tryParse(_fmvOverrideCtrl.text)
             : null,
@@ -2258,7 +2226,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                               style: TextStyle(color: _kTextSecondary))),
                       ...widget.beneficiaries.map((b) => DropdownMenuItem(
                             value: b.id,
-                            child: Text(b.name,
+                            child: Text(b.alias,
                                 style: const TextStyle(color: _kTextPrimary)),
                           )),
                     ],
@@ -2633,7 +2601,7 @@ class _BeneficiaryListEditor extends StatelessWidget {
             onPressed: () {
               final newB = EstateBeneficiary(
                 id: const Uuid().v4(),
-                name: '',
+                alias: '',
               );
               onChanged([...beneficiaries, newB]);
             },
@@ -2671,7 +2639,7 @@ class _BeneficiaryRow extends StatefulWidget {
 }
 
 class _BeneficiaryRowState extends State<_BeneficiaryRow> {
-  late final _nameCtrl = TextEditingController(text: widget.beneficiary.name);
+  late final _nameCtrl = TextEditingController(text: widget.beneficiary.alias);
   late String _relationship = widget.beneficiary.relationship;
   late String _njClass = widget.beneficiary.njClass;
 
@@ -2680,7 +2648,7 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
 
   void _emit() {
     widget.onUpdate(widget.beneficiary.copyWith(
-      name: _nameCtrl.text.trim(),
+      alias: _nameCtrl.text.trim(),
       relationship: _relationship,
       njClass: _njClass,
     ));
@@ -2704,7 +2672,7 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
                   controller: _nameCtrl,
                   onChanged: (_) => _emit(),
                   style: const TextStyle(color: _kTextPrimary, fontSize: 13),
-                  decoration: _inputDecoration(hint: 'Full Name').copyWith(
+                  decoration: _inputDecoration(hint: 'Alias (e.g. Daughter)').copyWith(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 8),
                   ),
@@ -2860,8 +2828,8 @@ class _ChecklistCard extends StatelessWidget {
     final p = profile;
     final items = [
       _ChecklistItem(
-        label: 'Owner name set',
-        ok: p != null && p.ownerName.isNotEmpty,
+        label: '🔒 Zero-Knowledge Privacy Enabled',
+        ok: true,
         required: true,
       ),
       _ChecklistItem(
@@ -2870,17 +2838,7 @@ class _ChecklistCard extends StatelessWidget {
         required: true,
       ),
       _ChecklistItem(
-        label: 'Attorney info provided',
-        ok: p != null && p.attorneyName.isNotEmpty,
-        required: false,
-      ),
-      _ChecklistItem(
-        label: 'Executor info provided',
-        ok: p != null && p.executorName.isNotEmpty,
-        required: false,
-      ),
-      _ChecklistItem(
-        label: 'Beneficiaries added',
+        label: 'Beneficiary aliases added',
         ok: p != null && p.beneficiaries.isNotEmpty,
         required: false,
         warnIfMissing: true,
@@ -3721,4 +3679,299 @@ ThemeData _estateTheme(BuildContext context) => ThemeData.dark().copyWith(
       dialogTheme: const DialogThemeData(backgroundColor: _kCard),
       cardColor: _kCard,
     );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ephemeral Wizard Dialog for Zero-Knowledge PDF Generation (RAM-only)
+// ─────────────────────────────────────────────────────────────────────────────
+class _EphemeralWizardDialog extends StatefulWidget {
+  final EstateProfile profile;
+  final String mode;
+  final DateTime? dateOfDeath;
+  final bool includePhotos;
+
+  const _EphemeralWizardDialog({
+    required this.profile,
+    required this.mode,
+    this.dateOfDeath,
+    required this.includePhotos,
+  });
+
+  @override
+  State<_EphemeralWizardDialog> createState() => _EphemeralWizardDialogState();
+}
+
+class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
+  int _step = 1;
+  final _formKey1 = GlobalKey<FormState>();
+  final _formKey3 = GlobalKey<FormState>();
+
+  final _ownerNameCtrl = TextEditingController();
+  final _execNameCtrl = TextEditingController();
+  final _attNameCtrl = TextEditingController();
+  final _attFirmCtrl = TextEditingController();
+  final _attEmailCtrl = TextEditingController();
+  bool _includeContacts = true;
+
+  final Map<String, TextEditingController> _heirNameCtrls = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (final b in widget.profile.beneficiaries) {
+      if (b.alias.isNotEmpty) {
+        _heirNameCtrls[b.alias] = TextEditingController();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ownerNameCtrl.dispose();
+    _execNameCtrl.dispose();
+    _attNameCtrl.dispose();
+    _attFirmCtrl.dispose();
+    _attEmailCtrl.dispose();
+    for (final c in _heirNameCtrls.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _next() {
+    if (_step == 1) {
+      if (!(_formKey1.currentState?.validate() ?? false)) return;
+      if (_heirNameCtrls.isEmpty) {
+        setState(() => _step = 3);
+      } else {
+        setState(() => _step = 2);
+      }
+    } else if (_step == 2) {
+      setState(() => _step = 3);
+    }
+  }
+
+  void _back() {
+    if (_step == 3) {
+      if (_heirNameCtrls.isEmpty) {
+        setState(() => _step = 1);
+      } else {
+        setState(() => _step = 2);
+      }
+    } else if (_step == 2) {
+      setState(() => _step = 1);
+    }
+  }
+
+  void _submit() {
+    if (_step == 3) {
+      if (!(_formKey3.currentState?.validate() ?? false)) return;
+      final aliasToLegal = _heirNameCtrls.map((k, v) => MapEntry(k, v.text.trim()));
+      
+      final identity = EphemeralReportIdentity(
+        ownerLegalName: _ownerNameCtrl.text.trim(),
+        executorName: _execNameCtrl.text.trim(),
+        attorneyName: _attNameCtrl.text.trim(),
+        attorneyFirm: _attFirmCtrl.text.trim(),
+        attorneyEmail: _attEmailCtrl.text.trim(),
+        aliasToLegalName: aliasToLegal,
+        reportDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        dateOfDeath: widget.dateOfDeath != null
+            ? DateFormat('yyyy-MM-dd').format(widget.dateOfDeath!)
+            : null,
+        includeContactsInPdf: _includeContacts,
+      );
+      Navigator.pop(context, identity);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: _kNavy,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Theme(
+        data: _estateTheme(context),
+        child: Container(
+          width: 420,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Step $_step of 3',
+                    style: const TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                  const Text(
+                    '🔒 Ephemeral RAM-Only',
+                    style: TextStyle(color: _kTextSecondary, fontSize: 10),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _stepTitle,
+                style: const TextStyle(color: _kTextPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Divider(color: _kCardBorder, height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: _buildStepContent(),
+                ),
+              ),
+              const Divider(color: _kCardBorder, height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: _kTextSecondary)),
+                  ),
+                  const Spacer(),
+                  if (_step > 1)
+                    OutlinedButton(
+                      onPressed: _back,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: _kCardBorder),
+                      ),
+                      child: const Text('Back', style: TextStyle(color: _kTextPrimary)),
+                    ),
+                  const SizedBox(width: 8),
+                  if (_step < 3)
+                    ElevatedButton(
+                      onPressed: _next,
+                      style: ElevatedButton.styleFrom(backgroundColor: _kGold),
+                      child: const Text('Next', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold)),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                      child: const Text('Generate PDF', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String get _stepTitle {
+    switch (_step) {
+      case 1: return 'Owner Identity';
+      case 2: return 'Heir Legal Names';
+      case 3: return 'Executor & Counsel';
+      default: return '';
+    }
+  }
+
+  Widget _buildStepContent() {
+    switch (_step) {
+      case 1:
+        return Form(
+          key: _formKey1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the owner\'s full legal name as it should appear on the PDF cover page and within legal declarations.',
+                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              _formFieldLocal('Owner Full Legal Name', _ownerNameCtrl,
+                  hint: 'e.g. AJ Smith', required: true),
+            ],
+          ),
+        );
+      case 2:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Link beneficiary aliases from your profile to their legal names. (Optional, aliases will show if left blank).',
+              style: TextStyle(color: _kTextSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ..._heirNameCtrls.entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _formFieldLocal('Legal Name for "${e.key}"', e.value,
+                      hint: 'e.g. Jane Doe'),
+                )),
+          ],
+        );
+      case 3:
+        return Form(
+          key: _formKey3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Provide executor and legal counsel contacts to assist with future inquiries (optional).',
+                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              _formFieldLocal('Executor Name', _execNameCtrl, hint: 'e.g. Bob Smith'),
+              _formFieldLocal('Attorney Name', _attNameCtrl, hint: 'e.g. Sarah Jones, Esq.'),
+              _formFieldLocal('Law Firm', _attFirmCtrl, hint: 'e.g. Apex Legal Group'),
+              _formFieldLocal('Attorney Email', _attEmailCtrl,
+                  hint: 'attorney@apexlegal.com',
+                  keyboardType: TextInputType.emailAddress),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _includeContacts,
+                    onChanged: (v) => setState(() => _includeContacts = v ?? true),
+                    activeColor: _kGold,
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Print contact details on PDF cover page',
+                      style: TextStyle(color: _kTextPrimary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _formFieldLocal(String label, TextEditingController ctrl,
+      {String? hint, bool required = false, TextInputType? keyboardType}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(label, style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+            if (required) const Text(' *', style: TextStyle(color: _kRed, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: _kTextPrimary, fontSize: 13),
+          decoration: _inputDecoration(hint: hint ?? '').copyWith(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          ),
+          validator: required
+              ? (v) => (v == null || v.trim().isEmpty) ? 'Required field' : null
+              : null,
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
 

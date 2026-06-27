@@ -36,8 +36,6 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   bool _savedOk = false;
   String? _savedFirestoreId;
   Timer? _pollTimer;
-  Timer? _frameTimer;
-  Uint8List? _liveFrameBytes;
   late AnimationController _pulseController;
   final TextEditingController _locationCtrl = TextEditingController();
 
@@ -63,7 +61,6 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _frameTimer?.cancel();
     _pulseController.dispose();
     _locationCtrl.dispose();
     super.dispose();
@@ -97,7 +94,6 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   // ─── Polling ────────────────────────────────────────────────────────────────
   void _startPolling() {
     _pollTimer?.cancel();
-    _frameTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
       final status = await _hw.getStatus();
       if (mounted && status != null) {
@@ -112,13 +108,6 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           // Trigger reference library fetch on first completion
           if (!wasComplete) _fetchSimilarCoins(status);
         }
-      }
-    });
-    // Frame preview: poll /frame every 300ms while scanning
-    _frameTimer = Timer.periodic(const Duration(milliseconds: 300), (_) async {
-      final bytes = await _hw.fetchFrame();
-      if (mounted && bytes != null) {
-        setState(() => _liveFrameBytes = bytes);
       }
     });
   }
@@ -228,8 +217,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             // The cv2 window on the desktop is the primary focusing display.
             // The web frame here shows the annotated obverse/reverse overlay
             // during scanning so the user can see step progress.
-            if (_serverOnline && _liveFrameBytes != null && _status?.isActive == true) ...[
-              _buildLivePreview(),
+            // ── Desktop focus pop-up instruction banner ──────────────────────
+            if (_serverOnline && _status?.isActive == true) ...[
+              _buildInstructionCard(),
               const SizedBox(height: 24),
             ],
             if (_status != null) _buildStatusPanel(),
@@ -408,59 +398,53 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     );
   }
 
-  // ─── Live Camera Preview ─────────────────────────────────────────────────
-  Widget _buildLivePreview() {
-    final isScanning = _status?.isActive == true;
-    final badgeColor  = isScanning ? _errorRed   : const Color(0xFF00BCD4); // red = LIVE, cyan = PREVIEW
-    final badgeLabel  = isScanning ? 'LIVE'       : 'PREVIEW';
-    final borderColor = isScanning ? _electricBlue : const Color(0xFF00BCD4);
-
+  // ─── Instruction Banner ───────────────────────────────────────────────────
+  Widget _buildInstructionCard() {
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: _darkCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor.withValues(alpha: 0.4), width: 2),
+        border: Border.all(color: _electricBlue.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: borderColor.withValues(alpha: 0.2),
-            blurRadius: 24,
+            color: _electricBlue.withValues(alpha: 0.15),
+            blurRadius: 20,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+      child: Row(
         children: [
-          // Live frame image
-          Image.memory(
-            _liveFrameBytes!,
-            fit: BoxFit.contain,
-            width: double.infinity,
-            gaplessPlayback: true, // prevents flicker between frames
+          const Icon(
+            Icons.desktop_windows_rounded,
+            color: _electricBlue,
+            size: 32,
           ),
-          // State badge (LIVE or PREVIEW)
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.fiber_manual_record, size: 8, color: Colors.white),
-                  SizedBox(width: 4),
-                  Text(badgeLabel,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2)),
-                ],
-              ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Focus Microscope Locally',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Please look for a pop-up window on your computer screen to help align and focus the microscope.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

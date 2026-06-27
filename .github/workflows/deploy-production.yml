@@ -130,3 +130,66 @@ jobs:
             exit 1
           fi
           echo "Backend is live and healthy"
+
+  # ── JOB 3: Deploy scan service to Cloud Run ──────────────────────────
+  deploy-scan-service:
+    name: Build & Deploy Scan Service (Cloud Run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3.0.1
+        with:
+          project_id: studio-9101802118-8c9a8
+
+      # Authenticate Docker to Artifact Registry
+      - name: Authenticate Docker to Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        working-directory: numista_backend/scan_service
+        run: |
+          docker build \
+            -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-scan-service:latest \
+            .
+
+      - name: Push image to Artifact Registry
+        run: |
+          docker push \
+            us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-scan-service:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy numista-scan-service \
+            --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-scan-service:latest \
+            --region us-central1 \
+            --project studio-9101802118-8c9a8 \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --timeout 320 \
+            --quiet
+
+      - name: Verify scan service health
+        run: |
+          URL=$(gcloud run services describe numista-scan-service \
+            --region us-central1 \
+            --project studio-9101802118-8c9a8 \
+            --format="value(status.url)")
+          echo "Scan Service URL: $URL"
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health")
+          echo "Scan service health: HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Scan service health check failed (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "Scan service is live and healthy"

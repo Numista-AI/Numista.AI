@@ -68,6 +68,12 @@ service cloud.firestore {
       allow read, write: if false; // backend service account only
     }
 
+    // ── Mint Errors (reference library — public read) ─────────────────────────
+    match /mint_errors/{document=**} {
+      allow read: if true;
+      allow write: if false;  // backend service account only
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

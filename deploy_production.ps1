@@ -165,11 +165,14 @@ Write-Host "  Normally handled automatically by GitHub Actions." -ForegroundColo
 Write-Host "  Run the block below ONLY if the CI/CD pipeline is unavailable." -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  # ---- Emergency backend commands (run manually if needed) ----" -ForegroundColor DarkGray
-Write-Host "  # cd numista_backend" -ForegroundColor DarkGray
-Write-Host "  # gcloud auth configure-docker us-central1-docker.pkg.dev --quiet" -ForegroundColor DarkGray
-Write-Host "  # docker build -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest ." -ForegroundColor DarkGray
-Write-Host "  # docker push us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest" -ForegroundColor DarkGray
-Write-Host "  # gcloud run deploy numista-backend --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest --region us-central1 --project studio-9101802118-8c9a8 --quiet" -ForegroundColor DarkGray
-Write-Host "  # ---------------------------------------------------------------" -ForegroundColor DarkGray
+Write-Host "  # cd numista_backend
+  # gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+  # docker build -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest .
+  # docker push us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest
+  # gcloud run deploy numista-backend --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest --region us-central1 --project studio-9101802118-8c9a8 --quiet
+  #
+  # ---- Emergency scan service commands (run manually if needed) ----
+  # gcloud run deploy numista-scan-service --source ./numista_backend/scan_service --project studio-9101802118-8c9a8 --region us-central1
+  # ---------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 Read-Host "  Press Enter to close"

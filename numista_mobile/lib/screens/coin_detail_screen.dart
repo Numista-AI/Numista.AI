@@ -28,6 +28,8 @@ import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
 import '../services/mint_error_service.dart';
+import '../widgets/grade_badge_widget.dart';
+import '../widgets/glossary_tooltip_wrapper.dart';
 import '../models/mint_error.dart';
 import 'mint_error_detail_screen.dart';
 
@@ -1282,37 +1284,7 @@ class _GradeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _gradeColors(grade);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: colors.$1,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.$1.withAlpha(200), width: 1),
-      ),
-      child: Text(
-        grade.toUpperCase(),
-        style: TextStyle(
-          color: colors.$2,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  (Color, Color) _gradeColors(String grade) {
-    final g = grade.toUpperCase();
-    if (RegExp(r'MS-7[0-9]|MS-6[5-9]').hasMatch(g)) return (_kGold, Colors.black87);
-    if (RegExp(r'MS-6[0-4]').hasMatch(g)) return (const Color(0xFFDAA520), Colors.black87);
-    if (g.contains('PROOF') || g.contains('PR-') || g.contains('PF-')) {
-      return (const Color(0xFF7B68EE), Colors.white);
-    }
-    if (g.contains('AU')) return (const Color(0xFFB8860B), Colors.white);
-    if (g.contains('EF') || g.contains('VF')) return (const Color(0xFF6C757D), Colors.white);
-    if (g.contains('MS')) return (_kAccent, Colors.white);
-    return (Colors.white.withAlpha(25), Colors.white70);
+    return GradeBadgeWidget(gradeCode: grade);
   }
 }
 
@@ -1742,9 +1714,11 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: _kAccent.withAlpha(50)),
               ),
-              child: Text(coin.personalNotes,
+              child: GlossaryTooltipWrapper(
+                text: coin.personalNotes,
                 style: const TextStyle(fontSize: 13, color: _kText,
-                    fontStyle: FontStyle.italic, height: 1.5)),
+                    fontStyle: FontStyle.italic, height: 1.5),
+              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -1768,8 +1742,10 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: _kBorder),
               ),
-              child: Text(coin.originalDescription,
-                style: const TextStyle(fontSize: 12, color: _kSubtext, height: 1.5)),
+              child: GlossaryTooltipWrapper(
+                text: coin.originalDescription,
+                style: const TextStyle(fontSize: 12, color: _kSubtext, height: 1.5),
+              ),
             ),
           ],
 
@@ -2644,19 +2620,39 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
 
   Future<void> _loadErrors() async {
     if (_loading) return;
-    setState(() => _loading = true);
-    final denom = widget.coin.denomination.toLowerCase();
-    final year = int.tryParse(widget.coin.year) ?? 0;
-    final results = await MintErrorService.getErrorsForCoin(
-      denomination: denom,
-      year: year,
-    );
-    if (mounted) {
-      setState(() {
-        _errors = results;
-        _loaded = true;
-        _loading = false;
-      });
+    setState(() {
+      _loading = true;
+      _loaded = false;
+    });
+    try {
+      final denom = widget.coin.denomination.toLowerCase();
+      final year = int.tryParse(widget.coin.year) ?? 0;
+      final results = await MintErrorService.getErrorsForCoin(
+        denomination: denom,
+        year: year,
+      ).timeout(
+        const Duration(seconds: 6),
+        onTimeout: () {
+          print('Mint error load timed out.');
+          return [];
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _errors = results;
+          _loaded = true;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading mint errors: $e');
+      if (mounted) {
+        setState(() {
+          _errors = [];
+          _loaded = true;
+          _loading = false;
+        });
+      }
     }
   }
 
