@@ -89,7 +89,7 @@ class PrivacyScreen extends StatelessWidget {
                     ),
                     _BulletPoint(
                       boldText: 'Coin Collection Data: ',
-                      text: 'We store your cataloged coins, images, grades, costs, and personal notes securely in Firebase Firestore.',
+                      text: 'We store your cataloged coins, images, grades, costs, and personal notes securely in Firebase Firestore. Optional Reference Library Contribution: If you voluntarily opt-in via our in-app settings, your anonymized coin photos may be contributed to our public global reference library to help the collector community (this is strictly optional and off by default).',
                     ),
                     _BulletPoint(
                       boldText: 'Estate Planning Profiles (Zero-Knowledge): ',
@@ -133,6 +133,11 @@ class PrivacyScreen extends StatelessWidget {
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     const SizedBox(height: 10),
+                    const _BulletPoint(
+                      boldText: 'Global Reference Library Index: ',
+                      text: 'If you explicitly opt-in to contribute images, your anonymized coin photos (stripped of all user identifiers, costs, and personal notes) are hosted in our public reference library bucket on Google Cloud Storage to populate the canonical catalog for all users.',
+                    ),
+                    const SizedBox(height: 8),
                     const _BulletPoint(
                       boldText: 'Affiliate Integration Partners: ',
                       text: 'When viewing or interacting with your collection wishlist, the Service integrates with the eBay Partner Network (EPN) to surface live product availability cards. Interacting with these features utilizes standard affiliate tracking identifiers to manage campaign routing, strictly isolated from your personal estate data.',
