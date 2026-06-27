@@ -132,6 +132,11 @@ class PrivacyScreen extends StatelessWidget {
                       'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Scanned images are processed securely using Google Cloud\'s Gemini enterprise platform (your data is never used to train public models). No data is shared with third-party advertisers.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
+                    const SizedBox(height: 10),
+                    const _BulletPoint(
+                      boldText: 'Affiliate Integration Partners: ',
+                      text: 'When viewing or interacting with your collection wishlist, the Service integrates with the eBay Partner Network (EPN) to surface live product availability cards. Interacting with these features utilizes standard affiliate tracking identifiers to manage campaign routing, strictly isolated from your personal estate data.',
+                    ),
                     SizedBox(height: 20),
 
                     _SectionHeader(title: '5. Data Security'),
@@ -143,7 +148,7 @@ class PrivacyScreen extends StatelessWidget {
 
                     _SectionHeader(title: '6. Your Choices & Data Deletion'),
                     Text(
-                      'You can edit or delete coin records and estate planning profiles in the app at any time. Accounts can be permanently deleted by contacting support, which wipes all collection history, estate reports, and images from Firebase. Local Desktop Agent settings can be deleted by removing the AppData configuration directory.',
+                      'You can edit or delete coin records and estate planning profiles in the app at any time. Accounts can be permanently deleted by contacting support, which wipes all collection history, estate profiles, anonymous generation metadata, and images from Firebase. Local Desktop Agent settings can be deleted by removing the AppData configuration directory.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
                     SizedBox(height: 20),
