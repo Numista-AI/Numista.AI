@@ -7,15 +7,15 @@
  * 2. Process an Invoice PDF using Document AI.
  */
 
-const { VertexAI } = require('@google-cloud/vertexai');
+const genaiPackage = require('@google/genai');
+const GoogleGenAI = genaiPackage.GoogleGenAI;
 const admin = require('firebase-admin');
 const { processInvoice } = require('./invoiceService');
 const fs = require('fs');
 
 // Initialize Configuration
 const PROJECT_ID = 'studio-9101802118-8c9a8';
-const LOCATION = 'us-central1';
-const MODEL_NAME = 'gemini-1.5-flash-001';
+const MODEL_NAME = 'gemini-2.5-flash';
 
 // Initialize Firebase
 try {
@@ -25,12 +25,11 @@ try {
 } catch (e) { }
 const db = admin.firestore();
 
-// Initialize Vertex AI
-const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
-const model = vertexAI.getGenerativeModel({ model: MODEL_NAME });
+// Initialize Google GenAI
+const genai = new GoogleGenAI();
 
 /**
- * Verifies coin authenticity using Vertex AI (Gemini).
+ * Verifies coin authenticity using Gemini.
  * @param {string} coinDescription - Text description of the coin.
  * @param {string} [imageBase64] - Optional base64 image of the coin.
  */
@@ -49,13 +48,14 @@ async function verifyCoinAuthenticity(coinDescription, imageBase64) {
     }
 
     try {
-        const result = await model.generateContent({
+        const result = await genai.models.generateContent({
+            model: MODEL_NAME,
             contents: [{ role: 'user', parts }]
         });
-        const response = result.response;
-        const text = response.candidates[0].content.parts[0].text;
+        
+        const text = result.text;
 
-        console.log("--- Vertex AI Analysis ---");
+        console.log("--- Gemini AI Analysis ---");
         console.log(text);
 
         return text;

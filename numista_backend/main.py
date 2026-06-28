@@ -74,6 +74,13 @@ db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 # Initialize GCS client (shares same SA credentials)
 gcs_client = gcs.Client(credentials=credentials, project=PROJECT_ID)
 
+# In-memory micro-cache for Grade Review Stats to bypass eventual consistency replication latency
+# Structure: {user_email: {"stats": dict, "timestamp": float}}
+GRADE_STATS_CACHE = {}
+# Track last submit write timestamps to check for rapid page transitions
+# Structure: {user_email: float}
+GRADE_WRITE_TIMESTAMPS = {}
+
 # ─── GEMINI MODEL CONFIGURATION ──────────────────────────────────────────────
 # Per official deprecation schedule as of Jun 11, 2026
 # (see: Gemini Models as of 11 JUN 2026.png)
@@ -1000,6 +1007,7 @@ async def import_spreadsheet(
     file:              UploadFile = File(...),
     import_name:       str = Form(''),   # optional label e.g. "Aunt's Access DB - Jan 2026"
     import_session_id: str = Form(''),   # set by Bulk Import flow; links coins to a session
+    item_type:         str = Form(None), # optional explicit item type
 ):
     """
     Ingests an Excel/CSV file into the user's review_queue.
@@ -1019,6 +1027,12 @@ async def import_spreadsheet(
              else pd.read_excel(io.BytesIO(contents))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+
+    # Sniff if the file is currency / banknote
+    fname = str(file.filename).lower()
+    is_currency = False
+    if item_type == "paper_currency" or "currency" in fname or "banknote" in fname or "bill" in fname:
+        is_currency = True
 
     # ── 1. AI column-name mapping ────────────────────────────────────────────
     headers = list(df.columns)
@@ -1068,21 +1082,21 @@ Omit any user headers with no reasonable match."""
         "grading cert no":      "Certification Number",
         "cert #":               "Certification Number",
         "certification #":      "Certification Number",
-        # Cost variants → canonical "Cost"
-        "cost":                 "Cost",
-        "price":                "Cost",
-        "purchase price":       "Cost",
-        "price paid":           "Cost",
-        "amount paid":          "Cost",
-        "purchased for":        "Cost",
-        "purchase cost":        "Cost",
-        # Notes variants → canonical "Personal Notes"
-        "personal notes":       "Personal Notes",
-        "personal note":        "Personal Notes",
-        "my notes":             "Personal Notes",
-        "notes":                "Personal Notes",
-        "personal notes i":     "Personal Notes",
-        # Reference number variants
+        # Cost variants → canonical "Purchase Cost"
+        "cost":                 "Purchase Cost",
+        "price":                "Purchase Cost",
+        "purchase price":       "Purchase Cost",
+        "price paid":           "Purchase Cost",
+        "amount paid":          "Purchase Cost",
+        "purchased for":        "Purchase Cost",
+        "purchase cost":        "Purchase Cost",
+        # Notes variants → canonical "Personal Notes I"
+        "personal notes":       "Personal Notes I",
+        "personal note":        "Personal Notes I",
+        "my notes":             "Personal Notes I",
+        "notes":                "Personal Notes I",
+        "personal notes i":     "Personal Notes I",
+        # Reference number variants → canonical "Personal Reference #"
         "personal ref #":       "Personal Reference #",
         "personal ref no":      "Personal Reference #",
         "personal reference #": "Personal Reference #",
@@ -1094,6 +1108,15 @@ Omit any user headers with no reasonable match."""
         "class":                "item_type",
         "format":               "item_type",
     }
+    if is_currency:
+        mapping_override.update({
+            "denomination_parsed":  "Denomination",
+            "series_year_parsed":   "Year",
+            "type_parsed":          "Program/Series",
+            "description":          "Original Description from source",
+            "issuer_parsed":        "Country",
+        })
+
     for h in headers:
         normalized_h = h.strip().lower()
         if normalized_h in mapping_override:
@@ -1131,42 +1154,67 @@ Omit any user headers with no reasonable match."""
         # Apply column mapping (raw values).
         # Use .get() on the row so optional/missing columns default to None gracefully.
         for user_col, schema_col in mapping.items():
-            raw_val = row.get(user_col) if hasattr(row, 'get') else (
-                row[user_col] if user_col in row.index else None
-            )
+            try:
+                if hasattr(row, 'get'):
+                    raw_val = row.get(user_col)
+                elif hasattr(row, 'index') and user_col in row.index:
+                    raw_val = row[user_col]
+                elif user_col in row:
+                    raw_val = row[user_col]
+                else:
+                    raw_val = None
+            except Exception:
+                raw_val = None
+
             if raw_val is not None and pd.notna(raw_val):
                 val = str(raw_val).strip()
                 if val:  # only write non-empty strings
                     new_doc[schema_col] = val
 
         # ── Rule-based normalizations ──────────────────────────────────────
+        if is_currency:
+            # Relaxed validation pipeline for banknotes/paper currency
+            new_doc['item_type'] = 'paper_currency'
+            new_doc['Mint Mark'] = ''
+            
+            raw_year = new_doc.get('Year') or ''
+            new_doc['Year'] = str(raw_year).strip()
+            
+            if not (new_doc.get('Denomination') or '').strip():
+                new_doc['Denomination'] = 'One Dollar'
+                
+            raw_cond = new_doc.get('Condition') or ''
+            new_doc['Condition'] = str(raw_cond).strip() or 'Ungraded'
+            
+            cond_resolved = True
+            series_resolved = True
+        else:
+            # Year + Mint Mark: if Year field looks like "2007W", split it
+            raw_year = new_doc.get('Year') or ''
+            yr, mm = _parse_year_mint(raw_year)
+            new_doc['Year'] = yr
+            # Only overwrite Mint Mark if it's empty (don't clobber explicit column)
+            if mm and not (new_doc.get('Mint Mark') or '').strip():
+                new_doc['Mint Mark'] = mm
 
-        # Year + Mint Mark: if Year field looks like "2007W", split it
-        raw_year = new_doc.get('Year') or ''
-        yr, mm = _parse_year_mint(raw_year)
-        new_doc['Year'] = yr
-        # Only overwrite Mint Mark if it's empty (don't clobber explicit column)
-        if mm and not (new_doc.get('Mint Mark') or '').strip():
-            new_doc['Mint Mark'] = mm
+            # Condition normalization
+            raw_cond = new_doc.get('Condition') or ''
+            norm_cond = _norm_condition(raw_cond)
+            new_doc['Condition'] = norm_cond
+            cond_resolved = norm_cond != raw_cond or raw_cond.lower() in CONDITION_MAP
 
-        # Condition normalization
-        raw_cond = new_doc.get('Condition') or ''
-        norm_cond = _norm_condition(raw_cond)
-        new_doc['Condition'] = norm_cond
-        cond_resolved = norm_cond != raw_cond or raw_cond.lower() in CONDITION_MAP
+            # Program/Series nickname expansion
+            raw_series = new_doc.get('Program/Series') or ''
+            expanded = _expand_series(raw_series)
+            new_doc['Program/Series'] = expanded
+            series_resolved = expanded != raw_series
 
-        # Program/Series nickname expansion
-        raw_series = new_doc.get('Program/Series') or ''
-        expanded = _expand_series(raw_series)
-        new_doc['Program/Series'] = expanded
-        series_resolved = expanded != raw_series
-
-        # Theme/Subject nickname expansion (handles "Ike" in the wrong column)
-        raw_theme = new_doc.get('Theme/Subject') or ''
-        expanded_theme = _expand_series(raw_theme)
-        if "presidential" in str(new_doc.get('Program/Series', '')).lower():
-            expanded_theme = _normalize_presidential_theme(expanded_theme, new_doc.get('Year'))
-        new_doc['Theme/Subject'] = expanded_theme
+            # Theme/Subject nickname expansion (handles "Ike" in the wrong column)
+            raw_theme = new_doc.get('Theme/Subject') or ''
+            expanded_theme = _expand_series(raw_theme)
+            if "presidential" in str(new_doc.get('Program/Series', '')).lower():
+                expanded_theme = _normalize_presidential_theme(expanded_theme, new_doc.get('Year'))
+            new_doc['Theme/Subject'] = expanded_theme
 
         # Strip leading $ from Cost / Denomination
         for fld in ('Cost', 'Denomination'):
@@ -1179,9 +1227,18 @@ Omit any user headers with no reasonable match."""
         for col in headers:
             # If the column was NOT mapped to any Golden Schema key
             if col not in mapping:
-                val = row.get(col) if hasattr(row, 'get') else (
-                    row[col] if col in row.index else None
-                )
+                try:
+                    if hasattr(row, 'get'):
+                        val = row.get(col)
+                    elif hasattr(row, 'index') and col in row.index:
+                        val = row[col]
+                    elif col in row:
+                        val = row[col]
+                    else:
+                        val = None
+                except Exception:
+                    val = None
+
                 if val is not None and pd.notna(val):
                     val_str = str(val).strip()
                     if val_str:
@@ -1208,8 +1265,9 @@ Omit any user headers with no reasonable match."""
             new_doc['Personal Notes'] = notes_val
             new_doc['Personal Notes I'] = notes_val
 
-        # Classify the item type based on row contents
-        new_doc['item_type'] = _classify_item_type(new_doc)
+        # Classify the item type based on row contents (only if not already paper_currency)
+        if not is_currency:
+            new_doc['item_type'] = _classify_item_type(new_doc)
 
         # ── Source provenance ──────────────────────────────────────────────
         new_doc['upload_method']       = 'spreadsheet_import'
@@ -1220,8 +1278,10 @@ Omit any user headers with no reasonable match."""
             new_doc['import_session_id'] = import_session_id
 
         # Confidence: lower when AI fallback will be needed
-        needs_ai = (not cond_resolved and raw_cond) or \
-                   (not series_resolved and raw_series and not raw_series.strip().isdigit())
+        needs_ai = not is_currency and (
+            (not cond_resolved and raw_cond) or \
+            (not series_resolved and raw_series and not raw_series.strip().isdigit())
+        )
         new_doc['confidence_score'] = 0.75 if needs_ai else 0.95
 
         doc_ref = col_ref.document(str(uuid.uuid4()))
@@ -1816,6 +1876,23 @@ async def submit_grade_review(
             msg += (' 🚩 Community consensus differs from the AI grade — '
                     'this coin has been flagged for admin review.')
 
+    # Eventual consistency fix: record write timestamp and optimistically update cache
+    GRADE_WRITE_TIMESTAMPS[user_email] = _time.time()
+    cache_entry = GRADE_STATS_CACHE.get(user_email)
+    if cache_entry:
+        stats = cache_entry.get("stats", {})
+        stats["reviewed_by_me"] = stats.get("reviewed_by_me", 0) + 1
+        stats["pending_review"] = max(0, stats.get("pending_review", 0) - 1)
+        stats["total_ai_graded"] = stats["pending_review"] + stats["reviewed_by_me"]
+        if action == 'confirmed':
+            stats["confirmed"] = stats.get("confirmed", 0) + 1
+        elif flagged:
+            stats["flagged"] = stats.get("flagged", 0) + 1
+        GRADE_STATS_CACHE[user_email] = {
+            "stats": stats,
+            "timestamp": _time.time()
+        }
+
     return {
         'status':       'ok',
         'message':      msg,
@@ -1972,6 +2049,14 @@ async def resolve_grade_flag(
 @app.get("/api/grade_review/stats")
 def grade_review_stats(user_email: str):
     """Per-user grade review statistics for the Human AI Trainer dashboard."""
+    # Eventual consistency fix: check memory cache & recent writes
+    now = _time.time()
+    last_write = GRADE_WRITE_TIMESTAMPS.get(user_email, 0)
+    cache_entry = GRADE_STATS_CACHE.get(user_email)
+
+    if (now - last_write < 2.0 or (cache_entry and now - cache_entry["timestamp"] < 5.0)) and cache_entry:
+        return cache_entry["stats"]
+
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
     # Use Count aggregations to prevent pulling thousands of documents into memory
@@ -2011,13 +2096,18 @@ def grade_review_stats(user_email: str):
     except Exception as e:
         print(f"[grade_review_stats] count failed: {e}")
 
-    return {
+    stats = {
         'total_ai_graded':  total_ai,
         'pending_review':   pending,
         'confirmed':        confirmed_ct,
         'flagged':          flagged_ct,
         'reviewed_by_me':   reviewed_by_me,
     }
+    GRADE_STATS_CACHE[user_email] = {
+        "stats": stats,
+        "timestamp": _time.time()
+    }
+    return stats
 
 
 @app.post("/api/process_invoice")
@@ -5521,6 +5611,11 @@ async def import_process(req: ImportProcessRequest):
                 df  = pd.read_csv(io.BytesIO(file_bytes)) if ext == "csv" \
                       else pd.read_excel(io.BytesIO(file_bytes))
 
+                # Sniff if the file is currency / banknote
+                is_currency = False
+                if "currency" in fname.lower() or "banknote" in fname.lower() or "bill" in fname.lower():
+                    is_currency = True
+
                 # Reuse existing column-mapping logic
                 headers = list(df.columns)
                 mapping_prompt = f"""You are an expert data migration agent for a numismatic app.
@@ -5550,21 +5645,21 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     "grading cert no":      "Certification Number",
                     "cert #":               "Certification Number",
                     "certification #":      "Certification Number",
-                    # Cost variants → canonical "Cost"
-                    "cost":                 "Cost",
-                    "price":                "Cost",
-                    "purchase price":       "Cost",
-                    "price paid":           "Cost",
-                    "amount paid":          "Cost",
-                    "purchased for":        "Cost",
-                    "purchase cost":        "Cost",
-                    # Notes variants → canonical "Personal Notes"
-                    "personal notes":       "Personal Notes",
-                    "personal note":        "Personal Notes",
-                    "my notes":             "Personal Notes",
-                    "notes":                "Personal Notes",
-                    "personal notes i":     "Personal Notes",
-                    # Reference number variants
+                    # Cost variants → canonical "Purchase Cost"
+                    "cost":                 "Purchase Cost",
+                    "price":                "Purchase Cost",
+                    "purchase price":       "Purchase Cost",
+                    "price paid":           "Purchase Cost",
+                    "amount paid":          "Purchase Cost",
+                    "purchased for":        "Purchase Cost",
+                    "purchase cost":        "Purchase Cost",
+                    # Notes variants → canonical "Personal Notes I"
+                    "personal notes":       "Personal Notes I",
+                    "personal note":        "Personal Notes I",
+                    "my notes":             "Personal Notes I",
+                    "notes":                "Personal Notes I",
+                    "personal notes i":     "Personal Notes I",
+                    # Reference number variants → canonical "Personal Reference #"
                     "personal ref #":       "Personal Reference #",
                     "personal ref no":      "Personal Reference #",
                     "personal reference #": "Personal Reference #",
@@ -5576,6 +5671,15 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     "class":                "item_type",
                     "format":               "item_type",
                 }
+                if is_currency:
+                    mapping_override.update({
+                        "denomination_parsed":  "Denomination",
+                        "series_year_parsed":   "Year",
+                        "type_parsed":          "Program/Series",
+                        "description":          "Original Description from source",
+                        "issuer_parsed":        "Country",
+                    })
+
                 for h in headers:
                     normalized_h = h.strip().lower()
                     if normalized_h in mapping_override:
@@ -5610,13 +5714,36 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     }
                     # Apply column mapping — safe .get() so missing columns default cleanly.
                     for uc, sc in mapping.items():
-                        raw_val = row.get(uc) if hasattr(row, 'get') else (
-                            row[uc] if uc in row.index else None
-                        )
+                        try:
+                            if hasattr(row, 'get'):
+                                raw_val = row.get(uc)
+                            elif hasattr(row, 'index') and uc in row.index:
+                                raw_val = row[uc]
+                            elif uc in row:
+                                raw_val = row[uc]
+                            else:
+                                raw_val = None
+                        except Exception:
+                            raw_val = None
+
                         if raw_val is not None and pd.notna(raw_val):
                             val = str(raw_val).strip()
                             if val:  # only write non-empty strings
                                 doc[sc] = val
+
+                    # ── Rule-based normalizations for currency/banknotes ──
+                    if is_currency:
+                        doc['item_type'] = 'paper_currency'
+                        doc['Mint Mark'] = ''
+                        
+                        raw_year = doc.get('Year') or ''
+                        doc['Year'] = str(raw_year).strip()
+                        
+                        if not (doc.get('Denomination') or '').strip():
+                            doc['Denomination'] = 'One Dollar'
+                            
+                        raw_cond = doc.get('Condition') or ''
+                        doc['Condition'] = str(raw_cond).strip() or 'Ungraded'
 
                     # Strip leading $ from Cost / Denomination
                     for fld in ('Cost', 'Denomination'):
@@ -5629,9 +5756,18 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                     for col in headers:
                         # If the column was NOT mapped to any Golden Schema key
                         if col not in mapping:
-                            val = row.get(col) if hasattr(row, 'get') else (
-                                row[col] if col in row.index else None
-                            )
+                            try:
+                                if hasattr(row, 'get'):
+                                    val = row.get(col)
+                                elif hasattr(row, 'index') and col in row.index:
+                                    val = row[col]
+                                elif col in row:
+                                    val = row[col]
+                                else:
+                                    val = None
+                            except Exception:
+                                val = None
+
                             if val is not None and pd.notna(val):
                                 val_str = str(val).strip()
                                 if val_str:
@@ -5658,8 +5794,9 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
                         doc['Personal Notes'] = notes_val
                         doc['Personal Notes I'] = notes_val
 
-                    # Classify the item type based on row contents
-                    doc['item_type'] = _classify_item_type(doc)
+                    # Classify the item type based on row contents (only if not already paper_currency)
+                    if not is_currency:
+                        doc['item_type'] = _classify_item_type(doc)
 
                     doc_ref = col_ref.document(str(uuid.uuid4()))
                     batch.set(doc_ref, doc)

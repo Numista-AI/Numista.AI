@@ -115,6 +115,7 @@ jobs:
             --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest \
             --region us-central1 \
             --project studio-9101802118-8c9a8 \
+            --min-instances 1 \
             --quiet
 
       - name: Verify backend health
@@ -178,6 +179,7 @@ jobs:
             --allow-unauthenticated \
             --memory 2Gi \
             --timeout 320 \
+            --min-instances 1 \
             --quiet
 
       - name: Verify scan service health

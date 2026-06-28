@@ -169,10 +169,10 @@ Write-Host "  # cd numista_backend
   # gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
   # docker build -t us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest .
   # docker push us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest
-  # gcloud run deploy numista-backend --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest --region us-central1 --project studio-9101802118-8c9a8 --quiet
+  # gcloud run deploy numista-backend --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest --region us-central1 --project studio-9101802118-8c9a8 --min-instances 1 --quiet
   #
   # ---- Emergency scan service commands (run manually if needed) ----
-  # gcloud run deploy numista-scan-service --source ./numista_backend/scan_service --project studio-9101802118-8c9a8 --region us-central1
+  # gcloud run deploy numista-scan-service --source ./numista_backend/scan_service --project studio-9101802118-8c9a8 --region us-central1 --min-instances 1
   # ---------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 Read-Host "  Press Enter to close"
