@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -42,6 +43,7 @@ class BaseLayout extends StatefulWidget {
 
 class _BaseLayoutState extends State<BaseLayout> {
   String _activeRoute = 'Home Dashboard';
+  String _myCollectionTab = 'All';
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
@@ -55,7 +57,8 @@ class _BaseLayoutState extends State<BaseLayout> {
   @override
   void initState() {
     super.initState();
-
+    _loadDefaultTab();
+ 
     // ── Morgan deep-link: if the user tapped a tile in the greeter,
     // navigate directly to that screen instead of Home Dashboard.
     final morganRoute = WelcomeScreen.pendingRoute;
@@ -87,6 +90,16 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
   }
 
+  void _loadDefaultTab() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tab = prefs.getString('my_collection_default_tab');
+    if (tab != null && mounted) {
+      setState(() {
+        _myCollectionTab = tab;
+      });
+    }
+  }
+
   Widget _buildBody() {
     switch (_activeRoute) {
       case 'Home Dashboard':
@@ -100,11 +113,13 @@ class _BaseLayoutState extends State<BaseLayout> {
         );
       case 'My Collection':
         return MyCollectionScreen(
+          initialTab: _myCollectionTab,
           onNavigate: (route) => setState(() => _activeRoute = route),
           onNavigateWithQuery: (route, query) => setState(() {
             _activeRoute = route;
             _aiInitialQuery = query;
           }),
+          onTabChanged: (tab) => setState(() => _myCollectionTab = tab),
         );
       case 'Microscope Scanner':
         return const MicroscopeScanScreen();
@@ -343,13 +358,34 @@ class _BaseLayoutState extends State<BaseLayout> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       children: [
                         _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
-                        _buildNavItem('Currency Collection', icon: Icons.account_balance_wallet_outlined),
-                        _buildNavItem('Error Library', icon: Icons.manage_search_outlined),
-                        _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
                         WizardNavPulse(
-                          active: ws?.step.targetRoute == 'My Collection',
-                          child: _buildNavItem('My Collection', icon: Icons.collections_bookmark_outlined),
+                          active: ws?.step.targetRoute == 'Coin Programs',
+                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
                         ),
+
+                        const _SidebarSectionHeader(title: 'MY COLLECTION'),
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
+                          child: _buildNavItem('All', isSubItem: true, subItemKey: 'All'),
+                        ),
+                        _buildNavItem('Coins', isSubItem: true, subItemKey: 'Coins'),
+                        _buildNavItem('Currency Collection', isSubItem: true, subItemKey: 'Currency'),
+                        _buildNavItem('World and Specialty', isSubItem: true, subItemKey: 'World & Specialty'),
+                        _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
+
+                        const SizedBox(height: 8),
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'My Wishlist',
+                          child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
+                        ),
+                        _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
+
+                        const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'Add New Coins',
+                          child: _buildNavItem('Add new coins/notes/etc.', icon: Icons.add_circle_outline),
+                        ),
+                        _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
                         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                           stream: email.isNotEmpty
                               ? FirebaseFirestore.instance
@@ -365,30 +401,22 @@ class _BaseLayoutState extends State<BaseLayout> {
                                 badgeCount: count);
                           },
                         ),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Coin Programs',
-                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
-                        ),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Add New Coins',
-                          child: _buildNavItem('Add New Coins', icon: Icons.add_circle_outline),
-                        ),
-                        _buildNavItem('World & Specialty', icon: Icons.language_rounded),
-                        _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
-                        _buildNavItem('Inventory', icon: Icons.inventory_2_outlined),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'My Wishlist',
-                          child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
-                        ),
-                        _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
-                        _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
-                        _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
+
+                        const _SidebarSectionHeader(title: 'AI TRAINING'),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                         // Admin-only: Grade Flag Dashboard
                         if (email == 'jseaman1204@gmail.com' ||
                             email.endsWith('@numista.ai'))
-                          _buildNavItem('Admin: Grade Flags',
+                          _buildNavItem('Admin Grade Flags',
                               icon: Icons.admin_panel_settings_outlined),
+
+                        const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
+                        _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
+                        _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
+                        _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
+                        _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
+
+                        const SizedBox(height: 8),
                         _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
                         const _SidebarDivider(),
                         _buildNavItem('Our Team', icon: Icons.people_outline),
@@ -498,40 +526,65 @@ class _BaseLayoutState extends State<BaseLayout> {
 
 
   // ─── Nav item builder ────────────────────────────────────────────────────
-  Widget _buildNavItem(String title, {IconData? icon, int badgeCount = 0}) {
-    final bool isActive = _activeRoute == title;
+  Widget _buildNavItem(String title, {
+    IconData? icon,
+    int badgeCount = 0,
+    bool isSubItem = false,
+    String? subItemKey,
+  }) {
+    final bool isActive = subItemKey != null
+        ? (_activeRoute == 'My Collection' && _myCollectionTab == subItemKey)
+        : (_activeRoute == title);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     // Items without a backing screen are disabled
-    final bool isEnabled = const {
-      'Home Dashboard',
-      'My Collection',
-      'Currency Collection',
-      'Review Hub',
-      'Microscope Scanner',
-      'Coin Programs',
-      'Coin Search',
-      'Add New Coins',
-      'My Wishlist',
-      'Estate Planning',
-      'AI Deepdive',
-      'Human AI Trainer Review Board',
-      'AI Trainer Board',
-      'Admin: Grade Flags',
-      'Settings & Backup',
-      'Our Team',
-      'Customer Service',
-      'Inventory',
-      'Error Library',
-      'Glossary Academy',
-    }.contains(title);
+    final bool isEnabled = subItemKey != null
+        ? true
+        : const {
+            'Home Dashboard',
+            'My Collection',
+            'Currency Collection',
+            'Review Hub',
+            'Microscope Scanner',
+            'Coin Programs',
+            'Coin Search',
+            'Add New Coins',
+            'My Wishlist',
+            'Estate Planning',
+            'AI Deepdive',
+            'Human AI Trainer Review Board',
+            'AI Trainer Board',
+            'Admin: Grade Flags',
+            'Settings & Backup',
+            'Our Team',
+            'Customer Service',
+            'Inventory',
+            'Error Library',
+            'Glossary Academy',
+          }.contains(title == 'Add new coins/notes/etc.' ? 'Add New Coins' : (title == 'Admin Grade Flags' ? 'Admin: Grade Flags' : title));
 
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.45,
       child: InkWell(
-        onTap: isEnabled ? () => setState(() => _activeRoute = title) : null,
+        onTap: isEnabled
+            ? () {
+                if (subItemKey != null) {
+                  setState(() {
+                    _activeRoute = 'My Collection';
+                    _myCollectionTab = subItemKey;
+                  });
+                } else if (title == 'Add new coins/notes/etc.') {
+                  setState(() => _activeRoute = 'Add New Coins');
+                } else if (title == 'Admin Grade Flags') {
+                  setState(() => _activeRoute = 'Admin: Grade Flags');
+                } else {
+                  setState(() => _activeRoute = title);
+                }
+              }
+            : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+          padding: EdgeInsets.symmetric(vertical: 5, horizontal: isSubItem ? 14 : 6),
           decoration: BoxDecoration(
             color: isActive
                 ? (isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(12))
@@ -668,6 +721,29 @@ class _SidebarDivider extends StatelessWidget {
           thickness: 1,
         ),
       );
+}
+
+// ─── Sidebar section header ──────────────────────────────────────────────────
+class _SidebarSectionHeader extends StatelessWidget {
+  final String title;
+  const _SidebarSectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 16, bottom: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white38 : Colors.black45,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Browse Demo top banner ───────────────────────────────────────────────────

@@ -44,15 +44,10 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
       // Fetch Glossary
       final glossaryRes = await http.get(Uri.parse('$kApiBaseUrl/api/reference/glossary'));
       
-      // Fetch Sheldon Grades (We query local/static list or make a general endpoint. 
-      // Since Sheldon Scale has fixed codes, we can load them or fetch details for key ones.
-      // Let's populate the UI with a beautiful, comprehensive pre-seeded list,
-      // and when clicked, it pulls detail or we show the list directly).
-      // Wait, let's pull the full glossary first.
       if (glossaryRes.statusCode == 200) {
         final glossaryData = List<Map<String, dynamic>>.from(json.decode(glossaryRes.body));
         
-        // Let's pre-load some sheldon scale codes to populate the sheldon tab
+        // Pre-load Sheldon Scale grades to populate the sheldon tab
         final sheldonCodes = [
           'P-1', 'FR-2', 'AG-3', 'G-4', 'VG-8', 'F-12', 'VF-20', 
           'XF-40', 'AU-50', 'AU-58', 'MS-60', 'MS-63', 'MS-65', 'MS-70'
@@ -144,10 +139,94 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
     }
   }
 
+  // Helper to render responsive illustration boxes with fallback placeholders and loading shimmers
+  Widget _buildAcademyImage(String? url, {BoxFit fit = BoxFit.contain, double height = 140}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    Widget buildPendingPlaceholder() {
+      return Container(
+        height: height,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(12),
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.image_not_supported_outlined,
+                color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                size: 28,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Visual Reference Pending',
+                style: TextStyle(
+                  color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (url == null || url.trim().isEmpty) {
+      return buildPendingPlaceholder();
+    }
+
+    final resolvedUrl = _gcsToHttpUrl(url);
+
+    return Container(
+      height: height,
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(12),
+        ),
+      ),
+      child: CachedNetworkImage(
+        imageUrl: resolvedUrl,
+        fit: fit,
+        placeholder: (context, _) {
+          // Shimmer loading animation fallback
+          return Container(
+            color: isDark ? const Color(0xFF161B22) : const Color(0xFFE2E8F0),
+            child: const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFF63366),
+                ),
+              ),
+            ),
+          );
+        },
+        errorWidget: (context, url, error) => buildPendingPlaceholder(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1117), // Sleeek Dark Mode
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -182,8 +261,8 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                     TabBar(
                       controller: _tabController,
                       indicatorColor: const Color(0xFFF63366),
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white38,
+                      labelColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                      unselectedLabelColor: isDark ? Colors.white38 : const Color(0xFF64748B),
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       tabs: const [
                         Tab(text: 'Sheldon Scale', icon: Icon(Icons.line_weight_rounded, size: 20)),
@@ -211,27 +290,32 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   }
 
   Widget _buildSearchHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF161B22),
-        border: Border(bottom: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
+        border: Border(bottom: BorderSide(color: isDark ? Colors.white10 : Colors.black12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Numista Academy',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Learn grading scale, terminology, and errors',
-            style: TextStyle(color: Colors.white38, fontSize: 13),
+            style: TextStyle(
+              color: isDark ? Colors.white38 : const Color(0xFF475569), 
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 16),
           // Search input field
@@ -241,16 +325,27 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                 child: TextField(
                   controller: _searchController,
                   onSubmitted: (_) => _performSearch(),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A), 
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Ask anything... (e.g. "what is heads called?")',
-                    hintStyle: const TextStyle(color: Colors.white24),
-                    fillColor: const Color(0xFF0D1117),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                    ),
+                    fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF1F5F9),
                     filled: true,
-                    prefixIcon: const Icon(Icons.search, color: Colors.white38),
+                    prefixIcon: Icon(
+                      Icons.search, 
+                      color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white38),
+                            icon: Icon(
+                              Icons.clear, 
+                              color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -263,7 +358,9 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.white10),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white10 : Colors.black12,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -290,14 +387,21 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   }
 
   Widget _buildSearchResultsView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_searching) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Color(0xFFF63366)),
-            SizedBox(height: 16),
-            Text('AI Quest mapping query...', style: TextStyle(color: Colors.white38)),
+            const CircularProgressIndicator(color: Color(0xFFF63366)),
+            const SizedBox(height: 16),
+            Text(
+              'AI Quest mapping query...', 
+              style: TextStyle(
+                color: isDark ? Colors.white38 : const Color(0xFF64748B),
+              ),
+            ),
           ],
         ),
       );
@@ -322,12 +426,19 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'AI Quest Search Result',
-                style: TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                  fontSize: 13, 
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.white54),
+                icon: Icon(
+                  Icons.close, 
+                  color: isDark ? Colors.white54 : const Color(0xFF475569),
+                ),
                 onPressed: () {
                   _searchController.clear();
                   setState(() {
@@ -378,55 +489,59 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
             const SizedBox(height: 12),
             Text(
               term['term'] ?? '',
-              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A), 
+                fontSize: 24, 
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Category: ${term['category'] ?? 'General'}',
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: TextStyle(
+                color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               term['definition'] ?? '',
-              style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF334155), 
+                fontSize: 15, 
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 12),
             if (term['colloquial_mappings'] != null && (term['colloquial_mappings'] as List).isNotEmpty) ...[
-              const Text('Colloquial mappings:', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              Text(
+                'Colloquial mappings:', 
+                style: TextStyle(
+                  color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                  fontSize: 12,
+                ),
+              ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
                 children: (term['colloquial_mappings'] as List).map<Widget>((m) {
                   return Chip(
-                    label: Text(m.toString(), style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    backgroundColor: Colors.white10,
+                    label: Text(m.toString(), style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF334155), fontSize: 11)),
+                    backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                   );
                 }).toList(),
               ),
             ],
             const SizedBox(height: 24),
             // Illustration
-            if (term['illustration_url'] != null && (term['illustration_url'] as String).isNotEmpty)
-              Expanded(
-                child: Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white12),
-                      color: Colors.white.withAlpha(5),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: CachedNetworkImage(
-                      imageUrl: term['illustration_url'],
-                      fit: BoxFit.contain,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(color: Color(0xFFF63366)),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white24),
-                    ),
-                  ),
+            Expanded(
+              child: Center(
+                child: _buildAcademyImage(
+                  term['illustration_url'] as String?,
+                  height: double.infinity,
                 ),
               ),
+            ),
           ]
         ],
       ),
@@ -434,6 +549,8 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   }
 
   Widget _buildSheldonTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _grades.length,
@@ -444,11 +561,15 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
         final wear = grade['wear_description'] ?? '';
 
         return Card(
-          color: const Color(0xFF161B22),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+          ),
           margin: const EdgeInsets.only(bottom: 12),
+          elevation: isDark ? 0 : 2,
           child: ExpansionTile(
-            collapsedIconColor: Colors.white38,
+            collapsedIconColor: isDark ? Colors.white38 : const Color(0xFF64748B),
             iconColor: const Color(0xFFF63366),
             title: Row(
               children: [
@@ -460,7 +581,11 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                 Expanded(
                   child: Text(
                     name,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A), 
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ],
@@ -471,41 +596,67 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Divider(color: Colors.white12),
+                    Divider(color: isDark ? Colors.white12 : Colors.black12),
                     const SizedBox(height: 8),
-                    const Text('PRESERVATION & WEAR', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text(
+                      'PRESERVATION & WEAR', 
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(wear, style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    Text(
+                      wear, 
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF334155), 
+                        fontSize: 13, 
+                        height: 1.4,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    const Text('LUSTER STATUS', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text(
+                      'LUSTER STATUS', 
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(grade['luster_description'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                    Text(
+                      grade['luster_description'] ?? '', 
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF334155), 
+                        fontSize: 13, 
+                        height: 1.4,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    const Text('INSPECTION TIP', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text(
+                      'INSPECTION TIP', 
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       grade['inspection_tips'] ?? '',
-                      style: const TextStyle(color: Color(0xFFFCD34D), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309), 
+                        fontSize: 13, 
+                        height: 1.4, 
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    if (grade['illustration_url'] != null)
-                      Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: CachedNetworkImage(
-                          imageUrl: grade['illustration_url'],
-                          fit: BoxFit.contain,
-                          placeholder: (context, url) => const Center(
-                            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ),
-                          errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white24),
-                        ),
-                      ),
+                    _buildAcademyImage(
+                      grade['illustration_url'] as String?,
+                      height: 140,
+                    ),
                   ],
                 ),
               )
@@ -517,6 +668,8 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   }
 
   Widget _buildGlossaryTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _glossary.length,
@@ -528,9 +681,13 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
         final imgUrl = item['illustration_url'] as String?;
 
         return Card(
-          color: const Color(0xFF161B22),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+          ),
           margin: const EdgeInsets.only(bottom: 12),
+          elevation: isDark ? 0 : 2,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -545,18 +702,32 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                     ),
                     Text(
                       item['category'] ?? 'General',
-                      style: const TextStyle(color: Colors.white24, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: isDark ? Colors.white24 : Colors.black38, 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   definition,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF334155), 
+                    fontSize: 13, 
+                    height: 1.4,
+                  ),
                 ),
                 if (colloquial.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Text('Colloquial mappings:', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  Text(
+                    'Colloquial mappings:', 
+                    style: TextStyle(
+                      color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                      fontSize: 11,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
@@ -564,34 +735,22 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(8),
+                          color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(c, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                        child: Text(
+                          c, 
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : const Color(0xFF475569), 
+                            fontSize: 10,
+                          ),
+                        ),
                       );
                     }).toList(),
                   ),
                 ],
-                if (imgUrl != null && imgUrl.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    height: 140,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: CachedNetworkImage(
-                      imageUrl: imgUrl,
-                      fit: BoxFit.contain,
-                      placeholder: (context, url) => const Center(
-                        child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white24),
-                    ),
-                  ),
-                ],
+                const SizedBox(height: 16),
+                _buildAcademyImage(imgUrl, height: 140),
               ],
             ),
           ),
@@ -601,35 +760,36 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   }
 
   Widget _buildErrorsTab() {
-    // Placeholder grid pre-wired for error taxonomy maps
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final mockErrors = [
       {
         "name": "Doubled Die Obverse",
         "slug": "doubled-die",
         "side": "obverse",
         "example": "1955 Lincoln Cent DDO",
-        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/assets/reference/error_doubled-die_obverse.jpg",
+        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/error_doubled-die_obverse.jpg",
       },
       {
         "name": "Clipped Planchet",
         "slug": "clipped-planchet",
         "side": "obverse",
         "example": "Curved Clipped Nickel blank",
-        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/assets/reference/error_clipped-planchet_obverse.jpg",
+        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/error_clipped-planchet_obverse.jpg",
       },
       {
         "name": "Die Crack / Cud",
         "slug": "die-crack",
         "side": "reverse",
         "example": "Morgan Dollar reverse die break",
-        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/assets/reference/error_die-crack_reverse.jpg",
+        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/error_die-crack_reverse.jpg",
       },
       {
         "name": "Off-Center Strike",
         "slug": "off-center",
         "side": "obverse",
         "example": "20% off-center Lincoln wheat cent",
-        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/assets/reference/error_off-center_obverse.jpg",
+        "gcs_path": "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/error_off-center_obverse.jpg",
       }
     ];
 
@@ -644,40 +804,24 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
       itemCount: mockErrors.length,
       itemBuilder: (context, index) {
         final err = mockErrors[index];
-        final resolvedImgUrl = _gcsToHttpUrl(err['gcs_path']?.toString());
+        final gcsPath = err['gcs_path'];
 
         return Card(
-          color: const Color(0xFF161B22),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: isDark ? Colors.white10 : Colors.black12),
+          ),
+          elevation: isDark ? 0 : 2,
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Container(
-                  width: double.infinity,
-                  color: Colors.white.withAlpha(5),
-                  child: CachedNetworkImage(
-                    imageUrl: resolvedImgUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                    ),
-                    errorWidget: (context, url, error) => Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.broken_image, color: Colors.white24, size: 32),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${err['slug']}_${err['side']}.jpg',
-                            style: const TextStyle(color: Colors.white24, fontSize: 8),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                child: _buildAcademyImage(
+                  gcsPath,
+                  fit: BoxFit.cover,
+                  height: double.infinity,
                 ),
               ),
               Padding(
@@ -687,14 +831,21 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
                   children: [
                     Text(
                       err['name']!,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A), 
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 12,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       err['example']!,
-                      style: const TextStyle(color: Colors.white38, fontSize: 10),
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : const Color(0xFF64748B), 
+                        fontSize: 10,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

@@ -1,4 +1,4 @@
-﻿const { test, expect } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 // ============================================================
 // TEST SUITE 03: Browse Demo Flow
@@ -7,17 +7,23 @@
 // ============================================================
 
 const NAV_COORDS = [
-  { name: 'Home Dashboard',    x: 80,  y: 147 },
-  { name: 'My Collection',     x: 70,  y: 172 },
-  { name: 'Review Hub',        x: 66,  y: 198 },
-  { name: 'Coin Programs',     x: 73,  y: 224 },
-  { name: 'Add New Coins',     x: 75,  y: 250 },
-  { name: 'Microscope Scanner',x: 88,  y: 276 },
-  { name: 'Inventory',         x: 59,  y: 302 },
-  { name: 'My Wishlist',       x: 65,  y: 328 },
-  { name: 'Coin Search',       x: 66,  y: 354 },
-  { name: 'AI Deepdive',       x: 66,  y: 380 },
-  { name: 'AI Trainer Board',  x: 77,  y: 407 },
+  { name: 'Home Dashboard',          x: 80,  y: 146 },
+  { name: 'Coin Programs',           x: 80,  y: 173 },
+  { name: 'All',                     x: 80,  y: 231 },
+  { name: 'Coins',                   x: 80,  y: 257 },
+  { name: 'Currency Collection',     x: 80,  y: 283 },
+  { name: 'World and Specialty',     x: 80,  y: 309 },
+  { name: 'Inventory',               x: 80,  y: 335 },
+  { name: 'My Wishlist',             x: 80,  y: 369 },
+  { name: 'Estate Planning',         x: 80,  y: 395 },
+  { name: 'Add new coins/notes/etc.',x: 80,  y: 454 },
+  { name: 'Microscope Scanner',      x: 80,  y: 480 },
+  { name: 'Review Hub',              x: 80,  y: 506 },
+  { name: 'AI Trainer Board',        x: 80,  y: 566 },
+  { name: 'Error Library',           x: 80,  y: 624 },
+  { name: 'Glossary Academy',        x: 80,  y: 651 },
+  { name: 'Coin Search',             x: 80,  y: 676 },
+  { name: 'AI Deepdive',             x: 80,  y: 702 },
 ];
 
 async function enterDemo(page) {
@@ -25,6 +31,8 @@ async function enterDemo(page) {
   await page.waitForTimeout(4000);
   await page.mouse.click(714, 631); // Browse Demo button
   await page.waitForTimeout(4000);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.waitForTimeout(1000);
 }
 
 test.describe('03 - Browse Demo Navigation', () => {

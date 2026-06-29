@@ -11,6 +11,8 @@ async function enterDemo(page) {
   await page.waitForTimeout(4000);
   await page.mouse.click(714, 631);
   await page.waitForTimeout(4000);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.waitForTimeout(1000);
 }
 
 test.describe('06 - Edge Cases & Resilience', () => {
@@ -69,7 +71,7 @@ test.describe('06 - Edge Cases & Resilience', () => {
 
   test('T05: Demo Home Dashboard shows error state gracefully', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(80, 147); // Home Dashboard
+    await page.mouse.click(80, 146); // Home Dashboard
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/home-dashboard-demo.png', type: 'png' });
     // Dashboard unavailable is an expected error state in demo mode
@@ -79,7 +81,7 @@ test.describe('06 - Edge Cases & Resilience', () => {
 
   test('T06: Demo My Collection shows error state gracefully', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(70, 172); // My Collection
+    await page.mouse.click(80, 231); // My Collection
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/my-collection-demo.png', type: 'png' });
     // "Could not load your collection" is expected in demo mode
@@ -117,8 +119,8 @@ test.describe('06 - Edge Cases & Resilience', () => {
 
   test('T09: Sign Out from demo returns to login', async ({ page }) => {
     await enterDemo(page);
-    // Click Sign Out (bottom of sidebar, approx y=716)
-    await page.mouse.click(100, 716);
+    // Click Sign Out (bottom of sidebar, approx y=973)
+    await page.mouse.click(100, 973);
     await page.waitForTimeout(3000);
     const buf = await page.screenshot({ path: 'screenshots/after-signout.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(100000);
@@ -128,7 +130,7 @@ test.describe('06 - Edge Cases & Resilience', () => {
 
   test('T10: Add New Coins page in demo shows appropriate blocked state', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(75, 250); // Add New Coins
+    await page.mouse.click(80, 454); // Add new coins/notes/etc.
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/add-new-coins-demo.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);

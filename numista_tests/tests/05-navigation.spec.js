@@ -11,6 +11,8 @@ async function enterDemo(page) {
   await page.waitForTimeout(4000);
   await page.mouse.click(714, 631);
   await page.waitForTimeout(4000);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.waitForTimeout(1000);
 }
 
 test.describe('05 - Navigation & State Persistence', () => {
@@ -30,10 +32,10 @@ test.describe('05 - Navigation & State Persistence', () => {
     // This test verifies the sidebar-based "back to home" flow works correctly.
     await enterDemo(page);
     // Navigate away from home
-    await page.mouse.click(70, 172); // My Collection
+    await page.mouse.click(80, 231); // My Collection (All tab)
     await page.waitForTimeout(2500);
     // Navigate back to Home Dashboard via sidebar
-    await page.mouse.click(80, 147); // Home Dashboard
+    await page.mouse.click(80, 146); // Home Dashboard
     await page.waitForTimeout(2500);
     const buf = await page.screenshot({ path: 'screenshots/back-to-home-via-sidebar.png', type: 'png' });
     expect(page.url()).toContain('numista.ai');
@@ -43,10 +45,10 @@ test.describe('05 - Navigation & State Persistence', () => {
   test('T03: Navigating to My Collection then Home Dashboard keeps nav stable', async ({ page }) => {
     await enterDemo(page);
     // Go to My Collection
-    await page.mouse.click(70, 172);
+    await page.mouse.click(80, 231);
     await page.waitForTimeout(3000);
     // Go to Home Dashboard
-    await page.mouse.click(80, 147);
+    await page.mouse.click(80, 146);
     await page.waitForTimeout(3000);
     const buf = await page.screenshot({ path: 'screenshots/nav-back-to-home.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(100000);
@@ -58,8 +60,8 @@ test.describe('05 - Navigation & State Persistence', () => {
     page.on('pageerror', err => pageErrors.push(err.message));
 
     const navItems = [
-      { x: 80, y: 147 }, { x: 70, y: 172 }, { x: 66, y: 198 },
-      { x: 73, y: 224 }, { x: 75, y: 250 }, { x: 88, y: 276 },
+      { x: 80, y: 146 }, { x: 80, y: 231 }, { x: 80, y: 506 },
+      { x: 80, y: 173 }, { x: 80, y: 454 }, { x: 80, y: 480 },
     ];
     for (const item of navItems) {
       await page.mouse.click(item.x, item.y);
@@ -73,7 +75,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T05: Coin Search page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(66, 354); // Coin Search
+    await page.mouse.click(80, 676); // Coin Search
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/coin-search.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -82,7 +84,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T06: AI Deepdive page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(66, 380); // AI Deepdive
+    await page.mouse.click(80, 702); // AI Deepdive
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/ai-deepdive.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -90,7 +92,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T07: Inventory page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(59, 302); // Inventory
+    await page.mouse.click(80, 335); // Inventory
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/inventory.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -98,7 +100,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T08: My Wishlist page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(65, 328); // My Wishlist
+    await page.mouse.click(80, 369); // My Wishlist
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/my-wishlist.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -106,7 +108,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T09: AI Trainer Board loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(77, 407); // AI Trainer Board
+    await page.mouse.click(80, 566); // AI Trainer Board
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/ai-trainer-board.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -114,7 +116,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T10: Review Hub loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(66, 198); // Review Hub
+    await page.mouse.click(80, 506); // Review Hub
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/review-hub.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -122,7 +124,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T11: Coin Programs page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(73, 224); // Coin Programs
+    await page.mouse.click(80, 173); // Coin Programs
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/coin-programs.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
@@ -130,7 +132,7 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T12: Microscope Scanner page loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(88, 276); // Microscope Scanner
+    await page.mouse.click(80, 480); // Microscope Scanner
     await page.waitForTimeout(4000);
     const buf = await page.screenshot({ path: 'screenshots/microscope-scanner.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);

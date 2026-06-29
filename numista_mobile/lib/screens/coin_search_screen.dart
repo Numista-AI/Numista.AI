@@ -1214,7 +1214,7 @@ class _SuggestionsPane extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Search 1,913+ coin reference entries using natural language. '
+                'Search 11,900+ coin reference entries using natural language. '
                 'Ask about specific dates, mint marks, series, or history — '
                 'powered by Vertex AI Search.',
                 style: TextStyle(

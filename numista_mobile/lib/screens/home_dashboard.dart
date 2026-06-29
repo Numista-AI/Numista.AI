@@ -1382,7 +1382,7 @@ const _versionHistory = <_Release>[
     description: 'Vertex AI Coin Reference Search',
     isLatest: false,
     changes: [
-      'New Coin Search screen: semantic search over 1,913 coin reference entries powered by Vertex AI Search Enterprise tier.',
+      'New Coin Search screen: semantic search over 11,900+ coin reference entries powered by Vertex AI Search Enterprise tier.',
       'Natural language queries: ask about dates, mint marks, designers, metal content, or coin history.',
       'AI-generated summary banner surfaces key facts above results.',
       'Category filter chips (Circulating, Commemorative, Bullion, Proof) narrow results instantly.',

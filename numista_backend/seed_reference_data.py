@@ -15,8 +15,9 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_SCRIPT_DIR, "database", "numista.db")
 
 # GCS Reference URLs
-GCS_ANATOMY = "gs://studio-9101802118-8c9a8-uploads/assets/reference/coin_anatomy_diagram.png"
-GCS_COMPARISON = "gs://studio-9101802118-8c9a8-uploads/assets/reference/coin_grade_comparison.png"
+GCS_ANATOMY = "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/anatomy_obverse.jpg"
+GCS_REVERSE = "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/anatomy_reverse.jpg"
+GCS_COMPARISON = "gs://studio-9101802118-8c9a8-uploads/academy/illustrations/grade_comparison.jpg"
 
 # Sheldon scale data
 SHELDON_GRADES = [
@@ -176,7 +177,7 @@ GLOSSARY_TERMS = [
         "definition": "The back or tails side of a coin, typically depicting a seal, shield, or secondary design element.",
         "category": "Terminology",
         "colloquial_mappings": ["tails", "back"],
-        "illustration_url": GCS_ANATOMY
+        "illustration_url": GCS_REVERSE
     },
     {
         "term": "Field",

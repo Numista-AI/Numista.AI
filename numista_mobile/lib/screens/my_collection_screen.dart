@@ -81,7 +81,8 @@ class MyCollectionScreen extends StatefulWidget {
   final Function(String)? onNavigate;
   /// Navigate to a screen AND pass an initial query (used for AI Deep Dive).
   final Function(String route, String query)? onNavigateWithQuery;
-  MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery});
+  final Function(String)? onTabChanged;
+  MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery, this.onTabChanged});
   @override
   State<MyCollectionScreen> createState() => _MyCollectionScreenState();
 }
@@ -268,6 +269,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       setState(() {
         _currentTab = widget.initialTab ?? savedTab ?? 'All';
       });
+      if (widget.onTabChanged != null) {
+        widget.onTabChanged!(_currentTab);
+      }
     }
   }
 
@@ -277,6 +281,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('my_collection_default_tab', tab);
+    if (widget.onTabChanged != null) {
+      widget.onTabChanged!(tab);
+    }
   }
 
   @override
@@ -286,6 +293,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       setState(() {
         _currentTab = widget.initialTab!;
       });
+      if (widget.onTabChanged != null) {
+        widget.onTabChanged!(_currentTab);
+      }
     }
   }
 
@@ -1399,7 +1409,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         Container(
           margin: EdgeInsets.only(top: 22),
           child: Tooltip(
-            message: 'Search 1,913 coin reference entries with Vertex AI',
+            message: 'Search 11,900+ coin reference entries with Vertex AI',
             child: ElevatedButton.icon(
               onPressed: () => widget.onNavigate!('Coin Search'),
               icon: Icon(Icons.manage_search, size: 16),

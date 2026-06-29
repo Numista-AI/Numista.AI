@@ -17,6 +17,7 @@ import '../utils/file_saver_stub.dart'
 
 import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -45,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool? _photoSharingOptedIn;
   bool _inspectorMode = false;
+  String _defaultCollectionView = 'All';
 
   @override
   void initState() {
@@ -52,8 +54,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
     _loadPhotoSharingPref();
     _loadInspectorModePref();
+    _loadDefaultCollectionView();
     // Pre-fetch the coin count for the Danger Zone card.
     _fetchCoinCount(AuthService.userEmail);
+  }
+
+  void _loadDefaultCollectionView() async {
+    final prefs = await SharedPreferences.getInstance();
+    final val = prefs.getString('my_collection_default_tab') ?? 'All';
+    if (mounted) {
+      setState(() {
+        _defaultCollectionView = val;
+      });
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -135,6 +148,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // ── Theme Configuration Section ───────────────────────────────
           _buildThemeConfigCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── Default Collection View Section ───────────────────────────
+          _buildDefaultCollectionViewCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -736,6 +755,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Force Light Mode or enable Dark Mode across the entire application.',
               style: TextStyle(color: descColor, fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultCollectionViewCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    final dropdownItems = const {
+      'All': 'All',
+      'Coins': 'Coins',
+      'Currency': 'Currency Collection',
+      'World & Specialty': 'World and Specialty',
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF63366).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.collections_bookmark_outlined,
+                      color: Color(0xFFF63366), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Default Collection View',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Select the default view when loading My Collection',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                DropdownButton<String>(
+                  value: _defaultCollectionView,
+                  dropdownColor: cardBg,
+                  style: TextStyle(color: headerColor, fontSize: 14, fontWeight: FontWeight.w600),
+                  underline: const SizedBox(),
+                  onChanged: (String? newValue) async {
+                    if (newValue != null) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('my_collection_default_tab', newValue);
+                      setState(() {
+                        _defaultCollectionView = newValue;
+                      });
+                    }
+                  },
+                  items: dropdownItems.entries.map<DropdownMenuItem<String>>((entry) {
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
           ],
         ),
