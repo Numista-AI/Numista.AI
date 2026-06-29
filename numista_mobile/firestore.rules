@@ -55,6 +55,14 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Mint Error Library (reference data — authenticated read) ──────────────
+    // Public-facing error encyclopedia populated by the backend ingestion pipeline.
+    // Any signed-in user may read; client writes are forbidden (backend SA only).
+    match /mint_errors/{errorId} {
+      allow read:  if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
     // ── Backend-managed collections ───────────────────────────────────────────
     match /pending_items/{document=**} {
       allow read, write: if false; // backend service account only
