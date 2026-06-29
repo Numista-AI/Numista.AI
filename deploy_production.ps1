@@ -1,17 +1,10 @@
 # ============================================================
-#  Numista.AI — Emergency Manual Deploy Script
-#
-#  !! PRIMARY DEPLOYMENT METHOD: Push code to the `main` branch.
-#  !! GitHub Actions (.github/workflows/deploy-production.yml)
-#  !! will automatically build and deploy both the Flutter frontend
-#  !! and the Python backend to Cloud Run.
-#
-#  USE THIS SCRIPT ONLY AS AN EMERGENCY FALLBACK when the
-#  GitHub Actions pipeline is unavailable or broken.
+#  Numista.AI — Production Deploy Script
 #
 #  Usage:  .\deploy_production.ps1
 #
 #  What it does:
+#    0. Merges dev -> main and pushes (triggers GitHub Actions CI/CD)
 #    1. Removes the dev service-worker kill-switch from index.html
 #    2. Builds Flutter for web (release mode) from numista_mobile/
 #    3. Deploys frontend to Firebase Hosting
@@ -26,6 +19,54 @@ $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $MobileDir   = Join-Path $ProjectRoot "numista_mobile"
 $IndexFile   = Join-Path $MobileDir "web\index.html"
 $BackupFile  = Join-Path $MobileDir "web\index.html.bak"
+
+# ============================================================
+# STEP 0: Merge dev -> main and push to trigger GitHub Actions
+# ============================================================
+Write-Host ""
+Write-Host "  ================================================" -ForegroundColor Cyan
+Write-Host "  STEP 0: Merging dev -> main & pushing to GitHub" -ForegroundColor Cyan
+Write-Host "  ================================================" -ForegroundColor Cyan
+
+Push-Location $ProjectRoot
+
+$currentBranch = git rev-parse --abbrev-ref HEAD
+Write-Host "  Current branch: $currentBranch" -ForegroundColor DarkGray
+
+# Stash any uncommitted changes so the checkout is clean
+git stash --quiet
+
+git checkout main 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Could not switch to main branch." -ForegroundColor Red
+    Pop-Location
+    exit 1
+}
+
+git merge dev --no-edit 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Merge conflict detected. Resolve conflicts, then re-run." -ForegroundColor Red
+    git checkout $currentBranch 2>&1 | Out-Null
+    Pop-Location
+    exit 1
+}
+Write-Host "  Merge complete." -ForegroundColor Green
+
+git push origin main 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] git push failed. Check your credentials or network." -ForegroundColor Red
+    git checkout $currentBranch 2>&1 | Out-Null
+    Pop-Location
+    exit 1
+}
+Write-Host "  Pushed to GitHub. GitHub Actions will build & deploy automatically." -ForegroundColor Green
+Write-Host "  Monitor: https://github.com/Numista-AI/Numista.AI/actions" -ForegroundColor DarkGray
+
+# Return to working branch
+git checkout $currentBranch 2>&1 | Out-Null
+git stash pop --quiet 2>&1 | Out-Null
+
+Pop-Location
 
 Write-Host ""
 Write-Host "  Numista.AI - Production Deploy" -ForegroundColor Magenta
