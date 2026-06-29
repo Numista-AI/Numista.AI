@@ -11,14 +11,24 @@ class MintErrorService {
   static const String _collection = 'mint_errors';
 
   // ─── Stream: all published errors, optionally filtered ───────────────────
+  // NOTE: To avoid requiring a composite index on every filter combination,
+  // we apply orderBy only when no extra filters are active, and sort client-side
+  // otherwise. Firestore requires composite indexes for (filter + orderBy) combos.
   static Stream<List<MintError>> streamErrors({
     String? dataset,   // 'collectible' | 'common' | 'recent' | 'photographed'
     String? category,  // 'Doubled Die' | 'Planchet' | etc.
   }) {
+    final hasFilter = (dataset != null && dataset.isNotEmpty) ||
+        (category != null && category.isNotEmpty);
+
     Query<Map<String, dynamic>> q = _db
         .collection(_collection)
-        .where('isPublished', isEqualTo: true)
-        .orderBy('name');
+        .where('isPublished', isEqualTo: true);
+
+    // Only add orderBy when no extra filters — avoids composite index requirement
+    if (!hasFilter) {
+      q = q.orderBy('name');
+    }
 
     if (dataset != null && dataset.isNotEmpty) {
       q = q.where('datasets', arrayContains: dataset);
@@ -27,9 +37,12 @@ class MintErrorService {
       q = q.where('category', isEqualTo: category);
     }
 
-    return q.snapshots().map(
-          (snap) => snap.docs.map(MintError.fromFirestore).toList(),
-        );
+    return q.snapshots().map((snap) {
+      final list = snap.docs.map(MintError.fromFirestore).toList();
+      // Client-side sort when orderBy was skipped due to filters
+      if (hasFilter) list.sort((a, b) => a.name.compareTo(b.name));
+      return list;
+    });
   }
 
   // ─── Future: single error by ID ──────────────────────────────────────────
@@ -68,15 +81,34 @@ class MintErrorService {
     required String denomination,
     required int year,
   }) async {
+    // Normalize denomination — coins may store 'Quarter Dollar', '25C', 'Quarter', etc.
+    final normalized = _normalizeDenomination(denomination);
+
     final snap = await _db
         .collection(_collection)
         .where('isPublished', isEqualTo: true)
-        .where('denominations', arrayContains: denomination.toLowerCase())
+        .where('denominations', arrayContains: normalized)
         .get();
 
     final all = snap.docs.map(MintError.fromFirestore).toList();
     // Filter by year (years list contains the coin's year OR is empty = "any year")
     return all.where((e) => e.years.isEmpty || e.years.contains(year)).toList();
+  }
+
+  // ─── Denomination normalizer ──────────────────────────────────────────────
+  // Maps any denomination string variant to the lowercase key used in Firestore.
+  static String _normalizeDenomination(String raw) {
+    final s = raw.toLowerCase().trim();
+    if (s.contains('cent') || s.contains('penny') || s == '1c' || s == '1¢') return 'cent';
+    if (s.contains('nickel') || s == '5c' || s == '5¢') return 'nickel';
+    if (s.contains('dime') || s == '10c' || s == '10¢') return 'dime';
+    if (s.contains('quarter') || s == '25c' || s == '25¢') return 'quarter';
+    if (s.contains('half') || s == '50c' || s == '50¢') return 'half dollar';
+    if (s.contains('dollar') && !s.contains('half')) return 'dollar';
+    if (s.contains('eagle') && s.contains('silver')) return 'silver eagle';
+    if (s.contains('eagle') && s.contains('gold')) return 'gold eagle';
+    if (s.contains('currency') || s.contains('note') || s.contains('bill')) return 'currency';
+    return s; // fallback: pass through as-is
   }
 
   // ─── Distinct categories list (for filter chips) ─────────────────────────
