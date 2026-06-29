@@ -73,7 +73,34 @@ jobs:
         working-directory: numista_mobile
         run: firebase deploy --only hosting --project studio-9101802118-8c9a8
 
-  # ── JOB 2: Deploy Python backend to Cloud Run ──────────────────────────
+  # ── JOB 2: Deploy Firestore rules & indexes ────────────────────────────
+  deploy-firestore:
+    name: Deploy Firestore Rules & Indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@13
+
+      - name: Deploy Firestore rules and indexes
+        working-directory: numista_backend
+        run: firebase deploy --only firestore --project studio-9101802118-8c9a8
+
+  # ── JOB 3: Deploy Python backend to Cloud Run ──────────────────────────
   deploy-backend:
     name: Build & Deploy Backend (Cloud Run)
     runs-on: ubuntu-latest
