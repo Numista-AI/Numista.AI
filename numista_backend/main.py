@@ -6774,39 +6774,48 @@ def collection_completion_stats(user_email: str):
 
 
 @app.get("/api/reference/search")
-def reference_search(q: str, user_email: Optional[str] = None, page_size: int = 10, offset: int = 0):
+def reference_search(q: Optional[str] = "", user_email: Optional[str] = None, page_size: int = 10, offset: int = 0, sort_by: str = "year"):
     """
     Returns search results from the definitive catalog with ownership status.
     """
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=404, detail="Reference database not found")
         
-    q = q.strip()
-    if not q:
-        return {"query": q, "total": 0, "offset": offset, "results": []}
-        
+    q = q.strip() if q else ""
     try:
         owned_ids = _get_user_owned_doc_ids(user_email) if user_email else set()
-        
-        terms = q.lower().split()
-        conditions = []
-        params = {}
-        for idx, term in enumerate(terms):
-            conditions.append(f"(year LIKE :t{idx} OR denomination LIKE :t{idx} OR variety LIKE :t{idx} OR series LIKE :t{idx} OR note LIKE :t{idx})")
-            params[f"t{idx}"] = f"%{term}%"
-            
-        where_clause = " AND ".join(conditions)
         
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         
+        params = {}
+        if q:
+            terms = q.lower().split()
+            conditions = []
+            for idx, term in enumerate(terms):
+                conditions.append(f"(year LIKE :t{idx} OR denomination LIKE :t{idx} OR variety LIKE :t{idx} OR series LIKE :t{idx} OR note LIKE :t{idx})")
+                params[f"t{idx}"] = f"%{term}%"
+            where_clause = " AND ".join(conditions)
+        else:
+            # Default empty search lists coins chronologically from 1776 onwards, including Fugio/pattern base coin types (year is empty)
+            where_clause = "(year >= '1776' OR year = '')"
+            
         cur.execute(f"SELECT COUNT(*) FROM definitive_reference WHERE {where_clause}", params)
         total = cur.fetchone()[0]
         
+        # Sort logic
+        if sort_by == "alphabetical":
+            order_by = "ORDER BY CASE WHEN variety = '' THEN series ELSE variety END ASC, year ASC"
+        else:  # default is sorted by year
+            # Show empty years (base coin types/programs) first, then sort by year chronologically
+            order_by = "ORDER BY CASE WHEN year = '' THEN 0 ELSE 1 END, year ASC, variety ASC"
+            
         cur.execute(
-            f"SELECT doc_id, year, denomination, mint_mark, variety, note, series, category "
+            f"SELECT doc_id, year, denomination, mint_mark, variety, note, series, category, "
+            f"image_url_obverse, image_url_reverse, price_guide, population_total, apr_history "
             f"FROM definitive_reference WHERE {where_clause} "
+            f"{order_by} "
             f"LIMIT :limit OFFSET :offset",
             {**params, "limit": page_size, "offset": offset}
         )
@@ -6816,16 +6825,24 @@ def reference_search(q: str, user_email: Optional[str] = None, page_size: int = 
         results = []
         for r in rows:
             doc_id = r["doc_id"]
+            obv = r["image_url_obverse"] or ""
+            rev = r["image_url_reverse"] or ""
             results.append({
                 "doc_id": doc_id,
-                "year": r["year"],
-                "denomination": r["denomination"],
-                "mint_mark": r["mint_mark"],
-                "variety": r["variety"],
-                "note": r["note"],
-                "series": r["series"],
-                "category": r["category"],
-                "is_owned": doc_id in owned_ids
+                "year": r["year"] or "",
+                "denomination": r["denomination"] or "",
+                "mint_mark": r["mint_mark"] or "",
+                "variety": r["variety"] or "",
+                "note": r["note"] or "",
+                "series": r["series"] or "",
+                "category": r["category"] or "",
+                "is_owned": doc_id in owned_ids,
+                "image_url_obverse": obv,
+                "image_url_reverse": rev,
+                "image_url": obv or rev,
+                "price_guide": r["price_guide"] or "",
+                "population_total": r["population_total"] or 0,
+                "apr_history": r["apr_history"] or ""
             })
             
         return {

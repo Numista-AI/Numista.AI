@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/coin_search_service.dart';
 import '../services/wishlist_service.dart';
@@ -38,6 +39,8 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
   bool _loadingMore = false;
   CoinSearchResponse? _response;
   String _activeCategory = 'All';
+  String _sortBy = 'year';
+  bool _isDark = false; // Default is Light Theme!
 
   // Pagination
   static const int _pageSize = 10;
@@ -73,8 +76,10 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
 
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _ctrl.text = widget.initialQuery!;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _doSearch());
+    } else {
+      _ctrl.text = '';
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _doSearch());
   }
 
   @override
@@ -90,19 +95,11 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
 
   void _onQueryChanged(String value) {
     _debounce?.cancel();
-    if (value.trim().isEmpty) {
-      setState(() {
-        _response = null;
-        _loading = false;
-      });
-      return;
-    }
     _debounce = Timer(const Duration(milliseconds: 480), _doSearch);
   }
 
   Future<void> _doSearch({bool append = false}) async {
     final q = _ctrl.text.trim();
-    if (q.isEmpty) return;
 
     setState(() {
       if (append) {
@@ -117,6 +114,7 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
       query: q,
       pageSize: _pageSize,
       offset: _offset,
+      sortBy: _sortBy,
     );
 
     if (!mounted) return;
@@ -166,11 +164,17 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldBg = _isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC);
+    final cardColor = _isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final textDark = _isDark ? Colors.white : const Color(0xFF0F172A);
+    final borderCol = _isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E8F0);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1117),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0E1117),
+        backgroundColor: scaffoldBg,
         elevation: 0,
+        iconTheme: IconThemeData(color: textDark),
         title: Row(
           children: [
             Container(
@@ -184,10 +188,10 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
               child: const Icon(Icons.search, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'Coin Reference Search',
               style: TextStyle(
-                color: Colors.white,
+                color: textDark,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -195,13 +199,22 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(_isDark ? Icons.light_mode : Icons.dark_mode, color: textDark),
+            tooltip: _isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme',
+            onPressed: () {
+              setState(() {
+                _isDark = !_isDark;
+              });
+            },
+          ),
           Container(
             margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1D27),
+              color: cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFF63366).withAlpha(60)),
+              border: Border.all(color: borderCol),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -212,7 +225,7 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
                 Text(
                   'Powered by Vertex AI',
                   style: TextStyle(
-                      color: Colors.white.withAlpha(180),
+                      color: textDark.withAlpha(180),
                       fontSize: 10,
                       fontWeight: FontWeight.w500),
                 ),
@@ -224,23 +237,39 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
       body: Column(
         children: [
           // ── Search bar ──────────────────────────────────────────────────
-          _SearchBar(controller: _ctrl, onChanged: _onQueryChanged),
+          _SearchBar(controller: _ctrl, onChanged: _onQueryChanged, isDark: _isDark),
+
+          // ── Sort & Statistics Bar ────────────────────────────────────────
+          _SortAndStatsBar(
+            totalCount: _response?.total ?? 11906,
+            sortBy: _sortBy,
+            isDark: _isDark,
+            onSortChanged: (val) {
+              setState(() {
+                _sortBy = val;
+              });
+              _doSearch();
+            },
+          ),
 
           // ── Category filter chips ───────────────────────────────────────
           if (_response != null && _response!.results.isNotEmpty)
             _CategoryChips(
               categories: _categories,
               active: _activeCategory,
+              isDark: _isDark,
               onSelect: (c) => setState(() => _activeCategory = c),
             ),
+          const SizedBox(height: 8),
 
           // ── Body ────────────────────────────────────────────────────────
           Expanded(
             child: _loading
-                ? const _LoadingShimmer()
+                ? _LoadingShimmer(isDark: _isDark)
                 : _response == null
                     ? _SuggestionsPane(
                         suggestions: _suggestions,
+                        isDark: _isDark,
                         onTap: (s) {
                           _ctrl.text = s;
                           _doSearch();
@@ -248,13 +277,14 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
                       )
                     : _response!.error != null &&
                             _response!.results.isEmpty
-                        ? _ErrorPane(message: _response!.error!)
+                        ? _ErrorPane(message: _response!.error!, isDark: _isDark)
                         : _ResultsPane(
                             response: _response!,
                             results: _filteredResults,
                             hasMore: _hasMore,
                             loadingMore: _loadingMore,
                             fadeAnim: _fadeAnim,
+                            isDark: _isDark,
                             onLoadMore: _loadMore,
                           ),
           ),
@@ -269,19 +299,25 @@ class _CoinSearchScreenState extends State<CoinSearchScreen>
 class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  const _SearchBar({required this.controller, required this.onChanged});
+  final bool isDark;
+  const _SearchBar({required this.controller, required this.onChanged, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final border = isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E8F0);
+    final textCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final hintCol = isDark ? Colors.white.withAlpha(60) : const Color(0xFF94A3B8);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1D27),
+        color: bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withAlpha(20)),
+        border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFFF63366).withAlpha(25),
+              color: const Color(0xFFF63366).withAlpha(isDark ? 25 : 10),
               blurRadius: 12,
               offset: const Offset(0, 2)),
         ],
@@ -290,17 +326,17 @@ class _SearchBar extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         autofocus: false,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
+        style: TextStyle(color: textCol, fontSize: 15),
         decoration: InputDecoration(
           hintText: 'Search coins, series, years, mint marks…',
-          hintStyle: TextStyle(color: Colors.white.withAlpha(60), fontSize: 14),
+          hintStyle: TextStyle(color: hintCol, fontSize: 14),
           prefixIcon: const Icon(Icons.search, color: Color(0xFFF63366), size: 20),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,
             builder: (context, val, child) => val.text.isNotEmpty
                 ? IconButton(
                     icon: Icon(Icons.close,
-                        color: Colors.white.withAlpha(100), size: 18),
+                        color: isDark ? Colors.white.withAlpha(100) : const Color(0xFF94A3B8), size: 18),
                     onPressed: () {
                       controller.clear();
                       onChanged('');
@@ -317,15 +353,100 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
+// ─── Sort and Stats Bar ──────────────────────────────────────────────────────
+
+class _SortAndStatsBar extends StatelessWidget {
+  final int totalCount;
+  final String sortBy;
+  final bool isDark;
+  final ValueChanged<String> onSortChanged;
+
+  const _SortAndStatsBar({
+    required this.totalCount,
+    required this.sortBy,
+    required this.isDark,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textLight = isDark ? Colors.white54 : const Color(0xFF64748B);
+    final textDark = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bg = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final border = isDark ? Colors.white.withAlpha(15) : const Color(0xFFE2E8F0);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.library_books_outlined, size: 14, color: const Color(0xFFF63366).withAlpha(200)),
+              const SizedBox(width: 6),
+              Text(
+                'Definitive Registry: $totalCount records',
+                style: TextStyle(
+                  color: textLight,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text(
+                'Sort: ',
+                style: TextStyle(color: textLight, fontSize: 11),
+              ),
+              const SizedBox(width: 4),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: sortBy,
+                  dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  icon: Icon(Icons.arrow_drop_down, size: 16, color: textLight),
+                  style: TextStyle(color: textDark, fontSize: 11, fontWeight: FontWeight.bold),
+                  onChanged: (val) {
+                    if (val != null) onSortChanged(val);
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'year',
+                      child: Text('Chronological'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'alphabetical',
+                      child: Text('Alphabetical'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Category Chips ───────────────────────────────────────────────────────────
 
 class _CategoryChips extends StatelessWidget {
   final List<String> categories;
   final String active;
+  final bool isDark;
   final ValueChanged<String> onSelect;
   const _CategoryChips(
       {required this.categories,
       required this.active,
+      required this.isDark,
       required this.onSelect});
 
   @override
@@ -346,19 +467,19 @@ class _CategoryChips extends StatelessWidget {
               label: Text(cat,
                   style: TextStyle(
                       fontSize: 12,
-                      color: isActive ? Colors.white : Colors.white54,
+                      color: isActive ? Colors.white : (isDark ? Colors.white54 : const Color(0xFF64748B)),
                       fontWeight: isActive
                           ? FontWeight.w600
                           : FontWeight.normal)),
               selected: isActive,
               onSelected: (_) => onSelect(cat),
-              backgroundColor: const Color(0xFF1A1D27),
+              backgroundColor: isDark ? const Color(0xFF1A1D27) : const Color(0xFFF1F5F9),
               selectedColor: const Color(0xFFF63366).withAlpha(200),
               checkmarkColor: Colors.white,
               side: BorderSide(
                   color: isActive
                       ? const Color(0xFFF63366)
-                      : Colors.white.withAlpha(20)),
+                      : (isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E8F0))),
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
             ),
@@ -371,12 +492,82 @@ class _CategoryChips extends StatelessWidget {
 
 // ─── Results Pane ─────────────────────────────────────────────────────────────
 
+class _RegistryHeaderBanner extends StatelessWidget {
+  final bool isDark;
+  const _RegistryHeaderBanner({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final textLight = isDark ? Colors.white54 : const Color(0xFF64748B);
+    final textDark = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bg = isDark ? const Color(0xFF131722) : const Color(0xFFF1F5F9);
+    final border = isDark ? const Color(0xFFF63366).withAlpha(40) : const Color(0xFFF63366).withAlpha(20);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF63366).withAlpha(20),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified, color: Color(0xFFF63366), size: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'DEFINITIVE US COINS & CURRENCY REGISTRY',
+                style: TextStyle(
+                  color: textLight,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '11,906 Active Reference Entries',
+            style: TextStyle(
+              color: textDark,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'The absolute authority on US Mint programs, banknotes, and historical pattern coinage. Search using natural language or filter chronologically.',
+            style: TextStyle(
+              color: textLight,
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ResultsPane extends StatelessWidget {
   final CoinSearchResponse response;
   final List<CoinSearchResult> results;
   final bool hasMore;
   final bool loadingMore;
   final Animation<double> fadeAnim;
+  final bool isDark;
   final VoidCallback onLoadMore;
 
   const _ResultsPane({
@@ -385,6 +576,7 @@ class _ResultsPane extends StatelessWidget {
     required this.hasMore,
     required this.loadingMore,
     required this.fadeAnim,
+    required this.isDark,
     required this.onLoadMore,
   });
 
@@ -395,16 +587,16 @@ class _ResultsPane extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, color: Colors.white.withAlpha(60), size: 48),
+            Icon(Icons.search_off, color: isDark ? Colors.white.withAlpha(60) : const Color(0xFF94A3B8), size: 48),
             const SizedBox(height: 12),
             Text(
               'No results for "${response.query}"',
-              style: TextStyle(color: Colors.white.withAlpha(120), fontSize: 14),
+              style: TextStyle(color: isDark ? Colors.white.withAlpha(120) : const Color(0xFF475569), fontSize: 14),
             ),
             const SizedBox(height: 6),
             Text(
               'Try a different search term or remove filters.',
-              style: TextStyle(color: Colors.white.withAlpha(60), fontSize: 12),
+              style: TextStyle(color: isDark ? Colors.white.withAlpha(60) : const Color(0xFF94A3B8), fontSize: 12),
             ),
           ],
         ),
@@ -416,16 +608,24 @@ class _ResultsPane extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: results.length +
+            1 + // For the Registry Header Banner
             (response.summary.isNotEmpty ? 1 : 0) +
             (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          // AI Summary banner at the top
-          if (response.summary.isNotEmpty && index == 0) {
-            return _AISummaryBanner(summary: response.summary);
+          // Registry Header Banner is always at the top (index == 0)
+          if (index == 0) {
+            return _RegistryHeaderBanner(isDark: isDark);
           }
 
-          final resultIndex =
-              index - (response.summary.isNotEmpty ? 1 : 0);
+          final summaryOffset = response.summary.isNotEmpty ? 1 : 0;
+          final cardIndex = index - 1; // Subtract 1 for the Registry Header Banner
+
+          // AI Summary banner right under the Registry Header if summary exists
+          if (response.summary.isNotEmpty && cardIndex == 0) {
+            return _AISummaryBanner(summary: response.summary, isDark: isDark);
+          }
+
+          final resultIndex = cardIndex - summaryOffset;
 
           // Load More button at the bottom
           if (resultIndex == results.length) {
@@ -442,9 +642,9 @@ class _ResultsPane extends StatelessWidget {
                   : OutlinedButton(
                       onPressed: onLoadMore,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
+                        foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
                         side: BorderSide(
-                            color: Colors.white.withAlpha(30)),
+                            color: isDark ? Colors.white.withAlpha(30) : const Color(0xFFCBD5E1)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
@@ -456,6 +656,7 @@ class _ResultsPane extends StatelessWidget {
           return _CoinResultCard(
             result: results[resultIndex],
             index: resultIndex,
+            isDark: isDark,
           );
         },
       ),
@@ -467,7 +668,8 @@ class _ResultsPane extends StatelessWidget {
 
 class _AISummaryBanner extends StatelessWidget {
   final String summary;
-  const _AISummaryBanner({required this.summary});
+  final bool isDark;
+  const _AISummaryBanner({required this.summary, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -476,15 +678,20 @@ class _AISummaryBanner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1A1D27),
-            const Color(0xFF0B3D6E).withAlpha(80),
-          ],
+          colors: isDark
+              ? [
+                  const Color(0xFF1A1D27),
+                  const Color(0xFF0B3D6E).withAlpha(80),
+                ]
+              : [
+                  Colors.white,
+                  const Color(0xFFE0F2FE),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2DD4BF).withAlpha(60)),
+        border: Border.all(color: isDark ? const Color(0xFF2DD4BF).withAlpha(60) : const Color(0xFF0EA5E9).withAlpha(60)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,18 +699,18 @@ class _AISummaryBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF2DD4BF).withAlpha(30),
+              color: isDark ? const Color(0xFF2DD4BF).withAlpha(30) : const Color(0xFF0EA5E9).withAlpha(20),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.auto_awesome,
-                color: Color(0xFF2DD4BF), size: 14),
+            child: Icon(Icons.auto_awesome,
+                color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0284C7), size: 14),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               summary,
               style: TextStyle(
-                  color: Colors.white.withAlpha(200),
+                  color: isDark ? Colors.white.withAlpha(200) : const Color(0xFF334155),
                   fontSize: 13,
                   height: 1.45),
             ),
@@ -519,7 +726,8 @@ class _AISummaryBanner extends StatelessWidget {
 class _CoinResultCard extends StatelessWidget {
   final CoinSearchResult result;
   final int index;
-  const _CoinResultCard({required this.result, required this.index});
+  final bool isDark;
+  const _CoinResultCard({required this.result, required this.index, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -529,16 +737,20 @@ class _CoinResultCard extends StatelessWidget {
         .where((s) => s.isNotEmpty)
         .toList();
 
+    final cardCol = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final textDark = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textLight = isDark ? Colors.white54 : const Color(0xFF64748B);
+    final border = isDark ? Colors.white.withAlpha(12) : const Color(0xFFE2E8F0);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1D27),
+        color: cardCol,
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: Colors.white.withAlpha(12)),
+        border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withAlpha(60),
+              color: isDark ? Colors.black.withAlpha(60) : Colors.black.withAlpha(10),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -549,32 +761,41 @@ class _CoinResultCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => _showDetail(context),
-          hoverColor: Colors.white.withAlpha(8),
+          hoverColor: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(12),
           splashColor: const Color(0xFFF63366).withAlpha(20),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Index badge
+                // Coin image thumbnail (obverse)
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFF63366).withAlpha(30),
+                    color: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF1F5F9),
                     border: Border.all(
-                        color: const Color(0xFFF63366).withAlpha(80),
-                        width: 1),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: const TextStyle(
-                          color: Color(0xFFF63366),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                      color: isDark ? Colors.white.withAlpha(30) : const Color(0xFFCBD5E1),
+                      width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(20),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: result.imageUrlObverse.isNotEmpty
+                        ? Image.network(
+                            result.imageUrlObverse,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(Icons.image, size: 20, color: textLight),
+                          )
+                        : Icon(Icons.image, size: 20, color: textLight),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -585,8 +806,8 @@ class _CoinResultCard extends StatelessWidget {
                       // Title
                       Text(
                         result.displayTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: textDark,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           height: 1.3,
@@ -598,7 +819,7 @@ class _CoinResultCard extends StatelessWidget {
                         Text(
                           result.displaySubtitle,
                           style: TextStyle(
-                              color: Colors.white.withAlpha(120),
+                              color: textLight,
                               fontSize: 12),
                         ),
                       // Snippet
@@ -609,7 +830,7 @@ class _CoinResultCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: Colors.white.withAlpha(100),
+                              color: isDark ? Colors.white.withAlpha(100) : const Color(0xFF475569),
                               fontSize: 11,
                               height: 1.4),
                         ),
@@ -622,7 +843,7 @@ class _CoinResultCard extends StatelessWidget {
                           runSpacing: 4,
                           children: mints
                               .take(6)
-                              .map((m) => _MintChip(label: m))
+                              .map((m) => _MintChip(label: m, isDark: isDark))
                               .toList(),
                         ),
                       ],
@@ -710,7 +931,7 @@ class _CoinResultCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CoinDetailSheet(result: result),
+      builder: (_) => _CoinDetailSheet(result: result, isDark: isDark),
     );
   }
 
@@ -978,21 +1199,22 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
 
 class _MintChip extends StatelessWidget {
   final String label;
-  const _MintChip({required this.label});
+  final bool isDark;
+  const _MintChip({required this.label, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(12),
+        color: isDark ? Colors.white.withAlpha(12) : const Color(0xFFE2E8F0),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white.withAlpha(30)),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(30) : const Color(0xFFCBD5E1)),
       ),
       child: Text(
         label,
         style: TextStyle(
-            color: Colors.white.withAlpha(160),
+            color: isDark ? Colors.white.withAlpha(160) : const Color(0xFF475569),
             fontSize: 10,
             fontWeight: FontWeight.w500),
       ),
@@ -1004,18 +1226,25 @@ class _MintChip extends StatelessWidget {
 
 class _CoinDetailSheet extends StatelessWidget {
   final CoinSearchResult result;
-  const _CoinDetailSheet({required this.result});
+  final bool isDark;
+  const _CoinDetailSheet({required this.result, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final textCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSubCol = isDark ? Colors.white.withAlpha(140) : const Color(0xFF64748B);
+    final border = isDark ? Colors.white.withAlpha(15) : const Color(0xFFE2E8F0);
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      maxChildSize: 0.92,
-      minChildSize: 0.3,
+      initialChildSize: 0.75, // larger child size for rich details
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
       builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1D27),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border.all(color: border),
         ),
         child: Column(
           children: [
@@ -1025,7 +1254,7 @@ class _CoinDetailSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(40),
+                  color: isDark ? Colors.white.withAlpha(40) : const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(2)),
             ),
             Expanded(
@@ -1033,11 +1262,26 @@ class _CoinDetailSheet extends StatelessWidget {
                 controller: controller,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
+                  // Obverse & Reverse images side-by-side if available
+                  if (result.imageUrlObverse.isNotEmpty || result.imageUrlReverse.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (result.imageUrlObverse.isNotEmpty)
+                          _DetailImage(url: result.imageUrlObverse, label: 'Obverse', isDark: isDark),
+                        if (result.imageUrlObverse.isNotEmpty && result.imageUrlReverse.isNotEmpty)
+                          const SizedBox(width: 16),
+                        if (result.imageUrlReverse.isNotEmpty)
+                          _DetailImage(url: result.imageUrlReverse, label: 'Reverse', isDark: isDark),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   // Title
                   Text(
                     result.displayTitle,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: textCol,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         height: 1.25),
@@ -1048,25 +1292,39 @@ class _CoinDetailSheet extends StatelessWidget {
                     Text(
                       result.programName,
                       style: TextStyle(
-                          color: Colors.white.withAlpha(140),
+                          color: textSubCol,
                           fontSize: 13),
                     ),
                   ],
                   const SizedBox(height: 16),
                   // Info grid
-                  _DetailGrid(result: result),
+                  _DetailGrid(result: result, isDark: isDark),
+                  // Price Guide
+                  if (result.priceGuide.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionLabel(label: 'Price Guide (USD)', isDark: isDark),
+                    const SizedBox(height: 8),
+                    _PriceGuideTable(priceGuideJson: result.priceGuide, isDark: isDark),
+                  ],
                   // Content / description
                   if (result.notes.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _SectionLabel(label: 'Notes'),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 20),
+                    _SectionLabel(label: 'Notes', isDark: isDark),
+                    const SizedBox(height: 8),
                     Text(
                       result.notes,
                       style: TextStyle(
-                          color: Colors.white.withAlpha(160),
+                          color: isDark ? Colors.white.withAlpha(160) : const Color(0xFF475569),
                           fontSize: 13,
                           height: 1.5),
                     ),
+                  ],
+                  // APR History
+                  if (result.aprHistory.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionLabel(label: 'Auction Results', isDark: isDark),
+                    const SizedBox(height: 8),
+                    _AprHistoryList(aprHistoryJson: result.aprHistory, isDark: isDark),
                   ],
                 ],
               ),
@@ -1078,23 +1336,162 @@ class _CoinDetailSheet extends StatelessWidget {
   }
 }
 
+class _DetailImage extends StatelessWidget {
+  final String url;
+  final String label;
+  final bool isDark;
+  const _DetailImage({required this.url, required this.label, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? Colors.white.withAlpha(5) : const Color(0xFFF1F5F9);
+    final border = isDark ? Colors.white.withAlpha(20) : const Color(0xFFCBD5E1);
+    final textLight = isDark ? Colors.white54 : const Color(0xFF64748B);
+
+    return Column(
+      children: [
+        Container(
+          width: 110,
+          height: 110,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(15),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: url.isNotEmpty
+                ? Image.network(url, fit: BoxFit.cover)
+                : Icon(Icons.image_not_supported, size: 28, color: textLight),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(color: textLight, fontSize: 10, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceGuideTable extends StatelessWidget {
+  final String priceGuideJson;
+  final bool isDark;
+  const _PriceGuideTable({required this.priceGuideJson, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final Map<String, dynamic> prices = jsonDecode(priceGuideJson);
+      if (prices.isEmpty) return const Text('No price data available.', style: TextStyle(color: Colors.grey, fontSize: 13));
+
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: prices.entries.map((e) {
+          final val = e.value as num;
+          final displayVal = val > 0 ? '\$${val.toStringAsFixed(2)}' : '—';
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withAlpha(8) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isDark ? Colors.white.withAlpha(15) : const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(e.key, style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569), fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text(displayVal, style: TextStyle(color: isDark ? const Color(0xFF2DD4BF) : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    } catch (e) {
+      return const Text('Invalid price data format.', style: TextStyle(color: Colors.redAccent, fontSize: 12));
+    }
+  }
+}
+
+class _AprHistoryList extends StatelessWidget {
+  final String aprHistoryJson;
+  final bool isDark;
+  const _AprHistoryList({required this.aprHistoryJson, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final List<dynamic> history = jsonDecode(aprHistoryJson);
+      if (history.isEmpty) return const Text('No auction records available.', style: TextStyle(color: Colors.grey, fontSize: 13));
+
+      return Column(
+        children: history.map((item) {
+          final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+          final ah = item['auction_house']?.toString() ?? 'Auction';
+          final date = item['date']?.toString() ?? '';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withAlpha(5) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isDark ? Colors.white.withAlpha(10) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ah, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 12, fontWeight: FontWeight.w600)),
+                    if (date.isNotEmpty)
+                      Text(date, style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 10)),
+                  ],
+                ),
+                Text('\$${price.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF00C853), fontSize: 13, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    } catch (e) {
+      return const Text('Invalid auction history format.', style: TextStyle(color: Colors.redAccent, fontSize: 12));
+    }
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   final String label;
-  const _SectionLabel({required this.label});
+  final bool isDark;
+  const _SectionLabel({required this.label, required this.isDark});
   @override
-  Widget build(BuildContext context) => Text(
-        label.toUpperCase(),
-        style: TextStyle(
-            color: Colors.white.withAlpha(80),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2),
-      );
+  Widget build(BuildContext context) {
+    final textLight = isDark ? Colors.white.withAlpha(80) : const Color(0xFF64748B);
+    return Text(
+      label.toUpperCase(),
+      style: TextStyle(
+          color: textLight,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.2),
+    );
+  }
 }
 
 class _DetailGrid extends StatelessWidget {
   final CoinSearchResult result;
-  const _DetailGrid({required this.result});
+  final bool isDark;
+  const _DetailGrid({required this.result, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -1111,6 +1508,8 @@ class _DetailGrid extends StatelessWidget {
         MapEntry('Designer', result.designer),
       if (result.mintMarks.isNotEmpty)
         MapEntry('Mint Marks', result.mintMarks),
+      if (result.populationTotal > 0)
+        MapEntry('Population', '${result.populationTotal} graded'),
     ];
 
     if (items.isEmpty) return const SizedBox.shrink();
@@ -1119,7 +1518,7 @@ class _DetailGrid extends StatelessWidget {
       spacing: 10,
       runSpacing: 10,
       children: items
-          .map((e) => _DetailTile(label: e.key, value: e.value))
+          .map((e) => _DetailTile(label: e.key, value: e.value, isDark: isDark))
           .toList(),
     );
   }
@@ -1128,17 +1527,23 @@ class _DetailGrid extends StatelessWidget {
 class _DetailTile extends StatelessWidget {
   final String label;
   final String value;
-  const _DetailTile({required this.label, required this.value});
+  final bool isDark;
+  const _DetailTile({required this.label, required this.value, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final bg = isDark ? Colors.white.withAlpha(8) : const Color(0xFFF1F5F9);
+    final border = isDark ? Colors.white.withAlpha(15) : const Color(0xFFE2E8F0);
+    final textDark = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textLight = isDark ? Colors.white.withAlpha(80) : const Color(0xFF64748B);
+
     return Container(
       padding: const EdgeInsets.all(10),
       constraints: const BoxConstraints(minWidth: 100),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(8),
+        color: bg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withAlpha(15)),
+        border: Border.all(color: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1146,7 +1551,7 @@ class _DetailTile extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: TextStyle(
-                color: Colors.white.withAlpha(80),
+                color: textLight,
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8),
@@ -1154,8 +1559,8 @@ class _DetailTile extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             value,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: textDark,
                 fontSize: 13,
                 fontWeight: FontWeight.w500),
           ),
@@ -1169,12 +1574,18 @@ class _DetailTile extends StatelessWidget {
 
 class _SuggestionsPane extends StatelessWidget {
   final List<String> suggestions;
+  final bool isDark;
   final ValueChanged<String> onTap;
   const _SuggestionsPane(
-      {required this.suggestions, required this.onTap});
+      {required this.suggestions, required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final border = isDark ? const Color(0xFF2DD4BF).withAlpha(50) : const Color(0xFFCBD5E1);
+    final textDark = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textLight = isDark ? Colors.white.withAlpha(160) : const Color(0xFF475569);
+    final labelColor = isDark ? Colors.white.withAlpha(80) : const Color(0xFF64748B);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
@@ -1184,16 +1595,20 @@ class _SuggestionsPane extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                const Color(0xFF0B3D6E).withAlpha(150),
-                const Color(0xFF1A0A2E).withAlpha(150),
-              ],
+              colors: isDark
+                  ? [
+                      const Color(0xFF0B3D6E).withAlpha(150),
+                      const Color(0xFF1A0A2E).withAlpha(150),
+                    ]
+                  : [
+                      const Color(0xFFE2E8F0),
+                      const Color(0xFFF1F5F9),
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: const Color(0xFF2DD4BF).withAlpha(50)),
+            border: Border.all(color: border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1201,12 +1616,12 @@ class _SuggestionsPane extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.auto_awesome,
-                      color: Color(0xFF2DD4BF), size: 18),
+                      color: Color(0xFFF63366), size: 18),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'AI Coin Reference Search',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: textDark,
                         fontSize: 15,
                         fontWeight: FontWeight.w700),
                   ),
@@ -1218,7 +1633,7 @@ class _SuggestionsPane extends StatelessWidget {
                 'Ask about specific dates, mint marks, series, or history — '
                 'powered by Vertex AI Search.',
                 style: TextStyle(
-                    color: Colors.white.withAlpha(160),
+                    color: textLight,
                     fontSize: 12,
                     height: 1.5),
               ),
@@ -1231,7 +1646,7 @@ class _SuggestionsPane extends StatelessWidget {
           child: Text(
             'TRY SEARCHING FOR',
             style: TextStyle(
-                color: Colors.white.withAlpha(80),
+                color: labelColor,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2),
@@ -1242,7 +1657,7 @@ class _SuggestionsPane extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: suggestions
-              .map((s) => _SuggestionChip(label: s, onTap: () => onTap(s)))
+              .map((s) => _SuggestionChip(label: s, isDark: isDark, onTap: () => onTap(s)))
               .toList(),
         ),
       ],
@@ -1252,8 +1667,9 @@ class _SuggestionsPane extends StatelessWidget {
 
 class _SuggestionChip extends StatefulWidget {
   final String label;
+  final bool isDark;
   final VoidCallback onTap;
-  const _SuggestionChip({required this.label, required this.onTap});
+  const _SuggestionChip({required this.label, required this.isDark, required this.onTap});
 
   @override
   State<_SuggestionChip> createState() => _SuggestionChipState();
@@ -1264,6 +1680,13 @@ class _SuggestionChipState extends State<_SuggestionChip> {
 
   @override
   Widget build(BuildContext context) {
+    final bg = widget.isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final hoverBg = widget.isDark ? const Color(0xFFF63366).withAlpha(30) : const Color(0xFFF63366).withAlpha(15);
+    final border = widget.isDark ? Colors.white.withAlpha(25) : const Color(0xFFE2E8F0);
+    final hoverBorder = widget.isDark ? const Color(0xFFF63366).withAlpha(120) : const Color(0xFFF63366).withAlpha(80);
+    final textCol = widget.isDark ? Colors.white.withAlpha(160) : const Color(0xFF475569);
+    final hoverTextCol = widget.isDark ? Colors.white.withAlpha(230) : const Color(0xFF0F172A);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -1274,14 +1697,10 @@ class _SuggestionChipState extends State<_SuggestionChip> {
           padding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: _hovered
-                ? const Color(0xFFF63366).withAlpha(30)
-                : const Color(0xFF1A1D27),
+            color: _hovered ? hoverBg : bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: _hovered
-                  ? const Color(0xFFF63366).withAlpha(120)
-                  : Colors.white.withAlpha(25),
+              color: _hovered ? hoverBorder : border,
             ),
           ),
           child: Row(
@@ -1289,13 +1708,14 @@ class _SuggestionChipState extends State<_SuggestionChip> {
             children: [
               Icon(Icons.search,
                   size: 13,
-                  color: Colors.white.withAlpha(_hovered ? 200 : 100)),
+                  color: widget.isDark
+                      ? Colors.white.withAlpha(_hovered ? 200 : 100)
+                      : const Color(0xFFF63366).withAlpha(_hovered ? 200 : 120)),
               const SizedBox(width: 6),
               Text(
                 widget.label,
                 style: TextStyle(
-                    color:
-                        Colors.white.withAlpha(_hovered ? 230 : 160),
+                    color: _hovered ? hoverTextCol : textCol,
                     fontSize: 12),
               ),
             ],
@@ -1309,7 +1729,8 @@ class _SuggestionChipState extends State<_SuggestionChip> {
 // ─── Loading Shimmer ──────────────────────────────────────────────────────────
 
 class _LoadingShimmer extends StatefulWidget {
-  const _LoadingShimmer();
+  final bool isDark;
+  const _LoadingShimmer({required this.isDark});
 
   @override
   State<_LoadingShimmer> createState() => _LoadingShimmerState();
@@ -1338,6 +1759,9 @@ class _LoadingShimmerState extends State<_LoadingShimmer>
 
   @override
   Widget build(BuildContext context) {
+    final shBg = widget.isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final shHighlight = widget.isDark ? const Color(0xFF252838) : const Color(0xFFF1F5F9);
+
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, child) => ListView.builder(
@@ -1352,11 +1776,12 @@ class _LoadingShimmerState extends State<_LoadingShimmer>
               begin: Alignment(_anim.value - 1, 0),
               end: Alignment(_anim.value, 0),
               colors: [
-                const Color(0xFF1A1D27),
-                const Color(0xFF252838),
-                const Color(0xFF1A1D27),
+                shBg,
+                shHighlight,
+                shBg,
               ],
             ),
+            border: Border.all(color: widget.isDark ? Colors.transparent : const Color(0xFFE2E8F0)),
           ),
         ),
       ),
@@ -1368,7 +1793,8 @@ class _LoadingShimmerState extends State<_LoadingShimmer>
 
 class _ErrorPane extends StatelessWidget {
   final String message;
-  const _ErrorPane({required this.message});
+  final bool isDark;
+  const _ErrorPane({required this.message, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -1379,13 +1805,13 @@ class _ErrorPane extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.cloud_off,
-                color: Colors.white.withAlpha(60), size: 48),
+                color: isDark ? Colors.white.withAlpha(60) : const Color(0xFF94A3B8), size: 48),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
               style:
-                  TextStyle(color: Colors.white.withAlpha(120), fontSize: 13),
+                  TextStyle(color: isDark ? Colors.white.withAlpha(120) : const Color(0xFF475569), fontSize: 13),
             ),
           ],
         ),

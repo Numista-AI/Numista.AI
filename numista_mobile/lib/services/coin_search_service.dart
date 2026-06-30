@@ -19,6 +19,11 @@ class CoinSearchResult {
   final String content;
   final String snippet;
   final bool isOwned;
+  final String imageUrlObverse;
+  final String imageUrlReverse;
+  final String priceGuide;
+  final int populationTotal;
+  final String aprHistory;
 
   const CoinSearchResult({
     required this.id,
@@ -35,6 +40,11 @@ class CoinSearchResult {
     required this.content,
     required this.snippet,
     required this.isOwned,
+    required this.imageUrlObverse,
+    required this.imageUrlReverse,
+    required this.priceGuide,
+    required this.populationTotal,
+    required this.aprHistory,
   });
 
   factory CoinSearchResult.fromJson(Map<String, dynamic> j) {
@@ -53,6 +63,11 @@ class CoinSearchResult {
       content:     j['content']      as String? ?? '',
       snippet:     j['note']         as String? ?? '',
       isOwned:     j['is_owned']     as bool?   ?? false,
+      imageUrlObverse: j['image_url_obverse'] as String? ?? '',
+      imageUrlReverse: j['image_url_reverse'] as String? ?? '',
+      priceGuide:  j['price_guide']  as String? ?? '',
+      populationTotal: (j['population_total'] as num?)?.toInt() ?? 0,
+      aprHistory:  j['apr_history']  as String? ?? '',
     );
   }
 
@@ -127,9 +142,9 @@ class CoinSearchService {
     required String query,
     int pageSize = 10,
     int offset = 0,
+    String sortBy = 'year',
   }) async {
     final q = query.trim();
-    if (q.isEmpty) return CoinSearchResponse.empty(q);
 
     try {
       final userEmail = AuthService.userEmail;
@@ -139,6 +154,7 @@ class CoinSearchService {
           'user_email': userEmail,
           'page_size': pageSize.toString(),
           'offset': offset.toString(),
+          'sort_by': sortBy,
         },
       );
 
