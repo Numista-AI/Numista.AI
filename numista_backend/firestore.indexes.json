@@ -20,15 +20,42 @@
       "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "reference_library",
+      "collectionGroup": "mint_errors",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "denomination",
+          "fieldPath": "isPublished",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "year_int",
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "mint_errors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isPublished",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "datasets",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "name",
           "order": "ASCENDING"
         },
         {
@@ -51,50 +78,38 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "mint_errors",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isPublished",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "datasets",
           "arrayConfig": "CONTAINS"
         },
         {
           "fieldPath": "name",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "mint_errors",
+      "collectionGroup": "reference_library",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "isPublished",
+          "fieldPath": "denomination",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "category",
+          "fieldPath": "year_int",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "datasets",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "name",
+          "fieldPath": "__name__",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []
