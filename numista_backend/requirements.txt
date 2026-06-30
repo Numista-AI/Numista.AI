@@ -21,7 +21,7 @@ google-cloud-firestore==2.21.0
 google-cloud-storage==3.1.1
 google-cloud-documentai==3.14.0
 google-cloud-discoveryengine==0.13.6
-google-cloud-aiplatform==1.97.0
+google-cloud-aiplatform==1.158.0
 google-genai==1.71.0
 google-auth==2.40.3
 google-api-core==2.25.1
