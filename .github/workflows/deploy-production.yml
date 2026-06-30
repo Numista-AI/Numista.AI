@@ -98,7 +98,7 @@ jobs:
 
       - name: Deploy Firestore rules and indexes
         working-directory: numista_backend
-        run: firebase deploy --only firestore --project studio-9101802118-8c9a8
+        run: firebase deploy --only firestore --project studio-9101802118-8c9a8 --force
 
   # ── JOB 3: Deploy Python backend to Cloud Run ──────────────────────────
   deploy-backend:
