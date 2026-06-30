@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # numista-ai-tests.yml
 # GitHub Actions Workflow: Automated E2E tests for numista.ai
 #
@@ -112,7 +112,7 @@ jobs:
       # ── 11. Send email notification on failure ───────────────────
       - name: Notify on failure
         if: failure()
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v18
         with:
           server_address: smtp.gmail.com
           server_port: 465
