@@ -1,12 +1,12 @@
 # Numista.AI - Image Sourcing & Audit Report
 
-Generated at: 2026-06-30T12:45:29.405147+00:00 UTC
+Generated at: 2026-06-30T14:07:14.912010+00:00 UTC
 
 ## Summary of Executed Operations
 
 * **Agent Mode**: request
-* **Dry-Run Status**: True
-* **Target Scope**: all
+* **Dry-Run Status**: False
+* **Target Scope**: coins
 * **Total Coin/Note Image Gaps Filled**: 2 / 11906
 * **Total Mint Error Gaps Filled**: 0 / 0
 

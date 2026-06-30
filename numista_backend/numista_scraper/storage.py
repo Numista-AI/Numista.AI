@@ -72,7 +72,11 @@ def upload_to_gcs(img_bytes, gcs_path):
             content_type = "image/webp"
             
         blob.upload_from_string(img_bytes, content_type=content_type)
-        blob.make_public()
+        try:
+            blob.make_public()
+        except Exception:
+            # Skip ACL settings if bucket has Uniform Bucket-Level Access enabled
+            pass
         return blob.public_url
     except Exception as e:
         print(f"    ⚠ GCS upload error for path {gcs_path}: {e}")
