@@ -2,6 +2,7 @@ import re
 import urllib.parse
 from bs4 import BeautifulSoup
 from botasaurus.request import request, Request
+from botasaurus.soupify import soupify
 import requests
 
 # Load config settings
@@ -166,7 +167,8 @@ def scrape_heritage_auctions(request: Request, data):
         
     search_url = f"https://currency.ha.com/c/search-results.zx?Nty=1&Ntt={urllib.parse.quote_plus(query)}&N=790+231+4294967291"
     try:
-        soup = request.bs4(search_url)
+        resp = request.get(search_url)
+        soup = soupify(resp)
         img_pattern = re.compile(
             r'<img[^>]+src="(https://dyn1\.heritagestatic\.com/ha\?[^"]+)"[^>]*alt="([^"]*)"',
             re.IGNORECASE
@@ -211,7 +213,8 @@ def scrape_error_ref(request: Request, data):
     # Search error-ref.com via search query
     search_url = f"https://www.error-ref.com/?s={urllib.parse.quote_plus(error_type)}"
     try:
-        soup = request.bs4(search_url)
+        resp = request.get(search_url)
+        soup = soupify(resp)
         # Look for search results articles
         articles = []
         for a in soup.find_all("a", href=True):
@@ -226,7 +229,8 @@ def scrape_error_ref(request: Request, data):
             
         # Visit first article
         article_url = articles[0]
-        art_soup = request.bs4(article_url)
+        art_resp = request.get(article_url)
+        art_soup = soupify(art_resp)
         
         # Extract images and text
         paragraphs = [p.get_text() for p in art_soup.find_all("p") if p.get_text().strip()]
@@ -265,7 +269,8 @@ def scrape_coinweek(request: Request, data):
         
     search_url = f"https://coinweek.com/?s={urllib.parse.quote_plus(query)}"
     try:
-        soup = request.bs4(search_url)
+        resp = request.get(search_url)
+        soup = soupify(resp)
         
         # Find article links
         article_links = []
@@ -292,7 +297,8 @@ def scrape_coinweek(request: Request, data):
         article_url = article_links[0]
         print(f"    Scraping CoinWeek article: {article_url}")
         
-        art_soup = request.bs4(article_url)
+        art_resp = request.get(article_url)
+        art_soup = soupify(art_resp)
         
         # Extract main text
         paragraphs = []
@@ -333,3 +339,89 @@ def scrape_coinweek(request: Request, data):
     except Exception as e:
         print(f"    ⚠ CoinWeek scrape error for query '{query}': {e}")
     return None
+
+
+# ─── USMint.gov Scraper ────────────────────────────────────────────────────────
+
+@request
+def scrape_usmint(request: Request, data):
+    """
+    Search usmint.gov for coin designs, descriptions, and official public domain images.
+    `data` contains a dict with keys: 'query' (e.g. 'Patsy Takemoto Mink')
+    """
+    query = data.get("query")
+    if not query:
+        return None
+        
+    search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
+    try:
+        resp = request.get(search_url)
+        if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
+            print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
+            return None
+        soup = soupify(resp)
+        
+        # Find links pointing to learn or coin programs
+        article_links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "usmint.gov/learn/" in href or "usmint.gov/news/" in href or "usmint.gov/coins/" in href:
+                if not any(x in href for x in ["?s=", "/category/", "/tag/", "wp-content"]):
+                    article_links.append(href)
+                    
+        article_links = list(dict.fromkeys(article_links))
+        
+        if not article_links:
+            # Fallback catalog search
+            catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
+            cat_resp = request.get(catalog_url)
+            cat_soup = soupify(cat_resp)
+            for a in cat_soup.find_all("a", href=True):
+                href = a["href"]
+                if "/search?" not in href and (".html" in href or "-product-" in href):
+                    abs_href = href if href.startswith("http") else f"https://catalog.usmint.gov{href}"
+                    article_links.append(abs_href)
+            article_links = list(dict.fromkeys(article_links))
+            
+        if not article_links:
+            return None
+            
+        # Visit first page
+        target_url = article_links[0]
+        art_resp = request.get(target_url)
+        art_soup = soupify(art_resp)
+        
+        paragraphs = []
+        for p in art_soup.find_all("p"):
+            txt = p.get_text().strip()
+            if txt and len(txt) > 60 and not any(x in txt.lower() for x in ["copyright", "subscribe", "newsletter"]):
+                paragraphs.append(txt)
+                
+        desc = "\n\n".join(paragraphs[:3])
+        
+        # Extract images from content
+        images = []
+        for img in art_soup.find_all("img", src=True):
+            src = img["src"]
+            if "content/dam/usmint" in src or "uploads/" in src or "product/" in src:
+                # Resolve relative paths
+                if src.startswith("/"):
+                    src = f"https://www.usmint.gov{src}"
+                if not any(x in src.lower() for x in ["logo", "icon", "banner", "150x", "300x"]):
+                    images.append(src)
+                    
+        images = list(dict.fromkeys(images))
+        
+        if images:
+            return {
+                "source": "usmint",
+                "source_url": target_url,
+                "obverse_url": images[0] if len(images) >= 1 else None,
+                "reverse_url": images[1] if len(images) >= 2 else (images[0] if len(images) >= 1 else None),
+                "description": desc,
+                "title": query
+            }
+    except Exception as e:
+        print(f"    ⚠ USMint.gov scrape error for query '{query}': {e}")
+    return None
+

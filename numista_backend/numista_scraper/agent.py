@@ -18,7 +18,8 @@ try:
         fetch_pcgs_market_data,
         scrape_heritage_auctions,
         scrape_error_ref,
-        scrape_coinweek
+        scrape_coinweek,
+        scrape_usmint
     )
     from .storage import (
         ensure_sqlite_schema,
@@ -38,7 +39,8 @@ except ImportError:
         fetch_pcgs_market_data,
         scrape_heritage_auctions,
         scrape_error_ref,
-        scrape_coinweek
+        scrape_coinweek,
+        scrape_usmint
     )
     from numista_scraper.storage import (
         ensure_sqlite_schema,
@@ -224,10 +226,13 @@ class NumistaScraperAgent:
                 print("    Item is a Banknote. Searching Heritage Auctions...")
                 scraped_data = scrape_heritage_auctions({"query": query})
             else:
-                print("    Item is a Coin. Sourcing images from Heritage fallback...")
-                scraped_data = scrape_heritage_auctions({"query": query})
-                if scraped_data:
-                    scraped_data["source"] = "heritage"
+                print("    Item is a Coin. Sourcing images from USMint.gov...")
+                scraped_data = scrape_usmint({"query": query})
+                if not scraped_data or not scraped_data.get("obverse_url"):
+                    print("    USMint.gov returned no images. Sourcing from Heritage fallback...")
+                    scraped_data = scrape_heritage_auctions({"query": query})
+                    if scraped_data:
+                        scraped_data["source"] = "heritage"
                     
         # 3. Fetch PCGS Market Data if it's a coin
         market_data = None
