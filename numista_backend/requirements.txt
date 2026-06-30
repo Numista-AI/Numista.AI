@@ -37,7 +37,7 @@ PyJWT==2.10.3
 yfinance==0.2.62
 
 # ── Payments ──────────────────────────────────────────────────────────────────
-stripe==12.2.0
+stripe==15.3.0
 
 # ── HTML/PDF parsing (used in main.py routes) ─────────────────────────────────
 beautifulsoup4==4.13.4
