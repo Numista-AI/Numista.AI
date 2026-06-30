@@ -200,6 +200,215 @@ def scrape_heritage_auctions(request: Request, data):
 
 # ─── Error-Ref.com Scraper ────────────────────────────────────────────────────
 
+def is_article_related(title, error, query=None):
+    if not title or not error:
+        return True
+    title_lower = title.lower()
+    name_lower = error.get("name", "").lower()
+    short_lower = error.get("shortName", "").lower()
+    error_id = error.get("id", "").lower()
+    
+    # If query is general term, allow general titles matching query
+    if query:
+        q_clean = query.lower().strip()
+        general_terms = [
+            "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
+            "struck through", "struck-through", "grease", "planchet", "planchet errors",
+            "struck through grease", "struck-through grease"
+        ]
+        if q_clean in general_terms:
+            return q_clean in title_lower or any(word in title_lower for word in q_clean.split())
+            
+    # Check if the title has general modern coins or list indicators (to allow list articles like "5 Modern Quarters...")
+    list_indicators = ["modern", "quarter", "cent", "dollar", "nickel", "dime", "worth", "money", "find", "change", "error", "die", "misprint", "collect"]
+    has_list_indicator = any(word in title_lower for word in list_indicators)
+    
+    # Specific date/variety checks
+    if "1955" in name_lower:
+        return "1955" in title_lower or "double" in title_lower or "ddo" in title_lower or has_list_indicator
+        
+    if "wisconsin" in name_lower:
+        return "wisconsin" in title_lower or "leaf" in title_lower or has_list_indicator
+        
+    if "bat" in name_lower or "samoa" in name_lower:
+        return "samoa" in title_lower or "bat" in title_lower or has_list_indicator
+        
+    if "new jersey" in name_lower or "nj-quarter" in error_id:
+        return "new jersey" in title_lower or "nj" in title_lower or "crossroads" in title_lower or has_list_indicator
+        
+    if "inverted back" in name_lower or "inverted-back" in error_id:
+        currency_indicators = ["note", "bill", "currency", "banknote", "conway", "paper", "worth", "money", "find", "error", "misprint", "collect"]
+        has_currency_indicator = any(word in title_lower for word in currency_indicators)
+        return "inverted" in title_lower or "back" in title_lower or has_currency_indicator
+        
+    if "clipped" in name_lower or "clip" in name_lower:
+        return "clip" in title_lower or "planchet" in title_lower or has_list_indicator
+        
+    # General fallback: check if any of the keywords are in the title
+    words = re.findall(r'[a-z0-9]{3,}', short_lower or name_lower)
+    stops = {"coin", "error", "quarter", "cent", "dollar", "nickel", "dime", "mint", "state", "the", "and"}
+    keywords = [w for w in words if w not in stops]
+    if not keywords:
+        return True
+    return any(kw in title_lower for kw in keywords) or has_list_indicator
+
+
+def validate_article_content(text, error, query=None):
+    if not text or not error:
+        return True
+    text_lower = text.lower()
+    error_id = error.get("id", "").lower()
+    name_lower = error.get("name", "").lower()
+    
+    general_terms = [
+        "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
+        "struck through", "struck-through", "grease", "die gouges", "die chip", "die chips",
+        "doubled die", "clipped planchet", "curved clip", "planchet", "planchet errors",
+        "struck through grease", "struck-through grease"
+    ]
+    is_general_query = query and query.lower().strip() in general_terms
+    
+    if "1955-ddo" in error_id or "1955" in name_lower:
+        return "1955" in text_lower and ("double" in text_lower or "ddo" in text_lower)
+        
+    if "wisconsin" in name_lower:
+        return "wisconsin" in text_lower and "leaf" in text_lower
+        
+    if "bat" in name_lower or "samoa" in name_lower:
+        return "samoa" in text_lower and ("bat" in text_lower or "fruit bat" in text_lower)
+        
+    if "new jersey" in name_lower or "nj-quarter" in error_id:
+        if is_general_query:
+            if "die-gouge" in error_id or "gouge" in name_lower:
+                return "gouge" in text_lower or "extra tree" in text_lower
+            if "struck-through" in error_id or "struck-through" in name_lower:
+                return "grease" in text_lower or "die fill" in text_lower or "struck through grease" in text_lower or "struck-through grease" in text_lower
+            return True
+            
+        has_nj = "new jersey" in text_lower or bool(re.search(r'\bnj\b', text_lower))
+        if not has_nj:
+            return False
+            
+        if "die-gouge" in error_id or "gouge" in name_lower:
+            return "gouge" in text_lower or "extra tree" in text_lower
+            
+        if "struck-through" in error_id or "struck-through" in name_lower:
+            return "grease" in text_lower or "die fill" in text_lower or "struck through grease" in text_lower or "struck-through grease" in text_lower
+            
+        return True
+        
+    if "inverted-back" in error_id or "inverted back" in name_lower:
+        has_inverted = "inverted" in text_lower or "upside" in text_lower
+        has_paper = any(w in text_lower for w in ["banknote", "paper money", "conway", "dollar bill", "currency error", "inverted back", "inverted reverse", "inverted printing"])
+        is_coin_page = "die installation" in text_lower or "die gouge" in text_lower or "clipped planchet" in text_lower
+        return has_inverted and has_paper and not is_coin_page
+        
+    if "clipped" in name_lower or "clip" in name_lower:
+        return bool(re.search(r'\bclips?\b|\bclipped\b|\bplanchets?\b', text_lower))
+        
+    return True
+
+
+def get_scored_images(soup, error, content_div, is_general_query=False):
+    if not error:
+        images = []
+        for img in content_div.find_all("img", src=True):
+            src = img["src"]
+            if not any(x in src.lower() for x in ["logo", "avatar", "advertis", "banner", "icon", "widget", "bio", "author", "staff", "headshot", "person", "profile", "gravatar"]):
+                for attr in ["bv-data-src", "data-orig-file", "data-large-file", "data-src", "src"]:
+                    val = img.get(attr)
+                    if val and val.startswith("http"):
+                        src = val
+                        break
+                images.append(src)
+        return list(dict.fromkeys(images))
+
+    name = error.get("name", "")
+    short_name = error.get("shortName", "")
+    category = error.get("category", "")
+    subcategory = error.get("subcategory", "")
+    error_id = error.get("id", "")
+    
+    words = re.findall(r'[a-z0-9]{3,}', (name + " " + short_name + " " + category + " " + subcategory + " " + error_id).lower())
+    stops = {"coin", "error", "quarter", "cent", "dollar", "nickel", "dime", "mint", "state", "the", "and"}
+    keywords = list(set([w for w in words if w not in stops]))
+    
+    if "1955-ddo" in error_id.lower() or "1955" in name.lower():
+        keywords.extend(["1955", "ddo", "doubled"])
+    if "wisconsin" in name.lower():
+        keywords.extend(["wisconsin", "leaf", "corn"])
+    if "bat" in name.lower() or "samoa" in name.lower():
+        keywords.extend(["bat", "samoa"])
+    if "jersey" in name.lower():
+        keywords.extend(["jersey", "gouge", "tree", "crossroads"])
+    if "inverted" in name.lower():
+        keywords.extend(["inverted", "back", "upside", "reverse", "obverse"])
+    if "clip" in name.lower():
+        keywords.extend(["clip", "clipped", "planchet", "curved"])
+        
+    keywords = list(set(keywords))
+    
+    scored_images = []
+    for img in content_div.find_all("img", src=True):
+        src = img["src"]
+        if any(x in src.lower() for x in ["logo", "avatar", "advertis", "banner", "icon", "widget", "bio", "author", "staff", "headshot", "person", "profile", "gravatar"]):
+            continue
+            
+        for attr in ["bv-data-src", "data-orig-file", "data-large-file", "data-src", "src"]:
+            val = img.get(attr)
+            if val and val.startswith("http"):
+                src = val
+                break
+                
+        alt = img.get("alt", "").lower()
+        src_lower = src.lower()
+        
+        parent_text = ""
+        parent = img.parent
+        for _ in range(2):
+            if parent:
+                parent_text += " " + parent.get_text()
+                parent = parent.parent
+        parent_text = parent_text.lower()
+        
+        score = 0
+        for kw in keywords:
+            if kw in alt:
+                score += 15
+            if kw in src_lower:
+                score += 15
+            if kw in parent_text:
+                score += 5
+                
+        # Year penalty: check for mismatching 4-digit years if the error has target years and is not general
+        years = error.get("years")
+        if years and not is_general_query:
+            filename = src_lower.split("/")[-1]
+            found_years = set(re.findall(r'\b(1[89]\d{2}|20\d{2})\b', alt + " " + filename))
+            target_years_str = [str(y) for y in years]
+            mismatch = False
+            for fy in found_years:
+                if fy not in target_years_str:
+                    mismatch = True
+                    break
+            if mismatch:
+                score = -9999  # Discard mismatching years completely
+                
+        if score >= 0:
+            scored_images.append((score, src))
+        
+    scored_images.sort(key=lambda x: x[0], reverse=True)
+    
+    seen = set()
+    res = []
+    for score, src in scored_images:
+        if src not in seen:
+            res.append((score, src))
+            seen.add(src)
+            
+    return res
+
+
 @request
 def scrape_error_ref(request: Request, data):
     """
@@ -211,51 +420,76 @@ def scrape_error_ref(request: Request, data):
         return None
         
     # Search error-ref.com via search query
-    search_url = f"https://www.error-ref.com/?s={urllib.parse.quote_plus(error_type)}"
+    query_clean = error_type.replace("-", " ")
+    search_url = f"https://www.error-ref.com/?s={urllib.parse.quote_plus(query_clean)}"
     try:
         resp = request.get(search_url)
         soup = soupify(resp)
         # Look for search results articles
         articles = []
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "www.error-ref.com/" in href and href != "https://www.error-ref.com/" and "?" not in href:
-                articles.append(href)
+        for h2 in soup.find_all("h2", class_="entry-title"):
+            a = h2.find("a", href=True)
+            if a:
+                href = a["href"]
+                title = h2.get_text().strip()
+                if "www.error-ref.com/" in href and href != "https://www.error-ref.com/" and "?" not in href:
+                    # Filter out direct binary, PDF, or image files to prevent utf-8 decoding crashes
+                    if any(href.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".zip"]) or "wp-content/uploads" in href.lower():
+                        continue
+                    articles.append((title, href))
                 
-        articles = list(dict.fromkeys(articles)) # deduplicate
-        
-        if not articles:
+        # Filter candidates
+        error_record = data.get("error_record")
+        article_url = None
+        for title, url in articles:
+            if is_article_related(title, error_record, query=error_type):
+                article_url = url
+                break
+                
+        if not article_url:
             return None
             
-        # Visit first article
-        article_url = articles[0]
+        # Visit selected article
         art_resp = request.get(article_url)
         art_soup = soupify(art_resp)
         
-        # Extract images and text
+        # Extract text and validate content (exclude header/footer menus by targeting the content div)
         paragraphs = [p.get_text() for p in art_soup.find_all("p") if p.get_text().strip()]
         desc = "\n\n".join(paragraphs[:3]) # First 3 paragraphs
         
-        images = []
-        for img in art_soup.find_all("img", src=True):
-            src = img["src"]
-            if "uploads/" in src and "logo" not in src.lower():
-                images.append(src)
-                
-        images = list(dict.fromkeys(images))
+        content_div = art_soup.find(class_=re.compile(r"entry-content|post-content|article-content", re.I)) or art_soup.find(id="content") or art_soup
+        full_text = content_div.get_text() + " " + " ".join([img.get("alt", "") for img in content_div.find_all("img")])
+        if not validate_article_content(full_text, error_record, query=error_type):
+            print(f"    ⚠ Article {article_url} failed content validation for {error_type}. Skipping...")
+            return None
+            
+        # Score and extract images
+        general_terms = [
+            "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
+            "struck through", "struck-through", "grease", "die gouges", "die chip", "die chips",
+            "doubled die", "clipped planchet", "curved clip", "planchet", "planchet errors",
+            "struck through grease", "struck-through grease"
+        ]
+        is_general_query = error_type.lower().strip() in general_terms
         
+        scored = get_scored_images(art_soup, error_record, art_soup, is_general_query=is_general_query)
+        min_score = 0 if is_general_query else 1
+        valid_images = [url for score, url in scored if score >= min_score]
+        if not valid_images:
+            print(f"    ⚠ Article {article_url} has no images matching error keywords/year. Skipping...")
+            return None
+            
         return {
             "source": "error-ref",
             "source_url": article_url,
-            "obverse_url": images[0] if len(images) >= 1 else None,
-            "reverse_url": images[1] if len(images) >= 2 else None,
+            "obverse_url": valid_images[0] if len(valid_images) >= 1 else None,
+            "reverse_url": valid_images[1] if len(valid_images) >= 2 else None,
             "description": desc
         }
     except Exception as e:
         print(f"    ⚠ Error-Ref scrape error for '{error_type}': {e}")
     return None
 
-# ─── CoinWeek Scraper ─────────────────────────────────────────────────────────
 
 @request
 def scrape_coinweek(request: Request, data):
@@ -273,67 +507,78 @@ def scrape_coinweek(request: Request, data):
         soup = soupify(resp)
         
         # Find article links
-        article_links = []
-        # CoinWeek search results typically contain <h2 class="entry-title"><a href="...">
-        for h2 in soup.find_all("h2", class_=re.compile(r"entry-title|post-title|title", re.I)):
-            a = h2.find("a", href=True)
+        article_candidates = []
+        for heading in soup.find_all(["h2", "h3"], class_=re.compile(r"entry-title|post-title|title|td-module-title", re.I)):
+            a = heading.find("a", href=True)
             if a:
-                article_links.append(a["href"])
+                title = heading.get_text().strip()
+                article_candidates.append((title, a["href"]))
                 
         # Fallback to search links in main body
-        if not article_links:
+        if not article_candidates:
             for a in soup.find_all("a", href=True):
                 href = a["href"]
+                title = a.get_text().strip() or href
                 if "coinweek.com/" in href and any(x in href for x in ["/19", "/20", "error", "die", "dollar", "cent"]):
                     if not any(x in href for x in ["?s=", "category", "tag", "author", "wp-content"]):
-                        article_links.append(href)
+                        article_candidates.append((title, href))
                         
-        article_links = list(dict.fromkeys(article_links))
-        
-        if not article_links:
-            print(f"    ⚠ No CoinWeek article found for query: {query}")
+        # Filter and validate candidates
+        error_record = data.get("error_record")
+        article_url = None
+        for title, url in article_candidates:
+            if is_article_related(title, error_record, query=query):
+                print(f"    Scraping CoinWeek candidate article: {url}")
+                art_resp = request.get(url)
+                art_soup = soupify(art_resp)
+                
+                # Extract text
+                paragraphs = []
+                for p in art_soup.find_all("p"):
+                    txt = p.get_text().strip()
+                    if txt and len(txt) > 60 and not any(x in txt.lower() for x in ["copyright", "subscribe", "newsletter", "advertisement"]):
+                        paragraphs.append(txt)
+                desc = "\n\n".join(paragraphs[:3])
+                
+                # Validate text content (exclude header/footer menus by targeting the content div)
+                content_div = art_soup.find(class_=re.compile(r"entry-content|post-content|article-content", re.I)) or art_soup
+                full_text = content_div.get_text() + " " + " ".join([img.get("alt", "") for img in content_div.find_all("img")])
+                if validate_article_content(full_text, error_record, query=query):
+                    article_url = url
+                    break
+                else:
+                    print(f"    ⚠ Article {url} failed content validation. Trying next candidate...")
+                    
+        if not article_url:
+            print(f"    ⚠ No valid CoinWeek article found for query: {query}")
             return None
             
-        article_url = article_links[0]
-        print(f"    Scraping CoinWeek article: {article_url}")
-        
-        art_resp = request.get(article_url)
-        art_soup = soupify(art_resp)
-        
-        # Extract main text
-        paragraphs = []
-        for p in art_soup.find_all("p"):
-            txt = p.get_text().strip()
-            if txt and len(txt) > 60 and not any(x in txt.lower() for x in ["copyright", "subscribe", "newsletter", "advertisement"]):
-                paragraphs.append(txt)
-        
-        desc = "\n\n".join(paragraphs[:3]) # Top 3 paragraphs
-        
         # Extract high-res images from post content
-        images = []
-        # Post content is typically in <div class="entry-content"> or <article>
         content_div = art_soup.find(class_=re.compile(r"entry-content|post-content|article-content", re.I)) or art_soup
         
-        for img in content_div.find_all("img", src=True):
-            src = img["src"]
-            # Exclude avatars, ads, logo images
-            if not any(x in src.lower() for x in ["logo", "avatar", "advertis", "banner", "icon", "widget"]):
-                # CoinWeek often uses srcset or lazy sizes. Let's resolve high-res if possible
-                for attr in ["data-orig-file", "data-large-file", "data-src", "src"]:
-                    val = img.get(attr)
-                    if val and val.startswith("http"):
-                        src = val
-                        break
-                images.append(src)
-                
-        images = list(dict.fromkeys(images))
+        general_terms = [
+            "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
+            "struck through", "struck-through", "grease", "die gouges", "die chip", "die chips",
+            "doubled die", "clipped planchet", "curved clip", "planchet", "planchet errors"
+        ]
+        q_clean = re.sub(r'\berror\b', '', query, flags=re.I).strip().lower()
+        is_general_query = q_clean in general_terms
         
-        if images:
+        scored = get_scored_images(art_soup, error_record, content_div, is_general_query=is_general_query)
+        
+        # Pick top images
+        min_score = 0 if is_general_query else 1
+        valid_images = [url for score, url in scored if score >= min_score]
+        if not valid_images:
+            print(f"    ⚠ Article {article_url} has no images matching error keywords/year. Skipping...")
+            return None
+            
+        if valid_images:
             return {
                 "source": "coinweek",
                 "source_url": article_url,
-                "obverse_url": images[0] if len(images) >= 1 else None,
-                "reverse_url": images[1] if len(images) >= 2 else (images[0] if len(images) >= 1 else None),
+                "obverse_url": valid_images[0] if len(valid_images) >= 1 else None,
+                "reverse_url": valid_images[1] if len(valid_images) >= 2 else (valid_images[0] if len(valid_images) >= 1 else None),
                 "description": desc
             }
     except Exception as e:

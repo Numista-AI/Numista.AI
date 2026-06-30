@@ -283,6 +283,174 @@ class NumistaScraperAgent:
         return True
 
 
+    def get_fallback_queries(self, error):
+        name = error.get("name", "")
+        shortName = error.get("shortName", "")
+        category = error.get("category", "")
+        subcategory = error.get("subcategory", "")
+        years = error.get("years", [])
+        denoms = error.get("denominations", [])
+        
+        # Helper to clean a string of specific blocking terms
+        def clean_term(text):
+            if not text:
+                return ""
+            text = text.replace("—", " ").replace("–", " ").replace("-", " ")
+            text = re.sub(r"[#`'\"(),/]", " ", text)
+            blocking = [
+                "Crossroads of the Revolution",
+                "State Quarter",
+                "State",
+                "Extra Tree",
+                "Grease",
+                "FRN",
+                "High",
+                "Low",
+                "Obverse",
+                "Reverse"
+            ]
+            for word in blocking:
+                text = re.sub(rf"\b{re.escape(word)}\b", "", text, flags=re.I)
+            text = re.sub(r"\s+", " ", text).strip()
+            return text
+
+        # Candidate query list
+        candidates = []
+        
+        # 1. Cleaned name
+        c_name = clean_term(name)
+        if c_name:
+            candidates.append(c_name)
+            candidates.append(f"{c_name} error")
+            
+        # 2. Short name (cleaned)
+        if shortName:
+            c_short = clean_term(shortName)
+            if c_short:
+                candidates.append(c_short)
+                candidates.append(f"{c_short} error")
+                if years and str(years[0]) not in c_short:
+                    candidates.append(f"{years[0]} {c_short}")
+                    candidates.append(f"{years[0]} {c_short} error")
+
+        # 3. Domain variety shortcuts (high priority)
+        name_lower = name.lower()
+        if "bat" in name_lower or "samoa" in name_lower:
+            candidates.append("Samoa Bat Quarter")
+            candidates.append("2020 Samoa Bat Quarter")
+            candidates.append("Samoa Bat")
+            candidates.append("Samoa Bat error")
+            candidates.append("2020 Samoa Bat Quarter error")
+        if "wisconsin" in name_lower:
+            candidates.append("Wisconsin Extra Leaf")
+            candidates.append("Wisconsin Leaf Quarter")
+            candidates.append("Wisconsin Extra Leaf error")
+            candidates.append("Wisconsin Leaf Quarter error")
+        if "new jersey" in name_lower or "jersey" in name_lower:
+            candidates.append("New Jersey Quarter error")
+            candidates.append("New Jersey Crossroads Quarter")
+            candidates.append("New Jersey Crossroads Quarter error")
+
+        # 4. Smart nickname fallback if name contains quotes (e.g. 'Bat')
+        nick_match = re.search(r"['\"‘“]([^'\"’”]+)['\"’ ”]", name)
+        if nick_match:
+            nick = nick_match.group(1).strip()
+            if len(nick) > 2:
+                candidates.append(nick)
+                candidates.append(f"{nick} error")
+                if denoms:
+                    candidates.append(f"{denoms[0]} {nick}")
+                    candidates.append(f"{denoms[0]} {nick} error")
+                if years:
+                    candidates.append(f"{years[0]} {nick}")
+                    candidates.append(f"{years[0]} {nick} error")
+
+        # 5. Cleaned shortName directly
+        if shortName:
+            short_part = shortName.split("/")[0].strip()
+            candidates.append(short_part)
+            candidates.append(f"{short_part} error")
+
+        # 6. Extract core general variety terms
+        for term in ["struck-through grease", "struck through grease", "struck-through", "struck through", "die gouge", "die chip", "doubled die", "clipped planchet", "curved clip", "grease"]:
+            if term in name_lower or term in shortName.lower():
+                candidates.append(term)
+                candidates.append(f"{term} error")
+
+        # 7. Year + Denomination + Category
+        if years and denoms:
+            candidates.append(f"{years[0]} {denoms[0]} {category}")
+            candidates.append(f"{years[0]} {denoms[0]} {category} error")
+            candidates.append(f"{years[0]} {denoms[0]}")
+            candidates.append(f"{years[0]} {denoms[0]} error")
+
+        # 8. Denomination + Category
+        if denoms:
+            candidates.append(f"{denoms[0]} {category}")
+            candidates.append(f"{denoms[0]} {category} error")
+
+        # Deduplicate candidates preserving order
+        seen = set()
+        unique_candidates = []
+        for q in candidates:
+            q_clean = q.lower().strip()
+            if q_clean not in seen and len(q) > 3:
+                seen.add(q_clean)
+                unique_candidates.append(q)
+
+        # Specific vs Generic categorization
+        def is_specific_str(q):
+            q_lower = q.lower()
+            # If it has a specific year, it is specific
+            if re.search(r'\b(19\d{2}|20\d{2})\b', q_lower):
+                # But generic year + denomination/category is treated as generic/broad
+                if q_lower in [f"{years[0]} {denoms[0]} {category}".lower(), f"{years[0]} {denoms[0]}".lower(), f"{years[0]} {denoms[0]} error".lower(), f"{years[0]} {denoms[0]} {category} error".lower()] if (years and denoms) else False:
+                    return False
+                return True
+            # Specific variety keywords (including currency/banknote terms)
+            specific_keywords = [
+                "wisconsin", "samoa", "jersey", "bat", "conway", "mankiller", "leaf", 
+                "delaware", "connecticut", "patsy", "mink", "note", "bill", "currency", 
+                "banknote", "inverted back", "federal reserve", "frn"
+            ]
+            if any(kw in q_lower for kw in specific_keywords):
+                return True
+            return False
+
+        specific_queries = []
+        generic_queries = []
+        for q in unique_candidates:
+            if is_specific_str(q):
+                specific_queries.append(q)
+            else:
+                generic_queries.append(q)
+
+        return specific_queries, generic_queries
+
+    def try_error_ref_flow(self, error, queries):
+        for q in queries:
+            print(f"    Searching Error-Ref for: '{q}'...")
+            scraped = scrape_error_ref({"error_type": q, "error_record": error})
+            if scraped and scraped.get("obverse_url"):
+                return scraped
+        return None
+
+    def try_coinweek_flow(self, error, queries):
+        for q in queries:
+            print(f"    Searching CoinWeek for: '{q}'...")
+            scraped = scrape_coinweek({"query": q, "error_record": error})
+            if scraped and scraped.get("obverse_url"):
+                return scraped
+        return None
+
+    def try_heritage_flow(self, error, queries):
+        for q in queries:
+            print(f"    Searching Heritage Auctions for currency error: '{q}'...")
+            scraped = scrape_heritage_auctions({"query": q, "error_record": error})
+            if scraped and scraped.get("obverse_url"):
+                return scraped
+        return None
+
     def process_error_gap(self, error, dry_run=False):
         """
         Source illustrations and descriptions for a missing mint error.
@@ -291,19 +459,61 @@ class NumistaScraperAgent:
         name = error.get("name")
         category = error.get("category", "")
         subcategory = error.get("subcategory", "")
+        years = error.get("years", [])
+        is_specific = len(years) > 0
         
         print(f"\n⚡ Sourcing images/descriptions for Mint Error: {name} [ID: {error_id}]")
         
-        # Step 1: Query Error-Ref
-        scraped = scrape_error_ref({"error_type": f"{name} {subcategory}"})
+        scraped = None
+        is_currency = (
+            subcategory.lower() == "currency" or
+            "currency" in [d.lower() for d in error.get("denominations", [])] or
+            "federal reserve" in name.lower()
+        )
         
-        # Step 2: Fallback to CoinWeek for detailed articles & high-res images
+        # Get specific and generic fallback queries
+        specific_queries, generic_queries = self.get_fallback_queries(error)
+        
+        # Prepend the primary name to the specific queries list if it is not already there
+        if name not in specific_queries:
+            specific_queries.insert(0, name)
+        name_err = f"{name} error"
+        if name_err not in specific_queries:
+            specific_queries.insert(1, name_err)
+
+        if is_currency:
+            print("    Item is a Banknote/Currency error. Trying Heritage Auctions first...")
+            scraped = self.try_heritage_flow(error, specific_queries)
+            if not scraped or not scraped.get("obverse_url"):
+                print("    Heritage specific search returned no images. Trying CoinWeek specific...")
+                scraped = self.try_coinweek_flow(error, specific_queries)
+            if not scraped or not scraped.get("obverse_url"):
+                print("    CoinWeek specific search returned no images. Trying Error-Ref specific...")
+                scraped = self.try_error_ref_flow(error, specific_queries)
+        elif is_specific:
+            # Specific variety -> Prefer CoinWeek/Error-Ref specific first
+            scraped = self.try_coinweek_flow(error, specific_queries)
+            if not scraped or not scraped.get("obverse_url"):
+                print("    CoinWeek specific search returned no images. Trying Error-Ref specific...")
+                scraped = self.try_error_ref_flow(error, specific_queries)
+        else:
+            # General error -> Prefer Error-Ref generic first
+            scraped = self.try_error_ref_flow(error, generic_queries)
+            if not scraped or not scraped.get("obverse_url"):
+                print("    Error-Ref generic search returned no images. Trying CoinWeek generic...")
+                scraped = self.try_coinweek_flow(error, generic_queries)
+                
+        # If specific searches failed for specific variety/currency, we fall back to generic/general definitions
         if not scraped or not scraped.get("obverse_url"):
-            print("    Error-Ref search returned no images. Trying CoinWeek...")
-            scraped = scrape_coinweek({"query": f"{name} coin error"})
+            if is_specific or is_currency:
+                print("    ⚠ Specific variety searches failed. Falling back to generic definition pages...")
+                # For generic fallbacks, we always prefer Error-Ref first (since it is a glossary), then CoinWeek
+                scraped = self.try_error_ref_flow(error, generic_queries)
+                if not scraped or not scraped.get("obverse_url"):
+                    scraped = self.try_coinweek_flow(error, generic_queries)
             
         if not scraped or not scraped.get("obverse_url"):
-            print("    ✗ Failed to source images from Error-Ref or CoinWeek.")
+            print("    ✗ Failed to source images from Heritage, CoinWeek, or Error-Ref.")
             return False
 
         if dry_run:

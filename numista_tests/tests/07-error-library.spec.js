@@ -56,9 +56,15 @@ test.describe('07 - Error Library Screen Verification', () => {
     });
     expect(hasPermissionDeniedText, 'Found permission denied error text on screen').toBe(false);
 
-    // Ensure no new Firestore permission errors were thrown in the console
-    const hasConsolePermissionErrors = errors.some(e => e.includes('permission-denied') || e.includes('insufficient permissions'));
-    expect(hasConsolePermissionErrors, 'Found permission denied console errors: ' + errors.join(' | ')).toBe(false);
+    // Ensure no Firestore or Firebase errors were thrown in the console (e.g. failed-precondition, permission-denied)
+    const criticalErrors = errors.filter(e => 
+      e.includes('cloud_firestore') || 
+      e.includes('failed-precondition') || 
+      e.includes('permission-denied') ||
+      e.includes('insufficient permissions') ||
+      e.includes('firebase')
+    );
+    expect(criticalErrors.length, 'Found critical console errors: ' + criticalErrors.join(' | ')).toBe(0);
   });
 
 });
