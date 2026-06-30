@@ -17,7 +17,7 @@ python-multipart==0.0.20
 
 # ── Google Cloud & AI ─────────────────────────────────────────────────────────
 firebase-admin==7.3.0
-google-cloud-firestore==2.20.2
+google-cloud-firestore==2.21.0
 google-cloud-storage==3.1.0
 google-cloud-documentai==3.14.0
 google-cloud-discoveryengine==0.13.6
