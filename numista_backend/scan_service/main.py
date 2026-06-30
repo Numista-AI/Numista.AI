@@ -43,12 +43,25 @@ import re
 import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify, abort, make_response
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from google import genai
 from google.genai import types
 from google.cloud import firestore
 from estate_state_rules import STATE_RULES
 
 app = Flask(__name__)
+
+# ── Rate limiting — protects the unauthenticated endpoint from API abuse ────────
+# Uses in-memory storage (suitable for single Cloud Run instance).
+# Limits: 10 scans/min and 5 estate reports/min per client IP.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window",
+)
 
 # ── Model config ───────────────────────────────────────────────────────────────────
 # Per official deprecation schedule Jun 11, 2026:
@@ -257,6 +270,7 @@ def write_to_firestore(user_id: str, program_id: str, coins: dict) -> int:
 
 
 @app.route("/scan_checklist", methods=["POST"])
+@limiter.limit("10 per minute")
 def scan_checklist():
     # ── Parse request ─────────────────────────────────────────────────────────
     if "image" not in request.files:
@@ -331,6 +345,7 @@ def health():
 # ── Estate Report Endpoint ─────────────────────────────────────────────────────
 
 @app.route("/generate_estate_report", methods=["POST"])
+@limiter.limit("5 per minute")
 def generate_estate_report():
     """
     POST /generate_estate_report

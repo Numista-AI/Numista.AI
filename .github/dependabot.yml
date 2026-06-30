@@ -1,0 +1,83 @@
+# =============================================================================
+# .github/dependabot.yml — Automated Security Update Configuration
+# =============================================================================
+# Dependabot will open pull requests when packages have security vulnerabilities
+# or new versions. Review and merge PRs to keep the dependency tree clean.
+#
+# Schedule: Production packages checked weekly (Monday), Flutter/npm monthly.
+# PRs are capped at 5 per ecosystem to avoid overwhelming the queue.
+# =============================================================================
+
+version: 2
+updates:
+
+  # ── Python backend (Cloud Run production) ──────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/numista_backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+      - "backend"
+    open-pull-requests-limit: 5
+    ignore:
+      # requirements-dev.txt is intentionally separate — dev alerts are lower urgency
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+
+  # ── Python scan service ──────────────────────────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/numista_backend/scan_service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "security"
+      - "scan-service"
+    open-pull-requests-limit: 3
+
+  # ── Flutter mobile app ───────────────────────────────────────────────────────
+  - package-ecosystem: "pub"
+    directory: "/numista_mobile"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "flutter"
+    open-pull-requests-limit: 5
+
+  # ── Test suite (npm / Playwright) ────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/numista_tests"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "tests"
+    open-pull-requests-limit: 3
+
+  # ── GitHub Actions (workflow action versions) ────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+      - "ci-cd"
+    open-pull-requests-limit: 3

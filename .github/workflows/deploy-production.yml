@@ -11,8 +11,6 @@ on:
       - '!**/docs/**'
   workflow_dispatch:
 
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:
   # ── JOB 1: Deploy Flutter web to Firebase Hosting ──────────────────────
@@ -23,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2.23.0
@@ -56,10 +54,10 @@ jobs:
         working-directory: numista_mobile
         run: flutter build web --release --base-href "/"
 
-      - name: Set up Node.js (Node 18 is used to bypass Node 20/24 keep-alive connection bugs)
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -81,12 +79,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -117,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -178,7 +176,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
