@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scraper Dashboard — Numista.AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:          #0d0f14;
+      --surface:     #161b26;
+      --surface2:    #1e2535;
+      --border:      #2a3249;
+      --accent:      #4f8ef7;
+      --accent-glow: rgba(79,142,247,0.15);
+      --gold:        #f0c040;
+      --gold-glow:   rgba(240,192,64,0.12);
+      --green:       #34d399;
+      --red:         #f87171;
+      --text:        #e2e8f0;
+      --text-dim:    #94a3b8;
+      --radius:      12px;
+      --radius-lg:   18px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.45);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, var(--text-dim));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-live {
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-live::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Controls & Controls Form ── */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #2b6cb0);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 18px var(--accent-glow);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ── Stats Summary Row ── */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Reports Timeline ── */
+    .report-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .report-item:hover {
+      border-color: var(--muted);
+    }
+
+    .report-header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .report-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .report-date {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .report-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .report-stats-badge {
+      background: rgba(79, 142, 247, 0.1);
+      border: 1px solid rgba(79, 142, 247, 0.3);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .report-body {
+      display: none;
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(13, 15, 20, 0.5);
+    }
+
+    .report-item.open .report-body {
+      display: block;
+    }
+
+    /* ── Scraper Live Console Log ── */
+    .console-card {
+      margin-top: 20px;
+      background: #090b0e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #a3b8cc;
+      height: 180px;
+      overflow-y: auto;
+    }
+
+    .console-line {
+      margin-bottom: 6px;
+      white-space: pre-wrap;
+    }
+
+    .console-line.success { color: var(--green); }
+    .console-line.error { color: var(--red); }
+    .console-line.info { color: var(--accent); }
+
+    /* ── Markdown Rendering styles ── */
+    .md-render h1, .md-render h2, .md-render h3 {
+      color: #fff;
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+    .md-render h2 { font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .md-render p { margin-bottom: 12px; font-size: 0.88rem; color: var(--text-dim); }
+    .md-render ul { margin-left: 20px; margin-bottom: 12px; font-size: 0.88rem; color: var(--text-dim); }
+    .md-render li { margin-bottom: 4px; }
+    .md-render strong { color: #fff; font-weight: 600; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>Numista.AI</h1>
+        <div class="badge-live">Scraper Agent</div>
+      </div>
+      <div class="report-stats-badge" style="border-color: var(--border); color: var(--text-dim);">
+        9:00 PM Eastern Cron Active
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- ── Left: Controls Panel ── -->
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Trigger Scraper
+          </div>
+
+          <div class="form-group">
+            <label for="limit">Batch Limit (Coins)</label>
+            <select id="limit" class="form-control">
+              <option value="10">10 Coins (Quick Test)</option>
+              <option value="50">50 Coins</option>
+              <option value="100" selected>100 Coins (Recommended)</option>
+              <option value="200">200 Coins</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="target">Target Scope</label>
+            <select id="target" class="form-control">
+              <option value="all">All Gaps</option>
+              <option value="coins" selected>Coins Reference</option>
+              <option value="errors">Mint Errors</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="display:none;">
+            <label for="mode">Scraper Mode</label>
+            <select id="mode" class="form-control">
+              <option value="request" selected>Request (Lightweight)</option>
+              <option value="browser">Browser (Headless)</option>
+            </select>
+          </div>
+
+          <button id="btn-trigger" class="btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Execute Run
+          </button>
+        </div>
+
+        <!-- Live status console log -->
+        <div class="console-card" id="console">
+          <div class="console-line info">[System] Scraper Client Initialized. Ready.</div>
+        </div>
+      </div>
+
+      <!-- ── Right: Audit Metrics & History ── -->
+      <div>
+        <div class="stats-summary">
+          <div class="stat-card">
+            <div class="stat-val" style="color: var(--accent);">11,904</div>
+            <div class="stat-label">Total Gaps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="stat-filled" style="color: var(--green);">0</div>
+            <div class="stat-label">Gaps Filled</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="stat-runs">0</div>
+            <div class="stat-label">Runs Logged</div>
+          </div>
+        </div>
+
+        <div class="card" style="min-height: 400px;">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Execution History & Audit Reports
+          </div>
+
+          <div id="reports-timeline">
+            <!-- Reports dynamically inserted -->
+            <div style="text-align: center; color: var(--text-dim); padding: 40px;">
+              Loading reports from Firestore...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://numista-backend-568985927038.us-central1.run.app';
+    const consoleEl = document.getElementById('console');
+    const triggerBtn = document.getElementById('btn-trigger');
+
+    function logToConsole(text, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `console-line ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      consoleEl.appendChild(div);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // A lightweight Markdown parser for simple report formatting
+    function parseMarkdown(md) {
+      if (!md) return '';
+      let html = md;
+      
+      // Headers
+      html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+      html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+      
+      // Bullets
+      html = html.replace(/^\*\s+(.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.+<\/li>)/gs, '<ul>$1</ul>');
+      
+      // Bold
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      
+      // Newlines to Paragraphs
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = '<p>' + html + '</p>';
+      
+      return html;
+    }
+
+    async function loadReports() {
+      try {
+        const r = await fetch(`${API_BASE}/api/cron/reports?limit=15`);
+        if (!r.ok) throw new Error('Failed to fetch reports');
+        const data = await r.json();
+
+        const container = document.getElementById('reports-timeline');
+        container.innerHTML = '';
+
+        if (data.length === 0) {
+          container.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 40px;">No reports logged yet.</div>`;
+          return;
+        }
+
+        let totalFilled = 0;
+        document.getElementById('stat-runs').textContent = data.length;
+
+        data.forEach((report, index) => {
+          totalFilled += (report.processed_coins || 0) + (report.processed_errors || 0);
+
+          const item = document.createElement('div');
+          item.className = 'report-item';
+          
+          const dt = new Date(report.datetime_utc || report.timestamp * 1000);
+          const dateStr = dt.toLocaleString();
+
+          item.innerHTML = `
+            <div class="report-header" onclick="this.parentElement.classList.toggle('open')">
+              <div class="report-meta">
+                <div class="report-date">${dateStr}</div>
+                <div class="report-sub">Limit: ${report.limit} | Target: ${report.target} | Dry-Run: ${report.dry_run}</div>
+              </div>
+              <div class="report-stats-badge">
+                +${(report.processed_coins || 0) + (report.processed_errors || 0)} Gaps
+              </div>
+            </div>
+            <div class="report-body md-render">
+              ${parseMarkdown(report.report_content)}
+            </div>
+          `;
+          container.appendChild(item);
+        });
+
+        document.getElementById('stat-filled').textContent = totalFilled.toLocaleString();
+      } catch (e) {
+        logToConsole(`Error loading history: ${e.message}`, 'error');
+      }
+    }
+
+    // Trigger Scraper
+    triggerBtn.addEventListener('click', async () => {
+      const limit = document.getElementById('limit').value;
+      const target = document.getElementById('target').value;
+      const mode = document.getElementById('mode').value;
+
+      triggerBtn.disabled = true;
+      triggerBtn.innerHTML = `<span class="spinner"></span> Running Scraper...`;
+      logToConsole(`Launching scraper job (Target: ${target}, Limit: ${limit})...`, 'info');
+
+      try {
+        const r = await fetch(`${API_BASE}/api/cron/scrape-gaps?limit=${limit}&target=${target}&mode=${mode}`, {
+          method: 'POST'
+        });
+
+        if (!r.ok) throw new Error(`HTTP Error ${r.status}`);
+        const data = await r.json();
+
+        if (data.status === 'success') {
+          logToConsole(`Scraper run complete! Processed ${data.processed_coins} coins, ${data.processed_errors} errors.`, 'success');
+          logToConsole(`Report saved in Firestore as: ${data.report_saved_to_firestore}`, 'success');
+        } else {
+          logToConsole(`Scraper returned error: ${data.message}`, 'error');
+        }
+      } catch (e) {
+        logToConsole(`Execution failed: ${e.message}`, 'error');
+        logToConsole(`Note: Job continues running in the background if Cloud Run timeout was reached.`, 'info');
+      } finally {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Execute Run
+        `;
+        // Reload reports
+        setTimeout(loadReports, 2000);
+      }
+    });
+
+    // Initial load
+    loadReports();
+    // Refresh every 30s
+    setInterval(loadReports, 30000);
+  </script>
+</body>
+</html>

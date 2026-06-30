@@ -1,4 +1,8 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "hosting": {
     "site": "numista-vault",
     "public": "build/web",
@@ -20,6 +24,10 @@
       {
         "source": "/add_coins.html",
         "destination": "/add_coins.html"
+      },
+      {
+        "source": "/scraper_dashboard.html",
+        "destination": "/scraper_dashboard.html"
       },
       {
         "source": "**",

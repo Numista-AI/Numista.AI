@@ -7418,6 +7418,35 @@ async def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "re
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/api/cron/reports")
+async def get_scraper_reports(limit: int = 15):
+    """
+    Get the list of recent scraper reports from Firestore.
+    """
+    try:
+        reports_ref = db.collection("scraper_reports")
+        query = reports_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit)
+        docs = query.stream()
+        
+        reports = []
+        for doc in docs:
+            data = doc.to_dict()
+            reports.append({
+                "id": doc.id,
+                "timestamp": data.get("timestamp"),
+                "datetime_utc": data.get("datetime_utc"),
+                "processed_coins": data.get("processed_coins"),
+                "processed_errors": data.get("processed_errors"),
+                "report_content": data.get("report_content"),
+                "target": data.get("target"),
+                "limit": data.get("limit"),
+                "dry_run": data.get("dry_run")
+            })
+        return reports
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
