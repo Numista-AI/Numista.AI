@@ -294,7 +294,7 @@ class _BaseLayoutState extends State<BaseLayout> {
         children: [
           // ─── Sidebar ─────────────────────────────────────────────────────
           Container(
-            width: 200,
+            width: 240,
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC),
               border: Border(
@@ -584,17 +584,17 @@ class _BaseLayoutState extends State<BaseLayout> {
             : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 5, horizontal: isSubItem ? 14 : 6),
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: isSubItem ? 16 : 8),
           decoration: BoxDecoration(
             color: isActive
-                ? (isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(12))
+                ? (isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(15))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(children: [
             if (icon != null)
               Icon(icon,
-                  size: 14,
+                  size: 17,
                   color: isActive
                       ? const Color(0xFFF63366)
                       : (isDark ? Colors.white54 : Colors.black54))
@@ -615,7 +615,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   ),
                 ),
               ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
@@ -624,7 +624,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   color: isActive
                       ? (isDark ? Colors.white : const Color(0xFF0F172A))
                       : (isDark ? Colors.white60 : const Color(0xFF475569)),
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight:
                       isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
@@ -732,11 +732,11 @@ class _SidebarSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(left: 8, top: 16, bottom: 4),
+      padding: const EdgeInsets.only(left: 8, top: 22, bottom: 6),
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 10.5,
           fontWeight: FontWeight.bold,
           color: isDark ? Colors.white38 : Colors.black45,
           letterSpacing: 0.8,

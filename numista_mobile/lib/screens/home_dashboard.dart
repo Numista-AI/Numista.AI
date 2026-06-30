@@ -1294,17 +1294,47 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
           ),
           const SizedBox(height: 20),
-          // Legend / Breakdown details
-          Column(
-            children: [
-              buildLegendItem('Coins', coins, coinsPct, const Color(0xFF6366F1)),
-              const SizedBox(height: 8),
-              buildLegendItem('Currency', currency, currencyPct, const Color(0xFF10B981)),
-              const SizedBox(height: 8),
-              buildLegendItem('Medals', medals, medalsPct, const Color(0xFFF59E0B)),
-              const SizedBox(height: 8),
-              buildLegendItem('Others', others, othersPct, const Color(0xFFEC4899)),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final items = [
+                buildLegendItem('Coins', coins, coinsPct, const Color(0xFF6366F1)),
+                buildLegendItem('Currency', currency, currencyPct, const Color(0xFF10B981)),
+                buildLegendItem('Medals', medals, medalsPct, const Color(0xFFF59E0B)),
+                buildLegendItem('Others', others, othersPct, const Color(0xFFEC4899)),
+              ];
+              final width = constraints.maxWidth;
+              if (width > 850) {
+                return Row(
+                  children: items.map((item) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: item,
+                    ),
+                  )).toList(),
+                );
+              } else if (width > 480) {
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: items.map((item) => SizedBox(
+                    width: (width - 10) / 2,
+                    child: item,
+                  )).toList(),
+                );
+              } else {
+                return Column(
+                  children: [
+                    items[0],
+                    const SizedBox(height: 8),
+                    items[1],
+                    const SizedBox(height: 8),
+                    items[2],
+                    const SizedBox(height: 8),
+                    items[3],
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
