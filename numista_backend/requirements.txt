@@ -33,7 +33,7 @@ feedparser==6.0.12
 requests==2.32.4
 httpx==0.28.1
 python-dotenv==1.1.0
-PyJWT==2.10.3
+PyJWT==2.10.1
 yfinance==0.2.62
 
 # ── Payments ──────────────────────────────────────────────────────────────────
