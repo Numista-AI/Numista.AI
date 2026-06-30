@@ -16,6 +16,157 @@ COINS_JSON = "definitive_catalog_full.json"
 BANKNOTES_JSON = "banknotes_expanded.json"
 KEY_PATH = "serviceAccountKey.json.json"
 
+ALLOWED_COIN_SERIES = {
+    # 31 Modern and Classic programs
+    "2026 U.S. Circulating Coins",
+    "50 State Quarters",
+    "America the Beautiful Quarters (National Parks)",
+    "American Innovation $1 Coin Program",
+    "American Silver Eagles",
+    "American Women Quarters",
+    "Barber Dimes",
+    "Barber Half Dollars",
+    "Barber Quarters",
+    "Buffalo Nickels",
+    "D.C. & U.S. Territories Quarters",
+    "Eisenhower Dollars",
+    "Flying Eagle & Indian Head Cents",
+    "Franklin Half Dollars",
+    "Jefferson Nickels",
+    "Kennedy Half Dollars",
+    "Liberty Head (V) Nickels",
+    "Liberty Walking Half Dollars",
+    "Lincoln Bicentennial Cents (2009)",
+    "Lincoln Cents",
+    "Lincoln Memorial Cents",
+    "Lincoln Shield Cents",
+    "Lincoln Wheat Pennies",
+    "Mercury Dimes",
+    "Morgan Dollars",
+    "Peace Dollars",
+    "Presidential Dollars",
+    "Roosevelt Dimes",
+    "Sacagawea & Native American Dollars",
+    "Susan B. Anthony Dollars",
+    "Washington Quarters (Classic)",
+
+    # Historical Design types and specific series
+    "Flowing Hair Coinage",
+    "Draped Bust Coinage",
+    "Classic Head Coinage",
+    "Capped Bust Coinage",
+    "Seated Liberty Coinage",
+    "Gobrecht Dollars",
+    "Trade Dollars",
+    "Coronet Head Coinage",
+    "Liberty Head Coinage",
+    "Saint-Gaudens Gold Coinage",
+    "Early Commemorative Half Dollars",
+    "Modern Commemorative Dollars",
+    "U.S. Pattern Coinage",
+    
+    # Specific series
+    "Standing Liberty Quarters",
+    "Shield Nickels",
+    "Shield Nickel",
+    "Two Cents",
+    "Three Cents (Nickel)",
+    "Three Cents (Silver)",
+    "Three Cent Nickels",
+    "Half Dimes",
+    "Half Dime",
+    "Twenty Cents",
+    "Half Cents",
+    "Large Cents",
+    "Liberty Cap Cents",
+    "Liberty Cap Half Dimes",
+    "Fractional Currency",
+    "Postage Currency",
+    "American Buffalo",
+    "American Eagle",
+    "American Gold Eagle",
+    "American Silver Eagle",
+    "American Platinum Eagle",
+    "Double Eagle",
+    "Double Eagles",
+    "Quarter Eagle",
+    "Quarter Eagles",
+    "Half Eagle",
+    "Half Eagles",
+    "Eagle",
+    "Eagles",
+    "Stella",
+    "Stellas",
+    "Three Dollars",
+    "Four Dollars",
+    "Standing Liberty",
+    "Mercury Dime",
+    "Barber Quarter",
+    "Barber Half Dollar",
+    "Barber Dime",
+    "Morgan Dollar",
+    "Peace Dollar",
+    "Sacagawea Dollar",
+    "Eisenhower Dollar",
+    "Susan B. Anthony Dollar",
+    "Kennedy Half Dollar",
+    "Franklin Half Dollar",
+    "Walking Liberty Half Dollar",
+    "Jefferson Nickel",
+    "Buffalo Nickel",
+    "Liberty Head V Nickel",
+    "Roosevelt Dime",
+    "Lincoln Cent",
+    "Flying Eagle Cent",
+    "Indian Head Cent",
+    "Fugio Cent",
+    
+    # Newly added official series
+    "First Spouse Gold Coins",
+    "American Liberty Gold Coins",
+    "American Palladium Eagles",
+    "Jefferson Wartime Nickels",
+    "Washington Silver Quarters",
+    "Liberty Head/Braided Hair Cents",
+    "Three Cents",
+    "Trime",
+    "Liberty Nickels",
+    "Indian Head - Quarter Eagle",
+    "Liberty Head / Matron Head",
+    "Liberty Head / Matron Head Modified",
+    "Metric Double Eagle / Quintuple Stella",
+    "Large Indian Head",
+    "Indian Princess Head",
+    "Small Indian Head",
+    "Braided Hair - Half Cents",
+    "Liberty Cap",
+    "Half Disme",
+    "Capped Head - Quarter Eagle",
+    "Indian Head",
+    "Washington",
+    "1/200 Dollar Liberty Cap, Head Facing Right, Half Cents",
+    "American Liberty High Relief Gold",
+    "1879 Quintuple Stella",
+    "Half Eagle Restrike",
+    "1878 Half Eagle",
+    "Emerging Liberty Dimes",
+    "Bess",
+    "Lady Bird"
+}
+
+ALLOWED_MEDAL_SERIES = {
+    "Congressional Gold Medal",
+    "Presidential Medal",
+    "US Mint National Medal",
+    "U.S. Medals",
+    "Official Medals",
+    "US Mint Medals",
+    "Congressional Gold Medals",
+    "Presidential Medals",
+    "US Mint National Medals"
+}
+
+
 def normalize_denom(raw, default="One Dollar"):
     if not raw:
         return default
@@ -327,47 +478,98 @@ def main():
                     is_official_medal = True
                     
                 if is_official_medal:
-                    baseline_medals_count += 1
                     # Merge official medals from baseline
                     map_entry = baseline_map.get(title, {})
                     series_val = map_entry.get("series", "U.S. Medals")
                     year_val = map_entry.get("year", "")
                     mint_val = map_entry.get("mint_mark", "")
 
-                    consolidated_catalog.append({
-                        "doc_id": f"ref_coin_type_{r['id']}",
-                        "year": year_val,
-                        "denomination": "Medal",
-                        "mint_mark": mint_val,
-                        "variety": title,
-                        "note": aka or f"Official U.S. Medal: {title}",
-                        "series": series_val,
-                        "category": "medal"
-                    })
+                    if series_val in ALLOWED_MEDAL_SERIES:
+                        baseline_medals_count += 1
+                        consolidated_catalog.append({
+                            "doc_id": f"ref_coin_type_{r['id']}",
+                            "year": year_val,
+                            "denomination": "Medal",
+                            "mint_mark": mint_val,
+                            "variety": title,
+                            "note": aka or f"Official U.S. Medal: {title}",
+                            "series": series_val,
+                            "category": "medal"
+                        })
+                    else:
+                        baseline_rejected_count += 1
                 else:
                     baseline_rejected_count += 1
             else:
                 # Mapped baseline coin
-                baseline_coins_count += 1
-                denom_val = parse_denom_baseline(title)
-                if not denom_val:
-                    denom_val = r["category"].title() if r["category"] else "Coin"
-                
                 map_entry = baseline_map.get(title, {})
                 series_val = map_entry.get("series", r["category"].title() if r["category"] else "U.S. Coins")
                 year_val = map_entry.get("year", "")
                 mint_val = map_entry.get("mint_mark", "")
+                
+                # Check for explicit rejections/souvenirs
+                if "world fair of money" in combined and "fugio" in combined:
+                    baseline_rejected_count += 1
+                    continue
+                if "hobo" in combined:
+                    baseline_rejected_count += 1
+                    continue
+                # Connecticut coppers, Mailed bust, etc. (colonial pre-federal except Fugio)
+                if any(kw in combined for kw in ["mailed bust", "connecticut", "vermont", "massachusetts", "new jersey"]):
+                    if "fugio" not in combined:
+                        baseline_rejected_count += 1
+                        continue
+
+                # Silver Rounds & Bullion mapping
+                if series_val == 'Silver Rounds & Bullion':
+                    if "Bullion Coinage" in title and "10 Dollars" in title:
+                        series_val = "First Spouse Gold Coins"
+                    elif "American Liberty" in title or "High Relief" in title:
+                        series_val = "American Liberty Gold Coins"
+                    elif "Palladium Eagle" in title:
+                        series_val = "American Palladium Eagles"
+                    elif "Pursuit of Happiness" in title:
+                        series_val = "American Liberty Gold Coins"
+                
+                # Official banknotes in coins table mapping
+                is_banknote = False
+                if series_val in {'Educational Series', 'Horse Blanket', 'Greenback'} or (series_val == 'Martha' and "Silver Certificate" in title):
+                    is_banknote = True
+                    category_val = "banknote"
+                    series_val = "U.S. Banknotes"
+                else:
+                    category_val = "coin"
                     
-                consolidated_catalog.append({
-                    "doc_id": f"ref_coin_type_{r['id']}",
-                    "year": year_val,
-                    "denomination": denom_val,
-                    "mint_mark": mint_val,
-                    "variety": title,
-                    "note": aka or f"Base coin type: {title}",
-                    "series": series_val,
-                    "category": "coin"
-                })
+                if is_banknote:
+                    baseline_coins_count += 1
+                    consolidated_catalog.append({
+                        "doc_id": f"ref_coin_type_{r['id']}",
+                        "year": year_val,
+                        "denomination": parse_denom_baseline(title) or "One Dollar",
+                        "mint_mark": mint_val,
+                        "variety": title,
+                        "note": aka or f"Official U.S. Banknote: {title}",
+                        "series": series_val,
+                        "category": category_val
+                    })
+                elif series_val in ALLOWED_COIN_SERIES:
+                    baseline_coins_count += 1
+                    denom_val = parse_denom_baseline(title)
+                    if not denom_val:
+                        denom_val = r["category"].title() if r["category"] else "Coin"
+                        
+                    consolidated_catalog.append({
+                        "doc_id": f"ref_coin_type_{r['id']}",
+                        "year": year_val,
+                        "denomination": denom_val,
+                        "mint_mark": mint_val,
+                        "variety": title,
+                        "note": aka or f"Base coin type: {title}",
+                        "series": series_val,
+                        "category": category_val
+                    })
+                else:
+                    baseline_rejected_count += 1
         print(f"  Baseline classification completed:")
         print(f"    Coins Mapped: {baseline_coins_count}")
         print(f"    Medals Mapped: {baseline_medals_count}")
@@ -430,7 +632,74 @@ def main():
             "category": "medal"
         })
 
-    print(f"\nConsolidated catalog size: {len(consolidated_catalog)} total entries.")
+    # Final filter / guardrail pass to guarantee 100% compliance with U.S. Mint and BEP official items
+    final_catalog = []
+    skipped_count = 0
+    for entry in consolidated_catalog:
+        cat = entry.get("category", "")
+        series = entry.get("series", "")
+        title = entry.get("variety", "")
+        note = entry.get("note", "")
+        
+        # Explicit checks for play money/casino/replicas/novelty
+        combined = f"{title} {series} {note}".lower()
+        
+        # 1. Souvenir/reproduction Fugio or other explicit rejections
+        if "world fair of money" in combined and "fugio" in combined:
+            skipped_count += 1
+            continue
+            
+        # 2. Hardcode skip Hobo nickels/dollars which map to "Morgan" or "Buffalo"
+        if "hobo" in combined:
+            skipped_count += 1
+            continue
+            
+        # 3. Check for specific non-US token and replica items (checking only coins/medals)
+        is_rejected = False
+        REJECT_KEYWORDS = [
+            "token", "privately struck", "private issue", "merchant", 
+            "municipal", "exonumia", "wooden nickel", "poker chip", 
+            "gaming", "replica", "copy", "novelty", "play money",
+            "counterfeit", "souvenir medal", "fantasy issue", "reproduction",
+            "tropicana", "readers digest", "reader's digest", "pooh bear"
+        ]
+        
+        if cat in ["coin", "medal"]:
+            for kw in REJECT_KEYWORDS:
+                if kw in combined:
+                    is_rejected = True
+                    break
+                    
+        if is_rejected:
+            skipped_count += 1
+            continue
+            
+        # 4. Check whitelists
+        if cat == "coin":
+            # Check for Mailed bust, Connecticut copper, Vermont copper, etc. (colonial/pre-federal except Fugio)
+            if any(kw in combined for kw in ["mailed bust", "connecticut", "vermont", "massachusetts", "new jersey"]):
+                if "fugio" not in combined:
+                    skipped_count += 1
+                    continue
+            if series in ALLOWED_COIN_SERIES:
+                final_catalog.append(entry)
+            else:
+                skipped_count += 1
+        elif cat == "medal":
+            if series in ALLOWED_MEDAL_SERIES:
+                final_catalog.append(entry)
+            else:
+                skipped_count += 1
+        elif cat == "banknote":
+            # For banknotes, we force category = banknote and series = U.S. Banknotes
+            entry["series"] = "U.S. Banknotes"
+            final_catalog.append(entry)
+        else:
+            skipped_count += 1
+            
+    consolidated_catalog = final_catalog
+    print(f"\nConsolidated catalog size after whitelisting guardrails: {len(consolidated_catalog)} total entries.")
+    print(f"Skipped/Filtered out: {skipped_count} entries.")
 
     # 5. Populate SQLite Local Cache (definitive_reference table)
     print(f"\nCaching in SQLite: {DB_PATH}")
