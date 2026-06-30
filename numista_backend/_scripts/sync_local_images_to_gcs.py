@@ -1,4 +1,4 @@
-"""
+r"""
 sync_local_images_to_gcs.py
 ─────────────────────────────────────────────────────────────────────────────
 Compares local "Manual downloaded Coin Images" folder against GCS and:

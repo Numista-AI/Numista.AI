@@ -1,4 +1,4 @@
-﻿"""
+"""
 import_knowledge_base.py
 ========================
 One-shot importer that reads all structured coin JSON files and writes them

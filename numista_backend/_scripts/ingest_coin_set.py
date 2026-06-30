@@ -1,4 +1,4 @@
-"""
+r"""
 ingest_coin_set.py
 ──────────────────────────────────────────────────────────────────────────────
 Uploads a folder of coin-set images to GCS, creates denomination-aware entries
