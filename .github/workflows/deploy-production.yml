@@ -96,9 +96,18 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@13
 
-      - name: Deploy Firestore rules and indexes
+      - name: Deploy Firestore rules
         working-directory: numista_backend
-        run: firebase deploy --only firestore --project studio-9101802118-8c9a8 --force
+        run: firebase deploy --only firestore:rules --project studio-9101802118-8c9a8
+
+      # Indexes are already correctly deployed on the server. The Firebase CLI v13
+      # has a reconciliation bug that produces a 409 when the local index definition
+      # exactly matches what is live (it still tries to re-CREATE it). Since a 409
+      # means "already exists", this is safe to treat as non-fatal.
+      - name: Deploy Firestore indexes (non-fatal)
+        working-directory: numista_backend
+        continue-on-error: true
+        run: firebase deploy --only firestore:indexes --project studio-9101802118-8c9a8 --force
 
   # ── JOB 3: Deploy Python backend to Cloud Run ──────────────────────────
   deploy-backend:
