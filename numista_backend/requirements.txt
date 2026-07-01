@@ -44,6 +44,12 @@ beautifulsoup4==4.13.4
 PyPDF2==3.0.1
 Pillow==11.2.1
 
+# ── Web scraping (for Scraper Dashboard) ──────────────────────────────────────
+botasaurus==4.0.97
+botasaurus_requests==4.0.38
+botasaurus_driver==4.0.92
+curl_cffi==0.11.1
+
 # ── gRPC transport (required by google-cloud-* libraries) ─────────────────────
 grpcio==1.71.0
 grpcio-status==1.71.0
