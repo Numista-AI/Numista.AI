@@ -903,6 +903,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           _buildResultRow('Year', report['year']?.toString() ?? '—'),
           _buildResultRow('Country', report['country']?.toString() ?? '—'),
           _buildResultRow('Denomination', report['denomination']?.toString() ?? '—'),
+          _buildResultRow('Mint Mark', report['mint_mark']?.toString() ?? '—'),
           _buildResultRow('Series', report['program_series']?.toString() ?? '—'),
           _buildResultRow('Theme', report['theme_subject']?.toString() ?? '—'),
           _buildResultRow('Grade', report['grade']?.toString() ?? '—'),

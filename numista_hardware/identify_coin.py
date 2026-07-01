@@ -403,7 +403,10 @@ Return ONLY a valid JSON object:
             )
         )
 
-        vdata = safe_parse_json(response.text)
+        if hasattr(response, 'parsed') and response.parsed:
+            vdata = response.parsed.model_dump() if hasattr(response.parsed, 'model_dump') else response.parsed
+        else:
+            vdata = safe_parse_json(response.text)
         logger.info(f"[REF] Verification pass complete — "
                      f"confirmed={vdata.get('identification_confirmed')}, "
                      f"grade={vdata.get('refined_grade')}, "
@@ -521,7 +524,7 @@ def run_numista_report(img_path_a, img_path_b):
 
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-1.5-flash",
             contents=[prompt, img_a, img_b],
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',
@@ -530,12 +533,16 @@ def run_numista_report(img_path_a, img_path_b):
             )
         )
         
-        try:
-            res_data = safe_parse_json(response.text)
-        except Exception as json_err:
-            logger.error("[GEMINI] JSON parse/repair failed (%s). Raw response (first 300): %s",
-                         json_err, response.text[:300] if response.text else "(empty)")
-            res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
+        if hasattr(response, 'parsed') and response.parsed:
+            # Use the SDK's built-in parsing
+            res_data = response.parsed.model_dump() if hasattr(response.parsed, 'model_dump') else response.parsed
+        else:
+            try:
+                res_data = safe_parse_json(response.text)
+            except Exception as json_err:
+                logger.error("[GEMINI] JSON parse/repair failed (%s). Raw response: %s",
+                             json_err, response.text[:300] if response.text else "(empty)")
+                res_data = {"file_slug": "detected_coin", "report": response.text, "obverse_image": "A"}
 
 
         # Route image paths based on Gemini's side determination
