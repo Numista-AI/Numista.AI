@@ -311,7 +311,7 @@ def find_best_image_url(denomination, year):
             # Filter to jpg/png images
             files = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png"))]
             # Filter out non-coin images (e.g. paintings, medals, etc.)
-            files = [f for f in files if not any(w in f.lower() for w in ["hadrian", "filarete", "painting", "statue", "medal", "sculpture"])]
+            files = [f for f in files if not any(w in f.lower() for w in ["hadrian", "filarete", "painting", "statue", "medal", "memorial", "token", "sculpture"])]
             if files:
                 # Prefer images with "obverse" or "front" in name
                 preferred = [f for f in files if any(w in f.lower() for w in ["obverse", "front", "obv"])]
@@ -333,6 +333,9 @@ def find_best_image_url(denomination, year):
             title = hit.get("title", "")
             if title.lower().startswith("file:") and title.lower().endswith((".jpg", ".jpeg", ".png")):
                 filename = title.replace("File:", "").replace("file:", "")
+                # Filter out non-coin images
+                if any(w in filename.lower() for w in ["hadrian", "filarete", "painting", "statue", "medal", "memorial", "token", "sculpture"]):
+                    continue
                 url = wiki_resolve_filename(filename)
                 if url:
                     print(f"      ✓ Search hit: {filename[:80]}", flush=True)
@@ -473,8 +476,17 @@ def main():
 
     # ── Write log ──────────────────────────────────────────────────────────────
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Load existing log if any
+    all_logs = []
+    if LOG_PATH.exists():
+        try:
+            with open(LOG_PATH, "r", encoding="utf-8") as f:
+                all_logs = json.load(f)
+        except:
+            pass
+    all_logs.extend(log)
     with open(LOG_PATH, "w", encoding="utf-8") as f:
-        json.dump(log, f, indent=2, default=str)
+        json.dump(all_logs, f, indent=2, default=str)
 
     print(f"\n{'='*60}")
     print(f"  Run complete:")

@@ -1,0 +1,83 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "AJ's Coin Collection Schema - 21 Columns",
+    "type": "object",
+    "required": [
+        "year",
+        "denomination",
+        "quantity",
+        "condition"
+    ],
+    "properties": {
+        "country": {
+            "type": "string",
+            "default": "USA"
+        },
+        "year": {
+            "type": "string"
+        },
+        "mint_mark": {
+            "type": "string"
+        },
+        "denomination": {
+            "type": "string"
+        },
+        "quantity": {
+            "type": "integer",
+            "default": 1
+        },
+        "program_series_set": {
+            "type": "string"
+        },
+        "theme_subject": {
+            "type": "string"
+        },
+        "condition": {
+            "type": "string",
+            "default": "Circulated"
+        },
+        "surface_strike_quality_notes": {
+            "type": "string"
+        },
+        "grading_service": {
+            "type": "string",
+            "default": "Other/Raw/None"
+        },
+        "grading_certification_number": {
+            "type": "string"
+        },
+        "cost": {
+            "type": "number",
+            "default": 0.00
+        },
+        "purchase_date": {
+            "type": "string"
+        },
+        "retailer_website": {
+            "type": "string"
+        },
+        "metal_content": {
+            "type": "string"
+        },
+        "melt_value": {
+            "type": "number"
+        },
+        "personal_notes": {
+            "type": "string"
+        },
+        "personal_reference_invoice_number": {
+            "type": "string"
+        },
+        "storage_location": {
+            "type": "string"
+        },
+        "item_no": {
+            "type": "string",
+            "description": "Column 20: Retailer stock/item number found on invoice."
+        },
+        "ai_estimated_value": {
+            "type": "string",
+            "description": "Column 21: AI-generated current market price range."
+        }
+    }
+}
