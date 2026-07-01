@@ -30,6 +30,7 @@ serviceAccountKey.json.json
 !package.json
 !firestore.indexes.json
 !projects.json
+!coin-schema.json
 
 # Google Cloud / Firebase
 .firebase/

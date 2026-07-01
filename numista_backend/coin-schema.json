@@ -1,0 +1,148 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Numista.AI Golden Schema - 32 Columns",
+    "description": "Canonical field definitions for all coin and currency items in Numista.AI. Ingestion pipelines, CSV importers, and AI grading tools should validate against this schema. Updated 2026-07-01.",
+    "type": "object",
+    "required": [
+        "Year",
+        "Denomination",
+        "Quantity",
+        "Condition"
+    ],
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Unique document identifier (Firestore doc_id or UUID). Auto-generated on ingest."
+        },
+        "Country": {
+            "type": "string",
+            "default": "USA",
+            "description": "Country of origin."
+        },
+        "Year": {
+            "type": "string",
+            "description": "Year of issue. May include suffix for special series (e.g. '1934-A' for currency)."
+        },
+        "Mint Mark": {
+            "type": "string",
+            "description": "Mint mark letter (P, D, S, W, CC, O, etc.). Empty string if not applicable."
+        },
+        "Denomination": {
+            "type": "string",
+            "description": "Face value or denomination label (e.g. 'Quarter', '$1', 'Kennedy Half Dollar')."
+        },
+        "Quantity": {
+            "type": "integer",
+            "default": 1,
+            "description": "Number of identical items in this record."
+        },
+        "Program/Series": {
+            "type": "string",
+            "description": "The official US Mint program or series name (e.g. 'American Women Quarters')."
+        },
+        "Theme/Subject": {
+            "type": "string",
+            "description": "The theme or honoree depicted on the coin/note reverse."
+        },
+        "Condition": {
+            "type": "string",
+            "default": "Circulated",
+            "description": "Grading condition label (e.g. 'MS-65', 'Fine', 'Uncirculated', 'Circulated')."
+        },
+        "Surface & Strike Quality": {
+            "type": "string",
+            "default": "Business",
+            "description": "Strike/surface type. Canonical values: 'Business', 'Proof', 'Specimen', 'SMS', 'Burnished'. Maps from legacy 'Strike Type'."
+        },
+        "Holder Type": {
+            "type": "string",
+            "default": "Raw",
+            "description": "Holder or encapsulation type (e.g. 'Raw', 'PCGS Slab', 'NGC Slab', 'OGP')."
+        },
+        "Grading Service": {
+            "type": "string",
+            "default": "None",
+            "description": "Third-party grading service used (e.g. 'PCGS', 'NGC', 'ANACS', 'None')."
+        },
+        "Certification Number": {
+            "type": "string",
+            "description": "Grading certificate number issued by the grading service. Maps from legacy 'Grading Cert #'."
+        },
+        "Metal Content": {
+            "type": "string",
+            "description": "Metal composition (e.g. '90% Silver', 'Copper-Nickel Clad', '22k Gold')."
+        },
+        "Melt Value": {
+            "type": "string",
+            "description": "Estimated intrinsic melt value in USD. Populated by AI or market data enrichment."
+        },
+        "Purchase Cost": {
+            "type": "string",
+            "description": "Amount paid for this item in USD. Maps from legacy 'Cost'."
+        },
+        "Purchase Date": {
+            "type": "string",
+            "description": "Date of purchase (ISO 8601 format preferred: YYYY-MM-DD)."
+        },
+        "Retailer/Website": {
+            "type": "string",
+            "description": "Name or URL of the retailer or auction site where purchased."
+        },
+        "Retailer Invoice #": {
+            "type": "string",
+            "description": "Invoice or order number from the retailer."
+        },
+        "Retailer Item No.": {
+            "type": "string",
+            "description": "SKU or item number assigned by the retailer."
+        },
+        "Variety": {
+            "type": "string",
+            "description": "Die variety or mint error classification (e.g. 'Double Die Obverse', 'RPM')."
+        },
+        "Personal Notes I": {
+            "type": "string",
+            "description": "Free-form personal notes from the collector. Maps from legacy 'Personal Notes'."
+        },
+        "Personal Reference #": {
+            "type": "string",
+            "description": "Collector-assigned reference number. Maps from legacy 'Personal Ref #'."
+        },
+        "Storage Location": {
+            "type": "string",
+            "description": "Physical storage location (e.g. 'Album 3, Page 5', 'Safe Deposit Box')."
+        },
+        "AI Estimated Value": {
+            "type": "string",
+            "description": "AI-generated market value estimate in USD. Populated by Morgan AI valuation pipeline."
+        },
+        "imageUrlObverse": {
+            "type": "string",
+            "description": "GCS or CDN URL of the coin obverse (heads) image."
+        },
+        "imageUrlReverse": {
+            "type": "string",
+            "description": "GCS or CDN URL of the coin reverse (tails) image."
+        },
+        "category": {
+            "type": "string",
+            "description": "Item classification (e.g. 'coin', 'paper_currency', 'medal', 'token')."
+        },
+        "inventoryStatus": {
+            "type": "string",
+            "description": "Ownership / inventory state (e.g. 'owned', 'sold', 'wanted', 'consignment')."
+        },
+        "deep_dive_status": {
+            "type": "string",
+            "description": "Morgan AI deep-dive enrichment status ('pending', 'complete', 'skipped')."
+        },
+        "Original Description from source": {
+            "type": "string",
+            "description": "Raw description text as originally provided in the source CSV or invoice."
+        },
+        "source_file": {
+            "type": "string",
+            "description": "Source file or import batch identifier for traceability."
+        }
+    }
+}
