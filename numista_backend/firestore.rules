@@ -74,6 +74,17 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Microscope / Hardware Agent Commands ──────────────────────────────────
+    match /commands/{email}/pending/{commandId} {
+      allow create: if isOwner(email);
+      allow read, write: if false; // Only agent (SA) reads/deletes
+    }
+
+    match /commands/{email}/results/{resultId} {
+      allow read: if isOwner(email);
+      allow write: if false; // Only agent (SA) writes
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
