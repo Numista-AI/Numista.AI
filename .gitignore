@@ -140,3 +140,11 @@ refresh
 
 # SQLite database files (local only - not committed per AGENTS.md)
 numista_backend/database/*.db
+
+# Scratch and Output (Rule 4)
+scratch/
+numista_backend/output/
+numista_backend/latest_scraper_report.md
+numista_backend/sourcing_audit_report.md
+numista_backend/images_needed_report.md
+.firebase/*.cache
