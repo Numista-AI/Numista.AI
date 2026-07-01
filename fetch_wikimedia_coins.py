@@ -388,6 +388,12 @@ def main():
         
         print(f"\n→ [{priority}] {denomination} {year_str}", flush=True)
         
+        # 0. Skip if already done
+        doc_ids = get_db_doc_ids(denomination, year_str)
+        if not doc_ids:
+            print(f"    ✓ Already done (all matching SQLite rows filled)", flush=True)
+            continue
+        
         # Try to convert year
         try:
             year = int(year_str)
