@@ -2,22 +2,20 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
+import 'auth_service.dart';
 
 /// Bridges the Flutter UI to the numista hardware agent.
 ///
-/// Scan TRIGGERS and saves use the hardware server's HTTP endpoints directly
-/// (localhost:5000) to avoid Firestore client-write restrictions.
-/// The hardware server itself writes to Firestore using its service account.
-/// Live status POLLING also uses localhost:5000 Flask.
+/// Scan TRIGGERS and saves use Firestore commands to avoid mixed-content
+/// security blocks in HTTPS browsers.
+/// Live status POLLING still uses localhost:5000 Flask.
 class HardwareService {
   static const String _statusUrl    = 'https://localhost:5000/get-status';
   static const String _startScanUrl = 'https://localhost:5000/start-scan';
   static const String _saveUrl      = 'https://localhost:5000/add-to-collection';
   static const String _pairUrl      = 'https://localhost:5000/pair';
-
-
-  // Firestore fallback paths: not implemented, HTTP is used in all code paths
-  // (keeping comment for future reference if offline-first support is needed)
 
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
@@ -46,48 +44,50 @@ class HardwareService {
   }
 
   // ─── Start Scan ───────────────────────────────────────────────────────────
-  /// Posts to /start-scan on the local hardware server.
-  /// Returns true if the command was accepted.
+  /// Writes a 'start_scan' command to Firestore.
+  /// The local hardware agent listens for this and triggers the capture worker.
   Future<bool> startScan() async {
     try {
-      final response = await http
-          .post(Uri.parse(_startScanUrl))
-          .timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) {
-        debugPrint('[HW] ✅ Scan started via HTTP /start-scan');
-        return true;
-      }
-      debugPrint('[HW] /start-scan returned ${response.statusCode}');
-      return false;
+      final email = AuthService.userEmail;
+      await FirebaseFirestore.instance
+          .collection('commands/$email/pending')
+          .add({
+        'command': 'start_scan',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[HW] ✅ Scan started via Firestore command');
+      return true;
     } catch (e) {
-      debugPrint('[HW] /start-scan failed: $e');
+      debugPrint('[HW] ❌ Failed to write start_scan command: $e');
       return false;
     }
   }
 
   // ─── Confirm & Save ───────────────────────────────────────────────────────
-  /// Posts coin data to /add-to-collection on the local hardware server.
-  /// The server handles GCS upload + Firestore write via service account.
-  /// Returns a coin ID string on success, null on failure.
+  /// Writes a 'save_coin' command to Firestore with the coin data.
+  /// The agent handles GCS upload + Firestore write via service account.
+  /// Returns the pre-generated coin ID.
   Future<String?> addToCollection(Map<String, dynamic> coinData) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse(_saveUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(coinData),
-          )
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        debugPrint('[HW] ✅ addToCollection HTTP success: $json');
-        return json['coin_id'] as String? ??
-            'microscope_${DateTime.now().millisecondsSinceEpoch}';
-      }
-      debugPrint('[HW] /add-to-collection returned ${response.statusCode}');
-      return null;
+      final email = AuthService.userEmail;
+      final coinId = const Uuid().v4();
+
+      // Ensure the ID is in the data so the agent uses it
+      final data = Map<String, dynamic>.from(coinData);
+      data['id'] = coinId;
+
+      await FirebaseFirestore.instance
+          .collection('commands/$email/pending')
+          .add({
+        'command': 'save_coin',
+        'data': data,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('[HW] ✅ Save command written to Firestore');
+      return coinId;
     } catch (e) {
-      debugPrint('[HW] addToCollection error: $e');
+      debugPrint('[HW] ❌ Failed to write save_coin command: $e');
       return null;
     }
   }
@@ -141,18 +141,20 @@ class HardwareService {
   }
 
   // ─── Confirm Flip ─────────────────────────────────────────────────────────
-  /// Called when the user clicks "I've flipped the coin — Scan Reverse".
-  /// Immediately clears the flip lockout on the hardware agent so the reverse
-  /// capture begins without waiting for the 8-second auto-timer to expire.
+  /// Writes a 'confirm_flip' command to Firestore.
   Future<bool> confirmFlip() async {
     try {
-      final response = await http
-          .post(Uri.parse('https://localhost:5000/confirm-flip'))
-          .timeout(const Duration(seconds: 3));
-      debugPrint('[HW] confirmFlip → ${response.statusCode}');
-      return response.statusCode == 200;
+      final email = AuthService.userEmail;
+      await FirebaseFirestore.instance
+          .collection('commands/$email/pending')
+          .add({
+        'command': 'confirm_flip',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[HW] ✅ Flip confirmed via Firestore');
+      return true;
     } catch (e) {
-      debugPrint('[HW] confirmFlip failed: $e');
+      debugPrint('[HW] ❌ Failed to write confirm_flip command: $e');
       return false;
     }
   }

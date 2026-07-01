@@ -831,7 +831,7 @@ def _process_coin_save(data: dict):
     """
     slug = data.get("file_slug", "manual_entry")
     timestamp = time.strftime("%Y%m%d_%H%M")
-    coin_id = str(uuid.uuid4())
+    coin_id = data.get("id") or str(uuid.uuid4())
 
     verified_dir = "verified_images"
     os.makedirs(verified_dir, exist_ok=True)
@@ -954,6 +954,14 @@ def on_command_snapshot(doc_snapshots, changes, read_time):
             threading.Thread(
                 target=_process_coin_save, args=(data,), daemon=True
             ).start()
+
+        elif cmd == 'confirm_flip':
+            if not capture_status.get("waiting_for_flip"):
+                logging.warning("[CMD] Received confirm_flip but not waiting for flip")
+                continue
+            capture_status["waiting_for_flip"] = False
+            capture_status["flip_timer_start_ts"] = None
+            logging.info("[CMD] Flip confirmed via Firestore")
 
         else:
             logging.warning(f"[CMD] Unknown command: {cmd}")
