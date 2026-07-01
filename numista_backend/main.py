@@ -21,6 +21,10 @@ from google import genai
 from google.genai import types as genai_types
 import feedparser
 import re
+import sqlite3
+from pathlib import Path
+import time
+from numista_scraper.config import DB_PATH
 
 # Morgan's coin knowledge base RAG lookup
 try:
@@ -7462,6 +7466,24 @@ async def get_scraper_reports(limit: int = 15):
         return reports
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stats/gaps")
+async def get_gap_stats():
+    """
+    Get the current total image gaps from the SQLite database.
+    """
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE image_url_obverse IS NULL OR image_url_obverse = ''")
+        total_gaps = cur.fetchone()[0]
+        conn.close()
+        return {"total_gaps": total_gaps}
+    except Exception as e:
+        print(f"Error fetching gap stats: {e}")
+        # Fallback to last known if DB is locked
+        return {"total_gaps": 0, "error": str(e)}
 
 
 if __name__ == "__main__":

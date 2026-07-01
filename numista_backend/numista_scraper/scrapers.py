@@ -20,6 +20,25 @@ NUMISTA_API_BASE = 'https://api.numista.com/v3'
 
 # ─── Numista API Scraper ──────────────────────────────────────────────────────
 
+def search_numista_api(query):
+    """
+    Search the Numista API for types matching a keyword query.
+    """
+    url = f"{NUMISTA_API_BASE}/types"
+    params = {'q': query}
+    headers = {
+        'Numista-API-Key': NUMISTA_API_KEY,
+        'Accept': 'application/json',
+        'User-Agent': 'NumistaAI/1.0 (eric@numista.ai)'
+    }
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=REQUEST_TIMEOUT)
+        if resp.status_code == 200:
+            return resp.json().get('types', [])
+    except Exception as e:
+        print(f"    ⚠ Numista API search error for '{query}': {e}")
+    return []
+
 def scrape_numista_api(coin_id):
     """
     Directly query the Numista API for obverse and reverse images.

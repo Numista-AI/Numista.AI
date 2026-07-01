@@ -56,6 +56,7 @@ except ImportError:
 class NumistaScraperAgent:
     def __init__(self, mode="request"):
         self.mode = mode
+        self.processed_list = []
         # Ensure schema is aligned on startup
         ensure_sqlite_schema()
 
@@ -648,6 +649,11 @@ class NumistaScraperAgent:
                     success = self.process_coin_gap(coin, dry_run)
                     if success:
                         processed_coins += 1
+                        self.processed_list.append({
+                            "title": f"{coin.get('year', '')} {coin.get('variety', '')}",
+                            "category": coin.get('category', 'coin'),
+                            "source": "Numista/PCGS"
+                        })
                     # Rate limiting delay
                     time.sleep(DEFAULT_DELAY)
                 except Exception as e:
@@ -663,6 +669,11 @@ class NumistaScraperAgent:
                     success = self.process_error_gap(err, dry_run)
                     if success:
                         processed_errors += 1
+                        self.processed_list.append({
+                            "title": err.get('variety_name', 'Unnamed Error'),
+                            "category": "mint_error",
+                            "source": "Heritage/Error-Ref"
+                        })
                     time.sleep(DEFAULT_DELAY)
                 except Exception as e:
                     print(f"  Error processing error gap {err.get('id')}: {e}")
@@ -672,12 +683,20 @@ class NumistaScraperAgent:
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(f"# Numista.AI - Image Sourcing & Audit Report\n\n")
             f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()} UTC\n\n")
+            
             f.write(f"## Summary of Executed Operations\n\n")
             f.write(f"* **Agent Mode**: {self.mode}\n")
             f.write(f"* **Dry-Run Status**: {dry_run}\n")
             f.write(f"* **Target Scope**: {target}\n")
             f.write(f"* **Total Coin/Note Image Gaps Filled**: {processed_coins} / {len(coin_gaps)}\n")
             f.write(f"* **Total Mint Error Gaps Filled**: {processed_errors} / {len(error_gaps)}\n\n")
+            
+            if self.processed_list:
+                f.write(f"## Successfully Processed Items\n\n")
+                for item in self.processed_list:
+                    f.write(f"* **{item['title']}** ({item['category']}) - *{item['source']}*\n")
+                f.write("\n")
+
             f.write(f"## Data Quality and Corrections\n\n")
             f.write(f"All varieties checked against official references. SQLite schemas aligned to support `image_url_obverse` and `image_url_reverse` keys.\n")
 
