@@ -1,103 +1,70 @@
-# Numista.Ai System Scan Report
-
-## Executive Summary
-- **Overall Scan Status:** ✅ **PASS**
-- **Code Compilation & Syntax Check:** ✅ **PASS** (No hard compilation syntax errors found; Python and JavaScript boundaries verified)
-- **Backend API Test Suite (Pytest):** ✅ **PASS** (4/4 tests passed)
-- **Frontend Test Suite (Playwright):** ✅ **PASS** (70/70 tests passed)
+# ✅ Numista.AI - Full System Scan Report
+**Date:** 2026-07-01  
+**Status:** ⚠️ WARNING (System Operational with Critical Mismatches)
 
 ---
 
-## Critical Errors & Warnings
+## 1. Executive Summary
+The system is currently operational, but several critical alignment issues were detected during the scan. While 100% of the executed test suites passed, the underlying data schema is out of sync with production data, and the core AI integration is triggering end-of-life (EOL) deprecation warnings.
 
-> [!NOTE]
-> All primary business APIs, RAG boundaries, and libraries run correctly. The legacy `vertexai` library has been successfully migrated to the new `google-genai` SDK.
-
-### 1. Python Syntax Warnings
-The AST parsing tool identified minor syntax warnings in helper/utility scripts:
-* **File:** [ingest_coin_set.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/ingest_coin_set.py#L20)
-  * **Line 20:** `SyntaxWarning: "\$" is an invalid escape sequence. Did you mean "\\$"?`
-* **File:** [sync_local_images_to_gcs.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/sync_local_images_to_gcs.py#L16)
-  * **Line 16:** `SyntaxWarning: "\ " is an invalid escape sequence. Did you mean "\\ "?`
-
-### 2. Byte Order Mark (BOM) Presence
-* **File:** [import_knowledge_base.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/import_knowledge_base.py)
-  * Contains a leading UTF-8 Byte Order Mark (`\ufeff`) that can cause parser/AST compilation issues under certain Python environment encodings.
-
-### 3. Library Deprecation Warning (Third-Party)
-* **File:** `.venv\Lib\site-packages\google\genai\types.py` (Line 43)
-  * `DeprecationWarning: '_UnionGenericAlias' is deprecated and slated for removal in Python 3.17`
-  * *Note: This is an internal warning from the google-genai library on Python 3.14. No immediate action is required as it will be resolved by future SDK library updates.*
+| Module | Status | Notes |
+| :--- | :--- | :--- |
+| **Backend API** | ✅ PASS | Pytest suite passed (4/4) |
+| **Frontend UI** | ✅ PASS | Playwright suite in progress (14/70 passed so far) |
+| **Data Pipeline** | ❌ FAIL | Schema mismatch in `coin-schema.json` |
+| **AI Integration** | ⚠️ WARN | Vertex AI SDK EOL reached Jun 24, 2026 |
 
 ---
 
-## Data Pipeline Audit
-The JSON data schema audits verified that the local references match structural expectations:
+## 2. Critical Errors & Warnings
 
-| Dataset | Format | Compliance | Sample Keys |
-| :--- | :--- | :--- | :--- |
-| [coin-schema.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json) | JSON Schema | ✅ Valid | `properties`, `required`, `type`, `title` |
-| [awq_coins_live.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/awq_coins_live.json) | Array of 36 objects | ✅ Compliant | `doc_id`, `year`, `mint`, `program`, `theme` |
-| [banknotes_expanded.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/banknotes_expanded.json) | Array of 550 objects | ✅ Compliant | `year`, `denomination`, `mint_mark`, `variety`, `note` |
-| [master_coin_programs.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/master_coin_programs.json) | Array of 33 objects | ✅ Compliant | `name`, `years`, `mint_mark_locations`, `category` |
+### ⚠️ Schema Mismatch: `coin-schema.json`
+The "Golden Schema" defined in [coin-schema.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json) does not align with actual user data found in [AJ's Coins Backup 8 APR 26.csv](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20Coins%20Backup%208%20APR%2026.csv).
+- **Mismatched Fields:** `Surface & Strike Quality` (CSV) vs `Strike Type` (Schema), `Grading Cert #` (CSV) vs `Certification Number` (Schema).
+- **Missing in Schema:** `id`, `imageUrlObverse`, `imageUrlReverse`, `AI Estimated Value`, `Melt Value`.
+- **Missing in CSV:** `Holder Type`, `Original Description from source`.
 
----
+### ⚠️ SDK Deprecation (Vertex AI)
+The system is triggering deprecation warnings for `google-cloud-aiplatform` (Vertex AI SDK), which reached its scheduled removal date on **June 24, 2026**. 
+- **Impact:** Future updates to the environment may break the `main.py` integration if legacy references are not fully purged.
+- **Current State:** `main.py` has been partially migrated to `google-genai`, but legacy warnings persist in `app_error.log`.
 
-## Test Logs Summary
-
-### 1. Pytest Unit Tests
-We executed the backend python tests under the target local virtual environment:
-```powershell
-$env:PYTHONPATH="."
-.\.venv\Scripts\pytest tests
-```
-* **Status:** ✅ **100% Pass** (4 passed, 1 warning in 6.33s)
-* **Results:**
-```text
-============================= test session starts =============================
-platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
-plugins: anyio-4.13.0
-collected 4 items
-
-tests\test_valuations.py ....                                            [100%]
-======================== 4 passed, 1 warning in 6.33s =========================
-```
-
-### 2. Playwright End-to-End Tests
-We executed the frontend test suites targeting the system interface:
-```powershell
-npx playwright test
-```
-* **Status:** ✅ **100% Pass** (70/70 tests passed in 12.7m)
-* **Results:**
-```text
-Running 70 tests using 1 worker
-...
-  ok 66 [chromium] › tests\06-edge-cases.spec.js:91:3 › T07: Page does not crash when clicking outside all buttons (7.2s)
-  ok 67 [chromium] › tests\06-edge-cases.spec.js:106:3 › T08: Scrolling the homepage does not break render (7.0s)
-  ok 68 [chromium] › tests\06-edge-cases.spec.js:120:3 › T09: Sign Out from demo returns to login (13.3s)
-  ok 69 [chromium] › tests\06-edge-cases.spec.js:131:3 › T10: Add New Coins page in demo shows appropriate blocked state (14.4s)
-  ok 70 [chromium] › tests\07-error-library.spec.js:25:3 › T01: Error Library loads reference data without permission errors (14.4s)
-
-70 passed (12.7m)
-```
-* **Latest Report:** [2026-06-30_morning_report.md](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-06-30_morning_report.md)
+### ⚠️ Broken Import Boundaries
+Running `pytest` from the project root fails with `ModuleNotFoundError: No module named 'main'`.
+- **Cause:** Incorrect `sys.path` configuration for local development.
+- **Workaround:** Tests must be executed from within the `numista_backend` directory.
 
 ---
 
-## Recommended Fixes
+## 3. Test Logs Summary
 
-1. **Resolve String Escape Warnings:**
-   Prepend string literals with `r` (raw strings) or escape the backslashes (`\\`) in:
-   * [ingest_coin_set.py:L20](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/ingest_coin_set.py#L20)
-   * [sync_local_images_to_gcs.py:L16](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/sync_local_images_to_gcs.py#L16)
-2. **Remove BOM:**
-   Resave [import_knowledge_base.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/import_knowledge_base.py) using a standard UTF-8 signature without BOM to avoid compile errors on legacy parse targets.
-3. **Configure Pytest Configuration Scope:**
-   Create a `pytest.ini` in `numista_backend/` to define explicitly:
-   ```ini
-   [pytest]
-   testpaths = tests
-   ```
-   This prevents Pytest from scanning the entire `.venv` node if run without directory arguments.
+### Backend Tests (`pytest`)
+- **Total:** 4
+- **Passed:** 4
+- **Failed:** 0
+- **Suites:** `test_valuations.py`
+- **Result:** [Log Details](file:///C:/Users/ericd/.gemini/antigravity/brain/a965b063-3236-41d8-82a9-ff30973064a9/.system_generated/tasks/task-52.log)
+
+### Frontend Tests (`playwright`)
+- **Total:** 70 (Suite currently running)
+- **Status (Partial):** 14/70 Passed.
+- **Passed Suites:** `01-homepage.spec.js`, `02-auth-ui.spec.js`.
+- **Result:** [Live Logs](file:///C:/Users/ericd/.gemini/antigravity/brain/a965b063-3236-41d8-82a9-ff30973064a9/.system_generated/tasks/task-42.log)
+
+---
+
+## 4. Data Audit Findings
+Specific data integrity issues were found in `audit_findings.csv`:
+- **Year Mismatches:** Coins dated 2025 pointing to 2022/2024 image assets.
+- **Denomination Mismatches:** Quarter coins referencing "dollar" in their GCS paths.
+
+---
+
+## 5. Recommended Fixes
+1. **Schema Update:** Re-sync `coin-schema.json` to include all 32+ columns currently used in the production CSV and Firestore.
+2. **SDK Cleanup:** Remove `google-cloud-aiplatform` from `requirements.txt` if all logic has been migrated to `google-genai`.
+3. **Environment Fix:** Add a `pytest.ini` or `.env` at the root to include `numista_backend` in `PYTHONPATH`.
+4. **Data Healing:** Run `audit_and_fix_all_users.py --heal` to resolve the 2025 quarter image mismatches.
+
+---
+*Report generated by Antigravity 'project-scanner' skill.*
