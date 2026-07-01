@@ -137,3 +137,6 @@ refresh
 
 # Streamlit secrets (never commit real keys)
 .streamlit/secrets.toml
+
+# SQLite database files (local only - not committed per AGENTS.md)
+numista_backend/database/*.db
