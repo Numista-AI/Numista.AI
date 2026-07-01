@@ -57,3 +57,6 @@ test_wikimedia_urls.py
 test_new_credentials.py
 confirm_congress_key.py
 scratch/
+output/
+database/*.db
+*.db
