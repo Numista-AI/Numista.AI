@@ -402,12 +402,16 @@
       <div>
         <div class="stats-summary">
           <div class="stat-card">
-            <div class="stat-val" id="stat-total" style="color: var(--accent);">--</div>
-            <div class="stat-label">Total Gaps</div>
+            <div class="stat-val" id="stat-library" style="color: var(--accent);">--</div>
+            <div class="stat-label">Library Size</div>
           </div>
           <div class="stat-card">
-            <div class="stat-val" id="stat-filled" style="color: var(--green);">0</div>
-            <div class="stat-label">Gaps Filled</div>
+            <div class="stat-val" id="stat-total" style="color: #ff9800;">--</div>
+            <div class="stat-label">Image Gaps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="stat-coverage" style="color: var(--green);">0%</div>
+            <div class="stat-label">Image Coverage</div>
           </div>
           <div class="stat-card">
             <div class="stat-val" id="stat-runs">0</div>
@@ -477,7 +481,9 @@
         const r = await fetch(`${API_BASE}/api/stats/gaps`);
         if (r.ok) {
           const data = await r.json();
+          document.getElementById('stat-library').textContent = (data.total_items || 0).toLocaleString();
           document.getElementById('stat-total').textContent = (data.total_gaps || 0).toLocaleString();
+          document.getElementById('stat-coverage').textContent = (data.coverage_pct || 0) + '%';
         }
       } catch (e) {
         console.error("Failed to fetch gap stats", e);

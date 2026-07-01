@@ -7471,19 +7471,42 @@ async def get_scraper_reports(limit: int = 15):
 @app.get("/api/stats/gaps")
 async def get_gap_stats():
     """
-    Get the current total image gaps from the SQLite database.
+    Get the current total image gaps and library coverage from the SQLite database.
     """
     try:
         conn = sqlite3.connect(str(DB_PATH))
         cur = conn.cursor()
+        
+        # 1. Total Items in definitive_reference
+        cur.execute("SELECT COUNT(*) FROM definitive_reference")
+        total_items = cur.fetchone()[0]
+        
+        # 2. Total Gaps (missing obverse image)
         cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE image_url_obverse IS NULL OR image_url_obverse = ''")
         total_gaps = cur.fetchone()[0]
+        
+        # 3. Items with images
+        items_with_images = total_items - total_gaps
+        
+        # 4. Coverage Percentage
+        coverage_pct = round((items_with_images / total_items * 100), 2) if total_items > 0 else 0
+        
         conn.close()
-        return {"total_gaps": total_gaps}
+        return {
+            "total_items": total_items,
+            "total_gaps": total_gaps,
+            "items_with_images": items_with_images,
+            "coverage_pct": coverage_pct
+        }
     except Exception as e:
         print(f"Error fetching gap stats: {e}")
-        # Fallback to last known if DB is locked
-        return {"total_gaps": 0, "error": str(e)}
+        return {
+            "total_items": 0,
+            "total_gaps": 0,
+            "items_with_images": 0,
+            "coverage_pct": 0,
+            "error": str(e)
+        }
 
 
 if __name__ == "__main__":
