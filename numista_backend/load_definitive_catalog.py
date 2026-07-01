@@ -151,7 +151,11 @@ ALLOWED_COIN_SERIES = {
     "1878 Half Eagle",
     "Emerging Liberty Dimes",
     "Bess",
-    "Lady Bird"
+    "Lady Bird",
+    "Civil War Tokens",
+    "Pre-Federal & Colonial Coinage",
+    "Hawaiian Kingdom Coinage",
+    "Continental Currency"
 }
 
 ALLOWED_MEDAL_SERIES = {
@@ -165,6 +169,25 @@ ALLOWED_MEDAL_SERIES = {
     "Presidential Medals",
     "US Mint National Medals"
 }
+
+
+def get_baseline_category(title, series_val, issuer):
+    combined = f"{title} {series_val} {issuer}".lower()
+    
+    if "medal" in combined or "medallion" in combined:
+        return "medal"
+        
+    is_note = False
+    if series_val in {'Obsolete Banknotes & Scrip', 'Continental Currency', 'Fractional Currency', 'Postage Currency', 'Educational Series', 'Horse Blanket', 'Greenback'}:
+        if not any(kw in combined for kw in ["token", "coin", "pattern", "restrike", "silver round", "gold eagle"]):
+            is_note = True
+    elif "banknote" in combined or "silver certificate" in combined or "gold certificate" in combined or "treasury note" in combined:
+        if not any(kw in combined for kw in ["token", "pattern", "restrike", "replica"]):
+            is_note = True
+            
+    if is_note:
+        return "banknote"
+    return "coin"
 
 
 def normalize_denom(raw, default="One Dollar"):
@@ -514,11 +537,29 @@ def main():
                 if "hobo" in combined:
                     baseline_rejected_count += 1
                     continue
-                # Connecticut coppers, Mailed bust, etc. (colonial pre-federal except Fugio)
-                if any(kw in combined for kw in ["mailed bust", "connecticut", "vermont", "massachusetts", "new jersey"]):
-                    if "fugio" not in combined:
-                        baseline_rejected_count += 1
-                        continue
+                
+                # Collectible issuers & historical token keywords
+                COLLECTIBLE_ISSUERS = {
+                    "Confederate States", "Hawaii", "Puerto Rico", "Danish West Indies (1730-1917)",
+                    "United States (pre-federal and private/territorial)", "Texas", "North Carolina, Province of",
+                    "Colorado Territory", "California Republic", "Alaska", "Maryland, Colony of",
+                    "Connecticut, Colony of", "Vermont, Republic of", "Georgia, Province of",
+                    "Nebraska, Territory of", "Utah Territory", "Massachusetts Bay, Province of",
+                    "Oregon Territory", "New York, Province of", "Michigan, Territory of",
+                    "Virginia, Province of", "South Carolina", "New Jersey, Province of",
+                    "Minnesota, Territory of", "Michigan (British)", "Kentucky (British Settlement)",
+                    "Kansas, Territory of", "Guam", "Florida (Spanish)", "Northern Mariana Islands",
+                    "United States Pacific territories", "American Samoa", "United States Virgin Islands (1917-date)"
+                }
+                
+                HISTORICAL_TOKEN_KEYWORDS = [
+                    "hard times", "feuchtwanger", "talbot", "california gold", 
+                    "california half dollar", "california quarter", "unity states",
+                    "bechtler", "moffat", "clark", "gruber", "oregon exchange", 
+                    "pacific company", "waszcz", "norris", "greg", "dubosq", "shults",
+                    "baldwin", "wass", "molitor", "kellogg", "j.s. ormsby", "templeton reid",
+                    "so-called dollar", "bryan dollar", "mormon gold", "erie canal", "aafes"
+                ]
 
                 # Silver Rounds & Bullion mapping
                 if series_val == 'Silver Rounds & Bullion':
@@ -531,32 +572,31 @@ def main():
                     elif "Pursuit of Happiness" in title:
                         series_val = "American Liberty Gold Coins"
                 
-                # Official banknotes in coins table mapping
-                is_banknote = False
-                if series_val in {'Educational Series', 'Horse Blanket', 'Greenback'} or (series_val == 'Martha' and "Silver Certificate" in title):
-                    is_banknote = True
-                    category_val = "banknote"
-                    series_val = "U.S. Banknotes"
-                else:
-                    category_val = "coin"
-                    
-                if is_banknote:
-                    baseline_coins_count += 1
-                    consolidated_catalog.append({
-                        "doc_id": f"ref_coin_type_{r['id']}",
-                        "year": year_val,
-                        "denomination": parse_denom_baseline(title) or "One Dollar",
-                        "mint_mark": mint_val,
-                        "variety": title,
-                        "note": aka or f"Official U.S. Banknote: {title}",
-                        "series": series_val,
-                        "category": category_val
-                    })
-                elif series_val in ALLOWED_COIN_SERIES:
+                category_val = get_baseline_category(title, series_val, issuer)
+                
+                keep = False
+                if issuer in COLLECTIBLE_ISSUERS:
+                    keep = True
+                elif category_val == "coin":
+                    if series_val in ALLOWED_COIN_SERIES:
+                        keep = True
+                    elif any(kw in combined for kw in HISTORICAL_TOKEN_KEYWORDS):
+                        keep = True
+                elif category_val == "banknote":
+                    if series_val in {'Obsolete Banknotes & Scrip', 'Continental Currency', 'Fractional Currency', 'Postage Currency', 'Educational Series', 'Horse Blanket', 'Greenback'}:
+                        # Skip modern metal replicas mapping to these banknote series
+                        if not any(kw in combined for kw in ["token", "silver", "copper", "ounce", "oz", "scrip"]):
+                            keep = True
+                            
+                if keep:
                     baseline_coins_count += 1
                     denom_val = parse_denom_baseline(title)
                     if not denom_val:
-                        denom_val = r["category"].title() if r["category"] else "Coin"
+                        denom_val = r["category"].title() if r["category"] else ("Medal" if category_val == "medal" else "Coin")
+                        
+                    # Banknote series normalization
+                    if category_val == "banknote" and series_val in {'Educational Series', 'Horse Blanket', 'Greenback'}:
+                        series_val = "U.S. Banknotes"
                         
                     consolidated_catalog.append({
                         "doc_id": f"ref_coin_type_{r['id']}",
@@ -564,8 +604,8 @@ def main():
                         "denomination": denom_val,
                         "mint_mark": mint_val,
                         "variety": title,
-                        "note": aka or f"Base coin type: {title}",
-                        "series": series_val,
+                        "note": aka or f"Base baseline item: {title}",
+                        "series": series_val if series_val else ("U.S. Banknotes" if category_val == "banknote" else "U.S. Coins"),
                         "category": category_val
                     })
                 else:
@@ -635,6 +675,29 @@ def main():
     # Final filter / guardrail pass to guarantee 100% compliance with U.S. Mint and BEP official items
     final_catalog = []
     skipped_count = 0
+    
+    COLLECTIBLE_ISSUERS = {
+        "Confederate States", "Hawaii", "Puerto Rico", "Danish West Indies (1730-1917)",
+        "United States (pre-federal and private/territorial)", "Texas", "North Carolina, Province of",
+        "Colorado Territory", "California Republic", "Alaska", "Maryland, Colony of",
+        "Connecticut, Colony of", "Vermont, Republic of", "Georgia, Province of",
+        "Nebraska, Territory of", "Utah Territory", "Massachusetts Bay, Province of",
+        "Oregon Territory", "New York, Province of", "Michigan, Territory of",
+        "Virginia, Province of", "South Carolina", "New Jersey, Province of",
+        "Minnesota, Territory of", "Michigan (British)", "Kentucky (British Settlement)",
+        "Kansas, Territory of", "Guam", "Florida (Spanish)", "Northern Mariana Islands",
+        "United States Pacific territories", "American Samoa", "United States Virgin Islands (1917-date)"
+    }
+    
+    HISTORICAL_TOKEN_KEYWORDS = [
+        "hard times", "feuchtwanger", "talbot", "california gold", 
+        "california half dollar", "california quarter", "unity states",
+        "bechtler", "moffat", "clark", "gruber", "oregon exchange", 
+        "pacific company", "waszcz", "norris", "greg", "dubosq", "shults",
+        "baldwin", "wass", "molitor", "kellogg", "j.s. ormsby", "templeton reid",
+        "so-called dollar", "bryan dollar", "mormon gold", "erie canal", "aafes"
+    ]
+    
     for entry in consolidated_catalog:
         cat = entry.get("category", "")
         series = entry.get("series", "")
@@ -657,11 +720,9 @@ def main():
         # 3. Check for specific non-US token and replica items (checking only coins/medals)
         is_rejected = False
         REJECT_KEYWORDS = [
-            "token", "privately struck", "private issue", "merchant", 
-            "municipal", "exonumia", "wooden nickel", "poker chip", 
-            "gaming", "replica", "copy", "novelty", "play money",
-            "counterfeit", "souvenir medal", "fantasy issue", "reproduction",
-            "tropicana", "readers digest", "reader's digest", "pooh bear"
+            "replica", "copy", "play money", "counterfeit", "souvenir medal", 
+            "fantasy issue", "reproduction", "tropicana", "readers digest", 
+            "reader's digest", "pooh bear", "motion picture prop"
         ]
         
         if cat in ["coin", "medal"]:
@@ -676,12 +737,13 @@ def main():
             
         # 4. Check whitelists
         if cat == "coin":
-            # Check for Mailed bust, Connecticut copper, Vermont copper, etc. (colonial/pre-federal except Fugio)
-            if any(kw in combined for kw in ["mailed bust", "connecticut", "vermont", "massachusetts", "new jersey"]):
-                if "fugio" not in combined:
-                    skipped_count += 1
-                    continue
-            if series in ALLOWED_COIN_SERIES:
+            keep_coin = False
+            if any(kw in combined for kw in HISTORICAL_TOKEN_KEYWORDS):
+                keep_coin = True
+            elif series in ALLOWED_COIN_SERIES:
+                keep_coin = True
+            
+            if keep_coin:
                 final_catalog.append(entry)
             else:
                 skipped_count += 1
@@ -691,8 +753,7 @@ def main():
             else:
                 skipped_count += 1
         elif cat == "banknote":
-            # For banknotes, we force category = banknote and series = U.S. Banknotes
-            entry["series"] = "U.S. Banknotes"
+            # Obsolete state bank notes or regular notes are kept
             final_catalog.append(entry)
         else:
             skipped_count += 1
