@@ -309,10 +309,12 @@ def find_best_image_url(denomination, year):
         try:
             files = wiki_get_category_images(entry["cat"], limit=30)
             # Filter to jpg/png images
-            imgs = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png"))]
-            if imgs:
+            files = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+            # Filter out non-coin images (e.g. paintings, medals, etc.)
+            files = [f for f in files if not any(w in f.lower() for w in ["hadrian", "filarete", "painting", "statue", "medal", "sculpture"])]
+            if files:
                 # Prefer images with "obverse" or "front" in name
-                preferred = [f for f in imgs if any(w in f.lower() for w in ["obverse", "front", "obv"])]
+                preferred = [f for f in files if any(w in f.lower() for w in ["obverse", "front", "obv"])]
                 candidate = preferred[0] if preferred else imgs[0]
                 url = wiki_resolve_filename(candidate)
                 if url:
@@ -395,7 +397,7 @@ def main():
         # 1. Find Wikimedia URL
         print(f"    Searching Wikimedia Commons...", flush=True)
         img_url, img_filename = find_best_image_url(denomination, year)
-        time.sleep(0.5)  # Rate limiting
+        time.sleep(5)  # Be nice to Wikimedia API
         
         if not img_url:
             print(f"    ✗ No image found for {denomination} {year_str}", flush=True)
