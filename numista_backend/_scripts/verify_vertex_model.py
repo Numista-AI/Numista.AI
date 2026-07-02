@@ -25,6 +25,6 @@ def test_model(model_name, location):
         return False
 
 # Test current model landscape
-test_model("gemini-2.5-flash", "us-central1")
+test_model("gemini-3.5-flash", "us-central1")
 test_model("gemini-2.5-pro", "us-central1")
 test_model("gemini-3.5-flash", "us-central1")

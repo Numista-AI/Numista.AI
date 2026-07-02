@@ -15,7 +15,7 @@ const fs = require('fs');
 
 // Initialize Configuration
 const PROJECT_ID = 'studio-9101802118-8c9a8';
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-3.5-flash';
 
 // Initialize Firebase
 try {

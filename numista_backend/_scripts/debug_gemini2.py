@@ -42,7 +42,7 @@ EXTRACTION_PROMPT = (
 prompt = EXTRACTION_PROMPT + doc_text[:12000]
 
 response = client.models.generate_content(
-    model="gemini-2.5-flash",
+    model="gemini-3.5-flash",
     contents=prompt,
     config=genai_types.GenerateContentConfig(
         response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),

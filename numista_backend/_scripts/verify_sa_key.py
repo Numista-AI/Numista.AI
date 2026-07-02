@@ -33,7 +33,7 @@ def test_model_with_sa(model_name):
         return False
 
 # Test 1: 2.5 Flash
-test_model_with_sa("gemini-2.5-flash")
+test_model_with_sa("gemini-3.5-flash")
 
 # Test 2: 3.0 Flash (Check if name is correct)
 test_model_with_sa("gemini-3.0-flash")

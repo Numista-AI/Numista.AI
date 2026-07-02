@@ -39,7 +39,7 @@ SCANS_DIR         = Path(r"C:\Users\ericd\Documents\MyVertexProject\Scans 28 JAN
 OUTPUT_DIR        = Path(r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\receipt_labels")
 DATASET_NAME      = (f"projects/{PROJECT_ID}/locations/{LOCATION}"
                      f"/processors/{RECEIPT_PROC_ID}/dataset")
-MODEL_ID          = "gemini-2.5-flash"
+MODEL_ID          = "gemini-3.5-flash"
 
 GEMINI_PROMPT = """
 You are analyzing a scanned coin purchase invoice. Extract the following data

@@ -364,7 +364,7 @@ def classify_with_gemini(blob, storage_client):
 
         client = genai.Client(vertexai=True, project=PROJECT, location="us-central1")
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=[
                 genai_types.Part.from_text(GEMINI_VISION_PROMPT),
                 genai_types.Part.from_bytes(data=image_bytes, mime_type=mime),
