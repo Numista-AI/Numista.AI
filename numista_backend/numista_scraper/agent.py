@@ -217,9 +217,10 @@ class NumistaScraperAgent:
 
         return "7130" # Fallback to standard 1881-S Morgan Dollar
 
-    def process_coin_gap(self, coin, dry_run=False):
+    def process_coin_gap(self, coin, dry_run=False, source_priority="all"):
         """
         Source obverse and reverse images and fetch PCGS market data.
+        source_priority: "all", "usmint", "numista", "heritage"
         """
         doc_id = coin.get("doc_id")
         year = coin.get("year", "")
@@ -230,31 +231,38 @@ class NumistaScraperAgent:
         
         print(f"\n⚡ Sourcing images and market data for: {year} {denom} ({variety}) [ID: {doc_id}]")
         
-        # 1. Determine if this is a baseline coin with a Numista Piece ID
-        numista_id_match = re.match(r"^ref_coin_type_(\d+)$", doc_id)
         scraped_data = None
-        
-        if numista_id_match:
-            numista_id = int(numista_id_match.group(1))
-            print(f"    Direct Numista ID found: {numista_id}. Fetching from Numista API...")
-            scraped_data = scrape_numista_api(numista_id)
-            
-        # 2. If not found or not a baseline type, search Heritage Auctions (PCGS scrapers dropped to prevent blocks)
+        query = f"{year} {denom} {mint} {variety}".strip()
+
+        # 1. US Mint Priority (if requested or in 'all' mode)
+        if category == "coin" and source_priority in ["all", "usmint"]:
+            print("    Attempting USMint.gov (Priority)...")
+            scraped_data = scrape_usmint({"query": query})
+            if scraped_data and scraped_data.get("obverse_url"):
+                print("    ✓ Successfully found on USMint.gov")
+                scraped_data["source"] = "usmint"
+            elif source_priority == "usmint":
+                print("    ⚠ USMint.gov returned no images. Skipping other sources (US Mint Only Mode).")
+                return False # Move to next gap
+
+        # 2. Numista API (Metadata + Image fallback)
         if not scraped_data or not scraped_data.get("obverse_url"):
-            query = f"{year} {denom} {mint} {variety}".strip()
-            print(f"    Direct lookup failed. Sourcing via APIs and fallback...")
-            
-            if category == "banknote":
-                print("    Item is a Banknote. Searching Heritage Auctions...")
-                scraped_data = scrape_heritage_auctions({"query": query})
-            else:
-                print("    Item is a Coin. Sourcing images from USMint.gov...")
-                scraped_data = scrape_usmint({"query": query})
-                if not scraped_data or not scraped_data.get("obverse_url"):
-                    print("    USMint.gov returned no images. Sourcing from Heritage fallback...")
-                    scraped_data = scrape_heritage_auctions({"query": query})
+            if source_priority in ["all", "numista"]:
+                numista_id_match = re.match(r"^ref_coin_type_(\d+)$", doc_id)
+                if numista_id_match:
+                    numista_id = int(numista_id_match.group(1))
+                    print(f"    Fetching from Numista API...")
+                    scraped_data = scrape_numista_api(numista_id)
                     if scraped_data:
-                        scraped_data["source"] = "heritage"
+                        scraped_data["source"] = "numista"
+
+        # 3. Heritage Auctions (Deep Fallback)
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all", "heritage"]:
+                print("    Sourcing from Heritage Auctions fallback...")
+                scraped_data = scrape_heritage_auctions({"query": query})
+                if scraped_data:
+                    scraped_data["source"] = "heritage"
                     
         # 3. Fetch PCGS Market Data if it's a coin
         market_data = None
@@ -638,20 +646,16 @@ class NumistaScraperAgent:
                     print(f"      ✓ Healed variety name in SQLite to official: '{scraped_title}'")
                     
                     # Update Firestore as well
-                    db.collection("coins_reference").document(doc_id).update({
-                        "variety": scraped_title
-                    })
-                    print("      ✓ Healed variety name in Firestore.")
                 except Exception as e:
                     print(f"      ⚠ Self-healing update failed: {e}")
 
-    def run(self, target="all", limit=None, dry_run=False):
+    def run(self, limit=10, target="all", dry_run=False, source_priority="all"):
         """
         Run the full scraper agent flow: audit gaps, fetch images, heal data, and write audit reports.
         """
         print("="*60)
         print(f"  Numista.AI Scraper Agent Executing (Mode: {self.mode})")
-        print(f"  Dry-Run: {dry_run} | Target: {target} | Limit: {limit}")
+        print(f"  Dry-Run: {dry_run} | Target: {target} | Limit: {limit} | Priority: {source_priority}")
         print("="*60)
         
         # 1. Audit
@@ -667,7 +671,7 @@ class NumistaScraperAgent:
                 if limit and processed_coins >= limit:
                     break
                 try:
-                    success = self.process_coin_gap(coin, dry_run)
+                    success = self.process_coin_gap(coin, dry_run, source_priority)
                     if success:
                         processed_coins += 1
                         self.processed_list.append({
