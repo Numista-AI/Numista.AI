@@ -1,71 +1,53 @@
-# ✅ Numista.AI - Full System Scan Report
-**Date:** 2026-07-01  
-**Status:** ⚠️ WARNING (System Operational with Critical Mismatches)
+# SCAN_REPORT.md
+
+## Executive Summary
+**Status:** ⚠️ **CAUTION** (Passed with Warnings)
+
+The Numista.Ai system check completed with no syntax errors and basic functionality intact. However, several critical inconsistencies in data schemas and AI model configurations were identified that pose risks to production stability and data integrity.
 
 ---
 
-## 1. Executive Summary
-The system is currently operational, but several critical alignment issues were detected during the scan. While 100% of the executed test suites passed, the underlying data schema is out of sync with production data, and the core AI integration is triggering end-of-life (EOL) deprecation warnings.
+## Critical Errors & Warnings
 
-| Module | Status | Notes |
-| :--- | :--- | :--- |
-| **Backend API** | ✅ PASS | Pytest suite passed (4/4) |
-| **Frontend UI** | ✅ PASS | Playwright suite passed (70/70) |
-| **Data Pipeline** | ❌ FAIL | Schema mismatch in `coin-schema.json` |
-| **AI Integration** | ⚠️ WARN | Vertex AI SDK EOL reached Jun 24, 2026 |
+### 1. Schema Mismatch (High Priority)
+- **Issue:** The local dataset `numista_backend/banknotes_expanded.json` uses lowercase keys (e.g., `year`, `denomination`), while the "Golden Schema" defined in `numista_backend/coin-schema.json` requires Title Case keys (e.g., `Year`, `Denomination`).
+- **Impact:** Ingestion pipelines validating against the Golden Schema will fail or drop data.
 
----
+### 2. AI Model Inconsistency (Medium Priority)
+- **Issue:**
+  - `numista_backend/main.py` is configured for `gemini-3.5-flash`.
+  - `numista_backend/mappingController.js` is configured for `gemini-2.5-flash`.
+- **Impact:** Inconsistent behavior and potential "Model Not Found" errors if `gemini-2.5-flash` is a typo or deprecated version.
 
-## 2. Critical Errors & Warnings
-
-### ⚠️ Schema Mismatch: `coin-schema.json`
-The "Golden Schema" defined in [coin-schema.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json) does not align with actual user data found in [AJ's Coins Backup 8 APR 26.csv](file:///c:/Users/ericd/Documents/MyVertexProject/AJ%27s%20Coins%20Backup%208%20APR%2026.csv).
-- **Mismatched Fields:** `Surface & Strike Quality` (CSV) vs `Strike Type` (Schema), `Grading Cert #` (CSV) vs `Certification Number` (Schema).
-- **Missing in Schema:** `id`, `imageUrlObverse`, `imageUrlReverse`, `AI Estimated Value`, `Melt Value`.
-- **Missing in CSV:** `Holder Type`, `Original Description from source`.
-
-### ⚠️ SDK Deprecation (Vertex AI)
-The system is triggering deprecation warnings for `google-cloud-aiplatform` (Vertex AI SDK), which reached its scheduled removal date on **June 24, 2026**. 
-- **Impact:** Future updates to the environment may break the `main.py` integration if legacy references are not fully purged.
-- **Current State:** `main.py` has been partially migrated to `google-genai`, but legacy warnings persist in `app_error.log`.
-
-### ⚠️ Broken Import Boundaries
-Running `pytest` from the project root fails with `ModuleNotFoundError: No module named 'main'`.
-- **Cause:** Incorrect `sys.path` configuration for local development.
-- **Workaround:** Tests must be executed from within the `numista_backend` directory.
+### 3. Environment & Import Boundaries (Low Priority)
+- **Issue:** Running `pytest` from the project root fails with `ModuleNotFoundError: No module named 'main'`.
+- **Impact:** Developer friction; tests only run correctly when invoked from within the `numista_backend` directory.
 
 ---
 
-## 3. Test Logs Summary
+## Test Logs Summary
 
-### Backend Tests (`pytest`)
-- **Total:** 4
-- **Passed:** 4
-- **Failed:** 0
-- **Suites:** `test_valuations.py`
-- **Result:** [Log Details](file:///C:/Users/ericd/.gemini/antigravity/brain/a965b063-3236-41d8-82a9-ff30973064a9/.system_generated/tasks/task-52.log)
+### Python Backend Tests
+- **Runner:** `pytest 8.4.1` (via `.venv`)
+- **Results:** 4/4 Tests Passed ✅
+- **Modules Verified:** `clean_valuation_value` (valuation logic).
 
-### Frontend Tests (`playwright`)
-- **Total:** 70
-- **Passed:** 70
-- **Failed:** 0
-- **Suites:** `01-homepage`, `02-auth-ui`, `03-demo-navigation`, `04-registration`, `05-navigation`, `06-edge-cases`, `07-error-library`
-- **Result:** [Full Logs](file:///C:/Users/ericd/.gemini/antigravity/brain/a965b063-3236-41d8-82a9-ff30973064a9/.system_generated/tasks/task-42.log)
+### Node.js Integration Tests
+- **Runner:** `node testGemini.js`
+- **Results:** Success ✅
+- **Summary:** Gemini 3 Flash Preview mapping successfully converted mock entities to the 21-column schema.
 
----
-
-## 4. Data Audit Findings
-Specific data integrity issues were found in `audit_findings.csv`:
-- **Year Mismatches:** Coins dated 2025 pointing to 2022/2024 image assets.
-- **Denomination Mismatches:** Quarter coins referencing "dollar" in their GCS paths.
+### Root Integration Tests
+- **Status:** **Skipped**
+- **Reason:** Root tests in `numista_tests/` are configured for Playwright/JS and were not invoked during the Python-centric pass.
 
 ---
 
-## 5. Recommended Fixes
-1. **Schema Update:** Re-sync `coin-schema.json` to include all 32+ columns currently used in the production CSV and Firestore.
-2. **SDK Cleanup:** Remove `google-cloud-aiplatform` from `requirements.txt` if all logic has been migrated to `google-genai`.
-3. **Environment Fix:** Add a `pytest.ini` or `.env` at the root to include `numista_backend` in `PYTHONPATH`.
-4. **Data Healing:** Run `audit_and_fix_all_users.py --heal` to resolve the 2025 quarter image mismatches.
+## Recommended Fixes
+
+1. **Schema Alignment:** Execute a script to normalize all JSON/CSV datasets to match the Title Case keys defined in the `coin-schema.json`.
+2. **Model Standardization:** Update `mappingController.js` to use `gemini-3.5-flash` to align with the primary backend configuration.
+3. **Pathing Correction:** Create a `.env` or `setup.cfg` in the root to properly set `PYTHONPATH` for global test execution.
 
 ---
-*Report generated by Antigravity 'project-scanner' skill.*
+*Report generated by Antigravity Project Scanner on 2026-07-02.*
