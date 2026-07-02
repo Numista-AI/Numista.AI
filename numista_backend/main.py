@@ -7390,6 +7390,31 @@ async def littleton_sync(request: LittletonSyncRequest):
 # ─── END LITTLETON COIN COMPANY INTEGRATION ───────────────────────────────────
 
 
+@app.get("/api/cron/campaigns")
+async def get_active_campaigns():
+    """
+    Get the status of active system-wide campaigns.
+    """
+    try:
+        camp_ref = db.collection("campaigns")
+        docs = camp_ref.stream()
+        
+        campaigns = []
+        for doc in docs:
+            data = doc.to_dict()
+            campaigns.append({
+                "id": doc.id,
+                "name": data.get("name"),
+                "status": data.get("status"),
+                "progress": data.get("progress"),
+                "total_target": data.get("total_target"),
+                "description": data.get("description")
+            })
+        return campaigns
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/cron/scrape-gaps")
 async def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request", dry_run: bool = False, priority: str = "all"):
     """
@@ -7437,6 +7462,31 @@ async def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "re
     except Exception as e:
         print(f"❌ [Cron Scraper] Execution error: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/cron/audits")
+async def get_weekly_audits(limit: int = 10):
+    """
+    Get the list of weekly system audits from Firestore.
+    """
+    try:
+        audits_ref = db.collection("weekly_audits")
+        query = audits_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit)
+        docs = query.stream()
+        
+        audits = []
+        for doc in docs:
+            data = doc.to_dict()
+            audits.append({
+                "id": doc.id,
+                "timestamp": data.get("timestamp"),
+                "datetime_utc": data.get("datetime_utc"),
+                "summary": data.get("summary"),
+                "report_content": data.get("report_content")
+            })
+        return audits
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/cron/reports")

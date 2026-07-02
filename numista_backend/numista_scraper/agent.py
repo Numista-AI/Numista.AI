@@ -19,7 +19,8 @@ try:
         scrape_heritage_auctions,
         scrape_error_ref,
         scrape_coinweek,
-        scrape_usmint
+        scrape_usmint,
+        scrape_wikimedia
     )
     from .storage import (
         ensure_sqlite_schema,
@@ -27,6 +28,7 @@ try:
         upload_to_gcs,
         update_coin_images_in_databases,
         update_mint_error_images_in_firestore,
+        auto_migrate_to_gcs,
         db
     )
 except ImportError:
@@ -40,7 +42,8 @@ except ImportError:
         scrape_heritage_auctions,
         scrape_error_ref,
         scrape_coinweek,
-        scrape_usmint
+        scrape_usmint,
+        scrape_wikimedia
     )
     from numista_scraper.storage import (
         ensure_sqlite_schema,
@@ -48,6 +51,7 @@ except ImportError:
         upload_to_gcs,
         update_coin_images_in_databases,
         update_mint_error_images_in_firestore,
+        auto_migrate_to_gcs,
         db
     )
 
@@ -72,19 +76,14 @@ class NumistaScraperAgent:
             try:
                 # Audit against Firestore for persistent cloud tracking
                 ref_col = db.collection("definitive_reference")
-                # We filter for missing images directly in the query
-                docs = ref_col.where("image_url_obverse", "==", "").stream()
+                print("    Streaming 'definitive_reference' to find gaps...")
+                docs = ref_col.stream()
                 for doc in docs:
                     data = doc.to_dict()
-                    coin_gaps.append(data)
-                
-                # Also check for NULLs (Firestore treats empty string and null differently)
-                null_docs = ref_col.where("image_url_obverse", "==", None).stream()
-                for doc in null_docs:
-                    data = doc.to_dict()
-                    if data["doc_id"] not in [g["doc_id"] for g in coin_gaps]:
+                    obv = data.get("image_url_obverse", "")
+                    if not obv or str(obv).strip() == "" or obv is None:
                         coin_gaps.append(data)
-                        
+                
                 print(f"  - Found {len(coin_gaps)} coin/note records missing obverse images in Firestore.")
             except Exception as e:
                 print(f"  ⚠ Firestore audit error: {e}. Falling back to SQLite.")
@@ -220,7 +219,7 @@ class NumistaScraperAgent:
     def process_coin_gap(self, coin, dry_run=False, source_priority="all"):
         """
         Source obverse and reverse images and fetch PCGS market data.
-        source_priority: "all", "usmint", "numista", "heritage"
+        source_priority: "all", "usmint", "numista", "heritage", "wikimedia"
         """
         doc_id = coin.get("doc_id")
         year = coin.get("year", "")
@@ -245,6 +244,18 @@ class NumistaScraperAgent:
                 print("    ⚠ USMint.gov returned no images. Skipping other sources (US Mint Only Mode).")
                 return False # Move to next gap
 
+        # 1.5 Wikimedia Commons (New Campaign Target)
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all", "wikimedia"]:
+                print("    Attempting Wikimedia Commons (Campaign)...")
+                scraped_data = scrape_wikimedia({"query": query})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on Wikimedia Commons")
+                    scraped_data["source"] = "wikimedia"
+                elif source_priority == "wikimedia":
+                    print("    ⚠ Wikimedia Commons returned no images. Skipping other sources (Wikimedia Only Mode).")
+                    return False
+
         # 2. Numista API (Metadata + Image fallback)
         if not scraped_data or not scraped_data.get("obverse_url"):
             if source_priority in ["all", "numista"]:
@@ -263,6 +274,13 @@ class NumistaScraperAgent:
                 scraped_data = scrape_heritage_auctions({"query": query})
                 if scraped_data:
                     scraped_data["source"] = "heritage"
+                    
+        # Apply GCS Migration
+        if scraped_data:
+            if scraped_data.get("obverse_url"):
+                scraped_data["obverse_url"] = auto_migrate_to_gcs(scraped_data.get("obverse_url"), doc_id, "obverse")
+            if scraped_data.get("reverse_url"):
+                scraped_data["reverse_url"] = auto_migrate_to_gcs(scraped_data.get("reverse_url"), doc_id, "reverse")
                     
         # 3. Fetch PCGS Market Data if it's a coin
         market_data = None

@@ -82,6 +82,31 @@ def upload_to_gcs(img_bytes, gcs_path):
         print(f"    ⚠ GCS upload error for path {gcs_path}: {e}")
     return None
 
+
+def auto_migrate_to_gcs(remote_url, doc_id, side="obverse"):
+    """
+    Download image from remote_url, upload to GCS under coins/<doc_id>_<side>.jpg,
+    and return the new GCS public URL.
+    """
+    if not remote_url or "storage.googleapis.com" in remote_url:
+        return remote_url
+        
+    print(f"    [Auto-Migration] Moving {side} to GCS for {doc_id}...")
+    img_bytes = download_image(remote_url)
+    if img_bytes:
+        ext = "jpg"
+        if ".png" in remote_url.lower(): ext = "png"
+        elif ".webp" in remote_url.lower(): ext = "webp"
+        
+        gcs_path = f"coins/{doc_id}_{side}.{ext}"
+        gcs_url = upload_to_gcs(img_bytes, gcs_path)
+        if gcs_url:
+            print(f"    [Auto-Migration] ✅ Success: {gcs_url}")
+            return gcs_url
+            
+    print(f"    [Auto-Migration] ⚠ Failed to migrate {remote_url}")
+    return remote_url
+
 # ─── Database Operations ───────────────────────────────────────────────────────
 
 def ensure_sqlite_schema():

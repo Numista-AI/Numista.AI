@@ -1,5 +1,7 @@
 import re
 import urllib.parse
+import json
+import time
 from bs4 import BeautifulSoup
 from botasaurus.request import request, Request
 from botasaurus.soupify import soupify
@@ -14,6 +16,9 @@ except ImportError:
     ]
     DEFAULT_DELAY = 1.5
     REQUEST_TIMEOUT = 30
+
+UA = "NumistaAI/1.0 (educational numismatic archive; contact eric.seaman@yahoo.com)"
+WIKI_API = "https://commons.wikimedia.org/w/api.php"
 
 NUMISTA_API_KEY = 'ExpST6TaGRDXkcEt6QajYJ0Lj76JZ8oqBPPpWhe'
 NUMISTA_API_BASE = 'https://api.numista.com/v3'
@@ -717,3 +722,73 @@ def scrape_usmint(request: Request, data):
         print(f"    ⚠ USMint.gov scrape error for query '{query}': {e}")
     return None
 
+# ─── Wikimedia Commons Scraper ────────────────────────────────────────────────
+
+@request
+def scrape_wikimedia(request: Request, data):
+    """
+    Search Wikimedia Commons for public domain coin images.
+    `data` contains a dict with keys: 'query' (e.g. '1943 Lincoln Cent')
+    """
+    query = data.get("query")
+    if not query:
+        return None
+        
+    # We search for obverse and reverse separately for better accuracy
+    results = {}
+    for side in ["obverse", "reverse"]:
+        search_term = f"{query} coin {side}"
+        api_url = (
+            f"{WIKI_API}?action=query&list=search&srnamespace=6"
+            f"&srsearch={urllib.parse.quote(search_term)}&srlimit=5&format=json"
+        )
+        
+        try:
+            resp = request.get(api_url, headers={"User-Agent": UA})
+            if resp.status_code != 200:
+                continue
+            
+            search_data = resp.json()
+            search_results = search_data.get("query", {}).get("search", [])
+            
+            candidates = []
+            for r in search_results:
+                title = r.get("title", "")
+                if any(title.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                    # Resolve direct URL
+                    info_url = (
+                        f"{WIKI_API}?action=query&titles={urllib.parse.quote(title)}"
+                        f"&prop=imageinfo&iiprop=url&format=json"
+                    )
+                    info_resp = request.get(info_url, headers={"User-Agent": UA})
+                    if info_resp.status_code == 200:
+                        info_data = info_resp.json()
+                        pages = info_data.get("query", {}).get("pages", {})
+                        for pid, page in pages.items():
+                            ii = page.get("imageinfo", [])
+                            if ii:
+                                img_url = ii[0].get("url")
+                                if img_url:
+                                    # Simple scoring: count query words in title
+                                    score = sum(1 for word in query.lower().split() if word in title.lower())
+                                    if side in title.lower(): score += 2
+                                    candidates.append((score, img_url))
+            
+            if candidates:
+                # Pick the best candidate
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                results[side] = candidates[0][1]
+                
+            time.sleep(0.5) # Be polite
+        except Exception as e:
+            print(f"    ⚠ Wikimedia API error for '{search_term}': {e}")
+            
+    if results.get("obverse"):
+        return {
+            "source": "wikimedia",
+            "source_url": "https://commons.wikimedia.org/",
+            "obverse_url": results.get("obverse"),
+            "reverse_url": results.get("reverse") or results.get("obverse"),
+            "description": f"Public domain image for {query} sourced from Wikimedia Commons."
+        }
+    return None
