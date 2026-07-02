@@ -28,13 +28,21 @@ Identified and resolved the cause of the 9 PM cron job failure.
 Updated the [Scraper Dashboard](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/web/scraper_dashboard.html) to show the real-time status of the library:
 - **New Metrics:** Added "Library Size" and "Image Coverage %" stat cards.
 - **Sync Fix:** The "Total Gaps" number now accurately reflects the SQLite database count (6,317) instead of the stale "11,904" number.
+## 5. USMint Session Sharing (New)
+Implemented the ability to share active USMint.gov session cookies to bypass anti-bot blocks.
+- **Cookie Support:** The scraper now checks Firestore for session cookies and injects them into requests.
+- **Configuration UI:** Added a textarea to the dashboard to easily paste and save cookies.
+- **Impact:** This allows the scraper to access high-quality images from the US Mint by impersonating an authenticated user session.
+
+## 6. Cloud Persistence (New)
+Resolved the issue where the scraper would "forget" its progress after each run on Cloud Run.
+- **Firestore Audit:** Replaced the ephemeral SQLite audit with a persistent Firestore audit. The scraper now checks the cloud database directly to see what is missing.
+- **Unified Source of Truth:** Both the dashboard and the scraper now synchronize with the `definitive_reference` collection in Firestore.
+- **Consistency:** Once an image is found and saved to the cloud, it is permanently removed from the "Image Gaps" count.
 
 ## Verification Results
 - **Git Push:** All changes pushed to `origin main`.
-- **Cloud Run Deployment:** Successfully deployed version `da3e2a182a9a` with `botasaurus` support.
-- **Data Audit:** Confirmed 9,678 items in `definitive_reference` via direct SQL query.
-
-![Dashboard Update](file:///C:/Users/ericd/.gemini/antigravity/brain/3b2b2b54-ea70-4c98-897b-1430b6de72f6/media__1782948163339.png)
-*(Note: Screenshot from previous state, new metrics will appear on refresh)*
+- **Cloud Run Deployment:** Successfully deployed with Firestore persistence support.
+- **Data Audit:** Switched from SQLite to Firestore for cloud-native tracking.
 
 <!-- GOAL_COMPLETE -->

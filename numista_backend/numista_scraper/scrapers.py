@@ -605,6 +605,22 @@ def scrape_coinweek(request: Request, data):
     return None
 
 
+def fetch_usmint_cookies():
+    """
+    Fetches the USMint.gov cookie string from Firestore config/usmint.
+    Used to bypass 403 blocks by sharing active session cookies.
+    """
+    try:
+        from firebase_admin import firestore
+        db = firestore.client()
+        doc = db.collection("config").document("usmint").get()
+        if doc.exists:
+            return doc.to_dict().get("cookieString")
+    except Exception as e:
+        print(f"    ⚠ Error fetching USMint cookies from Firestore: {e}")
+    return None
+
+
 # ─── USMint.gov Scraper ────────────────────────────────────────────────────────
 
 @request
@@ -617,9 +633,21 @@ def scrape_usmint(request: Request, data):
     if not query:
         return None
         
+    cookies = fetch_usmint_cookies()
+    headers = {
+        "User-Agent": USER_AGENTS[0],
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "max-age=0",
+        "Upgrade-Insecure-Requests": "1"
+    }
+    if cookies:
+        headers["Cookie"] = cookies
+        print("    [USMint.gov] Using provided session cookies for request...")
+
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = request.get(search_url)
+        resp = request.get(search_url, headers=headers)
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None
@@ -652,7 +680,7 @@ def scrape_usmint(request: Request, data):
             
         # Visit first page
         target_url = article_links[0]
-        art_resp = request.get(target_url)
+        art_resp = request.get(target_url, headers=headers)
         art_soup = soupify(art_resp)
         
         paragraphs = []

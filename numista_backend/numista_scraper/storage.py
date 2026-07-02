@@ -159,9 +159,9 @@ def update_coin_images_in_databases(doc_id, obv_url, rev_url, row=None):
     except Exception as e:
         print(f"    ⚠ SQLite update error for {doc_id}: {e}")
 
-    # 2. Update Firestore (coins_reference)
+    # 2. Update Firestore (definitive_reference)
     try:
-        col_ref = db.collection("coins_reference")
+        col_ref = db.collection("definitive_reference")
         doc_ref = col_ref.document(doc_id)
         if doc_ref.get().exists:
             update_data = {
@@ -175,7 +175,7 @@ def update_coin_images_in_databases(doc_id, obv_url, rev_url, row=None):
                 
             doc_ref.update(update_data)
     except Exception as e:
-        print(f"    ⚠ Firestore update error for coins_reference doc {doc_id}: {e}")
+        print(f"    ⚠ Firestore update error for definitive_reference doc {doc_id}: {e}")
 
 
 

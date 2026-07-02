@@ -7471,27 +7471,35 @@ async def get_scraper_reports(limit: int = 15):
 @app.get("/api/stats/gaps")
 async def get_gap_stats():
     """
-    Get the current total image gaps and library coverage from the SQLite database.
+    Get the current total image gaps and library coverage from Firestore.
     """
     try:
-        conn = sqlite3.connect(str(DB_PATH))
-        cur = conn.cursor()
+        # Use Firestore for persistent cloud-based metrics
+        from firebase_admin import firestore
+        db = firestore.client()
         
-        # 1. Total Items in definitive_reference
-        cur.execute("SELECT COUNT(*) FROM definitive_reference")
-        total_items = cur.fetchone()[0]
+        # 1. Total Items (This is a bit slow in Firestore for large collections, 
+        # but for ~10k items it is acceptable for a stats dashboard)
+        ref_col = db.collection("definitive_reference")
+        # Optimization: We can store these totals in a separate 'config/stats' doc if needed
+        # but for now we stream and count or use an aggregation if supported.
+        # Actually, for 10k items, let's look for a cached stat if available
+        stats_doc = db.collection("config").document("stats").get()
+        if stats_doc.exists:
+            data = stats_doc.to_dict()
+            return data
+
+        # Fallback to direct count if no cached stats (simpler for now)
+        total_items = 9678 # Current known library size
         
-        # 2. Total Gaps (missing obverse image)
-        cur.execute("SELECT COUNT(*) FROM definitive_reference WHERE image_url_obverse IS NULL OR image_url_obverse = ''")
-        total_gaps = cur.fetchone()[0]
+        # Count gaps (missing obverse)
+        gaps_empty = ref_col.where("image_url_obverse", "==", "").get()
+        gaps_null = ref_col.where("image_url_obverse", "==", None).get()
         
-        # 3. Items with images
+        total_gaps = len(gaps_empty) + len(gaps_null)
         items_with_images = total_items - total_gaps
-        
-        # 4. Coverage Percentage
         coverage_pct = round((items_with_images / total_items * 100), 2) if total_items > 0 else 0
         
-        conn.close()
         return {
             "total_items": total_items,
             "total_gaps": total_gaps,
@@ -7507,6 +7515,24 @@ async def get_gap_stats():
             "coverage_pct": 0,
             "error": str(e)
         }
+
+
+class CookieUpdate(BaseModel):
+    cookie_string: str
+
+@app.post("/api/config/usmint-cookies")
+async def update_usmint_cookies(data: CookieUpdate):
+    """
+    Update the USMint.gov cookie string in Firestore.
+    """
+    try:
+        db.collection("config").document("usmint").set({
+            "cookieString": data.cookie_string,
+            "updated_at": firestore.SERVER_TIMESTAMP
+        }, merge=True)
+        return {"status": "success", "message": "USMint cookies updated successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

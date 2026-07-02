@@ -60,33 +60,54 @@ class NumistaScraperAgent:
         # Ensure schema is aligned on startup
         ensure_sqlite_schema()
 
-    def audit_gaps(self):
+    def audit_gaps(self, use_firestore=True):
         """
-        Audit the SQLite database and Firestore to identify missing images or catalog mismatches.
+        Audit the SQLite database or Firestore to identify missing images or catalog mismatches.
         """
-        print("🔍 Auditing databases for image gaps...")
+        print(f"🔍 Auditing {'Firestore' if use_firestore else 'SQLite'} for image gaps...")
         
-        # 1. Audit SQLite US Numismatic Database
         coin_gaps = []
-        try:
-            conn = sqlite3.connect(str(DB_PATH))
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            
-            # Query rows with no obverse image
-            cur.execute("""
-                SELECT doc_id, year, denomination, mint_mark, variety, series, category 
-                FROM definitive_reference 
-                WHERE image_url_obverse IS NULL OR image_url_obverse = ''
-            """)
-            rows = cur.fetchall()
-            conn.close()
-            
-            for r in rows:
-                coin_gaps.append(dict(r))
-            print(f"  - Found {len(coin_gaps)} coin/note records missing obverse images.")
-        except Exception as e:
-            print(f"  ⚠ SQLite audit error: {e}")
+
+        if use_firestore:
+            try:
+                # Audit against Firestore for persistent cloud tracking
+                ref_col = db.collection("definitive_reference")
+                # We filter for missing images directly in the query
+                docs = ref_col.where("image_url_obverse", "==", "").stream()
+                for doc in docs:
+                    data = doc.to_dict()
+                    coin_gaps.append(data)
+                
+                # Also check for NULLs (Firestore treats empty string and null differently)
+                null_docs = ref_col.where("image_url_obverse", "==", None).stream()
+                for doc in null_docs:
+                    data = doc.to_dict()
+                    if data["doc_id"] not in [g["doc_id"] for g in coin_gaps]:
+                        coin_gaps.append(data)
+                        
+                print(f"  - Found {len(coin_gaps)} coin/note records missing obverse images in Firestore.")
+            except Exception as e:
+                print(f"  ⚠ Firestore audit error: {e}. Falling back to SQLite.")
+                use_firestore = False
+
+        if not use_firestore:
+            # Fallback to SQLite (local mode)
+            try:
+                conn = sqlite3.connect(str(DB_PATH))
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT doc_id, year, denomination, mint_mark, variety, series, category 
+                    FROM definitive_reference 
+                    WHERE image_url_obverse IS NULL OR image_url_obverse = ''
+                """)
+                rows = cur.fetchall()
+                conn.close()
+                for r in rows:
+                    coin_gaps.append(dict(r))
+                print(f"  - Found {len(coin_gaps)} coin/note records missing obverse images in SQLite.")
+            except Exception as e:
+                print(f"  ⚠ SQLite audit error: {e}")
 
         # 2. Audit Firestore US Mint Error Database
         error_gaps = []
