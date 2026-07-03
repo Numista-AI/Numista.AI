@@ -27,11 +27,16 @@ The Numista.Ai project has passed the core system check. The backend infrastruct
 - **Summary:** Basic valuation logic and parsing are stable.
 
 ### Frontend/UI Tests (Playwright)
-- **Status:** In Progress (14/45+ tests PASSED)
+- **Status:** **100% PASSED** (70/70 tests)
 - **Completed Specs:**
   - `01-homepage.spec.js`: PASSED (7/7)
   - `02-auth-ui.spec.js`: PASSED (7/7)
-- **Summary:** Core navigation, homepage rendering, and basic authentication UI are stable.
+  - `03-demo-navigation.spec.js`: PASSED (24/24)
+  - `04-registration.spec.js`: PASSED (8/8)
+  - `05-navigation.spec.js`: PASSED (12/12)
+  - `06-edge-cases.spec.js`: PASSED (10/10)
+  - `07-error-library.spec.js`: PASSED (2/2)
+- **Summary:** Full frontend suite completed without regression. All core flows (Auth, Nav, Demo Mode) are stable.
 
 ## Recommended Fixes
 
