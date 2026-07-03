@@ -723,27 +723,63 @@ class NumistaScraperAgent:
 
         # 4. Generate Report
         report_path = Path(__file__).parent.parent / "sourcing_audit_report.md"
-        with open(report_path, "w", encoding="utf-8") as f:
-            f.write(f"# Numista.AI - Image Sourcing & Audit Report\n\n")
-            f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()} UTC\n\n")
-            
-            f.write(f"## Summary of Executed Operations\n\n")
-            f.write(f"* **Agent Mode**: {self.mode}\n")
-            f.write(f"* **Dry-Run Status**: {dry_run}\n")
-            f.write(f"* **Target Scope**: {target}\n")
-            f.write(f"* **Total Coin/Note Image Gaps Filled**: {processed_coins} / {len(coin_gaps)}\n")
-            f.write(f"* **Total Mint Error Gaps Filled**: {processed_errors} / {len(error_gaps)}\n\n")
-            
-            if self.processed_list:
-                f.write(f"## Successfully Processed Items\n\n")
-                for item in self.processed_list:
-                    f.write(f"* **{item['title']}** ({item['category']}) - *{item['source']}*\n")
-                f.write("\n")
+        report_content = f"# Numista.AI - Image Sourcing & Audit Report\n\n"
+        report_content += f"Generated at: {datetime.now(timezone.utc).isoformat()} UTC\n\n"
+        report_content += f"## Summary of Executed Operations\n\n"
+        report_content += f"* **Agent Mode**: {self.mode}\n"
+        report_content += f"* **Dry-Run Status**: {dry_run}\n"
+        report_content += f"* **Target Scope**: {target}\n"
+        report_content += f"* **Total Coin/Note Image Gaps Filled**: {processed_coins} / {len(coin_gaps)}\n"
+        report_content += f"* **Total Mint Error Gaps Filled**: {processed_errors} / {len(error_gaps)}\n\n"
+        
+        if self.processed_list:
+            report_content += f"## Successfully Processed Items\n\n"
+            for item in self.processed_list:
+                report_content += f"* **{item['title']}** ({item['category']}) - *{item['source']}*\n"
+            report_content += "\n"
 
-            f.write(f"## Data Quality and Corrections\n\n")
-            f.write(f"All varieties checked against official references. SQLite schemas aligned to support `image_url_obverse` and `image_url_reverse` keys.\n")
+        report_content += f"## Data Quality and Corrections\n\n"
+        report_content += f"All varieties checked against official references. SQLite schemas aligned to support `image_url_obverse` and `image_url_reverse` keys.\n"
+
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(report_content)
+
+        # 5. Save to Firestore for Dashboard
+        if not dry_run:
+            try:
+                db.collection("scraper_reports").add({
+                    "timestamp": int(time.time()),
+                    "datetime_utc": datetime.now(timezone.utc).isoformat(),
+                    "limit": limit,
+                    "target": target,
+                    "dry_run": dry_run,
+                    "processed_coins": processed_coins,
+                    "processed_errors": processed_errors,
+                    "report_content": report_content
+                })
+                print("      ✓ Saved report to Firestore for dashboard.")
+            except Exception as e:
+                print(f"      ⚠ Failed to save report to Firestore: {e}")
 
         print("\n" + "="*60)
         print(f"  Agent run completed. Report written to {report_path.name}")
         print("="*60)
         return processed_coins, processed_errors
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Numista.AI Scraper Agent")
+    parser.add_argument("--mode", type=str, default="audit", choices=["audit", "campaign", "verify"], help="Operation mode")
+    parser.add_argument("--limit", type=int, default=10, help="Max items to process")
+    parser.add_argument("--target", type=str, default="all", choices=["all", "coins", "errors"], help="Target items")
+    parser.add_argument("--priority", type=str, default="all", help="Source priority (e.g. 'wikimedia')")
+    parser.add_argument("--dry-run", action="store_true", help="Don't perform actual updates")
+    
+    args = parser.parse_args()
+    
+    # Ensure numista_backend is on path if running as script
+    sys.path.append(str(Path(__file__).parent.parent))
+    
+    agent = NumistaScraperAgent(mode=args.mode)
+    agent.run(limit=args.limit, target=args.target, dry_run=args.dry_run, source_priority=args.priority)
