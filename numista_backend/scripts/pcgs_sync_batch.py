@@ -21,8 +21,13 @@ try:
     agent = NumistaScraperAgent()
     col_ref = db.collection("definitive_reference")
     
-    # Process a small batch for verification
-    docs = col_ref.limit(10).stream()
+    import argparse
+    parser = argparse.ArgumentParser(description="PCGS Sync Batch")
+    parser.add_argument("--limit", type=int, default=10, help="Max items to process")
+    args = parser.parse_args()
+
+    # Process a batch
+    docs = col_ref.limit(args.limit).stream()
     
     updated_count = 0
     

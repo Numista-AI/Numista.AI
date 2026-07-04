@@ -214,7 +214,7 @@ class NumistaScraperAgent:
         if "kennedy" in variety_lower or "kennedy" in series:
             return "6706"
 
-        return "7130" # Fallback to standard 1881-S Morgan Dollar
+        return None
 
     def process_coin_gap(self, coin, dry_run=False, source_priority="all"):
         """
