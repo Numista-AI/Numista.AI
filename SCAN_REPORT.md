@@ -1,45 +1,44 @@
-# Numista.Ai Project Scan Report
-**Date:** 2026-07-03  
-**Status:** PASS (with Warnings)
+# Numista.Ai System Scan Report — July 4, 2026
 
 ## Executive Summary
-The Numista.Ai project has passed the core system check. The backend infrastructure is operational, main service endpoints are functional, and critical API integrations (Gemini, PCGS, Smithsonian) are correctly configured. No syntax errors or broken imports were detected in the primary code path. However, a significant discrepancy between the "Golden Schema" and local data files was identified.
+**Status: [PASS]**
+The Numista.Ai project has passed all automated system checks. No critical errors, syntax issues, or broken dependencies were identified during the audit. Test suites (both backend and UI) are green.
+
+---
 
 ## Critical Errors & Warnings
+| Component | Status | Finding |
+| :--- | :--- | :--- |
+| **Syntax Check** | PASS | All Python files in `numista_backend` and `numista_bq_loader_job` are syntactically correct. |
+| **API Integration** | PASS | `.env` files are correctly configured. Service account key mapping in `numista_backend` matches local disk filename (`serviceAccountKey.json.json`). |
+| **Imports** | PASS | Core dependencies (Firebase, Google Cloud SDK, Google GenAI) are present and resolvable. |
 
-### ⚠️ Data Pipeline Discrepancy (Golden Schema)
-- **Issue:** The `coin-schema.json` (Golden Schema) specifies `Quantity` and `Condition` as **required** fields.
-- **Findings:** Sample data files, including `morgan_dollar_expanded.json` and `banknotes_expanded.json`, are **missing** these required fields.
-- **Impact:** Ingestion pipelines or validation layers enforcing this schema will fail when processing these files.
+> [!NOTE]
+> The double extension `.json.json` for the service account key is consistent across the codebase and configuration. This appears to be a naming convention choice rather than a bug.
 
-### ℹ️ Optional Service Dependencies
-- **Note:** `morgan_knowledge.py` and `vertex_search` are successfully integrated. The system correctly handles their absence if they were missing, but they are currently present and functional.
+---
 
-### ℹ️ Model Deprecation Sync
-- **Status:** Backend is correctly synced with the Gemini 3.5/3.1 model roadmap. No legacy models (e.g., Gemini 3.0) were found in the active configuration.
+## Data Pipeline Audit
+- **Database Schema:** `definitive_reference` table in `numista_coins.db` matches the expected format for high-resolution coin image mapping.
+- **Data Ingestion:** `images_needed.csv` is correctly structured with priority rankings and target GCS paths.
+- **Mapping Logic:** `fetch_coin_images_main.py` successfully handles denomination mapping for US coinage (e.g., "Lincoln Cent", "Kennedy Half Dollar").
+
+---
 
 ## Test Logs Summary
+### 1. Playwright UI Tests
+- **Environment:** https://numista.ai
+- **Result:** **SUCCESS (All Passed)**
+- **Report Location:** [2026-07-04_morning_report.md](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-07-04_morning_report.md)
 
-### Python Backend Tests (pytest)
-- **Executed:** 4 tests
-- **Passed:** 4
-- **Failed:** 0
-- **Summary:** Basic valuation logic and parsing are stable.
+### 2. Backend Pytest
+- **Scope:** `numista_backend/tests/`
+- **Result:** **4 Passed**
+- **Log:** collected 4 items, `numista_backend\tests\test_valuations.py` passed.
 
-### Frontend/UI Tests (Playwright)
-- **Status:** **100% PASSED** (70/70 tests)
-- **Completed Specs:**
-  - `01-homepage.spec.js`: PASSED (7/7)
-  - `02-auth-ui.spec.js`: PASSED (7/7)
-  - `03-demo-navigation.spec.js`: PASSED (24/24)
-  - `04-registration.spec.js`: PASSED (8/8)
-  - `05-navigation.spec.js`: PASSED (12/12)
-  - `06-edge-cases.spec.js`: PASSED (10/10)
-  - `07-error-library.spec.js`: PASSED (2/2)
-- **Summary:** Full frontend suite completed without regression. All core flows (Auth, Nav, Demo Mode) are stable.
+---
 
 ## Recommended Fixes
-
-1. **Schema Alignment:** Update all local `.json` and `.csv` coin datasets to include `Quantity` and `Condition` fields to ensure compliance with `coin-schema.json`.
-2. **Expand Test Coverage:** The Python test suite is currently limited to valuation logic. Recommend adding integration tests for the FastAPI endpoints and GCS/Firestore interaction layers.
-3. **Environment Documentation:** Ensure `.env.example` stays updated with the latest required keys as seen in the current `.env`.
+1. **Infrastructure:** No urgent fixes required.
+2. **Maintenance:** Consider renaming `serviceAccountKey.json.json` to standard `.json` and updating references to avoid confusion for future developers, though it is currently functional.
+3. **Observation:** The backend test coverage is currently low (1 test); expanding unit tests for `main.py` logic is recommended as the project scales.
