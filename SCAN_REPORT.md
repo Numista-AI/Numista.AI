@@ -1,4 +1,4 @@
-# Numista.Ai System Scan Report — July 4, 2026
+# Numista.Ai System Scan Report — July 5, 2026
 
 ## Executive Summary
 **Status: [PASS]**
@@ -9,36 +9,41 @@ The Numista.Ai project has passed all automated system checks. No critical error
 ## Critical Errors & Warnings
 | Component | Status | Finding |
 | :--- | :--- | :--- |
-| **Syntax Check** | PASS | All Python files in `numista_backend` and `numista_bq_loader_job` are syntactically correct. |
-| **API Integration** | PASS | `.env` files are correctly configured. Service account key mapping in `numista_backend` matches local disk filename (`serviceAccountKey.json.json`). |
+| **Syntax Check** | PASS | All Python files in `numista_backend` and `numista_ai` are syntactically correct (verified via `compileall`). |
+| **API Integration** | PASS | `.env` files are correctly configured. Service account key mapping in `numista_backend` is present. |
 | **Imports** | PASS | Core dependencies (Firebase, Google Cloud SDK, Google GenAI) are present and resolvable. |
+| **Secrets Scan** | PASS | No hardcoded API keys or secrets detected in the backend codebase. |
 
-> [!NOTE]
-> The double extension `.json.json` for the service account key is consistent across the codebase and configuration. This appears to be a naming convention choice rather than a bug.
+> [!WARNING]
+> **Legacy Data Headers:** The sample data in `AJ's Coins Backup 8 APR 26.csv` uses legacy headers (e.g., `Cost`, `Grading Cert #`, `Personal Notes`) instead of the canonical names defined in `coin-schema.json` (e.g., `Purchase Cost`, `Certification Number`, `Personal Notes I`). While the system likely handles this via mapping, it is a point of potential friction for new ingestion pipelines.
 
 ---
 
 ## Data Pipeline Audit
-- **Database Schema:** `definitive_reference` table in `numista_coins.db` matches the expected format for high-resolution coin image mapping.
-- **Data Ingestion:** `images_needed.csv` is correctly structured with priority rankings and target GCS paths.
-- **Mapping Logic:** `fetch_coin_images_main.py` successfully handles denomination mapping for US coinage (e.g., "Lincoln Cent", "Kennedy Half Dollar").
+- **Database Schema:** `coin-schema.json` is updated (2026-07-01) and defines 32 canonical columns.
+- **Data Ingestion:** `numista_bq_loader.py` is correctly configured to load Firestore exports into BigQuery dataset `numista_analytics`.
+- **Reference Library:** `morgan_knowledge.py` is present and correctly imported in the main backend service for RAG-based coin context lookup.
 
 ---
 
 ## Test Logs Summary
 ### 1. Playwright UI Tests
 - **Environment:** https://numista.ai
-- **Result:** **SUCCESS (All Passed)**
-- **Report Location:** [2026-07-04_morning_report.md](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-07-04_morning_report.md)
+- **Result:** **SUCCESS (7/7 Passed)**
+- **Highlights:**
+  - HTTP 200 response verified.
+  - Flutter app rendering (flt-glass-pane) confirmed.
+  - No JS console errors on load.
+  - Page performance within 10s threshold.
 
 ### 2. Backend Pytest
 - **Scope:** `numista_backend/tests/`
-- **Result:** **4 Passed**
-- **Log:** collected 4 items, `numista_backend\tests\test_valuations.py` passed.
+- **Result:** **4/4 Passed**
+- **Log:** `numista_backend\tests\test_valuations.py` passed all assertions for currency/valuation cleaning logic.
 
 ---
 
 ## Recommended Fixes
-1. **Infrastructure:** No urgent fixes required.
-2. **Maintenance:** Consider renaming `serviceAccountKey.json.json` to standard `.json` and updating references to avoid confusion for future developers, though it is currently functional.
-3. **Observation:** The backend test coverage is currently low (1 test); expanding unit tests for `main.py` logic is recommended as the project scales.
+1. **Data Consistency:** Update legacy CSV headers in backup files to match the `coin-schema.json` canonical names to reduce mapping overhead.
+2. **Maintenance:** Continue monitoring the `.json.json` extension for service account keys to ensure it remains consistent across all deployment environments.
+3. **Observation:** Backend test coverage remains focused on valuation logic; expanding tests for `main.py` API endpoints is recommended.
