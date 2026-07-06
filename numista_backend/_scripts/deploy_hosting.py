@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Deploy Flutter web build to Firebase Hosting via REST API.
 Uses service account credentials (no browser auth needed).

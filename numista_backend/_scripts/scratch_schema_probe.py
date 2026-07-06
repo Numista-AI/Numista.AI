@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import os, google.auth
 from google.cloud import firestore
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = './serviceAccountKey.json.json'

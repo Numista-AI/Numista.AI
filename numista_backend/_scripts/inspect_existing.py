@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import json, sys
 sys.stdout.reconfigure(encoding='utf-8')
 data = json.load(open('master_coin_programs.json', encoding='utf-8'))

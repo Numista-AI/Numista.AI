@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Dry run — generate 3 variants per PDF locally, no GCS upload.
 Renders each to PNG for quick visual inspection.

@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import pandas as pd
 
 # Mocking the constants from app.py

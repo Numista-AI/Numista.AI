@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Scrape the American Women Quarters Wikipedia page and patch master_coin_programs.json.
 Also adds the program scraper to the sync_worker for automated future syncing.

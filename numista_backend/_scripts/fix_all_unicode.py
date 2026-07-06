@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Comprehensive fix: Replace ALL em-dashes, en-dashes, and other problematic Unicode
 in the Dart source file with ASCII-safe alternatives.

@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Batch patch Lincoln Cents, Morgan Dollars, Buffalo Nickels, Mercury Dimes.
 These are classic series — the existing per-date/mintmark coin structure

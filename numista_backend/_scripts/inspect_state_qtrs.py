@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import sys, re, urllib.request
 from bs4 import BeautifulSoup
 sys.stdout.reconfigure(encoding='utf-8')

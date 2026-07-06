@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import os
 import pandas as pd
 from google import genai
@@ -40,7 +41,7 @@ def run_numista_report(obv_path, rev_path):
         """
         
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.5-flash",
             contents=[prompt, img1, img2]
         )
         analysis = response.text

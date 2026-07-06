@@ -66,10 +66,11 @@ limiter = Limiter(
 # ── Model config ───────────────────────────────────────────────────────────────────
 # Per official deprecation schedule Jun 11, 2026:
 #   gemini-3.5-flash  Released May 19, 2026. NO shutdown announced.
-#                     Recommended replacement for gemini-3-flash-preview.
+#                     Recommended replacement for gemini-3.5-flash.
 #                     Requires location='global' on Vertex AI.
 PROJECT_ID = os.environ.get("GCP_PROJECT", "studio-9101802118-8c9a8")
 LOCATION   = os.environ.get("GCP_REGION",  "global")
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 MODEL      = "gemini-3.5-flash"
 
 client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)

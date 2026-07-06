@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Generate a comprehensive CSV of ALL coins in the coin_image_index (what we HAVE)
 vs. ALL coins in Eric's collection (what we NEED), and produces a gap report.

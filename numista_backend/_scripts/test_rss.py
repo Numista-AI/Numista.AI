@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import feedparser
 f = feedparser.parse('https://www.coinworld.com/rss/all-news.xml')
 print(f'CoinWorld: {len(f.entries)} entries')

@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 #!/usr/bin/env python3
 """
 migrate_precious_metal.py — Standardizes Metal Content for all coins.

@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Batch patch Kennedy Half Dollars, Roosevelt Dimes, and Jefferson Nickels
 with accurate, era-specific variety data.

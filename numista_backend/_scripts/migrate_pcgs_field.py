@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 #!/usr/bin/env python3
 """
 migrate_pcgs_field.py — Ensures all PCGS-imported coins have the full extended schema.

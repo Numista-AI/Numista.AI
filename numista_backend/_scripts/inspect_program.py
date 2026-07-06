@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Inspect the morgan_dollars program structure in Firestore."""
 import firebase_admin
 from firebase_admin import credentials, firestore

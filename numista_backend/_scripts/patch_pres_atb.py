@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Patch master_coin_programs.json for:
 1. Presidential Dollars (2007-2016, 2020) — edge lettered

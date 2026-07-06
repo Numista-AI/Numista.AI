@@ -91,12 +91,13 @@ GRADE_WRITE_TIMESTAMPS = {}
 #
 #   gemini-3.5-flash       Released May 19, 2026. NO shutdown announced. → PRIMARY
 #   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
-#   gemini-3.1-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
+#   gemini-3.5-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
 #
 # NOTE: All Gemini 3.x models require location='global' on Vertex AI.
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 PRIMARY_MODEL = "gemini-3.5-flash"
 PRO_MODEL     = "gemini-3.1-pro-preview"
-IMAGE_MODEL   = "gemini-3.1-flash-image"
+IMAGE_MODEL   = "gemini-3.5-flash-image"
 
 # Initialize google-genai client (Vertex AI backend)
 # REGION: gemini-3-x-preview models require 'global' — stable gemini-2.5-x
@@ -7589,4 +7590,4 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 
-
+

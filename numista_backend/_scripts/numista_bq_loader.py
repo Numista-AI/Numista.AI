@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 numista_bq_loader.py
 Cloud Run Job: Loads the latest Firestore export from GCS into BigQuery.

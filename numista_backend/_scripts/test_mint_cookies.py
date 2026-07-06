@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import urllib.request, re
 
 COOKIES = ('dwanonymous_b2cf918be9f3733e2d19f7e7beb4b6d7=acvbZsuqmyvGOefBI1gzTaZ7oC; '

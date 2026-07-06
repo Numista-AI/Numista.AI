@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Patches auto_annotate_checklist_dataset.py to use text-based Gemini extraction."""
 
 with open("auto_annotate_checklist_dataset.py", "r", encoding="utf-8") as f:

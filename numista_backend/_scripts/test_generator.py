@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Quick test — generate 3 variants of the 50 State Quarter checklist locally, no GCS upload."""
 import fitz, random, os, sys
 sys.stdout.reconfigure(encoding='utf-8')

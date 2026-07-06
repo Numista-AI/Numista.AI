@@ -20,13 +20,14 @@ from google.genai import types as genai_types
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # Deprecation chain (Gemini Deprecation Schedule, Apr 14 2026):
-#   gemini-2.0-flash-001 → shutdown Jun  1 2026 → replaced by gemini-3.5-flash
-#   gemini-3.5-flash     → shutdown Jun 17 2026 → replaced by gemini-3-flash-preview
-#   gemini-3-flash-preview = current recommended model (Public Preview, no shutdown listed)
+#   gemini-3.5-flash-001 → shutdown Jun  1 2026 → replaced by gemini-3.5-flash
+#   gemini-3.5-flash     → shutdown Jun 17 2026 → replaced by gemini-3.5-flash
+#   gemini-3.5-flash = current recommended model (Public Preview, no shutdown listed)
 #   IMPORTANT: post-Jun-2025 preview models require location='global' on Vertex AI
 PROJECT_ID  = "studio-9101802118-8c9a8"
-LOCATION    = "global"           # required for gemini-3-flash-preview
-MODEL       = "gemini-3-flash-preview"
+LOCATION    = "global"           # required for gemini-3.5-flash
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
+MODEL       = "gemini-3.5-flash"
 MASTER_JSON = pathlib.Path(__file__).parent / "master_coin_programs.json"
 
 # ── Prompt template ───────────────────────────────────────────────────────────

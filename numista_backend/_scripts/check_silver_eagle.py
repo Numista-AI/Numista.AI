@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Quick check: what Silver Eagle keys are in coin_image_index?
 Also checks Eric's testing account for coin image_url_obverse fields.

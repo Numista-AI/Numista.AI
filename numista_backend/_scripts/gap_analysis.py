@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Gap analysis v3 - using correct Firestore field names.
 Fields: 'Program/Series', 'Year', 'Denomination', 'Mint Mark', 'image_url_obverse'

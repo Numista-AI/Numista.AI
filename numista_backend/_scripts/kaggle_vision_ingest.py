@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 kaggle_vision_ingest.py
 ────────────────────────────────────────────────────────────────
@@ -59,10 +60,10 @@ PUB_BASE   = "https://storage.googleapis.com"
 # Model candidates in priority order — script picks first one that responds
 MODEL_CANDIDATES = [
     "gemini-3.5-flash",
-    "gemini-3.0-flash",
-    "gemini-3-flash-preview",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash",
 ]
 MODEL = None  # resolved at runtime
 

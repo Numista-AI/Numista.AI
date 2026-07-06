@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Re-runs the mint mark type/description tagging with all em-dashes
 replaced by ASCII hyphens, which are safe for PDF Helvetica font.

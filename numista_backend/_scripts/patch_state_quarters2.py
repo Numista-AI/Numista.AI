@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Add 50 State Quarters as new program (they live separately from classic Washington Quarters).
 Also enrich classic Washington Quarters with proper mint mark variety data.

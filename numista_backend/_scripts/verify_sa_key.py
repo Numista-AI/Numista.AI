@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 
 from google import genai
 from google.oauth2 import service_account
@@ -36,4 +37,4 @@ def test_model_with_sa(model_name):
 test_model_with_sa("gemini-3.5-flash")
 
 # Test 2: 3.0 Flash (Check if name is correct)
-test_model_with_sa("gemini-3.0-flash")
+test_model_with_sa("gemini-3.5-flash")

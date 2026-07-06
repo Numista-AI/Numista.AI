@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Patch Sacagawea & Native American Dollars coin data per Wikipedia corrections."""
 import sys, json, os
 sys.stdout.reconfigure(encoding='utf-8')

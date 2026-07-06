@@ -76,3 +76,16 @@ The following should never be staged or committed:
 - `numista_backend/sourcing_audit_report.md` (unless intentional)
 
 Add these to `.gitignore` if they keep appearing as untracked.
+
+---
+
+### Rule 5 — Mandatory Gemini Model Policy
+
+Before changing any Gemini model ID (e.g., changing `gemini-3.5-flash` to anything else), you **MUST**:
+
+1. Read the latest PDF documentation in:
+   `C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\`
+2. Verify the "Shutdown date" and "Recommended replacement" for the proposed model.
+3. NEVER downgrade to a model that has an earlier shutdown date than the current one (e.g., do not move from `gemini-3.5` back to `gemini-1.5` if `1.5` shuts down sooner).
+4. If a model is 404ing, check the `location='global'` setting before assuming the model is retired.
+

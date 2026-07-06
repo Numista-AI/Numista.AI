@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Split Lincoln Cents into 4 collector-friendly sub-checklists:
   1. Wheat Pennies         (1909–1958)

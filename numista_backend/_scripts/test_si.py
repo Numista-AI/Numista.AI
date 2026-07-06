@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import re
 
 html_path = r"C:\Users\ericd\Documents\MyVertexProject\Manual downloaded Coin Images\si_quarters\American Women Quarters™ Program _ Smithsonian American Women's History Museum.html"

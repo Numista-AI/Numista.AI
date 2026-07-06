@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Debug: print raw Gemini response from actual dataset document."""
 from google import genai
 from google.genai import types as genai_types

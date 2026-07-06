@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import csv
 
 with open('_scripts/eric_image_gap_report.csv', encoding='utf-8') as f:

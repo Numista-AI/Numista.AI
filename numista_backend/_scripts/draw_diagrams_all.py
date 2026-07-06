@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Generates 8 mint mark location template diagrams (one per position type).
 Each is a clean line-art coin diagram with labeled arrow.

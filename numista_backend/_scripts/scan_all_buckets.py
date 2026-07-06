@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Scan ALL GCS buckets in the project and inventory every image file.
 Reports bucket names, object counts, and samples of image paths.

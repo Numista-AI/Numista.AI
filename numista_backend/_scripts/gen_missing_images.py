@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 gen_missing_images.py
 Analyzes jseaman1204@gmail.com's coin collection against the Firestore image

@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Splices the reference-image-aware left panel into _showCoinInspectorDialog.
 Replaces lines 1213..1293 (the old image panel Container) with new FutureBuilder version.

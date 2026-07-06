@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Rebuild Eisenhower Dollar data with accurate per-year, multi-variety structure.
 Production years: 1971-1974, 1976 (Bicentennial), 1977-1978 (no 1975).

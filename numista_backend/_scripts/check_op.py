@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import sys, json
 sys.stdout.reconfigure(encoding='utf-8')
 import requests, google.auth, google.auth.transport.requests

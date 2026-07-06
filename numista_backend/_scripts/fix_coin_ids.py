@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 #!/usr/bin/env python3
 """
 fix_coin_ids.py — Assigns stable coin_id slugs to all user coins in Firestore.

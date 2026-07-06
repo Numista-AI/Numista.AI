@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Fix: add response_mime_type=application/json to gemini_extract_from_text."""
 with open("auto_annotate_checklist_dataset.py", "r", encoding="utf-8") as f:
     code = f.read()

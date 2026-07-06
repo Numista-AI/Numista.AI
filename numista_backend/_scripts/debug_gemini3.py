@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """Debug: print the raw Gemini response bytes to find the truncation character."""
 import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

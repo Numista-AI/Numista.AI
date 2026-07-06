@@ -1,3 +1,4 @@
+# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 """
 Seed all programs from master_coin_programs.json to global_programs in Firestore.
 Skips programs that are already there (won't overwrite existing data).
