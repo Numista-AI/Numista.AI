@@ -1,49 +1,74 @@
-# Numista.Ai System Scan Report — July 5, 2026
+# Numista.Ai System Scan Report
+**Date:** 2026-07-06  
+**Time:** 07:08:16 (Local)  
+**Agent:** Antigravity (Agentic AI)
 
 ## Executive Summary
-**Status: [PASS]**
-The Numista.Ai project has passed all automated system checks. No critical errors, syntax issues, or broken dependencies were identified during the audit. Test suites (both backend and UI) are green.
+**Status:** ⚠️ **WARNING / PARTIAL FAIL**
+
+The system scan has identified critical infrastructure risks related to LLM model deprecation and database synchronization. While core backend tests are passing, several integration boundaries are failing or at risk due to outdated SDKs and missing model access.
+
+| Component | Status | Notes |
+| :--- | :--- | :--- |
+| **Backend API** | ✅ PASS | Core logic and valuations passed pytest. |
+| **LLM Integration** | ❌ FAIL | Model `gemini-3-flash-preview` is 404ing; SDK is deprecated. |
+| **Data Pipelines** | ⚠️ WARNING | Local SQLite is empty (0 bytes); System has moved to Firestore. |
+| **E2E Tests** | 🔄 RUNNING | Playwright suite is partially verified (8/70 passed). |
 
 ---
 
 ## Critical Errors & Warnings
-| Component | Status | Finding |
-| :--- | :--- | :--- |
-| **Syntax Check** | PASS | All Python files in `numista_backend` and `numista_ai` are syntactically correct (verified via `compileall`). |
-| **API Integration** | PASS | `.env` files are correctly configured. Service account key mapping in `numista_backend` is present. |
-| **Imports** | PASS | Core dependencies (Firebase, Google Cloud SDK, Google GenAI) are present and resolvable. |
-| **Secrets Scan** | PASS | No hardcoded API keys or secrets detected in the backend codebase. |
 
-> [!WARNING]
-> **Legacy Data Headers:** The sample data in `AJ's Coins Backup 8 APR 26.csv` uses legacy headers (e.g., `Cost`, `Grading Cert #`, `Personal Notes`) instead of the canonical names defined in `coin-schema.json` (e.g., `Purchase Cost`, `Certification Number`, `Personal Notes I`). While the system likely handles this via mapping, it is a point of potential friction for new ingestion pipelines.
+### 1. LLM Integration Failure (CRITICAL)
+- **Error:** `Publisher Model [...] models/gemini-3-flash-preview was not found.`
+- **Context:** Node.js backend (`mappingController.js`) and test scripts still reference a preview model that has been removed or restricted.
+- **Impact:** Invoice mapping and entity extraction are currently broken in the Node.js environment.
 
----
+### 2. Vertex AI SDK Deprecation (URGENT)
+- **Warning:** `This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026.`
+- **Context:** The system date is July 6, 2026. The `vertexai` Python SDK is now officially past its shutdown date.
+- **Impact:** Future updates or environment redeployments may cause immediate failure of all GenAI features.
 
-## Data Pipeline Audit
-- **Database Schema:** `coin-schema.json` is updated (2026-07-01) and defines 32 canonical columns.
-- **Data Ingestion:** `numista_bq_loader.py` is correctly configured to load Firestore exports into BigQuery dataset `numista_analytics`.
-- **Reference Library:** `morgan_knowledge.py` is present and correctly imported in the main backend service for RAG-based coin context lookup.
+### 3. Data Source Ambiguity
+- **Warning:** Local `numista_coins.db` files are 0 bytes.
+- **Context:** Per `walkthrough.md`, the project has migrated to **Cloud Firestore**. 
+- **Impact:** Local development environments without Firestore connectivity will appear to have no coin data.
 
 ---
 
 ## Test Logs Summary
-### 1. Playwright UI Tests
-- **Environment:** https://numista.ai
-- **Result:** **SUCCESS (7/7 Passed)**
-- **Highlights:**
-  - HTTP 200 response verified.
-  - Flutter app rendering (flt-glass-pane) confirmed.
-  - No JS console errors on load.
-  - Page performance within 10s threshold.
 
-### 2. Backend Pytest
-- **Scope:** `numista_backend/tests/`
-- **Result:** **4/4 Passed**
-- **Log:** `numista_backend\tests\test_valuations.py` passed all assertions for currency/valuation cleaning logic.
+### Python Unit Tests (Pytest)
+- **Directory:** `numista_backend/tests`
+- **Result:** `4 passed, 1 warning` (26.29s)
+- **Verified:** `test_valuations.py` passed successfully.
+
+### Playwright E2E Tests (NPM)
+- **Directory:** `numista_tests`
+- **Result:** **8/70 Passed** (Suite still executing)
+- **Verified:** Homepage load, Flutter rendering, and Auth UI basics are functional.
+
+---
+
+## Data Pipeline Audit
+
+### Image Coverage
+- **Obverse Coverage:** ~34%
+- **Remaining Gaps:** 6,317 items (down from 11,904).
+- **Orphan Records:** Many records in `audit_findings.csv` and `gcs_xref_audit_report.csv` are marked as `TRUE_ORPHAN` (no matching GCS images).
+
+### Schema Validation
+- **Schema:** `coin-schema.json` (32 Columns)
+- **Status:** Local DB is empty, preventing direct schema validation. Migration to Firestore needs a cross-check against this schema.
 
 ---
 
 ## Recommended Fixes
-1. **Data Consistency:** Update legacy CSV headers in backup files to match the `coin-schema.json` canonical names to reduce mapping overhead.
-2. **Maintenance:** Continue monitoring the `.json.json` extension for service account keys to ensure it remains consistent across all deployment environments.
-3. **Observation:** Backend test coverage remains focused on valuation logic; expanding tests for `main.py` API endpoints is recommended.
+
+1. **Update LLM Model:** Change `modelId` in `mappingController.js` from `gemini-3-flash-preview` to `gemini-3.5-flash` or `gemini-1.5-flash`.
+2. **Upgrade SDK:** Complete the transition to `google-genai` (GenAI SDK) across all Python and Node.js components to remove `vertexai` dependencies.
+3. **Database Sync:** Provide a "seed" script for local developers to populate `numista_coins.db` from a Firestore export to enable offline work.
+4. **Image Sourcing:** Trigger `awq_image_sourcing.py` to address the remaining 6,317 image gaps.
+
+---
+*Report generated by triggering the 'project-scanner' skill.*
