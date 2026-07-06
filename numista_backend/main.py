@@ -93,10 +93,10 @@ GRADE_WRITE_TIMESTAMPS = {}
 #   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
 #   gemini-3.1-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
 #
-# NOTE: gemini-3-pro-preview SHUT DOWN Mar 9, 2026 — do NOT use.
 # NOTE: All Gemini 3.x models require location='global' on Vertex AI.
-PRIMARY_MODEL = "gemini-1.5-flash"
-PRO_MODEL     = "gemini-1.5-pro"
+PRIMARY_MODEL = "gemini-3.5-flash"
+PRO_MODEL     = "gemini-3.1-pro-preview"
+IMAGE_MODEL   = "gemini-3.1-flash-image"
 
 # Initialize google-genai client (Vertex AI backend)
 # REGION: gemini-3-x-preview models require 'global' — stable gemini-2.5-x
@@ -6590,6 +6590,9 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         else:
             matched = False
             key_std = (year, denom, mint, "")
+            if key_std in ref_coins:
+                owned_doc_ids.add(ref_coins[key_std])
+                matched = True
             if key_std in ref_coins:
                 owned_doc_ids.add(ref_coins[key_std])
                 matched = True

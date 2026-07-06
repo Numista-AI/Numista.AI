@@ -287,7 +287,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
 
     try {
       final model = FirebaseAI.googleAI().generativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         generationConfig: GenerationConfig(temperature: 0.7),
       );
 

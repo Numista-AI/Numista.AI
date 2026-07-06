@@ -70,7 +70,7 @@ limiter = Limiter(
 #                     Requires location='global' on Vertex AI.
 PROJECT_ID = os.environ.get("GCP_PROJECT", "studio-9101802118-8c9a8")
 LOCATION   = os.environ.get("GCP_REGION",  "global")
-MODEL      = "gemini-1.5-flash"
+MODEL      = "gemini-3.5-flash"
 
 client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
 db     = firestore.Client(project=PROJECT_ID)
