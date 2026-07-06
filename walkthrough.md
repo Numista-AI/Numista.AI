@@ -1,28 +1,25 @@
-# Project Scan Walkthrough — Numista.Ai
+# Walkthrough - System Scan (2026-07-06)
 
-I have completed the full system check using the `project-scanner` skill. Below is a summary of the actions taken and the results.
+I have triggered the `project-scanner` skill to run a full system check on the Numista.Ai project.
 
-## 1. Skill Discovery & Instruction Review
-- Located the `project-scanner` skill in `.antigravity/skills/project-scanner/SKILL.md`.
-- Reviewed instructions: Error check, Data Pipeline audit, Test execution, and Report generation.
+## Actions Taken
+1. **Triggered Skill:** Located and executed the `project-scanner` skill instructions.
+2. **Error Audit:** 
+    - Identified a critical **404 error** for the `gemini-3-flash-preview` model in the Node.js backend.
+    - Flagged the **Vertex AI SDK deprecation** (deadline was June 24, 2026).
+3. **Database Check:** Confirmed that local SQLite databases are empty, reflecting the migration to **Cloud Firestore**.
+4. **Test Execution:**
+    - Ran `pytest` for the backend logic (4/4 passed).
+    - Initiated a 70-test Playwright suite (partially verified homepage and auth UI).
+5. **Reporting:** Generated a comprehensive [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the root directory.
 
-## 2. Error Check & API Audit
-- **Syntax Check:** Ran `python -m compileall` across all major backend directories. No syntax errors found.
-- **API Keys:** Audited `.env` files. Verified that `GOOGLE_APPLICATION_CREDENTIALS` correctly maps to the local `serviceAccountKey.json.json` file.
-- **Dependencies:** Confirmed core AI and Cloud SDKs are present in `requirements.txt`.
+## Key Findings
+- **LLM Integration:** The Node.js environment needs a model update to `gemini-3.5-flash` or `gemini-1.5-flash`.
+- **SDK Status:** The `vertexai` Python SDK is past its shutdown date and should be fully replaced by `google-genai`.
+- **Data Coverage:** Image coverage remains at ~34%, with 6,317 gaps remaining.
 
-## 3. Data Pipeline Audit
-- **SQLite Schema:** Verified the `definitive_reference` table structure in `numista_coins.db`.
-- **Ingestion Mapping:** Reviewed `fetch_coin_images_main.py` and `images_needed.csv`. Confirmed that denomination normalization and GCS target paths are correctly configured.
-- **Golden Schema:** Audited `coin-schema.json` to ensure alignment with the 32-column canonical format.
+## Next Steps
+- Recommend updating the model ID in `mappingController.js`.
+- Recommend a full cleanup of `vertexai` dependencies.
 
-## 4. Test Execution
-- **Playwright UI Tests:** Triggered `run_tests.ps1`. All tests passed against the live production environment.
-- **Backend Unit Tests:** Ran `pytest` within the backend virtual environment. 4 tests in `test_valuations.py` passed successfully.
-
-## 5. Report Generation & Git Workflow
-- Generated the comprehensive [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the project root.
-- Staged, committed, and pushed the report to the `main` branch as per workspace rules.
-
-**Final Status:** All systems operational.
 <!-- GOAL_COMPLETE -->
