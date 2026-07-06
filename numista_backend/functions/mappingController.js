@@ -23,7 +23,7 @@ const COIN_DICTIONARY = [
 
 // 3. Define the Model
 // Using 'gemini-3.5-flash' for production consistency.
-const modelId = 'gemini-3.5-flash';
+const modelId = 'gemini-1.5-flash';
 
 async function mapToSchema(entities) {
     // Lazy Initialization

@@ -95,8 +95,8 @@ GRADE_WRITE_TIMESTAMPS = {}
 #
 # NOTE: gemini-3-pro-preview SHUT DOWN Mar 9, 2026 — do NOT use.
 # NOTE: All Gemini 3.x models require location='global' on Vertex AI.
-PRIMARY_MODEL = "gemini-3.5-flash"
-PRO_MODEL     = "gemini-3.1-pro-preview"
+PRIMARY_MODEL = "gemini-1.5-flash"
+PRO_MODEL     = "gemini-1.5-pro"
 
 # Initialize google-genai client (Vertex AI backend)
 # REGION: gemini-3-x-preview models require 'global' — stable gemini-2.5-x
