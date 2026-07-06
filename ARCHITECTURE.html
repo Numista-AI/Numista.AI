@@ -205,7 +205,7 @@
 |  |  (primary DB)  |  | (AI services)|  |  (images)   |  |
 |  +----------------+  +--------------+  +-------------+  |
 |  +------------------------------------------------------+|
-|  |      Gemini Vision AI  (gemini-3-flash-preview)      ||
+|  |      Gemini Vision AI  (gemini-1.5-flash)      ||
 |  +------------------------------------------------------+|
 +----------------------------------------------------------+
                          | Firestore real-time listener
@@ -406,7 +406,7 @@
 1. Receive image bytes + <code>program_id</code> + <code>user_id</code> + page metadata<br />
 2. Load program coin list from <code>global_programs/{program_id}</code> in Firestore<br />
 3. Chunk coin list by page number (reduces output tokens ~65%)<br />
-4. Call <code>gemini-3-flash-preview</code> with system prompt + image + structured coin list<br />
+4. Call <code>gemini-1.5-flash</code> with system prompt + image + structured coin list<br />
 5. Parse JSON response (with truncation-recovery logic)<br />
 6. Batch-write to <code>users/{uid}/checklist_entries</code> (owned) and <code>users/{uid}/wishlist</code> (unowned)<br />
 7. Return summary JSON</p>
@@ -767,13 +767,13 @@ PcgsImportResult: {successCount, failedCount, duplicateCount}
 <tbody>
 <tr>
 <td>Scan Service (Cloud Run)</td>
-<td><code>gemini-3-flash-preview</code></td>
+<td><code>gemini-1.5-flash</code></td>
 <td><code>google-genai</code></td>
 <td>Checklist OCR + checkbox detection</td>
 </tr>
 <tr>
 <td>Hardware Agent</td>
-<td><code>gemini-3-flash-preview</code></td>
+<td><code>gemini-1.5-flash</code></td>
 <td><code>google-genai</code></td>
 <td>Coin ID from microscope photos</td>
 </tr>
