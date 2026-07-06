@@ -303,27 +303,63 @@ class NumistaScraperAgent:
                 print(f"    ✓ [DRY RUN] Would download reverse: {scraped_data.get('reverse_url')}")
             return True
 
-        # 5. Download and upload images
-        gcs_obv_url = None
-        gcs_rev_url = None
+        # 5. Final Verification of Sourcing Success
+        obv_url = scraped_data.get("obverse_url")
+        rev_url = scraped_data.get("reverse_url")
+
+        if not obv_url or "storage.googleapis.com" not in obv_url:
+            print(f"    ⚠ No GCS-migrated image for {doc_id}. Triggering AI Reconstruction...")
+            success = self.trigger_ai_reconstruction(coin, dry_run)
+            return success
+
+        # Only add to processed list if we actually got a migrated image
+        if not dry_run:
+            self.processed_list.append({
+                "title": f"{year} {denom} ({variety})",
+                "category": category,
+                "source": scraped_data.get("source", "unknown"),
+                "obverse_url": obv_url,
+                "reverse_url": rev_url
+            })
+            
+        # Persist updates to databases
+        update_coin_images_in_databases(doc_id, obv_url, rev_url, market_data)
+        return True
+
+    def trigger_ai_reconstruction(self, coin, dry_run=False):
+        """
+        Fallback: Generate a 'Historical Reconstruction' using gemini-3.1-flash-image.
+        """
+        doc_id = coin.get("doc_id")
+        year = coin.get("year", "")
+        denom = coin.get("denomination", "")
+        variety = coin.get("variety", "")
+        category = coin.get("category", "")
         
-        # Upload obverse
-        if scraped_data.get("obverse_url"):
-            obv_bytes = download_image(scraped_data.get("obverse_url"))
-            if obv_bytes:
-                slug = self.slugify(f"{year}_{denom}_{mint}_{variety}")
-                obv_path = f"reference_library/{category}s/{slug}_obverse.jpg"
-                gcs_obv_url = upload_to_gcs(obv_bytes, obv_path)
-                print(f"    ✓ Uploaded obverse to GCS: {gcs_obv_url}")
-                
-        # Upload reverse
-        if scraped_data.get("reverse_url"):
-            rev_bytes = download_image(scraped_data.get("reverse_url"))
-            if rev_bytes:
-                slug = self.slugify(f"{year}_{denom}_{mint}_{variety}")
-                rev_path = f"reference_library/{category}s/{slug}_reverse.jpg"
-                gcs_rev_url = upload_to_gcs(rev_bytes, rev_path)
-                print(f"    ✓ Uploaded reverse to GCS: {gcs_rev_url}")
+        prompt = f"Historical reconstruction of a {year} {denom} {category} from the United States. Variety: {variety}. High-detail, professional numismatic photography style, white background."
+        
+        print(f"    🎨 Generating AI Reconstruction for {doc_id}...")
+        
+        if dry_run:
+            print(f"    ✓ [DRY RUN] Would generate AI image with prompt: {prompt}")
+            return False
+
+        try:
+            # We save the intention to a dedicated queue for human review
+            reconstruction_data = {
+                "doc_id": doc_id,
+                "prompt": prompt,
+                "status": "pending_generation",
+                "timestamp": int(time.time()),
+                "metadata": coin
+            }
+            
+            db.collection("ai_training_queue").document(doc_id).set(reconstruction_data)
+            print(f"    ✓ Queued for AI Reconstruction: {doc_id}")
+            return False # Not 'Successfully Processed' yet until human-voted
+        except Exception as e:
+            print(f"    ❌ AI Reconstruction queuing failed: {e}")
+            return False
 
         # Persist updates (always write market data even if images weren't uploaded)
         update_coin_images_in_databases(doc_id, gcs_obv_url, gcs_rev_url, market_data)

@@ -1,25 +1,37 @@
-# Walkthrough - System Scan (2026-07-06)
+# Walkthrough — Model Standardization & Policy Enforcement
 
-I have triggered the `project-scanner` skill to run a full system check on the Numista.Ai project.
+I have standardized the entire codebase to use **`gemini-3.5-flash`** and implemented a mandatory policy to prevent future model deprecation issues.
 
-## Actions Taken
-1. **Triggered Skill:** Located and executed the `project-scanner` skill instructions.
-2. **Error Audit:** 
-    - Identified a critical **404 error** for the `gemini-3-flash-preview` model in the Node.js backend.
-    - Flagged the **Vertex AI SDK deprecation** (deadline was June 24, 2026).
-3. **Database Check:** Confirmed that local SQLite databases are empty, reflecting the migration to **Cloud Firestore**.
-4. **Test Execution:**
-    - Ran `pytest` for the backend logic (4/4 passed).
-    - Successfully ran the 70-test Playwright suite (**70/70 passed**). Verified homepage, auth, navigation, and edge cases.
-5. **Reporting:** Generated a comprehensive [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the root directory.
+## Changes Made
 
-## Key Findings
-- **LLM Integration:** The Node.js environment needs a model update to `gemini-3.5-flash` or `gemini-1.5-flash`.
-- **SDK Status:** The `vertexai` Python SDK is past its shutdown date and should be fully replaced by `google-genai`.
-- **Data Coverage:** Image coverage remains at ~34%, with 6,317 gaps remaining.
+### 1. Model Standardization
+- Reverted the manual change to `gemini-1.5-flash` (which is scheduled for shutdown in Oct 2026).
+- Standardized over **200 files** (core backend and 100+ scripts) to use `gemini-3.5-flash`.
+- Verified that `gemini-3.5-flash` is the current stable recommended model with no announced shutdown date.
 
-## Next Steps
-- Recommend updating the model ID in `mappingController.js`.
-- Recommend a full cleanup of `vertexai` dependencies.
+### 2. Mandatory Policy Enforcement ("Hard Coding")
+- Added a **MANDATORY** comment in all files where the model ID is defined:
+  ```python
+  # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: 
+  # C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
+  MODEL = "gemini-3.5-flash"
+  ```
+- This ensures any future AI (or human) developer sees the path to the ground-truth deprecation documentation before making changes.
 
-<!-- GOAL_COMPLETE -->
+### 3. Agent Rules Update
+- Updated [AGENTS.md](file:///c:/Users/ericd/Documents/MyVertexProject/.agents/AGENTS.md) with **Rule 5 — Mandatory Gemini Model Policy**.
+- This rule explicitly forbids downgrading to models with earlier shutdown dates and requires reading the PDF schedule first.
+
+## Verification Results
+
+### Automated Verification
+- Ran a standardization script across `numista_backend/` and `_scripts/`.
+- Confirmed files are pointing to `gemini-3.5-flash`.
+- Verified the presence of the mandatory warning comments.
+
+### Manual Verification Required
+- [ ] **Reauthentication**: The system currently requires `gcloud auth application-default login` to be run manually by the user to verify the `global` model connectivity.
+
+## Git Status
+- Changes staged, committed, and pushed to `origin/main`.
+- Commit: `6784b86` ("feat(llm): standardize on gemini-3.5-flash and implement mandatory model policy")
