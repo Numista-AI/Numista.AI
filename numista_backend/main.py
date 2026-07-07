@@ -63,7 +63,7 @@ except Exception as _vx_err:
     print(f"[startup] Vertex AI Search not available: {_vx_err}")
 
 PROJECT_ID = "studio-9101802118-8c9a8"
-LOCATION = "us-central1"
+LOCATION = "global"
 
 # ─── GCS USER CONTENT BUCKET ────────────────────────────────────────────────
 # All user-uploaded files live here under a structured path:
@@ -100,10 +100,8 @@ PRO_MODEL     = "gemini-3.1-pro-preview"
 IMAGE_MODEL   = "gemini-3.5-flash-image"
 
 # Initialize google-genai client (Vertex AI backend)
-# REGION: gemini-3-x-preview models require 'global' — stable gemini-2.5-x
-# models could use 'us-central1', but since we're on preview, global is correct.
-# Override via GEMINI_LOCATION env var if needed.
-GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
+# Override via GEMINI_LOCATION env var if needed, default to 'global'
+GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", LOCATION)
 genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=GEMINI_LOCATION)
 
 

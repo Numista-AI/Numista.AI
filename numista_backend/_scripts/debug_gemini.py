@@ -10,7 +10,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
+client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="global", credentials=creds)
 
 sample_text = """
 Liberty Head Nickels 1883-1912
