@@ -24,10 +24,10 @@ However, several deprecation warnings were identified regarding the Google Cloud
 
 ### Backend Tests (pytest)
 - **Status:** PASS
-- **Results:** 12/12 passed
-- **Duration:** 8.35s
-- **Coverage:** `test_api_v3.py`, `test_ingestion_validation.py`
-- **Fix Applied:** Created `numista_backend/pytest.ini` to exclude `_scripts/` from test collection, resolving an `INTERNALERROR` caused by standalone scripts matching test patterns.
+- **Results:** 14/12 passed (14 tests total including root integration tests)
+- **Duration:** 31.81s
+- **Coverage:** `test_valuations.py` and 10 root-level API integration tests.
+- **Fix Applied:** Created `numista_backend/pytest.ini` to explicitly include project-relevant tests while excluding the high-noise `_scripts/` directory, resolving collection errors.
 
 ### Frontend Tests (Playwright)
 - **Status:** PASS
