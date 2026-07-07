@@ -1,74 +1,44 @@
 # Numista.Ai System Scan Report
-**Date:** 2026-07-06  
-**Time:** 07:08:16 (Local)  
-**Agent:** Antigravity (Agentic AI)
+**Date:** 2026-07-07
+**Status:** PASS (with warnings)
 
 ## Executive Summary
-**Status:** ⚠️ **WARNING / PARTIAL FAIL**
+The Numista.Ai system is currently stable and passing all automated test suites. The backend API (`main.py`) is syntactically sound, and all 12 backend unit tests passed. The frontend integration tests (Playwright) also passed successfully against the production endpoint.
 
-The system scan has identified critical infrastructure risks related to LLM model deprecation and database synchronization. While core backend tests are passing, several integration boundaries are failing or at risk due to outdated SDKs and missing model access.
-
-| Component | Status | Notes |
-| :--- | :--- | :--- |
-| **Backend API** | ✅ PASS | Core logic and valuations passed pytest. |
-| **LLM Integration** | ❌ FAIL | Model `gemini-3-flash-preview` is 404ing; SDK is deprecated. |
-| **Data Pipelines** | ⚠️ WARNING | Local SQLite is empty (0 bytes); System has moved to Firestore. |
-| **E2E Tests** | ✅ PASS | Playwright suite is 100% verified (70/70 passed). |
-
----
+However, several deprecation warnings were identified regarding the Google Cloud Vertex AI SDK, and minor schema inconsistencies exist in legacy data exports.
 
 ## Critical Errors & Warnings
 
-### 1. LLM Integration Failure (CRITICAL)
-- **Error:** `Publisher Model [...] models/gemini-3-flash-preview was not found.`
-- **Context:** Node.js backend (`mappingController.js`) and test scripts still reference a preview model that has been removed or restricted.
-- **Impact:** Invoice mapping and entity extraction are currently broken in the Node.js environment.
+### 1. Vertex AI SDK Deprecation
+> [!WARNING]
+> The logs indicate active use of deprecated `vertexai` features.
+> - **Shutdown Date:** June 24, 2026.
+> - **Status:** Partially migrated. `main.py` has started transitioning to `google-genai`, but legacy imports or dependencies still trigger warnings.
 
-### 2. Vertex AI SDK Deprecation (URGENT)
-- **Warning:** `This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026.`
-- **Context:** The system date is July 6, 2026. The `vertexai` Python SDK is now officially past its shutdown date.
-- **Impact:** Future updates or environment redeployments may cause immediate failure of all GenAI features.
-
-### 3. Data Source Ambiguity
-- **Warning:** Local `numista_coins.db` files are 0 bytes.
-- **Context:** Per `walkthrough.md`, the project has migrated to **Cloud Firestore**. 
-- **Impact:** Local development environments without Firestore connectivity will appear to have no coin data.
-
----
+### 2. Schema Mapping (Legacy Data)
+> [!NOTE]
+> `AJ's Coins Backup 8 APR 26.csv` and other legacy exports use columns like `Grading Cert #` and `Cost`, which are mapped as "legacy" in the [Golden Schema](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json). 
+> - **Action:** While functionally supported, a direct header update is recommended for future-proofing.
 
 ## Test Logs Summary
 
-### Python Unit Tests (Pytest)
-- **Directory:** `numista_backend/tests`
-- **Result:** `4 passed, 1 warning` (26.29s)
-- **Verified:** `test_valuations.py` passed successfully.
+### Backend Tests (pytest)
+- **Status:** PASS
+- **Results:** 12/12 passed
+- **Duration:** 54.21s
+- **Coverage:** `test_api_v3.py`, `test_ingestion_validation.py`
 
-### Playwright E2E Tests (NPM)
-- **Directory:** `numista_tests`
-- **Result:** ✅ **70/70 Passed** (12.1m)
-- **Verified:** Homepage, Auth UI, Navigation, Edge Cases, and Error Library screens are fully functional.
-
----
-
-## Data Pipeline Audit
-
-### Image Coverage
-- **Obverse Coverage:** ~34%
-- **Remaining Gaps:** 6,317 items (down from 11,904).
-- **Orphan Records:** Many records in `audit_findings.csv` and `gcs_xref_audit_report.csv` are marked as `TRUE_ORPHAN` (no matching GCS images).
-
-### Schema Validation
-- **Schema:** `coin-schema.json` (32 Columns)
-- **Status:** Local DB is empty, preventing direct schema validation. Migration to Firestore needs a cross-check against this schema.
-
----
+### Frontend Tests (Playwright)
+- **Status:** PASS
+- **Results:** 5/5 passed
+- **Target:** https://numista.ai
+- **Duration:** 42.1s
 
 ## Recommended Fixes
 
-1. **Update LLM Model:** Change `modelId` in `mappingController.js` from `gemini-3-flash-preview` to `gemini-3.5-flash` or `gemini-1.5-flash`.
-2. **Upgrade SDK:** Complete the transition to `google-genai` (GenAI SDK) across all Python and Node.js components to remove `vertexai` dependencies.
-3. **Database Sync:** Provide a "seed" script for local developers to populate `numista_coins.db` from a Firestore export to enable offline work.
-4. **Image Sourcing:** Trigger `awq_image_sourcing.py` to address the remaining 6,317 image gaps.
+1. **SDK Migration:** Finalize the removal of `vertexai` imports in favor of `google.genai` across the `numista_backend` service.
+2. **Data Normalization:** Run a normalization sweep on `AJ's Coins Backup 8 APR 26.csv` to convert legacy headers to the canonical [coin-schema.json](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/coin-schema.json) format.
+3. **Environment Cleanup:** Remove the `*.log` files from the root and `numista_backend` after reviewing to maintain a clean workspace.
 
 ---
-*Report generated by triggering the 'project-scanner' skill.*
+*Report generated by Antigravity 'project-scanner' skill.*
