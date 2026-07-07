@@ -24,16 +24,18 @@ However, several deprecation warnings were identified regarding the Google Cloud
 
 ### Backend Tests (pytest)
 - **Status:** PASS
-- **Results:** 14/12 passed (14 tests total including root integration tests)
-- **Duration:** 31.81s
+- **Results:** 14/14 passed
+- **Duration:** 29.58s
 - **Coverage:** `test_valuations.py` and 10 root-level API integration tests.
 - **Fix Applied:** Created `numista_backend/pytest.ini` to explicitly include project-relevant tests while excluding the high-noise `_scripts/` directory, resolving collection errors.
 
 ### Frontend Tests (Playwright)
 - **Status:** PASS
-- **Results:** 5/5 passed
+- **Results:** 70/70 passed ✅
+- **Morning Report:** [2026-07-07_morning_report.md](file:///c:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-07-07_morning_report.md)
 - **Target:** https://numista.ai
-- **Duration:** 42.1s
+- **Duration:** 12m 45s
+- **Coverage:** Homepage, Auth UI, Demo Navigation, Registration, Edge Cases, Error Library.
 
 ## Recommended Fixes
 
