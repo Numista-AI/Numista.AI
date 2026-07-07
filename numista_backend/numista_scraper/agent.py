@@ -20,7 +20,11 @@ try:
         scrape_error_ref,
         scrape_coinweek,
         scrape_usmint,
-        scrape_wikimedia
+        scrape_wikimedia,
+        scrape_pcgs_photograde,
+        scrape_ngc,
+        scrape_smithsonian,
+        scrape_usacoinbook,
     )
     from .storage import (
         ensure_sqlite_schema,
@@ -43,7 +47,11 @@ except ImportError:
         scrape_error_ref,
         scrape_coinweek,
         scrape_usmint,
-        scrape_wikimedia
+        scrape_wikimedia,
+        scrape_pcgs_photograde,
+        scrape_ngc,
+        scrape_smithsonian,
+        scrape_usacoinbook,
     )
     from numista_scraper.storage import (
         ensure_sqlite_schema,
@@ -61,6 +69,7 @@ class NumistaScraperAgent:
     def __init__(self, mode="request"):
         self.mode = mode
         self.processed_list = []
+        self.ai_pending_list = []  # Coins that need AI approval before image generation
         # Ensure schema is aligned on startup
         ensure_sqlite_schema()
 
@@ -216,10 +225,36 @@ class NumistaScraperAgent:
 
         return None
 
+    def _has_usmint_cookies(self):
+        """
+        Returns True only if valid USMint session cookies are stored in Firestore.
+        Without cookies, USMint.gov will 403 immediately — no point attempting.
+        """
+        try:
+            doc = db.collection("config").document("usmint").get()
+            if doc.exists:
+                val = doc.to_dict().get("cookieString", "")
+                return bool(val and val.strip())
+        except Exception:
+            pass
+        return False
+
     def process_coin_gap(self, coin, dry_run=False, source_priority="all"):
         """
         Source obverse and reverse images and fetch PCGS market data.
         source_priority: "all", "usmint", "numista", "heritage", "wikimedia"
+
+        Source waterfall order:
+          1. USMint.gov        — only if session cookies are stored in Firestore
+          2. Wikimedia Commons — free public-domain images
+          3. Numista API       — official numismatic API
+          4. PCGS PhotoGrade  — professional coin photography
+          5. NGC Coin Explorer — NGC registry images
+          6. Smithsonian NMAH — museum archive images
+          7. USA CoinBook      — collector reference images
+          8. Heritage Auctions — auction lot photographs
+        If none succeed, the coin is queued in 'ai_reconstruction_pending'
+        for your manual approval — AI is NEVER triggered automatically.
         """
         doc_id = coin.get("doc_id")
         year = coin.get("year", "")
@@ -227,36 +262,36 @@ class NumistaScraperAgent:
         mint = coin.get("mint_mark", "P")
         variety = coin.get("variety", "")
         category = coin.get("category", "")
-        
+
         print(f"\n⚡ Sourcing images and market data for: {year} {denom} ({variety}) [ID: {doc_id}]")
-        
+
         scraped_data = None
         query = f"{year} {denom} {mint} {variety}".strip()
 
-        # 1. US Mint Priority (if requested or in 'all' mode)
+        # 1. US Mint — ONLY attempt if valid session cookies exist in Firestore
         if category == "coin" and source_priority in ["all", "usmint"]:
-            print("    Attempting USMint.gov (Priority)...")
-            scraped_data = scrape_usmint({"query": query})
-            if scraped_data and scraped_data.get("obverse_url"):
-                print("    ✓ Successfully found on USMint.gov")
-                scraped_data["source"] = "usmint"
-            elif source_priority == "usmint":
+            if self._has_usmint_cookies():
+                print("    Attempting USMint.gov (session cookies found)...")
+                scraped_data = scrape_usmint({"query": query})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on USMint.gov")
+                    scraped_data["source"] = "usmint"
+            else:
+                print("    Skipping USMint.gov — no session cookies stored. Paste cookies in the dashboard to enable.")
+            if source_priority == "usmint" and (not scraped_data or not scraped_data.get("obverse_url")):
                 print("    ⚠ USMint.gov returned no images. Skipping other sources (US Mint Only Mode).")
-                return False # Move to next gap
+                return False
 
-        # 1.5 Wikimedia Commons (New Campaign Target)
+        # 2. Wikimedia Commons
         if not scraped_data or not scraped_data.get("obverse_url"):
             if source_priority in ["all", "wikimedia"]:
-                print("    Attempting Wikimedia Commons (Campaign)...")
+                print("    Attempting Wikimedia Commons...")
                 scraped_data = scrape_wikimedia({"query": query})
                 if scraped_data and scraped_data.get("obverse_url"):
                     print("    ✓ Successfully found on Wikimedia Commons")
                     scraped_data["source"] = "wikimedia"
-                elif source_priority == "wikimedia":
-                    print("    ⚠ Wikimedia Commons returned no images. Skipping other sources (Wikimedia Only Mode).")
-                    return False
 
-        # 2. Numista API (Metadata + Image fallback)
+        # 3. Numista API
         if not scraped_data or not scraped_data.get("obverse_url"):
             if source_priority in ["all", "numista"]:
                 numista_id_match = re.match(r"^ref_coin_type_(\d+)$", doc_id)
@@ -267,22 +302,58 @@ class NumistaScraperAgent:
                     if scraped_data:
                         scraped_data["source"] = "numista"
 
-        # 3. Heritage Auctions (Deep Fallback)
+        # 4. PCGS PhotoGrade Online
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all"]:
+                print("    Attempting PCGS PhotoGrade...")
+                scraped_data = scrape_pcgs_photograde({"query": query, "year": year, "denomination": denom})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on PCGS PhotoGrade")
+                    scraped_data["source"] = "pcgs"
+
+        # 5. NGC Coin Explorer
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all"]:
+                print("    Attempting NGC Coin Explorer...")
+                scraped_data = scrape_ngc({"query": query, "year": year, "denomination": denom})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on NGC Coin Explorer")
+                    scraped_data["source"] = "ngc"
+
+        # 6. Smithsonian National Museum of American History
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all"]:
+                print("    Attempting Smithsonian NMAH...")
+                scraped_data = scrape_smithsonian({"query": query})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on Smithsonian NMAH")
+                    scraped_data["source"] = "smithsonian"
+
+        # 7. USA CoinBook
+        if not scraped_data or not scraped_data.get("obverse_url"):
+            if source_priority in ["all"]:
+                print("    Attempting USA CoinBook...")
+                scraped_data = scrape_usacoinbook({"query": query, "year": year, "denomination": denom})
+                if scraped_data and scraped_data.get("obverse_url"):
+                    print("    ✓ Successfully found on USA CoinBook")
+                    scraped_data["source"] = "usacoinbook"
+
+        # 8. Heritage Auctions (last resort for actual coin photos)
         if not scraped_data or not scraped_data.get("obverse_url"):
             if source_priority in ["all", "heritage"]:
                 print("    Sourcing from Heritage Auctions fallback...")
                 scraped_data = scrape_heritage_auctions({"query": query})
                 if scraped_data:
                     scraped_data["source"] = "heritage"
-                    
-        # Apply GCS Migration
+
+        # Apply GCS Migration for any found image
         if scraped_data:
             if scraped_data.get("obverse_url"):
                 scraped_data["obverse_url"] = auto_migrate_to_gcs(scraped_data.get("obverse_url"), doc_id, "obverse")
             if scraped_data.get("reverse_url"):
                 scraped_data["reverse_url"] = auto_migrate_to_gcs(scraped_data.get("reverse_url"), doc_id, "reverse")
-                    
-        # 3. Fetch PCGS Market Data if it's a coin
+
+        # Fetch PCGS Market Data if it's a coin
         market_data = None
         if category == "coin":
             pcgs_no = self.resolve_pcgs_no(coin)
@@ -293,7 +364,7 @@ class NumistaScraperAgent:
         if not scraped_data:
             scraped_data = {}
 
-        # 4. Double-Checking / Self-Healing Metadata
+        # Double-Checking / Self-Healing Metadata
         if scraped_data.get("title"):
             self.double_check_metadata(coin, scraped_data, dry_run)
 
@@ -303,16 +374,33 @@ class NumistaScraperAgent:
                 print(f"    ✓ [DRY RUN] Would download reverse: {scraped_data.get('reverse_url')}")
             return True
 
-        # 5. Final Verification of Sourcing Success
+        # Final Verification
         obv_url = scraped_data.get("obverse_url")
         rev_url = scraped_data.get("reverse_url")
 
         if not obv_url or "storage.googleapis.com" not in obv_url:
-            print(f"    ⚠ No GCS-migrated image for {doc_id}. Triggering AI Reconstruction...")
-            success = self.trigger_ai_reconstruction(coin, dry_run)
-            return success
+            # ── NO AI generation without approval ──────────────────────────────
+            # Queue this coin for human review. The nightly report will list
+            # all pending items. User must approve before any AI image is made.
+            print(f"    ℹ No image found for {doc_id} from any source. Adding to AI approval queue.")
+            try:
+                db.collection("ai_reconstruction_pending").document(doc_id).set({
+                    "doc_id": doc_id,
+                    "year": year,
+                    "denomination": denom,
+                    "mint_mark": mint,
+                    "variety": variety,
+                    "category": category,
+                    "sources_tried": ["usmint", "wikimedia", "numista", "pcgs", "ngc", "smithsonian", "usacoinbook", "heritage"],
+                    "status": "pending_approval",
+                    "queued_at": int(time.time())
+                }, merge=True)
+                self.ai_pending_list.append(f"{year} {denom} {variety} [{doc_id}]")
+            except Exception as e:
+                print(f"    ⚠ Failed to queue for AI review: {e}")
+            return False
 
-        # Only add to processed list if we actually got a migrated image
+        # Success — persist
         if not dry_run:
             self.processed_list.append({
                 "title": f"{year} {denom} ({variety})",
@@ -321,8 +409,7 @@ class NumistaScraperAgent:
                 "obverse_url": obv_url,
                 "reverse_url": rev_url
             })
-            
-        # Persist updates to databases
+
         update_coin_images_in_databases(doc_id, obv_url, rev_url, market_data)
         return True
 
@@ -767,12 +854,22 @@ class NumistaScraperAgent:
         report_content += f"* **Target Scope**: {target}\n"
         report_content += f"* **Total Coin/Note Image Gaps Filled**: {processed_coins} / {len(coin_gaps)}\n"
         report_content += f"* **Total Mint Error Gaps Filled**: {processed_errors} / {len(error_gaps)}\n\n"
-        
+
         if self.processed_list:
             report_content += f"## Successfully Processed Items\n\n"
             for item in self.processed_list:
                 report_content += f"* **{item['title']}** ({item['category']}) - *{item['source']}*\n"
             report_content += "\n"
+
+        if self.ai_pending_list:
+            report_content += f"## ⚠ Pending AI Image Approval ({len(self.ai_pending_list)} coins)\n\n"
+            report_content += "The following coins had **no image found** from any source.\n"
+            report_content += "**No AI images were generated.** Please review this list and approve AI generation\n"
+            report_content += "when it is convenient (e.g. overnight) to avoid impacting your Gemini quota:\n\n"
+            for entry in self.ai_pending_list:
+                report_content += f"* {entry}\n"
+            report_content += "\nTo trigger AI generation for approved coins, use the dashboard\n"
+            report_content += "or the `/api/cron/generate-pending-ai` endpoint.\n\n"
 
         report_content += f"## Data Quality and Corrections\n\n"
         report_content += f"All varieties checked against official references. SQLite schemas aligned to support `image_url_obverse` and `image_url_reverse` keys.\n"

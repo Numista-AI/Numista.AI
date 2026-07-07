@@ -792,3 +792,252 @@ def scrape_wikimedia(request: Request, data):
             "description": f"Public domain image for {query} sourced from Wikimedia Commons."
         }
     return None
+
+
+# ─── PCGS PhotoGrade Online ───────────────────────────────────────────────────
+
+def scrape_pcgs_photograde(data):
+    """
+    Search PCGS CoinFacts for high-quality reference coin images.
+    PCGS CoinFacts is publicly accessible and contains professional obverse/reverse photos.
+    """
+    query = data.get("query", "")
+    year = data.get("year", "")
+    denomination = data.get("denomination", "")
+    if not query:
+        return None
+    try:
+        search_url = f"https://www.pcgs.com/coinfacts/search?q={urllib.parse.quote_plus(query)}"
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # Find first coin detail link
+        links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/coinfacts/coin/" in href or "/coinfacts/detail/" in href:
+                links.append(href if href.startswith("http") else f"https://www.pcgs.com{href}")
+        if not links:
+            return None
+        # Visit first result
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if detail.status_code != 200:
+            return None
+        dsoup = BeautifulSoup(detail.text, "html.parser")
+        # PCGS uses img tags with class containing 'obverse' / 'reverse' or data-side
+        obverse_url = None
+        reverse_url = None
+        for img in dsoup.find_all("img"):
+            src = img.get("src", "") or img.get("data-src", "")
+            alt = img.get("alt", "").lower()
+            cls = " ".join(img.get("class", [])).lower()
+            if not src or "placeholder" in src.lower():
+                continue
+            if "obverse" in alt or "obverse" in cls or "front" in alt:
+                obverse_url = src if src.startswith("http") else f"https://www.pcgs.com{src}"
+            elif "reverse" in alt or "reverse" in cls or "back" in alt:
+                reverse_url = src if src.startswith("http") else f"https://www.pcgs.com{src}"
+        if not obverse_url:
+            return None
+        return {
+            "source": "pcgs",
+            "source_url": links[0],
+            "obverse_url": obverse_url,
+            "reverse_url": reverse_url,
+            "description": f"PCGS CoinFacts reference image for {query}."
+        }
+    except Exception as e:
+        print(f"    ⚠ PCGS PhotoGrade scrape error: {e}")
+    return None
+
+
+# ─── NGC Coin Explorer ────────────────────────────────────────────────────────
+
+def scrape_ngc(data):
+    """
+    Search NGC Coin Explorer for reference images.
+    NGC's coin catalog is publicly browsable with quality obverse/reverse images.
+    """
+    query = data.get("query", "")
+    year = data.get("year", "")
+    denomination = data.get("denomination", "")
+    if not query:
+        return None
+    try:
+        # NGC coin explorer search
+        search_url = f"https://www.ngccoin.com/coin-explorer/search/?q={urllib.parse.quote_plus(query)}"
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # Find coin detail links
+        links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/coin-explorer/" in href and ("/detail/" in href or "/coins/" in href):
+                links.append(href if href.startswith("http") else f"https://www.ngccoin.com{href}")
+        if not links:
+            return None
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if detail.status_code != 200:
+            return None
+        dsoup = BeautifulSoup(detail.text, "html.parser")
+        obverse_url = None
+        reverse_url = None
+        for img in dsoup.find_all("img"):
+            src = img.get("src", "") or img.get("data-src", "")
+            alt = img.get("alt", "").lower()
+            if not src or "logo" in src.lower() or "icon" in src.lower():
+                continue
+            if "obverse" in alt or "front" in alt:
+                obverse_url = src if src.startswith("http") else f"https://www.ngccoin.com{src}"
+            elif "reverse" in alt or "back" in alt:
+                reverse_url = src if src.startswith("http") else f"https://www.ngccoin.com{src}"
+        # Fallback: grab first large coin image
+        if not obverse_url:
+            for img in dsoup.find_all("img"):
+                src = img.get("src", "")
+                if src and ("coin" in src.lower() or "numis" in src.lower()):
+                    obverse_url = src if src.startswith("http") else f"https://www.ngccoin.com{src}"
+                    break
+        if not obverse_url:
+            return None
+        return {
+            "source": "ngc",
+            "source_url": links[0],
+            "obverse_url": obverse_url,
+            "reverse_url": reverse_url,
+            "description": f"NGC Coin Explorer reference image for {query}."
+        }
+    except Exception as e:
+        print(f"    ⚠ NGC scrape error: {e}")
+    return None
+
+
+# ─── Smithsonian National Museum of American History ─────────────────────────
+
+def scrape_smithsonian(data):
+    """
+    Search the Smithsonian NMAH online collection for numismatic objects.
+    Uses the Smithsonian Open Access API (no key required for basic searches).
+    Images are public domain / CC0.
+    """
+    query = data.get("query", "")
+    if not query:
+        return None
+    try:
+        api_url = "https://api.si.edu/openaccess/api/v1.0/search"
+        params = {
+            "q": f"{query} coin",
+            "unit_code": "NMAH",
+            "type": "edanmdm",
+            "rows": 5,
+            "api_key": "DEMO_KEY"  # Public demo key — sufficient for low-volume use
+        }
+        resp = requests.get(api_url, params=params, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None
+        data_json = resp.json()
+        rows = data_json.get("response", {}).get("rows", [])
+        for row in rows:
+            descriptor = row.get("content", {}).get("descriptiveNonRepeating", {})
+            online_media = descriptor.get("online_media", {}).get("media", [])
+            for media in online_media:
+                if media.get("type") == "Images":
+                    resources = media.get("resources", [])
+                    for res in resources:
+                        url = res.get("url", "")
+                        if url and (url.endswith(".jpg") or url.endswith(".png") or "iiif" in url):
+                            return {
+                                "source": "smithsonian",
+                                "source_url": row.get("id", "https://americanhistory.si.edu/"),
+                                "obverse_url": url,
+                                "reverse_url": None,
+                                "description": row.get("title", f"Smithsonian NMAH reference for {query}.")
+                            }
+    except Exception as e:
+        print(f"    ⚠ Smithsonian NMAH scrape error: {e}")
+    return None
+
+
+# ─── USA CoinBook ─────────────────────────────────────────────────────────────
+
+def scrape_usacoinbook(data):
+    """
+    Search USA CoinBook (usacoinbook.com) for coin images.
+    A well-structured collector reference site with clean obverse/reverse photos.
+    """
+    query = data.get("query", "")
+    year = data.get("year", "")
+    denomination = data.get("denomination", "").lower()
+    if not query:
+        return None
+    try:
+        # Map denomination to URL slug used by USA CoinBook
+        denom_map = {
+            "cent": "lincoln-cents",
+            "cents": "lincoln-cents",
+            "penny": "lincoln-cents",
+            "nickel": "jefferson-nickels",
+            "nickels": "jefferson-nickels",
+            "dime": "roosevelt-dimes",
+            "dimes": "roosevelt-dimes",
+            "quarter": "washington-quarters",
+            "quarters": "washington-quarters",
+            "half dollar": "kennedy-half-dollars",
+            "dollar": "eisenhower-dollars",
+        }
+        slug = None
+        for key, val in denom_map.items():
+            if key in denomination:
+                slug = val
+                break
+
+        search_url = f"https://www.usacoinbook.com/coins/search/?q={urllib.parse.quote_plus(query)}"
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # Find coin detail links
+        links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/coins/" in href and href.count("/") >= 3:
+                links.append(href if href.startswith("http") else f"https://www.usacoinbook.com{href}")
+        if not links:
+            return None
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        if detail.status_code != 200:
+            return None
+        dsoup = BeautifulSoup(detail.text, "html.parser")
+        obverse_url = None
+        reverse_url = None
+        for img in dsoup.find_all("img"):
+            src = img.get("src", "")
+            alt = img.get("alt", "").lower()
+            if not src or "logo" in src.lower() or "ad" in src.lower():
+                continue
+            if "obverse" in alt or "front" in alt or "heads" in alt:
+                obverse_url = src if src.startswith("http") else f"https://www.usacoinbook.com{src}"
+            elif "reverse" in alt or "back" in alt or "tails" in alt:
+                reverse_url = src if src.startswith("http") else f"https://www.usacoinbook.com{src}"
+        # Fallback: first coin image on the page
+        if not obverse_url:
+            for img in dsoup.find_all("img"):
+                src = img.get("src", "")
+                if src and (".jpg" in src or ".png" in src) and "coin" in src.lower():
+                    obverse_url = src if src.startswith("http") else f"https://www.usacoinbook.com{src}"
+                    break
+        if not obverse_url:
+            return None
+        return {
+            "source": "usacoinbook",
+            "source_url": links[0],
+            "obverse_url": obverse_url,
+            "reverse_url": reverse_url,
+            "description": f"USA CoinBook reference image for {query}."
+        }
+    except Exception as e:
+        print(f"    ⚠ USA CoinBook scrape error: {e}")
+    return None
