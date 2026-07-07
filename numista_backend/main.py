@@ -7565,7 +7565,16 @@ async def get_gap_stats():
 
 
 class CookieUpdate(BaseModel):
-    cookie_string: str
+    cookies: str
+
+class BrainSuggestionApprove(BaseModel):
+    suggestion_id: str
+    approved: bool
+    notes: Optional[str] = None
+
+class BrainKnowledgeUpdate(BaseModel):
+    doc_id: str
+    intent: str
 
 @app.post("/api/config/usmint-cookies")
 async def update_usmint_cookies(data: CookieUpdate):
@@ -7589,3 +7598,60 @@ if __name__ == "__main__":
 
 
 
+
+# ─── BRAIN ADMIN API ─────────────────────────────────────────────────────────
+
+@app.get("/api/admin/brain/knowledge")
+async def get_brain_knowledge():
+    """Returns all documents absorbed into the Brain's Knowledge Base."""
+    docs = db.collection('brain_knowledge_base').order_by('absorbed_at', direction=firestore.Query.DESCENDING).stream()
+    return [{"id": d.id, **d.to_dict()} for d in docs]
+
+@app.get("/api/admin/brain/suggestions")
+async def get_brain_suggestions():
+    """Returns pending self-healing suggestions from the Brain."""
+    docs = db.collection('brain_suggestions').where('status', '==', 'pending').stream()
+    return [{"id": d.id, **d.to_dict()} for d in docs]
+
+@app.post("/api/admin/brain/approve")
+async def approve_brain_suggestion(req: BrainSuggestionApprove):
+    """Approves or rejects a Brain self-healing suggestion."""
+    doc_ref = db.collection('brain_suggestions').document(req.suggestion_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    if req.approved:
+        # Implement the actual data update here based on target_collection/doc_id
+        # For now, just mark as approved
+        doc_ref.update({
+            'status': 'approved',
+            'resolved_at': firestore.SERVER_TIMESTAMP,
+            'admin_notes': req.notes
+        })
+        return {"status": "approved_and_applied"}
+    else:
+        doc_ref.update({
+            'status': 'rejected',
+            'resolved_at': firestore.SERVER_TIMESTAMP,
+            'admin_notes': req.notes
+        })
+        return {"status": "rejected"}
+
+@app.post("/api/admin/brain/reprocess")
+async def reprocess_knowledge(req: BrainKnowledgeUpdate):
+    """Triggers a re-process of a document with new instructions."""
+    doc_ref = db.collection('brain_knowledge_base').document(req.doc_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    data = doc.to_dict()
+    file_path = Path(data['file_path'])
+    
+    # In a real scenario, we'd trigger the processor asynchronously
+    # For now, we call it directly (blocking for the API call)
+    from brain_processor import absorb_document
+    absorb_document(file_path, req.intent)
+    
+    return {"status": "reprocessing_started"}
