@@ -51,7 +51,7 @@ botasaurus_driver==4.0.92
 curl_cffi==0.11.1
 
 # ── gRPC transport (required by google-cloud-* libraries) ─────────────────────
-grpcio>=1.75.1
-grpcio-status>=1.75.1
-proto-plus>=1.27.2
-protobuf>=5.29.4
+grpcio==1.71.0
+grpcio-status==1.71.0
+proto-plus==1.27.2
+protobuf==5.29.4
