@@ -46,6 +46,8 @@ app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "http://localhost:5000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -7576,6 +7578,10 @@ class BrainKnowledgeUpdate(BaseModel):
     doc_id: str
     intent: str
 
+class BrainBulkAction(BaseModel):
+    suggestion_ids: List[str]
+    action: str # 'approved' or 'ignored'
+
 @app.post("/api/config/usmint-cookies")
 async def update_usmint_cookies(data: CookieUpdate):
     """
@@ -7637,6 +7643,22 @@ async def approve_brain_suggestion(req: BrainSuggestionApprove):
             'admin_notes': req.notes
         })
         return {"status": "rejected"}
+
+@app.post("/api/admin/brain/suggestions/bulk")
+async def bulk_approve_suggestions(req: BrainBulkAction):
+    """Bulk approves or ignores multiple suggestions."""
+    batch = db.batch()
+    status_val = 'approved' if req.action == 'approved' else 'rejected'
+    
+    for sug_id in req.suggestion_ids:
+        doc_ref = db.collection('brain_suggestions').document(sug_id)
+        batch.update(doc_ref, {
+            'status': status_val,
+            'resolved_at': firestore.SERVER_TIMESTAMP
+        })
+    
+    batch.commit()
+    return {"status": f"bulk_{req.action}_complete", "count": len(req.suggestion_ids)}
 
 @app.post("/api/admin/brain/reprocess")
 async def reprocess_knowledge(req: BrainKnowledgeUpdate):

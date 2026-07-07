@@ -327,15 +327,49 @@ def get_coin_context(
     if not top_coins:
         return None
 
+    # 3. Add Brain Knowledge Base (Autonomous Learning)
+    brain_context = ""
+    try:
+        # Search the last 50 documents absorbed into the brain
+        brain_docs = db.collection('brain_knowledge_base').order_by('absorbed_at', direction=firestore.Query.DESCENDING).limit(50).stream()
+        brain_scored = []
+        for doc in brain_docs:
+            data = doc.to_dict()
+            # Simple keyword search in summary and file content
+            text = f"{data.get('filename', '')} {data.get('summary', '')}".lower()
+            score = 0
+            for kw in keywords:
+                if kw in text: score += 1
+            if score > 0:
+                brain_scored.append((score, data))
+        
+        if brain_scored:
+            brain_scored.sort(key=lambda x: x[0], reverse=True)
+            top_brain = brain_scored[:3]
+            brain_context = "\n\nSUPPLEMENTAL BRAIN KNOWLEDGE (from user-provided docs):\n"
+            for _, b in top_brain:
+                brain_context += f"- DOC: {b.get('filename')}\n  SUMMARY: {b.get('summary')}\n"
+                if b.get('type'): brain_context += f"  TYPE: {b.get('type')}\n"
+
+    except Exception as e:
+        print(f"[morgan_knowledge] Brain lookup error: {e}")
+
     # ── Format context block ───────────────────────────────────────────────────
     header = (
         "NUMISMATIC REFERENCE DATA (from Numista.AI knowledge base):\n"
         "Use the following verified coin information to answer the user's question accurately.\n"
         "If the user's question matches one of these coins, cite these facts.\n"
     )
-    entries = "\n\n".join(format_coin_for_context(c) for c in top_coins)
+    
+    main_entries = ""
+    if top_coins:
+        main_entries = "\n\n".join(format_coin_for_context(c) for c in top_coins)
 
-    return f"{header}\n{entries}\n"
+    final_context = f"{header}\n{main_entries}" if main_entries else ""
+    if brain_context:
+        final_context += brain_context
+        
+    return final_context if final_context else None
 
 
 def get_coin_by_id(db: firestore.Client, coin_id: str) -> Optional[dict]:

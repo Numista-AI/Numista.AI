@@ -61,9 +61,19 @@ if __name__ == "__main__":
         
     event_handler = BrainInboxHandler()
     observer = Observer()
-    observer.schedule(event_handler, INBOX_DIR, recursive=False)
+    observer.schedule(event_handler, INBOX_DIR, recursive=True)
     
     logging.info(f"Numista Brain Watcher started on {INBOX_DIR}")
+    
+    # --- STARTUP SYNC ---
+    logging.info("Starting initial sync of existing files...")
+    for root, dirs, files in os.walk(INBOX_DIR):
+        for file in files:
+            file_path = Path(root) / file
+            if file_path.suffix.lower() not in ['.tmp', '.crdownload', '.part', '.txt']:
+                logging.info(f"Syncing existing file: {file_path.name}")
+                event_handler.process_file(file_path)
+    
     observer.start()
     try:
         while True:
