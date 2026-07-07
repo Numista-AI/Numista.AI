@@ -729,60 +729,120 @@ def scrape_wikimedia(request: Request, data):
     """
     Search Wikimedia Commons for public domain coin images.
     `data` contains a dict with keys: 'query' (e.g. '1943 Lincoln Cent')
+
+    Validation rules enforced before accepting any candidate:
+    - If a 4-digit year appears in the query, that exact year MUST appear in
+      the candidate image filename/title.  A 1972 image will never be accepted
+      for a 2025 query.
+    - If the query contains a named series keyword (e.g. "American Innovation",
+      "State Quarter", "Sacagawea"), that keyword MUST appear in the title.
+    - Minimum relevance score of 2 required (at least 2 query words in title).
     """
     query = data.get("query")
     if not query:
         return None
-        
-    # We search for obverse and reverse separately for better accuracy
+
+    # ── Extract validation constraints from query ──────────────────────────────
+    year_match = re.search(r'\b(1[89]\d{2}|20\d{2})\b', query)
+    required_year = year_match.group(1) if year_match else None
+
+    # Named series keywords — if any appear in the query, the result title
+    # must also contain at least one of the series terms.
+    SERIES_KEYWORDS = [
+        "american innovation", "state quarter", "50 state", "america the beautiful",
+        "sacagawea", "native american", "presidential dollar", "westward journey",
+        "lincoln cent", "lincoln memorial", "lincoln wheat", "jefferson nickel",
+        "buffalo nickel", "walking liberty", "morgan", "peace dollar",
+        "kennedy half", "eisenhower dollar", "susan b anthony",
+        "american silver eagle", "american gold eagle", "american buffalo",
+        "women quarters", "american women",
+    ]
+    query_lower = query.lower()
+    required_series = [kw for kw in SERIES_KEYWORDS if kw in query_lower]
+
+    def is_valid_candidate(title: str) -> bool:
+        """Returns True only if this image title satisfies our validation rules."""
+        t = title.lower()
+        # Rule 1: Year must match exactly
+        if required_year and required_year not in t:
+            return False
+        # Rule 2: At least one series keyword must appear (if query had one)
+        if required_series and not any(kw in t for kw in required_series):
+            return False
+        return True
+
+    def score_candidate(title: str, side: str, query: str) -> int:
+        """Score how well an image title matches our query."""
+        t = title.lower()
+        q_words = query.lower().split()
+        score = sum(1 for w in q_words if len(w) > 2 and w in t)
+        if side in t:
+            score += 2
+        if required_year and required_year in t:
+            score += 3  # Strong bonus for exact year match
+        if required_series and any(kw in t for kw in required_series):
+            score += 3  # Strong bonus for series name match
+        return score
+
+    # ── Search Wikimedia for obverse and reverse ───────────────────────────────
     results = {}
     for side in ["obverse", "reverse"]:
         search_term = f"{query} coin {side}"
         api_url = (
             f"{WIKI_API}?action=query&list=search&srnamespace=6"
-            f"&srsearch={urllib.parse.quote(search_term)}&srlimit=5&format=json"
+            f"&srsearch={urllib.parse.quote(search_term)}&srlimit=10&format=json"
         )
-        
+
         try:
             resp = request.get(api_url, headers={"User-Agent": UA})
             if resp.status_code != 200:
                 continue
-            
+
             search_data = resp.json()
             search_results = search_data.get("query", {}).get("search", [])
-            
+
             candidates = []
             for r in search_results:
                 title = r.get("title", "")
-                if any(title.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp"]):
-                    # Resolve direct URL
-                    info_url = (
-                        f"{WIKI_API}?action=query&titles={urllib.parse.quote(title)}"
-                        f"&prop=imageinfo&iiprop=url&format=json"
-                    )
-                    info_resp = request.get(info_url, headers={"User-Agent": UA})
-                    if info_resp.status_code == 200:
-                        info_data = info_resp.json()
-                        pages = info_data.get("query", {}).get("pages", {})
-                        for pid, page in pages.items():
-                            ii = page.get("imageinfo", [])
-                            if ii:
-                                img_url = ii[0].get("url")
-                                if img_url:
-                                    # Simple scoring: count query words in title
-                                    score = sum(1 for word in query.lower().split() if word in title.lower())
-                                    if side in title.lower(): score += 2
-                                    candidates.append((score, img_url))
-            
+                if not any(title.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                    continue
+
+                # ── VALIDATION GATE ──────────────────────────────────────────
+                if not is_valid_candidate(title):
+                    print(f"      [Wikimedia] Rejected '{title}' (year/series mismatch)")
+                    continue
+
+                # Resolve to direct image URL
+                info_url = (
+                    f"{WIKI_API}?action=query&titles={urllib.parse.quote(title)}"
+                    f"&prop=imageinfo&iiprop=url&format=json"
+                )
+                info_resp = request.get(info_url, headers={"User-Agent": UA})
+                if info_resp.status_code == 200:
+                    info_data = info_resp.json()
+                    pages = info_data.get("query", {}).get("pages", {})
+                    for pid, page in pages.items():
+                        ii = page.get("imageinfo", [])
+                        if ii:
+                            img_url = ii[0].get("url")
+                            if img_url:
+                                score = score_candidate(title, side, query)
+                                candidates.append((score, img_url, title))
+
             if candidates:
-                # Pick the best candidate
                 candidates.sort(key=lambda x: x[0], reverse=True)
-                results[side] = candidates[0][1]
-                
-            time.sleep(0.5) # Be polite
+                best_score, best_url, best_title = candidates[0]
+                # Minimum score threshold — must be a genuinely relevant match
+                if best_score >= 2:
+                    print(f"      [Wikimedia] Accepted '{best_title}' (score={best_score})")
+                    results[side] = best_url
+                else:
+                    print(f"      [Wikimedia] Best candidate '{best_title}' score too low ({best_score}), rejecting.")
+
+            time.sleep(0.5)  # Be polite
         except Exception as e:
             print(f"    ⚠ Wikimedia API error for '{search_term}': {e}")
-            
+
     if results.get("obverse"):
         return {
             "source": "wikimedia",
