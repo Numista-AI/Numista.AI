@@ -27,6 +27,9 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
   - Added `/api/greysheet/batch-resolve` and `/api/greysheet/batch-refresh` to perform large-scale inventory GSID mapping and grade-based price refreshes.
   - Added **Greysheet Credentials** card and **Greysheet Portfolio Tools** card to `scraper_dashboard.html` for easy credential management and portfolio updates directly from the dashboard UI.
   - Automatically triggers a daily snapshot under `/api/portfolio/snapshot/daily` after completing a batch price refresh.
+  - **Pricing Data Extraction Fix**: Updated `/api/greysheet/refresh` in `main.py` to extract individual rows from `PricingData` arrays in the API response, ensuring accurate condition mapping.
+  - **Improved Resolution Fields**: Updated `greysheet_service.py` to parse more variations of field names (e.g., `PCGS Number`, `Mint Mark`, `Program/Series`) and perform descriptive keyword searches in fallback mapping.
+
 
 
 

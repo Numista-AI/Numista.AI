@@ -7803,8 +7803,16 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         if not prices:
             return {"status": "no_pricing", "message": "No pricing data returned from Greysheet API."}
             
+        # Extract individual pricing rows from all returned collectible records
+        pricing_rows = []
+        for collectible in prices:
+            pricing_rows.extend(collectible.get("PricingData", []))
+            
+        if not pricing_rows:
+            return {"status": "no_pricing", "message": "No pricing details returned in Greysheet API payload."}
+            
         # 3. Match grade (condition)
-        condition = coin_data.get("condition") or "Ungraded"
+        condition = coin_data.get("Condition") or coin_data.get("condition") or "Ungraded"
         
         # Extract number from condition (e.g. MS65 -> 65, VF30 -> 30)
         import re
@@ -7818,26 +7826,26 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         if target_grade:
             if has_cac:
                 # First look specifically for a CAC match
-                for p in prices:
+                for p in pricing_rows:
                     if p.get("Grade") == target_grade and p.get("IsCac"):
                         matched_price = p
                         break
             else:
                 # First look for a non-CAC match
-                for p in prices:
+                for p in pricing_rows:
                     if p.get("Grade") == target_grade and not p.get("IsCac"):
                         matched_price = p
                         break
             # Fallback to any match for that grade
             if not matched_price:
-                for p in prices:
+                for p in pricing_rows:
                     if p.get("Grade") == target_grade:
                         matched_price = p
                         break
                         
         # If no grade match, fallback to the lowest/default price
-        if not matched_price and prices:
-            matched_price = prices[0]
+        if not matched_price and pricing_rows:
+            matched_price = pricing_rows[0]
             
         if not matched_price:
             return {"status": "no_match", "message": "Could not map coin grade to pricing record."}

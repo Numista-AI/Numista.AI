@@ -159,15 +159,15 @@ class GreysheetService:
             return None
 
         # Extract coin attributes
-        pcgs_number = coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or coin_data.get("pcgsNo")
+        pcgs_number = coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or coin_data.get("pcgsNo") or coin_data.get("PCGS Number")
         if not pcgs_number and coin_data.get("certificationNumber") and coin_data.get("gradingService") == "PCGS":
             # Cert exists, but no PCGS number resolved yet. Should fetch pcgs number first if possible.
             pass
 
         year = str(coin_data.get("Year") or coin_data.get("year") or "")
-        mint_mark = str(coin_data.get("MintMark") or coin_data.get("mintMark") or "").upper()
+        mint_mark = str(coin_data.get("MintMark") or coin_data.get("mintMark") or coin_data.get("Mint Mark") or "").upper()
         denomination = str(coin_data.get("Denomination") or coin_data.get("denomination") or "")
-        series = str(coin_data.get("ProgramSeries") or coin_data.get("programSeries") or coin_data.get("series") or "")
+        series = str(coin_data.get("ProgramSeries") or coin_data.get("programSeries") or coin_data.get("series") or coin_data.get("Program/Series") or "")
         variety = str(coin_data.get("Variety") or coin_data.get("variety") or "")
 
         logger.info(f"[Greysheet] Resolving GSID for: Year={year}, Mint={mint_mark}, Denomination={denomination}, Series={series}, PCGS={pcgs_number}")
@@ -197,10 +197,27 @@ class GreysheetService:
             logger.info("[Greysheet] No direct node match by series. Trying fallback node search.")
             # Default fallback: try matching denominations
             denom_lower = denomination.lower()
-            for node in leaf_nodes:
-                node_name_lower = node["Name"].lower()
-                if any(kw in node_name_lower for kw in ["cent", "nickel", "dime", "quarter", "half", "dollar"]) and any(kw in denom_lower for kw in ["cent", "nickel", "dime", "quarter", "half", "dollar"]):
-                    matched_nodes.append(node)
+            
+            # Find the primary denomination keyword to prevent cross-matching
+            primary_kw = None
+            if "quarter" in denom_lower:
+                primary_kw = "quarter"
+            elif "half" in denom_lower:
+                primary_kw = "half"
+            elif "dime" in denom_lower:
+                primary_kw = "dime"
+            elif "nickel" in denom_lower:
+                primary_kw = "nickel"
+            elif "cent" in denom_lower or "penny" in denom_lower or "1c" in denom_lower:
+                primary_kw = "cent"
+            elif "dollar" in denom_lower or "1$" in denom_lower:
+                primary_kw = "dollar"
+                
+            if primary_kw:
+                for node in leaf_nodes:
+                    node_name_lower = node["Name"].lower()
+                    if primary_kw in node_name_lower:
+                        matched_nodes.append(node)
 
         # Step 2: Fetch candidates under matched leaf nodes
         candidates = []
@@ -276,16 +293,39 @@ Do not output markdown code blocks, just raw JSON.
         best_cand = None
         best_score = 0
         year_str = str(year)
+
+        # Collect descriptive terms from the coin data
+        descriptive_terms = []
+        name_val = coin_data.get("Name") or coin_data.get("name")
+        if name_val:
+            descriptive_terms.extend(str(name_val).lower().split())
+        theme_val = coin_data.get("Theme/Subject") or coin_data.get("theme")
+        if theme_val:
+            descriptive_terms.extend(str(theme_val).lower().replace("&", " ").replace("-", " ").split())
+        if variety:
+            descriptive_terms.extend(str(variety).lower().split())
+            
+        # Filter out common stop words or irrelevant details
+        stop_words = {"&", "and", "or", "the", "a", "an", "of", "in", "on", "at", "to", "with", "couple", "compact"}
+        descriptive_terms = [term for term in descriptive_terms if term not in stop_words and len(term) > 2]
+
         for cand in candidates:
             cand_name = cand["Name"].lower()
             score = 0
             if year_str and year_str in cand_name:
                 score += 10
-            if mint_mark and mint_mark in cand_name:
+            if mint_mark and f"-{mint_mark.lower()}" in cand_name:
                 score += 5
-            elif not mint_mark and "no mint mark" in cand_name or (mint_mark == "P" and "philadelphia" in cand_name):
+            elif mint_mark and f" {mint_mark.lower()} " in cand_name:
+                score += 3
+            elif not mint_mark and ("no mint mark" in cand_name or "philadelphia" in cand_name):
                 score += 2
                 
+            # Match descriptive keywords
+            for term in descriptive_terms:
+                if term in cand_name:
+                    score += 15
+
             if score > best_score:
                 best_score = score
                 best_cand = cand
