@@ -151,9 +151,39 @@ def analyze_document(filename: str, file_bytes: bytes, mime_type: str, user_inte
         }}
         """
 
+    # Handle .xlsx conversion to CSV if needed
+    if mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        try:
+            import pandas as pd
+            import io
+            print(f"📊 Converting Excel to CSV for AI analysis...")
+            df = pd.read_excel(io.BytesIO(file_bytes))
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            file_bytes = csv_buffer.getvalue().encode('utf-8')
+            mime_type = "text/csv"
+        except Exception as conv_err:
+            print(f"⚠ Excel conversion failed: {conv_err}. Attempting raw text fallback.")
+
+    # Handle .docx conversion to text if needed
+    if mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        try:
+            from docx import Document
+            import io
+            print(f"📝 Converting Word (.docx) to text for AI analysis...")
+            doc = Document(io.BytesIO(file_bytes))
+            full_text = []
+            for para in doc.paragraphs:
+                full_text.append(para.text)
+            file_bytes = "\n".join(full_text).encode('utf-8')
+            mime_type = "text/plain"
+        except Exception as conv_err:
+            print(f"⚠ Word conversion failed: {conv_err}. Attempting raw text fallback.")
+
     try:
         # Use plain strings for text parts and from_bytes for blobs
-        # This avoid the "Part.from_text() takes 1 positional argument but 2 were given" error
+        # This avoids the "Part.from_text() takes 1 positional argument but 2 were given" error
+        # In the new SDK, strings are passed directly as strings, not as Parts.
         response = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
             contents=[
