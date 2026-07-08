@@ -31,8 +31,65 @@ HERITAGE_CURRENCY_SEARCH = "https://currency.ha.com/c/search-results.zx"
 ERROR_REF_URL = "https://www.error-ref.com/"
 COINWEEK_SEARCH = "https://coinweek.com/?s="
 
-# Proxy settings (can be populated via environment variables)
-PROXIES = {
-    "http": os.environ.get("NUMISTA_SCRAPE_HTTP_PROXY"),
-    "https": os.environ.get("NUMISTA_SCRAPE_HTTPS_PROXY"),
-}
+# ─── Rotating Proxy Pool ─────────────────────────────────────────────────────
+# Proxies are loaded lazily from Firestore (config/webshare_proxies) on first
+# use, so Cloud Run containers share the same managed list without baking
+# credentials into env vars.  Local dev falls back to the env vars if Firestore
+# is unreachable.
+
+import random as _random
+
+_proxy_pool: list = []       # Cached list of proxy URL strings
+_proxy_index: int = 0        # Round-robin cursor
+
+
+def _load_proxy_pool() -> list:
+    """Load proxy list from Firestore config/webshare_proxies."""
+    try:
+        from firebase_admin import firestore as _fs
+        db = _fs.client()
+        doc = db.collection("config").document("webshare_proxies").get()
+        if doc.exists:
+            pool = doc.to_dict().get("proxies", [])
+            if pool:
+                return pool
+    except Exception as e:
+        print(f"[config] Could not load proxy pool from Firestore: {e}")
+    # Fallback: env var (local dev / first boot before Firestore is ready)
+    env_proxy = os.environ.get("NUMISTA_SCRAPE_HTTP_PROXY") or os.environ.get("NUMISTA_SCRAPE_HTTPS_PROXY")
+    return [env_proxy] if env_proxy else []
+
+
+def get_scrape_proxy() -> dict:
+    """
+    Return a requests-compatible proxy dict with the next proxy in the pool.
+    Rotates round-robin so successive calls use different IPs.
+    Returns {"http": None, "https": None} if no proxies are configured.
+    """
+    global _proxy_pool, _proxy_index
+    if not _proxy_pool:
+        _proxy_pool = _load_proxy_pool()
+    if not _proxy_pool:
+        return {"http": None, "https": None}
+    proxy_url = _proxy_pool[_proxy_index % len(_proxy_pool)]
+    _proxy_index += 1
+    return {"http": proxy_url, "https": proxy_url}
+
+
+def get_random_scrape_proxy() -> dict:
+    """
+    Return a requests-compatible proxy dict with a randomly chosen proxy.
+    Useful when you want unpredictable rotation rather than round-robin.
+    """
+    global _proxy_pool
+    if not _proxy_pool:
+        _proxy_pool = _load_proxy_pool()
+    if not _proxy_pool:
+        return {"http": None, "https": None}
+    proxy_url = _random.choice(_proxy_pool)
+    return {"http": proxy_url, "https": proxy_url}
+
+
+# Legacy alias — keeps any existing code that references PROXIES working,
+# but now it uses a randomly-picked proxy from the pool.
+PROXIES = get_random_scrape_proxy()

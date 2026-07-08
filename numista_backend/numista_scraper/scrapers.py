@@ -9,13 +9,15 @@ import requests
 
 # Load config settings
 try:
-    from .config import USER_AGENTS, DEFAULT_DELAY, REQUEST_TIMEOUT
+    from .config import USER_AGENTS, DEFAULT_DELAY, REQUEST_TIMEOUT, PROXIES, get_scrape_proxy
 except ImportError:
+    def get_scrape_proxy(): return {"http": None, "https": None}
     USER_AGENTS = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ]
     DEFAULT_DELAY = 1.5
     REQUEST_TIMEOUT = 30
+    PROXIES = {"http": None, "https": None}
 
 UA = "NumistaAI/1.0 (educational numismatic archive; contact eric.seaman@yahoo.com)"
 WIKI_API = "https://commons.wikimedia.org/w/api.php"
@@ -652,7 +654,8 @@ def scrape_usmint(request: Request, data):
 
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = request.get(search_url, headers=headers)
+        _proxy = get_scrape_proxy()
+        resp = request.get(search_url, headers=headers, proxy=_proxy.get("http"))
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None
@@ -671,7 +674,7 @@ def scrape_usmint(request: Request, data):
         if not article_links:
             # Fallback catalog search
             catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
-            cat_resp = request.get(catalog_url)
+            cat_resp = request.get(catalog_url, proxy=get_scrape_proxy().get("http"))
             cat_soup = soupify(cat_resp)
             for a in cat_soup.find_all("a", href=True):
                 href = a["href"]
@@ -685,7 +688,7 @@ def scrape_usmint(request: Request, data):
             
         # Visit first page
         target_url = article_links[0]
-        art_resp = request.get(target_url, headers=headers)
+        art_resp = request.get(target_url, headers=headers, proxy=get_scrape_proxy().get("http"))
         art_soup = soupify(art_resp)
         
         paragraphs = []
@@ -867,7 +870,7 @@ def scrape_pcgs_photograde(data):
         return None
     try:
         search_url = f"https://www.pcgs.com/coinfacts/search?q={urllib.parse.quote_plus(query)}"
-        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if resp.status_code != 200:
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -880,7 +883,7 @@ def scrape_pcgs_photograde(data):
         if not links:
             return None
         # Visit first result
-        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if detail.status_code != 200:
             return None
         dsoup = BeautifulSoup(detail.text, "html.parser")
@@ -926,7 +929,7 @@ def scrape_ngc(data):
     try:
         # NGC coin explorer search
         search_url = f"https://www.ngccoin.com/coin-explorer/search/?q={urllib.parse.quote_plus(query)}"
-        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if resp.status_code != 200:
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -938,7 +941,7 @@ def scrape_ngc(data):
                 links.append(href if href.startswith("http") else f"https://www.ngccoin.com{href}")
         if not links:
             return None
-        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if detail.status_code != 200:
             return None
         dsoup = BeautifulSoup(detail.text, "html.parser")
@@ -1054,7 +1057,7 @@ def scrape_usacoinbook(data):
                 break
 
         search_url = f"https://www.usacoinbook.com/coins/search/?q={urllib.parse.quote_plus(query)}"
-        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        resp = requests.get(search_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if resp.status_code != 200:
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -1066,7 +1069,7 @@ def scrape_usacoinbook(data):
                 links.append(href if href.startswith("http") else f"https://www.usacoinbook.com{href}")
         if not links:
             return None
-        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+        detail = requests.get(links[0], headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT, proxies=get_scrape_proxy())
         if detail.status_code != 200:
             return None
         dsoup = BeautifulSoup(detail.text, "html.parser")
