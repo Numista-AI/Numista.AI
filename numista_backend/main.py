@@ -7566,7 +7566,7 @@ def get_gap_stats():
 
 
 class CookieUpdate(BaseModel):
-    cookies: str
+    cookie_string: str
 
 class BrainSuggestionApprove(BaseModel):
     suggestion_id: str
