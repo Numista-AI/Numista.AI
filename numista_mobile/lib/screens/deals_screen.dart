@@ -193,7 +193,7 @@ class _DealsScreenState extends State<DealsScreen> {
                         final imageUrl = deal['imageUrl'] as String;
 
                         return Container(
-                          margin: const EdgeInsets.bottom(16),
+                          margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
                             color: cardBg,
                             borderRadius: BorderRadius.circular(16),
