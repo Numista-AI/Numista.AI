@@ -7948,7 +7948,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         melt_val = get_precious_metal_melt_value(metal_content, denom_str)
 
         cpg_retail = clean_val(matched_price.get("CpgVal"))
-        greysheet_bid = clean_val(matched_price.get("GreyVal"))
+        greysheet_bid = clean_val(matched_price.get("GreyVal") or matched_price.get("GreyVal1"))
         if greysheet_bid == 0.0:
             greysheet_bid = cpg_retail * 0.80
         greysheet_ask = greysheet_bid * 1.15
@@ -8323,7 +8323,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
                     continue
                     
                 cpg_retail = clean_val(matched_price.get("CpgVal"))
-                greysheet_bid = clean_val(matched_price.get("GreyVal"))
+                greysheet_bid = clean_val(matched_price.get("GreyVal") or matched_price.get("GreyVal1"))
                 if greysheet_bid == 0.0:
                     greysheet_bid = cpg_retail * 0.80
                 greysheet_ask = greysheet_bid * 1.15
