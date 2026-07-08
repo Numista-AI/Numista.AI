@@ -7704,6 +7704,7 @@ class GreysheetResolveRequest(BaseModel):
     program_series: Optional[str] = None
     variety: Optional[str] = None
     pcgs_no: Optional[str] = None
+    item_type: Optional[str] = None
 
 @app.post("/api/greysheet/resolve")
 async def resolve_greysheet_coin(req: GreysheetResolveRequest):
@@ -7731,7 +7732,8 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
                 "Denomination": req.denomination or "",
                 "ProgramSeries": req.program_series or "",
                 "Variety": req.variety or "",
-                "PCGSNo": req.pcgs_no or ""
+                "PCGSNo": req.pcgs_no or "",
+                "item_type": req.item_type or ""
             }
         
         # 2. Instantiate service and resolve
@@ -7839,11 +7841,105 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             except Exception:
                 return 0.0
                 
+        # Calculate melt value fallback
+        def get_precious_metal_melt_value(metal_content: str, denomination: str) -> float:
+            if not metal_content or not denomination:
+                return 0.0
+            mc = str(metal_content).strip().lower()
+            denom = str(denomination).strip().lower()
+            
+            # Fetch spot prices via yfinance logic
+            try:
+                gold_spot = float(yf.Ticker("GC=F").fast_info.last_price or 3100.0)
+                silver_spot = float(yf.Ticker("SI=F").fast_info.last_price or 35.0)
+            except Exception:
+                gold_spot = 3100.0
+                silver_spot = 35.0
+                
+            # 90% Silver dime (0.07234), quarter (0.18084), half (0.36169), dollar (0.77344)
+            if "90% silver" in mc or "90% silver" in mc:
+                if "dime" in denom:
+                    return silver_spot * 0.07234
+                elif "quarter" in denom:
+                    return silver_spot * 0.18084
+                elif "half" in denom or "50c" in denom:
+                    return silver_spot * 0.36169
+                elif "dollar" in denom or "1$" in denom:
+                    return silver_spot * 0.77344
+                    
+            # 40% Silver half dollar (0.14792)
+            if "40% silver" in mc:
+                if "half" in denom or "50c" in denom:
+                    return silver_spot * 0.14792
+                    
+            # 35% Silver nickel (0.05626)
+            if "35% silver" in mc:
+                if "nickel" in denom or "5c" in denom:
+                    return silver_spot * 0.05626
+                    
+            # American Silver Eagle: 1 oz Ag
+            if "silver (99" in mc or "99.9%" in mc:
+                return silver_spot * 1.0
+                
+            # Gold Coins (Pre-1933 standard weights for 90% gold by face value)
+            if "90% gold" in mc or "90% gold" in mc:
+                face = 0.0
+                if "20" in denom or "double eagle" in denom:
+                    face = 20.0
+                elif "10" in denom or "eagle" in denom:
+                    face = 10.0
+                elif "5" in denom or "half eagle" in denom:
+                    face = 5.0
+                elif "2.5" in denom or "quarter eagle" in denom:
+                    face = 2.5
+                elif "3" in denom:
+                    face = 3.0
+                elif "1" in denom:
+                    face = 1.0
+                    
+                au_weights = {
+                    1.0: 0.04837,
+                    2.5: 0.12094,
+                    3.0: 0.14513,
+                    5.0: 0.24188,
+                    10.0: 0.48375,
+                    20.0: 0.96750,
+                }
+                if face in au_weights:
+                    return gold_spot * au_weights[face]
+                    
+            # American Gold Eagle (.9167 gold)
+            if "91.67% gold" in mc or "gold eagle" in denom:
+                if "50" in denom or "1 oz" in denom or "one ounce" in denom:
+                    return gold_spot * 1.0
+                elif "25" in denom or "1/2" in denom:
+                    return gold_spot * 0.5
+                elif "10" in denom or "1/4" in denom:
+                    return gold_spot * 0.25
+                elif "5" in denom or "1/10" in denom:
+                    return gold_spot * 0.1
+                    
+            # American Gold Buffalo (.9999 gold)
+            if "99.99% gold" in mc or "buffalo" in denom:
+                return gold_spot * 1.0
+                
+            return 0.0
+
+        metal_content = coin_data.get("Metal Content") or coin_data.get("metalContent") or ""
+        denom_str = coin_data.get("Denomination") or coin_data.get("denomination") or ""
+        melt_val = get_precious_metal_melt_value(metal_content, denom_str)
+
         cpg_retail = clean_val(matched_price.get("CpgVal"))
         greysheet_bid = clean_val(matched_price.get("GreyVal"))
         if greysheet_bid == 0.0:
             greysheet_bid = cpg_retail * 0.80
         greysheet_ask = greysheet_bid * 1.15
+        
+        if melt_val > 0.0 and melt_val > cpg_retail:
+            cpg_retail = melt_val
+            greysheet_bid = melt_val * 0.90
+            greysheet_ask = melt_val * 1.10
+            print(f"[Greysheet] Melt value fallback triggered: melt_val={melt_val:.2f} > cpg_retail")
         
         # 5. Update coin in Firestore
         update_payload = {

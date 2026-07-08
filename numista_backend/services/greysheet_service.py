@@ -152,6 +152,12 @@ class GreysheetService:
         Map a coin in the inventory to its Greysheet GSID.
         Uses PCGS number matching first, otherwise calls Gemini to select from candidate collectibles.
         """
+        # Ingestion Type Guardrails: Non-coin items bypass the coin lookup
+        item_type = str(coin_data.get("item_type") or coin_data.get("Item Type") or coin_data.get("Item_Type") or "").lower()
+        if item_type in ["paper_currency", "medal", "supply"] or "medal" in item_type or "paper" in item_type or "supply" in item_type:
+            logger.info(f"[Greysheet] Ingestion guardrail triggered: item_type='{item_type}' is non-coin. Bypassing Greysheet resolution.")
+            return None
+
         # Extract coin attributes
         pcgs_number = coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or coin_data.get("pcgsNo")
         if not pcgs_number and coin_data.get("certificationNumber") and coin_data.get("gradingService") == "PCGS":

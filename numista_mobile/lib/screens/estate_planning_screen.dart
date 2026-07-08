@@ -10,6 +10,7 @@ import '../models/coin_model.dart';
 import '../services/estate_profile_service.dart';
 import '../services/estate_data_service.dart';
 import '../services/estate_report_service.dart';
+import '../services/valuation_mode_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme constants
@@ -822,6 +823,7 @@ class _CollectionTabState extends State<_CollectionTab> {
   Map<String, CoinEstateData> _estateData = {};
   List<EstateBeneficiary> _beneficiaries = [];
   bool _loading = true;
+  bool _isAdvancedMode = false;
   String _filter = 'All'; // 'All' | 'Unassigned' | 'Needs Appraisal'
   StreamSubscription<Map<String, CoinEstateData>>? _estateSub;
   StreamSubscription<EstateProfile?>? _profileSub;
@@ -830,6 +832,7 @@ class _CollectionTabState extends State<_CollectionTab> {
   void initState() {
     super.initState();
     _loadCoins();
+    _loadValuationMode();
     _estateSub = EstateDataService.watchEstateData(widget.uid).listen((data) {
       if (mounted) setState(() => _estateData = data);
     });
@@ -838,6 +841,11 @@ class _CollectionTabState extends State<_CollectionTab> {
         setState(() => _beneficiaries = p.beneficiaries);
       }
     });
+  }
+
+  void _loadValuationMode() async {
+    final mode = await ValuationModeService.isAdvancedMode();
+    if (mounted) setState(() => _isAdvancedMode = mode);
   }
 
   Future<void> _loadCoins() async {
@@ -877,9 +885,18 @@ class _CollectionTabState extends State<_CollectionTab> {
   }
 
   double _parseFmv(CoinModel c) {
-    final raw = _estateData[c.id]?.fmvOverride
-        ?? _parseValue(c.aiEstimatedValue);
-    return raw;
+    if (_estateData[c.id]?.fmvOverride != null) {
+      return _estateData[c.id]!.fmvOverride!;
+    }
+    if (_isAdvancedMode) {
+      final cpg = c.cpgRetail;
+      if (cpg > 0) return cpg;
+      return _parseValue(c.aiEstimatedValue);
+    } else {
+      final bid = c.greysheetBid;
+      if (bid > 0) return bid;
+      return _parseValue(c.aiEstimatedValue) * 0.80;
+    }
   }
 
   double _parseValue(String v) {
@@ -1021,6 +1038,7 @@ class _DivisionTabState extends State<_DivisionTab> {
   EstateProfile? _profile;
   bool _loading = true;
   bool _saving = false;
+  bool _isAdvancedMode = false;
 
   // Simulation results
   Map<String, List<CoinModel>> _simulatedLots = {};
@@ -1033,6 +1051,7 @@ class _DivisionTabState extends State<_DivisionTab> {
   void initState() {
     super.initState();
     _loadCoins();
+    _loadValuationMode();
     _estateSub = EstateDataService.watchEstateData(widget.uid).listen((data) {
       if (mounted) {
         setState(() {
@@ -1049,6 +1068,16 @@ class _DivisionTabState extends State<_DivisionTab> {
         _runDivisionSimulation();
       }
     });
+  }
+
+  void _loadValuationMode() async {
+    final mode = await ValuationModeService.isAdvancedMode();
+    if (mounted) {
+      setState(() {
+        _isAdvancedMode = mode;
+      });
+      _runDivisionSimulation();
+    }
   }
 
   Future<void> _loadCoins() async {
@@ -1082,9 +1111,18 @@ class _DivisionTabState extends State<_DivisionTab> {
   }
 
   double _parseFmv(CoinModel c) {
-    final raw = _estateData[c.id]?.fmvOverride
-        ?? _parseValue(c.aiEstimatedValue);
-    return raw;
+    if (_estateData[c.id]?.fmvOverride != null) {
+      return _estateData[c.id]!.fmvOverride!;
+    }
+    if (_isAdvancedMode) {
+      final cpg = c.cpgRetail;
+      if (cpg > 0) return cpg;
+      return _parseValue(c.aiEstimatedValue);
+    } else {
+      final bid = c.greysheetBid;
+      if (bid > 0) return bid;
+      return _parseValue(c.aiEstimatedValue) * 0.80;
+    }
   }
 
   double _parseValue(String v) {

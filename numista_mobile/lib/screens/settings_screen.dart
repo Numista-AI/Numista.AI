@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/inspector_service.dart';
+import '../services/valuation_mode_service.dart';
 
 import '../utils/file_saver_stub.dart'
     if (dart.library.html) '../utils/file_saver_web.dart'
@@ -46,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool? _photoSharingOptedIn;
   bool _inspectorMode = false;
+  bool _advancedValuationMode = false;
   String _defaultCollectionView = 'All';
 
   @override
@@ -54,9 +56,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
     _loadPhotoSharingPref();
     _loadInspectorModePref();
+    _loadValuationModePref();
     _loadDefaultCollectionView();
     // Pre-fetch the coin count for the Danger Zone card.
     _fetchCoinCount(AuthService.userEmail);
+  }
+
+  void _loadValuationModePref() async {
+    final enabled = await ValuationModeService.isAdvancedMode();
+    if (mounted) {
+      setState(() {
+        _advancedValuationMode = enabled;
+      });
+    }
   }
 
   void _loadDefaultCollectionView() async {
@@ -160,6 +172,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
  
           // ── Privacy & Photo Sharing Card ───────────────────────────
           _buildPrivacyCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── Valuation Preferences Section ────────────────────────────
+          _buildValuationPreferencesCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -1052,6 +1070,117 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: descColor,
                         height: 1.4),
                   ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildValuationPreferencesCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD4A843).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.account_balance_wallet_outlined,
+                      color: Color(0xFFD4A843), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Valuation Preferences',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: headerColor,
+                        ),
+                      ),
+                      Text(
+                        'Configure how portfolio metrics are displayed',
+                        style: TextStyle(fontSize: 13, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Advanced Numismatist View',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: headerColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Shows CPG Retail, Greysheet Bid, and Ask values simultaneously. If disabled, simplifies dashboard and division totals to Estate/Liquidation View (Greysheet Bid).',
+                        style: TextStyle(fontSize: 12, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Switch.adaptive(
+                  value: _advancedValuationMode,
+                  activeThumbColor: const Color(0xFFD4A843),
+                  onChanged: (val) async {
+                    await ValuationModeService.setAdvancedMode(val);
+                    setState(() {
+                      _advancedValuationMode = val;
+                    });
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(val
+                              ? 'Advanced Numismatist View enabled! Showing Bid, Ask, and CPG.'
+                              : 'Estate/Liquidation View active (Greysheet Bid default).'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),

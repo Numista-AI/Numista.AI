@@ -1615,14 +1615,27 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Text(
-          'Greysheet Pricing Guide',
-          style: TextStyle(
-            fontSize: 12,
-            color: _kSubtext,
-            letterSpacing: 0.8,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Greysheet Pricing Guide',
+              style: TextStyle(
+                fontSize: 12,
+                color: _kSubtext,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              'GSID: #${widget.gsid}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: _kSubtext,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Container(

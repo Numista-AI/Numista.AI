@@ -21,12 +21,23 @@ def test_resolve_greysheet_raw():
     if data["status"] == "success":
         assert "gsid" in data
 
+def test_item_type_guardrails():
+    # Test that non-coin items are bypassed by the guardrails
+    payload = {
+        "year": "1923",
+        "denomination": "One Dollar",
+        "item_type": "paper_currency",
+        "program_series": "Silver Certificates"
+    }
+    response = client.post("/api/greysheet/resolve", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "not_resolved"
+
 def test_pricing_endpoint():
-    # Test fetching pricing details for a dummy/sample GSID
-    # Since GSID 429 is a common Lincoln Cent, let's query it
+    # Test fetching pricing details for GSID 429
     response = client.get("/api/greysheet/pricing/429")
     assert response.status_code == 200
     data = response.json()
     assert "pricing" in data
-    # It should have matching grades or default list
     assert isinstance(data["pricing"], list)

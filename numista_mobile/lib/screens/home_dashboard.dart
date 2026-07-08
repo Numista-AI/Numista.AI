@@ -13,6 +13,7 @@ import 'dart:math' as math;
 import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../services/valuation_mode_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
 
@@ -536,7 +537,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(width: 12),
                       Flexible(
-                        child: _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems),
+                        child: FutureBuilder<bool>(
+                          future: ValuationModeService.isAdvancedMode(),
+                          builder: (context, modeSnap) {
+                            final advanced = modeSnap.data ?? false;
+                            return _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced);
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -992,9 +999,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
-      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins) {
+      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
     final v = _valuation;
-    final hasValue    = cpgTotal > 0;
+    final displayVal  = advanced ? cpgTotal : bidTotal;
+    final hasValue    = displayVal > 0;
     final isRunning   = v.isRunning;
     final isPaused    = v.isPaused;
     final hasProgress = v.completed > 0 || v.failed > 0;
@@ -1002,23 +1010,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        const Text('EST. PORTFOLIO VALUE',
-            style: TextStyle(
-                fontSize: 10,
+        Text(advanced ? 'EST. PORTFOLIO VALUE (RETAIL)' : 'EST. PORTFOLIO VALUE (ESTATE/LIQ)',
+            style: const TextStyle(
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF5A5C69))),
         const SizedBox(height: 2),
 
         // ── Main value display ──────────────────────────────────────────────
         if (hasValue)
-          Text(fmt.format(cpgTotal),
+          Text(fmt.format(displayVal),
               style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F9D58)))
         else if (isRunning)
           Text(
-            hasProgress ? '${fmt.format(cpgTotal)} (est.)' : 'Valuing\u2026',
+            hasProgress ? '${fmt.format(displayVal)} (est.)' : 'Valuing\u2026',
             style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -1031,7 +1039,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF9CA3AF))),
 
-        if (hasValue) ...[
+        if (hasValue && advanced) ...[
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,

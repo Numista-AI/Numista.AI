@@ -1576,14 +1576,28 @@ class _MicroscopePricingAdvisorState extends State<_MicroscopePricingAdvisor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        const Text(
-          'Sheldon Grade Pricing Advisor',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: _electricBlue,
-            letterSpacing: 0.8,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Sheldon Grade Pricing Advisor',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _electricBlue,
+                letterSpacing: 0.8,
+              ),
+            ),
+            if (_gsid != null)
+              Text(
+                'GSID: #$_gsid',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         Container(
