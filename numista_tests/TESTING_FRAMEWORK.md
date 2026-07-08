@@ -26,6 +26,10 @@ c:\Users\ericd\Documents\MyVertexProject\numista_tests\
 | `tests/02-auth-ui.spec.js` | Sign In / Create Account UI, Browse Demo, Try It Free buttons |
 | `tests/03-demo-navigation.spec.js` | Browse Demo flow, all 11 nav sidebar items |
 | `tests/04-registration.spec.js` | Create Account form validation edge cases |
+| `tests/07-error-library.spec.js` | Error Library Verification — Firestore permission check |
+| `tests/08-greysheet-valuation.spec.js` | **[v4.0]** Home Dashboard health, CPG portfolio value, Wishlist EPN, Estate Planning, backend API endpoints |
+| `tests/09-deals-arbitrage.spec.js` | **[v4.0]** Arbitrage Deal Spotter card, DealsScreen launch, EPN affiliate endpoint, Wishlist scan |
+| `tests/10-greysheet-coin-detail.spec.js` | **[v4.0]** Greysheet Pricing Table in Financials tab, valuation toggle in Settings, CAC, portfolio snapshot endpoint |
 | `tests/05-navigation.spec.js` | In-app navigation, refresh, rapid clicks, all demo pages |
 | `tests/06-edge-cases.spec.js` | Keyboard, scroll, network errors, Sign Out, resilience |
 | `playwright.config.js` | Playwright settings: Chromium, 1280×720, retries, reporters |
@@ -158,7 +162,26 @@ Numista.AI is built with **Flutter Web (CanvasKit renderer)**. This means:
 | 04 - Registration | 8 | ✅ All pass |
 | 05 - Navigation | 12 | ✅ All pass |
 | 06 - Edge Cases | 9 | ✅ All pass |
-| **TOTAL** | **63** | **100% ✅** |
+| **TOTAL (pre-v4.0)** | **63** | **100% ✅** |
+
+## Test Results — v4.0 Baseline (July 8, 2026)
+
+> [!NOTE]
+> Three new test suites were added to cover the Greysheet Market Valuation integration (v4.0). They have not yet been run against production. The next scheduled run will establish the new baseline.
+
+| Suite | Tests | Result |
+|-------|-------|--------|
+| 01 - Homepage | 7 | ✅ (established baseline) |
+| 02 - Auth UI | 8 | ✅ (established baseline) |
+| 03 - Demo Navigation | 19 | ✅ (established baseline) |
+| 04 - Registration | 8 | ✅ (established baseline) |
+| 05 - Navigation | 12 | ✅ (established baseline) |
+| 06 - Edge Cases | 9 | ✅ (established baseline) |
+| 07 - Error Library | 1 | ✅ (established baseline) |
+| 08 - Greysheet Valuation | 12 | ⏳ Not yet run |
+| 09 - Deals & Arbitrage | 8 | ⏳ Not yet run |
+| 10 - Greysheet Coin Detail | 14 | ⏳ Not yet run |
+| **TOTAL** | **~98** | **63 baseline + 34 new** |
 
 > [!NOTE]
 > The "Dashboard unavailable" and "Could not load collection" errors shown in demo mode are **expected behavior** — the demo runs with a read-only account and cannot load real data. Tests verify these error states render gracefully rather than crashing.
@@ -177,7 +200,7 @@ This allows Antigravity to directly control a browser using `browser_*` tools (s
 
 ## How to Add a New Test
 
-1. Create `numista_tests/tests/07-your-new-suite.spec.js`
+1. Create `numista_tests/tests/11-your-new-suite.spec.js`
 2. Use coordinate-based clicks (see button coordinates above)
 3. Use screenshot size validation for assertions
 4. Run `npx playwright test tests/07-your-new-suite.spec.js` to verify
