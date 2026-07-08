@@ -11,12 +11,12 @@ def extract_text(pdf_path, txt_path):
         print(f"Extracted {pdf_path} using PyMuPDF")
     except ImportError:
         try:
-            import PyPDF2
+            import pypdf
             with open(pdf_path, 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
+                reader = pypdf.PdfReader(f)
                 for page in reader.pages:
                     text += page.extract_text() + "\n"
-            print(f"Extracted {pdf_path} using PyPDF2")
+            print(f"Extracted {pdf_path} using pypdf")
         except ImportError:
             try:
                 import pdfplumber
@@ -25,7 +25,7 @@ def extract_text(pdf_path, txt_path):
                         text += page.extract_text() + "\n"
                 print(f"Extracted {pdf_path} using pdfplumber")
             except ImportError as e:
-                print(f"No PDF library found. Please install PyMuPDF or PyPDF2. {e}")
+                print(f"No PDF library found. Please install PyMuPDF or pypdf. {e}")
                 sys.exit(1)
                 
     with open(txt_path, 'w', encoding='utf-8') as f:

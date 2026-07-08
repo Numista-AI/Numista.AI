@@ -1,7 +1,7 @@
 # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
 import os
 from google.cloud import storage
-import PyPDF2
+import pypdf
 
 BUCKET_NAME = "numista-training-docs"
 BLOB_NAME = "Numista.AI Training Data/US Mint Coin Programs/LC-KGW-50-State-Commemorative-Quarter-Checklist.pdf"
@@ -15,7 +15,7 @@ blob.download_to_filename(LOCAL_PDF)
 print("Download complete. Parsing text...")
 
 with open(LOCAL_PDF, "rb") as f:
-    reader = PyPDF2.PdfReader(f)
+    reader = pypdf.PdfReader(f)
     full_text = ""
     for idx, page in enumerate(reader.pages):
         full_text += f"\n--- Page {idx + 1} ---\n"

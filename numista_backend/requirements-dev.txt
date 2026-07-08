@@ -46,7 +46,7 @@ pydeck==0.9.1
 extra-streamlit-components==0.1.81
 
 # ── PDF generation / parsing ──────────────────────────────────────────────────
-PyPDF2==3.0.1
+pypdf==6.13.3
 reportlab>=4.4.0
 
 # ── Git utilities ─────────────────────────────────────────────────────────────
