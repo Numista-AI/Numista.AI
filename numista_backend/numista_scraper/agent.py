@@ -268,6 +268,14 @@ class NumistaScraperAgent:
         scraped_data = None
         query = f"{year} {denom} {mint} {variety}".strip()
 
+        # Override default priority based on US Mint cookie state
+        if source_priority == "all":
+            if self._has_usmint_cookies():
+                print("    [Priority Override] Active session cookies found. Restricting run to USMint.gov only.")
+                source_priority = "usmint"
+            else:
+                print("    [Priority Override] No session cookies found. Skipping USMint.gov and searching fallbacks.")
+
         # 1. US Mint — ONLY attempt if valid session cookies exist in Firestore
         if category == "coin" and source_priority in ["all", "usmint"]:
             if self._has_usmint_cookies():
