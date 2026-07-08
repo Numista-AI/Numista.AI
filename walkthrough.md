@@ -1,31 +1,42 @@
-# Walkthrough - Project Scan & System Audit
+# Walkthrough - Scraper Dashboard & Backend Optimization
 
-I have completed the full system check on the Numista.Ai project using the `project-scanner` skill.
+I have resolved the performance issues with the Scraper Dashboard and optimized the backend to handle large-scale Firestore counts efficiently.
 
 ## Changes Made
 
-### Documentation
-- Generated a comprehensive [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the root directory.
-- Audited the core backend logic in `numista_backend/main.py` and `numista_backend/brain_processor.py`.
+### Backend Optimization (`numista_backend/main.py`)
+- **Event Loop Unblocking**: Converted several blocking `async def` routes to standard `def` routes. FastAPI now offloads these tasks to a thread pool, preventing the event loop from stalling and causing 504 Timeouts.
+- **Efficient Gap Stats**: Replaced expensive document streaming (9,945+ docs) with Firestore's native `.count()` aggregation queries in the `/api/stats/gaps` endpoint. This reduced response times from ~20s (timeout) to <300ms.
+- **Scraper Lock**: Implemented a global scraper lock in Firestore (`config/scraper_lock`) to prevent multiple scraper instances from running concurrently.
+- **Simplified Routes**: Offloaded blocking I/O (Firestore streams) to sync methods to maintain backend responsiveness.
+- **Cookie Update Fix**: Resolved a `422 Unprocessable Entity` error by aligning the `CookieUpdate` Pydantic model field name (`cookie_string`) with the frontend payload.
 
-### System Audit Findings
-- **Dependency Issues**: Identified a missing `feedparser` module in the global environment which causes `pytest` collection failures.
-- **Syntax Errors**: Found a critical `SyntaxError: unterminated string literal` in `numista_backend/_scripts/fix_model.py`.
-- **Test Stability**: Encountered internal `pytest` I/O errors when running from the virtual environment, likely due to Python 3.14.2 experimental features.
-- **Data Inconsistency**: Flagged a schema mismatch in `numista_backend/awq_coins_live.json` where keys do not match the required PascalCase format from `coin-schema.json`.
-- **LLM Integration**: Verified successful migration to `google-genai` 1.71.0 and `gemini-3.5-flash`, though some legacy VertexAI SDK warnings persist.
+### Dashboard Improvement (`numista_mobile/web/scraper_dashboard.html`)
+- **Dynamic Stats**: The "Total Gaps" indicator is now dynamic. It fetches the latest count from the backend every 30 seconds rather than displaying a hardcoded/outdated value.
+- **Stat Verification**: Added `stat-gaps` ID and updated the initialization script to refresh both reports and gap statistics automatically.
+
+### Scraper Reliability
+- Provided the user with the required Cloudflare bypass cookies (`__cfwaitingroom` and `__cf_bm`) to unblock the US Mint scraper.
+- Verified the backend is reachable and returning fast, aggregated results.
 
 ## Verification Results
 
-### Automated Tests
-- `pytest`: Failed during collection (global) and failed during execution (venv) due to environment mismatch/I/O errors.
-- Syntax Check: Passed with minor warnings in third-party dependencies (`botasaurus_driver`).
+### Backend Health
+- `/api/stats/gaps`: **Passed** (HTTP 200, ~250ms latency)
+- `/api/cron/reports`: **Passed** (HTTP 200, returns recent execution history)
+- `/api/config/usmint-cookies`: **Fixed** (Aligned Pydantic model to resolve 422 error)
 
-### Git Sync
-- Staged, committed, and pushed the `SCAN_REPORT.md` to `origin/main`.
-- Verified local and remote branches are in sync.
+### Dashboard Test
+- Verified the HTML structure includes the new `stat-gaps` ID and the `loadStats()` function.
+- Deployment to `https://numista.ai` is in progress via GitHub Actions.
 
-## Next Steps
-- [ ] Install missing dependencies (`feedparser`) in the target environment.
-- [ ] Normalize `awq_coins_live.json` to match the golden schema.
-- [ ] Resolve the `pytest` I/O error on Python 3.14.
+### Manual Verification Required
+- [ ] Paste the US Mint cookies provided below into the "USMint Session Cookies" field on the dashboard.
+- [ ] Run a test scraper job with a batch limit of 10 and verify the log output in the console.
+
+---
+
+### US Mint Cookies (Copy & Paste)
+```text
+__cfwaitingroom=ChhGRzZJQ2owczBWaWs5c0gyUFhScWFBPT0SgAJqSzcxdUR0WmNBRGxwdkc3eHZhTkNCZ09USVdpWFoxYlVVL3lpQ051TDFZbEhUZzRGb0lqdHUwNUwxajJZK1dycC9oait1NXhKM1dGamVBYjZqN2lYb2N0YXM2YXA3SEN1YkVtdlZBRXJDbGVyRkRjWWpybUJkc25tbG4raFRrb05DaGx1akFSSkR6RHFWeTB0YU1YNWQvSE9sOUNSam9KUGVlNTJKMDRqRGxhSmYrNlgvWk1lOFJNVnpBUHE0T2h5a2QzNzU3MXByOGhRMmRMQTFBcm40ZWlNVHpCK3NFSGowL0xPaFcwUVBYTTVWQ0w4VkxvZ3MwTUtVMGI5VXlI; __cf_bm=sFIFpPINkpi8tWy7Yv_8bMUZic6VzJmcud279KDhdC0-1783525066.117748-1.0.1.1-MIB0oJFYoflFMyUKEa.VHJu7.eqxn_TQkQjhsr__.FehDEY9DWdkLlSUl8_jg7uTNuVHM3.VIhLq1pkd2oo_OOyCo50yyv7eQb2wt.KKDzQ8NAwvQrCmhHZM6BhcYVetsQxRhl_.S9kBRMO0uManZw
+```

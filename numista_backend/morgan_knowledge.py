@@ -122,6 +122,9 @@ def score_coin(coin: dict, keywords: list[str]) -> int:
         str(coin.get("series", "")),
         str(coin.get("year", "")),
         str(coin.get("denomination", "")),
+        str(coin.get("variety", "")),
+        str(coin.get("note", "")),
+        str(coin.get("composition", "")),
         str(coin.get("design_obverse", "")),
         str(coin.get("design_reverse", "")),
         str(coin.get("design_description", "")),
@@ -134,8 +137,8 @@ def score_coin(coin: dict, keywords: list[str]) -> int:
             # Year matches are high-value signals
             if re.match(r'^\d{4}$', kw):
                 score += 5
-            # Series/denomination matches
-            elif kw in str(coin.get("series", "")).lower():
+            # Series/denomination/variety matches
+            elif kw in str(coin.get("series", "")).lower() or kw in str(coin.get("variety", "")).lower():
                 score += 4
             else:
                 score += 1
@@ -146,12 +149,15 @@ def score_coin(coin: dict, keywords: list[str]) -> int:
 def format_coin_for_context(coin: dict) -> str:
     """Format a single coin entry as a readable context block."""
     lines = [
-        f"COIN: {coin.get('series', 'Unknown Series')} — {coin.get('year', '')}",
+        f"COIN: {coin.get('series', 'Unknown Series')} — {coin.get('year', '')} {coin.get('variety', '')}",
+        f"  Category:      {coin.get('category', '')}",
         f"  Denomination:  {coin.get('denomination', '')}",
         f"  Composition:   {coin.get('composition', '')}",
         f"  Obverse:       {coin.get('design_obverse', '')}",
         f"  Reverse:       {coin.get('design_reverse', '')}",
     ]
+    if coin.get("note"):
+        lines.append(f"  Note:          {coin.get('note')}")
     if coin.get("design_description"):
         desc = coin["design_description"]
         # Truncate long descriptions

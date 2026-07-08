@@ -517,7 +517,10 @@ def main():
                             "variety": title,
                             "note": aka or f"Official U.S. Medal: {title}",
                             "series": series_val,
-                            "category": "medal"
+                            "category": "medal",
+                            "design_obverse": map_entry.get("design_obverse", ""),
+                            "design_reverse": map_entry.get("design_reverse", ""),
+                            "composition": map_entry.get("composition", "")
                         })
                     else:
                         baseline_rejected_count += 1
@@ -606,7 +609,10 @@ def main():
                         "variety": title,
                         "note": aka or f"Base baseline item: {title}",
                         "series": series_val if series_val else ("U.S. Banknotes" if category_val == "banknote" else "U.S. Coins"),
-                        "category": category_val
+                        "category": category_val,
+                        "design_obverse": map_entry.get("design_obverse", ""),
+                        "design_reverse": map_entry.get("design_reverse", ""),
+                        "composition": map_entry.get("composition", "")
                     })
                 else:
                     baseline_rejected_count += 1
@@ -779,7 +785,10 @@ def main():
             note TEXT,
             series TEXT,
             category TEXT,
-            doc_id TEXT UNIQUE
+            doc_id TEXT UNIQUE,
+            design_obverse TEXT,
+            design_reverse TEXT,
+            composition TEXT
         );
     """)
     db_cursor.execute("CREATE INDEX IF NOT EXISTS idx_ref_lookup ON definitive_reference (year, mint_mark, category);")
@@ -790,8 +799,8 @@ def main():
         try:
             db_cursor.execute("""
                 INSERT OR REPLACE INTO definitive_reference 
-                (year, denomination, mint_mark, variety, note, series, category, doc_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                (year, denomination, mint_mark, variety, note, series, category, doc_id, design_obverse, design_reverse, composition) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """, (
                 entry["year"],
                 entry["denomination"],
@@ -800,7 +809,10 @@ def main():
                 entry["note"],
                 entry["series"],
                 entry["category"],
-                entry["doc_id"]
+                entry["doc_id"],
+                entry.get("design_obverse", ""),
+                entry.get("design_reverse", ""),
+                entry.get("composition", "")
             ))
             inserted_sqlite += 1
         except Exception as e:
@@ -857,7 +869,10 @@ def main():
                 "note": entry["note"],
                 "series": entry["series"],
                 "category": entry["category"],
-                "coin_id": entry["doc_id"] # backward compatibility
+                "coin_id": entry["doc_id"], # backward compatibility
+                "design_obverse": entry.get("design_obverse", ""),
+                "design_reverse": entry.get("design_reverse", ""),
+                "composition": entry.get("composition", "")
             })
             
         try:

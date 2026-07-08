@@ -54,11 +54,11 @@ def create_data_store(ds_client) -> str:
         print("Creating data store (waiting for LRO)...")
         result = op.result(timeout=120)
         name = result.name
-        print(f"  ✅ Data store created: {name}")
+        print(f"  [OK] Data store created: {name}")
         return name
     except AlreadyExists:
         name = f"{parent}/dataStores/{DATA_STORE_ID}"
-        print(f"  ℹ️  Data store already exists: {name}")
+        print(f"  [INFO] Data store already exists: {name}")
         return name
 
 
@@ -78,9 +78,9 @@ def import_documents(doc_client, data_store_name: str):
     print(f"  Import LRO: {op.operation.name}")
     print("  Waiting for import (this takes 1-3 min)...")
     result = op.result(timeout=300)
-    print(f"  ✅ Import complete!")
+    print(f"  [OK] Import complete!")
     if hasattr(result, 'error_samples') and result.error_samples:
-        print(f"  ⚠️  {len(result.error_samples)} error samples (first few docs may have issues)")
+        print(f"  [WARN] {len(result.error_samples)} error samples (first few docs may have issues)")
     return result
 
 
@@ -105,11 +105,11 @@ def create_engine(eng_client, data_store_name: str) -> str:
         print("Creating search engine (waiting for LRO)...")
         result = op.result(timeout=180)
         name = result.name
-        print(f"  ✅ Engine created: {name}")
+        print(f"  [OK] Engine created: {name}")
         return name
     except AlreadyExists:
         name = f"{parent}/engines/{ENGINE_ID}"
-        print(f"  ℹ️  Engine already exists: {name}")
+        print(f"  [INFO] Engine already exists: {name}")
         return name
 
 
@@ -126,7 +126,7 @@ def save_ids(data_store_name: str, engine_name: str):
     }
     with open(IDS_FILE, "w") as f:
         json.dump(ids, f, indent=2)
-    print(f"\n✅ IDs saved to {IDS_FILE}")
+    print(f"\n[OK] IDs saved to {IDS_FILE}")
     print(json.dumps(ids, indent=2))
 
 

@@ -7437,8 +7437,8 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
         lock_doc = lock_ref.get()
         if lock_doc.exists:
             lock_data = lock_doc.to_dict()
-            # If running and started less than 1 hour ago, block.
-            if lock_data.get("running") and (time.time() - lock_data.get("started_at", 0) < 3600):
+            # If running and started less than 15 minutes ago, block.
+            if lock_data.get("running") and (time.time() - lock_data.get("started_at", 0) < 900):
                 print(f"⚠ [Cron Scraper] Rejected: Job already running (started {int(time.time() - lock_data.get('started_at'))}s ago)")
                 return {"status": "error", "message": "Scraper is already running in another process."}
     except Exception as e:
@@ -7592,6 +7592,21 @@ async def update_usmint_cookies(data: CookieUpdate):
             "updated_at": firestore.SERVER_TIMESTAMP
         }, merge=True)
         return {"status": "success", "message": "USMint cookies updated successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/config/release-lock")
+def release_scraper_lock():
+    """
+    Force release the scraper lock in Firestore.
+    """
+    try:
+        db.collection("config").document("scraper_lock").set({
+            "running": False,
+            "started_at": 0
+        })
+        return {"status": "success", "message": "Scraper lock released successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
