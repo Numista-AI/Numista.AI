@@ -925,6 +925,8 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               programSeries: report['program_series']?.toString() ?? '',
               variety: report['variety']?.toString() ?? '',
               currentGrade: report['grade']?.toString() ?? '',
+              isSlabbed: (report['grading_service']?.toString() ?? '').isNotEmpty ||
+                  (report['holder_type']?.toString() ?? '').toLowerCase().contains('slab'),
             ),
           if (report['report'] != null) ...[
             const SizedBox(height: 16),
@@ -1451,6 +1453,7 @@ class _MicroscopePricingAdvisor extends StatefulWidget {
   final String programSeries;
   final String variety;
   final String currentGrade;
+  final bool isSlabbed;
 
   const _MicroscopePricingAdvisor({
     required this.year,
@@ -1459,6 +1462,7 @@ class _MicroscopePricingAdvisor extends StatefulWidget {
     required this.programSeries,
     required this.variety,
     required this.currentGrade,
+    this.isSlabbed = false,
   });
 
   @override
@@ -1691,6 +1695,29 @@ class _MicroscopePricingAdvisorState extends State<_MicroscopePricingAdvisor> {
             },
           ),
         ),
+        if (widget.isSlabbed) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFC8E6C9)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Color(0xFF2E7D32), size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Verification Alert: Check physical holder for a green or gold CAC sticker. It adds 20%-50%+ premium value!',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

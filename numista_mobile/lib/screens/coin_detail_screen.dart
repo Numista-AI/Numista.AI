@@ -620,6 +620,42 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     }
   }
 
+  Future<void> _updateCac(bool value) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .doc(_coin.id)
+          .update({'hasCac': value});
+      
+      // Trigger a refresh call on the backend in the background
+      http.post(
+        Uri.parse('$kApiBaseUrl/api/greysheet/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': AuthService.userEmail,
+          'coin_id': _coin.id,
+        }),
+      );
+      
+      final updated = CoinModel.fromMap({
+        ..._coin.toFirestore(),
+        'hasCac': value,
+        'timestamp': _coin.timestamp,
+      }, _coin.id);
+      if (!mounted) return;
+      setState(() {
+        _coin = updated;
+      });
+      widget.onEdited?.call();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update CAC sticker status: $e'), backgroundColor: _kRed),
+        );
+      }
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // BUILD
   // ─────────────────────────────────────────────────────────────────────────
@@ -696,7 +732,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                 isInspectorMode: _isInspectorMode,
                 onInspectField: _showDiscrepancyDialog,
               ),
-              _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices),
+              _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices, onCacToggled: _updateCac),
               _ProvenanceTab(coin: _coin),
               _AiInsightsTab(
                 loading: _aiLoading,
@@ -1401,7 +1437,8 @@ class _DetailsTab extends StatelessWidget {
 class _FinancialsTab extends StatelessWidget {
   final CoinModel coin;
   final Map<String, double> spotPrices;
-  const _FinancialsTab({required this.coin, required this.spotPrices});
+  final Function(bool) onCacToggled;
+  const _FinancialsTab({required this.coin, required this.spotPrices, required this.onCacToggled});
 
   @override
   Widget build(BuildContext context) {
@@ -1499,6 +1536,52 @@ class _FinancialsTab extends StatelessWidget {
           if (spotPrices.isNotEmpty) ...[
             const SizedBox(height: 16),
             _SpotPriceRow(spotPrices: spotPrices),
+          ],
+          
+          if (coin.gradingService.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'CAC Verification Check',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Bid/Retail values).',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _kSubtext,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Switch.adaptive(
+                    value: coin.hasCac,
+                    activeColor: const Color(0xFF10B981), // CAC Green
+                    onChanged: onCacToggled,
+                  ),
+                ],
+              ),
+            ),
           ],
           
           if (coin.greysheetGsid.isNotEmpty)

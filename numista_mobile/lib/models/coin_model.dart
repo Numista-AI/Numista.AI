@@ -39,6 +39,7 @@ class CoinModel {
   final double greysheetAsk;
   final double cpgRetail;
   final DateTime? priceLastUpdated;
+  final bool hasCac;
 
   // Image QC / Verification status
   final String imageVerificationStatus; // 'unverified', 'grok_verified', 'human_verified', 'flagged'
@@ -99,6 +100,7 @@ class CoinModel {
     this.greysheetAsk = 0.0,
     this.cpgRetail = 0.0,
     this.priceLastUpdated,
+    this.hasCac = false,
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -171,6 +173,7 @@ class CoinModel {
       priceLastUpdated: data['priceLastUpdated'] is Timestamp 
           ? (data['priceLastUpdated'] as Timestamp).toDate() 
           : null,
+      hasCac: data['hasCac'] as bool? ?? false,
     );
   }
 
@@ -209,6 +212,7 @@ class CoinModel {
       'greysheetAsk': greysheetAsk,
       'cpgRetail': cpgRetail,
       'priceLastUpdated': priceLastUpdated != null ? Timestamp.fromDate(priceLastUpdated!) : null,
+      'hasCac': hasCac,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };

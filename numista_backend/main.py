@@ -7811,14 +7811,24 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         grade_match = re.search(r'\d+', condition)
         target_grade = int(grade_match.group()) if grade_match else None
         
+        # Check if CAC sticker is enabled on the coin
+        has_cac = bool(coin_data.get("hasCac", False))
+
         matched_price = None
         if target_grade:
-            # First look for a non-CAC match
-            for p in prices:
-                if p.get("Grade") == target_grade and not p.get("IsCac"):
-                    matched_price = p
-                    break
-            # Fallback to any match
+            if has_cac:
+                # First look specifically for a CAC match
+                for p in prices:
+                    if p.get("Grade") == target_grade and p.get("IsCac"):
+                        matched_price = p
+                        break
+            else:
+                # First look for a non-CAC match
+                for p in prices:
+                    if p.get("Grade") == target_grade and not p.get("IsCac"):
+                        matched_price = p
+                        break
+            # Fallback to any match for that grade
             if not matched_price:
                 for p in prices:
                     if p.get("Grade") == target_grade:
@@ -7934,6 +7944,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         if greysheet_bid == 0.0:
             greysheet_bid = cpg_retail * 0.80
         greysheet_ask = greysheet_bid * 1.15
+        
+        # If the coin has CAC but the matched record was NOT CAC (fallback), apply manual +20% premium
+        if has_cac and not bool(matched_price.get("IsCac", False)):
+            cpg_retail *= 1.20
+            greysheet_bid *= 1.20
+            greysheet_ask *= 1.20
+            print(f"[Greysheet] Applying manual +20% CAC premium fallback (IsCac row missing)")
         
         if melt_val > 0.0 and melt_val > cpg_retail:
             cpg_retail = melt_val
@@ -8056,3 +8073,76 @@ async def refresh_arbitrage_deals():
     global DEALS_DB
     DEALS_DB = new_deals
     return {"status": "success", "count": len(DEALS_DB)}
+
+# ─── DAILY PORTFOLIO SNAPSHOTS ────────────────────────────────────────────────
+
+class DailySnapshotRequest(BaseModel):
+    user_id: str
+
+@app.post("/api/portfolio/snapshot/daily")
+async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
+    try:
+        from datetime import datetime
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        
+        # 1. Fetch all coins for the user
+        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        
+        total_value = 0.0
+        gold_val = 0.0
+        silver_val = 0.0
+        type_val = 0.0
+        
+        for doc in coins_ref:
+            coin = doc.to_dict()
+            qty = 1
+            try:
+                qty = int(coin.get("Quantity") or 1)
+            except Exception:
+                pass
+                
+            # Default to Bid value as standard valuation
+            val = float(coin.get("greysheetBid") or 0.0)
+            if val == 0.0:
+                # Fallback to AI Value
+                try:
+                    cleaned = str(coin.get("AI Estimated Value") or "0").replace("$", "").replace(",", "").strip()
+                    val = float(cleaned)
+                except Exception:
+                    val = 0.0
+                    
+            item_val = val * qty
+            total_value += item_val
+            
+            mc = str(coin.get("Metal Content") or "").lower()
+            if "gold" in mc:
+                gold_val += item_val
+            elif "silver" in mc:
+                silver_val += item_val
+            else:
+                type_val += item_val
+                
+        # 2. Write snapshot to portfolio_history
+        snapshot = {
+            "date": today_str,
+            "totalValue": round(total_value, 2),
+            "categories": {
+                "gold": round(gold_val, 2),
+                "silver": round(silver_val, 2),
+                "typeCoins": round(type_val, 2)
+            },
+            "timestamp": firestore.SERVER_TIMESTAMP
+        }
+        
+        db.collection("users").document(req.user_id).collection("portfolio_history").document(today_str).set(snapshot)
+        
+        response_snapshot = dict(snapshot)
+        response_snapshot["timestamp"] = datetime.utcnow().isoformat()
+        
+        return {
+            "status": "success",
+            "snapshot": response_snapshot
+        }
+    except Exception as e:
+        print(f"[Snapshot] Error creating daily snapshot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

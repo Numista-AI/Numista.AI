@@ -57,3 +57,15 @@ def test_deals_endpoints():
     refresh_data = response.json()
     assert refresh_data["status"] == "success"
     assert refresh_data["count"] > 0
+
+def test_daily_snapshot_endpoint():
+    # Test POST /api/portfolio/snapshot/daily
+    # We will trigger snapshot for a test user
+    payload = {"user_id": "test_user_snapshot@numista.ai"}
+    response = client.post("/api/portfolio/snapshot/daily", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "snapshot" in data
+    assert "totalValue" in data["snapshot"]
+    assert "categories" in data["snapshot"]

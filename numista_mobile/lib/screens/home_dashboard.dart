@@ -1452,7 +1452,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Arbitrage Deal Spotter',
+                        'Wishlist Deal Spotter',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1461,7 +1461,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Find coins listed below Greysheet Wholesale Bid',
+                        'Find wishlist coins on eBay near or below Bid price',
                         style: TextStyle(fontSize: 12, color: descColor),
                       ),
                     ],
