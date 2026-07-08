@@ -724,8 +724,7 @@ def scrape_usmint(request: Request, data):
 
 # ─── Wikimedia Commons Scraper ────────────────────────────────────────────────
 
-@request
-def scrape_wikimedia(request: Request, data):
+def scrape_wikimedia(data):
     """
     Search Wikimedia Commons for public domain coin images.
     `data` contains a dict with keys: 'query' (e.g. '1943 Lincoln Cent')
@@ -794,7 +793,7 @@ def scrape_wikimedia(request: Request, data):
         )
 
         try:
-            resp = request.get(api_url, headers={"User-Agent": UA})
+            resp = requests.get(api_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
             if resp.status_code != 200:
                 continue
 
@@ -817,7 +816,7 @@ def scrape_wikimedia(request: Request, data):
                     f"{WIKI_API}?action=query&titles={urllib.parse.quote(title)}"
                     f"&prop=imageinfo&iiprop=url&format=json"
                 )
-                info_resp = request.get(info_url, headers={"User-Agent": UA})
+                info_resp = requests.get(info_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
                 if info_resp.status_code == 200:
                     info_data = info_resp.json()
                     pages = info_data.get("query", {}).get("pages", {})
