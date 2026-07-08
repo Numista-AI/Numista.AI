@@ -8206,7 +8206,7 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
                 
             gsid = service.resolve_gsid_hybrid(
                 coin_data=coin_data,
-                genai_client=genai_client,
+                genai_client=None,  # Bypass Gemini AI during batch runs to prevent rate limits/timeouts
                 primary_model=PRIMARY_MODEL
             )
             if gsid:
