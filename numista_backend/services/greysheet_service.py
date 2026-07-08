@@ -25,6 +25,8 @@ class GreysheetService:
         self._api_token = None
         self._headers = None
         self._leaf_nodes_cache = None  # In-memory cache of leaf nodes
+        self._collectibles_cache = {}  # Cache of node_id -> collectibles list
+        self._pricing_cache = {}       # Cache of gsid -> pricing data list
         
     def _lazy_init(self):
         """Lazy load credentials and setup headers."""
@@ -80,13 +82,21 @@ class GreysheetService:
 
     def get_collectible_by_node(self, node_id: int) -> List[Dict[str, Any]]:
         """Fetch all collectibles under a leaf node."""
+        if node_id in self._collectibles_cache:
+            return self._collectibles_cache[node_id]
         res = self._get("GetCollectibleByNodeRequest", {"NodeId": node_id})
-        return res.get("Data", []) if res else []
+        data = res.get("Data", []) if res else []
+        self._collectibles_cache[node_id] = data
+        return data
 
     def get_pricing(self, gsid: int) -> List[Dict[str, Any]]:
         """Fetch pricing table for a specific GSID."""
+        if gsid in self._pricing_cache:
+            return self._pricing_cache[gsid]
         res = self._get("GetPricingRequest", {"Gsid": gsid})
-        return res.get("Data", []) if res else []
+        data = res.get("Data", []) if res else []
+        self._pricing_cache[gsid] = data
+        return data
 
     def get_collectible(self, gsid: int) -> Optional[Dict[str, Any]]:
         """Fetch a single collectible's metadata by GSID."""
@@ -156,6 +166,12 @@ class GreysheetService:
         item_type = str(coin_data.get("item_type") or coin_data.get("Item Type") or coin_data.get("Item_Type") or "").lower()
         if item_type in ["paper_currency", "medal", "supply"] or "medal" in item_type or "paper" in item_type or "supply" in item_type:
             logger.info(f"[Greysheet] Ingestion guardrail triggered: item_type='{item_type}' is non-coin. Bypassing Greysheet resolution.")
+            return None
+
+        # Country Guardrail: Only resolve U.S. coins (or unknown/empty countries)
+        country = str(coin_data.get("Country") or coin_data.get("country") or "").lower().strip()
+        if country and country not in ["us", "usa", "united states", "unknown"]:
+            logger.info(f"[Greysheet] Country guardrail triggered: country='{country}' is non-U.S. Bypassing Greysheet resolution.")
             return None
 
         # Extract coin attributes

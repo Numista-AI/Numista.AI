@@ -8182,14 +8182,21 @@ class BatchActionRequest(BaseModel):
 async def batch_resolve_greysheet_coins(req: BatchActionRequest):
     """
     Resolves GSIDs for all coins in a user's inventory that do not have one yet.
+    Uses Firestore write batches in chunks of 500 for high efficiency.
     """
     try:
         from services.greysheet_service import GreysheetService
+        import time
+        start_time = time.time()
+        
         service = GreysheetService(db=db)
         
         coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
         resolved_count = 0
         total_count = 0
+        
+        batch = db.batch()
+        batch_count = 0
         
         for doc in coins_ref:
             total_count += 1
@@ -8203,18 +8210,29 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
                 primary_model=PRIMARY_MODEL
             )
             if gsid:
-                db.collection("users").document(req.user_id).collection("coins").document(doc.id).update({
+                doc_ref = db.collection("users").document(req.user_id).collection("coins").document(doc.id)
+                batch.update(doc_ref, {
                     "greysheetGsid": str(gsid),
                     "greysheetBid": 0.0,
                     "greysheetAsk": 0.0,
                     "cpgRetail": 0.0,
                     "priceLastUpdated": None
                 })
+                batch_count += 1
                 resolved_count += 1
                 
+                if batch_count >= 500:
+                    batch.commit()
+                    batch = db.batch()
+                    batch_count = 0
+                    
+        if batch_count > 0:
+            batch.commit()
+            
+        elapsed = time.time() - start_time
         return {
             "status": "success",
-            "message": f"Processed {total_count} coins: resolved {resolved_count} new GSIDs."
+            "message": f"Processed {total_count} coins in {elapsed:.2f}s: resolved {resolved_count} new GSIDs."
         }
     except Exception as e:
         print(f"[Greysheet] Error in batch resolve: {e}")
@@ -8224,32 +8242,119 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
 async def batch_refresh_greysheet_prices(req: BatchActionRequest):
     """
     Refreshes pricing for all coins in a user's inventory that have a GSID.
+    Groups coins by unique GSID to minimize network calls, and uses Firestore write batches.
     """
     try:
         from services.greysheet_service import GreysheetService
+        from collections import defaultdict
+        import time
+        start_time = time.time()
+        
         service = GreysheetService(db=db)
         
+        # 1. Fetch all coins and group by unique GSID
         coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
-        refreshed_count = 0
-        total_count = 0
+        gsid_to_coins = defaultdict(list)
+        total_mapped = 0
         
         for doc in coins_ref:
             coin_data = doc.to_dict()
             gsid_str = coin_data.get("greysheetGsid")
-            if not gsid_str:
+            if gsid_str:
+                gsid_to_coins[int(gsid_str)].append((doc.id, coin_data))
+                total_mapped += 1
+                
+        # 2. Iterate by GSID, fetch pricing once, and batch update coins
+        batch = db.batch()
+        batch_count = 0
+        refreshed_count = 0
+        
+        # Clean helper for value parsing
+        def clean_val(val):
+            if not val:
+                return 0.0
+            try:
+                return float(str(val).replace(",", "").strip())
+            except Exception:
+                return 0.0
+                
+        for gsid, coin_list in gsid_to_coins.items():
+            prices = service.get_pricing(gsid)
+            if not prices:
                 continue
                 
-            total_count += 1
-            try:
-                # We can reuse the refresh endpoint logic by calling a helper
-                await refresh_greysheet_coin_price(GreysheetResolveRequest(user_id=req.user_id, coin_id=doc.id))
-                refreshed_count += 1
-            except Exception as ce:
-                print(f"[Greysheet] Failed to refresh coin {doc.id}: {ce}")
+            pricing_rows = []
+            for collectible in prices:
+                pricing_rows.extend(collectible.get("PricingData", []))
                 
+            if not pricing_rows:
+                continue
+                
+            for coin_id, coin_data in coin_list:
+                condition = coin_data.get("Condition") or coin_data.get("condition") or "Ungraded"
+                
+                # Grade matching
+                import re
+                grade_match = re.search(r'\d+', condition)
+                target_grade = int(grade_match.group()) if grade_match else None
+                has_cac = bool(coin_data.get("hasCac", False))
+                
+                matched_price = None
+                if target_grade:
+                    if has_cac:
+                        for p in pricing_rows:
+                            if p.get("Grade") == target_grade and p.get("IsCac"):
+                                matched_price = p
+                                break
+                    else:
+                        for p in pricing_rows:
+                            if p.get("Grade") == target_grade and not p.get("IsCac"):
+                                matched_price = p
+                                break
+                    if not matched_price:
+                        for p in pricing_rows:
+                            if p.get("Grade") == target_grade:
+                                matched_price = p
+                                break
+                if not matched_price and pricing_rows:
+                    matched_price = pricing_rows[0]
+                    
+                if not matched_price:
+                    continue
+                    
+                cpg_retail = clean_val(matched_price.get("CpgVal"))
+                greysheet_bid = clean_val(matched_price.get("GreyVal"))
+                if greysheet_bid == 0.0:
+                    greysheet_bid = cpg_retail * 0.80
+                greysheet_ask = greysheet_bid * 1.15
+                
+                if has_cac and not bool(matched_price.get("IsCac", False)):
+                    cpg_retail *= 1.20
+                    greysheet_bid *= 1.20
+                    greysheet_ask *= 1.20
+                    
+                doc_ref = db.collection("users").document(req.user_id).collection("coins").document(coin_id)
+                batch.update(doc_ref, {
+                    "greysheetBid": greysheet_bid,
+                    "greysheetAsk": greysheet_ask,
+                    "cpgRetail": cpg_retail,
+                    "priceLastUpdated": firestore.SERVER_TIMESTAMP
+                })
+                batch_count += 1
+                refreshed_count += 1
+                
+                if batch_count >= 500:
+                    batch.commit()
+                    batch = db.batch()
+                    batch_count = 0
+                    
+        if batch_count > 0:
+            batch.commit()
+            
+        elapsed = time.time() - start_time
         return {
             "status": "success",
-            "message": f"Processed {total_count} mapped coins: refreshed pricing for {refreshed_count} coins."
+            "message": f"Processed {total_mapped} mapped coins in {elapsed:.2f}s: refreshed pricing for {refreshed_count} coins."
         }
     except Exception as e:
         print(f"[Greysheet] Error in batch refresh: {e}")
