@@ -654,8 +654,7 @@ def scrape_usmint(request: Request, data):
 
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        _proxy = get_scrape_proxy()
-        resp = request.get(search_url, headers=headers, proxy=_proxy.get("http"))
+        resp = request.get(search_url, headers=headers, proxies=get_scrape_proxy())
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None
@@ -674,7 +673,7 @@ def scrape_usmint(request: Request, data):
         if not article_links:
             # Fallback catalog search
             catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
-            cat_resp = request.get(catalog_url, proxy=get_scrape_proxy().get("http"))
+            cat_resp = request.get(catalog_url, proxies=get_scrape_proxy())
             cat_soup = soupify(cat_resp)
             for a in cat_soup.find_all("a", href=True):
                 href = a["href"]
@@ -688,7 +687,7 @@ def scrape_usmint(request: Request, data):
             
         # Visit first page
         target_url = article_links[0]
-        art_resp = request.get(target_url, headers=headers, proxy=get_scrape_proxy().get("http"))
+        art_resp = request.get(target_url, headers=headers, proxies=get_scrape_proxy())
         art_soup = soupify(art_resp)
         
         paragraphs = []
