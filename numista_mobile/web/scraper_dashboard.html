@@ -417,7 +417,7 @@
       <div>
         <div class="stats-summary">
           <div class="stat-card">
-            <div class="stat-val" style="color: var(--accent);">11,904</div>
+            <div class="stat-val" id="stat-gaps" style="color: var(--accent);">--</div>
             <div class="stat-label">Total Gaps</div>
           </div>
           <div class="stat-card">
@@ -482,6 +482,17 @@
       html = '<p>' + html + '</p>';
       
       return html;
+    }
+
+    async function loadStats() {
+      try {
+        const r = await fetch(`${API_BASE}/api/stats/gaps`);
+        if (!r.ok) throw new Error('Failed to fetch gap stats');
+        const data = await r.json();
+        document.getElementById('stat-gaps').textContent = (data.total_gaps || 0).toLocaleString();
+      } catch (e) {
+        logToConsole(`Error loading gap stats: ${e.message}`, 'error');
+      }
     }
 
     async function loadReports() {
@@ -566,8 +577,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           Execute Run
         `;
-        // Reload reports
-        setTimeout(loadReports, 2000);
+        // Reload reports and stats
+        setTimeout(() => {
+          loadReports();
+          loadStats();
+        }, 2000);
       }
     });
 
@@ -605,8 +619,13 @@
 
     // Initial load
     loadReports();
+    loadStats();
     // Refresh every 30s
-    setInterval(loadReports, 30000);
+    setInterval(() => {
+      loadReports();
+      loadStats();
+    }, 30000);
+
   </script>
 </body>
 </html>
