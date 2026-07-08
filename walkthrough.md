@@ -18,6 +18,8 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
 ### Scraper Reliability
 - Provided the user with the required Cloudflare bypass cookies (`__cfwaitingroom` and `__cf_bm`) to unblock the US Mint scraper.
 - Verified the backend is reachable and returning fast, aggregated results.
+- **Wikimedia Scraper Fix**: Migrated `scrape_wikimedia` from Botasaurus `@request` to standard `requests.get` to bypass Cloud Run environment compatibility issues (which caused Botasaurus calls to fail with `Request failed` for every query, slowing down execution to ~80s per coin).
+
 
 ## Verification Results
 
