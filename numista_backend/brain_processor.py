@@ -72,6 +72,19 @@ def absorb_document(file_path: Path, user_intent: str = None):
         # 2. Store in Knowledge Base (Firestore)
         # Use filename as part of ID for easier tracking
         doc_id = f"{file_path.stem}_{int(datetime.now().timestamp())}"
+        
+        # Clean up previous "Failed" entries for this same filename if we just succeeded
+        try:
+            failed_docs = db.collection('brain_knowledge_base').where('filename', '==', file_path.name).stream()
+            for fd in failed_docs:
+                fdata = fd.to_dict()
+                # If the previous one was a failure, delete it to keep the dashboard clean
+                if "Failed to analyze" in fdata.get('summary', '') or "Analysis failed" in fdata.get('summary', ''):
+                    logger.info(f"   🗑 Cleaning up previous failed record: {fd.id}")
+                    db.collection('brain_knowledge_base').document(fd.id).delete()
+        except Exception as clean_err:
+            logger.warning(f"   ⚠ Could not clean up old failure records: {clean_err}")
+
         db.collection('brain_knowledge_base').document(doc_id).set({
             'filename': file_path.name,
             'type': doc_type,
