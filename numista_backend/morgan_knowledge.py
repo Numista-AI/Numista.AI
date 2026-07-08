@@ -266,6 +266,19 @@ def get_coin_context_vertex(query: str, max_results: int = MAX_RESULTS) -> Optio
                 f"  Metal:         {sd.get('metal', '')}",
                 f"  Mint marks:    {sd.get('mint_marks', '')}",
             ]
+            
+            content_str = sd.get("content", "")
+            obverse_match = re.search(r"Obverse:\s*(.*?)(?=\s*\|\s*(?:Reverse:|Base baseline|$))", content_str)
+            reverse_match = re.search(r"Reverse:\s*(.*?)(?=\s*\|\s*(?:Base baseline|$))", content_str)
+            
+            obverse_text = obverse_match.group(1).strip() if obverse_match else ""
+            reverse_text = reverse_match.group(1).strip() if reverse_match else ""
+            
+            if obverse_text:
+                entry_lines.append(f"  Obverse:       {obverse_text}")
+            if reverse_text:
+                entry_lines.append(f"  Reverse:       {reverse_text}")
+                
             if sd.get('designer'):
                 entry_lines.append(f"  Designer:      {sd.get('designer')}")
             if sd.get('notes'):
