@@ -1,37 +1,30 @@
-# Walkthrough — Model Standardization & Policy Enforcement
+# Walkthrough - Project Scan & System Audit
 
-I have standardized the entire codebase to use **`gemini-3.5-flash`** and implemented a mandatory policy to prevent future model deprecation issues.
+I have completed the full system check on the Numista.Ai project using the `project-scanner` skill.
 
 ## Changes Made
 
-### 1. Model Standardization
-- Reverted the manual change to `gemini-1.5-flash` (which is scheduled for shutdown in Oct 2026).
-- Standardized over **200 files** (core backend and 100+ scripts) to use `gemini-3.5-flash`.
-- Verified that `gemini-3.5-flash` is the current stable recommended model with no announced shutdown date.
+### Documentation
+- Generated a comprehensive [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the root directory.
+- Audited the core backend logic in `numista_backend/main.py` and `numista_backend/brain_processor.py`.
 
-### 2. Mandatory Policy Enforcement ("Hard Coding")
-- Added a **MANDATORY** comment in all files where the model ID is defined:
-  ```python
-  # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: 
-  # C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
-  MODEL = "gemini-3.5-flash"
-  ```
-- This ensures any future AI (or human) developer sees the path to the ground-truth deprecation documentation before making changes.
-
-### 3. Agent Rules Update
-- Updated [AGENTS.md](file:///c:/Users/ericd/Documents/MyVertexProject/.agents/AGENTS.md) with **Rule 5 — Mandatory Gemini Model Policy**.
-- This rule explicitly forbids downgrading to models with earlier shutdown dates and requires reading the PDF schedule first.
+### System Audit Findings
+- **Dependency Issues**: Identified a missing `feedparser` module in the global environment which causes `pytest` collection failures.
+- **Test Stability**: Encountered internal `pytest` I/O errors when running from the virtual environment, likely due to Python 3.14.2 experimental features.
+- **Data Inconsistency**: Flagged a schema mismatch in `numista_backend/awq_coins_live.json` where keys do not match the required PascalCase format from `coin-schema.json`.
+- **LLM Integration**: Verified successful migration to `google-genai` 1.71.0 and `gemini-3.5-flash`, though some legacy VertexAI SDK warnings persist.
 
 ## Verification Results
 
-### Automated Verification
-- Ran a standardization script across `numista_backend/` and `_scripts/`.
-- Confirmed files are pointing to `gemini-3.5-flash`.
-- Verified the presence of the mandatory warning comments.
+### Automated Tests
+- `pytest`: Failed during collection (global) and failed during execution (venv) due to environment mismatch/I/O errors.
+- Syntax Check: Passed with minor warnings in third-party dependencies (`botasaurus_driver`).
 
-### Manual Verification Required
-- [ ] **Reauthentication**: The system currently requires `gcloud auth application-default login` to be run manually by the user to verify the `global` model connectivity.
+### Git Sync
+- Staged, committed, and pushed the `SCAN_REPORT.md` to `origin/main`.
+- Verified local and remote branches are in sync.
 
-## Git Status
-- Changes staged, committed, and pushed to `origin/main`.
-- Commit: `6784b86` ("feat(llm): standardize on gemini-3.5-flash and implement mandatory model policy")
+## Next Steps
+- [ ] Install missing dependencies (`feedparser`) in the target environment.
+- [ ] Normalize `awq_coins_live.json` to match the golden schema.
+- [ ] Resolve the `pytest` I/O error on Python 3.14.
