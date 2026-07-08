@@ -152,6 +152,47 @@ class GreysheetService:
         logger.info(f"[Greysheet] Found {len(leaf_nodes)} U.S. Coins leaf nodes.")
         return leaf_nodes
 
+    # ── Denomination normaliser ───────────────────────────────────────────────
+    # Maps how the app stores denominations → Greysheet catalog naming.
+    # Greysheet uses "$5 Liberty Gold", "$10 Indian Gold", etc.
+    # Our DB stores "Five Dollars (Half Eagle)", "Ten Dollars (Eagle)", etc.
+    # Without this map the fuzzy matcher picks up the wrong keyword (e.g. "half")
+    # from "Half Eagle" and matches Half Cents/Dimes/Dollars instead of gold coins.
+    _DENOM_NORM_MAP: List[tuple] = [
+        # Word-form gold denominations (must be checked BEFORE generic keyword fallback)
+        ("double eagle",    "$20 gold"),
+        ("twenty dollar",   "$20 gold"),
+        ("twenty dollars",  "$20 gold"),
+        ("ten dollar",      "$10 gold"),
+        ("ten dollars",     "$10 gold"),
+        ("eagle",           "$10 gold"),   # plain "eagle" = $10 gold eagle
+        ("five dollar",     "$5 gold"),
+        ("five dollars",    "$5 gold"),
+        ("half eagle",      "$5 gold"),    # half eagle = $5 face value gold
+        ("quarter eagle",   "$2.50 gold"),
+        ("two and half",    "$2.50 gold"),
+        ("three dollar",    "$3 gold"),
+        ("three dollars",   "$3 gold"),
+        ("four dollar",     "$4 gold"),
+        ("stella",          "$4 gold"),
+        ("one dollar gold", "$1 gold"),
+    ]
+
+    @staticmethod
+    def _normalise_denomination(denomination: str) -> List[str]:
+        """
+        Returns a list of Greysheet-compatible search terms for a given stored
+        denomination string.  Always returns the original denomination as well so
+        exact or partial matches still work for standard coins.
+        """
+        terms = [denomination.lower()]
+        denom_lower = denomination.lower()
+        for pattern, replacement in GreysheetService._DENOM_NORM_MAP:
+            if pattern in denom_lower:
+                terms.insert(0, replacement)   # prefer the normalised term
+                break
+        return terms
+
     def resolve_gsid_hybrid(
         self,
         coin_data: Dict[str, Any],
@@ -190,50 +231,61 @@ class GreysheetService:
 
         # Step 1: Find matching leaf nodes by series or denomination
         leaf_nodes = self.crawl_all_us_leaf_nodes()
-        
-        # Fuzzy match leaf nodes
-        # Morgan Silver Dollar -> Morgan Dollars, Lincoln Cent -> Lincoln Cents, etc.
-        matched_nodes = []
-        search_terms = []
-        if series:
-            search_terms.append(series.lower())
-        if denomination:
-            search_terms.append(denomination.lower())
 
-        for node in leaf_nodes:
-            node_name_lower = node["Name"].lower()
-            # If the node name is contained in our series or vice versa
-            for term in search_terms:
-                if term in node_name_lower or node_name_lower in term:
-                    matched_nodes.append(node)
-                    break
+        # Normalise the stored denomination into Greysheet-compatible search terms.
+        # e.g. "Five Dollars (Half Eagle)" -> ["$5 gold", "five dollars (half eagle)"]
+        # This prevents "half" in "Half Eagle" from matching Half Cents/Dimes/Dollars.
+        denom_terms = self._normalise_denomination(denomination) if denomination else []
+
+        # Fuzzy match leaf nodes by preferring primary denomination keywords to ensure we capture
+        # all relevant series (e.g. Statehood, ATB, and American Women Quarters when denomination is "Quarter").
+        matched_nodes = []
+        denom_lower = denomination.lower()
+        primary_kw = None
         
-        # If no fuzzy match, fallback to search all nodes or try parent search
+        if "double eagle" in denom_lower or "twenty" in denom_lower or "$20" in denom_lower:
+            primary_kw = "$20"
+        elif "half eagle" in denom_lower or "five dollar" in denom_lower or "five dollars" in denom_lower or "$5" in denom_lower:
+            primary_kw = "$5"
+        elif "quarter eagle" in denom_lower or "two and half" in denom_lower or "$2.5" in denom_lower or "$2.50" in denom_lower:
+            primary_kw = "$2.50"
+        elif "ten dollar" in denom_lower or "ten dollars" in denom_lower or "$10" in denom_lower:
+            primary_kw = "$10"
+        elif "three dollar" in denom_lower or "$3" in denom_lower:
+            primary_kw = "$3"
+        elif "quarter" in denom_lower:
+            primary_kw = "quarter"
+        elif "dime" in denom_lower:
+            primary_kw = "dime"
+        elif "nickel" in denom_lower or "five cents" in denom_lower or "5c" in denom_lower:
+            primary_kw = "nickel"
+        elif "cent" in denom_lower or "penny" in denom_lower or "1c" in denom_lower:
+            primary_kw = "cent"
+        elif "dollar" in denom_lower or "1$" in denom_lower:
+            primary_kw = "dollar"
+        elif "half" in denom_lower:
+            primary_kw = "half dollar"
+
+        if primary_kw:
+            for node in leaf_nodes:
+                node_name_lower = node["Name"].lower()
+                if primary_kw in node_name_lower:
+                    matched_nodes.append(node)
+
+        # If no primary keyword match, do a fuzzy substring match on series/denomination as fallback
         if not matched_nodes:
-            logger.info("[Greysheet] No direct node match by series. Trying fallback node search.")
-            # Default fallback: try matching denominations
-            denom_lower = denomination.lower()
-            
-            # Find the primary denomination keyword to prevent cross-matching
-            primary_kw = None
-            if "quarter" in denom_lower:
-                primary_kw = "quarter"
-            elif "half" in denom_lower:
-                primary_kw = "half"
-            elif "dime" in denom_lower:
-                primary_kw = "dime"
-            elif "nickel" in denom_lower:
-                primary_kw = "nickel"
-            elif "cent" in denom_lower or "penny" in denom_lower or "1c" in denom_lower:
-                primary_kw = "cent"
-            elif "dollar" in denom_lower or "1$" in denom_lower:
-                primary_kw = "dollar"
-                
-            if primary_kw:
-                for node in leaf_nodes:
-                    node_name_lower = node["Name"].lower()
-                    if primary_kw in node_name_lower:
+            logger.info("[Greysheet] No direct primary keyword node match. Trying fallback fuzzy substring match.")
+            search_terms = []
+            if series:
+                search_terms.append(series.lower())
+            search_terms.extend(denom_terms)
+
+            for node in leaf_nodes:
+                node_name_lower = node["Name"].lower()
+                for term in search_terms:
+                    if term in node_name_lower or node_name_lower in term:
                         matched_nodes.append(node)
+                        break
 
         # Step 2: Fetch candidates under matched leaf nodes
         candidates = []

@@ -7900,18 +7900,21 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 return silver_spot * 1.0
                 
             # Gold Coins (Pre-1933 standard weights for 90% gold by face value)
-            if "90% gold" in mc or "90% gold" in mc:
+            # IMPORTANT: check specific multi-word phrases BEFORE checking single digits,
+            # because "Five Dollars (Half Eagle)" contains both "5" AND "half" and "eagle".
+            # Wrong order caused the Half Eagle to match $10 Eagle (face=10.0) in old code.
+            if "90% gold" in mc:
                 face = 0.0
-                if "20" in denom or "double eagle" in denom:
+                if "double eagle" in denom or "twenty" in denom:
                     face = 20.0
-                elif "10" in denom or "eagle" in denom:
-                    face = 10.0
-                elif "5" in denom or "half eagle" in denom:
+                elif "half eagle" in denom or "five dollar" in denom or "five dollars" in denom:
                     face = 5.0
-                elif "2.5" in denom or "quarter eagle" in denom:
+                elif "quarter eagle" in denom or "two and half" in denom:
                     face = 2.5
-                elif "3" in denom:
+                elif "three dollar" in denom:
                     face = 3.0
+                elif "eagle" in denom or "ten dollar" in denom or "ten dollars" in denom:
+                    face = 10.0
                 elif "1" in denom:
                     face = 1.0
                     
@@ -7961,11 +7964,32 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             print(f"[Greysheet] Applying manual +20% CAC premium fallback (IsCac row missing)")
         
         if melt_val > 0.0 and melt_val > cpg_retail:
-            cpg_retail = melt_val
-            greysheet_bid = melt_val * 0.90
-            greysheet_ask = melt_val * 1.10
-            print(f"[Greysheet] Melt value fallback triggered: melt_val={melt_val:.2f} > cpg_retail")
-        
+            # Melt value exceeds market price — note it but do NOT use melt as
+            # cpgRetail.  Melt is a floor (liquidation estimate), not a retail
+            # price.  Using it as cpgRetail caused the 1914 Half Eagle $48K bug.
+            print(f"[Greysheet] Melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin is worth more as metal. Keeping market price and logging melt for reference.")
+
+        # ── Sanity cap: refuse to write values that are wildly inflated ──
+        # If the computed retail price is > 10× the AI Estimated Value, something
+        # went wrong (wrong GSID match, wrong grade row, etc.).  Block the write
+        # and log a warning instead of poisoning the dashboard.
+        ai_raw = str(coin_data.get("AI Estimated Value") or "").replace("$", "").replace(",", "").strip()
+        # Parse the low end of any AI range
+        import re as _re
+        _ai_match = _re.search(r'(\d+\.?\d*)', ai_raw)
+        ai_low = float(_ai_match.group(1)) if _ai_match else 0.0
+        if ai_low > 0 and cpg_retail > ai_low * 10:
+            print(f"[Greysheet] SANITY CAP TRIGGERED: cpgRetail={cpg_retail:.2f} is >{10}x AI low estimate ({ai_low:.2f}). "
+                  f"Refusing to write. Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'.")
+            return {
+                "status": "sanity_cap",
+                "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds 10x AI estimate (${ai_low:,.2f}). "
+                           f"Price NOT written to Firestore. Verify GSID {gsid} is the correct series.",
+                "cpgRetail": cpg_retail,
+                "aiEstimate": ai_low,
+                "gsid": gsid,
+            }
+
         # 5. Update coin in Firestore
         update_payload = {
             "greysheetBid": greysheet_bid,
@@ -8112,12 +8136,11 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             # Default to Bid value as standard valuation
             val = float(coin.get("greysheetBid") or 0.0)
             if val == 0.0:
-                # Fallback to AI Value
-                try:
-                    cleaned = str(coin.get("AI Estimated Value") or "0").replace("$", "").replace(",", "").strip()
-                    val = float(cleaned)
-                except Exception:
-                    val = 0.0
+                # Fallback to AI Value — use clean_valuation_value() which
+                # correctly handles range strings like "$1,150 – $1,350"
+                # (returns the low end).  A bare float() call would throw a
+                # ValueError on any range and silently return 0.0.
+                val = clean_valuation_value(coin.get("AI Estimated Value") or "0")
                     
             item_val = val * qty
             total_value += item_val
