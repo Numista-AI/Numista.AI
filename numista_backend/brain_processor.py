@@ -79,7 +79,8 @@ def absorb_document(file_path: Path, user_intent: str = None):
             'intent': user_intent,
             'absorbed_at': firestore.SERVER_TIMESTAMP,
             'status': 'processed',
-            'file_path': str(file_path)
+            'file_path': str(file_path),
+            'source_dir': str(file_path.parent)
         })
         
         # 3. Handle Suggestions (Self-Healing)
