@@ -1,0 +1,96 @@
+﻿# Numista.AI — Release Notes
+
+> **Source of Truth for System Updates & Release Notes**
+> Managed automatically by `add_release_note.py`. Do not hand-edit the version entries.
+> To add a new release, run: `python add_release_note.py` from the project root.
+
+---
+
+
+## v4.0 — 2026-07-08
+**Greysheet Market Valuation Integration**
+
+- Greysheet CDN API integrated: real-time bid/ask valuations for circulating and key-date US coins.
+- Valuation pipeline hardened: graceful fallback when Greysheet returns no data for a coin type.
+- Home dashboard error states resolved: collection stats, portfolio chart, and market news all load cleanly.
+- Numismatic knowledge base expanded: additional coin series, mint marks, and legislative context seeded.
+- Proxy manager skill added to Antigravity agent: Webshare proxy provisioning fully automated.
+- Platform stability pass: backend startup errors eliminated, Cloud Run health checks passing.
+
+---
+
+<!-- HISTORY — preserved for reference, managed by the app as legacy entries -->
+
+## v3.9 — 2026-06-24
+**Ingestion Pipeline Hardening & Stability**
+- Aligned spreadsheet ingestion schema: all cost/price column variants now map to canonical "Cost" field.
+- Removed legacy back-compat sync logic that cross-populated deprecated Firestore fields.
+- Replaced direct dictionary access with safe .get() methods throughout ingestion.
+- Pinned google-genai>=1.71.0 in requirements.txt and removed deprecated legacy AI libraries.
+- Interactive Morgan suggestion chips: tapping a chip now launches Morgan with that query pre-filled.
+- Legacy vertexai utility scripts migrated to google-genai SDK ahead of deprecation.
+
+## v3.8 — 2026-06-23
+**Microscope Scanner Reliability & UX**
+- Restored cv2 focus window for manual microscope adjustment before capture.
+- Eliminated idle-preview lag in web browser.
+- Fixed camera-ownership race condition in idle preview thread.
+- Camera connection resilience: up to 5 frame-read retries before reporting error.
+- Added OpenCV frame-buffer limit (BUFFERSIZE=1) to prevent stale-frame accumulation.
+- New 'I have flipped the coin' button for immediate reverse scan.
+- Preview resolution reduced to 1280x720 during idle.
+
+## v3.7 — 2026-06-12
+**Code Quality & Morgan UX Pass**
+- Morgan guide bubbles fully redesigned with concise narrations and explicit arrow directions.
+- PDF invoice overlay: indeterminate bouncing progress bar replaces frozen "0%" state.
+- API URL centralised in lib/constants.dart — all 11 files now reference kApiBaseUrl.
+- Flutter analyze: 32 lint issues eliminated — zero warnings, zero errors.
+- Home dashboard: friendly news-unavailable message replaces internal config detail.
+
+## v3.6 Beta — 2026-06-10
+**Vertex AI Coin Reference Search**
+- New Coin Search screen: semantic search over 11,900+ coin reference entries.
+- Natural language queries for dates, mint marks, designers, metal content, coin history.
+- AI-generated summary banner surfaces key facts above results.
+- Category filter chips (Circulating, Commemorative, Bullion, Proof).
+
+## v3.5 Beta — 2026-06-09
+**Universal Item Routing & Supplies Tracking**
+- Invoice AI classifies every line item: coins, sets, stamps, currency, medals, and supplies.
+- Coin sets create a single Set Record in Review Hub.
+- Break Up Set expands a set into individual coins.
+- Supplies auto-routed to the new Inventory screen.
+
+## v3.2 Beta — 2026-04-25
+**PCGS Import Wizard**
+- Import graded coins directly from PCGS by certification number.
+- Automatic schema mapping: Year, Mint Mark, Grade, PCGS#, images, and price guide value.
+- Duplicate detection prevents double-importing slabs.
+
+## v3.1 Beta — 2026-04-23
+**AI Checklist Scanner**
+- Photograph a printed coin checklist — AI reads it and syncs your collection.
+- Supports all 31 coin programs.
+- Unchecked coins auto-populate your Wish List in one scan.
+
+## v3 Beta — 2026-04-08
+**Flutter Platform Launch**
+- Rebuilt entire frontend on Flutter for true cross-platform support.
+- Real-time Firestore streaming on all collection screens.
+- Hardware agent bridge via Firestore command pattern.
+
+## v2.7 — 2026-03-07
+**Improved UI Labels & Professional ID System** *(Streamlit legacy)*
+- Replaced cryptic hex IDs with professional Year-Mint-Denomination labels.
+
+## v2.6 — 2026-02-23
+**Checklist Logic Fixes & Strict Ingestion Rules** *(Streamlit legacy)*
+- Fixed Program Checklist matching to avoid false positives.
+- Added Face Value and Melt Value to Dashboard & Database view.
+
+## v1.0 — 2026-01-20
+**Initial Launch of Numista.AI** *(Streamlit legacy)*
+- Core Collection Management.
+- AI Scan & Valuation.
+- Market Data Integration.

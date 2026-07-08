@@ -1499,10 +1499,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.0',
+    date: '2026-07-08',
+    description: 'Greysheet Market Valuation Integration',
+    isLatest: true,
+    changes: [
+      'Greysheet CDN API integrated: real-time bid/ask valuations for circulating and key-date US coins.',
+      'Valuation pipeline hardened: graceful fallback when Greysheet returns no data for a coin type.',
+      'Home dashboard error states resolved: collection stats, portfolio chart, and market news all load cleanly.',
+      'Numismatic knowledge base expanded: additional coin series, mint marks, and legislative context seeded.',
+      'Proxy manager skill added to Antigravity agent: Webshare proxy provisioning fully automated.',
+      'Platform stability pass: backend startup errors eliminated, Cloud Run health checks passing.',
+    ],
+  ),
+  _Release(
     version: 'v3.9',
     date: '2026-06-24',
     description: 'Ingestion Pipeline Hardening & Stability',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Aligned spreadsheet ingestion schema: all cost/price column variants now map to the canonical "Cost" field; all notes variants map to "Personal Notes".',
       'Removed legacy back-compat sync logic that cross-populated deprecated Firestore fields.',
