@@ -127,6 +127,18 @@ _SILVER_YEAR_RULES = [
     (["barber"],           range(1892, 1917), True,  "90% Silver, 10% Copper", 0.07234),
 ]
 
+# Year-range rules for determining gold composition by denomination alone:
+# (keywords, year_range, composition, troy_oz_au)
+_GOLD_YEAR_RULES = [
+    (["double eagle", "twenty dollars", "$20", "20 dollars"], range(1849, 1934), "Gold (90% Gold, 10% Copper)", 0.96750),
+    (["half eagle", "five dollars", "$5", "5 dollars"],       range(1795, 1930), "Gold (90% Gold, 10% Copper)", 0.24188),
+    (["quarter eagle", "2.5 gold", "2-1/2 dollars", "two and a half"], range(1796, 1930), "Gold (90% Gold, 10% Copper)", 0.12094),
+    (["three dollars", "$3", "3 dollars"],                    range(1854, 1890), "Gold (90% Gold, 10% Copper)", 0.14513),
+    (["one dollar", "gold dollar", "$1 gold", "1 dollar gold"], range(1849, 1890), "Gold (90% Gold, 10% Copper)", 0.04837),
+    (["eagle", "ten dollars", "$10", "10 dollars"],           range(1795, 1934), "Gold (90% Gold, 10% Copper)", 0.48375),
+]
+
+
 
 class PCGSService:
     """
@@ -154,7 +166,9 @@ class PCGSService:
         enriched dict with:
           - metal_content (string)
           - is_silver (bool)
+          - is_gold (bool)
           - silver_troy_oz (float, 0.0 if not silver)
+          - gold_troy_oz (float, 0.0 if not gold)
           - melt_value_estimate (string, e.g. "$1.83")
           - pcgs_data (dict or None — raw API response)
           - pcgs_number (int or None)
@@ -166,14 +180,18 @@ class PCGSService:
 
         enriched = dict(coin_data)
         enriched["is_silver"]         = False
+        enriched["is_gold"]           = False
         enriched["silver_troy_oz"]    = 0.0
+        enriched["gold_troy_oz"]      = 0.0
         enriched["metal_content"]     = "Clad (Copper-Nickel)"
         enriched["melt_value_estimate"] = "< $0.01"
         enriched["pcgs_data"]         = None
         enriched["pcgs_number"]       = None
 
-        # ── Step 1: Determine silver composition from year + denomination ──
+        # ── Step 1: Determine metal composition from year + denomination ──
         silver_result = self._determine_silver(year, denomination, series)
+        gold_result   = self._determine_gold(year, denomination, series)
+
         if silver_result:
             comp, troy_oz = silver_result
             enriched["is_silver"]      = True
@@ -182,8 +200,16 @@ class PCGSService:
             melt_est = self._estimate_melt_value(troy_oz)
             enriched["melt_value_estimate"] = melt_est
             logging.info(f"[PCGS] Silver detected: {comp}  •  {troy_oz:.5f} troy oz  •  Melt ≈ {melt_est}")
+        elif gold_result:
+            comp, troy_oz = gold_result
+            enriched["is_gold"]        = True
+            enriched["gold_troy_oz"]   = troy_oz
+            enriched["metal_content"]  = comp
+            melt_est = self._estimate_gold_melt_value(troy_oz)
+            enriched["melt_value_estimate"] = melt_est
+            logging.info(f"[PCGS] Gold detected: {comp}  •  {troy_oz:.5f} troy oz  •  Melt ≈ {melt_est}")
         else:
-            logging.info(f"[PCGS] Not silver: {year} {denomination} {series}")
+            logging.info(f"[PCGS] Not precious: {year} {denomination} {series}")
 
         # ── Step 2: PCGS API lookup (if token is available) ──────────────
         if self.token:
@@ -195,7 +221,7 @@ class PCGSService:
                     enriched["pcgs_data"] = pcgs_data
                     # Override metal_content if PCGS has a more precise answer
                     pcgs_metal = pcgs_data.get("metalContent") or pcgs_data.get("composition")
-                    if pcgs_metal and not enriched["is_silver"]:
+                    if pcgs_metal and not enriched["is_silver"] and not enriched["is_gold"]:
                         enriched["metal_content"] = pcgs_metal
                     logging.info(f"[PCGS] CoinFacts retrieved → PCGS#{pcgs_no}")
         else:
@@ -218,6 +244,11 @@ class PCGSService:
             return None
 
         combined = f"{denomination} {series}".lower()
+
+        # Exclude gold coins from silver detection
+        gold_keywords = ["gold", "half eagle", "quarter eagle", "double eagle"]
+        if any(gkw in combined for gkw in gold_keywords) and "silver" not in combined:
+            return None
 
         for keywords, year_range, is_silver, comp, troy_oz in _SILVER_YEAR_RULES:
             if not is_silver:
@@ -266,6 +297,91 @@ class PCGSService:
         spot = self._fetch_live_silver_spot()
         melt = troy_oz * spot
         return f"~${melt:.2f}"
+
+    # ─── Gold Determination ───────────────────────────────────────────────────
+
+    # --- Caching for live gold spot price ---
+    _live_gold_spot_cache = None
+    _last_gold_spot_update = 0
+
+    def _determine_gold(self, year, denomination: str, series: str):
+        """
+        Returns (composition_str, troy_oz_au) if the coin is gold, else None.
+        Uses year-range rules — no network call required.
+        """
+        if not year:
+            return None
+        try:
+            year_int = int(year)
+        except (ValueError, TypeError):
+            return None
+
+        combined = f"{denomination} {series}".lower()
+
+        # Exclude silver coins from gold detection
+        if "silver" in combined or "clad" in combined:
+            return None
+
+        # 1. Modern Gold Eagle (1986-present)
+        if "gold eagle" in combined or ("eagle" in combined and year_int >= 1986):
+            if "50" in combined or "fifty" in combined:
+                return ("Gold (91.67% Gold, 3% Silver, 5.33% Copper)", 1.00)
+            elif "25" in combined or "twenty-five" in combined:
+                return ("Gold (91.67% Gold, 3% Silver, 5.33% Copper)", 0.50)
+            elif "10" in combined or "ten" in combined:
+                return ("Gold (91.67% Gold, 3% Silver, 5.33% Copper)", 0.25)
+            elif "5" in combined or "five" in combined:
+                return ("Gold (91.67% Gold, 3% Silver, 5.33% Copper)", 0.10)
+            return ("Gold (91.67% Gold, 3% Silver, 5.33% Copper)", 1.00)
+
+        # 2. Modern Gold Buffalo (2006-present)
+        if "buffalo" in combined and "gold" in combined and year_int >= 2006:
+            return ("Gold (99.99% Gold)", 1.00)
+
+        # 3. Pre-1933 Gold Coins (range rules)
+        for keywords, year_range, comp, troy_oz in _GOLD_YEAR_RULES:
+            if year_int not in year_range:
+                continue
+            if any(kw in combined for kw in keywords):
+                return (comp, troy_oz)
+
+        return None
+
+    def _fetch_live_gold_spot(self) -> float:
+        """
+        Fetches the current gold spot price from Yahoo Finance via yfinance.
+        Includes a 60-minute cache. Falls back to $2350.0 if API fails.
+        """
+        now = time.time()
+        if PCGSService._live_gold_spot_cache and (now - PCGSService._last_gold_spot_update < PCGSService._CACHE_TTL):
+            return PCGSService._live_gold_spot_cache
+
+        logging.info("[PCGS] Fetching live gold spot price from Yahoo Finance (GC=F)...")
+        try:
+            ticker = yf.Ticker("GC=F")
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                price = float(hist["Close"].iloc[-1])
+                if price > 0:
+                    PCGSService._live_gold_spot_cache = price
+                    PCGSService._last_gold_spot_update = now
+                    logging.info(f"[PCGS] Live gold spot updated: ${price:.2f}/oz")
+                    return price
+            
+            logging.warning("[PCGS] yfinance returned empty/zero data for GC=F.")
+        except Exception as e:
+            logging.error(f"[PCGS] Failed to fetch live gold spot: {e}")
+
+        return PCGSService._live_gold_spot_cache or 2350.0
+
+    def _estimate_gold_melt_value(self, troy_oz: float) -> str:
+        """
+        Returns an approximate gold melt value string using the live spot price.
+        """
+        spot = self._fetch_live_gold_spot()
+        melt = troy_oz * spot
+        return f"~${melt:.2f}"
+
 
     # ─── PCGS Number Resolution ────────────────────────────────────────────────
 
