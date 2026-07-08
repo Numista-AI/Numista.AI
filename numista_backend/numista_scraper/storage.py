@@ -8,12 +8,13 @@ from firebase_admin import credentials, firestore
 
 # Load configuration settings
 try:
-    from .config import DB_PATH, KEY_PATH, BUCKET_NAME, GCP_PROJECT
+    from .config import DB_PATH, KEY_PATH, BUCKET_NAME, GCP_PROJECT, get_scrape_proxy
 except ImportError:
     DB_PATH = "database/numista_coins.db"
     KEY_PATH = "serviceAccountKey.json.json"
     BUCKET_NAME = "numista-uploads-studio-9101802118-8c9a8"
     GCP_PROJECT = "studio-9101802118-8c9a8"
+    def get_scrape_proxy(): return {"http": None, "https": None}
 
 # ─── Initialization ──────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ def download_image(url):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        resp = requests.get(url, headers=headers, timeout=20)
+        resp = requests.get(url, headers=headers, timeout=20, proxies=get_scrape_proxy())
         if resp.status_code == 200 and len(resp.content) > 1000:
             return resp.content
     except Exception as e:
