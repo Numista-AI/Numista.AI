@@ -17,9 +17,15 @@ The system check has identified critical environment configuration issues and da
 - **Impact**: `pytest` fails to execute even when using the `.venv` where `feedparser` is present.
 - **Context**: This may be an incompatibility with the experimental Python 3.14.2 interpreter or a race condition in the `pytest-9.1.1` capture mechanism.
 
-### 3. Syntax Warnings in Dependencies
+### 3. Syntax Error in Utility Script
+- **Issue**: `SyntaxError: unterminated string literal` in `numista_backend/_scripts/fix_model.py`.
+- **Impact**: Script is unrunnable.
+- **Context**: An attempt to inject a mandatory model policy comment into another script resulted in a broken string literal spanning multiple lines without proper escaping or triple-quotes.
+
+### 4. Syntax Warnings in Dependencies
 - **Issue**: `SyntaxWarning: 'continue' in a 'finally' block` in `botasaurus_driver`.
-- **Impact**: High-level warning that may lead to unpredictable behavior in scraping tasks on newer Python versions.
+- **Issue**: `SyntaxWarning: 'return' in a 'finally' block` in `pystray`.
+- **Impact**: High-level warnings that may lead to unpredictable behavior in scraping tasks on newer Python versions.
 
 ---
 
@@ -49,6 +55,7 @@ The system check has identified critical environment configuration issues and da
 ## Recommended Fixes
 
 1. **Environment Sync**: Install all requirements in the global environment or fix the `.venv` pathing issues to ensure `pytest` can collect tests without `ModuleNotFoundError`.
-2. **Schema Normalization**: Run a migration script on `awq_coins_live.json` to normalize keys to PascalCase as defined in `coin-schema.json`.
-3. **Python Version**: Consider downgrading the local development environment to a stable Python 3.12 or 3.13 if Python 3.14 continues to cause `pytest` I/O errors.
-4. **SDK Cleanup**: Remove the `vertexai=True` flag from `genai.Client` if the project is fully migrated to the `google-genai` native SDK to suppress deprecation warnings.
+2. **Fix Syntax Errors**: Correct the broken string literal in `numista_backend/_scripts/fix_model.py` using raw strings or triple-quotes.
+3. **Schema Normalization**: Run a migration script on `awq_coins_live.json` to normalize keys to PascalCase as defined in `coin-schema.json`.
+4. **Python Version**: Consider downgrading the local development environment to a stable Python 3.12 or 3.13 if Python 3.14 continues to cause `pytest` I/O errors.
+5. **SDK Cleanup**: Remove the `vertexai=True` flag from `genai.Client` if the project is fully migrated to the `google-genai` native SDK to suppress deprecation warnings.
