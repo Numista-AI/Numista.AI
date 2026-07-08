@@ -148,3 +148,7 @@ numista_backend/latest_scraper_report.md
 numista_backend/sourcing_audit_report.md
 numista_backend/images_needed_report.md
 .firebase/*.cache
+
+# Backup and inbox files (local only - not committed per AGENTS.md)
+*.bak
+Numista_Brain_Inbox/
