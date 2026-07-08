@@ -16,6 +16,7 @@ import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
+import 'deals_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
@@ -551,6 +552,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                   // ── Category Breakdown ─────────────────────────────────────
                   _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
+                  const SizedBox(height: 24),
+
+                  // ── Arbitrage Deal Spotter ──────────────────────────────────
+                  _buildArbitrageDealsCard(context),
                   const SizedBox(height: 24),
 
                    // ── Metric cards ──────────────────────────────────────────
@@ -1394,6 +1399,79 @@ class _HomeDashboardState extends State<HomeDashboard> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildArbitrageDealsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DealsScreen()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F9D58).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.shopping_bag_outlined,
+                      color: Color(0xFF0F9D58), size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Arbitrage Deal Spotter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: headerColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Find coins listed below Greysheet Wholesale Bid',
+                        style: TextStyle(fontSize: 12, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFFF63366)),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

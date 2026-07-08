@@ -41,3 +41,19 @@ def test_pricing_endpoint():
     data = response.json()
     assert "pricing" in data
     assert isinstance(data["pricing"], list)
+
+def test_deals_endpoints():
+    # Test GET /api/greysheet/deals
+    response = client.get("/api/greysheet/deals")
+    assert response.status_code == 200
+    data = response.json()
+    assert "deals" in data
+    assert len(data["deals"]) > 0
+    assert "margin_percent" in data["deals"][0]
+
+    # Test POST /api/greysheet/deals/refresh
+    response = client.post("/api/greysheet/deals/refresh")
+    assert response.status_code == 200
+    refresh_data = response.json()
+    assert refresh_data["status"] == "success"
+    assert refresh_data["count"] > 0
