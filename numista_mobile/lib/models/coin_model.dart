@@ -33,6 +33,13 @@ class CoinModel {
   final String imageUrlReverse;
   final DateTime? timestamp;
 
+  // Greysheet Integration
+  final String greysheetGsid;
+  final double greysheetBid;
+  final double greysheetAsk;
+  final double cpgRetail;
+  final DateTime? priceLastUpdated;
+
   // Image QC / Verification status
   final String imageVerificationStatus; // 'unverified', 'grok_verified', 'human_verified', 'flagged'
   final String imageVerificationReason;
@@ -87,6 +94,11 @@ class CoinModel {
     this.importBatch = '',
     this.imageVerificationStatus = 'unverified',
     this.imageVerificationReason = '',
+    this.greysheetGsid = '',
+    this.greysheetBid = 0.0,
+    this.greysheetAsk = 0.0,
+    this.cpgRetail = 0.0,
+    this.priceLastUpdated,
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -152,6 +164,13 @@ class CoinModel {
       importBatch: data['import_batch']?.toString() ?? '',
       imageVerificationStatus: data['image_verification_status']?.toString() ?? 'unverified',
       imageVerificationReason: data['image_verification_reason']?.toString() ?? '',
+      greysheetGsid: data['greysheetGsid']?.toString() ?? '',
+      greysheetBid: (data['greysheetBid'] as num?)?.toDouble() ?? 0.0,
+      greysheetAsk: (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0,
+      cpgRetail: (data['cpgRetail'] as num?)?.toDouble() ?? 0.0,
+      priceLastUpdated: data['priceLastUpdated'] is Timestamp 
+          ? (data['priceLastUpdated'] as Timestamp).toDate() 
+          : null,
     );
   }
 
@@ -185,6 +204,11 @@ class CoinModel {
       'image_url_reverse': imageUrlReverse,
       'image_verification_status': imageVerificationStatus,
       'image_verification_reason': imageVerificationReason,
+      'greysheetGsid': greysheetGsid,
+      'greysheetBid': greysheetBid,
+      'greysheetAsk': greysheetAsk,
+      'cpgRetail': cpgRetail,
+      'priceLastUpdated': priceLastUpdated != null ? Timestamp.fromDate(priceLastUpdated!) : null,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };

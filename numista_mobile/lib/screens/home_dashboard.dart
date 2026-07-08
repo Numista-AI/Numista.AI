@@ -325,7 +325,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             // ── Compute portfolio metrics ──────────────────────────────────
             int totalItems = coins.length + currency.length + worldItems.length;
-            double portfolioValue  = 0;
+            double cpgTotal = 0;
+            double bidTotal = 0;
+            double askTotal = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
@@ -370,14 +372,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 coinsVal += finalVal;
               }
 
-              portfolioValue  += finalVal;
+              // Greysheet fields
+              final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+              final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+              final coinAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+
+              final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
+              final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
+              final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
+
+              cpgTotal += finalCpg;
+              bidTotal += finalBid;
+              askTotal += finalAsk;
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
 
               // Track per-program value for the bar chart
               final program = data['Program/Series']?.toString() ?? 'Other';
-              programValues[program] = (programValues[program] ?? 0) + coinValue;
+              programValues[program] = (programValues[program] ?? 0) + finalCpg;
             }
 
             // 2. Process Currency collection
@@ -390,8 +403,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 finalVal = _parseCurrency(data['Cost']);
               }
 
+              final curCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+              final curBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+              final curAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+
+              cpgTotal += curCpg > 0 ? curCpg : finalVal;
+              bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
+              askTotal += curAsk > 0 ? curAsk : finalVal * 0.92;
+
               currencyVal += finalVal;
-              portfolioValue += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
             }
@@ -418,7 +438,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 othersVal += finalVal;
               }
 
-              portfolioValue += finalVal;
+              final wCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+              final wBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+              final wAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+
+              cpgTotal += wCpg > 0 ? wCpg : finalVal;
+              bidTotal += wBid > 0 ? wBid : finalVal * 0.80;
+              askTotal += wAsk > 0 ? wAsk : finalVal * 0.92;
+
               acquisitionCost += purchPrice;
               final spotEntry = (data['spot_value_at_entry'] as num?)?.toDouble() ?? 0.0;
               if (spotEntry > 0) {
@@ -426,6 +453,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
             }
+
+            final portfolioValue = cpgTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
             if (totalItems > 0) {
@@ -507,7 +536,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                       const SizedBox(width: 12),
                       Flexible(
-                        child: _buildPortfolioValueSection(portfolioValue, fmt, totalItems),
+                        child: _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems),
                       ),
                     ],
                   ),
@@ -963,9 +992,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
-      double portfolioValue, intl.NumberFormat fmt, int totalCoins) {
+      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins) {
     final v = _valuation;
-    final hasValue    = portfolioValue > 0;
+    final hasValue    = cpgTotal > 0;
     final isRunning   = v.isRunning;
     final isPaused    = v.isPaused;
     final hasProgress = v.completed > 0 || v.failed > 0;
@@ -982,14 +1011,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         // ── Main value display ──────────────────────────────────────────────
         if (hasValue)
-          Text(fmt.format(portfolioValue),
+          Text(fmt.format(cpgTotal),
               style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F9D58)))
         else if (isRunning)
           Text(
-            hasProgress ? '${fmt.format(portfolioValue)} (est.)' : 'Valuing\u2026',
+            hasProgress ? '${fmt.format(cpgTotal)} (est.)' : 'Valuing\u2026',
             style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
@@ -1001,6 +1030,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF9CA3AF))),
+
+        if (hasValue) ...[
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text('Bid: ${fmt.format(bidTotal)}',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF4A5568))),
+              const SizedBox(width: 8),
+              Text('Ask: ${fmt.format(askTotal)}',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF4A5568))),
+            ],
+          ),
+        ],
 
         const SizedBox(height: 6),
 

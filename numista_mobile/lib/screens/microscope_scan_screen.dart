@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import '../constants.dart';
 import '../services/hardware_service.dart';
 import '../services/auth_service.dart';
 import '../services/pcgs_service.dart';
@@ -914,6 +917,15 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             final pcgsData = PCGSService.parseFromReport(report);
             return _buildSilverPanel(pcgsData);
           }),
+          if (report['grade'] != null && report['grade'].toString() != 'Ungraded')
+            _MicroscopePricingAdvisor(
+              year: report['year']?.toString() ?? '',
+              mintMark: report['mint_mark']?.toString() ?? '',
+              denomination: report['denomination']?.toString() ?? '',
+              programSeries: report['program_series']?.toString() ?? '',
+              variety: report['variety']?.toString() ?? '',
+              currentGrade: report['grade']?.toString() ?? '',
+            ),
           if (report['report'] != null) ...[
             const SizedBox(height: 16),
             const Text('Gemini Analysis:',
@@ -1428,6 +1440,244 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MicroscopePricingAdvisor extends StatefulWidget {
+  final String year;
+  final String mintMark;
+  final String denomination;
+  final String programSeries;
+  final String variety;
+  final String currentGrade;
+
+  const _MicroscopePricingAdvisor({
+    required this.year,
+    required this.mintMark,
+    required this.denomination,
+    required this.programSeries,
+    required this.variety,
+    required this.currentGrade,
+  });
+
+  @override
+  State<_MicroscopePricingAdvisor> createState() => _MicroscopePricingAdvisorState();
+}
+
+class _MicroscopePricingAdvisorState extends State<_MicroscopePricingAdvisor> {
+  bool _loading = true;
+  String? _gsid;
+  List<dynamic> _pricing = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveAndFetch();
+  }
+
+  Future<void> _resolveAndFetch() async {
+    try {
+      // 1. Resolve GSID
+      final resolveUrl = Uri.parse('$kApiBaseUrl/api/greysheet/resolve');
+      final resolveResp = await http.post(
+        resolveUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'year': widget.year,
+          'mint_mark': widget.mintMark,
+          'denomination': widget.denomination,
+          'program_series': widget.programSeries,
+          'variety': widget.variety,
+        }),
+      );
+
+      if (resolveResp.statusCode == 200) {
+        final resolveData = jsonDecode(resolveResp.body);
+        final gsid = resolveData['gsid']?.toString();
+        if (gsid != null && gsid.isNotEmpty) {
+          _gsid = gsid;
+          // 2. Fetch Pricing table
+          final pricingUrl = Uri.parse('$kApiBaseUrl/api/greysheet/pricing/$gsid');
+          final pricingResp = await http.get(pricingUrl);
+          if (pricingResp.statusCode == 200) {
+            final pricingData = jsonDecode(pricingResp.body);
+            if (mounted) {
+              setState(() {
+                _pricing = pricingData['pricing'] ?? [];
+                _loading = false;
+              });
+            }
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _electricBlue)),
+              SizedBox(width: 10),
+              Text('Analyzing Greysheet pricing curve...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_pricing.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Parse numeric grade for comparison (e.g. "MS65" -> 65)
+    final gradeReg = RegExp(r'\d+');
+    final match = gradeReg.firstMatch(widget.currentGrade);
+    final targetGradeNo = match != null ? int.tryParse(match.group(0)!) : null;
+
+    if (targetGradeNo == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Filter surrounding grades (±3 sheldon numbers, excluding CAC records)
+    final surrounding = _pricing.where((p) {
+      final isCac = p['IsCac'] ?? false;
+      if (isCac) return false;
+      final gradeNo = p['Grade'] as int?;
+      if (gradeNo == null) return false;
+      return (gradeNo - targetGradeNo).abs() <= 10; // Up to 10 points range
+    }).toList();
+
+    // Sort by Sheldon grade numeric value
+    surrounding.sort((a, b) => (a['Grade'] as int).compareTo(b['Grade'] as int));
+
+    // Find value of current grade for delta calculation
+    double? currentGradeValue;
+    for (final p in surrounding) {
+      if (p['Grade'] == targetGradeNo) {
+        currentGradeValue = double.tryParse((p['CpgVal'] ?? '').toString().replaceAll(',', ''));
+        break;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          'Sheldon Grade Pricing Advisor',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _electricBlue,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE9ECEF)),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: surrounding.length,
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE9ECEF)),
+            itemBuilder: (context, index) {
+              final p = surrounding[index];
+              final label = p['GradeLabel'] ?? '';
+              final cpgValStr = p['CpgVal'] ?? '';
+              final gradeNo = p['Grade'] as int;
+              
+              final isCurrent = gradeNo == targetGradeNo;
+              final val = double.tryParse(cpgValStr.replaceAll(',', ''));
+
+              String deltaText = '';
+              Color deltaColor = Colors.grey;
+
+              if (val != null && currentGradeValue != null && !isCurrent) {
+                final diff = val - currentGradeValue;
+                if (diff > 0) {
+                  deltaText = '(+\$${diff.toStringAsFixed(0)} value jump!)';
+                  deltaColor = _successGreen;
+                } else if (diff < 0) {
+                  deltaText = '(-\$${diff.abs().toStringAsFixed(0)})';
+                  deltaColor = Colors.redAccent;
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                            color: isCurrent ? _electricBlue : _charcoal,
+                          ),
+                        ),
+                        if (isCurrent) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _electricBlue.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Identified',
+                              style: TextStyle(fontSize: 9, color: _electricBlue, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (deltaText.isNotEmpty) ...[
+                          Text(
+                            deltaText,
+                            style: TextStyle(fontSize: 11, color: deltaColor, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          cpgValStr.isEmpty ? '—' : '\$$cpgValStr',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                            color: isCurrent ? _electricBlue : _charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

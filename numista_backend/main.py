@@ -7691,3 +7691,189 @@ async def reprocess_knowledge(req: BrainKnowledgeUpdate):
     absorb_document(file_path, req.intent)
     
     return {"status": "reprocessing_started"}
+
+
+# ─── GREYSHEET API INTEGRATION ───────────────────────────────────────────────
+
+class GreysheetResolveRequest(BaseModel):
+    user_id: Optional[str] = None
+    coin_id: Optional[str] = None
+    year: Optional[str] = None
+    mint_mark: Optional[str] = None
+    denomination: Optional[str] = None
+    program_series: Optional[str] = None
+    variety: Optional[str] = None
+    pcgs_no: Optional[str] = None
+
+@app.post("/api/greysheet/resolve")
+async def resolve_greysheet_coin(req: GreysheetResolveRequest):
+    """
+    Resolves the Greysheet GSID for a specific coin (either by Firestore ID or raw fields).
+    """
+    try:
+        from services.greysheet_service import GreysheetService
+        
+        service = GreysheetService(db=db)
+        coin_ref = None
+        
+        if req.user_id and req.coin_id:
+            # 1. Fetch coin from Firestore
+            coin_ref = db.collection("users").document(req.user_id).collection("coins").document(req.coin_id)
+            coin_doc = coin_ref.get()
+            if not coin_doc.exists:
+                raise HTTPException(status_code=404, detail="Coin document not found")
+            coin_data = coin_doc.to_dict()
+        else:
+            # Build coin_data from request parameters
+            coin_data = {
+                "Year": req.year or "",
+                "MintMark": req.mint_mark or "",
+                "Denomination": req.denomination or "",
+                "ProgramSeries": req.program_series or "",
+                "Variety": req.variety or "",
+                "PCGSNo": req.pcgs_no or ""
+            }
+        
+        # 2. Instantiate service and resolve
+        gsid = service.resolve_gsid_hybrid(
+            coin_data=coin_data,
+            genai_client=genai_client,
+            primary_model=PRIMARY_MODEL
+        )
+        
+        if not gsid:
+            return {"status": "not_resolved", "message": "Could not map coin to a Greysheet GSID."}
+            
+        # 3. Write back GSID to Firestore if we have a document reference
+        if coin_ref:
+            update_payload = {
+                "greysheetGsid": str(gsid),
+                "greysheetBid": 0.0,
+                "greysheetAsk": 0.0,
+                "cpgRetail": 0.0,
+                "priceLastUpdated": None
+            }
+            coin_ref.update(update_payload)
+        
+        return {
+            "status": "success",
+            "gsid": gsid,
+            "message": f"Successfully mapped coin to GSID {gsid}"
+        }
+    except Exception as e:
+        print(f"[Greysheet] Error resolving GSID: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/greysheet/refresh")
+async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
+    """
+    Fetches the latest pricing for a coin's GSID and updates its values based on grade.
+    """
+    try:
+        from services.greysheet_service import GreysheetService
+        
+        # 1. Fetch coin from Firestore
+        coin_ref = db.collection("users").document(req.user_id).collection("coins").document(req.coin_id)
+        coin_doc = coin_ref.get()
+        if not coin_doc.exists:
+            raise HTTPException(status_code=404, detail="Coin document not found")
+            
+        coin_data = coin_doc.to_dict()
+        gsid_str = coin_data.get("greysheetGsid")
+        
+        # Resolve GSID first if missing
+        service = GreysheetService(db=db)
+        if not gsid_str:
+            gsid = service.resolve_gsid_hybrid(
+                coin_data=coin_data,
+                genai_client=genai_client,
+                primary_model=PRIMARY_MODEL
+            )
+            if not gsid:
+                raise HTTPException(status_code=400, detail="Coin is not mapped to a GSID and resolution failed.")
+            gsid_str = str(gsid)
+            coin_ref.update({"greysheetGsid": gsid_str})
+        
+        gsid = int(gsid_str)
+        
+        # 2. Fetch prices from Greysheet
+        prices = service.get_pricing(gsid)
+        if not prices:
+            return {"status": "no_pricing", "message": "No pricing data returned from Greysheet API."}
+            
+        # 3. Match grade (condition)
+        condition = coin_data.get("condition") or "Ungraded"
+        
+        # Extract number from condition (e.g. MS65 -> 65, VF30 -> 30)
+        import re
+        grade_match = re.search(r'\d+', condition)
+        target_grade = int(grade_match.group()) if grade_match else None
+        
+        matched_price = None
+        if target_grade:
+            # First look for a non-CAC match
+            for p in prices:
+                if p.get("Grade") == target_grade and not p.get("IsCac"):
+                    matched_price = p
+                    break
+            # Fallback to any match
+            if not matched_price:
+                for p in prices:
+                    if p.get("Grade") == target_grade:
+                        matched_price = p
+                        break
+                        
+        # If no grade match, fallback to the lowest/default price
+        if not matched_price and prices:
+            matched_price = prices[0]
+            
+        if not matched_price:
+            return {"status": "no_match", "message": "Could not map coin grade to pricing record."}
+            
+        # 4. Clean and parse values
+        def clean_val(val):
+            if not val:
+                return 0.0
+            try:
+                return float(str(val).replace(",", "").strip())
+            except Exception:
+                return 0.0
+                
+        cpg_retail = clean_val(matched_price.get("CpgVal"))
+        greysheet_bid = clean_val(matched_price.get("GreyVal"))
+        if greysheet_bid == 0.0:
+            greysheet_bid = cpg_retail * 0.80
+        greysheet_ask = greysheet_bid * 1.15
+        
+        # 5. Update coin in Firestore
+        update_payload = {
+            "greysheetBid": greysheet_bid,
+            "greysheetAsk": greysheet_ask,
+            "cpgRetail": cpg_retail,
+            "priceLastUpdated": firestore.SERVER_TIMESTAMP
+        }
+        coin_ref.update(update_payload)
+        
+        return {
+            "status": "success",
+            "cpgRetail": cpg_retail,
+            "greysheetBid": greysheet_bid,
+            "greysheetAsk": greysheet_ask,
+            "gradeMatched": matched_price.get("GradeLabel", condition)
+        }
+    except Exception as e:
+        print(f"[Greysheet] Error refreshing coin price: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/greysheet/pricing/{gsid}")
+async def get_greysheet_pricing_table(gsid: int):
+    """
+    Returns the grade-by-grade pricing list for a specific GSID.
+    """
+    try:
+        from services.greysheet_service import GreysheetService
+        service = GreysheetService(db=db)
+        prices = service.get_pricing(gsid)
+        return {"gsid": gsid, "pricing": prices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

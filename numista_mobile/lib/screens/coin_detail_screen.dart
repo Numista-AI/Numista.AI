@@ -22,6 +22,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
+import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
@@ -1499,6 +1500,9 @@ class _FinancialsTab extends StatelessWidget {
             const SizedBox(height: 16),
             _SpotPriceRow(spotPrices: spotPrices),
           ],
+          
+          if (coin.greysheetGsid.isNotEmpty)
+            _GreysheetPricingTable(gsid: coin.greysheetGsid, currentGrade: coin.condition),
         ],
       ),
     );
@@ -1527,6 +1531,168 @@ class _FinancialsTab extends StatelessWidget {
     }
     final v = double.tryParse(norm.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     return v > 100000 ? 0.0 : v;          // sanity cap
+  }
+}
+
+
+class _GreysheetPricingTable extends StatefulWidget {
+  final String gsid;
+  final String currentGrade;
+
+  const _GreysheetPricingTable({required this.gsid, required this.currentGrade});
+
+  @override
+  State<_GreysheetPricingTable> createState() => _GreysheetPricingTableState();
+}
+
+class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
+  bool _loading = true;
+  List<dynamic> _pricing = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPricing();
+  }
+
+  Future<void> _fetchPricing() async {
+    try {
+      final response = await http.get(Uri.parse('$kApiBaseUrl/api/greysheet/pricing/${widget.gsid}'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _pricing = data['pricing'] ?? [];
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _error = 'Failed to load pricing table';
+            _loading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_error != null || _pricing.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          'No Greysheet pricing table available.',
+          style: TextStyle(fontSize: 12, color: _kSubtext, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    // Parse numeric grade for comparison (e.g. "MS65" -> 65)
+    final gradeReg = RegExp(r'\d+');
+    final match = gradeReg.firstMatch(widget.currentGrade);
+    final targetGradeNo = match != null ? int.tryParse(match.group(0)!) : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        const Text(
+          'Greysheet Pricing Guide',
+          style: TextStyle(
+            fontSize: 12,
+            color: _kSubtext,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _kBorder),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 24,
+              horizontalMargin: 12,
+              headingRowHeight: 36,
+              dataRowMinHeight: 32,
+              dataRowMaxHeight: 36,
+              columns: const [
+                DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('CPG Retail', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('Wholesale Bid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+              ],
+              rows: _pricing.map<DataRow>((p) {
+                final gradeLabel = p['GradeLabel'] ?? '—';
+                final cpgVal = p['CpgVal'] ?? '—';
+                final greyVal = p['GreyVal'] ?? '—';
+                final isCac = p['IsCac'] ?? false;
+                final gradeNo = p['Grade'] as int?;
+
+                final isCurrent = gradeNo != null && gradeNo == targetGradeNo && !isCac;
+
+                return DataRow(
+                  selected: isCurrent,
+                  color: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (isCurrent) return _kAccent.withAlpha(20);
+                    return null;
+                  }),
+                  cells: [
+                    DataCell(Text(
+                      '$gradeLabel${isCac ? " (CAC)" : ""}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent ? _kAccent : _kText,
+                      ),
+                    )),
+                    DataCell(Text(
+                      cpgVal.isEmpty ? '—' : '\$$cpgVal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent ? _kAccent : _kText,
+                      ),
+                    )),
+                    DataCell(Text(
+                      greyVal.isEmpty ? '—' : '\$$greyVal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent ? _kAccent : _kText,
+                      ),
+                    )),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
