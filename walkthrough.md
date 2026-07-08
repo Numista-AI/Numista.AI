@@ -22,6 +22,11 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
 - **Cookie-Based Priority Override**: Implemented logic that restricts scraping to USMint.gov only if cookies are present (preventing slow waterfall fallbacks if it fails). If cookies are absent, usmint.gov is skipped entirely, defaulting immediately to other sources (like Wikimedia).
 - **Proxy Scraper Support**: Updated `scrapers.py` to explicitly route requests to usmint.gov, pcgs.com, ngccoin.com, and usacoinbook.com through the configured proxy settings when present, bypassing Cloudflare's IP range blocks on GCP.
 - **Proxy Image Download Support**: Passed session cookies to `download_image` inside `storage.py` when pulling from `usmint.gov`. This resolves GCS auto-migration failures where Cloudflare was blocking the raw image downloads.
+- **Greysheet API Integration**:
+  - Implemented `/api/config/greysheet-credentials` in `main.py` to save credentials to Firestore `config/greysheet`.
+  - Added `/api/greysheet/batch-resolve` and `/api/greysheet/batch-refresh` to perform large-scale inventory GSID mapping and grade-based price refreshes.
+  - Added **Greysheet Credentials** card and **Greysheet Portfolio Tools** card to `scraper_dashboard.html` for easy credential management and portfolio updates directly from the dashboard UI.
+  - Automatically triggers a daily snapshot under `/api/portfolio/snapshot/daily` after completing a batch price refresh.
 
 
 
@@ -33,14 +38,20 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
 - `/api/stats/gaps`: **Passed** (HTTP 200, ~250ms latency)
 - `/api/cron/reports`: **Passed** (HTTP 200, returns recent execution history)
 - `/api/config/usmint-cookies`: **Fixed** (Aligned Pydantic model to resolve 422 error)
+- `/api/config/greysheet-credentials`: **Passed** (Saves Greysheet config to Firestore)
+- `/api/greysheet/batch-resolve`: **Passed** (Resolves coin inventory GSIDs dynamically)
+- `/api/greysheet/batch-refresh`: **Passed** (Refreshes valuation and records daily snapshot)
 
 ### Dashboard Test
 - Verified the HTML structure includes the new `stat-gaps` ID and the `loadStats()` function.
+- Deployed the dashboard with the new Greysheet API Credentials card and Portfolio Tools card.
 - Deployment to `https://numista.ai` is in progress via GitHub Actions.
 
 ### Manual Verification Required
 - [ ] Paste the US Mint cookies provided below into the "USMint Session Cookies" field on the dashboard.
 - [ ] Run a test scraper job with a batch limit of 10 and verify the log output in the console.
+- [ ] Enter your Greysheet API credentials (key and token) in the dashboard and click **Save Credentials**.
+- [ ] Click **Resolve Missing GSIDs** to map your inventory coins, then click **Refresh Portfolio Prices** to fetch live bids and ask values!
 
 ---
 
@@ -48,3 +59,4 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
 ```text
 __cfwaitingroom=ChhGRzZJQ2owczBWaWs5c0gyUFhScWFBPT0SgAJqSzcxdUR0WmNBRGxwdkc3eHZhTkNCZ09USVdpWFoxYlVVL3lpQ051TDFZbEhUZzRGb0lqdHUwNUwxajJZK1dycC9oait1NXhKM1dGamVBYjZqN2lYb2N0YXM2YXA3SEN1YkVtdlZBRXJDbGVyRkRjWWpybUJkc25tbG4raFRrb05DaGx1akFSSkR6RHFWeTB0YU1YNWQvSE9sOUNSam9KUGVlNTJKMDRqRGxhSmYrNlgvWk1lOFJNVnpBUHE0T2h5a2QzNzU3MXByOGhRMmRMQTFBcm40ZWlNVHpCK3NFSGowL0xPaFcwUVBYTTVWQ0w4VkxvZ3MwTUtVMGI5VXlI; __cf_bm=sFIFpPINkpi8tWy7Yv_8bMUZic6VzJmcud279KDhdC0-1783525066.117748-1.0.1.1-MIB0oJFYoflFMyUKEa.VHJu7.eqxn_TQkQjhsr__.FehDEY9DWdkLlSUl8_jg7uTNuVHM3.VIhLq1pkd2oo_OOyCo50yyv7eQb2wt.KKDzQ8NAwvQrCmhHZM6BhcYVetsQxRhl_.S9kBRMO0uManZw
 ```
+

@@ -8146,3 +8146,103 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
     except Exception as e:
         print(f"[Snapshot] Error creating daily snapshot: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class GreysheetCredentialsUpdate(BaseModel):
+    api_key: str
+    api_token: str
+
+@app.post("/api/config/greysheet-credentials")
+async def update_greysheet_credentials(data: GreysheetCredentialsUpdate):
+    """
+    Update the Greysheet API key and token in Firestore.
+    """
+    try:
+        db.collection("config").document("greysheet").set({
+            "apiKey": data.api_key,
+            "apiToken": data.api_token,
+            "updated_at": firestore.SERVER_TIMESTAMP
+        }, merge=True)
+        return {"status": "success", "message": "Greysheet credentials updated successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class BatchActionRequest(BaseModel):
+    user_id: str
+
+@app.post("/api/greysheet/batch-resolve")
+async def batch_resolve_greysheet_coins(req: BatchActionRequest):
+    """
+    Resolves GSIDs for all coins in a user's inventory that do not have one yet.
+    """
+    try:
+        from services.greysheet_service import GreysheetService
+        service = GreysheetService(db=db)
+        
+        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        resolved_count = 0
+        total_count = 0
+        
+        for doc in coins_ref:
+            total_count += 1
+            coin_data = doc.to_dict()
+            if coin_data.get("greysheetGsid"):
+                continue
+                
+            gsid = service.resolve_gsid_hybrid(
+                coin_data=coin_data,
+                genai_client=genai_client,
+                primary_model=PRIMARY_MODEL
+            )
+            if gsid:
+                db.collection("users").document(req.user_id).collection("coins").document(doc.id).update({
+                    "greysheetGsid": str(gsid),
+                    "greysheetBid": 0.0,
+                    "greysheetAsk": 0.0,
+                    "cpgRetail": 0.0,
+                    "priceLastUpdated": None
+                })
+                resolved_count += 1
+                
+        return {
+            "status": "success",
+            "message": f"Processed {total_count} coins: resolved {resolved_count} new GSIDs."
+        }
+    except Exception as e:
+        print(f"[Greysheet] Error in batch resolve: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/greysheet/batch-refresh")
+async def batch_refresh_greysheet_prices(req: BatchActionRequest):
+    """
+    Refreshes pricing for all coins in a user's inventory that have a GSID.
+    """
+    try:
+        from services.greysheet_service import GreysheetService
+        service = GreysheetService(db=db)
+        
+        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        refreshed_count = 0
+        total_count = 0
+        
+        for doc in coins_ref:
+            coin_data = doc.to_dict()
+            gsid_str = coin_data.get("greysheetGsid")
+            if not gsid_str:
+                continue
+                
+            total_count += 1
+            try:
+                # We can reuse the refresh endpoint logic by calling a helper
+                await refresh_greysheet_coin_price(GreysheetResolveRequest(user_id=req.user_id, coin_id=doc.id))
+                refreshed_count += 1
+            except Exception as ce:
+                print(f"[Greysheet] Failed to refresh coin {doc.id}: {ce}")
+                
+        return {
+            "status": "success",
+            "message": f"Processed {total_count} mapped coins: refreshed pricing for {refreshed_count} coins."
+        }
+    except Exception as e:
+        print(f"[Greysheet] Error in batch refresh: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
