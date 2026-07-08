@@ -21,12 +21,12 @@ botasaurus_api==4.0.10
 botasaurus_driver==4.0.92
 botasaurus_proxy_authentication==1.0.16
 botasaurus_requests==4.0.38
-curl_cffi==0.11.1
-playwright>=1.49.0
+curl_cffi==0.15.0
+playwright>=1.54.0
 
 # ── Image processing ─────────────────────────────────────────────────────────
 opencv-python==4.11.0.90
-Pillow==11.2.1
+Pillow==12.3.0
 
 # ── Data science / ML tooling ─────────────────────────────────────────────────
 numpy==2.2.6
@@ -67,8 +67,8 @@ kagglehub>=0.3.0
 kagglesdk>=1.0.0
 
 # ── Async / concurrency ───────────────────────────────────────────────────────
-gevent==24.11.1
-geventhttpclient==2.3.3
+gevent==26.0.0
+geventhttpclient==2.4.0
 
 # ── System utilities ──────────────────────────────────────────────────────────
 psutil==7.0.0
