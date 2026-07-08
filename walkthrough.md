@@ -21,6 +21,8 @@ I have resolved the performance issues with the Scraper Dashboard and optimized 
 - **Wikimedia Scraper Fix**: Migrated `scrape_wikimedia` from Botasaurus `@request` to standard `requests.get` to bypass Cloud Run environment compatibility issues (which caused Botasaurus calls to fail with `Request failed` for every query, slowing down execution to ~80s per coin).
 - **Cookie-Based Priority Override**: Implemented logic that restricts scraping to USMint.gov only if cookies are present (preventing slow waterfall fallbacks if it fails). If cookies are absent, usmint.gov is skipped entirely, defaulting immediately to other sources (like Wikimedia).
 - **Proxy Scraper Support**: Updated `scrapers.py` to explicitly route requests to usmint.gov, pcgs.com, ngccoin.com, and usacoinbook.com through the configured proxy settings when present, bypassing Cloudflare's IP range blocks on GCP.
+- **Proxy Image Download Support**: Passed session cookies to `download_image` inside `storage.py` when pulling from `usmint.gov`. This resolves GCS auto-migration failures where Cloudflare was blocking the raw image downloads.
+
 
 
 

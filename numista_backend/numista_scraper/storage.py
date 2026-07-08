@@ -51,9 +51,24 @@ def download_image(url):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
+        
+        # Pass cookies if downloading from usmint.gov to bypass Cloudflare
+        if "usmint.gov" in url.lower():
+            try:
+                doc = db.collection("config").document("usmint").get()
+                if doc.exists:
+                    cookies = doc.to_dict().get("cookieString")
+                    if cookies:
+                        headers["Cookie"] = cookies
+                        print("    [Download Image] Using provided USMint session cookies for image download...")
+            except Exception as ce:
+                print(f"    ⚠ Error reading USMint cookies for image download: {ce}")
+
         resp = requests.get(url, headers=headers, timeout=20, proxies=get_scrape_proxy())
         if resp.status_code == 200 and len(resp.content) > 1000:
             return resp.content
+        else:
+            print(f"    ⚠ Image download failed for {url}. Status: {resp.status_code}, Length: {len(resp.content) if resp.content else 0}")
     except Exception as e:
         print(f"    ⚠ Error downloading image from {url}: {e}")
     return None
