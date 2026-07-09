@@ -3,158 +3,204 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
-    "site": "numista-vault",
-    "public": "build/web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+  "hosting": [
+    {
+      "site": "numista-vault",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
 
-    "redirects": [
-      {
-        "source": "https://www.numista.ai/**",
-        "destination": "https://numista.ai/:splat",
-        "type": 301
-      }
-    ],
+      "redirects": [
+        {
+          "source": "https://www.numista.ai/**",
+          "destination": "https://numista.ai/:splat",
+          "type": 301
+        }
+      ],
 
-    "rewrites": [
-      {
-        "source": "/add_coins.html",
-        "destination": "/add_coins.html"
-      },
-      {
-        "source": "/scraper_dashboard.html",
-        "destination": "/scraper_dashboard.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
+      "rewrites": [
+        {
+          "source": "/add_coins.html",
+          "destination": "/add_coins.html"
+        },
+        {
+          "source": "/scraper_dashboard.html",
+          "destination": "/scraper_dashboard.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
 
-    "headers": [
-      {
-        "source": "/flutter_service_worker.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/flutter_bootstrap.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(js|css|wasm)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        "source": "/main.dart.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=86400"
-          }
-        ]
-      },
-      {
-        "source": "/manifest.json",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/manifest+json"
-          }
-        ]
-      },
-      {
-        "source": "/robots.txt",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=86400"
-          },
-          {
-            "key": "Content-Type",
-            "value": "text/plain; charset=utf-8"
-          }
-        ]
-      },
-      {
-        "source": "/sitemap.xml",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=86400"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/xml; charset=utf-8"
-          }
-        ]
-      },
-      {
-        "source": "**",
-        "headers": [
-          {
-            "key": "X-Frame-Options",
-            "value": "SAMEORIGIN"
-          },
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          },
-          {
-            "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
-          },
-          {
-            "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(), geolocation=(), payment=()"
-          },
-          {
-            "key": "Strict-Transport-Security",
-            "value": "max-age=63072000; includeSubDomains; preload"
-          },
-          {
-            "key": "X-DNS-Prefetch-Control",
-            "value": "on"
-          },
-          {
-            "key": "Content-Security-Policy",
-            "value": "default-src 'self' https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseapp.com https://*.firebase.com https://storage.googleapis.com https://*.run.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.run.app; worker-src blob: 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.gstatic.com; font-src 'self' https://fonts.gstatic.com https://*.gstatic.com data:; img-src 'self' data: blob: https://storage.googleapis.com https://*.googleusercontent.com https://*.gstatic.com https://*.run.app; connect-src 'self' blob: https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://accounts.google.com https://*.run.app https://numista-backend-568985927038.us-central1.run.app https://localhost:5000; frame-src 'self' https://apis.google.com https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.run.app"
-          }
-        ]
-      }
-    ]
-  },
+      "headers": [
+        {
+          "source": "/flutter_service_worker.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/flutter_bootstrap.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css|wasm)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "/main.dart.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=86400"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/manifest+json"
+            }
+          ]
+        },
+        {
+          "source": "/robots.txt",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=86400"
+            },
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            }
+          ]
+        },
+        {
+          "source": "/sitemap.xml",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=86400"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/xml; charset=utf-8"
+            }
+          ]
+        },
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=(), payment=()"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=63072000; includeSubDomains; preload"
+            },
+            {
+              "key": "X-DNS-Prefetch-Control",
+              "value": "on"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self' https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseapp.com https://*.firebase.com https://storage.googleapis.com https://*.run.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.run.app; worker-src blob: 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.gstatic.com; font-src 'self' https://fonts.gstatic.com https://*.gstatic.com data:; img-src 'self' data: blob: https://storage.googleapis.com https://*.googleusercontent.com https://*.gstatic.com https://*.run.app; connect-src 'self' blob: https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://accounts.google.com https://*.run.app https://numista-backend-568985927038.us-central1.run.app https://localhost:5000; frame-src 'self' https://apis.google.com https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.run.app"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "site": "numista-ux",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "/flutter_service_worker.js",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+        },
+        {
+          "source": "/flutter_bootstrap.js",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+        },
+        {
+          "source": "**/*.@(js|css|wasm)",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+          "source": "/main.dart.js",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+        },
+        {
+          "source": "**",
+          "headers": [
+            { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+            { "key": "X-Content-Type-Options", "value": "nosniff" },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self' https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseapp.com https://*.firebase.com https://storage.googleapis.com https://*.run.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.run.app; worker-src blob: 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.gstatic.com; font-src 'self' https://fonts.gstatic.com https://*.gstatic.com data:; img-src 'self' data: blob: https://storage.googleapis.com https://*.googleusercontent.com https://*.gstatic.com https://*.run.app; connect-src 'self' blob: https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://accounts.google.com https://*.run.app https://numista-backend-568985927038.us-central1.run.app https://localhost:5000; frame-src 'self' https://apis.google.com https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.run.app"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "flutter": {
     "platforms": {
       "android": {
