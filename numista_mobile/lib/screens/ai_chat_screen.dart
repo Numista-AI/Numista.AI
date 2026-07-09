@@ -22,7 +22,12 @@ import '../constants.dart';
 class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
   final String? initialQuery;
-  const AiChatScreen({super.key, this.initialQuery});
+  final String? activeRouteContext;
+  const AiChatScreen({
+    super.key,
+    this.initialQuery,
+    this.activeRouteContext,
+  });
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -149,9 +154,27 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// Insert Morgan's personalised opening message (no API call — generated locally).
   void _sendMorganOpener() {
     if (_ctx == null || _messages.isNotEmpty) return;
+    
+    String content = _ctx!.openingMessage;
+    
+    // Customize greeting based on the active screen the user came from
+    if (widget.activeRouteContext == 'My Collection') {
+      content = "Hi $_displayName! 👋 I see you were looking at your vault. "
+          "I can help you search, filter, or analyze your collection. "
+          "For example, ask me to 'find all my silver coins' or 'show me my most valuable coins'!";
+    } else if (widget.activeRouteContext == 'Add New Coins') {
+      content = "Hi $_displayName! 👋 Let's add some coins! "
+          "I can help you scan a receipt or upload photos of your coins. "
+          "What are we cataloging today?";
+    } else if (widget.activeRouteContext == 'Microscope Scanner') {
+      content = "Hi $_displayName! 👋 Ready to inspect your coins under the microscope? "
+          "I can guide you on how to capture high-quality photos for identifying and grading. "
+          "How can I help you today?";
+    }
+    
     final openerMsg = {
       'role': 'assistant',
-      'content': _ctx!.openingMessage,
+      'content': content,
     };
     if (mounted) setState(() => _messages.add(openerMsg));
     _persistMessages([openerMsg]);

@@ -9,13 +9,11 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
-import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
 import '../services/batch_valuation_service.dart';
-import '../services/valuation_mode_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'deals_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -26,11 +24,13 @@ class HomeDashboard extends StatefulWidget {
   final void Function(String query)? onAskMorganWithQuery;
   /// Called to navigate to My Collection (e.g. to run AI Valuation).
   final VoidCallback? onNavigateToCollection;
+  final void Function(String route)? onNavigate;
   const HomeDashboard({
     super.key,
     this.onAskMorgan,
     this.onAskMorganWithQuery,
     this.onNavigateToCollection,
+    this.onNavigate,
   });
 
   @override
@@ -288,7 +288,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return 0.00;
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, outerConstraints) {
@@ -296,106 +296,66 @@ class _HomeDashboardState extends State<HomeDashboard> {
           stream: _getCombinedStream(),
           builder: (context, snapshot) {
             // Only show the spinner on the very first load (no cached data).
-            // On subsequent Firestore updates keep showing the last known
-            // content so the widget tree is not blanked between updates.
             if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                   child: CircularProgressIndicator(color: Color(0xFFF63366)));
             }
             if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
-                    Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFFE53935)),
-                    SizedBox(height: 16),
-                    Text('Dashboard unavailable',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
-                            color: Color(0xFF31333F))),
-                    SizedBox(height: 8),
-                    Text('Check your connection and refresh the page.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF5A5C69))),
-                  ]),
-                ),
-              );
+              return Center(child: Text('Error: ${snapshot.error}'));
             }
 
-            final coins = snapshot.data?.coins ?? [];
-            final currency = snapshot.data?.currency ?? [];
-            final worldItems = snapshot.data?.worldItems ?? [];
+            final data = snapshot.data;
+            final coins = data?.coins ?? [];
+            final currency = data?.currency ?? [];
+            final worldItems = data?.worldItems ?? [];
 
-            // ── Compute portfolio metrics ──────────────────────────────────
-            int totalItems = coins.length + currency.length + worldItems.length;
-            double cpgTotal = 0;
-            double bidTotal = 0;
-            double askTotal = 0;
-            double acquisitionCost = 0;
-            double meltValue       = 0;
-            double faceValue       = 0;
+            final int totalItems = coins.length + currency.length + worldItems.length;
 
-            double coinsVal = 0;
-            double currencyVal = 0;
-            double medalsVal = 0;
-            double othersVal = 0;
+            double coinsVal = 0.0;
+            double currencyVal = 0.0;
+            double medalsVal = 0.0;
+            double othersVal = 0.0;
 
-            Map<String, double> programValues = {};
+            double cpgTotal = 0.0;
+            double bidTotal = 0.0;
+            double askTotal = 0.0;
 
-            // 1. Process Coins collection
+            double faceValue       = 0.0;
+            double acquisitionCost = 0.0;
+            double meltValue       = 0.0;
+            final Map<String, double> programValues = {};
+
+            // 1. Process standard Coins collection
             for (final data in coins) {
-              final valStr = data['AI Estimated Value'];
-              final coinValue = _parseCurrency(valStr);
-
-              // Melt Value
-              final liveMelt = _spotPrices.isNotEmpty
-                  ? (MeltValueService.compute(
-                        metalContent: data['Metal Content']?.toString() ?? '',
-                        denomination: data['Denomination']?.toString() ?? '',
-                        spotPrices: _spotPrices,
-                      ) ?? 0.0)
-                  : _parseCurrency(data['Melt Value']);
-              
-              final finalVal = math.max(coinValue, liveMelt);
-
-              // Classification
-              final itemType = (data['item_type'] ?? '').toString().toLowerCase();
-              final prog = (data['Program/Series'] ?? '').toString().toLowerCase();
-              final desc = (data['description'] ?? '').toString().toLowerCase();
-              final theme = (data['Theme/Subject'] ?? '').toString().toLowerCase();
-
-              final isMedal = itemType.contains('medal') || prog.contains('medal') || desc.contains('medal') || theme.contains('medal');
-              final isCurrency = itemType == 'paper_currency';
-
-              if (isMedal) {
-                medalsVal += finalVal;
-              } else if (isCurrency) {
-                currencyVal += finalVal;
+              final rawAi = data['AI Estimated Value'];
+              double finalVal = 0.0;
+              if (rawAi != null && rawAi != 'None' && rawAi != 'Pending' && rawAi.toString().isNotEmpty) {
+                finalVal = _parseCurrency(rawAi);
               } else {
-                coinsVal += finalVal;
+                finalVal = _parseCurrency(data['Cost']);
               }
 
-              // Greysheet fields
-              final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-              final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-              final coinAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+              final curCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+              final curBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+              final curAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
 
-              final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
-              final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
-              final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
+              cpgTotal += curCpg > 0 ? curCpg : finalVal;
+              bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
+              askTotal += curAsk > 0 ? curAsk : finalVal * 0.92;
 
-              cpgTotal += finalCpg;
-              bidTotal += finalBid;
-              askTotal += finalAsk;
+              coinsVal += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
-              meltValue       += liveMelt;
-              faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
+              final spotEntry = (data['spot_value_at_entry'] as num?)?.toDouble() ?? 0.0;
+              if (spotEntry > 0) {
+                meltValue += spotEntry;
+              }
+              faceValue += _computeFaceValue(data['Denomination']?.toString() ?? '');
 
-              // Track per-program value for the bar chart
-              final program = data['Program/Series']?.toString() ?? 'Other';
-              programValues[program] = (programValues[program] ?? 0) + finalCpg;
+              final prog = data['Program/Series']?.toString() ?? 'Others';
+              programValues[prog] = (programValues[prog] ?? 0.0) + finalVal;
             }
 
-            // 2. Process Currency collection
+            // 2. Process Notes (Paper Currency)
             for (final data in currency) {
               final rawAi = data['AI Estimated Value'];
               double finalVal = 0.0;
@@ -416,6 +376,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
               currencyVal += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
+
+              final prog = data['Program/Series']?.toString() ?? 'Others';
+              programValues[prog] = (programValues[prog] ?? 0.0) + finalVal;
             }
 
             // 3. Process World Items collection
@@ -426,9 +389,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
               final catStr = (data['item_type'] ?? '').toString().toLowerCase();
               final name = (data['name'] ?? '').toString().toLowerCase();
-              final notes = (data['notes'] ?? '').toString().toLowerCase();
+              final notesVal = (data['notes'] ?? '').toString().toLowerCase();
 
-              final isMedal = catStr.contains('medal') || name.contains('medal') || notes.contains('medal');
+              final isMedal = catStr.contains('medal') || name.contains('medal') || notesVal.contains('medal');
 
               if (isMedal) {
                 medalsVal += finalVal;
@@ -454,6 +417,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 meltValue += spotEntry;
               }
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
+
+              final prog = data['program_series']?.toString() ?? data['Program/Series']?.toString() ?? 'Others';
+              programValues[prog] = (programValues[prog] ?? 0.0) + finalVal;
             }
 
             final portfolioValue = cpgTotal;
@@ -473,7 +439,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               });
             }
 
-            // ── Last 3 added (using coins) ──────────────────────────────────
+            // ── Last 5 added (using coins) ──────────────────────────────────
             final sorted = List<Map<String, dynamic>>.from(coins);
             sorted.sort((a, b) {
               final aTs = a['Added'] ?? a['timestamp'] ?? a['created_at'];
@@ -490,508 +456,217 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final last5 = sorted.take(5).toList();
 
             final fmt = intl.NumberFormat.currency(symbol: '\$');
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final user = FirebaseAuth.instance.currentUser;
+            final displayName = user?.displayName ?? user?.email?.split('@').first ?? 'Collector';
+            final today = intl.DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now());
+
+            String greetingWord() {
+              final hr = DateTime.now().hour;
+              if (hr < 12) return 'Good Morning';
+              if (hr < 17) return 'Good Afternoon';
+              return 'Good Evening';
+            }
+
+            final isDesktop = outerConstraints.maxWidth > 800;
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Version badge ─────────────────────────────────────────
+                  // ─── Senior Welcome Banner ───────────────────────────────────
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                    ),
-                    child: const Text('Numista.AI v3.9',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            color: Color(0xFF166534))),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Header: title + portfolio value ──────────────────────
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('DASHBOARD',
-                                style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    fontStyle: FontStyle.italic,
-                                    color: Color(0xFF31333F))),
-                            Text('AI POWERED COLLECTION MANAGER',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5A5C69))),
-                          ],
-                        ),
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                            : [const Color(0xFF1E1E2C), const Color(0xFF2A2A40)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: FutureBuilder<bool>(
-                          future: ValuationModeService.isAdvancedMode(),
-                          builder: (context, modeSnap) {
-                            final advanced = modeSnap.data ?? false;
-                            return _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced);
-                          },
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(20),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Category Breakdown ─────────────────────────────────────
-                  _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
-                  const SizedBox(height: 24),
-
-                  // ── Arbitrage Deal Spotter ──────────────────────────────────
-                  _buildArbitrageDealsCard(context),
-                  const SizedBox(height: 24),
-
-                   // ── Metric cards ──────────────────────────────────────────
-                  LayoutBuilder(builder: (ctx, bc) {
-                    final profit = portfolioValue - acquisitionCost;
-                    final profitFmt = (profit >= 0 ? '+' : '') + fmt.format(profit);
-                    final profitColor = profit >= 0
-                        ? const Color(0xFF0F9D58)
-                        : const Color(0xFFE53935);
-                    final narrow = bc.maxWidth < 480;
-                    if (narrow) {
-                      return Column(children: [
-                        Row(children: [
-                          Expanded(child: _metricCard('Total Items', totalItems.toString())),
-                          const SizedBox(width: 10),
-                          Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
-                        ]),
-                        const SizedBox(height: 10),
-                        Row(children: [
-                          Expanded(child: _metricCard('Melt Value', fmt.format(meltValue))),
-                          const SizedBox(width: 10),
-                          Expanded(child: _metricCard('Face Value', fmt.format(faceValue))),
-                        ]),
-                        const SizedBox(height: 10),
-                        _metricCard('Profit / Loss', profitFmt,
-                            valueColor: profitColor),
-                      ]);
-                    }
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _metricCardFlex('Total Items', totalItems.toString()),
-                        _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
-                        _metricCardFlex('Melt Value', fmt.format(meltValue)),
-                        _metricCardFlex('Face Value', fmt.format(faceValue)),
-                        _metricCardFlex('Profit / Loss', profitFmt,
-                            valueColor: profitColor),
                       ],
-                    );
-                  }),
-                  const SizedBox(height: 24),
-
-                  // ── Portfolio Insights Charts ──────────────────────────────
-                  PortfolioChartsPanel(
-                    portfolioValue: portfolioValue,
-                    meltValue: meltValue,
-                    acquisitionCost: acquisitionCost,
-                    programValues: programValues,
-                    snapshots: _snapshots,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Recently Added ────────────────────────────────────────
-                  const Text('Recently Added',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF31333F))),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E6E9)),
                     ),
-                    child: last5.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No coins yet — add your first coin!',
-                                style: TextStyle(color: Color(0xFF5A5C69))))
-                        : Column(
-                            children: last5.asMap().entries.map((entry) {
-                              final data = entry.value;
-                              final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-                              final mint   = data['Mint Mark']?.toString() ?? '';
-                              final denom  = data['Denomination']?.toString() ?? '';
-                              final series = data['Program/Series']?.toString() ?? '';
-                              final theme  = data['Theme/Subject']?.toString() ?? '';
-                              final estVal = data['AI Estimated Value']?.toString() ?? '—';
-
-                              // Build a human-readable coin name
-                              // Priority: Program/Series > Theme/Subject > Denomination > fallback
-                              final denomFallback = denom.isNotEmpty && denom != 'Multiple'
-                                  ? (denom[0].toUpperCase() + denom.substring(1))
-                                      .replaceAll(r'$', '')
-                                      .trim()
-                                  : 'Coin';
-                              final coinName = series.isNotEmpty && series != 'Multiple'
-                                  ? series
-                                  : theme.isNotEmpty && theme != 'Multiple'
-                                      ? theme
-                                      : denomFallback;
-
-                              // Build year-mint label, normalise "Multiple" to "Various"
-                              final yearLabel = (year.isEmpty || year == 'Multiple') ? 'Various' : year;
-                              final mintLabel = (mint.isEmpty || mint == 'Multiple') ? '' : '-$mint';
-                              // Build denomination label — only prepend '$' if the
-                              // value is numeric (e.g. "1" → "$1") or already has it.
-                              // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
-                              String fmtDenom(String d) {
-                                if (d.isEmpty || d == 'Multiple') return '';
-                                if (d.startsWith(r'$')) return d;              // already has $
-                                final numeric = double.tryParse(
-                                    d.replaceAll(RegExp(r'[^\d.]'), ''));
-                                if (numeric != null && d.contains(RegExp(r'^[\d]'))) {
-                                  return '\$$d';                              // numeric → add $
-                                }
-                                return d[0].toUpperCase() + d.substring(1);   // word → capitalise
-                              }
-                              final denomLabel = fmtDenom(denom);
-                              final condition = data['Condition']?.toString() ?? '';
-
-                              // When year is known → "2025-W  $1"
-                              // When year is Various (sets/lots) → use Theme + Condition to differentiate
-                              final String subtitle;
-                              if (yearLabel != 'Various') {
-                                final parts = [
-                                  '$yearLabel$mintLabel',
-                                  if (denomLabel.isNotEmpty) denomLabel,
-                                ].where((s) => s.isNotEmpty).toList();
-                                subtitle = parts.join(' · ');
-                              } else {
-                                // Year unknown — use theme + condition to distinguish
-                                final themeStr = theme.isNotEmpty && theme != 'Multiple' ? theme : '';
-                                final condStr = (condition.isNotEmpty && condition != 'Ungraded') ? condition : '';
-                                final parts = [
-                                  if (themeStr.isNotEmpty) themeStr,
-                                  if (condStr.isNotEmpty) condStr,
-                                  if (denomLabel.isNotEmpty) denomLabel,
-                                ];
-                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' · ');
-                              }
-
-                              return Column(children: [
-                                if (entry.key > 0)
-                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
-                                ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  leading: _CoinThumbnail(
-                                    imageUrl: data['image_url_obverse']?.toString()
-                                        ?? data['imageUrlObverse']?.toString(),
-                                  ),
-                                  title: Text(coinName,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF31333F))),
-                                  subtitle: Text(subtitle,
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF64748B))),
-                                  trailing: Text(estVal,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF0F9D58))),
-                                ),
-                              ]);
-                            }).toList(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${greetingWord()}, $displayName! 👋',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
                           ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Morgan Widget ─────────────────────────────────────────
-                  _MorganDashboardCard(
-                    totalCoins: totalItems,
-                    onAskMorgan: widget.onAskMorgan,
-                    onAskMorganWithQuery: widget.onAskMorganWithQuery,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Live Spot Prices ──────────────────────────────────────
-                  Row(children: [
-                    const Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
-                    const SizedBox(width: 6),
-                    const Text('LIVE SPOT PRICES',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.5)),
-                    const SizedBox(width: 10),
-                    if (_pricesLastUpdated != null)
-                      Text(
-                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} · Source: metals-api.com',
-                        style: const TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF94A3B8)),
-                      ),
-                  ]),
-                  const SizedBox(height: 8),
-                  if (_isLoadingPrices)
-                    const SizedBox(height: 4,
-                        child: LinearProgressIndicator(color: Color(0xFF0F9D58)))
-                  else if (_spotPrices.isNotEmpty)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: _spotPrices.entries.map((e) =>
-                          Container(
-                            margin: const EdgeInsets.only(right: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE2E6E9)),
-                              boxShadow: [BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 4, offset: const Offset(0, 2))],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(e.key,
-                                    style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF64748B))),
-                                const SizedBox(height: 2),
-                                Text(fmt.format(e.value),
-                                    style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF0F172A))),
-                              ],
-                            ),
-                          ),
-                        ).toList(),
-                      ),
-                    ),
-                  const SizedBox(height: 24),
-
-                  // ── System Updates & Release Notes ────────────────────────
-                  _ReleaseNotesPanel(),
-                  const SizedBox(height: 24),
-
-                  // ── Market Intel / News feed (bottom) ─────────────────────
-                  Row(
-                    children: [
-                      const Icon(Icons.newspaper,
-                          size: 15, color: Color(0xFF3B82F6)),
-                      const SizedBox(width: 6),
-                      const Text('MARKET INTEL',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF64748B),
-                              letterSpacing: 0.5)),
-                      const Spacer(),
-                      if (!_isLoadingNews)
-                        IconButton(
-                          icon: const Icon(Icons.refresh,
-                              size: 16, color: Color(0xFF94A3B8)),
-                          tooltip: 'Refresh news',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _fetchNews(isRefresh: true),
                         ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Welcome back. Here is your coin collection summary for $today.',
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            color: Colors.white70,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  if (_isLoadingNews)
-                    const SizedBox(
-                      height: 4,
-                      child: LinearProgressIndicator(
-                          color: Color(0xFF3B82F6)))
-                  else if (_news.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E6E9)),
-                      ),
-                      child: Column(children: const [
-                        Icon(Icons.wifi_off_outlined,
-                            size: 28, color: Color(0xFFCBD5E1)),
-                        SizedBox(height: 8),
-                        Text('Market news unavailable right now — check back shortly.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12, color: Color(0xFF94A3B8))),
-                      ]),
+                  const SizedBox(height: 24),
+
+                  // ─── Symmetrical 3-Card Summary Row ──────────────────────────
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildValuationSummaryCard(portfolioValue, totalItems, fmt, isDark),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildLiveMetalsCard(fmt, isDark),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildLastAddedCoinCard(last5, fmt, isDark),
+                        ),
+                      ],
                     )
                   else
-                    SizedBox(
-                      height: 158,
-                      child: Builder(builder: (context) {
-                        // Filter out dismissed articles client-side
-                        final visibleNews = _news
-                            .whereType<Map<String, dynamic>>()
-                            .where((item) {
-                          final link = item['link']?.toString() ?? '';
-                          // Simple hash: use the link URL as a stable ID
-                          final id = link.isNotEmpty
-                              ? _stableArticleId(link)
-                              : '';
-                          return id.isEmpty || !_dismissedNewsIds.contains(id);
-                        }).toList();
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: visibleNews.length,
-                          itemBuilder: (ctx, i) {
-                            final item = visibleNews[i];
-                            final link = item['link']?.toString() ?? '';
-                            final articleId = link.isNotEmpty
-                                ? _stableArticleId(link)
-                                : '';
-                            return GestureDetector(
-                              onTap: link.isNotEmpty
-                                  ? () async {
-                                      final uri = Uri.parse(link);
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(uri,
-                                            mode: LaunchMode
-                                                .externalApplication);
-                                      }
-                                    }
-                                  : null,
-                              child: MouseRegion(
-                                cursor: link.isNotEmpty
-                                    ? SystemMouseCursors.click
-                                    : MouseCursor.defer,
-                                child: Container(
-                                  width: 270,
-                                  margin: const EdgeInsets.only(right: 12),
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: const Color(0xFFE2E6E9)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.03),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(children: [
-                                        Expanded(
-                                          child: Text(
-                                            item['source']?.toString() ?? 'News',
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF3B82F6)),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          item['published']?.toString() ?? '',
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0xFF94A3B8)),
-                                        ),
-                                      ]),
-                                      const SizedBox(height: 5),
-                                      Text(
-                                        item['title']?.toString() ?? '',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF1E293B)),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Expanded(
-                                        child: Text(
-                                          item['summary']?.toString() ?? '',
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF64748B),
-                                              height: 1.4),
-                                        ),
-                                      ),
-                                      // ── Bottom row: Read more + 👎 Not relevant ──
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          if (link.isNotEmpty)
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: const [
-                                                Text('Read more',
-                                                    style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Color(0xFF3B82F6),
-                                                        fontWeight: FontWeight.w600)),
-                                                SizedBox(width: 2),
-                                                Icon(Icons.arrow_forward_ios,
-                                                    size: 9,
-                                                    color: Color(0xFF3B82F6)),
-                                              ],
-                                            )
-                                          else
-                                            const SizedBox.shrink(),
-                                          // 👎 Not relevant
-                                          if (articleId.isNotEmpty)
-                                            GestureDetector(
-                                              onTap: () => _dismissArticle(articleId),
-                                              child: const Tooltip(
-                                                message: 'Not relevant — hide this article',
-                                                child: Icon(
-                                                  Icons.thumb_down_outlined,
-                                                  size: 13,
-                                                  color: Color(0xFFCBD5E1),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }),
-
+                    Column(
+                      children: [
+                        _buildValuationSummaryCard(portfolioValue, totalItems, fmt, isDark),
+                        const SizedBox(height: 14),
+                        _buildLiveMetalsCard(fmt, isDark),
+                        const SizedBox(height: 14),
+                        _buildLastAddedCoinCard(last5, fmt, isDark),
+                      ],
                     ),
+                  const SizedBox(height: 28),
+
+                  // ─── Large Primary Action Buttons ────────────────────────────
+                  Text(
+                    'WHAT WOULD YOU LIKE TO DO?',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (isDesktop)
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 3.4,
+                      children: _buildActionButtons(context, isDark),
+                    )
+                  else
+                    Column(
+                      children: _buildActionButtons(context, isDark)
+                          .map((w) => Padding(padding: const EdgeInsets.only(bottom: 12), child: w))
+                          .toList(),
+                    ),
+                  const SizedBox(height: 32),
+
+                  // ─── Collapsible Details Folders ─────────────────────────────
+                  Text(
+                    'DETAILED INSIGHTS & UTILITIES',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Folder 1: Valuation Breakdown & Metrics
+                  _ExpandableSection(
+                    title: 'Valuation & Metal Breakdown',
+                    icon: Icons.pie_chart_rounded,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
+                        const SizedBox(height: 20),
+                        // Melt, Face, Acquisition
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final w = constraints.maxWidth;
+                            final cols = w > 600 ? 3 : 1;
+                            if (cols == 3) {
+                              return Row(
+                                children: [
+                                  Expanded(child: _buildMetricCard('Silver Melt Value', meltValue, fmt, Icons.monetization_on)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildMetricCard('Total Face Value', faceValue, fmt, Icons.tag)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildMetricCard('Acquisition Cost', acquisitionCost, fmt, Icons.shopping_bag)),
+                                ],
+                              );
+                            } else {
+                              return Column(
+                                children: [
+                                  _buildMetricCard('Silver Melt Value', meltValue, fmt, Icons.monetization_on),
+                                  const SizedBox(height: 10),
+                                  _buildMetricCard('Total Face Value', faceValue, fmt, Icons.tag),
+                                  const SizedBox(height: 10),
+                                  _buildMetricCard('Acquisition Cost', acquisitionCost, fmt, Icons.shopping_bag),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Folder 2: Performance Charts
+                  _ExpandableSection(
+                    title: 'Historical Performance Charts',
+                    icon: Icons.trending_up_rounded,
+                    child: PortfolioChartsPanel(
+                      portfolioValue: portfolioValue,
+                      meltValue: meltValue,
+                      acquisitionCost: acquisitionCost,
+                      programValues: programValues,
+                      snapshots: _snapshots,
+                    ),
+                  ),
+
+                  // Folder 3: Recently Added Coin List
+                  _ExpandableSection(
+                    title: 'Recently Cataloged Coins',
+                    icon: Icons.history_rounded,
+                    child: _buildRecentlyAddedList(last5, fmt, isDark),
+                  ),
+
+                  // Folder 4: Live Market News & Updates
+                  _ExpandableSection(
+                    title: 'Numista & Market News',
+                    icon: Icons.newspaper_rounded,
+                    child: Column(
+                      children: [
+                        _buildNewsSection(fmt),
+                        const SizedBox(height: 16),
+                        _ReleaseNotesPanel(),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -1002,6 +677,546 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+  // ─── Senior dashboard widgets and helpers ──────────────────────────────────
+  Widget _buildValuationSummaryCard(double portfolioValue, int totalItems, intl.NumberFormat fmt, bool isDark) {
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'ESTIMATED PORTFOLIO VALUE',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white38 : const Color(0xFF64748B),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            fmt.format(portfolioValue),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0F9D58),
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$totalItems total cataloged items',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveMetalsCard(intl.NumberFormat fmt, bool isDark) {
+    final gold = _spotPrices['Gold'] ?? 0.0;
+    final silver = _spotPrices['Silver'] ?? 0.0;
+    final platinum = _spotPrices['Platinum'] ?? 0.0;
+
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Text(
+                'LIVE PRECIOUS METALS',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (_isLoadingPrices)
+                const SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFFF63366)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Gold (oz)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+              Text(gold > 0 ? fmt.format(gold) : 'Loading...',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFD4A843))),
+            ],
+          ),
+          const Divider(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Silver (oz)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+              Text(silver > 0 ? fmt.format(silver) : 'Loading...',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+            ],
+          ),
+          const Divider(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Platinum (oz)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+              Text(platinum > 0 ? fmt.format(platinum) : 'Loading...',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLastAddedCoinCard(List<Map<String, dynamic>> last5, intl.NumberFormat fmt, bool isDark) {
+    if (last5.isEmpty) {
+      return Container(
+        height: 160,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+        ),
+        child: const Center(
+          child: Text(
+            'No coins added yet.\nTap below to catalog one!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
+          ),
+        ),
+      );
+    }
+
+    final coin = last5.first;
+    final name = coin['Name'] ?? coin['Title'] ?? 'Unnamed Coin';
+    final grade = coin['Grade'] ?? 'Raw';
+    final rawVal = coin['AI Estimated Value'] ?? coin['Cost'] ?? '0';
+    final val = _parseCurrency(rawVal);
+    final imgUrl = coin['ObversePhotoUrl'] ?? coin['photo_url'] ?? '';
+
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'MOST RECENT ADDITION',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white38 : const Color(0xFF64748B),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withAlpha(10) : Colors.black.withAlpha(5),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                ),
+                child: ClipOval(
+                  child: imgUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const Icon(Icons.image, size: 20),
+                          errorWidget: (context, url, error) => const Icon(Icons.toll_rounded, size: 24, color: Colors.amber),
+                        )
+                      : const Icon(Icons.toll_rounded, size: 24, color: Colors.amber),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Grade: $grade',
+                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      fmt.format(val),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F9D58)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildActionButtons(BuildContext context, bool isDark) {
+    return [
+      _DashboardActionButton(
+        title: 'Add & Scan Coins',
+        subtitle: 'Upload coin photos, receipts, or PCGS grades',
+        icon: Icons.add_circle_rounded,
+        color: const Color(0xFFF63366),
+        onTap: () {
+          if (widget.onNavigate != null) {
+            widget.onNavigate!('Add New Coins');
+          }
+        },
+      ),
+      _DashboardActionButton(
+        title: 'Identify a Coin',
+        subtitle: 'Identify and grade coins with custom scanner',
+        icon: Icons.camera_alt_rounded,
+        color: const Color(0xFF3B82F6),
+        onTap: () {
+          if (widget.onNavigate != null) {
+            widget.onNavigate!('Microscope Scanner');
+          }
+        },
+      ),
+      _DashboardActionButton(
+        title: 'Browse Vault',
+        subtitle: 'Explore, sort and filter your entire collection',
+        icon: Icons.collections_bookmark_rounded,
+        color: const Color(0xFF10B981),
+        onTap: () {
+          if (widget.onNavigate != null) {
+            widget.onNavigate!('My Collection');
+          } else if (widget.onNavigateToCollection != null) {
+            widget.onNavigateToCollection!();
+          }
+        },
+      ),
+      _DashboardActionButton(
+        title: 'Ask Morgan AI',
+        subtitle: 'Ask questions or start a guided collection tour',
+        icon: Icons.psychology_rounded,
+        color: const Color(0xFF8B5CF6),
+        onTap: () {
+          if (widget.onAskMorgan != null) {
+            widget.onAskMorgan!();
+          }
+        },
+      ),
+    ];
+  }
+
+  Widget _buildMetricCard(String label, double val, intl.NumberFormat fmt, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFFF63366)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  fmt.format(val),
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentlyAddedList(List<Map<String, dynamic>> last5, intl.NumberFormat fmt, bool isDark) {
+    if (last5.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            'No recently added coins.',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: last5.map((coin) {
+        final name = coin['Name'] ?? coin['Title'] ?? 'Unnamed Coin';
+        final grade = coin['Grade'] ?? 'Raw';
+        final rawVal = coin['AI Estimated Value'] ?? coin['Cost'] ?? '0';
+        final val = _parseCurrency(rawVal);
+        final imgUrl = coin['ObversePhotoUrl'] ?? coin['photo_url'] ?? '';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withAlpha(5) : Colors.black.withAlpha(3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+                  ),
+                  child: ClipOval(
+                    child: imgUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imgUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (context, url, error) => const Icon(Icons.toll_rounded, size: 20, color: Colors.amber),
+                          )
+                        : const Icon(Icons.toll_rounded, size: 20, color: Colors.amber),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Grade: $grade',
+                        style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  fmt.format(val),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F9D58)),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildNewsSection(intl.NumberFormat fmt) {
+    if (_isLoadingNews) {
+      return const SizedBox(
+        height: 60,
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+        ),
+      );
+    }
+    if (_news.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE2E6E9)),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.wifi_off_outlined, size: 28, color: Color(0xFFCBD5E1)),
+            SizedBox(height: 8),
+            Text(
+              'Market news unavailable right now — check back shortly.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final visibleNews = _news
+        .whereType<Map<String, dynamic>>()
+        .where((item) {
+          final link = item['link']?.toString() ?? '';
+          final id = link.isNotEmpty ? _stableArticleId(link) : '';
+          return id.isEmpty || !_dismissedNewsIds.contains(id);
+        }).toList();
+
+    return SizedBox(
+      height: 158,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: visibleNews.length,
+        itemBuilder: (ctx, i) {
+          final item = visibleNews[i];
+          final link = item['link']?.toString() ?? '';
+          final articleId = link.isNotEmpty ? _stableArticleId(link) : '';
+          return GestureDetector(
+            onTap: link.isNotEmpty
+                ? () async {
+                    final uri = Uri.parse(link);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  }
+                : null,
+            child: MouseRegion(
+              cursor: link.isNotEmpty ? SystemMouseCursors.click : MouseCursor.defer,
+              child: Container(
+                width: 270,
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E6E9)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item['source']?.toString() ?? 'News',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF3B82F6)),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item['published']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      item['title']?.toString() ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(height: 5),
+                    Expanded(
+                      child: Text(
+                        item['summary']?.toString() ?? '',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (link.isNotEmpty)
+                          const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Read more',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF3B82F6),
+                                      fontWeight: FontWeight.w600)),
+                              SizedBox(width: 2),
+                              Icon(Icons.arrow_forward_ios, size: 9, color: Color(0xFF3B82F6)),
+                            ],
+                          )
+                        else
+                          const SizedBox.shrink(),
+                        if (articleId.isNotEmpty)
+                          GestureDetector(
+                            onTap: () => _dismissArticle(articleId),
+                            child: const Tooltip(
+                              message: 'Not relevant — hide this article',
+                              child: Icon(
+                                Icons.thumb_down_outlined,
+                                size: 13,
+                                color: Color(0xFFCBD5E1),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
       double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
@@ -2057,6 +2272,173 @@ class _CoinThumbnail extends StatelessWidget {
           width: 36, height: 36,
           decoration: _placeholder,
           child: const Icon(Icons.toll, size: 18, color: Color(0xFF5A5C69)),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Collapsible Section Widget ─────────────────────────────────────────────
+class _ExpandableSection extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+  const _ExpandableSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  State<_ExpandableSection> createState() => _ExpandableSectionState();
+}
+
+class _ExpandableSectionState extends State<_ExpandableSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: _expanded
+                ? const BorderRadius.vertical(top: Radius.circular(14))
+                : BorderRadius.circular(14),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+              child: Row(
+                children: [
+                  Icon(widget.icon,
+                      size: 18,
+                      color: const Color(0xFFF63366)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      size: 20,
+                      color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+              child: widget.child,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Large Dashboard Action Button ───────────────────────────────────────────
+class _DashboardActionButton extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _DashboardActionButton({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(isDark ? 30 : 10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: isDark ? Colors.white30 : const Color(0xFFCBD5E1),
+            ),
+          ],
         ),
       ),
     );

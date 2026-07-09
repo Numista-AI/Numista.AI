@@ -101,6 +101,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   bool    _sortAscending    = false; // false = newest first
   /// Default: hide columns where every visible row is empty
   bool    _showOnlyPopulated = true;
+  bool    _isSheetView = false;
 
   final _searchCtrl      = TextEditingController();
   final _searchFocus     = FocusNode();
@@ -601,12 +602,85 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Inventory List', style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
+            Row(
+              children: [
+                Text('Inventory List', style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: _bg == Colors.white ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _border),
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _isSheetView = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: !_isSheetView ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: !_isSheetView
+                                ? [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 2)]
+                                : [],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.grid_view_rounded, size: 13, color: !_isSheetView ? const Color(0xFFF63366) : Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Gallery View',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: !_isSheetView ? const Color(0xFF0F172A) : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _isSheetView = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _isSheetView ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: _isSheetView
+                                ? [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 2)]
+                                : [],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.table_rows_rounded, size: 13, color: _isSheetView ? const Color(0xFFF63366) : Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Sheet View',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isSheetView ? const Color(0xFF0F172A) : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             Row(children: [
-              // Column visibility toggle
-              _columnToggleButton(),
-              SizedBox(width: 12),
+              // Column visibility toggle (only for Sheet View)
+              if (_isSheetView) ...[
+                _columnToggleButton(),
+                const SizedBox(width: 12),
+              ],
               ElevatedButton.icon(
                 onPressed: widget.onNavigate != null
                     ? () => widget.onNavigate!('Estate Planning')
@@ -627,7 +701,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ),
         SizedBox(height: 12),
 
-        // Data table -- three distinct states
+        // Data table or Gallery View -- three distinct states
         if (allDocs.isEmpty)
           _buildCollectionEmptyState()
         else if (docs.isEmpty)
@@ -635,29 +709,231 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Center(child: Text('No coins match your filter.',
                 style: TextStyle(color: _subtext))))
+        else if (!_isSheetView)
+          Column(
+            children: docs.map((doc) => _buildGalleryCard(doc)).toList(),
+          )
         else
           SizedBox(
             height: 520,
             child: _buildDataTable(docs),
           ),
 
-        SizedBox(height: 16),
-
-        // Save Grid Changes
-        ElevatedButton.icon(
-          onPressed: _onSaveGridChanges,
-          icon: Icon(Icons.save, size: 16),
-          label: Text('Save Grid Changes'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _red,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4)),
-            padding: EdgeInsets.symmetric(
-                horizontal: 20, vertical: 14),
+        if (_isSheetView) ...[
+          SizedBox(height: 16),
+          // Save Grid Changes
+          ElevatedButton.icon(
+            onPressed: _onSaveGridChanges,
+            icon: Icon(Icons.save, size: 16),
+            label: Text('Save Grid Changes'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 14),
+            ),
           ),
-        ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildGalleryCard(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final name = data['Name'] ?? data['Title'] ?? 'Unnamed Coin';
+    final grade = data['Condition'] ?? data['Grade'] ?? 'Raw';
+    final rawVal = data['AI Estimated Value'] ?? data['Cost'] ?? '0';
+    final val = _parseAiValue(rawVal.toString());
+    final fmt = intl.NumberFormat.currency(symbol: '\$');
+
+    final obverseUrl = data['image_url_obverse'] ?? data['ObversePhotoUrl'] ?? '';
+    final reverseUrl = data['image_url_reverse'] ?? data['ReversePhotoUrl'] ?? '';
+
+    final year = data['Year']?.toString() ?? '';
+    final mint = data['Mint Mark']?.toString() ?? '';
+    final metal = data['Metal Content']?.toString() ?? '';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white.withAlpha(20) : const Color(0xFFE2E6E9)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: Year & Title & Value
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${year.isNotEmpty && year != "null" ? year : "Various"} ${mint.isNotEmpty && mint != "null" ? "- $mint" : ""}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFF63366),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'EST. VALUE',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    fmt.format(val),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F9D58),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Obverse and Reverse photos side-by-side
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    const Text('Front (Obverse)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withAlpha(10) : Colors.black.withAlpha(5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+                      ),
+                      child: Center(
+                        child: obverseUrl.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  obverseUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, url, error) => const Icon(Icons.toll_rounded, size: 40, color: Colors.amber),
+                                ),
+                              )
+                            : const Icon(Icons.toll_rounded, size: 40, color: Colors.amber),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    const Text('Back (Reverse)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withAlpha(10) : Colors.black.withAlpha(5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+                      ),
+                      child: Center(
+                        child: reverseUrl.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  reverseUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, url, error) => const Icon(Icons.toll_rounded, size: 40, color: Colors.amber),
+                                ),
+                              )
+                            : const Icon(Icons.toll_rounded, size: 40, color: Colors.amber),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Key stats row: Grade, Metal, Cert #
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('GRADE', style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(grade, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              if (metal.isNotEmpty && metal != "null")
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text('METAL', style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(metal, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      _showCoinInspectorDialog(doc.id, data);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFF63366)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                    child: const Text('View Details', style: TextStyle(color: Color(0xFFF63366), fontSize: 13)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
