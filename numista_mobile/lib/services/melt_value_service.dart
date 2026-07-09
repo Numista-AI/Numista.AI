@@ -122,7 +122,13 @@ class MeltValueService {
     }
 
     // ── Pre-1933 Gold (90%) ───────────────────────────────────────────────────
-    if (mc.contains('gold (90%)') || mc.contains('gold (90%')) {
+    // Metal Content field may be written several ways; match them all.
+    final isGold90 = mc.contains('gold (90%)') ||
+        mc.contains('gold (90%')   ||  // truncated close paren
+        mc.startsWith('90% gold')  ||  // '90% Gold, 10% Copper'
+        mc.startsWith('90% au')    ||  // abbreviated form
+        RegExp(r'gold[,\s]+90%', caseSensitive: false).hasMatch(mc);
+    if (isGold90) {
       final fv = _parseFaceValue(denom);
       if (fv != null) {
         final oz = _au90ByFaceValue[fv];

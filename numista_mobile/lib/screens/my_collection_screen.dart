@@ -359,6 +359,102 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- Sort + filter helpers -----------------------------------------------
+  // ---------------------------------------------------------------------------
+  // _sortKey — returns a Comparable that represents the column's logical sort
+  // order for a single coin data map.  This mirrors _getCellValue logic so that
+  // the sort order always matches what the user *sees* in the cell.
+  // ---------------------------------------------------------------------------
+  Comparable _sortKey(String field, Map<String, dynamic> m) {
+    switch (field) {
+      // ── AI Value ────────────────────────────────────────────────────────────
+      // Display logic (in _getCellValue) prefers greysheetBid / cpgRetail over
+      // the raw AI Estimated Value string.  Sort must use the same hierarchy.
+      case _F.aiValue:
+        final cpg = (m['cpgRetail']    as num?)?.toDouble() ?? 0.0;
+        final bid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        // Use bid as primary (default mode); fall through to AI estimate when 0
+        final gVal = bid > 0 ? bid : cpg;
+        if (gVal > 0) return gVal;
+        final av = m[_F.aiValue]?.toString() ?? '';
+        return _parseAiValue(av); // strips ~, $, commas → double (0 if empty)
+
+      // ── Condition ──────────────────────────────────────────────────────────
+      // Sort by Sheldon numeric grade (0–70) so grades appear in proper order.
+      // Blank / unknown values sort last (use -1 so they sink to the bottom
+      // when ascending, which is more useful than floating to the top).
+      case _F.condition:
+        final raw = m[_F.condition]?.toString().trim() ?? '';
+        return _conditionToGrade(raw); // returns double 0–70
+
+      // ── Melt Value ─────────────────────────────────────────────────────────
+      // Live value from spot prices if available, otherwise stored string.
+      case _F.meltValue:
+        if (_spotPrices.isNotEmpty) {
+          final lv = MeltValueService.compute(
+            metalContent: m[_F.metalContent]?.toString() ?? '',
+            denomination: m[_F.denomination]?.toString() ?? '',
+            spotPrices: _spotPrices,
+          );
+          return lv ?? 0.0;
+        }
+        final mv = m[_F.meltValue]?.toString() ?? '';
+        return double.tryParse(mv.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+
+      // ── Cost ───────────────────────────────────────────────────────────────
+      case _F.cost:
+        final raw = m[_F.cost]?.toString() ?? '';
+        return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+
+      // ── Year ───────────────────────────────────────────────────────────────
+      case _F.year:
+        final raw = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        return double.tryParse(raw) ?? 0.0;
+
+      // ── Default: plain text (alphabetical) ─────────────────────────────────
+      default:
+        final v = m[field]?.toString().trim() ?? '';
+        return (v == 'null' || v == 'nan') ? '' : v;
+    }
+  }
+
+  // Converts a raw condition string → Sheldon grade (0–70).
+  // Unknown/blank values return -1 so they sort consistently to the bottom.
+  static double _conditionToGrade(String raw) {
+    if (raw.isEmpty || raw == 'null') return -1;
+    final lower = raw.toLowerCase();
+    // Text shorthands
+    if (lower == 'p-1'   || lower == 'p')    return 1;
+    if (lower == 'fr-2'  || lower == 'fr')   return 2;
+    if (lower == 'ag-3'  || lower == 'ag')   return 3;
+    if (lower == 'g-4')                      return 4;
+    if (lower == 'g-6')                      return 6;
+    if (lower == 'g-8')                      return 8;
+    if (lower == 'vg-10' || lower == 'vg')   return 10;
+    if (lower == 'f-12')                     return 12;
+    if (lower == 'f-15')                     return 15;
+    if (lower == 'vf-20' || lower == 'vf')   return 20;
+    if (lower == 'vf-25')                    return 25;
+    if (lower == 'vf-30')                    return 30;
+    if (lower == 'vf-35')                    return 35;
+    if (lower == 'ef-40' || lower == 'xf-40' || lower == 'ef' || lower == 'xf') return 40;
+    if (lower == 'ef-45' || lower == 'xf-45') return 45;
+    if (lower == 'au-50' || lower == 'au50') return 50;
+    if (lower == 'au-55' || lower == 'au55') return 55;
+    if (lower == 'au-58' || lower == 'au58') return 58;
+    // Circulated shorthand (mid-range estimate: ~25)
+    if (lower.contains('circ') && !lower.contains('unc')) return 25;
+    // Uncirculated shorthand (≈ MS-60)
+    if (lower.contains('unc') || lower.contains('uncirculated')) return 60;
+    // Proof (≈ PF-65)
+    if (lower.contains('proof')) return 65;
+    // MS-xx or PF-xx (e.g. "MS-65", "MS65", "PF-68")
+    final msMatch = RegExp(r'(?:ms|pf|pr)[-\s]?(\d{1,2})', caseSensitive: false).firstMatch(lower);
+    if (msMatch != null) return double.tryParse(msMatch.group(1)!) ?? 60;
+    // Raw numeric Sheldon (stored as integer string)
+    final n = double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), ''));
+    return n ?? -1;
+  }
+
   List<QueryDocumentSnapshot> _sorted(List<QueryDocumentSnapshot> raw) {
     final copy = List<QueryDocumentSnapshot>.from(raw);
 
@@ -387,20 +483,22 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       return copy;
     }
 
-    final key = _columns[_sortColumnIndex].field;
+    final field = _columns[_sortColumnIndex].field;
     copy.sort((a, b) {
-      var av = (a.data() as Map)[key]?.toString() ?? '';
-      var bv = (b.data() as Map)[key]?.toString() ?? '';
-      // Strip leading currency/tilde for melt/cost columns so they sort numerically
-      av = av.replaceAll(RegExp(r'[~\$\s]'), '');
-      bv = bv.replaceAll(RegExp(r'[~\$\s]'), '');
-      final an = double.tryParse(av.replaceAll(RegExp(r'[^\d.]'), ''));
-      final bn = double.tryParse(bv.replaceAll(RegExp(r'[^\d.]'), ''));
-      final cmp = (an != null && bn != null) ? an.compareTo(bn) : av.compareTo(bv);
+      final ak = _sortKey(field, a.data() as Map<String, dynamic>);
+      final bk = _sortKey(field, b.data() as Map<String, dynamic>);
+      // Compare: if both are numeric use numeric comparison, else string
+      int cmp;
+      if (ak is double && bk is double) {
+        cmp = ak.compareTo(bk);
+      } else {
+        cmp = ak.toString().compareTo(bk.toString());
+      }
       return _sortAscending ? cmp : -cmp;
     });
     return copy;
   }
+
 
   List<QueryDocumentSnapshot> _filtered(List<QueryDocumentSnapshot> docs) {
     if (_searchQuery.isEmpty) return docs;
@@ -2032,8 +2130,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ? r'$' + n.toInt().toString()
               : r'$' + rawD;
         }
-        // Word-form denomination (penny, nickel, dime, quarter) -- capitalise
-        return rawD[0].toUpperCase() + rawD.substring(1);
+        // Word-form denomination: normalize to official US Mint terms, then capitalise
+        final dRaw = rawD.trim();
+        if (dRaw.toLowerCase() == 'penny' || dRaw.toLowerCase() == 'cent') {
+          return 'One Cent'; // Official US Mint term
+        }
+        return dRaw[0].toUpperCase() + dRaw.substring(1);
       case _F.condition:
         return _conditionLabel(m[_F.condition]?.toString().trim() ?? '');
       case _F.isSilver:
