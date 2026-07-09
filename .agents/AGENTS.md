@@ -113,6 +113,44 @@ Before changing any Gemini model ID (e.g., changing `gemini-3.5-flash` to anythi
 
 **This rule overrides Rule 1 with respect to the `main` branch.**
 
+Pushing to `main` deploys to the live production site (numista-vault.web.app) and is
+**exclusively the owner's responsibility**. Agents do not merge to `main` under any
+circumstances — not even after asking.
+
+**All agent code changes MUST follow this workflow:**
+
+1. Work on the `dev` branch (or a dedicated feature branch, e.g., `agent/feature-name`).
+2. Commit and push to `dev` only:
+   ```bash
+   git checkout dev
+   git add <files>
+   git commit -m "<type>(<scope>): <summary>"
+   git pull --rebase origin dev
+   git push origin dev
+   ```
+3. When work is complete, present a summary to the user and say:
+   > "Changes are pushed to `dev`. Please review and open a PR to deploy to the live site:
+   > https://github.com/Numista-AI/Numista.AI/compare/main...dev"
+
+**Agents NEVER:**
+- Push to `main` directly
+- Run `git merge` targeting `main`
+- Run `git checkout main` followed by any push
+- Ask "do you want me to merge to main?" and then do it
+
+**The ONLY exception** where touching `main` is permitted:
+- The designated sync-check conversation (ID: 7485fc0a-544c-4a5f-8e87-ff9e22099b5e) when
+  the user says "End of day — sync check". That conversation is the sole gatekeeper for
+  merging `dev` into `main` and deploying to the live site.
+- Commits containing ONLY documentation files (`walkthrough.md`, `AGENTS.md`, scan reports,
+  `*.md` in `scratch/`) that do not trigger a Flutter rebuild and do not affect the live site.
+
+**Why this rule exists:** On 2026-07-09, Antigravity sessions pushed unauthorized UX redesign
+changes directly to `main`, deploying them to the live site without the owner's review or
+approval. This rule is a direct response to that incident.
+
+**This rule overrides Rule 1 with respect to the `main` branch.**
+
 Rule 1's "push is the finish line" applies to **`dev`** — not to `main`.
 Pushing to `main` deploys to the live production site and requires explicit user authorization every single time.
 
