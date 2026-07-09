@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/coin_normalizer_service.dart';
 import '../services/epn_service.dart';
@@ -284,72 +285,51 @@ class _BaseLayoutState extends State<BaseLayout> {
     );
   }
 
-  // ─── Desktop/tablet layout: redesigned senior-friendly sidebar ──────────────
+  // ─── Desktop/tablet layout: sidebar ──────────────────────────────────────
   Widget _buildDesktopLayout(String email, String displayName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sidebarBg = isDark ? const Color(0xFF0B0F1A) : const Color(0xFFF4F6FB);
-    final sidebarBorder = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(14);
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
-          // ─── Redesigned Sidebar (Senior-focused) ──────────────────────────
+          // ─── Sidebar ─────────────────────────────────────────────────────
           Container(
-            width: 260,
+            width: 240,
             decoration: BoxDecoration(
-              color: sidebarBg,
-              border: Border(right: BorderSide(color: sidebarBorder)),
+              color: isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC),
+              border: Border(
+                right: BorderSide(
+                  color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(12),
+                ),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Logo ──────────────────────────────────────────────────
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Row(children: [
-                    Image.asset('assets/logo_owl.png', height: 44, fit: BoxFit.contain),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Numista.AI',
-                            style: TextStyle(
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15)),
-                        const Text('Coin Collection Manager',
-                            style: TextStyle(
-                                color: Color(0xFF94A3B8), fontSize: 9.5)),
-                      ],
-                    ),
-                  ]),
-                ),
                 const SizedBox(height: 12),
-
-                // ── User greeting ─────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Image.asset('assets/logo_owl.png',
+                      height: 56, fit: BoxFit.contain),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withAlpha(10) : Colors.black.withAlpha(6),
-                      borderRadius: BorderRadius.circular(10),
+                      color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(14)),
+                          color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20)),
                     ),
                     child: Row(children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: const Color(0xFFF63366).withAlpha(200),
-                        child: Text(
-                          displayName.isNotEmpty ? displayName[0].toUpperCase() : 'C',
-                          style: const TextStyle(color: Colors.white,
-                              fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
+                      const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Color(0xFFF63366),
+                        child: Icon(Icons.person, color: Colors.white, size: 14),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,126 +339,53 @@ class _BaseLayoutState extends State<BaseLayout> {
                                 style: TextStyle(
                                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 13)),
-                            Text('Collector',
+                                    fontSize: 11)),
+                            Text(email,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    color: Color(0xFF94A3B8), fontSize: 10)),
+                                    color: Colors.blueAccent, fontSize: 9)),
                           ],
                         ),
                       ),
                     ]),
                   ),
                 ),
-                const SizedBox(height: 18),
-
-                // ── Primary Navigation ────────────────────────────────────
+                const SizedBox(height: 10),
                 Expanded(
                   child: ValueListenableBuilder<WizardState?>(
                     valueListenable: WizardService.state,
                     builder: (context, ws, _) => ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       children: [
-
-                        // ── SECTION: MAIN ────────────────────────────────
-                        _SidebarSectionLabel(title: 'MAIN', isDark: isDark),
-
-                        _buildSeniorNavItem(
-                          'My Dashboard',
-                          icon: Icons.home_rounded,
-                          route: 'Home Dashboard',
-                          isDark: isDark,
+                        _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'Coin Programs',
+                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
                         ),
+
+                        const _SidebarSectionHeader(title: 'MY COLLECTION'),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
-                          child: _buildSeniorNavItem(
-                            'My Collection',
-                            icon: Icons.collections_bookmark_rounded,
-                            route: 'My Collection',
-                            isDark: isDark,
-                          ),
+                          child: _buildNavItem('All', isSubItem: true, subItemKey: 'All'),
                         ),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Add New Coins',
-                          child: _buildSeniorNavItem(
-                            'Add to Collection',
-                            icon: Icons.add_circle_rounded,
-                            route: 'Add New Coins',
-                            isDark: isDark,
-                          ),
-                        ),
-                        _buildSeniorNavItem(
-                          'Identify a Coin',
-                          icon: Icons.camera_alt_rounded,
-                          route: 'Microscope Scanner',
-                          isDark: isDark,
-                        ),
+                        _buildNavItem('Coins', isSubItem: true, subItemKey: 'Coins'),
+                        _buildNavItem('Currency Collection', isSubItem: true, subItemKey: 'Currency'),
+                        _buildNavItem('World and Specialty', isSubItem: true, subItemKey: 'World & Specialty'),
+                        _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
 
                         const SizedBox(height: 8),
-
-                        // ── SECTION: TOOLS ───────────────────────────────
-                        _SidebarSectionLabel(title: 'TOOLS', isDark: isDark),
-
-                        _buildSeniorNavItem(
-                          'Coin Value Lookup',
-                          icon: Icons.manage_search_rounded,
-                          route: 'Coin Search',
-                          isDark: isDark,
-                        ),
-                        _buildSeniorNavItem(
-                          'Estate Planning',
-                          icon: Icons.account_balance_rounded,
-                          route: 'Estate Planning',
-                          isDark: isDark,
-                        ),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'My Wishlist',
-                          child: _buildSeniorNavItem(
-                            'My Wish List',
-                            icon: Icons.favorite_rounded,
-                            route: 'My Wishlist',
-                            isDark: isDark,
-                          ),
+                          child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
-                        _buildSeniorNavItem(
-                          'Settings',
-                          icon: Icons.settings_rounded,
-                          route: 'Settings & Backup',
-                          isDark: isDark,
-                        ),
+                        _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
 
-                        const SizedBox(height: 8),
-
-                        // ── SECTION: MORE (advanced / less-used) ─────────
-                        _SidebarSectionLabel(title: 'MORE', isDark: isDark),
-
-                        _buildSeniorNavItem(
-                          'Coin Programs',
-                          icon: Icons.auto_awesome_rounded,
-                          route: 'Coin Programs',
-                          isDark: isDark,
-                          small: true,
+                        const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'Add New Coins',
+                          child: _buildNavItem('Add new coins/notes/etc.', icon: Icons.add_circle_outline),
                         ),
-                        _buildSeniorNavItem(
-                          'AI Deep Dive',
-                          icon: Icons.psychology_rounded,
-                          route: 'AI Deepdive',
-                          isDark: isDark,
-                          small: true,
-                        ),
-                        _buildSeniorNavItem(
-                          'Glossary & Academy',
-                          icon: Icons.school_rounded,
-                          route: 'Glossary Academy',
-                          isDark: isDark,
-                          small: true,
-                        ),
-                        _buildSeniorNavItem(
-                          'Mint Error Library',
-                          icon: Icons.bug_report_rounded,
-                          route: 'Error Library',
-                          isDark: isDark,
-                          small: true,
-                        ),
+                        _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
                         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                           stream: email.isNotEmpty
                               ? FirebaseFirestore.instance
@@ -489,76 +396,91 @@ class _BaseLayoutState extends State<BaseLayout> {
                               : const Stream.empty(),
                           builder: (context, snapshot) {
                             final count = snapshot.data?.docs.length ?? 0;
-                            return _buildSeniorNavItem(
-                              'Review Hub',
-                              icon: Icons.fact_check_rounded,
-                              route: 'Review Hub',
-                              isDark: isDark,
-                              badgeCount: count,
-                              small: true,
-                            );
+                            return _buildNavItem('Review Hub',
+                                icon: Icons.fact_check_outlined,
+                                badgeCount: count);
                           },
                         ),
-                        _buildSeniorNavItem(
-                          'AI Trainer Board',
-                          icon: Icons.how_to_vote_rounded,
-                          route: 'AI Trainer Board',
-                          isDark: isDark,
-                          small: true,
-                        ),
+
+                        const _SidebarSectionHeader(title: 'AI TRAINING'),
+                        _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
+                        // Admin-only: Grade Flag Dashboard
                         if (email == 'jseaman1204@gmail.com' ||
                             email.endsWith('@numista.ai'))
-                          _buildSeniorNavItem(
-                            'Admin: Grade Flags',
-                            icon: Icons.admin_panel_settings_rounded,
-                            route: 'Admin: Grade Flags',
-                            isDark: isDark,
-                            small: true,
-                          ),
-                        _buildSeniorNavItem(
-                          'Our Team',
-                          icon: Icons.people_rounded,
-                          route: 'Our Team',
-                          isDark: isDark,
-                          small: true,
-                        ),
-                        _buildSeniorNavItem(
-                          'Customer Service',
-                          icon: Icons.support_agent_rounded,
-                          route: 'Customer Service',
-                          isDark: isDark,
-                          small: true,
-                        ),
+                          _buildNavItem('Admin Grade Flags',
+                              icon: Icons.admin_panel_settings_outlined),
+
+                        const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
+                        _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
+                        _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
+                        _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
+                        _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
+
+                        const SizedBox(height: 8),
+                        _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
+                        const _SidebarDivider(),
+                        _buildNavItem('Our Team', icon: Icons.people_outline),
+                        _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
+                        _buildNavItem('🔍 Numista Lookup'),
                       ],
                     ),
                   ),
                 ),
-
-                // ── Morgan — ALWAYS prominent at bottom ───────────────────
+                // ── Morgan sidebar button ──────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
                   child: _MorganSidebarButton(onTap: _showMorganDialog),
                 ),
-
-                // ── Sign Out ──────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2A1F4E),
+                        foregroundColor: const Color(0xFFFFD700),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFFFD700)),
+                      label: const Text(
+                        'Send Beta Feedback',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: () async {
+                        final email = FirebaseAuth.instance.currentUser?.email ?? 'beta tester';
+                        final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
+                        final body = Uri.encodeComponent(
+                          'Beta tester: $email\n'
+                          'Version: v3.9\n\n'
+                          'Feedback / Bug Report:\n\n'
+                          '---\n'
+                          '(Please describe what happened, what you expected, and any steps to reproduce)\n',
+                        );
+                        final uri = Uri.parse('mailto:beta@numista.ai?subject=$subject&body=$body');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? Colors.white54 : const Color(0xFF64748B),
-                        side: BorderSide(
-                            color: isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                        foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                        side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       ),
-                      icon: const Icon(Icons.logout_rounded, size: 15),
+                      icon: const Icon(Icons.logout, size: 14),
                       label: Text(
                         AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
-                        style: const TextStyle(fontSize: 13),
+                        style: const TextStyle(fontSize: 11),
                       ),
                       onPressed: () => _confirmSignOut(context),
                     ),
@@ -598,100 +520,6 @@ class _BaseLayoutState extends State<BaseLayout> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ─── Senior-friendly nav item builder ────────────────────────────────────────
-  Widget _buildSeniorNavItem(
-    String label, {
-    required IconData icon,
-    required String route,
-    required bool isDark,
-    int badgeCount = 0,
-    bool small = false,
-  }) {
-    // Map sidebar route labels → internal routes for sub-collection tabs
-    String effectiveRoute = route;
-    final bool isActive = _activeRoute == effectiveRoute ||
-        (effectiveRoute == 'My Collection' && _activeRoute == 'My Collection');
-
-    final activeColor = const Color(0xFFF63366);
-    final double iconSize = small ? 16 : 20;
-    final double fontSize = small ? 12.5 : 14.5;
-    final double vertPad = small ? 7 : 10;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          if (route == 'Add New Coins') {
-            setState(() => _activeRoute = 'Add New Coins');
-          } else if (route == 'My Collection') {
-            setState(() {
-              _activeRoute = 'My Collection';
-              _myCollectionTab = 'All';
-            });
-          } else {
-            setState(() => _activeRoute = route);
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.symmetric(vertical: vertPad, horizontal: 10),
-          decoration: BoxDecoration(
-            color: isActive
-                ? (isDark
-                    ? activeColor.withAlpha(28)
-                    : activeColor.withAlpha(18))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: isActive
-                ? Border.all(color: activeColor.withAlpha(60), width: 1)
-                : null,
-          ),
-          child: Row(children: [
-            Icon(
-              icon,
-              size: iconSize,
-              color: isActive
-                  ? activeColor
-                  : (isDark ? Colors.white54 : const Color(0xFF64748B)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive
-                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                      : (isDark ? Colors.white70 : const Color(0xFF374151)),
-                ),
-              ),
-            ),
-            if (badgeCount > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: activeColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  badgeCount.toString(),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ]),
-        ),
       ),
     );
   }
@@ -895,7 +723,7 @@ class _SidebarDivider extends StatelessWidget {
       );
 }
 
-// ─── Sidebar section header (legacy, kept for compatibility) ─────────────────
+// ─── Sidebar section header ──────────────────────────────────────────────────
 class _SidebarSectionHeader extends StatelessWidget {
   final String title;
   const _SidebarSectionHeader({required this.title});
@@ -912,29 +740,6 @@ class _SidebarSectionHeader extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: isDark ? Colors.white38 : Colors.black45,
           letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Sidebar section label (redesigned sidebar) ───────────────────────────────
-class _SidebarSectionLabel extends StatelessWidget {
-  final String title;
-  final bool isDark;
-  const _SidebarSectionLabel({required this.title, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10, top: 16, bottom: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: isDark ? Colors.white30 : Colors.black38,
-          letterSpacing: 1.0,
         ),
       ),
     );

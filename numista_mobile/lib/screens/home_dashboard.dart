@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/auth_service.dart';
@@ -329,21 +328,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
             // ── Compute portfolio metrics ──────────────────────────────────
             int totalItems = coins.length + currency.length + worldItems.length;
             double cpgTotal = 0;
-            // ignore: unused_local_variable
             double bidTotal = 0;
-            // ignore: unused_local_variable
             double askTotal = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
 
-            // ignore: unused_local_variable
             double coinsVal = 0;
-            // ignore: unused_local_variable
             double currencyVal = 0;
-            // ignore: unused_local_variable
             double medalsVal = 0;
-            // ignore: unused_local_variable
             double othersVal = 0;
 
             Map<String, double> programValues = {};
@@ -497,799 +490,517 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final last5 = sorted.take(5).toList();
 
             final fmt = intl.NumberFormat.currency(symbol: '\$');
-            final lastAdded = last5.isNotEmpty ? last5.first : null;
-            // Determine gold/silver for the summary card
-            final goldPrice = _spotPrices['Gold'] ?? 0.0;
-            final silverPrice = _spotPrices['Silver'] ?? 0.0;
-            final profit = portfolioValue - acquisitionCost;
-            final profitPositive = profit >= 0;
 
-            return LayoutBuilder(builder: (ctx, bc) {
-              final isWide = bc.maxWidth >= 820;
-              return SingleChildScrollView(
-                padding: EdgeInsets.all(isWide ? 32 : 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Version badge ─────────────────────────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: const Text('Numista.AI v3.9',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                            color: Color(0xFF166534))),
+                  ),
+                  const SizedBox(height: 20),
 
-                    // ── Greeting header ─────────────────────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                  // ── Header: title + portfolio value ──────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('DASHBOARD',
+                                style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    fontStyle: FontStyle.italic,
+                                    color: Color(0xFF31333F))),
+                            Text('AI POWERED COLLECTION MANAGER',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A5C69))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: FutureBuilder<bool>(
+                          future: ValuationModeService.isAdvancedMode(),
+                          builder: (context, modeSnap) {
+                            final advanced = modeSnap.data ?? false;
+                            return _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Category Breakdown ─────────────────────────────────────
+                  _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
+                  const SizedBox(height: 24),
+
+                  // ── Arbitrage Deal Spotter ──────────────────────────────────
+                  _buildArbitrageDealsCard(context),
+                  const SizedBox(height: 24),
+
+                   // ── Metric cards ──────────────────────────────────────────
+                  LayoutBuilder(builder: (ctx, bc) {
+                    final profit = portfolioValue - acquisitionCost;
+                    final profitFmt = (profit >= 0 ? '+' : '') + fmt.format(profit);
+                    final profitColor = profit >= 0
+                        ? const Color(0xFF0F9D58)
+                        : const Color(0xFFE53935);
+                    final narrow = bc.maxWidth < 480;
+                    if (narrow) {
+                      return Column(children: [
+                        Row(children: [
+                          Expanded(child: _metricCard('Total Items', totalItems.toString())),
+                          const SizedBox(width: 10),
+                          Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
+                        ]),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(child: _metricCard('Melt Value', fmt.format(meltValue))),
+                          const SizedBox(width: 10),
+                          Expanded(child: _metricCard('Face Value', fmt.format(faceValue))),
+                        ]),
+                        const SizedBox(height: 10),
+                        _metricCard('Profit / Loss', profitFmt,
+                            valueColor: profitColor),
+                      ]);
+                    }
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              FutureBuilder<String>(
-                                future: Future.value(
-                                    FirebaseAuth.instance.currentUser
-                                        ?.displayName?.split(' ').first ??
-                                    FirebaseAuth.instance.currentUser
-                                        ?.email?.split('@').first ??
-                                    'Collector'),
-                                builder: (ctx, snap) => Text(
-                                  'Good to see you, ${snap.data ?? ''}!',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
+                        _metricCardFlex('Total Items', totalItems.toString()),
+                        _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
+                        _metricCardFlex('Melt Value', fmt.format(meltValue)),
+                        _metricCardFlex('Face Value', fmt.format(faceValue)),
+                        _metricCardFlex('Profit / Loss', profitFmt,
+                            valueColor: profitColor),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 24),
+
+                  // ── Portfolio Insights Charts ──────────────────────────────
+                  PortfolioChartsPanel(
+                    portfolioValue: portfolioValue,
+                    meltValue: meltValue,
+                    acquisitionCost: acquisitionCost,
+                    programValues: programValues,
+                    snapshots: _snapshots,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Recently Added ────────────────────────────────────────
+                  const Text('Recently Added',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF31333F))),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E6E9)),
+                    ),
+                    child: last5.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No coins yet — add your first coin!',
+                                style: TextStyle(color: Color(0xFF5A5C69))))
+                        : Column(
+                            children: last5.asMap().entries.map((entry) {
+                              final data = entry.value;
+                              final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+                              final mint   = data['Mint Mark']?.toString() ?? '';
+                              final denom  = data['Denomination']?.toString() ?? '';
+                              final series = data['Program/Series']?.toString() ?? '';
+                              final theme  = data['Theme/Subject']?.toString() ?? '';
+                              final estVal = data['AI Estimated Value']?.toString() ?? '—';
+
+                              // Build a human-readable coin name
+                              // Priority: Program/Series > Theme/Subject > Denomination > fallback
+                              final denomFallback = denom.isNotEmpty && denom != 'Multiple'
+                                  ? (denom[0].toUpperCase() + denom.substring(1))
+                                      .replaceAll(r'$', '')
+                                      .trim()
+                                  : 'Coin';
+                              final coinName = series.isNotEmpty && series != 'Multiple'
+                                  ? series
+                                  : theme.isNotEmpty && theme != 'Multiple'
+                                      ? theme
+                                      : denomFallback;
+
+                              // Build year-mint label, normalise "Multiple" to "Various"
+                              final yearLabel = (year.isEmpty || year == 'Multiple') ? 'Various' : year;
+                              final mintLabel = (mint.isEmpty || mint == 'Multiple') ? '' : '-$mint';
+                              // Build denomination label — only prepend '$' if the
+                              // value is numeric (e.g. "1" → "$1") or already has it.
+                              // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
+                              String fmtDenom(String d) {
+                                if (d.isEmpty || d == 'Multiple') return '';
+                                if (d.startsWith(r'$')) return d;              // already has $
+                                final numeric = double.tryParse(
+                                    d.replaceAll(RegExp(r'[^\d.]'), ''));
+                                if (numeric != null && d.contains(RegExp(r'^[\d]'))) {
+                                  return '\$$d';                              // numeric → add $
+                                }
+                                return d[0].toUpperCase() + d.substring(1);   // word → capitalise
+                              }
+                              final denomLabel = fmtDenom(denom);
+                              final condition = data['Condition']?.toString() ?? '';
+
+                              // When year is known → "2025-W  $1"
+                              // When year is Various (sets/lots) → use Theme + Condition to differentiate
+                              final String subtitle;
+                              if (yearLabel != 'Various') {
+                                final parts = [
+                                  '$yearLabel$mintLabel',
+                                  if (denomLabel.isNotEmpty) denomLabel,
+                                ].where((s) => s.isNotEmpty).toList();
+                                subtitle = parts.join(' · ');
+                              } else {
+                                // Year unknown — use theme + condition to distinguish
+                                final themeStr = theme.isNotEmpty && theme != 'Multiple' ? theme : '';
+                                final condStr = (condition.isNotEmpty && condition != 'Ungraded') ? condition : '';
+                                final parts = [
+                                  if (themeStr.isNotEmpty) themeStr,
+                                  if (condStr.isNotEmpty) condStr,
+                                  if (denomLabel.isNotEmpty) denomLabel,
+                                ];
+                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' · ');
+                              }
+
+                              return Column(children: [
+                                if (entry.key > 0)
+                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
+                                ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  leading: _CoinThumbnail(
+                                    imageUrl: data['image_url_obverse']?.toString()
+                                        ?? data['imageUrlObverse']?.toString(),
+                                  ),
+                                  title: Text(coinName,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF31333F))),
+                                  subtitle: Text(subtitle,
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B))),
+                                  trailing: Text(estVal,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0F9D58))),
+                                ),
+                              ]);
+                            }).toList(),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Morgan Widget ─────────────────────────────────────────
+                  _MorganDashboardCard(
+                    totalCoins: totalItems,
+                    onAskMorgan: widget.onAskMorgan,
+                    onAskMorganWithQuery: widget.onAskMorganWithQuery,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Live Spot Prices ──────────────────────────────────────
+                  Row(children: [
+                    const Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
+                    const SizedBox(width: 6),
+                    const Text('LIVE SPOT PRICES',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5)),
+                    const SizedBox(width: 10),
+                    if (_pricesLastUpdated != null)
+                      Text(
+                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} · Source: metals-api.com',
+                        style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFF94A3B8)),
+                      ),
+                  ]),
+                  const SizedBox(height: 8),
+                  if (_isLoadingPrices)
+                    const SizedBox(height: 4,
+                        child: LinearProgressIndicator(color: Color(0xFF0F9D58)))
+                  else if (_spotPrices.isNotEmpty)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _spotPrices.entries.map((e) =>
+                          Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E6E9)),
+                              boxShadow: [BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 4, offset: const Offset(0, 2))],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(e.key,
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B))),
+                                const SizedBox(height: 2),
+                                Text(fmt.format(e.value),
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF0F172A))),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+
+                  // ── System Updates & Release Notes ────────────────────────
+                  _ReleaseNotesPanel(),
+                  const SizedBox(height: 24),
+
+                  // ── Market Intel / News feed (bottom) ─────────────────────
+                  Row(
+                    children: [
+                      const Icon(Icons.newspaper,
+                          size: 15, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 6),
+                      const Text('MARKET INTEL',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 0.5)),
+                      const Spacer(),
+                      if (!_isLoadingNews)
+                        IconButton(
+                          icon: const Icon(Icons.refresh,
+                              size: 16, color: Color(0xFF94A3B8)),
+                          tooltip: 'Refresh news',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _fetchNews(isRefresh: true),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_isLoadingNews)
+                    const SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                          color: Color(0xFF3B82F6)))
+                  else if (_news.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E6E9)),
+                      ),
+                      child: Column(children: const [
+                        Icon(Icons.wifi_off_outlined,
+                            size: 28, color: Color(0xFFCBD5E1)),
+                        SizedBox(height: 8),
+                        Text('Market news unavailable right now — check back shortly.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFF94A3B8))),
+                      ]),
+                    )
+                  else
+                    SizedBox(
+                      height: 158,
+                      child: Builder(builder: (context) {
+                        // Filter out dismissed articles client-side
+                        final visibleNews = _news
+                            .whereType<Map<String, dynamic>>()
+                            .where((item) {
+                          final link = item['link']?.toString() ?? '';
+                          // Simple hash: use the link URL as a stable ID
+                          final id = link.isNotEmpty
+                              ? _stableArticleId(link)
+                              : '';
+                          return id.isEmpty || !_dismissedNewsIds.contains(id);
+                        }).toList();
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: visibleNews.length,
+                          itemBuilder: (ctx, i) {
+                            final item = visibleNews[i];
+                            final link = item['link']?.toString() ?? '';
+                            final articleId = link.isNotEmpty
+                                ? _stableArticleId(link)
+                                : '';
+                            return GestureDetector(
+                              onTap: link.isNotEmpty
+                                  ? () async {
+                                      final uri = Uri.parse(link);
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri,
+                                            mode: LaunchMode
+                                                .externalApplication);
+                                      }
+                                    }
+                                  : null,
+                              child: MouseRegion(
+                                cursor: link.isNotEmpty
+                                    ? SystemMouseCursors.click
+                                    : MouseCursor.defer,
+                                child: Container(
+                                  width: 270,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E6E9)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Expanded(
+                                          child: Text(
+                                            item['source']?.toString() ?? 'News',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF3B82F6)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          item['published']?.toString() ?? '',
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF94A3B8)),
+                                        ),
+                                      ]),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        item['title']?.toString() ?? '',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF1E293B)),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Expanded(
+                                        child: Text(
+                                          item['summary']?.toString() ?? '',
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF64748B),
+                                              height: 1.4),
+                                        ),
+                                      ),
+                                      // ── Bottom row: Read more + 👎 Not relevant ──
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          if (link.isNotEmpty)
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: const [
+                                                Text('Read more',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Color(0xFF3B82F6),
+                                                        fontWeight: FontWeight.w600)),
+                                                SizedBox(width: 2),
+                                                Icon(Icons.arrow_forward_ios,
+                                                    size: 9,
+                                                    color: Color(0xFF3B82F6)),
+                                              ],
+                                            )
+                                          else
+                                            const SizedBox.shrink(),
+                                          // 👎 Not relevant
+                                          if (articleId.isNotEmpty)
+                                            GestureDetector(
+                                              onTap: () => _dismissArticle(articleId),
+                                              child: const Tooltip(
+                                                message: 'Not relevant — hide this article',
+                                                child: Icon(
+                                                  Icons.thumb_down_outlined,
+                                                  size: 13,
+                                                  color: Color(0xFFCBD5E1),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                totalItems == 0
-                                    ? 'Your collection is empty — add your first coin!'
-                                    : 'Your collection has $totalItems item${totalItems == 1 ? '' : 's'}.',
-                                style: const TextStyle(
-                                    fontSize: 15, color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Version pill — subtle
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFF86EFAC)),
-                          ),
-                          child: const Text('v3.9',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF166534))),
-                        ),
-                      ],
+                            );
+                          },
+                        );
+                      }),
+
                     ),
-                    const SizedBox(height: 28),
-
-                    // ── 3 Summary Cards ─────────────────────────────────────
-                    isWide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _buildPortfolioCard(portfolioValue, profit, profitPositive, fmt)),
-                              const SizedBox(width: 16),
-                              Expanded(child: _buildMetalPricesCard(goldPrice, silverPrice, fmt)),
-                              const SizedBox(width: 16),
-                              Expanded(child: _buildLastAddedCard(lastAdded)),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              _buildPortfolioCard(portfolioValue, profit, profitPositive, fmt),
-                              const SizedBox(height: 12),
-                              _buildMetalPricesCard(goldPrice, silverPrice, fmt),
-                              const SizedBox(height: 12),
-                              _buildLastAddedCard(lastAdded),
-                            ],
-                          ),
-                    const SizedBox(height: 36),
-
-                    // ── What would you like to do? ──────────────────────────
-                    const Text(
-                      'What would you like to do?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    _DashboardActionButton(
-                      icon: Icons.add_circle_rounded,
-                      iconColor: const Color(0xFFF63366),
-                      label: 'Add to My Collection',
-                      subtitle: 'Photo, PDF receipt, or type it in — I\'ll help',
-                      onTap: widget.onNavigateToCollection == null
-                          ? null
-                          : () {
-                              // Navigate to Add New Coins
-                              // We signal parent via a special query or direct
-                            },
-                      heroTag: 'dash_add',
-                    ),
-                    const SizedBox(height: 10),
-
-                    _DashboardActionButton(
-                      icon: Icons.camera_alt_rounded,
-                      iconColor: const Color(0xFF0D9488),
-                      label: 'Identify a Coin',
-                      subtitle: 'Take a photo — Morgan will tell you what it is',
-                      onTap: null, // handled by parent nav via sidebar
-                      heroTag: 'dash_scan',
-                    ),
-                    const SizedBox(height: 10),
-
-                    _DashboardActionButton(
-                      icon: Icons.collections_bookmark_rounded,
-                      iconColor: const Color(0xFF4F46E5),
-                      label: 'Browse My Collection',
-                      subtitle: 'See, filter, and manage everything you own',
-                      onTap: widget.onNavigateToCollection,
-                      heroTag: 'dash_browse',
-                    ),
-                    const SizedBox(height: 10),
-
-                    _DashboardActionButton(
-                      icon: Icons.manage_search_rounded,
-                      iconColor: const Color(0xFFF59E0B),
-                      label: 'Look Up a Coin\'s Value',
-                      subtitle: 'Search by name, series, or year',
-                      onTap: widget.onAskMorganWithQuery == null
-                          ? null
-                          : () => widget.onAskMorganWithQuery!(
-                              'What is the current value of '),
-                      heroTag: 'dash_lookup',
-                    ),
-                    const SizedBox(height: 36),
-
-                    // ── More Details: portfolio metrics & charts (collapsible) ─
-                    _ExpandableSection(
-                      title: 'Portfolio Details',
-                      subtitle: 'Value, profit/loss, melt value, charts',
-                      icon: Icons.bar_chart_rounded,
-                      child: Column(children: [
-                        const SizedBox(height: 16),
-                        // Metric cards
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _metricCardFlex('Total Items', totalItems.toString()),
-                            _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
-                            _metricCardFlex('Melt Value', fmt.format(meltValue)),
-                            _metricCardFlex('Face Value', fmt.format(faceValue)),
-                            _metricCardFlex(
-                                'Profit / Loss',
-                                (profit >= 0 ? '+' : '') + fmt.format(profit),
-                                valueColor: profitPositive
-                                    ? const Color(0xFF0F9D58)
-                                    : const Color(0xFFE53935)),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        PortfolioChartsPanel(
-                          portfolioValue: portfolioValue,
-                          meltValue: meltValue,
-                          acquisitionCost: acquisitionCost,
-                          programValues: programValues,
-                          snapshots: _snapshots,
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── Recently Added (collapsible) ────────────────────────
-                    if (last5.isNotEmpty)
-                      _ExpandableSection(
-                        title: 'Recently Added',
-                        subtitle: 'Your last ${last5.length} items',
-                        icon: Icons.history_rounded,
-                        child: Column(children: [
-                          const SizedBox(height: 10),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFE2E6E9)),
-                            ),
-                            child: Column(
-                              children: last5.asMap().entries.map((entry) {
-                                final data = entry.value;
-                                final year = data['Year']?.toString()
-                                        .replaceAll(RegExp(r'\.0$'), '') ??
-                                    '';
-                                final series = data['Program/Series']?.toString() ?? '';
-                                final theme = data['Theme/Subject']?.toString() ?? '';
-                                final denom = data['Denomination']?.toString() ?? '';
-                                final estVal = data['AI Estimated Value']?.toString() ?? '—';
-                                final coinName = series.isNotEmpty && series != 'Multiple'
-                                    ? series
-                                    : theme.isNotEmpty && theme != 'Multiple'
-                                        ? theme
-                                        : denom.isNotEmpty ? denom : 'Coin';
-                                return Column(children: [
-                                  if (entry.key > 0)
-                                    const Divider(height: 1, color: Color(0xFFE2E6E9)),
-                                  ListTile(
-                                    dense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 6),
-                                    leading: _CoinThumbnail(
-                                      imageUrl: data['image_url_obverse']?.toString()
-                                          ?? data['imageUrlObverse']?.toString(),
-                                    ),
-                                    title: Text(coinName,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF1E293B))),
-                                    subtitle: year.isNotEmpty
-                                        ? Text(year,
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B)))
-                                        : null,
-                                    trailing: Text(estVal,
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF0F9D58))),
-                                  ),
-                                ]);
-                              }).toList(),
-                            ),
-                          ),
-                        ]),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // ── Coin News (collapsible, collapsed by default) ───────
-                    _ExpandableSection(
-                      title: 'Coin & Market News',
-                      subtitle: 'Latest numismatic headlines',
-                      icon: Icons.newspaper_rounded,
-                      initiallyExpanded: false,
-                      child: Column(children: [
-                        const SizedBox(height: 12),
-                        if (_isLoadingNews)
-                          const SizedBox(
-                              height: 4,
-                              child: LinearProgressIndicator(
-                                  color: Color(0xFF3B82F6)))
-                        else if (_news.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 20, horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                  color: const Color(0xFFE2E6E9)),
-                            ),
-                            child: const Column(children: [
-                              Icon(Icons.wifi_off_outlined,
-                                  size: 28, color: Color(0xFFCBD5E1)),
-                              SizedBox(height: 8),
-                              Text(
-                                'Market news unavailable right now — check back shortly.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF94A3B8)),
-                              ),
-                            ]),
-                          )
-                        else
-                          SizedBox(
-                            height: 158,
-                            child: Builder(builder: (context) {
-                              final visibleNews = _news
-                                  .whereType<Map<String, dynamic>>()
-                                  .where((item) {
-                                final link = item['link']?.toString() ?? '';
-                                final id = link.isNotEmpty
-                                    ? _stableArticleId(link)
-                                    : '';
-                                return id.isEmpty ||
-                                    !_dismissedNewsIds.contains(id);
-                              }).toList();
-                              return ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: visibleNews.length,
-                                itemBuilder: (ctx, i) {
-                                  final item = visibleNews[i];
-                                  final link =
-                                      item['link']?.toString() ?? '';
-                                  final articleId = link.isNotEmpty
-                                      ? _stableArticleId(link)
-                                      : '';
-                                  return GestureDetector(
-                                    onTap: link.isNotEmpty
-                                        ? () async {
-                                            final uri = Uri.parse(link);
-                                            if (await canLaunchUrl(uri)) {
-                                              await launchUrl(uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            }
-                                          }
-                                        : null,
-                                    child: MouseRegion(
-                                      cursor: link.isNotEmpty
-                                          ? SystemMouseCursors.click
-                                          : MouseCursor.defer,
-                                      child: Container(
-                                        width: 270,
-                                        margin: const EdgeInsets.only(
-                                            right: 12),
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                              color: const Color(0xFFE2E6E9)),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.03),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            )
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(children: [
-                                              Expanded(
-                                                child: Text(
-                                                  item['source']
-                                                          ?.toString() ??
-                                                      'News',
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Color(
-                                                          0xFF3B82F6)),
-                                                ),
-                                              ),
-                                              Text(
-                                                item['published']
-                                                        ?.toString() ??
-                                                    '',
-                                                style: const TextStyle(
-                                                    fontSize: 10,
-                                                    color: Color(0xFF94A3B8)),
-                                              ),
-                                            ]),
-                                            const SizedBox(height: 5),
-                                            Text(
-                                              item['title']?.toString() ??
-                                                  '',
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Color(0xFF1E293B)),
-                                            ),
-                                            const SizedBox(height: 5),
-                                            Expanded(
-                                              child: Text(
-                                                item['summary']
-                                                        ?.toString() ??
-                                                    '',
-                                                maxLines: 3,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Color(0xFF64748B),
-                                                    height: 1.4),
-                                              ),
-                                            ),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                if (link.isNotEmpty)
-                                                  const Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Text('Read more',
-                                                          style: TextStyle(
-                                                              fontSize: 10,
-                                                              color: Color(
-                                                                  0xFF3B82F6),
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600)),
-                                                      SizedBox(width: 2),
-                                                      Icon(
-                                                          Icons
-                                                              .arrow_forward_ios,
-                                                          size: 9,
-                                                          color: Color(
-                                                              0xFF3B82F6)),
-                                                    ],
-                                                  )
-                                                else
-                                                  const SizedBox.shrink(),
-                                                if (articleId.isNotEmpty)
-                                                  GestureDetector(
-                                                    onTap: () =>
-                                                        _dismissArticle(
-                                                            articleId),
-                                                    child: const Tooltip(
-                                                      message:
-                                                          'Not relevant — hide this article',
-                                                      child: Icon(
-                                                        Icons
-                                                            .thumb_down_outlined,
-                                                        size: 13,
-                                                        color: Color(
-                                                            0xFFCBD5E1),
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            }),
-                          ),
-                      ]),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              );
-            });
+                  const SizedBox(height: 32),
+                ],
+              ),
+            );
           },
         );
       },
     );
   }
-
-  // ── Portfolio summary card ───────────────────────────────────────────────────
-  Widget _buildPortfolioCard(
-      double value, double profit, bool positive, intl.NumberFormat fmt) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F9D58).withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.account_balance_wallet_rounded,
-                  color: Color(0xFF0F9D58), size: 18),
-            ),
-            const SizedBox(width: 8),
-            const Text('Portfolio Value',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B))),
-          ]),
-          const SizedBox(height: 12),
-          FutureBuilder<bool>(
-            future: ValuationModeService.isAdvancedMode(),
-            builder: (context, snap) {
-              final advanced = snap.data ?? false;
-              return _buildPortfolioValueSection(
-                  value,
-                  value * 0.8, // bid approximation shown inside
-                  value * 0.92,
-                  fmt,
-                  0,
-                  advanced: advanced);
-            },
-          ),
-          if (profit != 0) ...{
-            const SizedBox(height: 8),
-            Row(children: [
-              Icon(
-                positive
-                    ? Icons.trending_up_rounded
-                    : Icons.trending_down_rounded,
-                color: positive
-                    ? const Color(0xFF0F9D58)
-                    : const Color(0xFFE53935),
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${positive ? '+' : ''}${fmt.format(profit)} vs. cost',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: positive
-                        ? const Color(0xFF0F9D58)
-                        : const Color(0xFFE53935)),
-              ),
-            ]),
-          },
-        ],
-      ),
-    );
-  }
-
-  // ── Metal prices summary card ────────────────────────────────────────────────
-  Widget _buildMetalPricesCard(
-      double gold, double silver, intl.NumberFormat fmt) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD700).withAlpha(30),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.show_chart_rounded,
-                  color: Color(0xFFB8860B), size: 18),
-            ),
-            const SizedBox(width: 8),
-            const Text('Today\'s Metal Prices',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B))),
-          ]),
-          const SizedBox(height: 14),
-          if (_isLoadingPrices)
-            const SizedBox(
-                height: 4,
-                child: LinearProgressIndicator(color: Color(0xFFD4A843)))
-          else if (gold > 0) ...{
-            _metalPriceLine('Gold (oz)', fmt.format(gold), const Color(0xFFB8860B)),
-            const SizedBox(height: 8),
-            _metalPriceLine('Silver (oz)', fmt.format(silver), const Color(0xFF64748B)),
-          } else
-            const Text('Prices unavailable',
-                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
-          if (_pricesLastUpdated != null) ...{
-            const SizedBox(height: 10),
-            Text(
-              'Updated ${intl.DateFormat('h:mm a').format(_pricesLastUpdated!.toLocal())}',
-              style: const TextStyle(fontSize: 10, color: Color(0xFFCBD5E1)),
-            ),
-          },
-        ],
-      ),
-    );
-  }
-
-  Widget _metalPriceLine(String label, String price, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: color.withAlpha(200))),
-        Text(price,
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: color)),
-      ],
-    );
-  }
-
-  // ── Last added summary card ──────────────────────────────────────────────────
-  Widget _buildLastAddedCard(Map<String, dynamic>? coin) {
-    if (coin == null) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E6E9)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4F46E5).withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.add_circle_rounded,
-                    color: Color(0xFF4F46E5), size: 18),
-              ),
-              const SizedBox(width: 8),
-              const Text('Last Added',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B))),
-            ]),
-            const SizedBox(height: 16),
-            const Text('No coins yet',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B))),
-            const SizedBox(height: 4),
-            const Text('Add your first coin to get started.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
-          ],
-        ),
-      );
-    }
-
-    final series = coin['Program/Series']?.toString() ?? '';
-    final theme = coin['Theme/Subject']?.toString() ?? '';
-    final denom = coin['Denomination']?.toString() ?? '';
-    final year = coin['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final coinName = series.isNotEmpty && series != 'Multiple'
-        ? series
-        : theme.isNotEmpty && theme != 'Multiple'
-            ? theme
-            : denom.isNotEmpty
-                ? denom
-                : 'Coin';
-    final estVal = coin['AI Estimated Value']?.toString() ?? '—';
-    final imageUrl = coin['image_url_obverse']?.toString()
-        ?? coin['imageUrlObverse']?.toString();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4F46E5).withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.history_rounded,
-                  color: Color(0xFF4F46E5), size: 18),
-            ),
-            const SizedBox(width: 8),
-            const Text('Last Added',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B))),
-          ]),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              if (imageUrl != null && imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    width: 46,
-                    height: 46,
-                    fit: BoxFit.cover,
-                    errorWidget: (ctx, url, err) => Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Icon(Icons.monetization_on_outlined,
-                          color: Color(0xFFCBD5E1), size: 26),
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(Icons.monetization_on_outlined,
-                      color: Color(0xFFCBD5E1), size: 26),
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(coinName,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E293B))),
-                    if (year.isNotEmpty)
-                      Text(year,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B))),
-                    Text(estVal,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F9D58))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-
 
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
@@ -2348,163 +2059,6 @@ class _CoinThumbnail extends StatelessWidget {
           child: const Icon(Icons.toll, size: 18, color: Color(0xFF5A5C69)),
         ),
       ),
-    );
-  }
-}
-
-// ─── Large senior-friendly action button ──────────────────────────────────────
-class _DashboardActionButton extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String subtitle;
-  final VoidCallback? onTap;
-  final String heroTag;
-
-  const _DashboardActionButton({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.subtitle,
-    required this.onTap,
-    required this.heroTag,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E6E9)),
-          ),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: iconColor.withAlpha(20),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A))),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 13, color: Color(0xFF64748B))),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                size: 14, color: Color(0xFFCBD5E1)),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Collapsible section for the dashboard ────────────────────────────────────
-class _ExpandableSection extends StatefulWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Widget child;
-  final bool initiallyExpanded;
-
-  const _ExpandableSection({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.child,
-    this.initiallyExpanded = true,
-  });
-
-  @override
-  State<_ExpandableSection> createState() => _ExpandableSectionState();
-}
-
-class _ExpandableSectionState extends State<_ExpandableSection> {
-  late bool _expanded;
-
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.initiallyExpanded;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
-      ),
-      child: Column(children: [
-        InkWell(
-          borderRadius: _expanded
-              ? const BorderRadius.vertical(top: Radius.circular(12))
-              : BorderRadius.circular(12),
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            child: Row(children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A).withAlpha(8),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(widget.icon,
-                    size: 16, color: const Color(0xFF475569)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.title,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A))),
-                    Text(widget.subtitle,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF94A3B8))),
-                  ],
-                ),
-              ),
-              AnimatedRotation(
-                turns: _expanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: const Icon(Icons.expand_more_rounded,
-                    size: 20, color: Color(0xFF94A3B8)),
-              ),
-            ]),
-          ),
-        ),
-        if (_expanded)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-            child: widget.child,
-          ),
-      ]),
     );
   }
 }
