@@ -10,6 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/valuation_mode_service.dart';
 import 'currency_collection_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
@@ -193,7 +194,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   static const _greenText = Color(0xFF155724);
   static const _red       = Color(0xFFDC3545);
 
-  // --- Column definitions (widths tuned so Value col is visible ≥1200px) --
+  // --- Column definitions -------------------------------------------------------
+  // AI Value sits right after Condition so it is visible without scrolling.
+  // Metal and Melt Value moved right (after Cost) since they are reference data
+  // that collectors check less frequently than the estimated value.
   static const _columns = [
     // Year and Mint are narrow + adjacent so they read as one unit (e.g. 2025 W)
     // but remain independently sortable columns.
@@ -204,15 +208,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _ColDef(_F.themeSubject,     'Theme/Subject', 140),
     _ColDef(_F.variety,          'Variety/Error', 120),
     _ColDef(_F.condition,        'Condition',      70),
-    _ColDef(_F.isSilver,         'Metal',          62),
-    _ColDef(_F.meltValue,        'Melt Value',     80),
-    _ColDef(_F.pcgsNumber,       'PCGS #',         80),
+    _ColDef(_F.aiValue,          'AI Value',      100), // moved left — visible on load
     _ColDef(_F.cost,             'Cost',           90),
+    _ColDef(_F.isSilver,         'Metal',          62), // moved right
+    _ColDef(_F.meltValue,        'Melt Value',     80), // moved right
+    _ColDef(_F.pcgsNumber,       'PCGS #',         80),
     _ColDef(_F.purchaseDate,     'Date',           80),
     _ColDef(_F.retailerItemNo,   'Item #',         80),
     _ColDef(_F.retailerInvoice,  'Invoice #',      90),
     _ColDef(_F.storageLocation,  'Location',      100),
-    _ColDef(_F.aiValue,          'AI Value',      100),
   ];
 
   /// Currency formatter shared across all cost/value cells.
@@ -572,7 +576,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 : null;
             if (selDoc != null) _selectedCoinId = selDoc.id;
 
-            return _buildCoinsTab(docs, allDocs);
+            return FutureBuilder<bool>(
+              future: ValuationModeService.isAdvancedMode(),
+              builder: (context, modeSnap) {
+                final advanced = modeSnap.data ?? false;
+                return _buildCoinsTab(docs, allDocs, advanced: advanced);
+              },
+            );
           },
         );
       case 'Currency':
@@ -585,7 +595,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
-  Widget _buildCoinsTab(List<QueryDocumentSnapshot> docs, List<QueryDocumentSnapshot> allDocs) {
+  Widget _buildCoinsTab(List<QueryDocumentSnapshot> docs, List<QueryDocumentSnapshot> allDocs, {bool advanced = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -594,35 +604,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         Divider(color: _border),
         SizedBox(height: 16),
 
-        _buildStatsRow(docs),
+        _buildStatsRow(docs, advanced: advanced),
         SizedBox(height: 16),
 
-        // Toolbar: section label + toggle + AI Report button
+        // Toolbar: column visibility toggle + AI Report button (no section label)
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text('Inventory List', style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
-            Row(children: [
-              // Column visibility toggle
-              _columnToggleButton(),
-              SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: widget.onNavigate != null
-                    ? () => widget.onNavigate!('Estate Planning')
-                    : null,
-                icon: Icon(Icons.auto_awesome, size: 16),
-                label: Text('Generate AI Report Now'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4)),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                ),
+            // Column visibility toggle
+            _columnToggleButton(),
+            SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: widget.onNavigate != null
+                  ? () => widget.onNavigate!('Estate Planning')
+                  : null,
+              icon: Icon(Icons.auto_awesome, size: 16),
+              label: Text('Generate AI Report Now'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFF63366),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
               ),
-            ]),
+            ),
           ],
         ),
         SizedBox(height: 12),
@@ -638,25 +644,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         else
           SizedBox(
             height: 520,
-            child: _buildDataTable(docs),
+            child: _buildDataTable(docs, advanced: advanced),
           ),
-
-        SizedBox(height: 16),
-
-        // Save Grid Changes
-        ElevatedButton.icon(
-          onPressed: _onSaveGridChanges,
-          icon: Icon(Icons.save, size: 16),
-          label: Text('Save Grid Changes'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _red,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4)),
-            padding: EdgeInsets.symmetric(
-                horizontal: 20, vertical: 14),
-          ),
-        ),
       ],
     );
   }
@@ -673,207 +662,228 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             return StreamBuilder<List<WorldItem>>(
               stream: WorldItemService.worldItemsStream(),
               builder: (context, worldSnap) {
-                final coinsDocs = coinsSnap.data?.docs ?? [];
-                final currencyDocs = currencySnap.data?.docs ?? [];
-                final worldDocs = worldSnap.data ?? [];
+                return FutureBuilder<bool>(
+                  future: ValuationModeService.isAdvancedMode(),
+                  builder: (context, modeSnap) {
+                    final advanced = modeSnap.data ?? false;
+                    final coinsDocs = coinsSnap.data?.docs ?? [];
+                    final currencyDocs = currencySnap.data?.docs ?? [];
+                    final worldDocs = worldSnap.data ?? [];
 
-                final coinsCount = coinsDocs.length;
-                final currencyCount = currencyDocs.length;
-                final worldCount = worldDocs.length;
+                    final coinsCount = coinsDocs.length;
+                    final currencyCount = currencyDocs.length;
+                    final worldCount = worldDocs.length;
 
-                double coinsValue = 0;
-                for (final doc in coinsDocs) {
-                  try {
-                    final data = doc.data();
-                    coinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
-                  } catch (_) {}
-                }
+                    double coinsValue = 0;
+                    for (final doc in coinsDocs) {
+                      try {
+                        final data = doc.data();
+                        final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+                        final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                        final gVal = advanced ? coinCpg : coinBid;
+                        if (gVal > 0) {
+                          coinsValue += gVal;
+                        } else {
+                          coinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
+                        }
+                      } catch (_) {}
+                    }
 
-                double currencyValue = 0;
-                for (final doc in currencyDocs) {
-                  try {
-                    final data = doc.data();
-                    currencyValue += _parseNumber(data['Cost']);
-                  } catch (_) {}
-                }
+                    double currencyValue = 0;
+                    for (final doc in currencyDocs) {
+                      try {
+                        final data = doc.data();
+                        currencyValue += _parseNumber(data['Cost']);
+                      } catch (_) {}
+                    }
 
-                double worldValue = 0;
-                for (final item in worldDocs) {
-                  worldValue += item.estimatedValue ?? 0.0;
-                }
-                
-                final grandTotalValue = coinsValue + currencyValue + worldValue;
+                    double worldValue = 0;
+                    for (final item in worldDocs) {
+                      worldValue += item.estimatedValue ?? 0.0;
+                    }
+                    
+                    final grandTotalValue = coinsValue + currencyValue + worldValue;
 
-                // Merge and map for the combined additions feed
-                final coinItems = coinsDocs.map((doc) {
-                  final data = doc.data();
-                  final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
-                  DateTime? addedDate;
-                  if (addedTs is Timestamp) {
-                    addedDate = addedTs.toDate();
-                  } else if (addedTs is String) {
-                    addedDate = DateTime.tryParse(addedTs);
-                  }
-                  final denom = data['Denomination']?.toString() ?? '';
-                  final year = data['Year']?.toString() ?? '';
-                  final title = '$year $denom'.trim();
-                  return UnifiedCollectionItem(
-                    title: title.isNotEmpty ? title : 'Coin',
-                    category: 'Coin',
-                    emoji: '🪙',
-                    country: data['Country']?.toString() ?? 'US',
-                    dateAdded: addedDate,
-                    value: _parseAiValue(data['AI Estimated Value']?.toString() ?? ''),
-                  );
-                }).toList();
+                    // Merge and map for the combined additions feed
+                    final coinItems = coinsDocs.map((doc) {
+                      final data = doc.data();
+                      final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
+                      DateTime? addedDate;
+                      if (addedTs is Timestamp) {
+                        addedDate = addedTs.toDate();
+                      } else if (addedTs is String) {
+                        addedDate = DateTime.tryParse(addedTs);
+                      }
+                      final denom = data['Denomination']?.toString() ?? '';
+                      final year = data['Year']?.toString() ?? '';
+                      final title = '$year $denom'.trim();
 
-                final currencyItems = currencyDocs.map((doc) {
-                  final data = doc.data();
-                  final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
-                  DateTime? addedDate;
-                  if (addedTs is Timestamp) {
-                    addedDate = addedTs.toDate();
-                  } else if (addedTs is String) {
-                    addedDate = DateTime.tryParse(addedTs);
-                  }
-                  return UnifiedCollectionItem(
-                    title: data['Description']?.toString() ?? 'Banknote',
-                    category: 'Currency',
-                    emoji: '💵',
-                    country: data['Country']?.toString() ?? 'US',
-                    dateAdded: addedDate,
-                    value: _parseNumber(data['Cost']),
-                  );
-                }).toList();
+                      final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+                      final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                      final gVal = advanced ? coinCpg : coinBid;
+                      final displayValue = gVal > 0 
+                          ? gVal 
+                          : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
 
-                final worldItems = worldDocs.map((item) {
-                  return UnifiedCollectionItem(
-                    title: item.name.isNotEmpty ? item.name : 'World Item',
-                    category: 'World & Specialty',
-                    emoji: item.itemCategory.emoji,
-                    country: item.country,
-                    dateAdded: item.createdAt,
-                    value: item.estimatedValue ?? 0.0,
-                  );
-                }).toList();
+                      return UnifiedCollectionItem(
+                        title: title.isNotEmpty ? title : 'Coin',
+                        category: 'Coin',
+                        emoji: '🪙',
+                        country: data['Country']?.toString() ?? 'US',
+                        dateAdded: addedDate,
+                        value: displayValue,
+                      );
+                    }).toList();
 
-                // Combine and sort by date added, newest first
-                final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
-                combinedItems.sort((a, b) {
-                  if (a.dateAdded == null && b.dateAdded == null) return 0;
-                  if (a.dateAdded == null) return 1;
-                  if (b.dateAdded == null) return -1;
-                  return b.dateAdded!.compareTo(a.dateAdded!);
-                });
+                    final currencyItems = currencyDocs.map((doc) {
+                      final data = doc.data();
+                      final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
+                      DateTime? addedDate;
+                      if (addedTs is Timestamp) {
+                        addedDate = addedTs.toDate();
+                      } else if (addedTs is String) {
+                        addedDate = DateTime.tryParse(addedTs);
+                      }
+                      return UnifiedCollectionItem(
+                        title: data['Description']?.toString() ?? 'Banknote',
+                        category: 'Currency',
+                        emoji: '💵',
+                        country: data['Country']?.toString() ?? 'US',
+                        dateAdded: addedDate,
+                        value: _parseNumber(data['Cost']),
+                      );
+                    }).toList();
 
-                // Take top 10
-                final recentAdditions = combinedItems.take(10).toList();
+                    final worldItems = worldDocs.map((item) {
+                      return UnifiedCollectionItem(
+                        title: item.name.isNotEmpty ? item.name : 'World Item',
+                        category: 'World & Specialty',
+                        emoji: item.itemCategory.emoji,
+                        country: item.country,
+                        dateAdded: item.createdAt,
+                        value: item.estimatedValue ?? 0.0,
+                      );
+                    }).toList();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Portfolio Stats Grid
-                    GridView(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 280,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 2.0,
-                      ),
+                    // Combine and sort by date added, newest first
+                    final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
+                    combinedItems.sort((a, b) {
+                      if (a.dateAdded == null && b.dateAdded == null) return 0;
+                      if (a.dateAdded == null) return 1;
+                      if (b.dateAdded == null) return -1;
+                      return b.dateAdded!.compareTo(a.dateAdded!);
+                    });
+
+                    // Take top 10
+                    final recentAdditions = combinedItems.take(10).toList();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDashboardCard(
-                          'Total Inventory Value',
-                          'ESTIMATED PORTFOLIO VALUE',
-                          '\$${grandTotalValue.toStringAsFixed(2)}',
-                          'Based on AI, cost, and specialty appraisals',
-                          Icons.account_balance_wallet_rounded,
-                          _accent,
+                        // Portfolio Stats Grid
+                        GridView(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 280,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 2.0,
+                          ),
+                          children: [
+                            _buildDashboardCard(
+                              'Total Inventory Value',
+                              'ESTIMATED PORTFOLIO VALUE',
+                              '\$${grandTotalValue.toStringAsFixed(2)}',
+                              'Based on AI, cost, and specialty appraisals',
+                              Icons.account_balance_wallet_rounded,
+                              _accent,
+                            ),
+                            _buildDashboardCard(
+                              'Coins',
+                              'COIN COLLECTION',
+                              '$coinsCount Items',
+                              'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                              Icons.monetization_on_rounded,
+                              Colors.amber,
+                            ),
+                            _buildDashboardCard(
+                              'Currency',
+                              'PAPER BANKNOTES',
+                              '$currencyCount Items',
+                              'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                              Icons.money_rounded,
+                              Colors.green,
+                            ),
+                            _buildDashboardCard(
+                              'World & Specialty',
+                              'OTHER ITEMS',
+                              '$worldCount Items',
+                              'Valued at \$${worldValue.toStringAsFixed(2)}',
+                              Icons.language_rounded,
+                              Colors.teal,
+                            ),
+                            _buildCompletionCard(),
+                          ],
                         ),
-                        _buildDashboardCard(
-                          'Coins',
-                          'COIN COLLECTION',
-                          '$coinsCount Items',
-                          'Valued at \$${coinsValue.toStringAsFixed(2)}',
-                          Icons.monetization_on_rounded,
-                          Colors.amber,
-                        ),
-                        _buildDashboardCard(
-                          'Currency',
-                          'PAPER BANKNOTES',
-                          '$currencyCount Items',
-                          'Valued at \$${currencyValue.toStringAsFixed(2)}',
-                          Icons.money_rounded,
-                          Colors.green,
-                        ),
-                        _buildDashboardCard(
-                          'World & Specialty',
-                          'OTHER ITEMS',
-                          '$worldCount Items',
-                          'Valued at \$${worldValue.toStringAsFixed(2)}',
-                          Icons.language_rounded,
-                          Colors.teal,
-                        ),
-                        _buildCompletionCard(),
-                      ],
-                    ),
-                    SizedBox(height: 32),
+                        SizedBox(height: 32),
 
-                    // Recent Additions Title
-                    Text(
-                      'Recent Additions (${combinedItems.length} total)',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: _text,
-                      ),
-                    ),
-                    SizedBox(height: 12),
+                        // Recent Additions Title
+                        Text(
+                          'Recent Additions (${combinedItems.length} total)',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _text,
+                          ),
+                        ),
+                        SizedBox(height: 12),
 
-                    // Combined Feed List
-                    if (recentAdditions.isEmpty)
-                      Card(
-                        color: _surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: _border),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: Text('No items in your collection yet.')),
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: recentAdditions.length,
-                        itemBuilder: (context, index) {
-                          final item = recentAdditions[index];
-                          return Card(
+                        // Combined Feed List
+                        if (recentAdditions.isEmpty)
+                          Card(
                             color: _surface,
-                            margin: EdgeInsets.symmetric(vertical: 4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                               side: BorderSide(color: _border),
                             ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: _bg,
-                                child: Text(item.emoji, style: TextStyle(fontSize: 18)),
-                              ),
-                              title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
-                              subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
-                              trailing: Text(
-                                '\$${item.value.toStringAsFixed(2)}',
-                                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Center(child: Text('No items in your collection yet.')),
                             ),
-                          );
-                        },
-                      ),
-                  ],
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: recentAdditions.length,
+                            itemBuilder: (context, index) {
+                              final item = recentAdditions[index];
+                              return Card(
+                                color: _surface,
+                                margin: EdgeInsets.symmetric(vertical: 4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(color: _border),
+                                ),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: _bg,
+                                    child: Text(item.emoji, style: TextStyle(fontSize: 18)),
+                                  ),
+                                  title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
+                                  subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
+                                  trailing: Text(
+                                    '\$${item.value.toStringAsFixed(2)}',
+                                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             );
@@ -1428,17 +1438,22 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
 
   // --- Stats row -----------------------------------------------------------
-  Widget _buildStatsRow(List<QueryDocumentSnapshot> docs) {
-    double aiTotal = 0;
+  Widget _buildStatsRow(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
+    double valueTotal = 0;
     double fvTotal = 0;
     double meltTotal = 0;
     for (final doc in docs) {
       final m   = doc.data() as Map<String, dynamic>;
       
-      // AI Value sum -- average range values to match dashboard logic
-      // e.g. '$4,000 - $6,000' > 5000, '$3,700' > 3700
-      final aiRaw = m[_F.aiValue]?.toString() ?? '';
-      aiTotal += _parseAiValue(aiRaw);
+      final coinCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+      final coinBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+      final gVal = advanced ? coinCpg : coinBid;
+      if (gVal > 0) {
+        valueTotal += gVal;
+      } else {
+        final aiRaw = m[_F.aiValue]?.toString() ?? '';
+        valueTotal += _parseAiValue(aiRaw);
+      }
 
       // Melt Value -- live from spot prices when available, else from Firestore
       final liveMelt = _spotPrices.isNotEmpty
@@ -1464,7 +1479,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       SizedBox(width: 12),
       _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}'),
       SizedBox(width: 12),
-      _statChip('Est. Value', '\$${aiTotal.toStringAsFixed(2)}'),
+      _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}'),
     ]);
   }
 
@@ -1725,7 +1740,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- Data Table (TableView -- sticky header + pinned Actions col) ---------
-  Widget _buildDataTable(List<QueryDocumentSnapshot> docs) {
+  Widget _buildDataTable(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
     final visCols   = _visibleColumns(docs);
     final totalCols = 1 + visCols.length; // col 0 = Actions (pinned)
     final totalRows = 1 + docs.length;    // row 0 = header (pinned)
@@ -1743,17 +1758,27 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(8),
         ),
-        // -- RawScrollbar: binds directly to _tvHorizCtrl -- no notification
-        // depth wrangling. Always-visible thumb shows users they can scroll right.
+        // -- Dual RawScrollbars: top bar is always visible; bottom bar added so
+        // users with large collections (5 000+ items) don't have to scroll all
+        // the way back to the top just to pan horizontally.
         child: RawScrollbar(
           controller: _tvHorizCtrl,
           thumbVisibility: true,
           trackVisibility: true,
           thickness: 8,
-          scrollbarOrientation: ScrollbarOrientation.top,
+          scrollbarOrientation: ScrollbarOrientation.bottom,
           thumbColor: Color(0xFFB0B8C8),
           trackColor: Color(0xFFF0F2F5),
           trackBorderColor: Color(0xFFE0E4EA),
+          child: RawScrollbar(
+            controller: _tvHorizCtrl,
+            thumbVisibility: true,
+            trackVisibility: true,
+            thickness: 8,
+            scrollbarOrientation: ScrollbarOrientation.top,
+            thumbColor: Color(0xFFB0B8C8),
+            trackColor: Color(0xFFF0F2F5),
+            trackBorderColor: Color(0xFFE0E4EA),
           child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
@@ -1871,7 +1896,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
             // Data cell
             final colDef = visCols[col - 1];
-            final value  = _getCellValue(colDef, m);
+            final value  = _getCellValue(colDef, m, advanced: advanced);
 
             // -- Cert # column: tappable PCGS link -------------------------
             if (colDef.field == _F.gradingCert && value.isNotEmpty) {
@@ -1938,7 +1963,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             );
           },
         ),       // TableView.builder
-        ),       // Scrollbar
+        ),       // RawScrollbar (top)
+        ),       // RawScrollbar (bottom)
       ),         // DecoratedBox
     );           // ClipRRect
   }
@@ -1988,7 +2014,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// Extracts a formatted display string for [col] from the coin data map [m].
   /// All cell value logic lives here so it can be called from the TableView
   /// cellBuilder without duplicating the switch statement.
-  String _getCellValue(_ColDef col, Map<String, dynamic> m) {
+  String _getCellValue(_ColDef col, Map<String, dynamic> m, {bool advanced = false}) {
     switch (col.field) {
       case _F.year:
         final v = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
@@ -2047,6 +2073,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final n = double.tryParse(rawC.replaceAll(RegExp(r'[^\d.]'), ''));
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
+        final coinCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+        final coinBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        final gVal = advanced ? coinCpg : coinBid;
+        if (gVal > 0) {
+          return _currencyFmt.format(gVal);
+        }
         final av = m[_F.aiValue]?.toString() ?? '';
         return (av == 'Pending' || av == 'null' || av.isEmpty) ? '' : av;
       default:
@@ -2945,12 +2977,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // _onAddToWishlist removed — wishlist action now lives in CoinDetailScreen.
   // _onGenerateReport removed — navigation to Estate Planning is now inline on the button.
 
-  void _onSaveGridChanges() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('All changes saved to Firestore.'),
-      backgroundColor: _green,
-    ));
-  }
+  // _onSaveGridChanges removed — button was a stub; Firestore auto-saves every edit live.
 
   // --- Coin Vault Gallery state ---------------------------------------------
   bool _vaultShowObverse = true; // true = obverse, false = reverse
