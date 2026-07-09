@@ -2,9 +2,8 @@ import re
 import urllib.parse
 import json
 import time
+import httpx
 from bs4 import BeautifulSoup
-from botasaurus.request import request, Request
-from botasaurus.soupify import soupify
 import requests
 
 # Load config settings
@@ -24,6 +23,58 @@ WIKI_API = "https://commons.wikimedia.org/w/api.php"
 
 NUMISTA_API_KEY = 'ExpST6TaGRDXkcEt6QajYJ0Lj76JZ8oqBPPpWhe'
 NUMISTA_API_BASE = 'https://api.numista.com/v3'
+
+# ── Lightweight HTTP helper (replaces botasaurus @request decorator) ──────────
+# botasaurus was only used for its retry logic and browser-spoof User-Agent.
+# httpx provides both natively: follow_redirects, configurable timeout, and
+# HTTPX transports support proxying the same way requests does.
+
+_SCRAPE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+def _scrape_get(
+    url: str,
+    *,
+    headers: dict = None,
+    proxies: dict = None,
+    retries: int = 3,
+    timeout: float = REQUEST_TIMEOUT,
+) -> httpx.Response:
+    """
+    Drop-in replacement for botasaurus request.get().
+    Returns an httpx.Response.  Raises on non-2xx after retries.
+    """
+    merged_headers = {**_SCRAPE_HEADERS, **(headers or {})}
+    mounts = {}
+    if proxies:
+        for scheme, proxy_url in (proxies or {}).items():
+            if proxy_url:
+                mounts[f"{scheme}://"] = httpx.HTTPTransport(proxy=proxy_url)
+    transport = httpx.HTTPTransport(retries=retries)
+    client_kwargs = dict(
+        headers=merged_headers,
+        follow_redirects=True,
+        timeout=timeout,
+        transport=transport,
+    )
+    if mounts:
+        client_kwargs["mounts"] = mounts
+    with httpx.Client(**client_kwargs) as client:
+        resp = client.get(url)
+        resp.raise_for_status()
+        return resp
+
+def _soupify(resp: httpx.Response) -> BeautifulSoup:
+    """Parse an httpx response into BeautifulSoup (replaces botasaurus.soupify)."""
+    return BeautifulSoup(resp.text, "html.parser")
+
 
 # ─── Numista API Scraper ──────────────────────────────────────────────────────
 
@@ -180,11 +231,12 @@ def fetch_pcgs_market_data(pcgs_no):
 
 # ─── Heritage Auctions Scraper ────────────────────────────────────────────────
 
-@request
-def scrape_heritage_auctions(request: Request, data):
+# ─── Heritage Auctions Scraper ───────────────────────────────────────────────
+
+def scrape_heritage_auctions(data):
     """
     Search Heritage Auctions and extract coin or currency images.
-    Uses Botasaurus proxy and browser impersonation to spoof TLS.
+    Uses httpx with browser-spoof User-Agent to avoid bot detection.
     `data` contains a dict with keys: 'query' (e.g. '1934 $1 Green Seal Boston')
     """
     query = data.get("query")
@@ -193,8 +245,8 @@ def scrape_heritage_auctions(request: Request, data):
         
     search_url = f"https://currency.ha.com/c/search-results.zx?Nty=1&Ntt={urllib.parse.quote_plus(query)}&N=790+231+4294967291"
     try:
-        resp = request.get(search_url)
-        soup = soupify(resp)
+        resp = _scrape_get(search_url)
+        soup = _soupify(resp)
         img_pattern = re.compile(
             r'<img[^>]+src="(https://dyn1\.heritagestatic\.com/ha\?[^"]+)"[^>]*alt="([^"]*)"',
             re.IGNORECASE
@@ -435,8 +487,8 @@ def get_scored_images(soup, error, content_div, is_general_query=False):
     return res
 
 
-@request
-def scrape_error_ref(request: Request, data):
+
+def scrape_error_ref(data):
     """
     Scrape error-ref.com for information and visual examples.
     `data` contains a dict with keys: 'error_type' (e.g. 'clipped planchet')
@@ -449,8 +501,8 @@ def scrape_error_ref(request: Request, data):
     query_clean = error_type.replace("-", " ")
     search_url = f"https://www.error-ref.com/?s={urllib.parse.quote_plus(query_clean)}"
     try:
-        resp = request.get(search_url)
-        soup = soupify(resp)
+        resp = _scrape_get(search_url)
+        soup = _soupify(resp)
         # Look for search results articles
         articles = []
         for h2 in soup.find_all("h2", class_="entry-title"):
@@ -476,8 +528,8 @@ def scrape_error_ref(request: Request, data):
             return None
             
         # Visit selected article
-        art_resp = request.get(article_url)
-        art_soup = soupify(art_resp)
+        art_resp = _scrape_get(article_url)
+        art_soup = _soupify(art_resp)
         
         # Extract text and validate content (exclude header/footer menus by targeting the content div)
         paragraphs = [p.get_text() for p in art_soup.find_all("p") if p.get_text().strip()]
@@ -517,8 +569,8 @@ def scrape_error_ref(request: Request, data):
     return None
 
 
-@request
-def scrape_coinweek(request: Request, data):
+
+def scrape_coinweek(data):
     """
     Scrape coinweek.com for coin errors, descriptions, and high-quality photographs.
     `data` contains a dict with keys: 'query' (e.g. '1934-D Peace Dollar doubled die')
@@ -529,8 +581,8 @@ def scrape_coinweek(request: Request, data):
         
     search_url = f"https://coinweek.com/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = request.get(search_url)
-        soup = soupify(resp)
+        resp = _scrape_get(search_url)
+        soup = _soupify(resp)
         
         # Find article links
         article_candidates = []
@@ -552,11 +604,12 @@ def scrape_coinweek(request: Request, data):
         # Filter and validate candidates
         error_record = data.get("error_record")
         article_url = None
+        art_soup = None
         for title, url in article_candidates:
             if is_article_related(title, error_record, query=query):
                 print(f"    Scraping CoinWeek candidate article: {url}")
-                art_resp = request.get(url)
-                art_soup = soupify(art_resp)
+                art_resp = _scrape_get(url)
+                art_soup = _soupify(art_resp)
                 
                 # Extract text
                 paragraphs = []
@@ -598,7 +651,7 @@ def scrape_coinweek(request: Request, data):
         if not valid_images:
             print(f"    ⚠ Article {article_url} has no images matching error keywords/year. Skipping...")
             return None
-            
+        
         if valid_images:
             return {
                 "source": "coinweek",
@@ -630,8 +683,9 @@ def fetch_usmint_cookies():
 
 # ─── USMint.gov Scraper ────────────────────────────────────────────────────────
 
-@request
-def scrape_usmint(request: Request, data):
+# ─── USMint.gov Scraper ────────────────────────────────────────────────────
+
+def scrape_usmint(data):
     """
     Search usmint.gov for coin designs, descriptions, and official public domain images.
     `data` contains a dict with keys: 'query' (e.g. 'Patsy Takemoto Mink')
@@ -654,11 +708,11 @@ def scrape_usmint(request: Request, data):
 
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = request.get(search_url, headers=headers, proxies=get_scrape_proxy())
+        resp = _scrape_get(search_url, headers=headers, proxies=get_scrape_proxy())
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None
-        soup = soupify(resp)
+        soup = _soupify(resp)
         
         # Find links pointing to learn or coin programs
         article_links = []
@@ -673,8 +727,8 @@ def scrape_usmint(request: Request, data):
         if not article_links:
             # Fallback catalog search
             catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
-            cat_resp = request.get(catalog_url, proxies=get_scrape_proxy())
-            cat_soup = soupify(cat_resp)
+            cat_resp = _scrape_get(catalog_url, proxies=get_scrape_proxy())
+            cat_soup = _soupify(cat_resp)
             for a in cat_soup.find_all("a", href=True):
                 href = a["href"]
                 if "/search?" not in href and (".html" in href or "-product-" in href):
@@ -687,8 +741,8 @@ def scrape_usmint(request: Request, data):
             
         # Visit first page
         target_url = article_links[0]
-        art_resp = request.get(target_url, headers=headers, proxies=get_scrape_proxy())
-        art_soup = soupify(art_resp)
+        art_resp = _scrape_get(target_url, headers=headers, proxies=get_scrape_proxy())
+        art_soup = _soupify(art_resp)
         
         paragraphs = []
         for p in art_soup.find_all("p"):

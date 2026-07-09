@@ -9,7 +9,7 @@
 # =============================================================================
 
 # ── Core web framework ────────────────────────────────────────────────────────
-fastapi==0.116.1
+fastapi==0.139.0
 uvicorn==0.34.3
 starlette==1.0.1
 pydantic==2.11.5
@@ -45,9 +45,6 @@ pypdf==6.13.3
 Pillow==12.3.0
 
 # ── Web scraping (for Scraper Dashboard) ──────────────────────────────────────
-botasaurus==4.0.97
-botasaurus_requests==4.0.38
-botasaurus_driver==4.0.92
 curl_cffi==0.15.0
 
 # ── gRPC transport (required by google-cloud-* libraries) ─────────────────────
