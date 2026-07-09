@@ -261,10 +261,14 @@ class GreysheetService:
             primary_kw = "nickel"
         elif "cent" in denom_lower or "penny" in denom_lower or "1c" in denom_lower:
             primary_kw = "cent"
+        elif "half dollar" in denom_lower or ("half" in denom_lower and "dollar" in denom_lower):
+            primary_kw = "half dollar"
+        elif "half cent" in denom_lower:
+            primary_kw = "half cent"
+        elif "half dime" in denom_lower:
+            primary_kw = "half dime"
         elif "dollar" in denom_lower or "1$" in denom_lower:
             primary_kw = "dollar"
-        elif "half" in denom_lower:
-            primary_kw = "half dollar"
 
         if primary_kw:
             for node in leaf_nodes:
@@ -377,6 +381,7 @@ Do not output markdown code blocks, just raw JSON.
         stop_words = {"&", "and", "or", "the", "a", "an", "of", "in", "on", "at", "to", "with", "couple", "compact"}
         descriptive_terms = [term for term in descriptive_terms if term not in stop_words and len(term) > 2]
 
+        import re
         for cand in candidates:
             cand_name = cand["Name"].lower()
 
@@ -386,6 +391,19 @@ Do not output markdown code blocks, just raw JSON.
             coin_is_roll_or_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
             if cand_has_roll_or_set and not coin_is_roll_or_set:
                 continue
+
+            # Year Guardrail: Skip candidate if it has a specific year/range in the name that doesn't match the coin's year
+            if year_str and year_str.isdigit():
+                cand_years = [int(y) for y in re.findall(r'\b\d{4}\b', cand_name)]
+                if cand_years:
+                    range_match = re.search(r'(\d{4})\s*[-–to\s]+\s*(\d{4})', cand_name)
+                    if range_match:
+                        start_yr = int(range_match.group(1))
+                        end_yr = int(range_match.group(2))
+                        if not (start_yr <= int(year_str) <= end_yr):
+                            continue
+                    elif int(year_str) not in cand_years:
+                        continue
 
             score = 0
             if year_str and year_str in cand_name:

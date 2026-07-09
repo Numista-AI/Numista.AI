@@ -7807,6 +7807,26 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                     if cand_has_roll_or_set and not coin_is_roll_or_set:
                         print(f"[Greysheet] Force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') is a roll/set but coin is not.")
                         force_resolve = True
+                        
+                    # Year Mismatch Guardrail: Force re-resolution if collectible name has a different year/range
+                    coin_year = str(coin_data.get("Year") or "").strip()
+                    if coin_year and coin_year.isdigit():
+                        import re
+                        cand_years = [int(y) for y in re.findall(r'\b\d{4}\b', cand_name)]
+                        if cand_years:
+                            range_match = re.search(r'(\d{4})\s*[-–to\s]+\s*(\d{4})', cand_name)
+                            year_mismatch = False
+                            if range_match:
+                                start_yr = int(range_match.group(1))
+                                end_yr = int(range_match.group(2))
+                                if not (start_yr <= int(coin_year) <= end_yr):
+                                    year_mismatch = True
+                            elif int(coin_year) not in cand_years:
+                                year_mismatch = True
+                                
+                            if year_mismatch:
+                                print(f"[Greysheet] Force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') has a year mismatch with coin year {coin_year}.")
+                                force_resolve = True
             except Exception as e:
                 print(f"[Greysheet] Error checking current GSID: {e}")
 
