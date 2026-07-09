@@ -379,6 +379,14 @@ Do not output markdown code blocks, just raw JSON.
 
         for cand in candidates:
             cand_name = cand["Name"].lower()
+
+            # Roll/Set Guardrail: Skip or penalise rolls/sets if the coin itself is not a roll/set
+            cand_has_roll_or_set = any(x in cand_name for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+            coin_desc = f"{name_val or ''} {variety or ''} {theme_val or ''} {series or ''} {denomination or ''}".lower()
+            coin_is_roll_or_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+            if cand_has_roll_or_set and not coin_is_roll_or_set:
+                continue
+
             score = 0
             if year_str and year_str in cand_name:
                 score += 10

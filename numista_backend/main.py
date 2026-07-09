@@ -7785,7 +7785,32 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         
         # Resolve GSID first if missing
         service = GreysheetService(db=db)
-        if not gsid_str:
+        
+        # Force re-resolution if the currently mapped GSID is a roll/set but the coin is not
+        force_resolve = False
+        if gsid_str:
+            try:
+                curr_gsid = int(gsid_str)
+                collectible = service.get_collectible(curr_gsid)
+                if collectible:
+                    cand_name = collectible.get("Name", "").lower()
+                    cand_has_roll_or_set = any(x in cand_name for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+                    
+                    coin_name = coin_data.get("Name") or coin_data.get("name") or ""
+                    coin_variety = coin_data.get("Variety") or coin_data.get("variety") or ""
+                    coin_theme = coin_data.get("Theme/Subject") or coin_data.get("theme") or ""
+                    coin_series = coin_data.get("Program/Series") or coin_data.get("series") or ""
+                    coin_denom = coin_data.get("Denomination") or coin_data.get("denomination") or ""
+                    coin_desc = f"{coin_name} {coin_variety} {coin_theme} {coin_series} {coin_denom}".lower()
+                    coin_is_roll_or_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+                    
+                    if cand_has_roll_or_set and not coin_is_roll_or_set:
+                        print(f"[Greysheet] Force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') is a roll/set but coin is not.")
+                        force_resolve = True
+            except Exception as e:
+                print(f"[Greysheet] Error checking current GSID: {e}")
+
+        if not gsid_str or force_resolve:
             gsid = service.resolve_gsid_hybrid(
                 coin_data=coin_data,
                 genai_client=genai_client,
