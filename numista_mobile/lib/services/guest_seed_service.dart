@@ -106,6 +106,7 @@ class GuestSeedService {
   }
 }
 
+// ignore: subtype_of_sealed_class
 class DemoDocumentSnapshot implements QueryDocumentSnapshot<Map<String, dynamic>> {
   @override
   final String id;
@@ -129,6 +130,7 @@ class DemoDocumentSnapshot implements QueryDocumentSnapshot<Map<String, dynamic>
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+// ignore: subtype_of_sealed_class
 class DemoQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
   @override
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;

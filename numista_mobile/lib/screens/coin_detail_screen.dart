@@ -1577,7 +1577,7 @@ class _FinancialsTab extends StatelessWidget {
                   Switch.adaptive(
                     value: coin.hasCac,
                     activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.5),
-                    activeColor: const Color(0xFF10B981),
+                    activeThumbColor: const Color(0xFF10B981),
                     onChanged: onCacToggled,
                   ),
                 ],
