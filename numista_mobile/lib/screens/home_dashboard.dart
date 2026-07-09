@@ -325,8 +325,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final currency = snapshot.data?.currency ?? [];
             final worldItems = snapshot.data?.worldItems ?? [];
 
-            // ── Compute portfolio metrics ──────────────────────────────────
-            int totalItems = coins.length + currency.length + worldItems.length;
+            return FutureBuilder<bool>(
+              future: ValuationModeService.isAdvancedMode(),
+              builder: (context, modeSnap) {
+                final advanced = modeSnap.data ?? false;
+
+                // ── Compute portfolio metrics ──────────────────────────────────
+                int totalItems = coins.length + currency.length + worldItems.length;
             double cpgTotal = 0;
             double bidTotal = 0;
             double askTotal = 0;
@@ -456,7 +461,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
             }
 
-            final portfolioValue = cpgTotal;
+            final portfolioValue = advanced ? cpgTotal : bidTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
             if (totalItems > 0) {
@@ -635,7 +640,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               final denom  = data['Denomination']?.toString() ?? '';
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
-                              final estVal = data['AI Estimated Value']?.toString() ?? '—';
+                              final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+                              final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                              final gVal = advanced ? coinCpg : coinBid;
+                              final estVal = gVal > 0 
+                                  ? fmt.format(gVal)
+                                  : (data['AI Estimated Value']?.toString() ?? '—');
 
                               // Build a human-readable coin name
                               // Priority: Program/Series > Theme/Subject > Denomination > fallback
@@ -995,6 +1005,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   const SizedBox(height: 32),
                 ],
               ),
+            );
+              },
             );
           },
         );
