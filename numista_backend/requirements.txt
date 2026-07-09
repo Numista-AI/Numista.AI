@@ -34,7 +34,7 @@ requests==2.34.2
 httpx==0.28.1
 python-dotenv==1.1.0
 PyJWT==2.10.1
-yfinance==1.4.1
+yfinance>=0.2.62  # allows pip to resolve; 1.4.1 pulls websockets/peewee that conflict in Docker
 
 # ── Payments ──────────────────────────────────────────────────────────────────
 stripe==12.2.0
