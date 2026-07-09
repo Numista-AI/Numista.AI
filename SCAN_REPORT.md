@@ -1,15 +1,18 @@
 # Numista.Ai System Scan Report - 2026-07-09
 
 ## Executive Summary: **FAIL** (Backend Degraded / Test Regressions)
-The system check has identified critical routing errors on the production backend container and missing Greysheet API credentials that lead to degraded valuation features. While the frontend and core app navigation function correctly (suites 01–07 passing), the v4.0.0 Greysheet and Deals test suites (08–10) are failing due to a mismatch between test expectations and backend FastAPI routes.
+The system check has identified critical routing errors on the production backend container and missing Greysheet API credentials that lead to degraded valuation features. While the frontend and core app navigation function correctly (suites 01–07 passing, 94/104 tests passed), the v4.0.0 Greysheet and Deals test suites (08–10) are failing (10/104 tests failed) due to a mismatch between test expectations and backend FastAPI routes/credentials.
 
 ---
 
 ## Critical Errors & Warnings
 
-### 1. Production Backend HTTP 404 Routes
-- **Issue**: Production Cloud Run URL (`numista-backend-xwqkbwqvuq-uc.a.run.app`) returns **404 Not Found** for critical Greysheet endpoints.
-- **Context**: The routes `/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, and `/api/ebay/search` do not exist in the backend `main.py` routing file. Furthermore, the daily snapshot endpoint in `main.py` is registered as a `POST /api/portfolio/snapshot/daily` route, but the test suite expects `GET /api/portfolio/snapshot`.
+### 1. Production Backend HTTP 404 & Mismatched Routes
+- **Issue**: Production Cloud Run URL (`numista-backend-xwqkbwqvuq-uc.a.run.app`) returns **404 Not Found** or other error responses for critical Greysheet/Deals endpoints.
+- **Context**:
+  - The routes `/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, and `/api/ebay/search` do not exist in the backend `main.py` routing file.
+  - The daily snapshot endpoint in `main.py` is registered as a `POST /api/portfolio/snapshot/daily` route, but the test suite expects `GET /api/portfolio/snapshot`.
+  - The resolver endpoint `/api/greysheet/resolve` and coin detail/pricing endpoint `/api/greysheet/pricing/{gsid}` fail due to credentials or configuration mismatches when queried under test conditions.
 
 ### 2. Dart Analyzer Warnings (30 Issues)
 - **Issue**: `flutter analyze` failed with exit code 1 due to code health warnings.
@@ -37,9 +40,9 @@ The system check has identified critical routing errors on the production backen
 
 ## Test Logs Summary
 
-- **Total Tests**: 104 (Run in progress)
-- **Passed So Far**: 38 (Suites 01-03)
-- **Failed / Blocked (Expected)**: 5 (Suites 08-10)
+- **Total Tests**: 104
+- **Passed**: 94 ✅
+- **Failed**: 10 ❌
 
 ### Current Suite Status
 
@@ -52,9 +55,9 @@ The system check has identified critical routing errors on the production backen
 | `05-navigation.spec.js` | 12 | ✅ PASS | Standard user dashboard and portfolio routes. |
 | `06-edge-cases.spec.js` | 10 | ✅ PASS | Form errors and network timeouts handled gracefully. |
 | `07-error-library.spec.js` | 1 | ✅ PASS | Sanity checks for application error logger. |
-| `08-greysheet-valuation.spec.js` | 12 | ❌ **FAIL** (T11, T12) | Endpoint `GET /api/greysheet/config` and `POST /api/greysheet/batch` return 404. |
-| `09-deals-arbitrage.spec.js` | 8 | ❌ **FAIL** (T06) | Endpoint `GET /api/ebay/search` returns 404 (not defined in `main.py`). |
-| `10-greysheet-coin-detail.spec.js` | 14 | ❌ **FAIL** (T10, T11, T13, T14) | Config/batch/cac return 404; snapshot expects GET but backend implements POST. |
+| `08-greysheet-valuation.spec.js` | 12 | ❌ **FAIL** (T11, T12) | Endpoints `/api/greysheet/config` and `/api/greysheet/batch` return 404. |
+| `09-deals-arbitrage.spec.js` | 8 | ❌ **FAIL** (T05, T06) | Endpoint `/api/ebay/search` returns 404 (not defined in `main.py`); Deals screen fails state assertion. |
+| `10-greysheet-coin-detail.spec.js` | 14 | ❌ **FAIL** (T04, T10, T11, T12, T13, T14) | Config/batch/cac/snapshot endpoints fail or return 404; snapshot expects GET but backend implements POST; resolve/pricing endpoints fail due to configuration. |
 
 ---
 

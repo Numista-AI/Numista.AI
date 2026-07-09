@@ -5,10 +5,11 @@
 | Commit | Scope | Summary |
 |---|---|---|
 | `1c8ca8e` | Scan Report | Generated and updated `SCAN_REPORT.md` with comprehensive system scan and audit results |
+| `6504f9a` | Walkthrough | Documented today's system scan report and findings |
 
 **Status Summary:**
-- **Core App Navigation & Demo (Suites 01-07):** **✅ PASSING (100% pass rate)**
-- **Greysheet API & Deals (Suites 08-10):** ❌ **EXPECTED FAILURES** due to missing API endpoints in backend routing and credential degradation.
+- **Core App Navigation & Demo (Suites 01-07):** **✅ PASSING (94/104 tests passed)**
+- **Greysheet API & Deals (Suites 08-10):** ❌ **FAIL (10/104 tests failed)** due to missing API endpoints in backend routing and credential degradation.
 - **Flutter Code Health (dart analyze):** ❌ **FAIL** (0 Errors, 11 Warnings, 19 Info messages)
 
 ---
@@ -22,6 +23,7 @@
   - `GET /api/ebay/search` -> ❌ **404 Not Found** (Expected by `09-deals-arbitrage.spec.js` as EPN affiliate endpoint)
   - `GET /api/greysheet/cac` -> ❌ **404 Not Found** (Expected by `10-greysheet-coin-detail.spec.js`)
   - `GET /api/portfolio/snapshot` -> ❌ **404 Not Found** (Backend implements `@app.post("/api/portfolio/snapshot/daily")`)
+  - Pricing `/api/greysheet/pricing/{gsid}` and `/api/greysheet/resolve` endpoints failed assertions due to credential/config mismatches during automated testing.
 
 ### 2. Greysheet API Key & Credentials
 - **Credentials:** Missing `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` in the environment configuration, falling back to default/restricted dev credentials.
