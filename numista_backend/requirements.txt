@@ -9,9 +9,11 @@
 # =============================================================================
 
 # ── Core web framework ────────────────────────────────────────────────────────
-fastapi==0.139.0
+# fastapi 0.134.0 is the first version with starlette>=0.46.0 (no upper cap),
+# which installs starlette 1.0.1+ and fixes CVE-2026-48710 (BadHost auth bypass).
+fastapi==0.134.0
 uvicorn==0.34.3
-# starlette resolved automatically by fastapi>=0.139.0 (requires >=0.46.0, no upper cap → installs 1.0.1+)
+# starlette resolved automatically by fastapi>=0.134.0 (installs 1.0.1+, fixes CVE-2026-48710)
 pydantic==2.11.5
 python-multipart==0.0.20
 
@@ -30,11 +32,11 @@ googleapis-common-protos==1.74.0
 # ── Data & utilities ──────────────────────────────────────────────────────────
 pandas==2.2.3
 feedparser==6.0.12
-requests==2.34.2
+requests==2.32.4
 httpx==0.28.1
 python-dotenv==1.1.0
 PyJWT==2.10.1
-yfinance>=0.2.62  # allows pip to resolve; 1.4.1 pulls websockets/peewee that conflict in Docker
+yfinance==0.2.62
 
 # ── Payments ──────────────────────────────────────────────────────────────────
 stripe==12.2.0
@@ -42,13 +44,14 @@ stripe==12.2.0
 # ── HTML/PDF parsing (used in main.py routes) ─────────────────────────────────
 beautifulsoup4==4.13.4
 pypdf==6.13.3
-Pillow==12.3.0
+Pillow==11.2.1
 
 # ── Web scraping (for Scraper Dashboard) ──────────────────────────────────────
-curl_cffi==0.15.0
+# botasaurus removed — scrapers.py now uses httpx directly (security + build fix)
+curl_cffi==0.11.1
 
 # ── gRPC transport (required by google-cloud-* libraries) ─────────────────────
-grpcio==1.73.0
-grpcio-status==1.73.0
+grpcio==1.71.0
+grpcio-status==1.71.0
 proto-plus==1.27.2
-protobuf==5.29.6
+protobuf==5.29.4
