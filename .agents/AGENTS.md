@@ -16,16 +16,17 @@ Before writing `walkthrough.md` or declaring a task/goal complete, you MUST:
    ```bash
    git commit -m "<type>(<scope>): <summary>"
    ```
-3. Pull and rebase, then push — **always use this exact sequence**:
+3. Pull and rebase, then push to **`dev`** — **always use this exact sequence**:
    ```bash
-   git pull --rebase origin main && git push origin main
+   git pull --rebase origin dev
+   git push origin dev
    ```
    The `--rebase` absorbs any commits that landed since your last pull (from other sessions,
    the auto-backup cron, or the user) and places your commit cleanly on top.
-   Never use a bare `git push` without the pull-rebase prefix.
-4. Confirm the push succeeded (look for `branch -> branch` in the output).
+   Never push directly to `main`. Never use a bare `git push` without the pull-rebase prefix.
+4. Confirm the push succeeded (look for `dev -> dev` in the output).
 
-**Only after a confirmed push may you write `walkthrough.md` or emit `<!-- GOAL_COMPLETE -->`.**
+**Only after a confirmed push to `dev` may you write `walkthrough.md` or emit `<!-- GOAL_COMPLETE -->`.**
 
 > A task that is not pushed to GitHub is NOT done — it is only done locally.
 
@@ -41,11 +42,11 @@ git log --oneline origin/main..HEAD
 git log --oneline origin/dev..HEAD
 ```
 
-If either local branch is **ahead** of its remote, push those commits first before starting new work:
+If the local `dev` branch is **ahead** of `origin/dev`, push those commits first:
 
 ```bash
-git pull --rebase origin main && git push origin main
-git pull --rebase origin dev  && git push origin dev
+git pull --rebase origin dev
+git push origin dev
 ```
 
 This prevents commits from being silently stranded when you switch branches between sessions.
@@ -57,7 +58,7 @@ This prevents commits from being silently stranded when you switch branches betw
 The order must always be:
 
 ```
-code changes → git add → git commit → git push → confirm → walkthrough.md → GOAL_COMPLETE
+code changes → git add → git commit → push to dev → confirm → walkthrough.md → GOAL_COMPLETE
 ```
 
 Not:
@@ -84,14 +85,13 @@ Add these to `.gitignore` if they keep appearing as untracked.
 
 ### Rule 5 — Never push while another session is actively pushing
 
-Multiple concurrent sessions pushing to `main` simultaneously causes cascading build
-failures. Before starting any session that will push to `main`:
+Multiple concurrent sessions pushing simultaneously causes cascading build failures.
 
 - **Do not run two sessions that touch the same files at the same time.**
   (e.g. don't run a security triage and a dependency upgrade session in parallel —
   both will edit `requirements.txt` and fight each other.)
 - If you suspect another session is mid-push, run `git fetch origin` and check
-  `git log --oneline origin/main..HEAD` before pushing.
+  `git log --oneline origin/dev..HEAD` before pushing.
 - For long-running overnight tasks, use a **single `/goal` session**, not multiple
   parallel sessions over the same file area.
 
@@ -116,7 +116,6 @@ Before changing any Gemini model ID (e.g., changing `gemini-3.5-flash` to anythi
 Pushing to `main` deploys to the live production site (numista-vault.web.app) and is
 **exclusively the owner's responsibility**. Agents do not merge to `main` under any
 circumstances — not even after asking.
-
 **All agent code changes MUST follow this workflow:**
 
 1. Work on the `dev` branch (or a dedicated feature branch, e.g., `agent/feature-name`).
@@ -154,35 +153,3 @@ circumstances — not even after asking.
 **Why this rule exists:** On 2026-07-09, Antigravity sessions pushed unauthorized UX redesign
 changes directly to `main`, deploying them to the live site without the owner's review or
 approval. This rule is a direct response to that incident.
-
-**This rule overrides Rule 1 with respect to the `main` branch.**
-
-Rule 1's "push is the finish line" applies to **`dev`** — not to `main`.
-Pushing to `main` deploys to the live production site and requires explicit user authorization every single time.
-
-**All agent code changes MUST follow this workflow:**
-
-1. Work on the `dev` branch (or a dedicated feature branch, e.g., `agent/feature-name`).
-2. Commit and push to `dev`:
-   ```bash
-   git add <files>
-   git commit -m "<type>(<scope>): <summary>"
-   git pull --rebase origin dev && git push origin dev
-   ```
-3. When work is complete, present a summary to the user and ask:
-   > "I'm ready to merge to `main` and deploy to the live site. Do you want me to proceed?"
-4. **Only after the user explicitly says YES** may the agent merge and push to `main`:
-   ```bash
-   git checkout main
-   git pull --rebase origin main
-   git merge --no-ff dev -m "merge(dev→main): <summary>"
-   git push origin main
-   git checkout dev
-   ```
-
-**The following are the ONLY exceptions** where pushing directly to `main` is permitted without asking:
-- Commits containing ONLY documentation files (`walkthrough.md`, `AGENTS.md`, scan reports, `*.md` in `scratch/`)
-- These do not trigger a Flutter rebuild and do not affect the live site
-
-**Why this rule exists:** On 2026-07-09, two Antigravity sessions pushed unauthorized UX redesign changes directly to `main`, deploying them to the live site (numista-vault.web.app) without the owner's review or approval. This rule is a direct response to that incident.
-
