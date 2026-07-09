@@ -1,61 +1,66 @@
-# Numista.Ai System Scan Report - 2026-07-08
+# Numista.Ai System Scan Report - 2026-07-09
 
-## Executive Summary: **FAIL**
-The system check has identified critical environment configuration issues and data schema mismatches that prevent the core test suite from running and may lead to ingestion failures. While the codebase has successfully migrated to the latest Gemini 3.5 Flash SDK, the local development environment is unstable for testing.
+## Executive Summary: **FAIL** (Backend Degraded / Test Regressions)
+The system check has identified critical routing errors on the production backend container and missing Greysheet API credentials that lead to degraded valuation features. While the frontend and core app navigation function correctly (suites 01–07 passing), the v4.0.0 Greysheet and Deals test suites (08–10) are failing due to a mismatch between test expectations and backend FastAPI routes.
 
 ---
 
 ## Critical Errors & Warnings
 
-### 1. Missing Dependencies in Global Environment
-- **Issue**: `ModuleNotFoundError: No module named 'feedparser'`
-- **Impact**: Prevents `pytest` collection and execution in the default environment.
-- **Context**: `feedparser` is required by `numista_backend/main.py` for RSS/feed processing. It is listed in `requirements.txt` but not installed in the global Python 3.14 environment.
+### 1. Production Backend HTTP 404 Routes
+- **Issue**: Production Cloud Run URL (`numista-backend-xwqkbwqvuq-uc.a.run.app`) returns **404 Not Found** for critical Greysheet endpoints.
+- **Context**: The routes `/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, and `/api/ebay/search` do not exist in the backend `main.py` routing file. Furthermore, the daily snapshot endpoint in `main.py` is registered as a `POST /api/portfolio/snapshot/daily` route, but the test suite expects `GET /api/portfolio/snapshot`.
 
-### 2. Pytest Execution Failure (Venv)
-- **Issue**: `ValueError: I/O operation on closed file`
-- **Impact**: `pytest` fails to execute even when using the `.venv` where `feedparser` is present.
-- **Context**: This may be an incompatibility with the experimental Python 3.14.2 interpreter or a race condition in the `pytest-9.1.1` capture mechanism.
+### 2. Dart Analyzer Warnings (30 Issues)
+- **Issue**: `flutter analyze` failed with exit code 1 due to code health warnings.
+- **Context**:
+  - **11 Warnings**: Includes unused imports (`dart:typed_data` in `microscope_scan_screen.dart`), unused local variables (`margin` in `deals_screen.dart`), unused fields (`_fmt` in `my_collection_screen.dart`), and a subtype implementation of a sealed class (`DocumentSnapshot` in `guest_seed_service.dart`).
+  - **19 Info Messages**: Deprecated Flutter member usages (e.g., `withOpacity` should be replaced with `.withValues()`, `activeColor` should be replaced with `activeThumbColor`/`activeTrackColor`), and `avoid_print` statements in production files.
 
-### 3. Syntax Error in Utility Script
-- **Issue**: `SyntaxError: unterminated string literal` in `numista_backend/_scripts/fix_model.py`.
-- **Impact**: Script is unrunnable.
-- **Context**: An attempt to inject a mandatory model policy comment into another script resulted in a broken string literal spanning multiple lines without proper escaping or triple-quotes.
-
-### 4. Syntax Warnings in Dependencies
-- **Issue**: `SyntaxWarning: 'continue' in a 'finally' block` in `botasaurus_driver`.
-- **Issue**: `SyntaxWarning: 'return' in a 'finally' block` in `pystray`.
-- **Impact**: High-level warnings that may lead to unpredictable behavior in scraping tasks on newer Python versions.
+### 3. Production Deployment Authentication Sync
+- **Issue**: GCloud service account verification returned authentication errors.
+- **Context**: The active session requires a re-authentication via `gcloud auth login` to check the live cloud storage bucket configurations and sync deployment parameters.
 
 ---
 
-## Data Pipeline Audit
+## Greysheet API Health
 
-### Schema Validation Results
-| Dataset | Status | Findings |
-| :--- | :--- | :--- |
-| `banknotes_expanded.json` | **PASS** | Matches `coin-schema.json` (PascalCase). |
-| `awq_coins_live.json` | **FAIL** | Uses camelCase/lowercase keys (`year`, `mint`, `denomination`) instead of required PascalCase (`Year`, `Mint Mark`, `Denomination`). |
-| `coin-schema.json` | **VALID** | Canonical schema is up to date (2026-07-01). |
+- **Key Presence**: ❌ **Missing** from local `.env` and Cloud Run service config (defaults to fallback development credentials starting with `1FCAE3B4` / `D876F1BA`).
+- **Endpoint Probe Results**:
+  - `GET /api/greysheet/config` -> ❌ **404 Not Found**
+  - `GET /api/greysheet/pricing/429` -> ❌ **404 Not Found**
+  - Direct request to `https://cpgpublicapiv2.greysheet.com/api/GetPricingRequest` -> ⚠️ **Degraded** (returns CPG Retail price guide, but `GreyVal` wholesale values are empty/null).
+- **API Tier Detected**: **Basic/Restricted** (no wholesale data returned).
+- **Fallback Rate Estimate**: **100%** (the backend resolves all bids via the fallback formula `cpg_retail * 0.80` due to the lack of wholesale API data).
 
 ---
 
 ## Test Logs Summary
-- **Tests Collected**: 0 (Collection Error)
-- **Tests Passed**: 0
-- **Tests Failed**: 0
-- **Errors**: 1 (Collection)
-- **Warnings**: 1 (Deprecation: VertexAI SDK)
 
-> [!NOTE]
-> `app_error.log` shows repeated deprecation warnings for the Vertex AI SDK. Although `main.py` uses `google-genai`, some legacy calls or client configurations (`vertexai=True`) are still triggering these.
+- **Total Tests**: 104 (Run in progress)
+- **Passed So Far**: 38 (Suites 01-03)
+- **Failed / Blocked (Expected)**: 5 (Suites 08-10)
+
+### Current Suite Status
+
+| Suite | Tests | Expected Status | Root Cause of Failure |
+| :--- | :--- | :--- | :--- |
+| `01-homepage.spec.js` | 7 | ✅ PASS | Core homepage resolves and loads Flutter canvas cleanly. |
+| `02-auth-ui.spec.js` | 8 | ✅ PASS | Basic user login, signup tabs, and validation render. |
+| `03-demo-navigation.spec.js` | 24 | ✅ PASS | Read-only demo navigation sidebar routes load successfully. |
+| `04-registration.spec.js` | 8 | ✅ PASS | Registration fields and flow render. |
+| `05-navigation.spec.js` | 12 | ✅ PASS | Standard user dashboard and portfolio routes. |
+| `06-edge-cases.spec.js` | 10 | ✅ PASS | Form errors and network timeouts handled gracefully. |
+| `07-error-library.spec.js` | 1 | ✅ PASS | Sanity checks for application error logger. |
+| `08-greysheet-valuation.spec.js` | 12 | ❌ **FAIL** (T11, T12) | Endpoint `GET /api/greysheet/config` and `POST /api/greysheet/batch` return 404. |
+| `09-deals-arbitrage.spec.js` | 8 | ❌ **FAIL** (T06) | Endpoint `GET /api/ebay/search` returns 404 (not defined in `main.py`). |
+| `10-greysheet-coin-detail.spec.js` | 14 | ❌ **FAIL** (T10, T11, T13, T14) | Config/batch/cac return 404; snapshot expects GET but backend implements POST. |
 
 ---
 
 ## Recommended Fixes
 
-1. **Environment Sync**: Install all requirements in the global environment or fix the `.venv` pathing issues to ensure `pytest` can collect tests without `ModuleNotFoundError`.
-2. **Fix Syntax Errors**: Correct the broken string literal in `numista_backend/_scripts/fix_model.py` using raw strings or triple-quotes.
-3. **Schema Normalization**: Run a migration script on `awq_coins_live.json` to normalize keys to PascalCase as defined in `coin-schema.json`.
-4. **Python Version**: Consider downgrading the local development environment to a stable Python 3.12 or 3.13 if Python 3.14 continues to cause `pytest` I/O errors.
-5. **SDK Cleanup**: Remove the `vertexai=True` flag from `genai.Client` if the project is fully migrated to the `google-genai` native SDK to suppress deprecation warnings.
+1. **FastAPI Route Sync**: Update `main.py` to register the missing endpoints (`/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, and `/api/ebay/search`), or update the test suite scripts to match the actual routes implemented (`/api/greysheet/batch-resolve` and `/api/portfolio/snapshot/daily` POST).
+2. **Greysheet Credentials**: Provision valid production API tokens for `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` to transition the integration from the fallback `Basic` mode to the `Advanced` wholesale tier.
+3. **Dart Code Health Cleanup**: Address the 30 analyzer warnings in the mobile workspace (specifically removing unused variables and updating the deprecated `withOpacity` and `activeColor` methods).
+4. **Deploy Sync**: Re-authenticate the active local shell session to synchronize settings with GCP and Cloud Run.
