@@ -1,0 +1,26 @@
+﻿Analyzing 2 items...                                            
+
+warning - Unused import: 'package:url_launcher/url_launcher.dart' - lib\screens\base_layout.dart:5:8 - unused_import
+warning - The declaration '_buildNavItem' isn't referenced - lib\screens\base_layout.dart:702:10 - unused_element
+warning - The declaration '_SidebarDivider' isn't referenced - lib\screens\base_layout.dart:885:7 - unused_element
+warning - The declaration '_SidebarSectionHeader' isn't referenced - lib\screens\base_layout.dart:900:7 - unused_element
+warning - The value of the local variable 'bidTotal' isn't used - lib\screens\home_dashboard.dart:332:20 - unused_local_variable
+warning - The value of the local variable 'askTotal' isn't used - lib\screens\home_dashboard.dart:333:20 - unused_local_variable
+warning - The value of the local variable 'coinsVal' isn't used - lib\screens\home_dashboard.dart:338:20 - unused_local_variable
+warning - The value of the local variable 'currencyVal' isn't used - lib\screens\home_dashboard.dart:339:20 - unused_local_variable
+warning - The value of the local variable 'medalsVal' isn't used - lib\screens\home_dashboard.dart:340:20 - unused_local_variable
+warning - The value of the local variable 'othersVal' isn't used - lib\screens\home_dashboard.dart:341:20 - unused_local_variable
+warning - The declaration '_buildCategoryBreakdown' isn't referenced - lib\screens\home_dashboard.dart:1514:10 - unused_element
+warning - The declaration '_buildArbitrageDealsCard' isn't referenced - lib\screens\home_dashboard.dart:1689:10 - unused_element
+warning - The declaration '_ReleaseNotesPanel' isn't referenced - lib\screens\home_dashboard.dart:1947:7 - unused_element
+warning - The declaration '_MorganDashboardCard' isn't referenced - lib\screens\home_dashboard.dart:2083:7 - unused_element
+warning - A value for optional parameter 'onAskMorgan' isn't ever given - lib\screens\home_dashboard.dart:2091:10 - unused_element_parameter
+warning - A value for optional parameter 'onAskMorganWithQuery' isn't ever given - lib\screens\home_dashboard.dart:2092:10 - unused_element_parameter
+
+flutter : 16 issues found. (ran in 56.2s)
+At line:1 char:1
++ flutter analyze lib/screens/home_dashboard.dart lib/screens/base_layo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (16 issues found. (ran in 56.2s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
