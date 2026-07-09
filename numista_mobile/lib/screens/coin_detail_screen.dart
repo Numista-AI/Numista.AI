@@ -1457,11 +1457,12 @@ class _FinancialsTab extends StatelessWidget {
             : coin.meltValue); // no spot prices yet — show stored value
 
     // ── EST. VALUE: same greysheet-first priority as the collection grid ─────
-    // Grid logic: greysheetBid first (default), cpgRetail in advanced mode,
-    // then fall back to raw AI Estimated Value string.
+    // EST. VALUE: CPG Retail (collector/market price) first, then greysheet bid
+    // (dealer wholesale floor), then raw AI Estimated Value string.
+    // This matches what Greysheet.com labels as "CPG Value (Retail)".
     final gBid = coin.greysheetBid;
     final gCpg = coin.cpgRetail;
-    final greysheetVal = gBid > 0 ? gBid : (gCpg > 0 ? gCpg : 0.0);
+    final greysheetVal = gCpg > 0 ? gCpg : (gBid > 0 ? gBid : 0.0);
     final aiDisplay = greysheetVal > 0
         ? '\$${greysheetVal.toStringAsFixed(2)}'
         : (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending'
