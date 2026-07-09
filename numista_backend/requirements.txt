@@ -11,7 +11,7 @@
 # ── Core web framework ────────────────────────────────────────────────────────
 fastapi==0.139.0
 uvicorn==0.34.3
-starlette==1.0.1
+# starlette resolved automatically by fastapi>=0.139.0 (requires >=0.46.0, no upper cap → installs 1.0.1+)
 pydantic==2.11.5
 python-multipart==0.0.20
 
