@@ -16,10 +16,13 @@ Before writing `walkthrough.md` or declaring a task/goal complete, you MUST:
    ```bash
    git commit -m "<type>(<scope>): <summary>"
    ```
-3. Push to the remote branch:
+3. Pull and rebase, then push — **always use this exact sequence**:
    ```bash
-   git push origin <branch>
+   git pull --rebase origin main && git push origin main
    ```
+   The `--rebase` absorbs any commits that landed since your last pull (from other sessions,
+   the auto-backup cron, or the user) and places your commit cleanly on top.
+   Never use a bare `git push` without the pull-rebase prefix.
 4. Confirm the push succeeded (look for `branch -> branch` in the output).
 
 **Only after a confirmed push may you write `walkthrough.md` or emit `<!-- GOAL_COMPLETE -->`.**
@@ -41,8 +44,8 @@ git log --oneline origin/dev..HEAD
 If either local branch is **ahead** of its remote, push those commits first before starting new work:
 
 ```bash
-git push origin main
-git push origin dev
+git pull --rebase origin main && git push origin main
+git pull --rebase origin dev  && git push origin dev
 ```
 
 This prevents commits from being silently stranded when you switch branches between sessions.
@@ -79,7 +82,22 @@ Add these to `.gitignore` if they keep appearing as untracked.
 
 ---
 
-### Rule 5 — Mandatory Gemini Model Policy
+### Rule 5 — Never push while another session is actively pushing
+
+Multiple concurrent sessions pushing to `main` simultaneously causes cascading build
+failures. Before starting any session that will push to `main`:
+
+- **Do not run two sessions that touch the same files at the same time.**
+  (e.g. don't run a security triage and a dependency upgrade session in parallel —
+  both will edit `requirements.txt` and fight each other.)
+- If you suspect another session is mid-push, run `git fetch origin` and check
+  `git log --oneline origin/main..HEAD` before pushing.
+- For long-running overnight tasks, use a **single `/goal` session**, not multiple
+  parallel sessions over the same file area.
+
+---
+
+### Rule 6 — Mandatory Gemini Model Policy
 
 Before changing any Gemini model ID (e.g., changing `gemini-3.5-flash` to anything else), you **MUST**:
 

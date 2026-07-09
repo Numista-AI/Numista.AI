@@ -1239,7 +1239,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withOpacity(0.4),
+          color: const Color(0xFF1E293B).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.white10),
         ),
@@ -1281,7 +1281,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 Text(
                   '${pct.toStringAsFixed(1)}%',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 11,
                   ),
                 ),
@@ -1301,7 +1301,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

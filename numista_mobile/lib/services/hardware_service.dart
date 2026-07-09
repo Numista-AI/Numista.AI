@@ -13,8 +13,6 @@ import 'auth_service.dart';
 /// Live status POLLING still uses localhost:5000 Flask.
 class HardwareService {
   static const String _statusUrl    = 'https://localhost:5000/get-status';
-  static const String _startScanUrl = 'https://localhost:5000/start-scan';
-  static const String _saveUrl      = 'https://localhost:5000/add-to-collection';
   static const String _pairUrl      = 'https://localhost:5000/pair';
 
   static final HardwareService _instance = HardwareService._internal();

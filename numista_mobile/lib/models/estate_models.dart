@@ -364,7 +364,7 @@ class EstateReportRecord {
     'mode':       mode,
     'state':      state,
     'generated_at_ts': FieldValue.serverTimestamp(),
-    'generated_at': DateTime.now().toUtc().toIso8601String() + 'Z',
+    'generated_at': '${DateTime.now().toUtc().toIso8601String()}Z',
     'total_coins': totalCoins,
     'total_fmv':   totalFmv,
     'download_url':   downloadUrl,

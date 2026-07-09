@@ -82,7 +82,7 @@ class MyCollectionScreen extends StatefulWidget {
   /// Navigate to a screen AND pass an initial query (used for AI Deep Dive).
   final Function(String route, String query)? onNavigateWithQuery;
   final Function(String)? onTabChanged;
-  MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery, this.onTabChanged});
+  const MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery, this.onTabChanged});
   @override
   State<MyCollectionScreen> createState() => _MyCollectionScreenState();
 }
@@ -192,9 +192,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   static const _greenBg   = Color(0xFFD4EED8);
   static const _greenText = Color(0xFF155724);
   static const _red       = Color(0xFFDC3545);
-
-  final _fmt =
-      intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
   // --- Column definitions (widths tuned so Value col is visible ≥1200px) --
   static const _columns = [
@@ -683,12 +680,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 final coinsCount = coinsDocs.length;
                 final currencyCount = currencyDocs.length;
                 final worldCount = worldDocs.length;
-                final totalCount = coinsCount + currencyCount + worldCount;
 
                 double coinsValue = 0;
                 for (final doc in coinsDocs) {
                   try {
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = doc.data();
                     coinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
                   } catch (_) {}
                 }
@@ -696,7 +692,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 double currencyValue = 0;
                 for (final doc in currencyDocs) {
                   try {
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = doc.data();
                     currencyValue += _parseNumber(data['Cost']);
                   } catch (_) {}
                 }
@@ -710,7 +706,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
                 // Merge and map for the combined additions feed
                 final coinItems = coinsDocs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
+                  final data = doc.data();
                   final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
                   DateTime? addedDate;
                   if (addedTs is Timestamp) {
@@ -732,7 +728,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 }).toList();
 
                 final currencyItems = currencyDocs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
+                  final data = doc.data();
                   final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
                   DateTime? addedDate;
                   if (addedTs is Timestamp) {
@@ -1198,7 +1194,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 ? Image.network(
                                     item.imageObverse!,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
+                                    errorBuilder: (context, error, stackTrace) => Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
                                   )
                                 : Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
                           ),
@@ -4009,7 +4005,7 @@ class MyCollectionSegmentedControl extends StatelessWidget {
   final String selectedTab;
   final ValueChanged<String> onTabChanged;
 
-  MyCollectionSegmentedControl({
+  const MyCollectionSegmentedControl({
     super.key,
     required this.selectedTab,
     required this.onTabChanged,

@@ -89,6 +89,29 @@ if (-not (Get-Command firebase -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+# Verify Firebase Login Status
+Write-Host "  Verifying Firebase Authentication status..." -ForegroundColor Yellow
+$fbCheck = firebase login --non-interactive 2>&1
+if ($fbCheck -match "logged in" -or $fbCheck -match "Already logged in") {
+    Write-Host "  Firebase authenticated." -ForegroundColor Green
+} else {
+    Write-Host "  [WARNING] Firebase authentication status uncertain. Check: firebase login" -ForegroundColor Yellow
+}
+
+# Verify GCloud Credentials & ADC Status
+if (Get-Command gcloud -ErrorAction SilentlyContinue) {
+    Write-Host "  Verifying Google Cloud CLI authentication..." -ForegroundColor Yellow
+    $gcloudAuth = gcloud auth list --format="value(account)" --filter="status:ACTIVE" 2>&1
+    if (-not $gcloudAuth) {
+        Write-Host "  [WARNING] No active gcloud account found. Run: gcloud auth login" -ForegroundColor Yellow
+    } else {
+        Write-Host "  Active gcloud account: $gcloudAuth" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [WARNING] gcloud CLI not found. Skip cloud verification." -ForegroundColor Yellow
+}
+
+
 # ── STEP 1: Back up index.html and strip the dev service-worker kill-switch ───
 Write-Host "  [1/5] Removing dev service-worker kill-switch from index.html..." -ForegroundColor Yellow
 

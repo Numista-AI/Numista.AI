@@ -166,7 +166,7 @@ class _DealsScreenState extends State<DealsScreen> {
                             const SizedBox(height: 8),
                             Text(
                               'Add slabbed coins to your Wishlist to scan live eBay listings automatically!',
-                              style: TextStyle(color: descColor.withOpacity(0.7), fontSize: 11),
+                              style: TextStyle(color: descColor.withValues(alpha: 0.7), fontSize: 11),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 20),
@@ -188,7 +188,6 @@ class _DealsScreenState extends State<DealsScreen> {
                         final coin = deal['coin'] as CoinModel;
                         final price = deal['price'] as double;
                         final bid = deal['greysheet_bid'] as double;
-                        final margin = deal['net_margin'] as double;
                         final marginPct = deal['margin_percent'] as double;
                         final imageUrl = deal['imageUrl'] as String;
 
@@ -266,7 +265,7 @@ class _DealsScreenState extends State<DealsScreen> {
                                           width: 60,
                                           height: 60,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
+                                          errorBuilder: (context, error, stackTrace) => Container(
                                             width: 60,
                                             height: 60,
                                             color: borderColor,

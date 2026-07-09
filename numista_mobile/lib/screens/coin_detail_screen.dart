@@ -1576,7 +1576,8 @@ class _FinancialsTab extends StatelessWidget {
                   const SizedBox(width: 16),
                   Switch.adaptive(
                     value: coin.hasCac,
-                    activeColor: const Color(0xFF10B981), // CAC Green
+                    activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.5),
+                    activeColor: const Color(0xFF10B981),
                     onChanged: onCacToggled,
                   ),
                 ],
@@ -2895,7 +2896,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
       ).timeout(
         const Duration(seconds: 6),
         onTimeout: () {
-          print('Mint error load timed out.');
+          // Timeout gracefully
           return [];
         },
       );
@@ -2907,7 +2908,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
         });
       }
     } catch (e) {
-      print('Error loading mint errors: $e');
+      // Log error silently or delegate to logger
       if (mounted) {
         setState(() {
           _errors = [];

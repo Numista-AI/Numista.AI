@@ -132,13 +132,13 @@ class PrivacyScreen extends StatelessWidget {
                       'We do not sell, rent, or trade your personal data. We securely host your data on Google Firebase (Firestore and Cloud Storage). Scanned images are processed securely using Google Cloud\'s Gemini enterprise platform (your data is never used to train public models). No data is shared with third-party advertisers.',
                       style: TextStyle(color: _text, fontSize: 14, height: 1.5),
                     ),
-                    const SizedBox(height: 10),
-                    const _BulletPoint(
+                    SizedBox(height: 10),
+                    _BulletPoint(
                       boldText: 'Global Reference Library Index: ',
                       text: 'If you explicitly opt-in to contribute images, your anonymized coin photos (stripped of all user identifiers, costs, and personal notes) are hosted in our public reference library bucket on Google Cloud Storage to populate the canonical catalog for all users.',
                     ),
-                    const SizedBox(height: 8),
-                    const _BulletPoint(
+                    SizedBox(height: 8),
+                    _BulletPoint(
                       boldText: 'Affiliate Integration Partners: ',
                       text: 'When viewing or interacting with your collection wishlist, the Service integrates with the eBay Partner Network (EPN) to surface live product availability cards. Interacting with these features utilizes standard affiliate tracking identifiers to manage campaign routing, strictly isolated from your personal estate data.',
                     ),
