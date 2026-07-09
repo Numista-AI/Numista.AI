@@ -1442,25 +1442,43 @@ class _FinancialsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meltVal = spotPrices.isNotEmpty
-        ? MeltValueService.format(
+    // ── Melt value: live-compute from spot prices when available ─────────────
+    final liveMelt = spotPrices.isNotEmpty
+        ? MeltValueService.compute(
             metalContent: coin.metalContent,
             denomination: coin.denomination,
             spotPrices: spotPrices,
           )
-        : coin.meltValue;
+        : null;
+    final meltVal = liveMelt != null
+        ? '\$${liveMelt.toStringAsFixed(2)}'
+        : (spotPrices.isNotEmpty
+            ? 'N/A'          // spot prices loaded but no precious metal
+            : coin.meltValue); // no spot prices yet — show stored value
 
+    // ── EST. VALUE: same greysheet-first priority as the collection grid ─────
+    // EST. VALUE: CPG Retail (collector/market price) first, then greysheet bid
+    // (dealer wholesale floor), then raw AI Estimated Value string.
+    // This matches what Greysheet.com labels as "CPG Value (Retail)".
+    final gBid = coin.greysheetBid;
+    final gCpg = coin.cpgRetail;
+    final greysheetVal = gCpg > 0 ? gCpg : (gBid > 0 ? gBid : 0.0);
+    final aiDisplay = greysheetVal > 0
+        ? '\$${greysheetVal.toStringAsFixed(2)}'
+        : (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending'
+            ? 'Pending'
+            : coin.aiEstimatedValue);
+
+    // Use the best numeric value for P&L calculation
     final purchaseAmt = _parseDollar(coin.purchaseCost);
-    final aiAmt       = _parseAiValue(coin.aiEstimatedValue);
-    final profit      = aiAmt - purchaseAmt;
+    final estAmt      = greysheetVal > 0 ? greysheetVal : _parseAiValue(coin.aiEstimatedValue);
+    final profit      = estAmt - purchaseAmt;
     final profitPct   = purchaseAmt > 0 ? (profit / purchaseAmt * 100) : null;
-    final canCalcPL   = purchaseAmt > 0 && aiAmt > 0;
+    final canCalcPL   = purchaseAmt > 0 && estAmt > 0;
 
     final costDisplay = (coin.purchaseCost.isEmpty || coin.purchaseCost == r'$0.00')
         ? 'UKN' : coin.purchaseCost;
-    final aiDisplay   = (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending')
-        ? 'Pending' : coin.aiEstimatedValue;
-    final meltDisplay = (meltVal.isEmpty || meltVal == 'N/A') ? 'Pending' : meltVal;
+    final meltDisplay = meltVal.isEmpty ? 'Pending' : meltVal;
 
     final plDolStr = canCalcPL
         ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';

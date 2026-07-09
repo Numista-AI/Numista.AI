@@ -372,8 +372,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       case _F.aiValue:
         final cpg = (m['cpgRetail']    as num?)?.toDouble() ?? 0.0;
         final bid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-        // Use bid as primary (default mode); fall through to AI estimate when 0
-        final gVal = bid > 0 ? bid : cpg;
+        // CPG Retail is the collector/market price (default); bid is dealer-wholesale (advanced)
+        final gVal = cpg > 0 ? cpg : bid;
         if (gVal > 0) return gVal;
         final av = m[_F.aiValue]?.toString() ?? '';
         return _parseAiValue(av); // strips ~, $, commas → double (0 if empty)
@@ -2177,7 +2177,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       case _F.aiValue:
         final coinCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
         final coinBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-        final gVal = advanced ? coinCpg : coinBid;
+        // Default: CPG Retail (collector/market price).  Advanced: Greysheet Bid (dealer wholesale).
+        final gVal = advanced ? coinBid : (coinCpg > 0 ? coinCpg : coinBid);
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }

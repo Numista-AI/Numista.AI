@@ -143,10 +143,13 @@ class GreysheetService:
                         "ParentNode_Id": node_id
                     }
 
-                    if live_collectibles > 0 or live_children == 0:
+                    if live_collectibles > 0:
                         leaf_nodes.append(child_info)
-                    else:
+                    
+                    if live_children > 0:
                         queue.append(child_info)
+                    elif live_collectibles == 0:
+                        leaf_nodes.append(child_info)
 
         self._leaf_nodes_cache = leaf_nodes
         logger.info(f"[Greysheet] Found {len(leaf_nodes)} U.S. Coins leaf nodes.")
@@ -273,7 +276,10 @@ class GreysheetService:
         if primary_kw:
             for node in leaf_nodes:
                 node_name_lower = node["Name"].lower()
-                if primary_kw in node_name_lower:
+                if primary_kw == "half dollar":
+                    if "half dollar" in node_name_lower or "halves" in node_name_lower:
+                        matched_nodes.append(node)
+                elif primary_kw in node_name_lower:
                     matched_nodes.append(node)
 
         # If no primary keyword match, do a fuzzy substring match on series/denomination as fallback
