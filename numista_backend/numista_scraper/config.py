@@ -72,6 +72,8 @@ def get_scrape_proxy() -> dict:
     Rotates round-robin so successive calls use different IPs.
     Returns {"http": None, "https": None} if no proxies are configured.
     """
+    if os.environ.get("DISABLE_PROXIES") == "true":
+        return {"http": None, "https": None}
     global _proxy_pool, _proxy_index
     if not _proxy_pool:
         _proxy_pool = _load_proxy_pool()
@@ -87,6 +89,8 @@ def get_random_scrape_proxy() -> dict:
     Return a requests-compatible proxy dict with a randomly chosen proxy.
     Useful when you want unpredictable rotation rather than round-robin.
     """
+    if os.environ.get("DISABLE_PROXIES") == "true":
+        return {"http": None, "https": None}
     global _proxy_pool
     if not _proxy_pool:
         _proxy_pool = _load_proxy_pool()
