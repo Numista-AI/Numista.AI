@@ -8047,51 +8047,66 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             # price.  Using it as cpgRetail caused the 1914 Half Eagle $48K bug.
             logger.info(f"Greysheet: melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin worth more as metal. Keeping market price and logging melt for reference.")
 
-        # ── Sanity cap: refuse to write values that are wildly inflated ──
-        # TWO-LAYER PROTECTION:
+        # ── Sanity cap: refuse to write wildly inflated values ──────────────────
+        # TWO-PATH PROTECTION (avoids blocking legitimate high-value key dates):
         #
-        # Layer 1 — Hard absolute ceiling ($10,000): catches newly-imported coins
-        #   that have no AI Estimated Value yet, so the relative cap below has
-        #   nothing to compare against. Root cause of the jseaman1204 $3.5M bug:
-        #   69 coins had no AI estimate, so the 10x cap was silently skipped.
-        HARD_CPG_CAP = 10_000.0
-        if cpg_retail > HARD_CPG_CAP:
-            logger.warning(
-                f"Greysheet: HARD CAP TRIGGERED: cpgRetail={cpg_retail:.2f} > "
-                f"${HARD_CPG_CAP:,.0f} absolute ceiling. "
-                f"Refusing to write. Check GSID {gsid} vs coin "
-                f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
-            )
-            return {
-                "status": "sanity_cap",
-                "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds absolute hard cap "
-                           f"${HARD_CPG_CAP:,.0f}. Price NOT written to Firestore. "
-                           f"Verify GSID {gsid} is the correct series.",
-                "cpgRetail": cpg_retail,
-                "hardCap": HARD_CPG_CAP,
-                "gsid": gsid,
-            }
+        # Path A — AI Estimated Value IS available:
+        #   Cap at 10x the AI low estimate. A genuine $50K key-date coin will
+        #   have an AI estimate of ~$40K+, so 10x = $400K — it passes fine.
+        #
+        # Path B — AI Estimated Value is NOT yet available (newly imported coin):
+        #   Use a conservative interim cap of $2,500. Without any context we
+        #   cannot distinguish a common Morgan ($30) from a key date ($50K), so
+        #   we hold the Greysheet write and flag the coin for AI valuation first.
+        #   Root cause of jseaman1204 $3.5M bug: 69 coins had no AI estimate so
+        #   the old single-layer cap was silently skipped, writing $240K values.
+        #
+        # IMPORTANT: the $2,500 interim cap does NOT permanently block high-value
+        # coins. Once the AI valuation runs and populates "AI Estimated Value",
+        # the next Greysheet refresh uses Path A and the true value is written.
 
-        # Layer 2 — Relative cap: if AI Estimated Value is available, refuse
-        #   values that exceed 10x the AI low estimate.
         ai_raw = str(coin_data.get("AI Estimated Value") or "").replace("$", "").replace(",", "").strip()
-        # Parse the low end of any AI range
         import re as _re
         _ai_match = _re.search(r'(\d+\.?\d*)', ai_raw)
         ai_low = float(_ai_match.group(1)) if _ai_match else 0.0
-        if ai_low > 0 and cpg_retail > ai_low * 10:
-            logger.warning(
-                f"Greysheet: SANITY CAP TRIGGERED: cpgRetail={cpg_retail:.2f} is >{10}x AI low estimate ({ai_low:.2f}). "
-                f"Refusing to write. Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
-            )
-            return {
-                "status": "sanity_cap",
-                "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds 10x AI estimate (${ai_low:,.2f}). "
-                           f"Price NOT written to Firestore. Verify GSID {gsid} is the correct series.",
-                "cpgRetail": cpg_retail,
-                "aiEstimate": ai_low,
-                "gsid": gsid,
-            }
+
+        if ai_low > 0:
+            # Path A: relative cap — 10x AI low estimate
+            if cpg_retail > ai_low * 10:
+                logger.warning(
+                    f"Greysheet: SANITY CAP (Path A): cpgRetail={cpg_retail:.2f} is >10x "
+                    f"AI low estimate ({ai_low:.2f}). Refusing to write. "
+                    f"Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+                )
+                return {
+                    "status": "sanity_cap",
+                    "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds 10x AI estimate "
+                               f"(${ai_low:,.2f}). Price NOT written. Verify GSID {gsid}.",
+                    "cpgRetail": cpg_retail,
+                    "aiEstimate": ai_low,
+                    "gsid": gsid,
+                }
+        else:
+            # Path B: no AI estimate yet — use conservative interim cap of $2,500.
+            # High-value coins will get through once AI valuation runs.
+            NO_AI_INTERIM_CAP = 2_500.0
+            if cpg_retail > NO_AI_INTERIM_CAP:
+                logger.warning(
+                    f"Greysheet: SANITY CAP (Path B / no-AI-estimate): cpgRetail={cpg_retail:.2f} > "
+                    f"${NO_AI_INTERIM_CAP:,.0f} interim cap. Coin has no AI Estimated Value yet. "
+                    f"Skipping write — run AI valuation first, then retry Greysheet. "
+                    f"GSID {gsid}, coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+                )
+                return {
+                    "status": "sanity_cap",
+                    "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds ${NO_AI_INTERIM_CAP:,.0f} "
+                               f"interim cap (no AI Estimated Value on file). Run AI valuation "
+                               f"first, then refresh Greysheet price. GSID {gsid}.",
+                    "cpgRetail": cpg_retail,
+                    "interimCap": NO_AI_INTERIM_CAP,
+                    "needsAiValuation": True,
+                    "gsid": gsid,
+                }
 
 
         # 5. Update coin in Firestore
