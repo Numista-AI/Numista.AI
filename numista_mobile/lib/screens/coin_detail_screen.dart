@@ -1530,6 +1530,34 @@ class _FinancialsTab extends StatelessWidget {
             metricBox('EST. VALUE', aiDisplay,
                 aiDisplay == 'Pending' ? _kSubtext : _kAccent),
           ]),
+          const SizedBox(height: 6),
+          // ── Greysheet CPG attribution (per §4.4 & §4.5 of API license) ──
+          GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('https://www.greysheet.com');
+              if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 10, color: _kSubtext),
+                children: [
+                  TextSpan(text: 'Coin, note & medal value estimate based on CPG data from '),
+                  const TextSpan(
+                    text: 'Greysheet',
+                    style: TextStyle(
+                      color: Color(0xFF60A5FA),
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF60A5FA),
+                    ),
+                  ),
+                  if (coin.priceLastUpdated != null)
+                    TextSpan(
+                      text: ' (${_fmtPriceMonth(coin.priceLastUpdated!)})',
+                    ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(children: [
             metricBox('PROFIT / LOSS', plDolStr, plColor),
@@ -1604,7 +1632,11 @@ class _FinancialsTab extends StatelessWidget {
           ],
           
           if (coin.greysheetGsid.isNotEmpty)
-            _GreysheetPricingTable(gsid: coin.greysheetGsid, currentGrade: coin.condition),
+            _GreysheetPricingTable(
+              gsid: coin.greysheetGsid,
+              currentGrade: coin.condition,
+              priceLastUpdated: coin.priceLastUpdated,
+            ),
         ],
       ),
     );
@@ -1613,6 +1645,16 @@ class _FinancialsTab extends StatelessWidget {
   double _parseDollar(String raw) {
     if (raw.isEmpty) return 0;
     return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
+  }
+
+  /// Formats a DateTime as "MMM yyyy" (e.g. "Jul 2026") for the Greysheet
+  /// CPG attribution line without requiring the intl package.
+  String _fmtPriceMonth(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.year}';
   }
 
   double _parseAiValue(String raw) {
@@ -1640,8 +1682,13 @@ class _FinancialsTab extends StatelessWidget {
 class _GreysheetPricingTable extends StatefulWidget {
   final String gsid;
   final String currentGrade;
+  final DateTime? priceLastUpdated;
 
-  const _GreysheetPricingTable({required this.gsid, required this.currentGrade});
+  const _GreysheetPricingTable({
+    required this.gsid,
+    required this.currentGrade,
+    this.priceLastUpdated,
+  });
 
   @override
   State<_GreysheetPricingTable> createState() => _GreysheetPricingTableState();
@@ -1803,6 +1850,35 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                   ],
                 );
               }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // ── Attribution footnote (§4.4 / §4.5 of CDN API license) ──────
+        GestureDetector(
+          onTap: () async {
+            final uri = Uri.parse('https://www.greysheet.com');
+            if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 10, color: _kSubtext, fontStyle: FontStyle.italic),
+              children: [
+                const TextSpan(text: 'Coin, note & medal value estimate based on CPG data from '),
+                const TextSpan(
+                  text: 'Greysheet',
+                  style: TextStyle(
+                    color: Color(0xFF60A5FA),
+                    decoration: TextDecoration.underline,
+                    decorationColor: Color(0xFF60A5FA),
+                  ),
+                ),
+                if (widget.priceLastUpdated != null)
+                  TextSpan(
+                    text: ' (${_fmtPriceMonth(widget.priceLastUpdated!)})',
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+              ],
             ),
           ),
         ),
