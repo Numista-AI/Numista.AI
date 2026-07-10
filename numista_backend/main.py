@@ -2731,7 +2731,7 @@ def get_mint_news():
                 if results:
                     return {"status": "ok", "source": "newsapi", "news": results}
         except Exception as e:
-            print(f"[mint_news] NewsAPI call failed: {e}")
+            logger.exception("NewsAPI call failed")
 
     # ── 3. RSS fallback — verified working feeds with per-feed timeout ─────────
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
@@ -2763,9 +2763,9 @@ def get_mint_news():
                     "source":    label,
                 })
         except FuturesTimeout:
-            print(f"[mint_news] RSS feed timed out ({url})")
+            logger.warning(f"RSS feed timed out: {url}")
         except Exception as e:
-            print(f"[mint_news] RSS feed error ({url}): {e}")
+            logger.error(f"RSS feed error ({url}): {e}")
 
     return {"status": "ok", "source": "rss", "news": all_entries}
 
@@ -2869,7 +2869,7 @@ async def deep_dive(request: DeepDiveRequest):
                 if kb_context:
                     knowledge_block = f"\n\n{kb_context}"
             except Exception as kb_err:
-                print(f"[deep_dive] Knowledge base lookup warning: {kb_err}")
+                logger.warning(f"Deep dive: knowledge base lookup warning: {kb_err}")
 
         # ── 4. Build prompt ────────────────────────────────────────────────────
         prompt = f"""You are Morgan, the friendly AI numismatic guide owl for Numista.AI.
@@ -2903,7 +2903,7 @@ Instructions:
         return {"status": "success", "response": response.text}
 
     except Exception as e:
-        print(f"[deep_dive] Error: {e}")
+        logger.exception("Deep dive error")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/review/commit")
@@ -2984,7 +2984,7 @@ async def commit_reviews(request: CommitReviewsRequest):
             "skipped": skipped_count
         }
     except Exception as e:
-        print(f"Commit error: {e}")
+        logger.exception("Review commit error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3055,7 +3055,7 @@ async def break_up_set(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"break_up_set error: {e}")
+        logger.exception("Break up set error")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/review/keep_set_as_is")
@@ -3108,7 +3108,7 @@ async def keep_set_as_is(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"keep_set_as_is error: {e}")
+        logger.exception("Keep set as-is error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3262,7 +3262,7 @@ async def dedup_sweep(user_email: str = Form(...)):
             'duplicates': duplicates,
         }
     except Exception as e:
-        print(f'[dedup_sweep] Error: {e}')
+        logger.exception("Dedup sweep error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3345,7 +3345,7 @@ async def dedup_auto_clean(user_email: str = Form(...)):
             'coins_kept':     coins_kept,
         }
     except Exception as e:
-        print(f'[dedup_auto_clean] Error: {e}')
+        logger.exception("Dedup auto-clean error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3683,7 +3683,7 @@ def get_coin_crop(coin_id: str, user_email: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f'[coin_crop] Error: {e}')
+        logger.exception("Coin crop error")
         raise HTTPException(status_code=500,
             detail=f'Crop failed: {str(e)}')
 
@@ -3748,8 +3748,8 @@ async def analyze_binder_scan(
             ai_result = json.loads(response.text)
         except json.JSONDecodeError as je:
             # If JSON is truncated, log and raise with detail
-            print(f"[analyze_binder_scan] JSON parse error at char {je.pos}: {je.msg}")
-            print(f"[analyze_binder_scan] Raw response tail: ...{response.text[-200:]}")
+            logger.error(f"Binder scan JSON parse error at char {je.pos}: {je.msg}")
+            logger.debug(f"Binder scan raw response tail: ...{response.text[-200:]}")
             raise HTTPException(
                 status_code=500,
                 detail=f"AI response was truncated or malformed: {je.msg} at position {je.pos}"
@@ -3757,7 +3757,7 @@ async def analyze_binder_scan(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[analyze_binder_scan] Gemini error: {e}")
+        logger.exception("Binder scan Gemini error")
         raise HTTPException(status_code=500, detail=f"AI analysis failed: {e}")
 
     # ── 3. Post-process: inject GCS URLs into page records ───────────────────
@@ -3819,7 +3819,7 @@ async def analyze_binder_scan(
                     new_coins.append(slot)
 
     except Exception as e:
-        print(f"[analyze_binder_scan] Delta detection warning: {e}")
+        logger.warning(f"Binder scan delta detection warning: {e}")
         # Non-fatal — delta detection is best-effort
 
     is_first_scan = (prior_scan_id is None)
@@ -3853,7 +3853,7 @@ async def analyze_binder_scan(
             binder_doc_id = new_ref.id
 
     except Exception as e:
-        print(f"[analyze_binder_scan] Firestore save warning: {e}")
+        logger.warning(f"Binder scan Firestore save warning: {e}")
         binder_doc_id = scan_uuid  # Use scan UUID as fallback
 
     # ── 7. Return full payload to Flutter ────────────────────────────────────
@@ -4057,7 +4057,7 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
         result = client.process_document(request=request)
         document = result.document
     except Exception as e:
-        print(f"[Document AI] Processing error: {e}")
+        logger.exception("Document AI processing error")
         return {"series_name": "", "slots": []}
 
     # ── 1. Extract top-level series_name ─────────────────────────────────────
@@ -4072,7 +4072,7 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
     routing      = SERIES_NAME_ROUTING.get(series_name.lower().strip(), {})
     program      = routing.get("program",      "Unknown Program")
     denomination = routing.get("denomination", "Unknown")
-    print(f"[Document AI] series_name='{series_name}' → program='{program}'")
+    logger.info(f"Document AI: series_name='{series_name}' -> program='{program}'")
 
     # ── 2. Extract coin_entry entities (one per checklist row) ────────────────
     coin_slots = []
@@ -4171,7 +4171,7 @@ async def analyze_checklist(
     # ── Path A: Document AI (littleton-v1, schema v4) ────────────────────────
     doc_ai_series_name = ""
     if use_document_ai:
-        print(f"[analyze_checklist] Using Document AI for format: {detected_format}")
+        logger.info(f"Analyze checklist: using Document AI for format: {detected_format}")
         try:
             # Process each file — collect slots and the extracted series_name
             for raw_bytes, content_type, filename in all_raw_bytes:
@@ -4207,15 +4207,15 @@ async def analyze_checklist(
                 }
                 analysis_engine = "document_ai"
             else:
-                print(f"[analyze_checklist] Document AI returned no entities — falling back to Gemini")
+                logger.warning("Analyze checklist: Document AI returned no entities — falling back to Gemini")
                 use_document_ai = False  # Force fallback
         except Exception as e:
-            print(f"[analyze_checklist] Document AI error, falling back to Gemini: {e}")
+            logger.warning(f"Analyze checklist: Document AI error, falling back to Gemini: {e}")
             use_document_ai = False
 
     # ── Path B: Gemini 3-flash fallback ────────────────────────────────────
     if not use_document_ai or ai_result is None:
-        print(f"[analyze_checklist] Using Gemini {PRIMARY_MODEL} for checklist analysis")
+        logger.info(f"Analyze checklist: using Gemini {PRIMARY_MODEL}")
         analysis_engine = "gemini"
 
         file_parts = []
@@ -4285,8 +4285,8 @@ IMPORTANT:
             try:
                 ai_result = json.loads(response.text)
             except json.JSONDecodeError as je:
-                print(f"[analyze_checklist] JSON parse error at char {je.pos}: {je.msg}")
-                print(f"[analyze_checklist] Raw response tail: ...{response.text[-200:]}")
+                logger.error(f"Checklist JSON parse error at char {je.pos}: {je.msg}")
+                logger.debug(f"Checklist raw response tail: ...{response.text[-200:]}")
                 raise HTTPException(
                     status_code=500,
                     detail=f"AI response was truncated or malformed: {je.msg} at position {je.pos}"
@@ -4294,7 +4294,7 @@ IMPORTANT:
         except HTTPException:
             raise
         except Exception as e:
-            print(f"[analyze_checklist] Gemini error: {e}")
+            logger.exception("Checklist Gemini error")
             raise HTTPException(status_code=500, detail=f"Checklist analysis failed: {e}")
 
         # Inject GCS URLs into page records
@@ -4421,7 +4421,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
                         ),
                     })
         except Exception as e:
-            print(f"[confirm_binder_scan] Duplicate check warning for {year}{mint} {subject}: {e}")
+            logger.warning(f"Binder scan duplicate check warning for {year}{mint} {subject}: {e}")
 
         # ── Stage the coin in review_queue ────────────────────────────────────
         new_doc = {
@@ -4507,7 +4507,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
                 "last_confirmed_date":  firestore.SERVER_TIMESTAMP,
             })
     except Exception as e:
-        print(f"[confirm_binder_scan] Binder doc update warning: {e}")
+        logger.warning(f"Binder doc update warning: {e}")
 
     return {
         "status":            "success",
@@ -4611,7 +4611,7 @@ def _get_pcgs_token() -> Optional[str]:
         token = doc.to_dict().get("bearerToken") if doc.exists else None
         return token or None
     except Exception as e:
-        print(f"[PCGS] Could not read token from Firestore: {e}")
+        logger.error(f"PCGS: could not read token from Firestore: {e}")
         return None
 
 @app.get("/api/pcgs/cert/{cert_no}")
@@ -4651,7 +4651,7 @@ async def pcgs_cert_lookup(cert_no: str):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not reach PCGS API: {e}")
 
-    print(f"[PCGS Cert] cert={cert_no} status={resp.status_code} url={resp.url}")
+    logger.info(f"PCGS Cert lookup: cert={cert_no} status={resp.status_code}")
 
     if resp.status_code == 401:
         raise HTTPException(status_code=401, detail="PCGS bearer token is invalid or expired. Generate a new one at pcgs.com/publicapi/documentation.")
@@ -4667,7 +4667,7 @@ async def pcgs_cert_lookup(cert_no: str):
     except Exception:
         raise HTTPException(status_code=502, detail=f"PCGS returned non-JSON: {resp.text[:200]}")
 
-    print(f"[PCGS Cert] raw response keys: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
+    logger.debug(f"PCGS Cert raw response keys: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}")
 
     # IsValidRequest=False means the cert exists in the DB but data retrieval failed
     if not data.get("IsValidRequest"):
@@ -4717,7 +4717,7 @@ async def pcgs_cert_lookup(cert_no: str):
                 coin_detail["ReverseImageURL"] = img.get("URL", "")
 
     grade_str = coin_detail["Grade"] or coin_detail["Designation"]
-    print(f"[PCGS Cert] ✅ {coin_detail['CoinName']} | {grade_str} | NFC={coin_detail['IsNFCSecure']}")
+    logger.info(f"PCGS Cert matched: {coin_detail['CoinName']} | {grade_str} | NFC={coin_detail['IsNFCSecure']}")
     return {"found": True, "certNo": cert_no, "coinDetail": coin_detail}
 
 
@@ -4837,7 +4837,7 @@ async def identify_coin_photo(
 
     Returns the full coin document as JSON whether or not it was saved.
     """
-    print(f"[identify_coin_photo] user={user_email} save={save_to_collection}")
+    logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
     # ── 1. Read image bytes ───────────────────────────────────────────────────
     bytes_a      = await image_a.read()
@@ -4869,9 +4869,9 @@ async def identify_coin_photo(
         if raw1.startswith("```"):
             raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         pass1: dict = json.loads(raw1)
-        print(f"[identify_coin_photo] Pass 1 ✅ {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
+        logger.info(f"Coin ID pass 1: {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
     except Exception as e:
-        print(f"[identify_coin_photo] Pass 1 error: {e}")
+        logger.exception("Coin ID pass 1 error")
         raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
 
     # ── 3. PASS 2 — Verification ──────────────────────────────────────────────
@@ -4903,10 +4903,10 @@ async def identify_coin_photo(
         if raw2.startswith("```"):
             raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         pass2 = json.loads(raw2)
-        print(f"[identify_coin_photo] Pass 2 ✅ grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
+        logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
     except Exception as e:
         # Non-fatal — continue with Pass 1 results only
-        print(f"[identify_coin_photo] Pass 2 error (non-fatal): {e}")
+        logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
 
     # ── 4. Merge Pass 1 + Pass 2 results ─────────────────────────────────────
     final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
@@ -4983,7 +4983,7 @@ async def identify_coin_photo(
                 rev_mime,
             )
         except Exception as e:
-            print(f"[identify_coin_photo] GCS upload warning: {e}")
+            logger.warning(f"Coin ID GCS upload warning: {e}")
 
         # Build base64 thumbnails for immediate Flutter display
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
@@ -5000,7 +5000,7 @@ async def identify_coin_photo(
         }
 
         db.collection(f"users/{user_email}/coins").document(coin_id).set(coin_doc)
-        print(f"[identify_coin_photo] ✅ Saved coin {coin_id} for {user_email}")
+        logger.info(f"Saved coin {coin_id}", extra={"user_email": user_email})
     else:
         # Preview mode — return b64 images for the Flutter review screen
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
@@ -5046,9 +5046,9 @@ async def analyze_grade_coin(
         if coin_id:
             try:
                 price_meta = lookup_coin_price_guide(coin_id)
-                print(f"[API Grade] Found reference metadata in cache for coin_id={coin_id}: {list(price_meta.keys()) if price_meta else 'None'}")
+                logger.info(f"Grade API: found reference metadata for coin_id={coin_id}: {list(price_meta.keys()) if price_meta else 'None'}")
             except Exception as dbe:
-                print(f"[API Grade] Local price guide cache query error: {dbe}")
+                logger.error(f"Grade API: local price guide cache query error: {dbe}")
 
         # 3. Invoke multimodal grading advisor
         result = analyze_coin_grade(obv_bytes, rev_bytes, coin_id)
@@ -5067,7 +5067,7 @@ async def analyze_grade_coin(
         }
         
     except Exception as e:
-        print(f"[API Grade] Unexpected error in /api/analyze/grade-coin: {e}")
+        logger.exception("Grade API: unexpected error")
         raise HTTPException(
             status_code=500,
             detail=f"Automated grading failed: {e}"
@@ -5154,8 +5154,8 @@ async def estimate_value_text(request: TextValuationRequest):
         confidence = result.get("confidence", "LOW")
         basis      = result.get("basis", "")
 
-        print(f"[estimate_value_text] {request.year} {request.denomination} "
-              f"{request.mint_mark} → {estimated} ({confidence})")
+        logger.info(f"Estimate value text: {request.year} {request.denomination} "
+              f"{request.mint_mark} -> {estimated} ({confidence})")
 
         return {
             "estimated_value": estimated,
@@ -5165,7 +5165,7 @@ async def estimate_value_text(request: TextValuationRequest):
             "source":          "text_estimator",
         }
     except Exception as e:
-        print(f"[estimate_value_text] Error: {e}")
+        logger.exception("Estimate value text error")
         raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
 
 
@@ -5240,7 +5240,7 @@ async def estimate_value_general(request: GeneralValuationRequest):
         confidence = result.get("confidence", "LOW")
         basis      = result.get("basis", "")
 
-        print(f"[estimate_value_general] {request.item_type}: {request.name} -> {estimated} ({confidence})")
+        logger.info(f"Estimate value general: {request.item_type}: {request.name} -> {estimated} ({confidence})")
 
         return {
             "estimated_value": estimated,
@@ -5250,7 +5250,7 @@ async def estimate_value_general(request: GeneralValuationRequest):
             "source":          "text_estimator",
         }
     except Exception as e:
-        print(f"[estimate_value_general] Error: {e}")
+        logger.exception("Estimate value general error")
         raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
 
 
