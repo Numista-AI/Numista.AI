@@ -142,6 +142,14 @@ class NumistaScraperAgent:
         except Exception as e:
             print(f"  ⚠ Firestore audit error: {e}")
 
+        # Prioritize coins over banknotes and medals in processing queue
+        coin_gaps.sort(key=lambda x: (
+            x.get("category") == "banknote",
+            x.get("category") == "medal",
+            x.get("category") != "coin",
+            x.get("year") or ""
+        ))
+
         return coin_gaps, error_gaps
 
     def slugify(self, text):
@@ -159,14 +167,14 @@ class NumistaScraperAgent:
             return pcgs_no
 
         # 2. Extract from doc_id or variety if PCGS number is embedded
-        doc_id = coin.get("doc_id", "")
-        variety = coin.get("variety", "")
+        doc_id = coin.get("doc_id") or ""
+        variety = coin.get("variety") or ""
 
         match = re.search(r"PCGS\s*(?:No\.?|#)?\s*(\d+)", variety, re.IGNORECASE)
         if match:
             return match.group(1)
 
-        note = coin.get("note", "")
+        note = coin.get("note") or ""
         match = re.search(r"PCGS\s*(?:No\.?|#)?\s*(\d+)", note, re.IGNORECASE)
         if match:
             return match.group(1)
@@ -271,10 +279,10 @@ class NumistaScraperAgent:
         # Override default priority based on US Mint cookie state
         if source_priority == "all":
             if self._has_usmint_cookies():
-                print("    [Priority Override] Active session cookies found. Restricting run to USMint.gov only.")
-                source_priority = "usmint"
+                print("    [USMint.gov] Active session cookies found. USMint.gov will be prioritized in the waterfall.")
+                # Keep source_priority as "all" so we fall back to other sources if US Mint fails
             else:
-                print("    [Priority Override] No session cookies found. Skipping USMint.gov and searching fallbacks.")
+                print("    [USMint.gov] No session cookies found. Skipping USMint.gov and searching fallbacks.")
 
         # 1. US Mint — ONLY attempt if valid session cookies exist in Firestore
         if category == "coin" and source_priority in ["all", "usmint"]:
@@ -816,9 +824,11 @@ class NumistaScraperAgent:
         # 2. Process Coin Gaps
         if target in ["all", "coins"] and coin_gaps:
             print(f"\nProcessing Coin Gaps (up to limit={limit})...")
+            attempted = 0
             for coin in coin_gaps:
-                if limit and processed_coins >= limit:
+                if limit and attempted >= limit:
                     break
+                attempted += 1
                 try:
                     success = self.process_coin_gap(coin, dry_run, source_priority)
                     if success:
@@ -831,14 +841,18 @@ class NumistaScraperAgent:
                     # Rate limiting delay
                     time.sleep(DEFAULT_DELAY)
                 except Exception as e:
+                    import traceback
                     print(f"  Error processing coin gap {coin.get('doc_id')}: {e}")
+                    traceback.print_exc()
 
         # 3. Process Error Gaps
         if target in ["all", "errors"] and error_gaps:
             print(f"\nProcessing Error Gaps (up to limit={limit})...")
+            attempted = 0
             for err in error_gaps:
-                if limit and processed_errors >= limit:
+                if limit and attempted >= limit:
                     break
+                attempted += 1
                 try:
                     success = self.process_error_gap(err, dry_run)
                     if success:

@@ -90,7 +90,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
     // A valid GSID would be something like "1794-S1C" for a Morgan dollar.
     // We test with a well-known GSID; auth required but should not 404.
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/pricing/1794-S1C',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/pricing/1794-S1C',
       { failOnStatusCode: false }
     );
     expect(res.status(), `Greysheet pricing endpoint is 404 — route missing`).not.toBe(404);
@@ -99,7 +99,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
 
   test('T05: Greysheet pricing endpoint returns valid JSON structure', async ({ page }) => {
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/pricing/1794-S1C',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/pricing/1794-S1C',
       { failOnStatusCode: false }
     );
     // 200 = data; 401/403 = auth-gated. Either way must be valid JSON if 200.
@@ -175,7 +175,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
 
   test('T10: GET /api/greysheet/config responds (not 404 or 500)', async ({ page }) => {
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/config',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config',
       { failOnStatusCode: false }
     );
     expect(res.status()).not.toBe(404);
@@ -184,7 +184,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
 
   test('T11: POST /api/greysheet/batch responds (not 404 or 500)', async ({ page }) => {
     const res = await page.request.post(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/batch',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/batch',
       { data: '{}', headers: { 'Content-Type': 'application/json' }, failOnStatusCode: false }
     );
     expect(res.status()).not.toBe(404);
@@ -193,7 +193,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
 
   test('T12: POST /api/greysheet/resolve responds (not 404 or 500)', async ({ page }) => {
     const res = await page.request.post(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/resolve',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/resolve',
       { data: '{}', headers: { 'Content-Type': 'application/json' }, failOnStatusCode: false }
     );
     expect(res.status()).not.toBe(404);
@@ -203,7 +203,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
   test('T13: GET /api/greysheet/cac responds (not 404 or 500)', async ({ page }) => {
     // CAC verification endpoint added in 6c051e6
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/cac',
+      'https://numista-backend-568985927038.us-central1.run.app/api/greysheet/cac',
       { failOnStatusCode: false }
     );
     expect(res.status()).not.toBe(404);
@@ -213,7 +213,7 @@ test.describe('10 - Coin Detail: Greysheet Pricing Table & Valuation Toggle (v4.
   test('T14: GET /api/portfolio/snapshot responds (not 404 or 500)', async ({ page }) => {
     // Daily portfolio snapshot endpoint added in 6c051e6
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/portfolio/snapshot',
+      'https://numista-backend-568985927038.us-central1.run.app/api/portfolio/snapshot',
       { failOnStatusCode: false }
     );
     expect(res.status()).not.toBe(404);

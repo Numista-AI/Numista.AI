@@ -22,6 +22,7 @@ interface Suggestion {
 }
 
 export default function AdminDashboard() {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
   const [knowledge, setKnowledge] = useState<KnowledgeDoc[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -34,8 +35,8 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const [kRes, sRes] = await Promise.all([
-        fetch('http://localhost:8080/api/admin/brain/knowledge'),
-        fetch('http://localhost:8080/api/admin/brain/suggestions')
+        fetch(`${API_BASE}/api/admin/brain/knowledge`),
+        fetch(`${API_BASE}/api/admin/brain/suggestions`)
       ]);
       setKnowledge(await kRes.json());
       setSuggestions(await sRes.json());
@@ -49,7 +50,7 @@ export default function AdminDashboard() {
 
   const handleApprove = async (id: string, approved: boolean) => {
     const action = approved ? 'approved' : 'ignored';
-    await fetch('http://localhost:8080/api/admin/brain/suggestions/bulk', {
+    await fetch(`${API_BASE}/api/admin/brain/suggestions/bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ suggestion_ids: [id], action })
@@ -59,7 +60,7 @@ export default function AdminDashboard() {
 
   const handleBulkAction = async (action: 'approved' | 'ignored') => {
     if (selectedIds.length === 0) return;
-    await fetch('http://localhost:8080/api/admin/brain/suggestions/bulk', {
+    await fetch(`${API_BASE}/api/admin/brain/suggestions/bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ suggestion_ids: selectedIds, action })

@@ -192,7 +192,7 @@ test.describe('08 - Greysheet Market Valuation (v4.0)', () => {
   test('T11: Greysheet backend credentials endpoint responds (not 404)', async ({ page }) => {
     // The credentials config endpoint was added in v4.0 (commit 616e17a).
     // It should return 200 or 401 (auth required), NOT 404 (missing route).
-    const res = await page.request.get('https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/config', {
+    const res = await page.request.get('https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config', {
       headers: { 'Content-Type': 'application/json' },
       failOnStatusCode: false,
     });
@@ -205,7 +205,7 @@ test.describe('08 - Greysheet Market Valuation (v4.0)', () => {
 
   test('T12: Greysheet valuation batch endpoint responds (not 404)', async ({ page }) => {
     // The batch valuation tool added in v4.0. Should be present even if auth-gated.
-    const res = await page.request.post('https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/greysheet/batch', {
+    const res = await page.request.post('https://numista-backend-568985927038.us-central1.run.app/api/greysheet/batch', {
       headers: { 'Content-Type': 'application/json' },
       data: '{}',
       failOnStatusCode: false,

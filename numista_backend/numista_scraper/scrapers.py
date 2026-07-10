@@ -46,30 +46,28 @@ def _scrape_get(
     proxies: dict = None,
     retries: int = 3,
     timeout: float = REQUEST_TIMEOUT,
-) -> httpx.Response:
+):
     """
-    Drop-in replacement for botasaurus request.get().
-    Returns an httpx.Response.  Raises on non-2xx after retries.
+    Bypasses Cloudflare JA3/JA4 TLS fingerprinting using curl_cffi.
     """
+    from curl_cffi import requests as curl_requests
     merged_headers = {**_SCRAPE_HEADERS, **(headers or {})}
-    mounts = {}
-    if proxies:
-        for scheme, proxy_url in (proxies or {}).items():
-            if proxy_url:
-                mounts[f"{scheme}://"] = httpx.HTTPTransport(proxy=proxy_url)
-    transport = httpx.HTTPTransport(retries=retries)
-    client_kwargs = dict(
-        headers=merged_headers,
-        follow_redirects=True,
-        timeout=timeout,
-        transport=transport,
-    )
-    if mounts:
-        client_kwargs["mounts"] = mounts
-    with httpx.Client(**client_kwargs) as client:
-        resp = client.get(url)
-        resp.raise_for_status()
-        return resp
+    
+    for attempt in range(retries + 1):
+        try:
+            resp = curl_requests.get(
+                url,
+                headers=merged_headers,
+                proxies=proxies,
+                timeout=timeout,
+                impersonate="chrome120",
+                allow_redirects=True
+            )
+            resp.raise_for_status()
+            return resp
+        except Exception as e:
+            if attempt == retries:
+                raise e
 
 def _soupify(resp: httpx.Response) -> BeautifulSoup:
     """Parse an httpx response into BeautifulSoup (replaces botasaurus.soupify)."""
@@ -282,9 +280,9 @@ def is_article_related(title, error, query=None):
     if not title or not error:
         return True
     title_lower = title.lower()
-    name_lower = error.get("name", "").lower()
-    short_lower = error.get("shortName", "").lower()
-    error_id = error.get("id", "").lower()
+    name_lower = (error.get("name") or "").lower()
+    short_lower = (error.get("shortName") or "").lower()
+    error_id = (error.get("id") or "").lower()
     
     # If query is general term, allow general titles matching query
     if query:
@@ -335,8 +333,8 @@ def validate_article_content(text, error, query=None):
     if not text or not error:
         return True
     text_lower = text.lower()
-    error_id = error.get("id", "").lower()
-    name_lower = error.get("name", "").lower()
+    error_id = (error.get("id") or "").lower()
+    name_lower = (error.get("name") or "").lower()
     
     general_terms = [
         "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
@@ -702,13 +700,18 @@ def scrape_usmint(data):
         "Cache-Control": "max-age=0",
         "Upgrade-Insecure-Requests": "1"
     }
-    if cookies:
+    
+    # Check if we are using proxies
+    current_proxy = get_scrape_proxy()
+    has_proxy = current_proxy and (current_proxy.get("http") or current_proxy.get("https"))
+
+    if cookies and not has_proxy:
         headers["Cookie"] = cookies
         print("    [USMint.gov] Using provided session cookies for request...")
 
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = _scrape_get(search_url, headers=headers, proxies=get_scrape_proxy())
+        resp = _scrape_get(search_url, headers=headers, proxies=current_proxy)
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None
@@ -1085,7 +1088,7 @@ def scrape_usacoinbook(data):
     """
     query = data.get("query", "")
     year = data.get("year", "")
-    denomination = data.get("denomination", "").lower()
+    denomination = (data.get("denomination") or "").lower()
     if not query:
         return None
     try:

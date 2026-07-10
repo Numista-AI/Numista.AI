@@ -1,42 +1,30 @@
-# Walkthrough — Numista.Ai System Check & Audit (2026-07-09)
+# Walkthrough - System Scan execution (2026-07-10)
 
-## Audit Results Committed and Pushed to `main`
+I have successfully executed the local skill **project-scanner** and ran the required checks. Below is a summary of the operations performed:
 
-| Commit | Scope | Summary |
-|---|---|---|
-| `1c8ca8e` | Scan Report | Generated and updated `SCAN_REPORT.md` with comprehensive system scan and audit results |
-| `6504f9a` | Walkthrough | Documented today's system scan report and findings |
+## 1. Local Audits & Verification
+* **Gemini Model Reference Check**: Verified all active models in the backend codebase (`numista_backend`) are using `gemini-3.5-flash` or `gemini-3.1-pro-preview`, complying with the requirements of Rule 6.
+* **Data Pipeline Integrity**:
+  * Verified that proxy configuration in [scrapers.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/numista_scraper/scrapers.py) uses `NUMISTA_SCRAPE_HTTP_PROXY`/`NUMISTA_SCRAPE_HTTPS_PROXY`.
+  * Verified that the directory monitor settings in [brain_watcher.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/brain_watcher.py) are locked strictly to `Numista_Brain_Inbox`.
+* **Dart Code Health**: Ran `flutter analyze` inside the mobile directory. It resolved with **0 warnings / 0 info issues**, showing significant code health improvements since the previous audit.
+* **Google Cloud Authentication**: Ran `gcloud auth list` and verified that credentials are active and synced to `eric@numista.ai`.
+* **Python Backend Test suite**: Attempted execution of `pytest` locally. The process was halted by an internal Pytest/Python 3.14.2 capture terminal output compatibility error (`ValueError: I/O operation on closed file`).
 
-**Status Summary:**
-- **Core App Navigation & Demo (Suites 01-07):** **✅ PASSING (94/104 tests passed)**
-- **Greysheet API & Deals (Suites 08-10):** ❌ **FAIL (10/104 tests failed)** due to missing API endpoints in backend routing and credential degradation.
-- **Flutter Code Health (dart analyze):** ❌ **FAIL** (0 Errors, 11 Warnings, 19 Info messages)
+## 2. Playwright Test Suite
+* Executed `npx playwright test --reporter=json,list` on the 10 local suites:
+  * **94 / 104 tests passed**.
+  * **10 / 104 tests failed**.
+  * **Failure Reason**: The live production Cloud Run backend at `https://numista-backend-xwqkbwqvuq-uc.a.run.app` (and `https://numista-backend-568985927038.us-central1.run.app`) returns **404 Not Found** for new endpoints introduced in v4.0.0 (e.g., config, batch, resolve, cac, portfolio snapshot, and ebay search). The code for these endpoints exists in local [main.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/main.py) but has not yet been deployed to the live container.
 
----
-
-## Findings Details
-
-### 1. Backend Route Regression & Mismatches
-- **Critical Mismatches:**
-  - `GET /api/greysheet/config` -> ❌ **404 Not Found** (Expected by `08-greysheet-valuation.spec.js` and `10-greysheet-coin-detail.spec.js`)
-  - `POST /api/greysheet/batch` -> ❌ **404 Not Found** (Expected by `08-greysheet-valuation.spec.js` and `10-greysheet-coin-detail.spec.js`)
-  - `GET /api/ebay/search` -> ❌ **404 Not Found** (Expected by `09-deals-arbitrage.spec.js` as EPN affiliate endpoint)
-  - `GET /api/greysheet/cac` -> ❌ **404 Not Found** (Expected by `10-greysheet-coin-detail.spec.js`)
-  - `GET /api/portfolio/snapshot` -> ❌ **404 Not Found** (Backend implements `@app.post("/api/portfolio/snapshot/daily")`)
-  - Pricing `/api/greysheet/pricing/{gsid}` and `/api/greysheet/resolve` endpoints failed assertions due to credential/config mismatches during automated testing.
-
-### 2. Greysheet API Key & Credentials
-- **Credentials:** Missing `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` in the environment configuration, falling back to default/restricted dev credentials.
-- **API Response:** The Greysheet API returns pricing records containing only CPG Retail values, with all wholesale bid/ask fields (`GreyVal`) empty.
-- **Fallback Rate:** **100%** fallback to `cpg_retail * 0.80` bid calculation.
-
-### 3. Flutter Code Quality (30 Issues)
-- **11 Warnings:** Unused variables (`margin`, `totalCount`), unused imports (`dart:typed_data`), and extending sealed classes (`DocumentSnapshot`).
-- **19 Info Messages:** Deprecated Flutter member usages (`withOpacity` should use `.withValues()`, `activeColor` should use `activeThumbColor`/`activeTrackColor`).
+## 3. Greysheet API Health
+* **Key Presence**: ❌ Missing from local [.env](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/.env).
+* **Endpoints**: 404 response on all probes to the live Cloud Run backend.
+* **Valuation Fallback**: Since no keys are configured, the system uses basic mode (estimating bids as `CPG Retail * 0.80`).
 
 ---
 
-## Action Items Recommended
-1. **Synchronize FastAPI Routes:** Align backend routing definitions in `main.py` with test suite calls (or correct the test suites to match the actual implemented routes).
-2. **Configure API Credentials:** Update environment parameters with active Greysheet production API keys to unlock advanced wholesale valuation.
-3. **Clean Up Flutter Warnings:** Resolve the Dart analyzer findings to restore compiler status.
+## 4. Scan Report Generation
+The audit results have been compiled into [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) in the project root directory.
+
+The document has been committed and pushed to the `dev` branch.

@@ -7611,13 +7611,6 @@ def release_scraper_lock():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-
-
 
 # ─── BRAIN ADMIN API ─────────────────────────────────────────────────────────
 
@@ -8608,4 +8601,10 @@ async def get_portfolio_snapshot_history(user_id: str):
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
 
