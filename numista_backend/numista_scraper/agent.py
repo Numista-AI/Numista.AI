@@ -70,6 +70,7 @@ class NumistaScraperAgent:
         self.mode = mode
         self.processed_list = []
         self.ai_pending_list = []  # Coins that need AI approval before image generation
+        self.latest_report_id = None
         # Ensure schema is aligned on startup
         ensure_sqlite_schema()
 
@@ -902,7 +903,7 @@ class NumistaScraperAgent:
         # 5. Save to Firestore for Dashboard
         if not dry_run:
             try:
-                db.collection("scraper_reports").add({
+                doc_ref = db.collection("scraper_reports").add({
                     "timestamp": int(time.time()),
                     "datetime_utc": datetime.now(timezone.utc).isoformat(),
                     "limit": limit,
@@ -912,7 +913,8 @@ class NumistaScraperAgent:
                     "processed_errors": processed_errors,
                     "report_content": report_content
                 })
-                print("      ✓ Saved report to Firestore for dashboard.")
+                self.latest_report_id = doc_ref[1].id
+                print(f"      ✓ Saved report to Firestore for dashboard: {self.latest_report_id}")
             except Exception as e:
                 print(f"      ⚠ Failed to save report to Firestore: {e}")
 

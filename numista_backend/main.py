@@ -7460,6 +7460,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
             "status": "success",
             "processed_coins": processed_coins,
             "processed_errors": processed_errors,
+            "report_saved_to_firestore": agent.latest_report_id,
             "message": "Scraper run complete. Report saved to Firestore."
         }
     except Exception as e:
