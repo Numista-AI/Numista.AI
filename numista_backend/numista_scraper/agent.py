@@ -271,10 +271,10 @@ class NumistaScraperAgent:
         # Override default priority based on US Mint cookie state
         if source_priority == "all":
             if self._has_usmint_cookies():
-                print("    [Priority Override] Active session cookies found. Restricting run to USMint.gov only.")
-                source_priority = "usmint"
+                print("    [USMint.gov] Active session cookies found. USMint.gov will be prioritized in the waterfall.")
+                # Keep source_priority as "all" so we fall back to other sources if US Mint fails
             else:
-                print("    [Priority Override] No session cookies found. Skipping USMint.gov and searching fallbacks.")
+                print("    [USMint.gov] No session cookies found. Skipping USMint.gov and searching fallbacks.")
 
         # 1. US Mint — ONLY attempt if valid session cookies exist in Firestore
         if category == "coin" and source_priority in ["all", "usmint"]:
@@ -816,9 +816,11 @@ class NumistaScraperAgent:
         # 2. Process Coin Gaps
         if target in ["all", "coins"] and coin_gaps:
             print(f"\nProcessing Coin Gaps (up to limit={limit})...")
+            attempted = 0
             for coin in coin_gaps:
-                if limit and processed_coins >= limit:
+                if limit and attempted >= limit:
                     break
+                attempted += 1
                 try:
                     success = self.process_coin_gap(coin, dry_run, source_priority)
                     if success:
@@ -836,9 +838,11 @@ class NumistaScraperAgent:
         # 3. Process Error Gaps
         if target in ["all", "errors"] and error_gaps:
             print(f"\nProcessing Error Gaps (up to limit={limit})...")
+            attempted = 0
             for err in error_gaps:
-                if limit and processed_errors >= limit:
+                if limit and attempted >= limit:
                     break
+                attempted += 1
                 try:
                     success = self.process_error_gap(err, dry_run)
                     if success:
