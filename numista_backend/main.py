@@ -8205,6 +8205,19 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
         silver_val = 0.0
         type_val = 0.0
         
+        total_coins = 0
+        melt_value_sum = 0.0
+        acquisition_cost_sum = 0.0
+        face_value_sum = 0.0
+        
+        def parse_price(val):
+            if not val:
+                return 0.0
+            try:
+                return float(str(val).replace("$", "").replace(",", "").strip())
+            except Exception:
+                return 0.0
+        
         for doc in coins_ref:
             coin = doc.to_dict()
             qty = 1
@@ -8213,6 +8226,8 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             except Exception:
                 pass
                 
+            total_coins += qty
+            
             # Default to Bid value as standard valuation
             val = float(coin.get("greysheetBid") or 0.0)
             if val == 0.0:
@@ -8233,7 +8248,12 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             else:
                 type_val += item_val
                 
-        # 2. Write snapshot to portfolio_history
+            # Parse other metrics for the mobile portfolio_snapshots table
+            melt_value_sum += parse_price(coin.get("meltValue")) * qty
+            acquisition_cost_sum += parse_price(coin.get("purchaseCost")) * qty
+            face_value_sum += parse_price(coin.get("faceValue")) * qty
+                
+        # 2. Write snapshot to portfolio_history (category breakdowns)
         snapshot = {
             "date": today_str,
             "totalValue": round(total_value, 2),
@@ -8244,8 +8264,18 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             },
             "timestamp": firestore.SERVER_TIMESTAMP
         }
-        
         db.collection("users").document(req.user_id).collection("portfolio_history").document(today_str).set(snapshot)
+        
+        # 3. Write snapshot to portfolio_snapshots (mobile line-chart schema)
+        db.collection("users").document(req.user_id).collection("portfolio_snapshots").document(today_str).set({
+            "date": today_str,
+            "totalCoins": total_coins,
+            "portfolioValue": round(total_value, 2),
+            "meltValue": round(melt_value_sum, 2),
+            "acquisitionCost": round(acquisition_cost_sum, 2),
+            "faceValue": round(face_value_sum, 2),
+            "snapshotAt": firestore.SERVER_TIMESTAMP
+        })
         
         response_snapshot = dict(snapshot)
         response_snapshot["timestamp"] = datetime.utcnow().isoformat()
