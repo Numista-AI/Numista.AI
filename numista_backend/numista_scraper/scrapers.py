@@ -63,6 +63,7 @@ def _scrape_get(
         follow_redirects=True,
         timeout=timeout,
         transport=transport,
+        http2=True,
     )
     if mounts:
         client_kwargs["mounts"] = mounts
