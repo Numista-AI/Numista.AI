@@ -46,31 +46,28 @@ def _scrape_get(
     proxies: dict = None,
     retries: int = 3,
     timeout: float = REQUEST_TIMEOUT,
-) -> httpx.Response:
+):
     """
-    Drop-in replacement for botasaurus request.get().
-    Returns an httpx.Response.  Raises on non-2xx after retries.
+    Bypasses Cloudflare JA3/JA4 TLS fingerprinting using curl_cffi.
     """
+    from curl_cffi import requests as curl_requests
     merged_headers = {**_SCRAPE_HEADERS, **(headers or {})}
-    mounts = {}
-    if proxies:
-        for scheme, proxy_url in (proxies or {}).items():
-            if proxy_url:
-                mounts[f"{scheme}://"] = httpx.HTTPTransport(proxy=proxy_url)
-    transport = httpx.HTTPTransport(retries=retries)
-    client_kwargs = dict(
-        headers=merged_headers,
-        follow_redirects=True,
-        timeout=timeout,
-        transport=transport,
-        http2=True,
-    )
-    if mounts:
-        client_kwargs["mounts"] = mounts
-    with httpx.Client(**client_kwargs) as client:
-        resp = client.get(url)
-        resp.raise_for_status()
-        return resp
+    
+    for attempt in range(retries + 1):
+        try:
+            resp = curl_requests.get(
+                url,
+                headers=merged_headers,
+                proxies=proxies,
+                timeout=timeout,
+                impersonate="chrome120",
+                allow_redirects=True
+            )
+            resp.raise_for_status()
+            return resp
+        except Exception as e:
+            if attempt == retries:
+                raise e
 
 def _soupify(resp: httpx.Response) -> BeautifulSoup:
     """Parse an httpx response into BeautifulSoup (replaces botasaurus.soupify)."""
