@@ -24,7 +24,9 @@ import re
 import sqlite3
 from pathlib import Path
 import time
+from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
+logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
 try:
@@ -32,7 +34,7 @@ try:
     MORGAN_KNOWLEDGE_AVAILABLE = True
 except ImportError:
     MORGAN_KNOWLEDGE_AVAILABLE = False
-    print("[startup] morgan_knowledge.py not found — coin reference lookup disabled")
+    logger.info("morgan_knowledge.py not found — coin reference lookup disabled")
 
 app = FastAPI(title="Numista.AI Backend API")
 
@@ -54,15 +56,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ─── REQUEST OBSERVABILITY MIDDLEWARE ──────────────────────────────────────────
+import contextvars
+
+@app.middleware("http")
+async def observability_middleware(request: Request, call_next):
+    """Log every API request with method, path, status, latency, and request ID."""
+    rid = generate_request_id()
+    request_id_var.set(rid)
+    user_email = request.query_params.get("user_email") or request.query_params.get("user_id") or "-"
+    if user_email != "-":
+        exceeded = rate_tracker.track(user_email)
+        if exceeded:
+            logger.warning(
+                f"Rate limit exceeded: {user_email} > {rate_tracker.rpm_limit} RPM",
+                extra={"user_email": user_email, "rpm_limit": rate_tracker.rpm_limit}
+            )
+    start = time.time()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        latency_ms = (time.time() - start) * 1000
+        logger.error(
+            f"{request.method} {request.url.path} -> 500 ({latency_ms:.0f}ms)",
+            extra={"method": request.method, "path": str(request.url.path),
+                   "status": 500, "latency_ms": latency_ms, "user_email": user_email,
+                   "request_id": rid}
+        )
+        raise
+    latency_ms = (time.time() - start) * 1000
+    log_level = "warning" if latency_ms > 5000 else ("error" if response.status_code >= 500 else "info")
+    getattr(logger, log_level)(
+        f"{request.method} {request.url.path} -> {response.status_code} ({latency_ms:.0f}ms)",
+        extra={"method": request.method, "path": str(request.url.path),
+               "status": response.status_code, "latency_ms": latency_ms,
+               "user_email": user_email, "request_id": rid}
+    )
+    return response
+
 # ─── VERTEX AI SEARCH — Coin Reference Library ───────────────────────────────
 # Registers GET /api/coin_search — open endpoint, no auth required.
 # Data store: numista-coin-library (1,913 coin documents, Enterprise + LLM tier)
 try:
     from vertex_search.coin_search_endpoint import register_coin_search
     register_coin_search(app)
-    print("[startup] Vertex AI Search endpoint registered: GET /api/coin_search")
+    logger.info("Vertex AI Search endpoint registered: GET /api/coin_search")
 except Exception as _vx_err:
-    print(f"[startup] Vertex AI Search not available: {_vx_err}")
+    logger.warning(f"Vertex AI Search not available: {_vx_err}")
 
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "global"
@@ -475,7 +515,7 @@ def _community_nicknames() -> dict[str, str]:
                 for d in docs
             }
         except Exception as e:
-            print(f"[community_cache] refresh error: {e}")
+            logger.error(f"Community cache refresh error: {e}")
         _community_cache_ts = _time.time()
     return {**COIN_NICKNAMES, **_community_cache}
 
@@ -733,7 +773,7 @@ def get_live_metal_prices():
             "Palladium": float(pall) if pall else 1000.0
         }
     except Exception as e:
-        print(f"Error fetching metals: {e}")
+        logger.exception("Error fetching metals")
         return {"Gold": 3100.0, "Silver": 35.0, "Platinum": 1000.0, "Palladium": 1000.0}
 
 
@@ -844,7 +884,7 @@ def _numista_search(gemini: dict) -> list:
             timeout=10,
         )
         if resp.status_code != 200:
-            print(f"[world_item] Numista API {resp.status_code}: {resp.text[:200]}")
+            logger.warning(f"Numista API {resp.status_code}: {resp.text[:200]}")
             return []
 
         types = resp.json().get("types", [])[:3]
@@ -863,7 +903,7 @@ def _numista_search(gemini: dict) -> list:
         return results
 
     except Exception as e:
-        print(f"[world_item] Numista search error: {e}")
+        logger.error(f"Numista search error: {e}")
         return []
 
 
@@ -971,7 +1011,7 @@ async def identify_world_item(
 
     except json.JSONDecodeError as e:
         # Gemini returned non-JSON — wrap the raw text gracefully
-        print(f"[world_item] Gemini JSON parse error: {e}. Raw: {raw_text[:300]}")
+        logger.error(f"Gemini JSON parse error: {e}. Raw: {raw_text[:300]}")
         gemini_result = {
             "identification":   "This appears to be an unidentified numismatic item.",
             "item_type":        "unknown",
@@ -984,7 +1024,7 @@ async def identify_world_item(
             "confidence_notes": "AI returned an unstructured response. Please fill in details manually.",
         }
     except Exception as e:
-        print(f"[world_item] Gemini call error: {e}")
+        logger.exception("Gemini call error")
         raise HTTPException(status_code=500, detail=f"AI identification failed: {str(e)}")
 
     # ── Stage 2: Numista lookup (only when confidence is high enough) ─────────
@@ -1076,7 +1116,7 @@ Omit any user headers with no reasonable match."""
         )
         mapping: dict = json.loads(resp.text)
     except Exception as e:
-        print(f"[import_spreadsheet] AI column-mapping error: {e}")
+        logger.exception("AI column-mapping error")
         mapping = {h: h for h in headers}   # 1-to-1 fallback
 
     # Standardize column mappings based on known discrepancies and schema requirements.
@@ -1340,7 +1380,7 @@ Preserve order. Use empty string if truly unknown."""
                     ai_fixed += 1
                 fb_batch.commit()
             except Exception as e:
-                print(f"[import_spreadsheet] AI fallback error (chunk {i}): {e}")
+                logger.exception(f"AI fallback error (chunk {i})")
 
     return {
         "status":        "success",
@@ -1449,7 +1489,7 @@ async def normalize_backfill(user_email: str = Form(...)):
     if batch_count > 0:
         batch.commit()
 
-    print(f"[normalize_backfill] {user_email}: {changed} updated, {unchanged} unchanged")
+    logger.info(f"Normalize backfill: {changed} updated, {unchanged} unchanged", extra={"user_email": user_email})
     return {
         "status":    "success",
         "changed":   changed,
@@ -1729,7 +1769,7 @@ def grade_review_queue(user_email: str, limit: int = 30):
                 seen_ids.add(doc.id)
                 raw_docs.append(doc)
     except Exception as e:
-        print(f"[grade_review_queue] query failed: {e}")
+        logger.exception("Grade review queue query failed")
 
     results = []
     for doc in raw_docs:
@@ -2099,7 +2139,7 @@ def grade_review_stats(user_email: str):
             
         total_ai = pending + reviewed_by_me
     except Exception as e:
-        print(f"[grade_review_stats] count failed: {e}")
+        logger.exception("Grade review stats count failed")
 
     stats = {
         'total_ai_graded':  total_ai,
@@ -2152,7 +2192,7 @@ async def process_invoice(
         else:
             # Magic byte sniff: PDFs start with %PDF (hex 25 50 44 46)
             mime_type = "application/pdf" if contents[:4] == b"%PDF" else "application/octet-stream"
-        print(f"[process_invoice] filename={file.filename!r} reported={reported_type!r} → using mime={mime_type!r}")
+        logger.info(f"Processing invoice: filename={file.filename!r} reported={reported_type!r} → using mime={mime_type!r}")
         pdf_part = genai_types.Part.from_bytes(data=contents, mime_type=mime_type)
 
 
@@ -2328,9 +2368,9 @@ async def process_invoice(
                     response_mime_type="application/json",
                 ),
             )
-            print(f"[process_invoice] PRO model OK, filename={file.filename!r}")
+            logger.info(f"Invoice PRO model OK: {file.filename!r}")
         except Exception as pro_err:
-            print(f"[process_invoice] PRO model failed ({pro_err!r}); retrying with PRIMARY")
+            logger.warning(f"Invoice PRO model failed ({pro_err!r}); retrying with PRIMARY")
             response = genai_client.models.generate_content(
                 model=PRIMARY_MODEL,
                 contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
@@ -2338,10 +2378,10 @@ async def process_invoice(
                     response_mime_type="application/json",
                 ),
             )
-            print(f"[process_invoice] PRIMARY model OK, filename={file.filename!r}")
+            logger.info(f"Invoice PRIMARY model OK: {file.filename!r}")
 
         raw_text = response.text or ""
-        print(f"[process_invoice] raw_snippet={raw_text[:400]!r}")
+        logger.debug(f"Invoice raw_snippet={raw_text[:400]!r}")
 
         def _repair_gemini_json(text: str) -> str:
             """
@@ -2394,7 +2434,7 @@ async def process_invoice(
         # ─── Retry pass: if first extraction returned nothing, try a simpler ──────
         # directive prompt focused purely on "find me the items with prices".
         if not items:
-            print(f"[process_invoice] First pass empty — firing directive retry prompt")
+            logger.warning("Invoice first pass empty — firing directive retry prompt")
             retry_prompt = """
             This is a coin/numismatic purchase invoice or receipt. I need you to extract every
             purchasable item that has a dollar amount > $0 associated with it.
@@ -2437,7 +2477,7 @@ async def process_invoice(
                     ),
                 )
                 retry_text = retry_response.text or ""
-                print(f"[process_invoice] retry_snippet={retry_text[:400]!r}")
+                logger.debug(f"Invoice retry_snippet={retry_text[:400]!r}")
                 retry_items = json.loads(_repair_gemini_json(retry_text)) if retry_text.strip() else []
                 if isinstance(retry_items, dict):
                     for _key in ('items', 'coins', 'line_items', 'results', 'data',
@@ -2449,11 +2489,11 @@ async def process_invoice(
                         retry_items = [retry_items]
                 if isinstance(retry_items, list) and retry_items:
                     items = retry_items
-                    print(f"[process_invoice] Retry succeeded: {len(items)} item(s) recovered")
+                    logger.info(f"Invoice retry succeeded: {len(items)} item(s) recovered")
                 else:
-                    print(f"[process_invoice] Retry also returned empty — genuinely nothing found")
+                    logger.warning("Invoice retry also returned empty — genuinely nothing found")
             except Exception as retry_err:
-                print(f"[process_invoice] Retry failed: {retry_err!r}")
+                logger.error(f"Invoice retry failed: {retry_err!r}")
 
         # ─── Route items by type ──────────────────────────────────────────────
         added_count    = 0   # coins, currency, medals, set-records → review_queue
@@ -2548,7 +2588,7 @@ async def process_invoice(
         }
         
     except Exception as e:
-        print(f"Error extracting invoice: {e}")
+        logger.exception("Error extracting invoice")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/mint_news")
@@ -2573,7 +2613,7 @@ def get_mint_news():
             if cfg.exists:
                 news_api_key = cfg.to_dict().get("api_key", "")
         except Exception as e:
-            print(f"[mint_news] Firestore key lookup failed: {e}")
+            logger.exception("Mint news: Firestore key lookup failed")
 
     # ── 2. Try NewsAPI.org ─────────────────────────────────────────────────────
     if news_api_key:
@@ -5879,7 +5919,7 @@ Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
             except Exception as e:
                 per_file[idx]["status"] = "error"
                 per_file[idx]["error"]  = str(e)
-                print(f"[bulk_import] spreadsheet error ({fname}): {e}")
+                logger.exception(f"Bulk import spreadsheet error ({fname})")
 
         elif ftype == "invoice":
             try:
@@ -6006,7 +6046,7 @@ Ignore shipping, tax, subtotal rows.
             except Exception as e:
                 per_file[idx]["status"] = "error"
                 per_file[idx]["error"]  = str(e)
-                print(f"[bulk_import] invoice error ({fname}): {e}")
+                logger.exception(f"Bulk import invoice error ({fname})")
 
         elif ftype == "image":
             # Skip this image if it was already handled as part of a pair
@@ -6044,7 +6084,7 @@ Ignore shipping, tax, subtotal rows.
                                          "png": "image/png",  "webp": "image/webp",
                                          "heic": "image/heic"}.get(pext, "image/jpeg")
                     except Exception as pair_e:
-                        print(f"[bulk_import] Could not load partner image: {pair_e}")
+                        logger.warning(f"Bulk import: could not load partner image: {pair_e}")
                         partner_bytes = bytes_a
                         partner_mime  = mime_a
 
@@ -6100,7 +6140,7 @@ Ignore shipping, tax, subtotal rows.
                         raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
                     pass2 = json.loads(raw2)
                 except Exception as p2e:
-                    print(f"[bulk_import] image pass2 non-fatal: {p2e}")
+                    logger.warning(f"Bulk import: image pass 2 non-fatal: {p2e}")
 
                 # ── Merge results ─────────────────────────────────────────────
                 final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
@@ -6155,13 +6195,12 @@ Ignore shipping, tax, subtotal rows.
                 per_file[idx]["status"]      = "done"
                 per_file[idx]["coins_added"] = 1
                 per_file[idx]["coin_doc_id"] = doc_ref.id
-                print(f"[bulk_import] image identified: {final_year} {final_denom} "
-                      f"conf={final_conf} pair={'yes' if partner_idx is not None else 'no'}")
+                logger.info(f"Bulk import image identified: {final_year} {final_denom} conf={final_conf} pair={'yes' if partner_idx is not None else 'no'}")
 
             except Exception as e:
                 per_file[idx]["status"] = "error"
                 per_file[idx]["error"]  = str(e)
-                print(f"[bulk_import] image error ({fname}): {e}")
+                logger.exception(f"Bulk import image error ({fname})")
 
         else:
             per_file[idx]["status"] = "skipped"
@@ -6285,7 +6324,7 @@ def collection_count(user_email: str):
         count = result[0][0].value if result and result[0] else 0
         return {"user_email": user_email, "coins": count}
     except Exception as e:
-        print(f"[collection_count] Error for {user_email}: {e}")
+        logger.exception("Collection count error", extra={"user_email": user_email})
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -6333,7 +6372,7 @@ def collection_clear(req: ClearCollectionRequest):
                 coins_deleted += 1
             batch.commit()
 
-        print(f"[collection_clear] Deleted {coins_deleted} coins for {req.user_email}")
+        logger.info(f"Collection cleared: {coins_deleted} coins deleted", extra={"user_email": req.user_email})
         return {
             "status":        "success",
             "user_email":    req.user_email,
@@ -6341,7 +6380,7 @@ def collection_clear(req: ClearCollectionRequest):
         }
 
     except Exception as e:
-        print(f"[collection_clear] Error for {req.user_email}: {e}")
+        logger.exception("Collection clear error", extra={"user_email": req.user_email})
         raise HTTPException(status_code=500, detail=str(e))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -6506,7 +6545,7 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         coins_ref = db.collection("users").document(user_email).collection("coins")
         user_coins = [doc.to_dict() for doc in coins_ref.stream()]
     except Exception as e:
-        print(f"[get_user_owned_doc_ids] Error fetching coins: {e}")
+        logger.error(f"get_user_owned_doc_ids: error fetching coins: {e}")
         user_coins = []
 
     # 2. Fetch user banknotes from Firestore
@@ -6514,12 +6553,12 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         currency_ref = db.collection("users").document(user_email).collection("currency")
         user_notes = [doc.to_dict() for doc in currency_ref.stream()]
     except Exception as e:
-        print(f"[get_user_owned_doc_ids] Error fetching banknotes: {e}")
+        logger.error(f"get_user_owned_doc_ids: error fetching banknotes: {e}")
         user_notes = []
 
     # 3. Load reference catalog from SQLite
     if not os.path.exists(DB_PATH):
-        print(f"[get_user_owned_doc_ids] DB not found at {DB_PATH}")
+        logger.warning(f"get_user_owned_doc_ids: DB not found at {DB_PATH}")
         return set()
         
     try:
@@ -6530,7 +6569,7 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         ref_rows = [dict(row) for row in cur.fetchall()]
         conn.close()
     except Exception as e:
-        print(f"[get_user_owned_doc_ids] SQLite error: {e}")
+        logger.error(f"get_user_owned_doc_ids: SQLite error: {e}")
         return set()
 
     ref_rows_dict = {r["doc_id"]: r for r in ref_rows}
@@ -6913,7 +6952,7 @@ def _get_littleton_helper():
             import littleton_sku_helper as _lh
             _littleton_helper = _lh
         except ImportError as _imp_err:
-            print(f"[littleton_sync] WARNING: littleton_sku_helper not available: {_imp_err}")
+            logger.warning(f"Littleton sync: sku_helper not available: {_imp_err}")
     return _littleton_helper
 
 
@@ -7090,7 +7129,7 @@ def search_reference(request: ReferenceSearchRequest):
             ),
         )
         
-        print(f"[DEBUG] Gemini search fallback response: {response}")
+        logger.debug(f"Gemini search fallback response: {response}")
         raw_text = (response.text or "").strip()
         if not raw_text:
             return {"matched": False, "source": "none"}
@@ -7112,7 +7151,7 @@ def search_reference(request: ReferenceSearchRequest):
         return {"matched": False, "source": "none"}
         
     except Exception as e:
-        print(f"[search_reference] Error: {e}")
+        logger.exception("Search reference error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -7224,7 +7263,7 @@ async def littleton_sync(request: LittletonSyncRequest):
         conn = sqlite3.connect(_NUMISTA_DB_PATH)
         lh.ensure_sku_table(conn)
     except Exception as db_err:
-        print(f"[littleton_sync] SQLite open/init error: {db_err}")
+        logger.exception("Littleton sync: SQLite open/init error")
         # Non-fatal: continue without SQLite layer (Firestore + Gemini still work)
         conn = None
 
@@ -7253,7 +7292,7 @@ async def littleton_sync(request: LittletonSyncRequest):
             qty         = max(1, int(order.qty or 1))
 
             if not sku:
-                print(f"[littleton_sync] Skipping record with empty SKU: {description[:60]}")
+                logger.warning(f"Littleton sync: skipping record with empty SKU: {description[:60]}")
                 errors += 1
                 continue
 
@@ -7355,7 +7394,7 @@ async def littleton_sync(request: LittletonSyncRequest):
                 batch_size = 0
 
         except Exception as record_err:
-            print(f"[littleton_sync] Error processing record '{order.littleton_sku}': {record_err}")
+            logger.exception(f"Littleton sync: error processing record '{order.littleton_sku}'")
             errors += 1
 
     # ── Flush remaining batch ─────────────────────────────────────────────────
@@ -7363,7 +7402,7 @@ async def littleton_sync(request: LittletonSyncRequest):
         try:
             batch.commit()
         except Exception as commit_err:
-            print(f"[littleton_sync] Final batch commit error: {commit_err}")
+            logger.exception("Littleton sync: final batch commit error")
             errors += batch_size
             committed -= batch_size
 
@@ -7374,8 +7413,8 @@ async def littleton_sync(request: LittletonSyncRequest):
         except Exception:
             pass
 
-    print(
-        f"[littleton_sync] user={user_email} | committed={committed} | "
+    logger.info(
+        f"Littleton sync complete: user={user_email} | committed={committed} | "
         f"sqlite={from_cache_sqlite} | firestore={from_cache_firestore} | "
         f"gemini={gemini_resolved} | errors={errors}"
     )
@@ -7429,7 +7468,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
     from datetime import datetime, timezone
     from pathlib import Path
     
-    print(f"⏰ [Cron Scraper] Triggered at {datetime.now(timezone.utc).isoformat()}")
+    logger.info(f"Cron scraper triggered at {datetime.now(timezone.utc).isoformat()}")
 
     # Firestore Lock Mechanism to prevent concurrent runs (Cloud Run scalability safety)
     lock_ref = db.collection("config").document("scraper_lock")
@@ -7439,10 +7478,10 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
             lock_data = lock_doc.to_dict()
             # If running and started less than 15 minutes ago, block.
             if lock_data.get("running") and (time.time() - lock_data.get("started_at", 0) < 900):
-                print(f"⚠ [Cron Scraper] Rejected: Job already running (started {int(time.time() - lock_data.get('started_at'))}s ago)")
+                logger.warning(f"Cron scraper rejected: job already running ({int(time.time() - lock_data.get('started_at'))}s ago)")
                 return {"status": "error", "message": "Scraper is already running in another process."}
     except Exception as e:
-        print(f"⚠ Lock check failed: {e}")
+        logger.error(f"Cron scraper lock check failed: {e}")
 
     # Set lock
     lock_ref.set({"running": True, "started_at": time.time()})
@@ -7464,7 +7503,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
             "message": "Scraper run complete. Report saved to Firestore."
         }
     except Exception as e:
-        print(f"❌ [Cron Scraper] Execution error: {e}")
+        logger.exception("Cron scraper execution error")
         return {"status": "error", "message": str(e)}
     finally:
         # Release lock
@@ -7556,7 +7595,7 @@ def get_gap_stats():
             "coverage_pct": coverage_pct
         }
     except Exception as e:
-        print(f"Error fetching gap stats: {e}")
+        logger.exception("Error fetching gap stats")
         return {
             "total_items": 0,
             "total_gaps": 0,
@@ -7757,7 +7796,7 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
             "message": f"Successfully mapped coin to GSID {gsid}"
         }
     except Exception as e:
-        print(f"[Greysheet] Error resolving GSID: {e}")
+        logger.exception("Greysheet: error resolving GSID")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/greysheet/refresh")
@@ -7799,7 +7838,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                     coin_is_roll_or_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
                     
                     if cand_has_roll_or_set and not coin_is_roll_or_set:
-                        print(f"[Greysheet] Force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') is a roll/set but coin is not.")
+                        logger.info(f"Greysheet: force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') is a roll/set but coin is not.")
                         force_resolve = True
                         
                     # Year Mismatch Guardrail: Force re-resolution if collectible name has a different year/range
@@ -7819,10 +7858,10 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                                 year_mismatch = True
                                 
                             if year_mismatch:
-                                print(f"[Greysheet] Force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') has a year mismatch with coin year {coin_year}.")
+                                logger.info(f"Greysheet: force re-resolving GSID: current GSID {curr_gsid} ('{collectible.get('Name')}') has a year mismatch with coin year {coin_year}.")
                                 force_resolve = True
             except Exception as e:
-                print(f"[Greysheet] Error checking current GSID: {e}")
+                logger.error(f"Greysheet: error checking current GSID: {e}")
 
         if not gsid_str or force_resolve:
             gsid = service.resolve_gsid_hybrid(
@@ -8000,13 +8039,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             cpg_retail *= 1.20
             greysheet_bid *= 1.20
             greysheet_ask *= 1.20
-            print(f"[Greysheet] Applying manual +20% CAC premium fallback (IsCac row missing)")
+            logger.info("Greysheet: applying manual +20% CAC premium fallback (IsCac row missing)")
         
         if melt_val > 0.0 and melt_val > cpg_retail:
             # Melt value exceeds market price — note it but do NOT use melt as
             # cpgRetail.  Melt is a floor (liquidation estimate), not a retail
             # price.  Using it as cpgRetail caused the 1914 Half Eagle $48K bug.
-            print(f"[Greysheet] Melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin is worth more as metal. Keeping market price and logging melt for reference.")
+            logger.info(f"Greysheet: melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin worth more as metal. Keeping market price and logging melt for reference.")
 
         # ── Sanity cap: refuse to write values that are wildly inflated ──
         # If the computed retail price is > 10× the AI Estimated Value, something
@@ -8018,8 +8057,10 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         _ai_match = _re.search(r'(\d+\.?\d*)', ai_raw)
         ai_low = float(_ai_match.group(1)) if _ai_match else 0.0
         if ai_low > 0 and cpg_retail > ai_low * 10:
-            print(f"[Greysheet] SANITY CAP TRIGGERED: cpgRetail={cpg_retail:.2f} is >{10}x AI low estimate ({ai_low:.2f}). "
-                  f"Refusing to write. Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'.")
+            logger.warning(
+                f"Greysheet: SANITY CAP TRIGGERED: cpgRetail={cpg_retail:.2f} is >{10}x AI low estimate ({ai_low:.2f}). "
+                f"Refusing to write. Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+            )
             return {
                 "status": "sanity_cap",
                 "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds 10x AI estimate (${ai_low:,.2f}). "
@@ -8046,7 +8087,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             "gradeMatched": matched_price.get("GradeLabel", condition)
         }
     except Exception as e:
-        print(f"[Greysheet] Error refreshing coin price: {e}")
+        logger.exception("Greysheet: error refreshing coin price")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/greysheet/pricing/{gsid}")
@@ -8214,7 +8255,7 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             "snapshot": response_snapshot
         }
     except Exception as e:
-        print(f"[Snapshot] Error creating daily snapshot: {e}")
+        logger.exception("Error creating daily portfolio snapshot")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -8297,7 +8338,7 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
             "message": f"Processed {total_count} coins in {elapsed:.2f}s: resolved {resolved_count} new GSIDs."
         }
     except Exception as e:
-        print(f"[Greysheet] Error in batch resolve: {e}")
+        logger.exception("Greysheet: error in batch resolve")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/greysheet/batch-refresh")
@@ -8445,7 +8486,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
             "message": f"Processed {total_mapped} mapped coins in {elapsed:.2f}s: refreshed pricing for {refreshed_count} coins."
         }
     except Exception as e:
-        print(f"[Greysheet] Error in batch refresh: {e}")
+        logger.exception("Greysheet: error in batch refresh")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -8596,7 +8637,7 @@ async def search_ebay_deals(q: str = "Morgan Silver Dollar MS64 NGC", limit: int
             })
         return {"deals": deals if deals else DEALS_DB}
     except Exception as e:
-        print(f"[eBay] Deals error: {e}")
+        logger.exception("eBay deals error")
         # Soft fallback to DEALS_DB
         return {"deals": DEALS_DB}
 
