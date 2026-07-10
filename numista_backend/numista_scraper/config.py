@@ -46,7 +46,13 @@ _proxy_index: int = 0        # Round-robin cursor
 def _load_proxy_pool() -> list:
     """Load proxy list from Firestore config/webshare_proxies."""
     try:
-        from firebase_admin import firestore as _fs
+        from firebase_admin import firestore as _fs, initialize_app, _apps, credentials
+        if not _apps:
+            if os.path.exists(KEY_PATH):
+                cred = credentials.Certificate(str(KEY_PATH))
+                initialize_app(cred)
+            else:
+                initialize_app()
         db = _fs.client()
         doc = db.collection("config").document("webshare_proxies").get()
         if doc.exists:
