@@ -388,8 +388,17 @@ def match_presidential_dollar(coin: dict) -> tuple[dict | None, dict | None]:
     return obv_row, rev_row
 
 def match_native_american(coin: dict) -> tuple[dict | None, dict | None]:
+    year = str(coin.get("year") or "").strip()
     obv = gcs_find(["sacagawea"], ["obverse", "front"]) or gcs_find(["native_american"], ["obverse", "front"])
-    rev = gcs_find(["sacagawea"], ["reverse", "back"]) or gcs_find(["native_american"], ["reverse"])
+    rev = None
+    if year.isdigit():
+        y_int = int(year)
+        if y_int < 2009:
+            rev = gcs_find(["sacagawea"], ["reverse", "back"])
+        else:
+            rev = gcs_find(["native_american", year], ["reverse"])
+    if not rev:
+        rev = gcs_find(["sacagawea"], ["reverse", "back"]) or gcs_find(["native_american"], ["reverse"])
     return obv, rev
 
 def match_america_beautiful(coin: dict) -> tuple[dict | None, dict | None]:
@@ -399,26 +408,44 @@ def match_america_beautiful(coin: dict) -> tuple[dict | None, dict | None]:
     park_parts = [p for p in park_slug.split("-") if len(p) > 2]
     obv = rev = None
     if park_parts:
-        obv = gcs_find(["america_beautiful"] + park_parts[:2], ["obverse"])
-        rev = gcs_find(["america_beautiful"] + park_parts[:2], ["reverse"])
+        obv = gcs_find(["america", "beautiful"] + park_parts[:2], ["obverse"])
+        rev = gcs_find(["america", "beautiful"] + park_parts[:2], ["reverse"])
+        if not rev:
+            rev = gcs_find(["america", "beautiful"] + park_parts[:2])
     if not obv:
-        obv = gcs_find(["america_beautiful"], ["obverse"])
-    if not rev:
-        rev = gcs_find(["america_beautiful"], ["reverse"])
+        obv = gcs_find(["america", "beautiful"], ["obverse"])
     return obv, rev
 
 def match_american_women_quarter(coin: dict) -> tuple[dict | None, dict | None]:
     theme = (coin.get("theme") or "").lower().strip()
     theme_slug = slugify(theme)
-    theme_parts = [p for p in theme_slug.split("-") if len(p) > 3]
-    obv = rev = None
+    theme_parts = [p for p in theme_slug.split("-") if len(p) > 2]
+    
+    obv = gcs_find(["american", "women"], ["obverse"])
+    rev = None
+    
     if theme_parts:
-        obv = gcs_find(["american_women"] + theme_parts[:2], ["obverse"])
-        rev = gcs_find(["american_women"] + theme_parts[:2], ["reverse"])
+        # Try searching with unique theme words in GCS to find matches in folders like si_quarters or american_women
+        for kw in reversed(theme_parts):
+            if kw in ["quarter", "dollar", "coin"]:
+                continue
+            res = gcs_find([kw], exclude_keywords=["dollar", "half", "dime", "nickel", "cent", "penny"])
+            if res:
+                path = res["path"].lower()
+                if "women" in path or "quarter" in path or "si_quarters" in path:
+                    rev = res
+                    break
+                    
+    # Fallback to the standard path keyword search if needed
+    if not rev and theme_parts:
+        obv = gcs_find(["american", "women"] + theme_parts[:2], ["obverse"])
+        rev = gcs_find(["american", "women"] + theme_parts[:2], ["reverse"])
+        if not rev:
+            rev = gcs_find(["american", "women"] + theme_parts[:2])
+            
     if not obv:
-        obv = gcs_find(["american_women"], ["obverse"])
-    if not rev:
-        rev = gcs_find(["american_women"], ["reverse"])
+        obv = gcs_find(["american", "women"], ["obverse"])
+        
     return obv, rev
 
 def match_generic(coin_type: str) -> tuple[dict | None, dict | None]:
@@ -712,6 +739,57 @@ def main():
                     parts = suffix.split("/")
                     if len(parts) >= 2 and parts[0] == "coins" and parts[1] != doc_id:
                         mismatch_reasons.append(f"{side} GCS path has wrong doc_id: {parts[1]} (expected {doc_id})")
+
+            # 7. Palladium / Bullion contamination
+            is_palladium = "palladium" in denom.lower() or "palladium" in program.lower() or "medal" in denom.lower() or "medal" in program.lower()
+            if not is_palladium:
+                if clean_obv and ("palladium" in clean_obv or "flowing-hair" in clean_obv):
+                    mismatch_reasons.append("Obverse: contaminated with Palladium/Medal bullion image")
+                if clean_rev and ("palladium" in clean_rev or "flowing-hair" in clean_rev):
+                    mismatch_reasons.append("Reverse: contaminated with Palladium/Medal bullion image")
+
+            # 8. AWQ Theme Mismatch
+            is_awq = ("women" in program.lower() and "quarter" in program.lower()) or ("women" in denom.lower() and "quarter" in denom.lower()) or ("american women" in program.lower())
+            if is_awq and theme:
+                theme_slug = slugify(theme)
+                awq_slugs = [
+                    'maya-angelou', 'sally-ride', 'wilma-mankiller', 'nina-otero-warren', 'anna-may-wong',
+                    'bessie-coleman', 'edith-kanaka-ole', 'eleanor-roosevelt', 'jovita-idar', 'maria-tallchief',
+                    'patsy-mink', 'ida-b-wells', 'celia-cruz', 'zitkala-sa', 'miriam-slater', 'vera-rubin',
+                    'stagecoach-mary', 'harriet-tubman', 'ada-lovelace', 'susan-la-flesche', 'althea-gibson',
+                    'stacey-park-milbern', 'juliette-gordon-low'
+                ]
+                awq_kw_to_slug = {
+                    'angelou': 'maya-angelou', 'maya': 'maya-angelou',
+                    'ride': 'sally-ride', 'sally': 'sally-ride',
+                    'mankiller': 'wilma-mankiller', 'wilma': 'wilma-mankiller',
+                    'otero': 'nina-otero-warren', 'warren': 'nina-otero-warren',
+                    'wong': 'anna-may-wong', 'anna may': 'anna-may-wong',
+                    'coleman': 'bessie-coleman', 'bessie': 'bessie-coleman',
+                    'kanakaole': 'edith-kanaka-ole', 'kanaka': 'edith-kanaka-ole',
+                    'roosevelt': 'eleanor-roosevelt', 'eleanor': 'eleanor-roosevelt',
+                    'idar': 'jovita-idar', 'jovita': 'jovita-idar',
+                    'tallchief': 'maria-tallchief', 'tall': 'maria-tallchief',
+                    'mink': 'patsy-mink', 'patsy': 'patsy-mink',
+                    'wells': 'ida-b-wells', 'ida': 'ida-b-wells',
+                    'cruz': 'celia-cruz', 'celia': 'celia-cruz',
+                    'zitkala': 'zitkala-sa',
+                    'rubin': 'vera-rubin', 'vera': 'vera-rubin',
+                    'milbern': 'stacey-park-milbern', 'stacey': 'stacey-park-milbern',
+                    'gordon low': 'juliette-gordon-low', 'juliette': 'juliette-gordon-low',
+                    'gibson': 'althea-gibson', 'althea': 'althea-gibson'
+                }
+                coin_subject_slug = None
+                for key, slug in awq_kw_to_slug.items():
+                    if key in theme_slug:
+                        coin_subject_slug = slug
+                        break
+                if coin_subject_slug:
+                    for other_slug in awq_slugs:
+                        if other_slug != coin_subject_slug and clean_rev and other_slug in clean_rev:
+                            mismatch_reasons.append(f"Reverse: AWQ Theme Mismatch (coin is {theme} but URL has {other_slug})")
+                    if coin_subject_slug != "maria-tallchief" and clean_rev and "native-american-one-dollar" in clean_rev:
+                        mismatch_reasons.append("Reverse: AWQ Theme Mismatch (coin is Sally Ride but URL has Tallchief Native American Dollar)")
 
             if mismatch_reasons:
                 findings.append({
