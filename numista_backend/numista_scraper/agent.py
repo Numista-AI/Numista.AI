@@ -313,7 +313,12 @@ class NumistaScraperAgent:
         if category == "coin" and source_priority in ["all", "usmint"]:
             if self._has_usmint_cookies():
                 print("    Attempting USMint.gov (session cookies found)...")
-                scraped_data = scrape_usmint({"query": query})
+                scraped_data = scrape_usmint({
+                    "query": query,
+                    "series": series,
+                    "variety": variety_clean,
+                    "year": year
+                })
                 if scraped_data and scraped_data.get("obverse_url"):
                     print("    ✓ Successfully found on USMint.gov")
                     scraped_data["source"] = "usmint"

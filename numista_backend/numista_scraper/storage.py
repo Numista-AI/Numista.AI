@@ -56,15 +56,19 @@ def download_image(url):
         current_proxy = get_scrape_proxy()
         has_proxy = current_proxy and (current_proxy.get("http") or current_proxy.get("https"))
 
-        # Pass cookies if downloading from usmint.gov to bypass Cloudflare (only if NOT using a proxy)
-        if "usmint.gov" in url.lower() and not has_proxy:
+        # Pass cookies if downloading from usmint.gov to bypass Cloudflare
+        if "usmint.gov" in url.lower():
             try:
                 doc = db.collection("config").document("usmint").get()
                 if doc.exists:
                     cookies = doc.to_dict().get("cookieString")
+                    user_agent = doc.to_dict().get("userAgent")
                     if cookies:
                         headers["Cookie"] = cookies
-                        print("    [Download Image] Using provided USMint session cookies for image download...")
+                        if user_agent:
+                            headers["User-Agent"] = user_agent
+                        print("    [Download Image] Using provided USMint session cookies and User-Agent for image download (bypassing proxy)...")
+                        current_proxy = {"http": None, "https": None}
             except Exception as ce:
                 print(f"    ⚠ Error reading USMint cookies for image download: {ce}")
 
@@ -72,7 +76,17 @@ def download_image(url):
         if "wikimedia.org" in url.lower() or "wikipedia.org" in url.lower():
             headers["User-Agent"] = "NumistaAICoinScraper/2.0 (https://numista-vault.web.app/; contact@numista.ai)"
 
-        resp = requests.get(url, headers=headers, timeout=20, proxies=current_proxy)
+        if "usmint.gov" in url.lower():
+            from curl_cffi import requests as curl_requests
+            minimal_headers = {
+                "User-Agent": headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            }
+            if "Cookie" in headers:
+                minimal_headers["Cookie"] = headers["Cookie"]
+            resp = curl_requests.get(url, headers=minimal_headers, timeout=20, proxies=current_proxy, impersonate="chrome120")
+        else:
+            resp = requests.get(url, headers=headers, timeout=20, proxies=current_proxy)
+
         if resp.status_code == 200 and len(resp.content) > 1000:
             return resp.content
         else:
