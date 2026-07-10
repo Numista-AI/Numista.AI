@@ -1647,16 +1647,6 @@ class _FinancialsTab extends StatelessWidget {
     return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
   }
 
-  /// Formats a DateTime as "MMM yyyy" (e.g. "Jul 2026") for the Greysheet
-  /// CPG attribution line without requiring the intl package.
-  String _fmtPriceMonth(DateTime dt) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[dt.month - 1]} ${dt.year}';
-  }
-
   double _parseAiValue(String raw) {
     if (raw.isEmpty || raw == 'Pending') return 0;
     // Normalise all dash variants and strip commas
@@ -1678,6 +1668,16 @@ class _FinancialsTab extends StatelessWidget {
   }
 }
 
+
+/// Formats a DateTime as "MMM yyyy" (e.g. "Jul 2026") for the Greysheet
+/// CPG attribution line without requiring the intl package.
+String _fmtPriceMonth(DateTime dt) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return '${months[dt.month - 1]} ${dt.year}';
+}
 
 class _GreysheetPricingTable extends StatefulWidget {
   final String gsid;
