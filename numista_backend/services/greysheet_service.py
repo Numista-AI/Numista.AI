@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from google.cloud import firestore
 import google.auth
@@ -84,27 +85,130 @@ class GreysheetService:
         """Fetch all collectibles under a leaf node."""
         if node_id in self._collectibles_cache:
             return self._collectibles_cache[node_id]
+
+        # 1. Try Firestore Cache
+        cache_key = f"node_collectible_{node_id}"
+        if self._db:
+            try:
+                doc_ref = self._db.collection("greysheet_cache").document(cache_key)
+                doc = doc_ref.get()
+                if doc.exists:
+                    cache_data = doc.to_dict()
+                    updated_at = cache_data.get("updated_at")
+                    if updated_at:
+                        if updated_at.tzinfo is None:
+                            updated_at = updated_at.replace(tzinfo=timezone.utc)
+                        delta = datetime.now(timezone.utc) - updated_at
+                        if delta.days < 30:
+                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
+                            data = cache_data.get("data", [])
+                            self._collectibles_cache[node_id] = data
+                            return data
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
+
+        # 2. Call direct API
         res = self._get("GetCollectibleByNodeRequest", {"NodeId": node_id})
         data = res.get("Data", []) if res else []
         self._collectibles_cache[node_id] = data
+
+        # 3. Write Firestore Cache
+        if self._db and data:
+            try:
+                self._db.collection("greysheet_cache").document(cache_key).set({
+                    "data": data,
+                    "updated_at": datetime.now(timezone.utc)
+                })
+                logger.info(f"[Greysheet Cache] Wrote cache for {cache_key}")
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error writing cache for {cache_key}: {e}")
+
         return data
 
     def get_pricing(self, gsid: int) -> List[Dict[str, Any]]:
         """Fetch pricing table for a specific GSID."""
         if gsid in self._pricing_cache:
             return self._pricing_cache[gsid]
+
+        # 1. Try Firestore Cache
+        cache_key = f"pricing_{gsid}"
+        if self._db:
+            try:
+                doc_ref = self._db.collection("greysheet_cache").document(cache_key)
+                doc = doc_ref.get()
+                if doc.exists:
+                    cache_data = doc.to_dict()
+                    updated_at = cache_data.get("updated_at")
+                    if updated_at:
+                        if updated_at.tzinfo is None:
+                            updated_at = updated_at.replace(tzinfo=timezone.utc)
+                        delta = datetime.now(timezone.utc) - updated_at
+                        if delta.days < 30:
+                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
+                            data = cache_data.get("data", [])
+                            self._pricing_cache[gsid] = data
+                            return data
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
+
+        # 2. Call direct API
         res = self._get("GetPricingRequest", {"Gsid": gsid})
         data = res.get("Data", []) if res else []
         self._pricing_cache[gsid] = data
+
+        # 3. Write Firestore Cache
+        if self._db and data:
+            try:
+                self._db.collection("greysheet_cache").document(cache_key).set({
+                    "data": data,
+                    "updated_at": datetime.now(timezone.utc)
+                })
+                logger.info(f"[Greysheet Cache] Wrote cache for {cache_key}")
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error writing cache for {cache_key}: {e}")
+
         return data
 
     def get_collectible(self, gsid: int) -> Optional[Dict[str, Any]]:
         """Fetch a single collectible's metadata by GSID."""
+        # 1. Try Firestore Cache
+        cache_key = f"collectible_{gsid}"
+        if self._db:
+            try:
+                doc_ref = self._db.collection("greysheet_cache").document(cache_key)
+                doc = doc_ref.get()
+                if doc.exists:
+                    cache_data = doc.to_dict()
+                    updated_at = cache_data.get("updated_at")
+                    if updated_at:
+                        if updated_at.tzinfo is None:
+                            updated_at = updated_at.replace(tzinfo=timezone.utc)
+                        delta = datetime.now(timezone.utc) - updated_at
+                        if delta.days < 30:
+                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
+                            return cache_data.get("data")
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
+
+        # 2. Call direct API
         res = self._get("GetCollectibleRequest", {"Gsid": gsid})
+        data_val = None
         if res and res.get("Data"):
             data = res.get("Data")
-            return data[0] if isinstance(data, list) and len(data) > 0 else None
-        return None
+            data_val = data[0] if isinstance(data, list) and len(data) > 0 else None
+
+        # 3. Write Firestore Cache
+        if self._db and data_val:
+            try:
+                self._db.collection("greysheet_cache").document(cache_key).set({
+                    "data": data_val,
+                    "updated_at": datetime.now(timezone.utc)
+                })
+                logger.info(f"[Greysheet Cache] Wrote cache for {cache_key}")
+            except Exception as e:
+                logger.warning(f"[Greysheet Cache] Error writing cache for {cache_key}: {e}")
+
+        return data_val
 
     def crawl_all_us_leaf_nodes(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
@@ -196,56 +300,238 @@ class GreysheetService:
                 break
         return terms
 
+    # ── Plain-language validation ──────────────────────────────────────────────
+
+    # Series-family keywords: maps plain-language series identifiers to the
+    # denomination keywords we expect to see in a Greysheet collectible name.
+    # Used by validate_match() to catch cross-series mismatches without AI.
+    _SERIES_FAMILIES: List[tuple] = [
+        # (series keyword in coin data,  must-appear in greysheet name,  must-NOT-appear)
+        ("presidential",      "presidential",        ["morgan", "peace", "barber", "bust", "trade", "seated", "eisenhower"]),
+        ("sacagawea",         "sacagawea",           ["morgan", "peace", "barber", "bust", "trade", "seated"]),
+        ("native american",   "native american",     ["morgan", "peace", "barber"]),
+        ("american innovation", "american innovation", ["morgan", "barber", "quarter", "dime"]),
+        ("morgan",            "morgan",              ["peace", "barber", "presidential", "sacagawea"]),
+        ("peace",             "peace",               ["morgan", "barber", "presidential"]),
+        ("barber quarter",    "barber",              ["morgan", "peace", "presidential", "half dollar", "dime"]),
+        ("barber dime",       "barber",              ["morgan", "peace", "presidential", "quarter", "half"]),
+        ("barber half",       "barber",              ["morgan", "peace", "presidential", "quarter", "dime"]),
+        ("kennedy",           "kennedy",             ["morgan", "peace", "barber", "walking liberty", "franklin"]),
+        ("franklin",          "franklin",            ["morgan", "peace", "barber", "kennedy"]),
+        ("walking liberty",   "walking liberty",     ["morgan", "peace", "barber", "kennedy", "franklin"]),
+        ("standing liberty",  "standing liberty",    ["barber", "washington", "statehood"]),
+        ("washington",        "washington",          ["standing liberty", "barber quarter"]),
+        ("lincoln",           "lincoln",             ["indian cent", "flying eagle", "large cent"]),
+        ("indian cent",       "indian",              ["lincoln", "flying eagle", "large cent"]),
+        ("flying eagle",      "flying eagle",        ["lincoln", "indian"]),
+        ("buffalo",           "buffalo",             ["jefferson", "liberty"]),
+        ("jefferson",         "jefferson",           ["buffalo", "liberty"]),
+        ("mercury",           "mercury",             ["barber", "roosevelt", "seated"]),
+        ("roosevelt",         "roosevelt",           ["mercury", "barber", "seated"]),
+        ("seated liberty",    "seated",              ["barber", "morgan", "peace"]),
+        ("bust",              "bust",                ["barber", "morgan", "seated"]),
+        ("trade dollar",      "trade",               ["morgan", "peace", "seated"]),
+        ("commemorative",     "commemorative",       []),
+        ("proof",             "proof",               []),
+    ]
+
+    @staticmethod
+    def _year_in_name(name_lower: str, coin_year: str) -> bool:
+        """Return True if coin_year is consistent with any year or range in name_lower."""
+        import re as _re
+        if not coin_year or not coin_year.isdigit():
+            return True  # no year to check — allow
+        yr = int(coin_year)
+        # Explicit range e.g. "1892-1916"
+        for m in _re.finditer(r'(\d{4})\s*[-\u2013]\s*(\d{4})', name_lower):
+            if int(m.group(1)) <= yr <= int(m.group(2)):
+                return True
+        # Single year in name
+        years_in_name = [int(y) for y in _re.findall(r'\b(\d{4})\b', name_lower)]
+        if years_in_name:
+            return yr in years_in_name
+        return True  # no year present in name — allow
+
+    def validate_match(
+        self,
+        greysheet_name: str,
+        coin_data: Dict[str, Any],
+        genai_client: Optional[Any] = None,
+        primary_model: str = "gemini-2.0-flash",
+    ) -> tuple:  # (is_valid: bool, reason: str)
+        """
+        Plain-language cross-check: does the Greysheet collectible name make sense
+        for this coin?
+
+        Returns (True, "ok") when the match is plausible.
+        Returns (False, <reason>) when the match is clearly wrong.
+
+        Checks (in order, no AI required for the first three):
+          1. Year consistency
+          2. Mint-mark consistency
+          3. Series/denomination family cross-check via _SERIES_FAMILIES
+          4. Gemini semantic check (optional, only when coin_data has a genai_client)
+        """
+        import re as _re
+
+        if not greysheet_name:
+            return False, "greysheet_name is empty"
+
+        gs_lower = greysheet_name.lower()
+        year = str(coin_data.get("Year") or coin_data.get("year") or "").strip()
+        mint = str(coin_data.get("Mint Mark") or coin_data.get("mintMark") or
+                   coin_data.get("MintMark") or "").strip().upper()
+        series = str(coin_data.get("Program/Series") or coin_data.get("series") or
+                     coin_data.get("ProgramSeries") or "").lower()
+        denom = str(coin_data.get("Denomination") or coin_data.get("denomination") or "").lower()
+        coin_desc = f"{series} {denom}".strip()
+
+        # ── Check 1: Year ─────────────────────────────────────────────────────
+        if not self._year_in_name(gs_lower, year):
+            return False, (
+                f"Year mismatch: coin is {year} but greysheet name "
+                f"'{greysheet_name}' implies a different year."
+            )
+
+        # ── Check 2: Mint mark ────────────────────────────────────────────────
+        # Only flag when the name contains a specific mint and it doesn't match.
+        mint_kw_map = {"P": ["philadelphia", "-p "], "D": ["-d "], "S": ["-s "],
+                       "O": ["-o "], "CC": ["carson city", "-cc"], "W": ["-w "]}
+        if mint and mint in mint_kw_map:
+            # Does the name assert a different mint?
+            for other_mint, other_kws in mint_kw_map.items():
+                if other_mint == mint:
+                    continue
+                if any(kw in gs_lower for kw in other_kws):
+                    return False, (
+                        f"Mint mismatch: coin is {mint} but greysheet name "
+                        f"'{greysheet_name}' appears to be {other_mint}."
+                    )
+
+        # ── Check 3: Series family ─────────────────────────────────────────────
+        for series_kw, gs_must_have, gs_must_not_have in self._SERIES_FAMILIES:
+            if series_kw in coin_desc:
+                if gs_must_have and gs_must_have not in gs_lower:
+                    return False, (
+                        f"Series mismatch: coin is '{series_kw}' but "
+                        f"greysheet name '{greysheet_name}' does not contain '{gs_must_have}'."
+                    )
+                for bad_kw in gs_must_not_have:
+                    if bad_kw in gs_lower:
+                        return False, (
+                            f"Series mismatch: coin is '{series_kw}' but "
+                            f"greysheet name '{greysheet_name}' contains '{bad_kw}' — wrong series."
+                        )
+                break  # matched a family, no need to check further
+
+        # ── Check 4: Gemini semantic check (optional) ─────────────────────────
+        if genai_client:
+            theme = str(coin_data.get("Theme/Subject") or "").strip()
+            prompt = (
+                f"You are a numismatic expert. Answer ONLY with JSON.\n\n"
+                f"Does the Greysheet series name \"{greysheet_name}\" correctly "
+                f"describe a coin with these attributes?\n"
+                f"  Year: {year}\n"
+                f"  Mint Mark: {mint}\n"
+                f"  Denomination: {denom}\n"
+                f"  Series/Program: {series}\n"
+                f"  Theme/Subject: {theme}\n\n"
+                f"Return: {{\"match\": true|false, \"reason\": \"<one sentence>\"}}"
+            )
+            try:
+                resp = genai_client.models.generate_content(
+                    model=primary_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+                res = json.loads(resp.text)
+                if not res.get("match", True):
+                    return False, f"Gemini: {res.get('reason', 'series mismatch')}"
+            except Exception as e:
+                logger.warning(f"[Greysheet] validate_match Gemini check failed: {e} — skipping AI check")
+
+        return True, "ok"
+
+    # ── GSID resolution ───────────────────────────────────────────────────────
+
     def resolve_gsid_hybrid(
         self,
         coin_data: Dict[str, Any],
         genai_client: Optional[Any] = None,
-        primary_model: str = "gemini-3.5-flash"
-    ) -> Optional[int]:
+        primary_model: str = "gemini-2.0-flash",
+    ) -> Optional[tuple]:  # (gsid: int, collectible_name: str) or None
         """
-        Map a coin in the inventory to its Greysheet GSID.
-        Uses PCGS number matching first, otherwise calls Gemini to select from candidate collectibles.
+        Map a coin to a Greysheet GSID via plain-language matching.
+
+        Returns (gsid, collectible_name) so callers always know *what* the GSID
+        represents in human-readable form — not just an opaque integer.
+
+        Priority order:
+          1. Fast-path: if coin already has a stored greysheetName that passes
+             validate_match(), trust the cached greysheetGsid and return early.
+          2. PCGS number exact match.
+          3. Gemini picks from denomination-filtered candidates.
+          4. Text-score fallback.
+
+        On success, the result is validated with validate_match() before returning.
+        If validation fails the candidate is discarded and we return None, letting
+        the caller decide whether to retry later.
         """
-        # Ingestion Type Guardrails: Non-coin items bypass the coin lookup
-        item_type = str(coin_data.get("item_type") or coin_data.get("Item Type") or coin_data.get("Item_Type") or "").lower()
-        if item_type in ["paper_currency", "medal", "supply"] or "medal" in item_type or "paper" in item_type or "supply" in item_type:
-            logger.info(f"[Greysheet] Ingestion guardrail triggered: item_type='{item_type}' is non-coin. Bypassing Greysheet resolution.")
+        # ── Guardrails ────────────────────────────────────────────────────────
+        item_type = str(coin_data.get("item_type") or coin_data.get("Item Type") or
+                        coin_data.get("Item_Type") or "").lower()
+        if (item_type in ["paper_currency", "medal", "supply"] or
+                "medal" in item_type or "paper" in item_type or "supply" in item_type):
+            logger.info(f"[Greysheet] Guardrail: item_type='{item_type}' is non-coin. Skipping.")
             return None
 
-        # Country Guardrail: Only resolve U.S. coins (or unknown/empty countries)
         country = str(coin_data.get("Country") or coin_data.get("country") or "").lower().strip()
         if country and country not in ["us", "usa", "united states", "unknown"]:
-            logger.info(f"[Greysheet] Country guardrail triggered: country='{country}' is non-U.S. Bypassing Greysheet resolution.")
+            logger.info(f"[Greysheet] Guardrail: country='{country}' is non-U.S. Skipping.")
             return None
 
-        # Extract coin attributes
-        pcgs_number = coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or coin_data.get("pcgsNo") or coin_data.get("PCGS Number")
-        if not pcgs_number and coin_data.get("certificationNumber") and coin_data.get("gradingService") == "PCGS":
-            # Cert exists, but no PCGS number resolved yet. Should fetch pcgs number first if possible.
-            pass
-
-        year = str(coin_data.get("Year") or coin_data.get("year") or "")
-        mint_mark = str(coin_data.get("MintMark") or coin_data.get("mintMark") or coin_data.get("Mint Mark") or "").upper()
+        # ── Extract coin attributes ───────────────────────────────────────────
+        pcgs_number = (coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or
+                       coin_data.get("pcgsNo") or coin_data.get("PCGS Number"))
+        year        = str(coin_data.get("Year") or coin_data.get("year") or "")
+        mint_mark   = str(coin_data.get("MintMark") or coin_data.get("mintMark") or
+                          coin_data.get("Mint Mark") or "").upper()
         denomination = str(coin_data.get("Denomination") or coin_data.get("denomination") or "")
-        series = str(coin_data.get("ProgramSeries") or coin_data.get("programSeries") or coin_data.get("series") or coin_data.get("Program/Series") or "")
-        variety = str(coin_data.get("Variety") or coin_data.get("variety") or "")
+        series      = str(coin_data.get("ProgramSeries") or coin_data.get("programSeries") or
+                          coin_data.get("series") or coin_data.get("Program/Series") or "")
+        variety     = str(coin_data.get("Variety") or coin_data.get("variety") or "")
 
-        logger.info(f"[Greysheet] Resolving GSID for: Year={year}, Mint={mint_mark}, Denomination={denomination}, Series={series}, PCGS={pcgs_number}")
+        logger.info(
+            f"[Greysheet] Resolving: Year={year}, Mint={mint_mark}, "
+            f"Denomination={denomination}, Series={series}, PCGS={pcgs_number}"
+        )
 
-        # Step 1: Find matching leaf nodes by series or denomination
+        # ── Fast-path: cached GSID with validated name ────────────────────────
+        cached_gsid = coin_data.get("greysheetGsid")
+        cached_name = coin_data.get("greysheetName")
+        if cached_gsid and cached_name:
+            valid, reason = self.validate_match(cached_name, coin_data, genai_client, primary_model)
+            if valid:
+                logger.info(
+                    f"[Greysheet] Fast-path: cached GSID {cached_gsid} "
+                    f"('{cached_name}') passed validation."
+                )
+                return (int(cached_gsid), cached_name)
+            else:
+                logger.warning(
+                    f"[Greysheet] Fast-path rejected: cached GSID {cached_gsid} "
+                    f"('{cached_name}') failed validation — {reason}. Re-resolving."
+                )
+                # Fall through to full resolution below.
+
+        # ── Step 1: Find leaf nodes by denomination keyword ───────────────────
         leaf_nodes = self.crawl_all_us_leaf_nodes()
-
-        # Normalise the stored denomination into Greysheet-compatible search terms.
-        # e.g. "Five Dollars (Half Eagle)" -> ["$5 gold", "five dollars (half eagle)"]
-        # This prevents "half" in "Half Eagle" from matching Half Cents/Dimes/Dollars.
         denom_terms = self._normalise_denomination(denomination) if denomination else []
 
-        # Fuzzy match leaf nodes by preferring primary denomination keywords to ensure we capture
-        # all relevant series (e.g. Statehood, ATB, and American Women Quarters when denomination is "Quarter").
         matched_nodes = []
         denom_lower = denomination.lower()
         primary_kw = None
-        
+
         if "double eagle" in denom_lower or "twenty" in denom_lower or "$20" in denom_lower:
             primary_kw = "$20"
         elif "half eagle" in denom_lower or "five dollar" in denom_lower or "five dollars" in denom_lower or "$5" in denom_lower:
@@ -270,7 +556,7 @@ class GreysheetService:
             primary_kw = "half cent"
         elif "half dime" in denom_lower:
             primary_kw = "half dime"
-        elif "dollar" in denom_lower or "1$" in denom_lower:
+        elif "dollar" in denom_lower or "$1" in denom_lower or "1$" in denom_lower:
             primary_kw = "dollar"
 
         if primary_kw:
@@ -282,14 +568,13 @@ class GreysheetService:
                 elif primary_kw in node_name_lower:
                     matched_nodes.append(node)
 
-        # If no primary keyword match, do a fuzzy substring match on series/denomination as fallback
+        # Fuzzy fallback on series name
         if not matched_nodes:
-            logger.info("[Greysheet] No direct primary keyword node match. Trying fallback fuzzy substring match.")
+            logger.info("[Greysheet] No primary keyword match. Trying series-name fuzzy fallback.")
             search_terms = []
             if series:
                 search_terms.append(series.lower())
             search_terms.extend(denom_terms)
-
             for node in leaf_nodes:
                 node_name_lower = node["Name"].lower()
                 for term in search_terms:
@@ -297,122 +582,111 @@ class GreysheetService:
                         matched_nodes.append(node)
                         break
 
-        # Step 2: Fetch candidates under matched leaf nodes
+        # ── Step 2: Fetch candidates under matched nodes ──────────────────────
         candidates = []
         for node in matched_nodes:
             node_id = node["Id"]
             logger.info(f"[Greysheet] Fetching collectibles for node: {node['Name']} (NodeId={node_id})")
-            node_collectibles = self.get_collectible_by_node(node_id)
-            candidates.extend(node_collectibles)
+            candidates.extend(self.get_collectible_by_node(node_id))
 
         if not candidates:
-            logger.warning("[Greysheet] No candidate collectibles found for matched nodes.")
+            logger.warning("[Greysheet] No candidate collectibles found.")
             return None
 
-        # Step 3: PCGS Number Match (If certified)
+        # ── Step 3: PCGS number exact match ───────────────────────────────────
         if pcgs_number:
             pcgs_str = str(pcgs_number).strip()
             for cand in candidates:
-                cand_pcgs = str(cand.get("PcgsNumber", "")).strip()
-                if cand_pcgs == pcgs_str:
-                    logger.info(f"[Greysheet] Match found via PCGS number: {cand['Name']} (GSID={cand['Gsid']})")
-                    return cand["Gsid"]
+                if str(cand.get("PcgsNumber", "")).strip() == pcgs_str:
+                    name = cand["Name"]
+                    gsid = cand["Gsid"]
+                    valid, reason = self.validate_match(name, coin_data, genai_client, primary_model)
+                    if valid:
+                        logger.info(f"[Greysheet] PCGS match: '{name}' (GSID={gsid})")
+                        return (int(gsid), name)
+                    logger.warning(f"[Greysheet] PCGS match '{name}' failed validation: {reason}")
 
-        # Step 4: AI Resolution for raw coins
+        # ── Step 4: Gemini picks from candidates ──────────────────────────────
         if genai_client:
-            logger.info(f"[Greysheet] Invoking Gemini to map raw coin to GSID from {len(candidates)} candidates.")
-            # Format candidate list for Gemini
-            candidate_list_str = ""
-            for cand in candidates:
-                candidate_list_str += f"- GSID: {cand['Gsid']} | Name: {cand['Name']} | PCGS No: {cand.get('PcgsNumber', 'N/A')}\n"
+            logger.info(f"[Greysheet] Invoking Gemini to select from {len(candidates)} candidates.")
+            candidate_list_str = "".join(
+                f"- GSID: {c['Gsid']} | Name: {c['Name']} | PCGS No: {c.get('PcgsNumber', 'N/A')}\n"
+                for c in candidates
+            )
+            theme = str(coin_data.get("Theme/Subject") or "")
+            prompt = f"""You are an expert numismatic data mapper. Select the single best Greysheet collectible for this coin.
 
-            prompt = f"""
-You are a expert numismatic data mapper. Match the following inventory coin record to the correct Greysheet Collectible GSID from the candidates listed below.
+COIN:
+  Year: {year}
+  Mint Mark: {mint_mark}
+  Denomination: {denomination}
+  Series/Program: {series}
+  Theme/Subject: {theme}
+  Variety: {variety}
 
-INVENTORY COIN RECORD:
-- Year: {year}
-- Mint Mark: {mint_mark}
-- Denomination: {denomination}
-- Series/Program: {series}
-- Variety/Description: {variety}
-
-CANDIDATE GREYSHEET COLLECTIBLES:
+CANDIDATES:
 {candidate_list_str}
 
-Select the SINGLE best GSID that exactly matches the inventory coin.
-- Return ONLY a JSON object containing:
-  "gsid": (integer or null, the matched GSID)
-  "confidence": (float between 0.0 and 1.0)
-  "explanation": (brief string explanation of why this was chosen)
-
-If none of the candidates match, set "gsid" to null.
-Do not output markdown code blocks, just raw JSON.
-"""
+Return ONLY JSON: {{"gsid": <int or null>, "confidence": <0.0-1.0>, "explanation": "<one sentence>"}}
+Set gsid to null if no candidate is a good match. Do not output markdown."""
             try:
-                response = genai_client.models.generate_content(
+                resp = genai_client.models.generate_content(
                     model=primary_model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json"
-                    )
+                    config=types.GenerateContentConfig(response_mime_type="application/json"),
                 )
-                res_json = json.loads(response.text)
+                res_json = json.loads(resp.text)
                 gsid = res_json.get("gsid")
                 confidence = res_json.get("confidence", 0.0)
-                logger.info(f"[Greysheet AI] Resolution response: {res_json}")
+                logger.info(f"[Greysheet AI] Gemini response: {res_json}")
                 if gsid and confidence >= 0.7:
-                    logger.info(f"[Greysheet AI] Selected GSID: {gsid} with confidence {confidence}")
-                    return int(gsid)
+                    # Find the collectible name for the chosen GSID
+                    chosen = next((c for c in candidates if c["Gsid"] == gsid), None)
+                    name = chosen["Name"] if chosen else f"GSID {gsid}"
+                    valid, reason = self.validate_match(name, coin_data, genai_client, primary_model)
+                    if valid:
+                        logger.info(f"[Greysheet AI] Validated: '{name}' (GSID={gsid}, confidence={confidence})")
+                        return (int(gsid), name)
+                    logger.warning(
+                        f"[Greysheet AI] Gemini chose GSID {gsid} ('{name}') "
+                        f"but validation failed: {reason}. Discarding."
+                    )
             except Exception as e:
-                logger.error(f"[Greysheet AI] Failed to resolve GSID via Gemini: {e}")
+                logger.error(f"[Greysheet AI] Gemini resolution failed: {e}")
 
-        # Step 5: Fallback to text matching
-        logger.info("[Greysheet] Fallback to simple text keyword matching.")
-        best_cand = None
-        best_score = 0
-        year_str = str(year)
-
-        # Collect descriptive terms from the coin data
-        descriptive_terms = []
-        name_val = coin_data.get("Name") or coin_data.get("name")
-        if name_val:
-            descriptive_terms.extend(str(name_val).lower().split())
+        # ── Step 5: Text-score fallback ───────────────────────────────────────
+        logger.info("[Greysheet] Falling back to text-score matching.")
+        import re as _re
+        name_val  = coin_data.get("Name") or coin_data.get("name")
         theme_val = coin_data.get("Theme/Subject") or coin_data.get("theme")
-        if theme_val:
-            descriptive_terms.extend(str(theme_val).lower().replace("&", " ").replace("-", " ").split())
-        if variety:
-            descriptive_terms.extend(str(variety).lower().split())
-            
-        # Filter out common stop words or irrelevant details
+        descriptive_terms = []
+        for src in [name_val, theme_val, variety]:
+            if src:
+                descriptive_terms.extend(str(src).lower().replace("&", " ").replace("-", " ").split())
         stop_words = {"&", "and", "or", "the", "a", "an", "of", "in", "on", "at", "to", "with", "couple", "compact"}
-        descriptive_terms = [term for term in descriptive_terms if term not in stop_words and len(term) > 2]
+        descriptive_terms = [t for t in descriptive_terms if t not in stop_words and len(t) > 2]
 
-        import re
+        best_cand, best_score = None, 0
         for cand in candidates:
             cand_name = cand["Name"].lower()
-
-            # Roll/Set Guardrail: Skip or penalise rolls/sets if the coin itself is not a roll/set
-            cand_has_roll_or_set = any(x in cand_name for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
-            coin_desc = f"{name_val or ''} {variety or ''} {theme_val or ''} {series or ''} {denomination or ''}".lower()
-            coin_is_roll_or_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
-            if cand_has_roll_or_set and not coin_is_roll_or_set:
+            # Skip rolls/sets for individual coins
+            cand_is_set = any(x in cand_name for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+            coin_desc   = f"{name_val or ''} {variety or ''} {theme_val or ''} {series or ''} {denomination or ''}".lower()
+            coin_is_set = any(x in coin_desc for x in ["roll", "set", "bag", "box", "case", "folder", "tribute"])
+            if cand_is_set and not coin_is_set:
                 continue
-
-            # Year Guardrail: Skip candidate if it has a specific year/range in the name that doesn't match the coin's year
-            if year_str and year_str.isdigit():
-                cand_years = [int(y) for y in re.findall(r'\b\d{4}\b', cand_name)]
+            # Year guardrail
+            if year and year.isdigit():
+                cand_years = [int(y) for y in _re.findall(r'\b\d{4}\b', cand_name)]
                 if cand_years:
-                    range_match = re.search(r'(\d{4})\s*[-–to\s]+\s*(\d{4})', cand_name)
-                    if range_match:
-                        start_yr = int(range_match.group(1))
-                        end_yr = int(range_match.group(2))
-                        if not (start_yr <= int(year_str) <= end_yr):
+                    range_m = _re.search(r'(\d{4})\s*[-\u2013to\s]+\s*(\d{4})', cand_name)
+                    if range_m:
+                        if not (int(range_m.group(1)) <= int(year) <= int(range_m.group(2))):
                             continue
-                    elif int(year_str) not in cand_years:
+                    elif int(year) not in cand_years:
                         continue
-
             score = 0
-            if year_str and year_str in cand_name:
+            if year and year in cand_name:
                 score += 10
             if mint_mark and f"-{mint_mark.lower()}" in cand_name:
                 score += 5
@@ -420,19 +694,24 @@ Do not output markdown code blocks, just raw JSON.
                 score += 3
             elif not mint_mark and ("no mint mark" in cand_name or "philadelphia" in cand_name):
                 score += 2
-                
-            # Match descriptive keywords
             for term in descriptive_terms:
                 if term in cand_name:
                     score += 15
-
             if score > best_score:
-                best_score = score
-                best_cand = cand
+                best_score, best_cand = score, cand
 
         if best_cand and best_score >= 10:
-            logger.info(f"[Greysheet] Best text match: {best_cand['Name']} (GSID={best_cand['Gsid']}) with score {best_score}")
-            return best_cand["Gsid"]
+            name = best_cand["Name"]
+            gsid = best_cand["Gsid"]
+            valid, reason = self.validate_match(name, coin_data, genai_client, primary_model)
+            if valid:
+                logger.info(f"[Greysheet] Text-score match: '{name}' (GSID={gsid}, score={best_score})")
+                return (int(gsid), name)
+            logger.warning(
+                f"[Greysheet] Text-score match '{name}' (GSID={gsid}) "
+                f"failed validation: {reason}. Discarding."
+            )
 
-        logger.warning("[Greysheet] Could not resolve GSID.")
+        logger.warning("[Greysheet] Could not resolve a validated GSID.")
         return None
+
