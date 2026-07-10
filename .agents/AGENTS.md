@@ -139,9 +139,15 @@ circumstances — not even after asking.
 - Ask "do you want me to merge to main?" and then do it
 
 **The ONLY exception** where touching `main` is permitted:
-- The designated sync-check conversation (ID: 7485fc0a-544c-4a5f-8e87-ff9e22099b5e) when
-  the user says "End of day — sync check". That conversation is the sole gatekeeper for
+- The designated deploy conversation (ID: 7485fc0a-544c-4a5f-8e87-ff9e22099b5e) when
+  the user says **"Prepare to Deploy"**. That conversation is the sole gatekeeper for
   merging `dev` into `main` and deploying to the live site.
+
+  **Deploy flow for that conversation:**
+  1. Run `git fetch origin` and compare `origin/dev` vs `origin/main`
+  2. Summarize every commit in plain English (no jargon)
+  3. Say **"Ready to deploy?"** and wait for the user to say YES
+  4. On YES: `gh pr create` + `gh pr merge` via GitHub CLI, confirm build is green
 - Commits containing ONLY documentation files (`walkthrough.md`, `AGENTS.md`, scan reports,
   `*.md` in `scratch/`) that do not trigger a Flutter rebuild and do not affect the live site.
 
