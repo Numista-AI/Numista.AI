@@ -159,14 +159,14 @@ class NumistaScraperAgent:
             return pcgs_no
 
         # 2. Extract from doc_id or variety if PCGS number is embedded
-        doc_id = coin.get("doc_id", "")
-        variety = coin.get("variety", "")
+        doc_id = coin.get("doc_id") or ""
+        variety = coin.get("variety") or ""
 
         match = re.search(r"PCGS\s*(?:No\.?|#)?\s*(\d+)", variety, re.IGNORECASE)
         if match:
             return match.group(1)
 
-        note = coin.get("note", "")
+        note = coin.get("note") or ""
         match = re.search(r"PCGS\s*(?:No\.?|#)?\s*(\d+)", note, re.IGNORECASE)
         if match:
             return match.group(1)
