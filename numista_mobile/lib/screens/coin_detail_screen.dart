@@ -1453,8 +1453,58 @@ class _FinancialsTab extends StatelessWidget {
     final meltVal = liveMelt != null
         ? '\$${liveMelt.toStringAsFixed(2)}'
         : (spotPrices.isNotEmpty
-            ? 'N/A'          // spot prices loaded but no precious metal
+            ? 'N/A'           // spot prices loaded but no precious metal
             : coin.meltValue); // no spot prices yet — show stored value
+    final meltDisplay = meltVal.isEmpty ? 'Pending' : meltVal;
+
+    // ── Melt formula breakdown ──────────────────────────────────────────────
+    // Build human-readable formula: "1 oz coin, 99.9% silver × $60.30/oz = $60.30"
+    String meltFormula = '';
+    if (liveMelt != null && spotPrices.isNotEmpty) {
+      final mc    = coin.metalContent.trim().toLowerCase();
+      final denom = coin.denomination.trim().toLowerCase();
+      final ag    = spotPrices['Silver'] ?? 0;
+      final au    = spotPrices['Gold']   ?? 0;
+
+      if (mc.contains('silver (99') || mc.contains('silver (999') ||
+          (mc.contains('silver') && RegExp(r'9[0-9]\.\d+%').hasMatch(mc))) {
+        meltFormula = ag > 0
+            ? '1 troy oz coin, 99.9% silver × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}'
+            : '';
+      } else if (mc.startsWith('90% silver')) {
+        final ozMap = {'dime': 0.07234, 'quarter': 0.18084, 'half': 0.36169, 'half dollar': 0.36169, 'dollar': 0.77344};
+        double? oz;
+        for (final e in ozMap.entries) { if (denom.contains(e.key)) { oz = e.value; break; } }
+        if (oz != null && ag > 0) {
+          meltFormula = '${oz.toStringAsFixed(5)} troy oz Ag (90% silver) × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}';
+        }
+      } else if (mc.startsWith('40% silver')) {
+        const oz = 0.14792;
+        if (ag > 0) meltFormula = '${oz.toStringAsFixed(5)} troy oz Ag (40% silver) × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}';
+      } else if (mc.startsWith('35% silver')) {
+        const oz = 0.05626;
+        if (ag > 0) meltFormula = '${oz.toStringAsFixed(5)} troy oz Ag (35% silver) × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}';
+      } else if (mc.contains('gold')) {
+        meltFormula = au > 0
+            ? 'Gold content × (gold spot \$${au.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}'
+            : '';
+      }
+    }
+
+    // ── Spot prices: only show metals relevant to this coin ─────────────────
+    // Silver coins → Silver only.  Gold coins → Gold only.  Others → all.
+    final mc = coin.metalContent.trim().toLowerCase();
+    final bool hasSilver = mc.contains('silver');
+    final bool hasGold   = mc.contains('gold');
+    final filteredSpot = Map<String, double>.fromEntries(
+      spotPrices.entries.where((e) {
+        final k = e.key.toLowerCase();
+        if (hasSilver && !hasGold) return k == 'silver';
+        if (hasGold && !hasSilver) return k == 'gold';
+        return k == 'silver' || k == 'gold'; // mixed or unknown: silver + gold only
+      }),
+    );
+
 
     // ── EST. VALUE: same greysheet-first priority as the collection grid ─────
     // EST. VALUE: CPG Retail (collector/market price) first, then greysheet bid
@@ -1478,7 +1528,6 @@ class _FinancialsTab extends StatelessWidget {
 
     final costDisplay = (coin.purchaseCost.isEmpty || coin.purchaseCost == r'$0.00')
         ? 'UKN' : coin.purchaseCost;
-    final meltDisplay = meltVal.isEmpty ? 'Pending' : meltVal;
 
     final plDolStr = canCalcPL
         ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';
@@ -1574,14 +1623,55 @@ class _FinancialsTab extends StatelessWidget {
               _DetailTile(label: 'Retailer',        value: coin.retailer),
             if (coin.retailerItemNo.isNotEmpty)
               _DetailTile(label: 'Item No.',        value: coin.retailerItemNo),
-            if (coin.retailerInvoiceNo.isNotEmpty)
+          if (coin.retailerInvoiceNo.isNotEmpty)
               _DetailTile(label: 'Invoice No.',     value: coin.retailerInvoiceNo),
-            _DetailTile(label: 'Melt Value',        value: meltDisplay),
           ]),
 
-          if (spotPrices.isNotEmpty) ...[
+          // ── Melt Value card with formula ─────────────────────────────────
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: _kSurface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _kBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Melt Value',
+                  style: TextStyle(fontSize: 11, color: _kSubtext, letterSpacing: 0.4),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  meltDisplay,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: _kText,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                if (meltFormula.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    '($meltFormula)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _kSubtext,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          if (filteredSpot.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _SpotPriceRow(spotPrices: spotPrices),
+            _SpotPriceRow(spotPrices: filteredSpot),
           ],
           
           if (coin.gradingService.isNotEmpty) ...[

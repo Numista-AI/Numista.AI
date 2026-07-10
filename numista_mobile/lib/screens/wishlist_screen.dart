@@ -11,6 +11,7 @@ import '../models/coin_model.dart';
 import '../models/program_model.dart';
 import '../widgets/common/ref_image_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'deals_screen.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -323,6 +324,80 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
+  Widget _buildArbitrageDealsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DealsScreen()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F9D58).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.shopping_bag_outlined,
+                      color: Color(0xFF0F9D58), size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Wishlist Deal Spotter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: headerColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Find wishlist coins on eBay near or below Bid price',
+                        style: TextStyle(fontSize: 12, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFFF63366)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -383,6 +458,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           child: ListView(
                             padding: const EdgeInsets.all(24),
                             children: [
+                              _buildArbitrageDealsCard(context),
                               _buildAutoMissingSection(allProgramsMap),
                               if (programs.isNotEmpty) ...[
                                 const Text('Collector Programs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
@@ -413,6 +489,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     return ListView(
                       padding: const EdgeInsets.all(24),
                       children: [
+                        _buildArbitrageDealsCard(context),
                         _buildAutoMissingSection(allProgramsMap),
                         if (programs.isNotEmpty) ...[
                           const Text('Collector Programs', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),

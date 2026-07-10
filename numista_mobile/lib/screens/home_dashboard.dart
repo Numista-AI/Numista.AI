@@ -559,10 +559,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
                   const SizedBox(height: 24),
 
-                  // ── Arbitrage Deal Spotter ──────────────────────────────────
-                  _buildArbitrageDealsCard(context),
-                  const SizedBox(height: 24),
-
                    // ── Metric cards ──────────────────────────────────────────
                   LayoutBuilder(builder: (ctx, bc) {
                     final profit = portfolioValue - acquisitionCost;

@@ -7769,31 +7769,35 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
                 "item_type": req.item_type or ""
             }
         
-        # 2. Instantiate service and resolve
-        gsid = service.resolve_gsid_hybrid(
+        # 2. Instantiate service and resolve — returns (gsid, name) tuple
+        result = service.resolve_gsid_hybrid(
             coin_data=coin_data,
             genai_client=genai_client,
             primary_model=PRIMARY_MODEL
         )
-        
-        if not gsid:
-            return {"status": "not_resolved", "message": "Could not map coin to a Greysheet GSID."}
-            
-        # 3. Write back GSID to Firestore if we have a document reference
+
+        if not result:
+            return {"status": "not_resolved", "message": "Could not map coin to a validated Greysheet series."}
+
+        gsid, greysheet_name = result
+
+        # 3. Write back GSID + plain-language name to Firestore
         if coin_ref:
             update_payload = {
                 "greysheetGsid": str(gsid),
+                "greysheetName": greysheet_name,
                 "greysheetBid": 0.0,
                 "greysheetAsk": 0.0,
                 "cpgRetail": 0.0,
                 "priceLastUpdated": None
             }
             coin_ref.update(update_payload)
-        
+
         return {
             "status": "success",
             "gsid": gsid,
-            "message": f"Successfully mapped coin to GSID {gsid}"
+            "greysheetName": greysheet_name,
+            "message": f"Mapped to '{greysheet_name}' (GSID {gsid})"
         }
     except Exception as e:
         logger.exception("Greysheet: error resolving GSID")
@@ -7864,15 +7868,47 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 logger.error(f"Greysheet: error checking current GSID: {e}")
 
         if not gsid_str or force_resolve:
-            gsid = service.resolve_gsid_hybrid(
+            result = service.resolve_gsid_hybrid(
                 coin_data=coin_data,
                 genai_client=genai_client,
                 primary_model=PRIMARY_MODEL
             )
-            if not gsid:
-                raise HTTPException(status_code=400, detail="Coin is not mapped to a GSID and resolution failed.")
-            gsid_str = str(gsid)
-            coin_ref.update({"greysheetGsid": gsid_str})
+            if not result:
+                raise HTTPException(status_code=400, detail="Coin is not mapped to a validated Greysheet series and resolution failed.")
+            gsid_int, greysheet_name = result
+            gsid_str = str(gsid_int)
+            coin_ref.update({"greysheetGsid": gsid_str, "greysheetName": greysheet_name})
+        else:
+            # Fast-path: validate the stored name before using the cached GSID
+            cached_name = coin_data.get("greysheetName")
+            if cached_name:
+                valid, reason = service.validate_match(
+                    cached_name, coin_data, genai_client, PRIMARY_MODEL
+                )
+                if not valid:
+                    logger.warning(
+                        f"Greysheet: cached GSID {gsid_str} ('{cached_name}') failed "
+                        f"plain-language validation: {reason}. Clearing and aborting refresh."
+                    )
+                    coin_ref.update({
+                        "greysheetGsid": firestore.DELETE_FIELD,
+                        "greysheetName": firestore.DELETE_FIELD,
+                        "greysheetGrade": firestore.DELETE_FIELD,
+                        "cpgRetail": 0.0,
+                        "greysheetBid": 0.0,
+                        "greysheetAsk": 0.0,
+                        "grade_review_status": "pending",
+                        "valuationFlag": (
+                            f"Greysheet series name '{cached_name}' does not match this coin's "
+                            f"description ({reason}). GSID cleared — will re-resolve on next refresh."
+                        ),
+                    })
+                    return {
+                        "status": "gsid_invalidated",
+                        "message": f"Cached GSID invalidated: {reason}. Will re-resolve next refresh.",
+                        "gsid": gsid_str,
+                        "greysheetName": cached_name,
+                    }
         
         gsid = int(gsid_str)
         
@@ -8089,10 +8125,14 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             )
 
         # 5. Write to Firestore — always write the value, flag if suspicious
+        grade_label = matched_price.get("GradeLabel", condition)
+        cached_gs_name = coin_data.get("greysheetName", "")
         update_payload = {
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
             "cpgRetail": cpg_retail,
+            "greysheetGrade": grade_label,       # e.g. "VG-8", "MS-63" — plain language
+            "greysheetName": cached_gs_name,     # e.g. "1909-S Barber Quarter" — plain language
             "priceLastUpdated": firestore.SERVER_TIMESTAMP,
         }
         if valuation_flag:
@@ -8109,7 +8149,9 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             "cpgRetail": cpg_retail,
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
-            "gradeMatched": matched_price.get("GradeLabel", condition)
+            "greysheetGrade": grade_label,
+            "greysheetName": cached_gs_name,
+            "gradeMatched": grade_label,
         }
     except Exception as e:
         logger.exception("Greysheet: error refreshing coin price")
