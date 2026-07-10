@@ -70,6 +70,7 @@ class NumistaScraperAgent:
         self.mode = mode
         self.processed_list = []
         self.ai_pending_list = []  # Coins that need AI approval before image generation
+        self.latest_report_id = None
         # Ensure schema is aligned on startup
         ensure_sqlite_schema()
 
@@ -270,11 +271,35 @@ class NumistaScraperAgent:
         mint = coin.get("mint_mark", "P")
         variety = coin.get("variety", "")
         category = coin.get("category", "")
+        series = coin.get("series", "")
 
         print(f"\n⚡ Sourcing images and market data for: {year} {denom} ({variety}) [ID: {doc_id}]")
 
         scraped_data = None
-        query = f"{year} {denom} {mint} {variety}".strip()
+        
+        # Build natural queries for modern commemorative and multi-design programs
+        series_lower = (series or "").lower()
+        variety_clean = (variety or "").replace(" (Silver)", "").strip()
+        
+        # Determine a collector-friendly denomination name
+        denom_clean = denom
+        if denom == "Quarter Dollar":
+            denom_clean = "Quarter"
+        
+        if "state quarter" in series_lower or "50 state" in series_lower:
+            query = f"{year} {variety_clean} State Quarter".strip()
+        elif "women quarters" in series_lower or "american women" in series_lower:
+            query = f"{year} {variety_clean} Women Quarter".strip()
+        elif "beautiful quarters" in series_lower or "national parks" in series_lower:
+            query = f"{year} {variety_clean} National Park Quarter".strip()
+        elif "american innovation" in series_lower:
+            query = f"{year} {variety_clean} Innovation Dollar".strip()
+        else:
+            # Standard query fallback, but exclude standard P/D mint marks for search engine indexing compatibility
+            if mint in ["P", "D"]:
+                query = f"{year} {denom_clean} {variety}".strip()
+            else:
+                query = f"{year} {denom_clean} {mint} {variety}".strip()
 
         # Override default priority based on US Mint cookie state
         if source_priority == "all":
@@ -302,7 +327,12 @@ class NumistaScraperAgent:
         if not scraped_data or not scraped_data.get("obverse_url"):
             if source_priority in ["all", "wikimedia"]:
                 print("    Attempting Wikimedia Commons...")
-                scraped_data = scrape_wikimedia({"query": query})
+                scraped_data = scrape_wikimedia({
+                    "query": query,
+                    "variety": variety_clean,
+                    "denomination": denom_clean,
+                    "series": series
+                })
                 if scraped_data and scraped_data.get("obverse_url"):
                     print("    ✓ Successfully found on Wikimedia Commons")
                     scraped_data["source"] = "wikimedia"
@@ -419,7 +449,7 @@ class NumistaScraperAgent:
         # Success — persist
         if not dry_run:
             self.processed_list.append({
-                "title": f"{year} {denom} ({variety})",
+                "title": f"{year or ''} {denom or ''} {variety or ''} [{doc_id}]".strip(),
                 "category": category,
                 "source": scraped_data.get("source", "unknown"),
                 "obverse_url": obv_url,
@@ -902,7 +932,7 @@ class NumistaScraperAgent:
         # 5. Save to Firestore for Dashboard
         if not dry_run:
             try:
-                db.collection("scraper_reports").add({
+                doc_ref = db.collection("scraper_reports").add({
                     "timestamp": int(time.time()),
                     "datetime_utc": datetime.now(timezone.utc).isoformat(),
                     "limit": limit,
@@ -912,7 +942,8 @@ class NumistaScraperAgent:
                     "processed_errors": processed_errors,
                     "report_content": report_content
                 })
-                print("      ✓ Saved report to Firestore for dashboard.")
+                self.latest_report_id = doc_ref[1].id
+                print(f"      ✓ Saved report to Firestore for dashboard: {self.latest_report_id}")
             except Exception as e:
                 print(f"      ⚠ Failed to save report to Firestore: {e}")
 

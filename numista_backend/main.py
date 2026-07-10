@@ -7460,6 +7460,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
             "status": "success",
             "processed_coins": processed_coins,
             "processed_errors": processed_errors,
+            "report_saved_to_firestore": agent.latest_report_id,
             "message": "Scraper run complete. Report saved to Firestore."
         }
     except Exception as e:
@@ -8339,7 +8340,33 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
             except Exception:
                 return 0.0
                 
-        for gsid, coin_list in gsid_to_coins.items():
+        # Enforce 2-month threshold (60 days) to prevent redundant API calls
+        from datetime import datetime, timezone, timedelta
+        two_months_ago = datetime.now(timezone.utc) - timedelta(days=60)
+        
+        def needs_update(coin_data):
+            last_updated = coin_data.get("priceLastUpdated")
+            if not last_updated:
+                return True
+            if isinstance(last_updated, datetime):
+                # Ensure timezone aware comparison
+                if last_updated.tzinfo is None:
+                    last_updated = last_updated.replace(tzinfo=timezone.utc)
+                return last_updated < two_months_ago
+            try:
+                dt = datetime.fromisoformat(str(last_updated).replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt < two_months_ago
+            except Exception:
+                return True
+                
+        for gsid, coin_list in list(gsid_to_coins.items()):
+            # Filter to coins that actually need an update
+            coins_needing_update = [c for c in coin_list if needs_update(c[1])]
+            if not coins_needing_update:
+                continue
+                
             prices = service.get_pricing(gsid)
             if not prices:
                 continue
@@ -8351,7 +8378,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
             if not pricing_rows:
                 continue
                 
-            for coin_id, coin_data in coin_list:
+            for coin_id, coin_data in coins_needing_update:
                 condition = coin_data.get("Condition") or coin_data.get("condition") or "Ungraded"
                 
                 # Grade matching

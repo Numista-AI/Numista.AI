@@ -152,3 +152,31 @@ numista_backend/images_needed_report.md
 # Backup and inbox files (local only - not committed per AGENTS.md)
 *.bak
 Numista_Brain_Inbox/
+
+# ============================================================
+# Session output / scratch text files (never source code)
+# ============================================================
+analyze_out.txt
+analyze2.txt
+build_out*.txt
+channel_out*.txt
+deploy_out*.txt
+deploy_simple.txt
+
+# ============================================================
+# User data exports (local only)
+# ============================================================
+*_unresolved_coins.csv
+jseaman_unresolved_coins.csv
+
+# ============================================================
+# Office documents (local notes, not source code)
+# ============================================================
+*.docx
+*.xlsx
+*.pptx
+
+# ============================================================
+# Local beta test notes (personal, not source code)
+# ============================================================
+1 NUMISTA.AI/

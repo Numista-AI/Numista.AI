@@ -173,7 +173,37 @@ def get_batches_for_program(program_name, coins):
 
 def process_single_batch(genai_client, program_name, category, baseline_mints_by_year, batch, idx, total_batches):
     print(f"    [Start] Program: {program_name} | Batch {idx+1}/{total_batches}: {batch['name']}")
-    prompt = f"""You are a senior numismatic cataloger compiling the definitive United States coin variety database.
+    
+    has_designs = any("design" in c for c in batch['coins'])
+    if has_designs:
+        prompt = f"""You are a senior numismatic cataloger compiling the definitive United States coin variety database.
+Your task is to expand the baseline list of active years, designs, and mint marks of the '{program_name}' series into a complete catalog of all standard issues and major Red Book die varieties.
+
+Here is the baseline list of active years, designs, and mint marks for the current batch:
+{json.dumps(batch['coins'], indent=2)}
+
+For each entry in the baseline list and each mint mark listed in its "mints" array, you must generate:
+1. The standard issue (regular strike) coin. For this standard coin:
+   - The variety field MUST be the design name from the baseline list (e.g., "Delaware", "Yosemite", "Maya Angelou").
+   - Do not use empty string variety for these standard issues—always set it to the design name.
+2. All major Red Book die varieties (e.g., overdates, over mintmarks, major doubled dies, or design transitions) for that coin.
+   Example variety names: "Doubled Die Obverse" (DDO), "Reverse of 1938", etc.
+   If there are no major varieties, do not invent them—just output the standard strike.
+
+Special Mappings:
+- 2026 Semiquincentennial (250th Anniversary) Coins: The standard variety MUST be the design name with "Liberty Bell 250 Privy Mark" (or Proof/Reverse Proof/Enhanced Uncirculated equivalent). The note must specify the dual date "1776 ~ 2026" and mention it commemorates the 250th Anniversary.
+
+Your output MUST be a valid JSON array of objects. Each object must have these exact keys:
+- "year": string (e.g. "1999")
+- "denomination": string (e.g., "Quarter Dollar", "One Dollar")
+- "mint_mark": string (e.g. "P", "D", "S", "W")
+- "variety": string (the design/variety name)
+- "note": string (description of the design, mintage details, identification features, or significance of this specific coin design)
+
+Do not include any other fields. Ensure absolute historical accuracy. Do not wrap the JSON output in markdown ```json or ``` code blocks.
+"""
+    else:
+        prompt = f"""You are a senior numismatic cataloger compiling the definitive United States coin variety database.
 Your task is to expand the baseline year/mint mark list of the '{program_name}' series into a complete catalog of all standard issues and major Red Book die varieties.
 
 Here is the baseline list of active years and mint marks for the current batch:
@@ -198,6 +228,7 @@ Your output MUST be a valid JSON array of objects. Each object must have these e
 
 Do not include any other fields. Ensure absolute historical accuracy. Do not wrap the JSON output in markdown ```json or ``` code blocks.
 """
+
     batch_entries = []
     try:
         response = genai_client.models.generate_content(
@@ -288,26 +319,83 @@ def run_curation():
 
     # Iterate through all programs to build the task list
     for program in master_programs:
-        program_name = program.get("name", "")
-        category = program.get("category", "")
+        program_name = program.get("Name", "")
+        category = program.get("Category", "")
         
         # Skip reference guides and proof packaging templates that aren't actual series
         if category in ["Reference", "Proof Sets"] or "Littleton" in program_name:
             continue
 
-        # Map baseline coins
-        year_to_mints = {}
-        for c in program.get("coins", []):
-            year = c.get("year", "").strip()
-            if not year:
-                continue
-            
-            # Handle hyphenated years with mint suffix, e.g., "1908-S" -> year "1908", mint "S"
-            if "-" in year and not year.startswith("-"):
-                parts = year.split("-")
-                if parts[0].isdigit() and len(parts[1]) == 1:
-                    year = parts[0]
-                    mints = [parts[1]]
+        # Determine if it's a multi-design program where designs are parsed from Coins list
+        MULTI_DESIGN_SERIES = {
+            "50 State Quarters",
+            "America the Beautiful Quarters (National Parks)",
+            "American Innovation $1 Coin Program",
+            "American Women Quarters",
+            "D.C. & U.S. Territories Quarters"
+        }
+        is_multi_design = program_name in MULTI_DESIGN_SERIES
+
+        baseline_coins = []
+        baseline_mints_by_year = {}
+
+        if is_multi_design:
+            for c in program.get("Coins", []):
+                year = c.get("year", "").strip()
+                name = c.get("name", "").strip()
+                if not year or not name:
+                    continue
+                
+                # Extract mints
+                mints = []
+                for v in c.get("varieties", []):
+                    if isinstance(v, dict):
+                        mints.append(v.get("id"))
+                    elif isinstance(v, str):
+                        mints.append(v)
+                
+                # Normalize mints
+                mints_norm = []
+                for m in mints:
+                    if m and "-" in m:
+                        m = m.split("-")[0]
+                    if m in ["None", "none", "", None]:
+                        m = "P"
+                    if m not in mints_norm:
+                        mints_norm.append(m)
+                
+                baseline_coins.append({
+                    "year": year,
+                    "design": name,
+                    "mints": mints_norm
+                })
+                
+                # Build baseline_mints_by_year for validation guardrails
+                if year not in baseline_mints_by_year:
+                    baseline_mints_by_year[year] = []
+                for m in mints_norm:
+                    if m not in baseline_mints_by_year[year]:
+                        baseline_mints_by_year[year].append(m)
+        else:
+            year_to_mints = {}
+            for c in program.get("Coins", []):
+                year = c.get("year", "").strip()
+                if not year:
+                    continue
+                
+                # Handle hyphenated years with mint suffix, e.g., "1908-S" -> year "1908", mint "S"
+                if "-" in year and not year.startswith("-"):
+                    parts = year.split("-")
+                    if parts[0].isdigit() and len(parts[1]) == 1:
+                        year = parts[0]
+                        mints = [parts[1]]
+                    else:
+                        mints = []
+                        for v in c.get("varieties", []):
+                            if isinstance(v, dict):
+                                mints.append(v.get("id"))
+                            elif isinstance(v, str):
+                                mints.append(v)
                 else:
                     mints = []
                     for v in c.get("varieties", []):
@@ -315,29 +403,26 @@ def run_curation():
                             mints.append(v.get("id"))
                         elif isinstance(v, str):
                             mints.append(v)
-            else:
-                mints = []
-                for v in c.get("varieties", []):
-                    if isinstance(v, dict):
-                        mints.append(v.get("id"))
-                    elif isinstance(v, str):
-                        mints.append(v)
+                
+                if year not in year_to_mints:
+                    year_to_mints[year] = []
+                for m in mints:
+                    if m and "-" in m:
+                        m = m.split("-")[0]
+                    if m in ["None", "none", "", None]:
+                        m = "P"
+                    if m not in year_to_mints[year]:
+                        year_to_mints[year].append(m)
             
-            if year not in year_to_mints:
-                year_to_mints[year] = []
-            for m in mints:
-                if m not in year_to_mints[year]:
-                    year_to_mints[year].append(m)
-
-        # Inject modern years (2024 and 2026) manually for circulating/bullion series if missing
-        if category in ["Cent", "Nickel", "Dime", "Quarter", "Half Dollar", "Dollar", "Bullion"]:
-            if "2024" not in year_to_mints:
-                year_to_mints["2024"] = ["P", "D", "S"]
-            if "2026" not in year_to_mints:
-                year_to_mints["2026"] = ["P", "D", "S", "W"]
-
-        baseline_mints_by_year = year_to_mints
-        baseline_coins = [{"year": y, "mints": m} for y, m in sorted(year_to_mints.items())]
+            # Inject modern years (2024 and 2026) manually for circulating/bullion series if missing
+            if category in ["Cent", "Nickel", "Dime", "Quarter", "Half Dollar", "Dollar", "Bullion"]:
+                if "2024" not in year_to_mints:
+                    year_to_mints["2024"] = ["P", "D", "S"]
+                if "2026" not in year_to_mints:
+                    year_to_mints["2026"] = ["P", "D", "S", "W"]
+            
+            baseline_mints_by_year = year_to_mints
+            baseline_coins = [{"year": y, "mints": m} for y, m in sorted(year_to_mints.items())]
 
         if not baseline_coins:
             continue
