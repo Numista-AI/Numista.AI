@@ -702,13 +702,18 @@ def scrape_usmint(data):
         "Cache-Control": "max-age=0",
         "Upgrade-Insecure-Requests": "1"
     }
-    if cookies:
+    
+    # Check if we are using proxies
+    current_proxy = get_scrape_proxy()
+    has_proxy = current_proxy and (current_proxy.get("http") or current_proxy.get("https"))
+
+    if cookies and not has_proxy:
         headers["Cookie"] = cookies
         print("    [USMint.gov] Using provided session cookies for request...")
 
     search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
     try:
-        resp = _scrape_get(search_url, headers=headers, proxies=get_scrape_proxy())
+        resp = _scrape_get(search_url, headers=headers, proxies=current_proxy)
         if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
             print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
             return None

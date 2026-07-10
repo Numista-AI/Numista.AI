@@ -52,8 +52,12 @@ def download_image(url):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         
-        # Pass cookies if downloading from usmint.gov to bypass Cloudflare
-        if "usmint.gov" in url.lower():
+        # Check if we are using proxies
+        current_proxy = get_scrape_proxy()
+        has_proxy = current_proxy and (current_proxy.get("http") or current_proxy.get("https"))
+
+        # Pass cookies if downloading from usmint.gov to bypass Cloudflare (only if NOT using a proxy)
+        if "usmint.gov" in url.lower() and not has_proxy:
             try:
                 doc = db.collection("config").document("usmint").get()
                 if doc.exists:
@@ -64,7 +68,11 @@ def download_image(url):
             except Exception as ce:
                 print(f"    ⚠ Error reading USMint cookies for image download: {ce}")
 
-        resp = requests.get(url, headers=headers, timeout=20, proxies=get_scrape_proxy())
+        # Set custom contact User-Agent for Wikimedia to avoid 429 rate limits
+        if "wikimedia.org" in url.lower() or "wikipedia.org" in url.lower():
+            headers["User-Agent"] = "NumistaAICoinScraper/2.0 (https://numista-vault.web.app/; contact@numista.ai)"
+
+        resp = requests.get(url, headers=headers, timeout=20, proxies=current_proxy)
         if resp.status_code == 200 and len(resp.content) > 1000:
             return resp.content
         else:
