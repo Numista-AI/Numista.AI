@@ -142,6 +142,14 @@ class NumistaScraperAgent:
         except Exception as e:
             print(f"  ⚠ Firestore audit error: {e}")
 
+        # Prioritize coins over banknotes and medals in processing queue
+        coin_gaps.sort(key=lambda x: (
+            x.get("category") == "banknote",
+            x.get("category") == "medal",
+            x.get("category") != "coin",
+            x.get("year") or ""
+        ))
+
         return coin_gaps, error_gaps
 
     def slugify(self, text):
@@ -833,7 +841,9 @@ class NumistaScraperAgent:
                     # Rate limiting delay
                     time.sleep(DEFAULT_DELAY)
                 except Exception as e:
+                    import traceback
                     print(f"  Error processing coin gap {coin.get('doc_id')}: {e}")
+                    traceback.print_exc()
 
         # 3. Process Error Gaps
         if target in ["all", "errors"] and error_gaps:
