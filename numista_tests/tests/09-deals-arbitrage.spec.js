@@ -129,7 +129,7 @@ test.describe('09 - Deals Screen & Arbitrage Deal Finder (v4.0)', () => {
   test('T06: EPN affiliate endpoint is reachable (not 404)', async ({ page }) => {
     // Checks the backend affiliate/eBay endpoint added as part of Deals feature.
     const res = await page.request.get(
-      'https://numista-backend-xwqkbwqvuq-uc.a.run.app/api/ebay/search',
+      'https://numista-backend-568985927038.us-central1.run.app/api/ebay/search',
       {
         headers: { 'Content-Type': 'application/json' },
         failOnStatusCode: false,
