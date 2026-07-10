@@ -1,5 +1,8 @@
 # Numista.AI — AI-Powered Numismatic Collection Manager
 
+[![CI — Dev Branch](https://github.com/Numista-AI/Numista.AI/actions/workflows/ci-dev.yml/badge.svg?branch=dev)](https://github.com/Numista-AI/Numista.AI/actions/workflows/ci-dev.yml)
+[![E2E Tests](https://github.com/Numista-AI/Numista.AI/actions/workflows/numista-ai-tests.yml/badge.svg)](https://github.com/Numista-AI/Numista.AI/actions/workflows/numista-ai-tests.yml)
+
 Welcome to **Numista.AI**, a comprehensive collection management and AI-powered valuation ecosystem for coin and banknote collectors. 
 
 This repository contains the mobile app, admin portal, scraping scripts, and database operations that power the Numista.AI ecosystem.
