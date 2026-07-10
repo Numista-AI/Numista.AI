@@ -8047,76 +8047,62 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             # price.  Using it as cpgRetail caused the 1914 Half Eagle $48K bug.
             logger.info(f"Greysheet: melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin worth more as metal. Keeping market price and logging melt for reference.")
 
-        # ── Sanity cap: refuse to write wildly inflated values ──────────────────
-        # TWO-PATH PROTECTION (avoids blocking legitimate high-value key dates):
+        # ── Valuation sanity check → Review Hub flag (no silent caps) ———————————
+        # Instead of blocking or capping suspicious values, we write the value and
+        # flag the coin for the user to review in Review Hub. The user decides —
+        # the system never silently discards a Greysheet price.
         #
-        # Path A — AI Estimated Value IS available:
-        #   Cap at 10x the AI low estimate. A genuine $50K key-date coin will
-        #   have an AI estimate of ~$40K+, so 10x = $400K — it passes fine.
+        # A coin is flagged when either:
+        #   • cpgRetail > 10x the AI low estimate (likely wrong GSID/grade match)
+        #   • cpgRetail > $2,500 and no AI Estimated Value exists yet (no baseline)
         #
-        # Path B — AI Estimated Value is NOT yet available (newly imported coin):
-        #   Use a conservative interim cap of $2,500. Without any context we
-        #   cannot distinguish a common Morgan ($30) from a key date ($50K), so
-        #   we hold the Greysheet write and flag the coin for AI valuation first.
-        #   Root cause of jseaman1204 $3.5M bug: 69 coins had no AI estimate so
-        #   the old single-layer cap was silently skipped, writing $240K values.
-        #
-        # IMPORTANT: the $2,500 interim cap does NOT permanently block high-value
-        # coins. Once the AI valuation runs and populates "AI Estimated Value",
-        # the next Greysheet refresh uses Path A and the true value is written.
+        # Flagged coins appear in Review Hub with a "Valuation needs review" note.
+        # Legitimate high-value coins (key dates, proofs) clear once the user
+        # confirms, or once AI valuation runs and the relative check passes cleanly.
 
         ai_raw = str(coin_data.get("AI Estimated Value") or "").replace("$", "").replace(",", "").strip()
         import re as _re
         _ai_match = _re.search(r'(\d+\.?\d*)', ai_raw)
         ai_low = float(_ai_match.group(1)) if _ai_match else 0.0
 
-        if ai_low > 0:
-            # Path A: relative cap — 10x AI low estimate
-            if cpg_retail > ai_low * 10:
-                logger.warning(
-                    f"Greysheet: SANITY CAP (Path A): cpgRetail={cpg_retail:.2f} is >10x "
-                    f"AI low estimate ({ai_low:.2f}). Refusing to write. "
-                    f"Check GSID {gsid} vs coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
-                )
-                return {
-                    "status": "sanity_cap",
-                    "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds 10x AI estimate "
-                               f"(${ai_low:,.2f}). Price NOT written. Verify GSID {gsid}.",
-                    "cpgRetail": cpg_retail,
-                    "aiEstimate": ai_low,
-                    "gsid": gsid,
-                }
-        else:
-            # Path B: no AI estimate yet — use conservative interim cap of $2,500.
-            # High-value coins will get through once AI valuation runs.
-            NO_AI_INTERIM_CAP = 2_500.0
-            if cpg_retail > NO_AI_INTERIM_CAP:
-                logger.warning(
-                    f"Greysheet: SANITY CAP (Path B / no-AI-estimate): cpgRetail={cpg_retail:.2f} > "
-                    f"${NO_AI_INTERIM_CAP:,.0f} interim cap. Coin has no AI Estimated Value yet. "
-                    f"Skipping write — run AI valuation first, then retry Greysheet. "
-                    f"GSID {gsid}, coin '{coin_data.get('Denomination')} {coin_data.get('Year')}'."
-                )
-                return {
-                    "status": "sanity_cap",
-                    "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds ${NO_AI_INTERIM_CAP:,.0f} "
-                               f"interim cap (no AI Estimated Value on file). Run AI valuation "
-                               f"first, then refresh Greysheet price. GSID {gsid}.",
-                    "cpgRetail": cpg_retail,
-                    "interimCap": NO_AI_INTERIM_CAP,
-                    "needsAiValuation": True,
-                    "gsid": gsid,
-                }
+        valuation_flag = None
+        if ai_low > 0 and cpg_retail > ai_low * 10:
+            valuation_flag = (
+                f"Greysheet returned ${cpg_retail:,.2f} which is more than 10x the "
+                f"AI estimate (${ai_low:,.2f}). Please verify this is the correct "
+                f"series/grade for this coin."
+            )
+            logger.warning(
+                f"Greysheet: flagging for review — cpgRetail={cpg_retail:.2f} is >10x "
+                f"AI low ({ai_low:.2f}). GSID {gsid}, "
+                f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+            )
+        elif ai_low == 0 and cpg_retail > 2_500.0:
+            valuation_flag = (
+                f"Greysheet returned ${cpg_retail:,.2f} but this coin has no AI "
+                f"Estimated Value on file yet. Please confirm this valuation is correct."
+            )
+            logger.warning(
+                f"Greysheet: flagging for review — cpgRetail={cpg_retail:.2f} with no "
+                f"AI estimate. GSID {gsid}, "
+                f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+            )
 
-
-        # 5. Update coin in Firestore
+        # 5. Write to Firestore — always write the value, flag if suspicious
         update_payload = {
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
             "cpgRetail": cpg_retail,
-            "priceLastUpdated": firestore.SERVER_TIMESTAMP
+            "priceLastUpdated": firestore.SERVER_TIMESTAMP,
         }
+        if valuation_flag:
+            update_payload["valuationFlag"] = valuation_flag
+            update_payload["grade_review_status"] = "pending"
+        else:
+            # Clear any stale flag if the value now looks clean
+            update_payload["valuationFlag"] = firestore.DELETE_FIELD
         coin_ref.update(update_payload)
+
         
         return {
             "status": "success",
