@@ -8048,9 +8048,32 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             logger.info(f"Greysheet: melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin worth more as metal. Keeping market price and logging melt for reference.")
 
         # ── Sanity cap: refuse to write values that are wildly inflated ──
-        # If the computed retail price is > 10× the AI Estimated Value, something
-        # went wrong (wrong GSID match, wrong grade row, etc.).  Block the write
-        # and log a warning instead of poisoning the dashboard.
+        # TWO-LAYER PROTECTION:
+        #
+        # Layer 1 — Hard absolute ceiling ($10,000): catches newly-imported coins
+        #   that have no AI Estimated Value yet, so the relative cap below has
+        #   nothing to compare against. Root cause of the jseaman1204 $3.5M bug:
+        #   69 coins had no AI estimate, so the 10x cap was silently skipped.
+        HARD_CPG_CAP = 10_000.0
+        if cpg_retail > HARD_CPG_CAP:
+            logger.warning(
+                f"Greysheet: HARD CAP TRIGGERED: cpgRetail={cpg_retail:.2f} > "
+                f"${HARD_CPG_CAP:,.0f} absolute ceiling. "
+                f"Refusing to write. Check GSID {gsid} vs coin "
+                f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
+            )
+            return {
+                "status": "sanity_cap",
+                "message": f"Computed cpgRetail ${cpg_retail:,.2f} exceeds absolute hard cap "
+                           f"${HARD_CPG_CAP:,.0f}. Price NOT written to Firestore. "
+                           f"Verify GSID {gsid} is the correct series.",
+                "cpgRetail": cpg_retail,
+                "hardCap": HARD_CPG_CAP,
+                "gsid": gsid,
+            }
+
+        # Layer 2 — Relative cap: if AI Estimated Value is available, refuse
+        #   values that exceed 10x the AI low estimate.
         ai_raw = str(coin_data.get("AI Estimated Value") or "").replace("$", "").replace(",", "").strip()
         # Parse the low end of any AI range
         import re as _re
@@ -8069,6 +8092,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 "aiEstimate": ai_low,
                 "gsid": gsid,
             }
+
 
         # 5. Update coin in Firestore
         update_payload = {
