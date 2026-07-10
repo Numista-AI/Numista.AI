@@ -282,9 +282,9 @@ def is_article_related(title, error, query=None):
     if not title or not error:
         return True
     title_lower = title.lower()
-    name_lower = error.get("name", "").lower()
-    short_lower = error.get("shortName", "").lower()
-    error_id = error.get("id", "").lower()
+    name_lower = (error.get("name") or "").lower()
+    short_lower = (error.get("shortName") or "").lower()
+    error_id = (error.get("id") or "").lower()
     
     # If query is general term, allow general titles matching query
     if query:
@@ -335,8 +335,8 @@ def validate_article_content(text, error, query=None):
     if not text or not error:
         return True
     text_lower = text.lower()
-    error_id = error.get("id", "").lower()
-    name_lower = error.get("name", "").lower()
+    error_id = (error.get("id") or "").lower()
+    name_lower = (error.get("name") or "").lower()
     
     general_terms = [
         "die gouge", "die errors", "striking errors", "currency", "striking", "die chips",
@@ -1085,7 +1085,7 @@ def scrape_usacoinbook(data):
     """
     query = data.get("query", "")
     year = data.get("year", "")
-    denomination = data.get("denomination", "").lower()
+    denomination = (data.get("denomination") or "").lower()
     if not query:
         return None
     try:
