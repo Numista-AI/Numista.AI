@@ -46,12 +46,16 @@ def _scrape_get(
     proxies: dict = None,
     retries: int = 3,
     timeout: float = REQUEST_TIMEOUT,
+    use_default_headers: bool = True,
 ):
     """
     Bypasses Cloudflare JA3/JA4 TLS fingerprinting using curl_cffi.
     """
     from curl_cffi import requests as curl_requests
-    merged_headers = {**_SCRAPE_HEADERS, **(headers or {})}
+    if use_default_headers:
+        merged_headers = {**_SCRAPE_HEADERS, **(headers or {})}
+    else:
+        merged_headers = headers or {}
     
     for attempt in range(retries + 1):
         try:
@@ -686,19 +690,26 @@ def fetch_usmint_cookies():
 def scrape_usmint(data):
     """
     Search usmint.gov for coin designs, descriptions, and official public domain images.
-    `data` contains a dict with keys: 'query' (e.g. 'Patsy Takemoto Mink')
+    `data` contains a dict with keys: 'query', 'series', 'variety', 'year'
     """
     query = data.get("query")
     if not query:
         return None
         
-    cookies = fetch_usmint_cookies()
+    cookies = None
+    user_agent = None
+    try:
+        from firebase_admin import firestore
+        db = firestore.client()
+        doc = db.collection("config").document("usmint").get()
+        if doc.exists:
+            cookies = doc.to_dict().get("cookieString")
+            user_agent = doc.to_dict().get("userAgent")
+    except Exception as e:
+        print(f"    ⚠ Error fetching USMint config from Firestore: {e}")
+
     headers = {
-        "User-Agent": USER_AGENTS[0],
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "max-age=0",
-        "Upgrade-Insecure-Requests": "1"
+        "User-Agent": user_agent or USER_AGENTS[0]
     }
     
     # Check if we are using proxies
@@ -707,48 +718,102 @@ def scrape_usmint(data):
 
     if cookies:
         headers["Cookie"] = cookies
-        print("    [USMint.gov] Using provided session cookies for request...")
+        print(f"    [USMint.gov] Using provided session cookies and User-Agent: {headers['User-Agent'][:60]}... (bypassing proxy for IP alignment)")
+        current_proxy = {"http": None, "https": None}
 
-    search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
-    try:
-        resp = _scrape_get(search_url, headers=headers, proxies=current_proxy)
-        if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
-            print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
-            return None
-        soup = _soupify(resp)
+    # Generate direct candidate URLs based on coin series and variety
+    series = (data.get("series") or "").lower()
+    variety = (data.get("variety") or "").lower()
+    candidate_urls = []
+    
+    if variety:
+        import re
+        def clean_slug(val):
+            s = val.lower().strip()
+            s = re.sub(r'[^a-z0-9\s-]', '', s)
+            s = re.sub(r'[\s]+', '-', s)
+            return s
+            
+        slug = clean_slug(variety)
         
-        # Find links pointing to learn or coin programs
-        article_links = []
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "usmint.gov/learn/" in href or "usmint.gov/news/" in href or "usmint.gov/coins/" in href:
-                if not any(x in href for x in ["?s=", "/category/", "/tag/", "wp-content"]):
-                    article_links.append(href)
-                    
-        article_links = list(dict.fromkeys(article_links))
-        
-        if not article_links:
-            # Fallback catalog search
-            catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
-            cat_resp = _scrape_get(catalog_url, proxies=get_scrape_proxy())
-            cat_soup = _soupify(cat_resp)
-            for a in cat_soup.find_all("a", href=True):
+        if "50 state" in series or "state quarter" in series:
+            candidate_urls.append(f"https://www.usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/{slug}")
+        elif "women quarters" in series or "american women" in series:
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/american-women-quarters/{slug}")
+        elif "american innovation" in series:
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/american-innovation-dollar-coins/{slug}")
+        elif "beautiful quarters" in series or "national parks" in series:
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}")
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}-national-park")
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}-national-monument")
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}-national-lakeshore")
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}-national-historic-site")
+            candidate_urls.append(f"https://www.usmint.gov/learn/coin-and-medal-programs/america-the-beautiful-quarters/{slug}-national-military-park")
+
+    target_url = None
+    art_resp = None
+    
+    # Try direct candidates first
+    for url in candidate_urls:
+        try:
+            print(f"    [USMint.gov] Trying direct URL candidate: {url}")
+            resp = _scrape_get(url, headers=headers, proxies=current_proxy, use_default_headers=False)
+            if resp.status_code == 200 and "waiting room" not in resp.text.lower():
+                print(f"    [USMint.gov] ✓ Direct URL succeeded: {url}")
+                target_url = url
+                art_resp = resp
+                break
+        except Exception as e:
+            print(f"    [USMint.gov] Direct URL candidate {url} failed: {e}")
+
+    # Fallback to WordPress site search if no direct candidate succeeded
+    if not target_url:
+        search_url = f"https://www.usmint.gov/?s={urllib.parse.quote_plus(query)}"
+        try:
+            resp = _scrape_get(search_url, headers=headers, proxies=current_proxy, use_default_headers=False)
+            if "waiting room" in resp.text.lower() or resp.status_code in [403, 429]:
+                print(f"    [USMint.gov] Request blocked or placed in waiting room (Status {resp.status_code}). Skipping...")
+                return None
+            soup = _soupify(resp)
+            
+            # Find links pointing to learn or coin programs
+            article_links = []
+            for a in soup.find_all("a", href=True):
                 href = a["href"]
-                if "/search?" not in href and (".html" in href or "-product-" in href):
-                    abs_href = href if href.startswith("http") else f"https://catalog.usmint.gov{href}"
-                    article_links.append(abs_href)
+                if "usmint.gov/learn/" in href or "usmint.gov/news/" in href or "usmint.gov/coins/" in href:
+                    if not any(x in href for x in ["?s=", "/category/", "/tag/", "wp-content"]):
+                        article_links.append(href)
+                        
             article_links = list(dict.fromkeys(article_links))
             
-        if not article_links:
+            if not article_links:
+                # Fallback catalog search
+                catalog_url = f"https://catalog.usmint.gov/search?q={urllib.parse.quote_plus(query)}"
+                cat_resp = _scrape_get(catalog_url, headers=headers, proxies=current_proxy, use_default_headers=False)
+                cat_soup = _soupify(cat_resp)
+                for a in cat_soup.find_all("a", href=True):
+                    href = a["href"]
+                    if "/search?" not in href and (".html" in href or "-product-" in href):
+                        abs_href = href if href.startswith("http") else f"https://catalog.usmint.gov{href}"
+                        article_links.append(abs_href)
+                article_links = list(dict.fromkeys(article_links))
+                
+            if not article_links:
+                return None
+                
+            # Visit first page
+            target_url = article_links[0]
+            art_resp = _scrape_get(target_url, headers=headers, proxies=current_proxy, use_default_headers=False)
+        except Exception as e:
+            print(f"    ⚠ USMint.gov search fallback error: {e}")
             return None
-            
-        # Visit first page
-        target_url = article_links[0]
-        art_resp = _scrape_get(target_url, headers=headers, proxies=get_scrape_proxy())
-        art_soup = _soupify(art_resp)
+
+    # Parse target page
+    try:
+        soup = _soupify(art_resp)
         
         paragraphs = []
-        for p in art_soup.find_all("p"):
+        for p in soup.find_all("p"):
             txt = p.get_text().strip()
             if txt and len(txt) > 60 and not any(x in txt.lower() for x in ["copyright", "subscribe", "newsletter"]):
                 paragraphs.append(txt)
@@ -757,9 +822,9 @@ def scrape_usmint(data):
         
         # Extract images from content
         images = []
-        for img in art_soup.find_all("img", src=True):
+        for img in soup.find_all("img", src=True):
             src = img["src"]
-            if "content/dam/usmint" in src or "uploads/" in src or "product/" in src:
+            if "content/dam/usmint" in src or "uploads/" in src or "product/" in src or "coreimg" in src:
                 # Resolve relative paths
                 if src.startswith("/"):
                     src = f"https://www.usmint.gov{src}"
@@ -768,17 +833,52 @@ def scrape_usmint(data):
                     
         images = list(dict.fromkeys(images))
         
+        obverse_url = None
+        reverse_url = None
+        
+        # Extract variety slug to identify reverse images matching variety
+        import re
+        slug = re.sub(r'[^a-z0-9-]', '', (data.get("variety") or "").lower().replace(" ", "-"))
+        
         if images:
+            # Try to identify obverse and reverse based on filename / path
+            for img_url in images:
+                img_url_lower = img_url.lower()
+                if "obverse" in img_url_lower or "heads" in img_url_lower:
+                    if not obverse_url:
+                        obverse_url = img_url
+                elif "reverse" in img_url_lower or "tails" in img_url_lower or (slug and slug in img_url_lower):
+                    if not reverse_url:
+                        reverse_url = img_url
+                        
+            # Fallbacks if one or both are not found
+            if not obverse_url and images:
+                for img in images:
+                    if "reverse" not in img.lower():
+                        obverse_url = img
+                        break
+                if not obverse_url:
+                    obverse_url = images[0]
+                    
+            if not reverse_url and images:
+                for img in images:
+                    if img != obverse_url:
+                        reverse_url = img
+                        break
+                if not reverse_url:
+                    reverse_url = obverse_url
+                    
             return {
                 "source": "usmint",
                 "source_url": target_url,
-                "obverse_url": images[0] if len(images) >= 1 else None,
-                "reverse_url": images[1] if len(images) >= 2 else (images[0] if len(images) >= 1 else None),
+                "obverse_url": obverse_url,
+                "reverse_url": reverse_url,
                 "description": desc,
                 "title": query
             }
     except Exception as e:
-        print(f"    ⚠ USMint.gov scrape error for query '{query}': {e}")
+        print(f"    ⚠ USMint.gov parse error for target URL {target_url}: {e}")
+        
     return None
 
 # ─── Wikimedia Commons Scraper ────────────────────────────────────────────────
