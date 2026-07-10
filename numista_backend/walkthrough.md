@@ -32,7 +32,52 @@ Updated the [Scraper Dashboard](file:///c:/Users/ericd/Documents/MyVertexProject
 Implemented the ability to share active USMint.gov session cookies to bypass anti-bot blocks.
 - **Cookie Support:** The scraper now checks Firestore for session cookies and injects them into requests.
 - **Configuration UI:** Added a textarea to the dashboard to easily paste and save cookies.
-- **Impact:** This allows the scraper to access high-quality images from the US Mint by impersonating an authenticated user session.
+- **2008 Alaska (D)**:
+  * ✓ **Scrape Success**: Successfully retrieved the official designs directly from `usmint.gov/learn/coins-and-medals/circulating-coins/quarter/50-state-quarters/alaska` using our new direct-path candidate routing and cookie/UA headers.
+  * ✓ **Obverse GCS**: [Alaska Obverse](https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/coins/ref_coin_50_state_quarters_quarter_dollar_2008_d_alaska_obverse.jpg)
+  * ✓ **Reverse GCS**: [Alaska Reverse](https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/coins/ref_coin_50_state_quarters_quarter_dollar_2008_d_alaska_reverse.jpg)
+  * ✓ **Self-Healing**: Automatically updated local SQLite variety name to `2008 Alaska State Quarter`.
+
+---
+
+## 🛠 Direct URL Candidate Sourcing & IP-Aligned Scraper (Alaska Quarter Fix)
+
+To resolve the Cloudflare blocks and broken WordPress-based site searches on `usmint.gov`, we developed and implemented a direct URL lookup system.
+
+### 1. Programmatic Candidate URLs
+* **Modified**: [numista_scraper/scrapers.py](file:///C:/Users/ericd/Documents/MyVertexProject/numista_backend/numista_scraper/scrapers.py)
+  * Generates exact direct URL paths for modern coin series:
+    * **50 State Quarters**: `.../circulating-coins/quarter/50-state-quarters/{state_slug}`
+    * **American Women Quarters**: `.../american-women-quarters/{honoree_slug}`
+    * **American Innovation Dollars**: `.../american-innovation-dollar-coins/{state_slug}`
+    * **America the Beautiful Quarters**: `.../america-the-beautiful-quarters/{site_slug}`
+  * Performs fast direct `GET` requests (with cookie + User-Agent header) to test these candidates. If a candidate returns `200 OK`, the scraper bypasses the site search entirely and crawls the page.
+
+### 2. Cloudflare Cookie & User-Agent Alignment
+* **Modified**: [numista_scraper/scrapers.py](file:///C:/Users/ericd/Documents/MyVertexProject/numista_backend/numista_scraper/scrapers.py)
+  * Since Cloudflare clearance cookies (`cf_clearance`) are IP-bound, passing them through rotating proxies triggers instant `403` blocks. We resolved this by **disabling proxies** for `usmint.gov` requests when active session cookies are stored, routing the request directly through your home IP.
+  * Aligned the request User-Agent header to exactly match your browser's signature (`Chrome/150.0.0.0`) stored alongside the cookies, and isolated these custom headers to prevent signature mismatches.
+
+### 3. curl_cffi Image Downloader
+* **Modified**: [numista_scraper/storage.py](file:///C:/Users/ericd/Documents/MyVertexProject/numista_backend/numista_scraper/storage.py)
+  * Modified the image downloader (`download_image`) to route `usmint.gov` downloads through `curl_cffi` (mimicking Chrome's TLS fingerprint) instead of the standard Python `requests` library, successfully bypassing Akamai/Cloudflare image download blocks.
+
+### 4. Database Synchronization
+* **Script Created**: [scratch/sync_alaska_all.py](file:///C:/Users/ericd/.gemini/antigravity/brain/85b1953c-6c77-4f76-a763-53ff12990453/scratch/sync_alaska_all.py)
+  * Synchronized the obverse/reverse GCS links, descriptions, and variety names across all four 2008 Alaska quarters in the SQLite cache and Firestore:
+    * `ref_coin_50_state_quarters_quarter_dollar_2008_p_alaska`
+    * `ref_coin_50_state_quarters_quarter_dollar_2008_d_alaska`
+    * `ref_coin_50_state_quarters_quarter_dollar_2008_s_alaska`
+    * `ref_coin_50_state_quarters_quarter_dollar_2008_s_alaska__silver`
+
+---
+
+## 🚀 Git Rules Compliance (Rule 7)
+
+As required by **Rule 7**, direct merges to `main` and production Cloud Run deployments are strictly owner-only. All changes are committed and pushed to the `dev` branch.
+
+To apply these catalog fixes and scraper enhancements to the live site, please review and open a Pull Request here:
+👉 **[Open PR to Deploy to Production](https://github.com/Numista-AI/Numista.AI/compare/main...dev)**
 
 ## 6. Cloud Persistence (New)
 Resolved the issue where the scraper would "forget" its progress after each run on Cloud Run.
