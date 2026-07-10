@@ -705,7 +705,7 @@ def scrape_usmint(data):
     current_proxy = get_scrape_proxy()
     has_proxy = current_proxy and (current_proxy.get("http") or current_proxy.get("https"))
 
-    if cookies and not has_proxy:
+    if cookies:
         headers["Cookie"] = cookies
         print("    [USMint.gov] Using provided session cookies for request...")
 
@@ -800,6 +800,10 @@ def scrape_wikimedia(data):
     if not query:
         return None
 
+    variety = data.get("variety", "")
+    denomination = data.get("denomination", "")
+    series = data.get("series", "")
+
     # ── Extract validation constraints from query ──────────────────────────────
     year_match = re.search(r'\b(1[89]\d{2}|20\d{2})\b', query)
     required_year = year_match.group(1) if year_match else None
@@ -825,8 +829,16 @@ def scrape_wikimedia(data):
         if required_year and required_year not in t:
             return False
         # Rule 2: At least one series keyword must appear (if query had one)
-        if required_series and not any(kw in t for kw in required_series):
-            return False
+        if required_series:
+            has_series = any(kw in t for kw in required_series)
+            if not has_series:
+                # Fallback: if we match the variety and a generic term like 'quarter' / 'cent' / 'dollar' / 'coin'
+                variety_clean = variety.replace(" (Silver)", "").strip()
+                variety_words = [w for w in variety_clean.lower().split() if len(w) > 2]
+                has_variety = all(w in t for w in variety_words) if variety_words else False
+                has_denom = any(w in t for w in ["quarter", "dollar", "cent", "nickel", "dime", "half", "coin"])
+                if not (has_variety and has_denom):
+                    return False
         return True
 
     def score_candidate(title: str, side: str, query: str) -> int:
@@ -858,6 +870,16 @@ def scrape_wikimedia(data):
 
             search_data = resp.json()
             search_results = search_data.get("query", {}).get("search", [])
+
+            # Fallback: if side-specific search returns no results, search clean natural query
+            if not search_results:
+                fallback_url = (
+                    f"{WIKI_API}?action=query&list=search&srnamespace=6"
+                    f"&srsearch={urllib.parse.quote(query)}&srlimit=10&format=json"
+                )
+                fb_resp = requests.get(fallback_url, headers={"User-Agent": UA}, timeout=REQUEST_TIMEOUT)
+                if fb_resp.status_code == 200:
+                    search_results = fb_resp.json().get("query", {}).get("search", [])
 
             candidates = []
             for r in search_results:
@@ -901,11 +923,11 @@ def scrape_wikimedia(data):
         except Exception as e:
             print(f"    ⚠ Wikimedia API error for '{search_term}': {e}")
 
-    if results.get("obverse"):
+    if results.get("obverse") or results.get("reverse"):
         return {
             "source": "wikimedia",
             "source_url": "https://commons.wikimedia.org/",
-            "obverse_url": results.get("obverse"),
+            "obverse_url": results.get("obverse") or results.get("reverse"),
             "reverse_url": results.get("reverse") or results.get("obverse"),
             "description": f"Public domain image for {query} sourced from Wikimedia Commons."
         }

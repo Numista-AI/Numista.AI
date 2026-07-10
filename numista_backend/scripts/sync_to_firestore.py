@@ -28,6 +28,26 @@ def sync_to_firestore():
     cur.execute("SELECT * FROM definitive_reference")
     rows = cur.fetchall()
     print(f"Found {len(rows)} local records. Starting upload to Firestore...")
+
+    # Wipe collection to avoid stale grouped _none entries
+    print("Wiping existing documents in 'definitive_reference' collection...")
+    deleted_count = 0
+    try:
+        doc_refs = list(col_ref.list_documents())
+        print(f"  Found {len(doc_refs)} existing reference documents to delete.")
+        batch = db.batch()
+        for doc_ref in doc_refs:
+            batch.delete(doc_ref)
+            deleted_count += 1
+            if deleted_count % 400 == 0:
+                batch.commit()
+                batch = db.batch()
+                print(f"  Deleted {deleted_count} documents from Firestore...")
+        if deleted_count % 400 != 0:
+            batch.commit()
+        print(f"  Wipe complete. Total deleted: {deleted_count} documents.")
+    except Exception as wipe_e:
+        print(f"  WARNING: Error during Firestore wipe (continuing anyway): {wipe_e}")
     
     batch = db.batch()
     count = 0
