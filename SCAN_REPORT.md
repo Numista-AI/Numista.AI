@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.0)
 
 ## Executive Summary
-* **Status:** ⚠️ **WARNING** (Unit/E2E test suites passed with 1 minor UI validation failure; Greysheet API is in fallback mode due to empty credentials).
+* **Status:** ⚠️ **WARNING** (Unit/E2E test suites passed with 1 minor UI validation failure and 1 backend authentication-expiry failure; Greysheet API is in fallback mode due to empty credentials).
 * **Scan Timestamp:** 2026-07-13
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.0, Frontend v4.0
@@ -13,6 +13,7 @@
 2. **Old Endpoint Reference in Documentation:** Local skill instructions references the defunct/orphan Cloud Run service (`numista-backend-xwqkbwqvuq-uc.a.run.app`), which yields `404 Not Found`.
 3. **Playwright test failure (T05):** `T05: Deals Screen renders a valid state` failed due to strict viewport screenshot length expectations (expecting > 50000 bytes, received less).
 4. **Unused Dart Element in Frontend:** The Dart Analyzer reported 1 warning (`_buildArbitrageDealsCard` is unused in `lib/screens/home_dashboard.dart`).
+5. **Expired local Google Application Default Credentials (ADC):** Python `pytest` suite failed on `test_daily_snapshot_endpoint` due to expired OAuth credentials on the developer host.
 
 ---
 
@@ -41,9 +42,11 @@
 
 ## Test Logs Summary
 ### 1. Backend python tests (`pytest`):
-* **Total:** 11 tests
-* **Passed:** 11 (100% pass rate)
-* **Failed:** 0
+* **Total:** 9 tests
+* **Passed:** 8
+* **Failed:** 1
+  * **Failure Details:** `tests/test_greysheet.py` -> `test_daily_snapshot_endpoint`
+  * **Cause:** `google.auth.exceptions.RefreshError` - Google ADC credentials expired on the local developer machine, triggering a `503 Service Unavailable` on Firestore calls.
 
 ### 2. Frontend Playwright tests:
 * **Total:** 104 tests
@@ -63,3 +66,4 @@
 2. **Update Local Documentation:** Replace obsolete `numista-backend-xwqkbwqvuq-uc.a.run.app` references in `project-scanner` and developer documentation with the active production backend URL (`https://numista-backend-568985927038.us-central1.run.app`).
 3. **Refactor Playwright T05 Assertion:** Relax the strict screenshot size check (`expect(buf.length).toBeGreaterThan(50000)`) in `09-deals-arbitrage.spec.js` to prevent false-positive failures on layout size fluctuations.
 4. **Remove Unused Dart Code:** Clean up the unused widget function `_buildArbitrageDealsCard` in `numista_mobile/lib/screens/home_dashboard.dart` to resolve the analyzer warning.
+5. **Reauthenticate local Google ADC:** Run `gcloud auth application-default login` on the developer machine to refresh Firestore accessibility for local test runs.
