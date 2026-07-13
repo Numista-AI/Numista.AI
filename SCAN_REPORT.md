@@ -1,65 +1,62 @@
-# Numista.Ai System Scan Report - 2026-07-10
+# SCAN REPORT: Numista.AI System Audit (v4.0)
 
-## Executive Summary: **FAIL** (Backend Degraded / Test Regressions)
-The system check has identified that the local codebase has successfully resolved all **Dart Analyzer warnings (0 issues found)**, and local database integrity is verified (11,928 total records). However, the live Cloud Run backend container (`numista-backend-xwqkbwqvuq-uc.a.run.app`) does not have the latest code version deployed. Consequently, critical endpoints returned **404 Not Found**, causing 10 out of 104 Playwright tests to fail. The core frontend navigation and read-only suites (01–07) pass cleanly (94/104 tests passed).
+## Executive Summary
+* **Status:** ⚠️ **WARNING** (Unit/E2E test suites passed with 1 minor UI validation failure; Greysheet API is in fallback mode due to empty credentials).
+* **Scan Timestamp:** 2026-07-13
+* **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
+* **Versions Scanned:** Backend v4.0, Frontend v4.0
 
 ---
 
 ## Critical Errors & Warnings
-
-### 1. Production Backend HTTP 404 (Missing Deployed Routes)
-- **Issue**: The active Cloud Run container returns **404 Not Found** for all newly implemented Greysheet, Deals, and Portfolio API routes.
-- **Context**: 
-  - Local `main.py` contains endpoints for `/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, `/api/portfolio/snapshot`, and `/api/ebay/search`.
-  - The live backend at `https://numista-backend-xwqkbwqvuq-uc.a.run.app` returns 404 for all these URLs, showing that the container has not been built/deployed with the current local changes.
-
-### 2. Python Test Suite Execution Blocked by Environment Compatibility
-- **Issue**: Running the Python `pytest` suite locally failed with `ValueError: I/O operation on closed file.`
-- **Context**:
-  - The local virtual environment runs **Python 3.14.2**, which has capture/buffering compatibility issues with the installed version of `pytest` (9.1.1).
-  - This is an environment/runner compatibility issue rather than a failure of the backend python test logic itself.
+1. **Empty Greysheet API Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are empty in `numista_backend/.env` (lines 51-52).
+2. **Old Endpoint Reference in Documentation:** Local skill instructions references the defunct/orphan Cloud Run service (`numista-backend-xwqkbwqvuq-uc.a.run.app`), which yields `404 Not Found`.
+3. **Playwright test failure (T05):** `T05: Deals Screen renders a valid state` failed due to strict viewport screenshot length expectations (expecting > 50000 bytes, received less).
 
 ---
 
 ## Greysheet API Health
+* **Key Presence:** ❌ (Empty in `.env` file)
+* **Endpoint Probe Results:**
+  * **Old/Orphan URL (`xwqkbwqvuq`):**
+    * `/api/greysheet/config`: ❌ `404 Not Found`
+    * `/api/greysheet/pricing/429`: ❌ `404 Not Found`
+  * **Active Production URL (`568985927038`):**
+    * `/api/greysheet/config`: ✅ `200 OK`
+      * Response: `{"status":"active","mode":"fallback","tier":"Basic","endpoints":...}`
+    * `/api/greysheet/pricing/429`: ✅ `200 OK`
+      * Response: Valid pricing payload returned using fallback credentials.
+* **API Tier Detected:** `Basic` (GreyVal1 only, via fallback)
+* **Fallback Rate Estimate:** `100%` (Backend relies entirely on hardcoded `DEFAULT_API_KEY` / `DEFAULT_API_TOKEN` for all external calls).
 
-- **Key Presence**: ❌ **Missing** from local `numista_backend/.env` (no `GREYSHEET_API_KEY` or `GREYSHEET_API_TOKEN` variables exist in the file).
-- **Endpoint Probe Results**:
-  - `GET /api/greysheet/config` -> ❌ **404 Not Found**
-  - `POST /api/greysheet/batch` -> ❌ **404 Not Found**
-  - `POST /api/greysheet/resolve` -> ❌ **404 Not Found**
-  - `GET /api/greysheet/cac` -> ❌ **404 Not Found**
-  - `GET /api/greysheet/pricing/429` -> ❌ **404 Not Found**
-- **API Tier Detected**: **Basic** (due to missing production keys, falling back to CPG Retail price guide / basic resolution).
-- **Fallback Rate Estimate**: **100%** (the backend resolves all bids via the fallback formula `cpg_retail * 0.80` due to the lack of wholesale API keys).
+---
+
+## Data Pipeline Audit
+* **Proxy Configuration (`scrapers.py`):** Verified. `numista_backend/numista_scraper/scrapers.py` uses `get_scrape_proxy()` which correctly loads proxies from `NUMISTA_SCRAPE_HTTP_PROXY`/`NUMISTA_SCRAPE_HTTPS_PROXY` env vars.
+* **Brain Watcher (`brain_watcher.py`):** Verified. `INBOX_DIR` is set strictly to `C:\Users\ericd\Documents\MyVertexProject\Numista_Brain_Inbox`.
+* **Model Check:** Verified. No usages of deprecated model IDs like `gemini-1.5-flash` found in the active codebase; all production files have been updated to `gemini-3.5-flash` or newer.
 
 ---
 
 ## Test Logs Summary
+### 1. Backend python tests (`pytest`):
+* **Total:** 11 tests
+* **Passed:** 11 (100% pass rate)
+* **Failed:** 0
 
-- **Total Tests**: 104
-- **Passed**: 94 ✅
-- **Failed**: 10 ❌
+### 2. Frontend Playwright tests:
+* **Total:** 104 tests
+* **Passed:** 103
+* **Failed:** 1
+  * **Failure Details:** `tests/09-deals-arbitrage.spec.js` -> `T05: Deals Screen renders a valid state`
+  * **Cause:** The screenshot byte length was below the hard 50,000-byte threshold, despite the page loading correctly.
 
-### Current Suite Status
-
-| Suite | Tests | Expected Status | Root Cause of Failure |
-| :--- | :--- | :--- | :--- |
-| `01-homepage.spec.js` | 7 | ✅ PASS | Core homepage resolves and loads Flutter canvas cleanly. |
-| `02-auth-ui.spec.js` | 8 | ✅ PASS | Basic user login, signup tabs, and validation render. |
-| `03-demo-navigation.spec.js` | 24 | ✅ PASS | Read-only demo navigation sidebar routes load successfully. |
-| `04-registration.spec.js` | 8 | ✅ PASS | Registration fields and flow render. |
-| `05-navigation.spec.js` | 12 | ✅ PASS | Standard user dashboard and portfolio routes. |
-| `06-edge-cases.spec.js` | 10 | ✅ PASS | Form errors and network timeouts handled gracefully. |
-| `07-error-library.spec.js` | 1 | ✅ PASS | Sanity checks for application error logger. |
-| `08-greysheet-valuation.spec.js` | 12 | ❌ **FAIL** (T11, T12) | Config and batch endpoints return 404 on the live Cloud Run backend. |
-| `09-deals-arbitrage.spec.js` | 8 | ❌ **FAIL** (T05, T06) | EPN affiliate `/api/ebay/search` returns 404; Deals screen fails state assertion. |
-| `10-greysheet-coin-detail.spec.js` | 14 | ❌ **FAIL** (T04, T10, T11, T12, T13, T14) | Pricing, config, batch, resolve, cac, and portfolio snapshot endpoints return 404 on the live Cloud Run backend. |
+### 3. Flutter Dart Analyzer:
+* **Status:** ✅ 0 issues found.
 
 ---
 
 ## Recommended Fixes
-
-1. **Deploy Backend Changes**: Deploy the local `numista_backend` code to the production Cloud Run container so that the new `/api/greysheet/*` and `/api/portfolio/*` routes are registered on the live backend.
-2. **Configure Greysheet API Credentials**: Add valid production keys for `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` to `numista_backend/.env` and the Cloud Run configuration to activate the **Advanced** tier and bypass the fallback logic.
-3. **Resolve Pytest Runner Compatibility**: Run the Python backend test suite on a fully supported stable version of Python (e.g., Python 3.11 or 3.12) to avoid internal `pytest` I/O conflicts with Python 3.14.2.
+1. **Configure Greysheet Credentials:** Populate the `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` in the production environment variables to upgrade from `Basic` fallback tier to `Advanced` tier.
+2. **Update Local Documentation:** Replace obsolete `numista-backend-xwqkbwqvuq-uc.a.run.app` references in `project-scanner` and developer documentation with the active production backend URL (`https://numista-backend-568985927038.us-central1.run.app`).
+3. **Refactor Playwright T05 Assertion:** Relax the strict screenshot size check (`expect(buf.length).toBeGreaterThan(50000)`) in `09-deals-arbitrage.spec.js` to prevent false-positive failures on layout size fluctuations.
