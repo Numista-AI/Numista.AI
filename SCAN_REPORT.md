@@ -12,6 +12,7 @@
 1. **Empty Greysheet API Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are empty in `numista_backend/.env` (lines 51-52).
 2. **Old Endpoint Reference in Documentation:** Local skill instructions references the defunct/orphan Cloud Run service (`numista-backend-xwqkbwqvuq-uc.a.run.app`), which yields `404 Not Found`.
 3. **Playwright test failure (T05):** `T05: Deals Screen renders a valid state` failed due to strict viewport screenshot length expectations (expecting > 50000 bytes, received less).
+4. **Unused Dart Element in Frontend:** The Dart Analyzer reported 1 warning (`_buildArbitrageDealsCard` is unused in `lib/screens/home_dashboard.dart`).
 
 ---
 
@@ -52,7 +53,8 @@
   * **Cause:** The screenshot byte length was below the hard 50,000-byte threshold, despite the page loading correctly.
 
 ### 3. Flutter Dart Analyzer:
-* **Status:** ✅ 0 issues found.
+* **Status:** ⚠️ 1 issue found (unused element warning).
+* **Warning Details:** `The declaration '_buildArbitrageDealsCard' isn't referenced - lib\screens\home_dashboard.dart:1414:10 - unused_element`
 
 ---
 
@@ -60,3 +62,4 @@
 1. **Configure Greysheet Credentials:** Populate the `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` in the production environment variables to upgrade from `Basic` fallback tier to `Advanced` tier.
 2. **Update Local Documentation:** Replace obsolete `numista-backend-xwqkbwqvuq-uc.a.run.app` references in `project-scanner` and developer documentation with the active production backend URL (`https://numista-backend-568985927038.us-central1.run.app`).
 3. **Refactor Playwright T05 Assertion:** Relax the strict screenshot size check (`expect(buf.length).toBeGreaterThan(50000)`) in `09-deals-arbitrage.spec.js` to prevent false-positive failures on layout size fluctuations.
+4. **Remove Unused Dart Code:** Clean up the unused widget function `_buildArbitrageDealsCard` in `numista_mobile/lib/screens/home_dashboard.dart` to resolve the analyzer warning.
