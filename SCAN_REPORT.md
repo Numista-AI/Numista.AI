@@ -2,7 +2,7 @@
 
 ## Executive Summary
 * **Status:** ⚠️ **WARNING** (Unit/E2E test suites passed with 1 minor UI validation failure and 1 backend authentication-expiry failure; Greysheet API is in fallback mode due to empty credentials).
-* **Scan Timestamp:** 2026-07-13
+* **Scan Timestamp:** 2026-07-14
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.0, Frontend v4.0
 
@@ -11,9 +11,14 @@
 ## Critical Errors & Warnings
 1. **Empty Greysheet API Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are empty in `numista_backend/.env` (lines 51-52).
 2. **Old Endpoint Reference in Documentation:** Local skill instructions references the defunct/orphan Cloud Run service (`numista-backend-xwqkbwqvuq-uc.a.run.app`), which yields `404 Not Found`.
-3. **Playwright test failure (T05):** `T05: Deals Screen renders a valid state` failed due to strict viewport screenshot length expectations (expecting > 50000 bytes, received less).
+3. **Playwright test failure (T05):** `T05: Deals Screen renders a valid state` failed due to strict viewport screenshot length expectations (expecting > 50000 bytes, received 30758).
 4. **Unused Dart Element in Frontend:** The Dart Analyzer reported 1 warning (`_buildArbitrageDealsCard` is unused in `lib/screens/home_dashboard.dart`).
 5. **Expired local Google Application Default Credentials (ADC):** Python `pytest` suite failed on `test_daily_snapshot_endpoint` due to expired OAuth credentials on the developer host.
+6. **Python Compilation Import Errors:** Compilation errors found in 3 files due to unresolved/mock import dependencies (expected test placeholders):
+   * `numista_backend/database/migrate_v2.py` (missing `missing_sqlite_migration_util`)
+   * `numista_backend/numista_scraper/scrapers.py` (missing `invalid_scrape_dependency`)
+   * `numista_backend/tests/test_greysheet.py` (missing `pytest_mock_invalid`)
+   *(Note: `unresolved_service.py` and `pricing_service.py` referenced in earlier sessions have been removed, narrowing the error surface).*
 
 ---
 
@@ -53,11 +58,11 @@
 * **Passed:** 103
 * **Failed:** 1
   * **Failure Details:** `tests/09-deals-arbitrage.spec.js` -> `T05: Deals Screen renders a valid state`
-  * **Cause:** The screenshot byte length was below the hard 50,000-byte threshold, despite the page loading correctly.
+  * **Cause:** The screenshot byte length was below the hard 50,000-byte threshold (received 30758 bytes), despite the page loading correctly.
 
 ### 3. Flutter Dart Analyzer:
 * **Status:** ⚠️ 1 issue found (unused element warning).
-* **Warning Details:** `The declaration '_buildArbitrageDealsCard' isn't referenced - lib\screens\home_dashboard.dart:1414:10 - unused_element`
+* **Warning Details:** `The declaration '_buildArbitrageDealsCard' isn't referenced - numista_mobile\lib\screens\home_dashboard.dart:1414:10 - unused_element`
 
 ---
 
@@ -67,3 +72,4 @@
 3. **Refactor Playwright T05 Assertion:** Relax the strict screenshot size check (`expect(buf.length).toBeGreaterThan(50000)`) in `09-deals-arbitrage.spec.js` to prevent false-positive failures on layout size fluctuations.
 4. **Remove Unused Dart Code:** Clean up the unused widget function `_buildArbitrageDealsCard` in `numista_mobile/lib/screens/home_dashboard.dart` to resolve the analyzer warning.
 5. **Reauthenticate local Google ADC:** Run `gcloud auth application-default login` on the developer machine to refresh Firestore accessibility for local test runs.
+6. **Address Python compilation imports:** Resolve mock/testing import placeholders in python files (`migrate_v2.py`, `scrapers.py`, `test_greysheet.py`) when transitioning to production/clean execution.
