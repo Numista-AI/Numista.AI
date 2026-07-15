@@ -14,7 +14,17 @@ const CLICK_WAIT = 4000;
 async function enterDemo(page) {
   await page.goto('https://numista.ai');
   await page.waitForTimeout(4000);
-  await page.mouse.click(714, 631); // Browse Demo button (authenticates a test user session)
+  // Use a text selector so layout shifts don't break demo entry.
+  // Falls back to coordinate click if the button text isn't in the DOM
+  // (Flutter canvas renders text as pixels, not DOM nodes).
+  const demoBtn = page.getByRole('button', { name: /browse demo/i });
+  if (await demoBtn.count() > 0) {
+    await demoBtn.click();
+  } else {
+    // Fallback: click the visual position of the Browse Demo button.
+    // Coordinates are relative to the default 1280x720 viewport.
+    await page.mouse.click(841, 647);
+  }
   await page.waitForTimeout(4000);
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.waitForTimeout(1000);
