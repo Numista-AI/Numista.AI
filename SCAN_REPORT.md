@@ -1,65 +1,78 @@
-# Numista.Ai System Scan Report - 2026-07-10
+# SCAN REPORT: Numista.AI System Audit (v4.0)
 
-## Executive Summary: **FAIL** (Backend Degraded / Test Regressions)
-The system check has identified that the local codebase has successfully resolved all **Dart Analyzer warnings (0 issues found)**, and local database integrity is verified (11,928 total records). However, the live Cloud Run backend container (`numista-backend-xwqkbwqvuq-uc.a.run.app`) does not have the latest code version deployed. Consequently, critical endpoints returned **404 Not Found**, causing 10 out of 104 Playwright tests to fail. The core frontend navigation and read-only suites (01–07) pass cleanly (94/104 tests passed).
+## Executive Summary
+* **Status:** ⚠️ **WARNING** (The system scan completed with 1 minor UI E2E test failure, 3 bypassed/hanging backend tests due to expired local ADC credentials, and 1 frontend unused element warning. The active codebase is compile-clean and uses correct model IDs, but the Greysheet API is in fallback mode due to empty credentials).
+* **Scan Date:** 2026-07-15
+* **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
+* **Versions Scanned:** Backend v4.0, Frontend v4.0
 
 ---
 
 ## Critical Errors & Warnings
-
-### 1. Production Backend HTTP 404 (Missing Deployed Routes)
-- **Issue**: The active Cloud Run container returns **404 Not Found** for all newly implemented Greysheet, Deals, and Portfolio API routes.
-- **Context**: 
-  - Local `main.py` contains endpoints for `/api/greysheet/config`, `/api/greysheet/batch`, `/api/greysheet/cac`, `/api/portfolio/snapshot`, and `/api/ebay/search`.
-  - The live backend at `https://numista-backend-xwqkbwqvuq-uc.a.run.app` returns 404 for all these URLs, showing that the container has not been built/deployed with the current local changes.
-
-### 2. Python Test Suite Execution Blocked by Environment Compatibility
-- **Issue**: Running the Python `pytest` suite locally failed with `ValueError: I/O operation on closed file.`
-- **Context**:
-  - The local virtual environment runs **Python 3.14.2**, which has capture/buffering compatibility issues with the installed version of `pytest` (9.1.1).
-  - This is an environment/runner compatibility issue rather than a failure of the backend python test logic itself.
+1. **Empty Greysheet API Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are empty in `numista_backend/.env` (lines 51-52).
+2. **Obsolete Backend URL in Local Skill Instructions:** The defunct/orphan Cloud Run URL (`https://numista-backend-xwqkbwqvuq-uc.a.run.app`) is referenced in `project-scanner/SKILL.md` (which returns `404 Not Found` for both `/api/greysheet/config` and `/api/greysheet/pricing/<gsid>`).
+3. **Playwright Test Failure (T05):** `T05: Deals Screen renders a valid state` in `tests\09-deals-arbitrage.spec.js` failed due to strict viewport screenshot length expectations (expecting > 50,000 bytes, received 30,758). This is because the test clicked multiple targets in a loop, navigating away to the AI Scan Preview screen (which has a smaller screenshot size).
+4. **Expired Local Google Application Default Credentials (ADC):** Python `pytest` suite hangs/blocks on Firestore-connected tests (`test_resolve_greysheet_raw`, `test_pricing_endpoint`, `test_daily_snapshot_endpoint`) due to expired Google ADC OAuth credentials on the developer host machine.
+5. **Latent Deprecated Model Reference:** The default argument for `primary_model` in `services/greysheet_service.py` (line 461) is set to `"gemini-2.0-flash"`. Per the July 2026 Gemini Deprecation Schedule, `gemini-2.0-flash` was officially shut down on June 1, 2026. While `main.py` overrides this with `PRIMARY_MODEL = "gemini-3.5-flash"`, any third-party calls relying on the default parameter signature will fail.
+6. **Unused Dart Element in Frontend:** The Dart Analyzer reported 1 warning (`_buildArbitrageDealsCard` is unused in `lib/screens/home_dashboard.dart`).
 
 ---
 
 ## Greysheet API Health
+* **Key Presence:** ❌ (Empty in `numista_backend/.env` file)
+* **Endpoint Probe Results:**
+  * **Defunct/Obsolete URL (`numista-backend-xwqkbwqvuq-uc.a.run.app`):**
+    * `/api/greysheet/config`: ❌ `404 Page not found`
+    * `/api/greysheet/pricing/429`: ❌ `404 Page not found`
+  * **Active Production URL (`numista-backend-568985927038.us-central1.run.app`):**
+    * `/api/greysheet/config`: ✅ `200 OK` (returns `"tier":"Basic"`, `"mode":"fallback"`)
+    * `/api/greysheet/pricing/429`: ✅ `200 OK` (returns valid pricing payload via fallback credentials)
+* **API Tier Detected:** `Basic` (fallback mode)
+* **Fallback Rate Estimate:** `100%` (The backend runs entirely on default fallback credentials due to empty variables).
 
-- **Key Presence**: ❌ **Missing** from local `numista_backend/.env` (no `GREYSHEET_API_KEY` or `GREYSHEET_API_TOKEN` variables exist in the file).
-- **Endpoint Probe Results**:
-  - `GET /api/greysheet/config` -> ❌ **404 Not Found**
-  - `POST /api/greysheet/batch` -> ❌ **404 Not Found**
-  - `POST /api/greysheet/resolve` -> ❌ **404 Not Found**
-  - `GET /api/greysheet/cac` -> ❌ **404 Not Found**
-  - `GET /api/greysheet/pricing/429` -> ❌ **404 Not Found**
-- **API Tier Detected**: **Basic** (due to missing production keys, falling back to CPG Retail price guide / basic resolution).
-- **Fallback Rate Estimate**: **100%** (the backend resolves all bids via the fallback formula `cpg_retail * 0.80` due to the lack of wholesale API keys).
+---
+
+## Data Pipeline Audit
+* **Proxy Configuration (`scrapers.py`):** Verified. `numista_backend/numista_scraper/config.py` uses `NUMISTA_SCRAPE_HTTP_PROXY`/`NUMISTA_SCRAPE_HTTPS_PROXY` env vars.
+* **Brain Watcher (`brain_watcher.py`):** Verified. `INBOX_DIR` is set strictly to `C:\Users\ericd\Documents\MyVertexProject\Numista_Brain_Inbox`.
+* **Model Check:** Verified. No usages of deprecated model IDs like `gemini-1.5-flash` found in the active codebase; all production files have been updated to `gemini-3.5-flash` or newer.
 
 ---
 
 ## Test Logs Summary
+### 1. Backend Python Tests (`pytest`)
+* **Total:** 9 tests
+* **Passed:** 6 tests
+  - `tests/test_greysheet.py::test_item_type_guardrails` (Passed)
+  - `tests/test_greysheet.py::test_deals_endpoints` (Passed)
+  - `tests/test_valuations.py::test_valuation_ranges` (Passed)
+  - `tests/test_valuations.py::test_valuation_single_value_with_commas` (Passed)
+  - `tests/test_valuations.py::test_valuation_simple_number` (Passed)
+  - `tests/test_valuations.py::test_valuation_invalid_gibberish` (Passed)
+* **Bypassed/Hanging:** 3 tests
+  - `test_resolve_greysheet_raw`
+  - `test_pricing_endpoint`
+  - `test_daily_snapshot_endpoint`
+  - **Cause:** These tests hit Firestore and Vertex AI endpoints, triggering an OAuth token refresh that blocks indefinitely or throws `RefreshError` due to expired local developer Google ADC credentials.
 
-- **Total Tests**: 104
-- **Passed**: 94 ✅
-- **Failed**: 10 ❌
+### 2. Frontend Playwright E2E Tests
+* **Total:** 104 tests
+* **Passed:** 103 tests
+* **Failed:** 1 test
+  - `tests\09-deals-arbitrage.spec.js` -> `T05: Deals Screen renders a valid state`
+  - **Cause:** The screenshot byte length was below the 50,000-byte threshold (received 30,758 bytes) because the test clicks targets in a loop and navigates to the "Free AI Scan Preview" page instead of staying on the Deals screen.
 
-### Current Suite Status
-
-| Suite | Tests | Expected Status | Root Cause of Failure |
-| :--- | :--- | :--- | :--- |
-| `01-homepage.spec.js` | 7 | ✅ PASS | Core homepage resolves and loads Flutter canvas cleanly. |
-| `02-auth-ui.spec.js` | 8 | ✅ PASS | Basic user login, signup tabs, and validation render. |
-| `03-demo-navigation.spec.js` | 24 | ✅ PASS | Read-only demo navigation sidebar routes load successfully. |
-| `04-registration.spec.js` | 8 | ✅ PASS | Registration fields and flow render. |
-| `05-navigation.spec.js` | 12 | ✅ PASS | Standard user dashboard and portfolio routes. |
-| `06-edge-cases.spec.js` | 10 | ✅ PASS | Form errors and network timeouts handled gracefully. |
-| `07-error-library.spec.js` | 1 | ✅ PASS | Sanity checks for application error logger. |
-| `08-greysheet-valuation.spec.js` | 12 | ❌ **FAIL** (T11, T12) | Config and batch endpoints return 404 on the live Cloud Run backend. |
-| `09-deals-arbitrage.spec.js` | 8 | ❌ **FAIL** (T05, T06) | EPN affiliate `/api/ebay/search` returns 404; Deals screen fails state assertion. |
-| `10-greysheet-coin-detail.spec.js` | 14 | ❌ **FAIL** (T04, T10, T11, T12, T13, T14) | Pricing, config, batch, resolve, cac, and portfolio snapshot endpoints return 404 on the live Cloud Run backend. |
+### 3. Flutter Dart Analyzer
+* **Status:** ⚠️ 1 issue found (unused element warning).
+* **Warning Details:**
+  `warning - The declaration '_buildArbitrageDealsCard' isn't referenced - numista_mobile\lib\screens\home_dashboard.dart:1414:10 - unused_element`
 
 ---
 
 ## Recommended Fixes
-
-1. **Deploy Backend Changes**: Deploy the local `numista_backend` code to the production Cloud Run container so that the new `/api/greysheet/*` and `/api/portfolio/*` routes are registered on the live backend.
-2. **Configure Greysheet API Credentials**: Add valid production keys for `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` to `numista_backend/.env` and the Cloud Run configuration to activate the **Advanced** tier and bypass the fallback logic.
-3. **Resolve Pytest Runner Compatibility**: Run the Python backend test suite on a fully supported stable version of Python (e.g., Python 3.11 or 3.12) to avoid internal `pytest` I/O conflicts with Python 3.14.2.
+1. **Reauthenticate Local Google ADC:** Run `gcloud auth application-default login` on the host machine to restore Firestore/Vertex AI authentication and allow all 9 Python backend tests to complete.
+2. **Refactor Playwright T05 Test:** Adjust `09-deals-arbitrage.spec.js` to click only the exact Deals card coordinates (like `780, 500` used in `T03`/`T04`) instead of clicking multiple targets in a loop, or relax the strict screenshot size threshold.
+3. **Clean Up Unused Dart Widget:** Delete the unused `_buildArbitrageDealsCard` method at `lib/screens/home_dashboard.dart:1414` to clean up the Flutter analyzer warning.
+4. **Configure Greysheet Credentials:** Populate `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` in the production environment settings to transition from `Basic` fallback mode to `Advanced` tier.
+5. **Update Default Model Signature:** Change the default value of the `primary_model` argument in `services/greysheet_service.py:resolve_gsid_hybrid` from `"gemini-2.0-flash"` to `"gemini-3.5-flash"`.
+6. **Update Skill Documentation:** Replace the obsolete URL `numisma-backend-xwqkbwqvuq-uc.a.run.app` with `numisma-backend-568985927038.us-central1.run.app` in `project-scanner/SKILL.md` to avoid future false alarms during system checks.

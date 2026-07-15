@@ -7535,6 +7535,48 @@ def get_weekly_audits(limit: int = 10):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/cron/run-audit")
+def trigger_nightly_audit():
+    """
+    GCP Cloud Scheduler trigger endpoint: runs nightly_data_audit.py and
+    auto_resolve_audit.py as background subprocesses and returns immediately.
+    Called by Cloud Scheduler at 02:00 AM UTC as a cloud backup in case the
+    local Windows laptop is offline.
+    """
+    import subprocess
+    import sys as _sys
+
+    python_exe = _sys.executable
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    audit_script   = os.path.join(project_root, "nightly_data_audit.py")
+    resolve_script = os.path.join(project_root, "auto_resolve_audit.py")
+
+    results = {}
+    for label, script in [("audit", audit_script), ("resolver", resolve_script)]:
+        if not os.path.exists(script):
+            results[label] = f"Script not found: {script}"
+            continue
+        try:
+            proc = subprocess.Popen(
+                [python_exe, script],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=project_root,
+            )
+            stdout, _ = proc.communicate(timeout=300)
+            results[label] = {
+                "returncode": proc.returncode,
+                "output_tail": stdout.decode("utf-8", errors="replace")[-2000:]
+            }
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            results[label] = "TIMEOUT after 300s"
+        except Exception as exc:
+            results[label] = str(exc)
+
+    return {"status": "completed", "results": results, "triggered_at": datetime.utcnow().isoformat()}
+
+
 @app.get("/api/cron/reports")
 def get_scraper_reports(limit: int = 15):
     """

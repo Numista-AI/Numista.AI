@@ -357,7 +357,7 @@ class GreysheetService:
         greysheet_name: str,
         coin_data: Dict[str, Any],
         genai_client: Optional[Any] = None,
-        primary_model: str = "gemini-2.0-flash",
+        primary_model: str = "gemini-3.5-flash",
     ) -> tuple:  # (is_valid: bool, reason: str)
         """
         Plain-language cross-check: does the Greysheet collectible name make sense
@@ -458,7 +458,7 @@ class GreysheetService:
         self,
         coin_data: Dict[str, Any],
         genai_client: Optional[Any] = None,
-        primary_model: str = "gemini-2.0-flash",
+        primary_model: str = "gemini-3.5-flash",
     ) -> Optional[tuple]:  # (gsid: int, collectible_name: str) or None
         """
         Map a coin to a Greysheet GSID via plain-language matching.

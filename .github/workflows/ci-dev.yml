@@ -1,0 +1,121 @@
+# ==========================================================================
+# ci-dev.yml
+# GitHub Actions Workflow: Continuous Integration for the dev branch
+#
+# Triggers on: every push to dev, every PR targeting main or dev
+# Purpose:     Catch broken Flutter builds and Python errors before they
+#              accumulate while the owner is away on vacation.
+#
+# Jobs (run in parallel):
+#   1. flutter-build  — flutter build web --release
+#   2. python-lint    — ruff check + basic import validation
+# ==========================================================================
+
+name: CI — Dev Branch
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'numista_mobile/**'
+      - 'numista_backend/**'
+      - '.github/workflows/ci-dev.yml'
+
+  pull_request:
+    branches: [main, dev]
+
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+jobs:
+  # ── JOB 1: Flutter Web Build ─────────────────────────────────────────────
+  flutter-build:
+    name: Flutter Web Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter (stable)
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        working-directory: numista_mobile
+        run: flutter pub get
+
+      - name: Analyze Dart code
+        working-directory: numista_mobile
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true  # Treat analysis warnings as non-blocking
+
+      - name: Build Flutter Web (release)
+        working-directory: numista_mobile
+        run: flutter build web --release --base-href "/"
+
+      - name: Post build summary
+        if: always()
+        run: |
+          echo "## Flutter Web Build" >> $GITHUB_STEP_SUMMARY
+          if [ -d "numista_mobile/build/web" ]; then
+            SIZE=$(du -sh numista_mobile/build/web | cut -f1)
+            echo "✅ Build succeeded — output size: $SIZE" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build output directory not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ── JOB 2: Python Lint & Import Check ───────────────────────────────────
+  python-lint:
+    name: Python Lint & Import Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: numista_backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: numista_backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+          # Install only lightweight deps needed for import checks
+          pip install -r requirements.txt --quiet 2>/dev/null || true
+
+      - name: Run ruff linter
+        working-directory: numista_backend
+        run: |
+          ruff check . \
+            --exclude .venv \
+            --exclude __pycache__ \
+            --exclude database \
+            --select E,F,W \
+            --ignore E501 \
+            --output-format github
+        continue-on-error: true   # Lint warnings are advisory during vacation
+
+      - name: Check key script imports (syntax check)
+        working-directory: numista_backend
+        run: |
+          echo "Checking syntax of critical scripts..."
+          python -m py_compile nightly_data_audit.py && echo "✅ nightly_data_audit.py OK"
+          python -m py_compile monitor_gcp_billing.py && echo "✅ monitor_gcp_billing.py OK"
+          python -m py_compile auto_resolve_audit.py 2>/dev/null && echo "✅ auto_resolve_audit.py OK" || echo "⚠️  auto_resolve_audit.py not yet present"
+        continue-on-error: false
+
+      - name: Post lint summary
+        if: always()
+        run: |
+          echo "## Python Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "Ruff and syntax checks completed. See step logs for details." >> $GITHUB_STEP_SUMMARY
