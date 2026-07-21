@@ -7749,6 +7749,75 @@ async def bulk_approve_suggestions(req: BrainBulkAction):
     batch.commit()
     return {"status": f"bulk_{req.action}_complete", "count": len(req.suggestion_ids)}
 
+@app.post("/api/admin/brain/suggestions/rescore")
+async def rescore_unscored_suggestions():
+    """
+    Re-evaluates all pending suggestions that have no confidence score.
+    Sends them to Gemini in a single batch and writes scores back to Firestore.
+    Does NOT approve or reject anything — purely adds confidence metadata.
+    """
+    # Fetch all pending suggestions missing a confidence score
+    docs = list(db.collection('brain_suggestions').where('status', '==', 'pending').stream())
+    unscored = [d for d in docs if d.to_dict().get('confidence') is None]
+
+    if not unscored:
+        return {"status": "nothing_to_score", "count": 0}
+
+    # Build a compact payload for Gemini — id + suggestion text + target collection
+    items = [
+        {
+            "id": d.id,
+            "suggestion": d.to_dict().get("suggestion", ""),
+            "collection": d.to_dict().get("target_collection", ""),
+        }
+        for d in unscored
+    ]
+
+    prompt = f"""You are the Numista Brain evaluator. Score each of the following numismatic
+database suggestions with a confidence value between 0.0 and 1.0.
+
+Confidence guidelines:
+- 0.93–1.00: Well-established numismatic fact or standard terminology — no ambiguity.
+- 0.85–0.92: Strongly implied by standard numismatic convention or common usage.
+- 0.00–0.84: Inferred, ambiguous, specialised, or requires cross-referencing.
+
+Suggestions to score:
+{json.dumps(items, ensure_ascii=False)}
+
+Return ONLY a valid JSON array with one object per suggestion, in the same order:
+[{{"id": "firestore_doc_id", "confidence": 0.95}}, ...]
+No markdown, no explanation — raw JSON only."""
+
+    try:
+        from google.genai import types as genai_types
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[prompt],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        scored_items = json.loads(response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gemini scoring failed: {e}")
+
+    # Write scores back to Firestore in a batch
+    batch = db.batch()
+    updated = 0
+    for item in scored_items:
+        try:
+            doc_id = item.get("id")
+            confidence = float(item.get("confidence", 0))
+            confidence = max(0.0, min(1.0, confidence))  # clamp
+            ref = db.collection('brain_suggestions').document(doc_id)
+            batch.update(ref, {"confidence": confidence})
+            updated += 1
+        except Exception:
+            continue  # skip malformed entries
+    batch.commit()
+
+    return {"status": "rescore_complete", "scored": updated, "total": len(unscored)}
+
 @app.post("/api/admin/brain/reprocess")
 async def reprocess_knowledge(req: BrainKnowledgeUpdate):
     """Triggers a re-process of a document with new instructions."""

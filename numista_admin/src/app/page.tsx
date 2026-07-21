@@ -218,6 +218,7 @@ export default function AdminDashboard() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rescoring, setRescoring] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -254,6 +255,18 @@ export default function AdminDashboard() {
   const handleBulkSelected = (action: 'approved' | 'ignored') => bulkAction(selectedIds, action);
   const handleApproveAll = () => bulkAction(suggestions.map((s) => s.id), 'approved');
   const handleApproveAllInTier = (ids: string[]) => bulkAction(ids, 'approved');
+
+  const handleRescore = async () => {
+    setRescoring(true);
+    try {
+      await fetch(`${API_BASE}/api/admin/brain/suggestions/rescore`, { method: 'POST' });
+      await fetchData();
+    } catch (err) {
+      console.error('Rescore failed', err);
+    } finally {
+      setRescoring(false);
+    }
+  };
 
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) =>
@@ -399,13 +412,22 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <button
-                      onClick={() => handleApproveAllInTier(legacy.map((s) => s.id))}
-                      className="text-[10px] uppercase font-bold bg-slate-600 hover:bg-slate-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                      onClick={handleRescore}
+                      disabled={rescoring}
+                      className="text-[10px] uppercase font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                      title="Ask Gemini to score all unscored suggestions — no approvals made"
                     >
-                      ✓ Approve All
+                      {rescoring ? (
+                        <>
+                          <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          Scoring...
+                        </>
+                      ) : (
+                        '🤖 Re-evaluate with AI'
+                      )}
                     </button>
                   </div>
-                  <p className="text-[10px] opacity-40 -mt-1">Generated before confidence scoring — approve to clear</p>
+                  <p className="text-[10px] opacity-40 -mt-1">Generated before confidence scoring — click Re-evaluate to score without approving</p>
                   <div className="space-y-3 pl-1 border-l border-white/5">
                     {legacy.map((sug) => (
                       <SuggestionCard
