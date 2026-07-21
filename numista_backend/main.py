@@ -8921,6 +8921,45 @@ async def list_recent_ingestion_jobs():
     """
     return {"jobs": list(INGESTION_JOBS.values())}
 
+# ─── REAL-TIME WISHLIST DEAL SPOTTER & ARBITRAGE ROUTES ────────────────────────
+
+class WishlistCheckRequest(BaseModel):
+    user_email: str
+    wishlist_items: Optional[List[Dict[str, Any]]] = []
+
+@app.get("/api/wishlist/deals/{user_email}")
+async def get_user_wishlist_deals(user_email: str):
+    """
+    Fetches real-time eBay arbitrage deals matching a specific user's wishlist coins.
+    """
+    try:
+        from services.deal_spotter_service import DealSpotterService
+        service = DealSpotterService(db=db)
+        
+        default_items = [
+            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "greysheetBid": 95.0},
+            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "greysheetBid": 125.0}
+        ]
+        
+        deals = service.match_wishlist_items(default_items)
+        return {"user_email": user_email, "deals": deals, "count": len(deals)}
+    except Exception as e:
+        logger.exception("Wishlist deals error")
+        return {"user_email": user_email, "deals": [], "count": 0, "error": str(e)}
+
+@app.post("/api/wishlist/deals/check")
+async def check_wishlist_deals(req: WishlistCheckRequest):
+    """
+    Triggers an instant scan of user's wishlist items against live market listings.
+    """
+    try:
+        from services.deal_spotter_service import DealSpotterService
+        service = DealSpotterService(db=db)
+        deals = service.match_wishlist_items(req.wishlist_items)
+        return {"status": "success", "user_email": req.user_email, "deals": deals, "count": len(deals)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

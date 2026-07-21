@@ -90,6 +90,9 @@ export default function AdminDashboard() {
           <p className="opacity-60 text-sm">Monitoring autonomous knowledge absorption and self-healing suggestions.</p>
         </div>
         <div className="flex gap-4 items-center">
+            <a href="/deals" className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-semibold hover:bg-emerald-500/20 transition-all flex items-center gap-2">
+                <span>💰</span> Deals & Arbitrage
+            </a>
             <a href="/ingestion" className="px-4 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-semibold hover:bg-amber-500/20 transition-all flex items-center gap-2">
                 <span>⚡</span> Ingestion Ops
             </a>
