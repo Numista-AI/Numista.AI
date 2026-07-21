@@ -89,7 +89,10 @@ export default function AdminDashboard() {
           <h1 className="text-4xl font-bold accent-text mb-2 tracking-tight">Numista.AI Brain Control</h1>
           <p className="opacity-60 text-sm">Monitoring autonomous knowledge absorption and self-healing suggestions.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+            <a href="/ingestion" className="px-4 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-semibold hover:bg-amber-500/20 transition-all flex items-center gap-2">
+                <span>⚡</span> Ingestion Ops
+            </a>
             <div className="glass px-4 py-2 rounded-lg flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 <span className="text-sm font-medium">Watcher Active</span>
