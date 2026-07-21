@@ -2154,6 +2154,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final series = m[_F.programSeries]?.toString() ?? '';
         final variety = m[_F.variety]?.toString() ?? '';
         final condition = m[_F.condition]?.toString() ?? '';
+        final theme = m[_F.themeSubject]?.toString() ?? '';
+        
+        final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
+        final displayTitle = '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
         
         final valCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
         final valBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
@@ -2226,7 +2230,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '$year $mint $denom'.trim(),
+                    displayTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
