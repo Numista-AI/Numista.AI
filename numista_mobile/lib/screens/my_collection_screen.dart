@@ -102,6 +102,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   bool    _sortAscending    = false; // false = newest first
   /// Default: hide columns where every visible row is empty
   bool    _showOnlyPopulated = true;
+  bool    _isCardView = false;
 
   final _searchCtrl      = TextEditingController();
   final _searchFocus     = FocusNode();
@@ -182,13 +183,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- Colours (match dynamic dark/light brightness toggle) ----------------
-  Color get _bg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0E1117) : Color(0xFFF1F5F9);
-  Color get _surface => Theme.of(context).brightness == Brightness.dark ? Color(0xFF1A1D27) : Colors.white;
-  Color get _text => Theme.of(context).brightness == Brightness.dark ? Color(0xFFE8EAF0) : Color(0xFF0F172A);
-  Color get _subtext => Theme.of(context).brightness == Brightness.dark ? Color(0xFF8B92B4) : Color(0xFF475569);
-  Color get _border => Theme.of(context).brightness == Brightness.dark ? Color(0xFF2D3143) : Color(0xFFE2E8F0);
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1120) : const Color(0xFFF4F4F2);
+  Color get _surface => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2937) : Colors.white;
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
+  Color get _subtext => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8B92B4) : const Color(0xFF5A5C69);
+  Color get _border => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D3143) : const Color(0xFFE2E8F0);
+  Color get _accent => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFC9A227) : const Color(0xFF8C7355);
 
-  static const _accent    = Color(0xFF4C8CDA);
   static const _green     = Color(0xFF28A745);
   static const _greenBg   = Color(0xFFD4EED8);
   static const _greenText = Color(0xFF155724);
@@ -705,44 +706,75 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         _buildStatsRow(docs, advanced: advanced),
         SizedBox(height: 16),
 
-        // Toolbar: column visibility toggle + AI Report button (no section label)
+        // Toolbar: view toggle + column visibility toggle + AI Report button
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // Column visibility toggle
-            _columnToggleButton(),
-            SizedBox(width: 12),
+            // Card / Table View Toggle
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: _border),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _toggleSegment(
+                    label: 'Table',
+                    icon: Icons.table_chart_outlined,
+                    active: !_isCardView,
+                    onTap: () => setState(() => _isCardView = false),
+                    isLeft: true,
+                  ),
+                  _toggleSegment(
+                    label: 'Cards',
+                    icon: Icons.grid_view_outlined,
+                    active: _isCardView,
+                    onTap: () => setState(() => _isCardView = true),
+                    isLeft: false,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Column visibility toggle (only relevant when table is visible)
+            if (!_isCardView) ...[
+              _columnToggleButton(),
+              const SizedBox(width: 12),
+            ],
             ElevatedButton.icon(
               onPressed: widget.onNavigate != null
                   ? () => widget.onNavigate!('Estate Planning')
                   : null,
-              icon: Icon(Icons.auto_awesome, size: 16),
-              label: Text('Generate AI Report Now'),
+              icon: const Icon(Icons.auto_awesome, size: 16),
+              label: const Text('Generate AI Report Now'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFF63366),
+                backgroundColor: const Color(0xFFF63366),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4)),
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 12),
               ),
             ),
           ],
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
 
-        // Data table -- three distinct states
+        // Data view -- three distinct states
         if (allDocs.isEmpty)
           _buildCollectionEmptyState()
         else if (docs.isEmpty)
           Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(child: Text('No coins match your filter.',
                 style: TextStyle(color: _subtext))))
         else
           SizedBox(
             height: 520,
-            child: _buildDataTable(docs, advanced: advanced),
+            child: _isCardView 
+                ? _buildCardGrid(docs, advanced: advanced)
+                : _buildDataTable(docs, advanced: advanced),
           ),
       ],
     );
@@ -1038,7 +1070,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: _border),
         ),
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 20,
             height: 20,
@@ -1572,12 +1604,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
     return Row(children: [
       _statChip('Showing', '${docs.length} coins'),
-      SizedBox(width: 12),
-      _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}'),
-      SizedBox(width: 12),
-      _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}'),
-      SizedBox(width: 12),
-      _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}'),
+      const SizedBox(width: 12),
+      _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}', isGold: true),
+      const SizedBox(width: 12),
+      _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}', isGold: true),
+      const SizedBox(width: 12),
+      _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}', isGold: true),
     ]);
   }
 
@@ -1761,19 +1793,52 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  Widget _statChip(String label, String value) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
+  Widget _statChip(String label, String value, {bool isGold = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final goldColor = const Color(0xFFC9A227);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
         color: _surface,
-        border: Border.all(color: _border),
-        borderRadius: BorderRadius.circular(6)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: TextStyle(fontSize: 11, color: _subtext)),
-      SizedBox(height: 2),
-      Text(value, style: TextStyle(
-          fontSize: 15, fontWeight: FontWeight.bold, color: _text)),
-    ]),
-  );
+        border: Border.merge(
+          Border(left: BorderSide(color: isGold ? goldColor : _border, width: 4)),
+          Border.all(color: _border.withAlpha(isDark ? 30 : 15)),
+        ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: isGold ? goldColor.withAlpha(15) : Colors.black.withAlpha(isDark ? 15 : 5),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: _subtext,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: isGold ? goldColor : _text,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // --- Column visibility toggle button -------------------------------------
   Widget _columnToggleButton() {
@@ -1911,7 +1976,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             extent: FixedTableSpanExtent(row == 0 ? headerH : dataH),
             backgroundDecoration: TableSpanDecoration(
               color: row == 0
-                  ? Color(0xFFF8F9FB)
+                  ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF151B26) : const Color(0xFFE2E2DF))
                   : (docs.length > row - 1 &&
                           docs[row - 1].id == _selectedCoinId
                       ? _accent.withAlpha(28)
@@ -1961,6 +2026,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               return TableViewCell(
                 child: InkWell(
                   onTap: onTap,
+                  hoverColor: _accent.withAlpha(20),
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 2),
                     child: Row(
@@ -2013,6 +2079,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           }
                         }
                       : onTap,
+                  hoverColor: _accent.withAlpha(20),
                   mouseCursor: isPcgs
                       ? SystemMouseCursors.click
                       : MouseCursor.defer,
@@ -2047,6 +2114,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             return TableViewCell(
               child: InkWell(
                 onTap: onTap,
+                hoverColor: _accent.withAlpha(20),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -2065,6 +2133,138 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ),       // RawScrollbar (bottom)
       ),         // DecoratedBox
     );           // ClipRRect
+  }
+
+  Widget _buildCardGrid(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 220,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: docs.length,
+      itemBuilder: (context, index) {
+        final doc = docs[index];
+        final m = doc.data() as Map<String, dynamic>;
+        
+        final year = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        final mint = m[_F.mintMark]?.toString() ?? '';
+        final denom = m[_F.denomination]?.toString() ?? '';
+        final series = m[_F.programSeries]?.toString() ?? '';
+        final variety = m[_F.variety]?.toString() ?? '';
+        final condition = m[_F.condition]?.toString() ?? '';
+        
+        final valCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
+        final valBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        final finalVal = advanced ? valCpg : valBid;
+        
+        final fmt = intl.NumberFormat.currency(symbol: '\$');
+        final valueText = finalVal > 0 
+            ? fmt.format(finalVal) 
+            : (m[_F.aiValue]?.toString() ?? '—');
+
+        final obverseUrl = m[_F.imageObverse]?.toString() ?? '';
+        final reverseUrl = m[_F.imageReverse]?.toString() ?? '';
+        final displayUrl = obverseUrl.isNotEmpty ? obverseUrl : reverseUrl;
+
+        return Card(
+          color: _surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: doc.id == _selectedCoinId ? _accent : _border,
+              width: doc.id == _selectedCoinId ? 2.0 : 1.0,
+            ),
+          ),
+          elevation: doc.id == _selectedCoinId ? 4 : 1,
+          child: InkWell(
+            onTap: () {
+              setState(() => _selectedCoinId = doc.id);
+              _showCoinInspectorDialog(doc.id, m);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? const Color(0xFF0B1120) 
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: displayUrl.isNotEmpty
+                          ? Center(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFC9A227).withAlpha(40),
+                                      blurRadius: 14,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                                child: Image.network(
+                                  displayUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.broken_image_outlined, size: 36),
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Icon(Icons.image_not_supported_outlined, size: 36),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '$year $mint $denom'.trim(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    series.isNotEmpty ? series : (variety.isNotEmpty ? variety : 'General Item'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: _subtext),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        valueText,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFC9A227),
+                        ),
+                      ),
+                      if (condition.isNotEmpty)
+                        GradeBadgeWidget(gradeCode: condition),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Sticky header cell with optional sort-direction arrow.

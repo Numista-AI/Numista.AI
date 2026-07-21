@@ -8,6 +8,7 @@ import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
 import 'services/theme_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 
 Future<void> main() async {
@@ -119,11 +120,17 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
           themeMode: ThemeProvider.instance.themeMode,
           theme: ThemeData(
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF8FAFC), // High-contrast clean light bg
-            primaryColor: const Color(0xFF1565C0),
+            scaffoldBackgroundColor: const Color(0xFFF4F4F2), // Premium parchment/platinum-silver bg
+            primaryColor: const Color(0xFF8C7355), // Antique bronze
+            cardColor: const Color(0xFFFFFFFF),
+            dividerColor: const Color(0xFFE2E8F0),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF1565C0),
+              seedColor: const Color(0xFF8C7355),
               brightness: Brightness.light,
+              primary: const Color(0xFF8C7355),
+              secondary: const Color(0xFFC9A227),
+              surface: const Color(0xFFFFFFFF),
+              error: const Color(0xFFDC3545),
             ),
             fontFamily: 'sans-serif',
             appBarTheme: const AppBarTheme(
@@ -131,28 +138,34 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               foregroundColor: Color(0xFF0F172A),
               elevation: 0,
             ),
-            textTheme: const TextTheme(
-              bodyMedium: TextStyle(color: Color(0xFF0F172A)),
-              bodyLarge:  TextStyle(color: Color(0xFF0F172A)),
+            textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
+              bodyColor: const Color(0xFF0F172A),
+              displayColor: const Color(0xFF0F172A),
             ),
           ),
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF0E1117), // Target premium dark bg
-            primaryColor: const Color(0xFF1565C0),
+            scaffoldBackgroundColor: const Color(0xFF0B1120), // Deep navy-black bg
+            primaryColor: const Color(0xFFC9A227), // Metallic gold
+            cardColor: const Color(0xFF1E2937), // Rich slate cards
+            dividerColor: const Color(0xFF2D3143),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF1565C0),
+              seedColor: const Color(0xFFC9A227),
               brightness: Brightness.dark,
+              primary: const Color(0xFFC9A227),
+              secondary: const Color(0xFFD4AF37),
+              surface: const Color(0xFF1E2937),
+              error: const Color(0xFFDC3545),
             ),
             fontFamily: 'sans-serif',
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF1A1D27),
+              backgroundColor: Color(0xFF1E2937),
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            textTheme: const TextTheme(
-              bodyMedium: TextStyle(color: Color(0xFFE8EAF0)),
-              bodyLarge:  TextStyle(color: Color(0xFFE8EAF0)),
+            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
+              bodyColor: const Color(0xFFE8EAF0),
+              displayColor: const Color(0xFFE8EAF0),
             ),
           ),
       // --- Auth Gate ---------------------------------------------------------
