@@ -2534,6 +2534,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 // -- Header -----------------------------------------------
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: BoxDecoration(
                     color: _surface,
                     border: Border(bottom: BorderSide(color: _border)),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
@@ -2590,6 +2591,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     // Left panel: image (300px)
                     Container(
                       width: 300,
+                      decoration: BoxDecoration(
                         color: _surface,
                         border: Border(right: BorderSide(color: _border)),
                       ),
