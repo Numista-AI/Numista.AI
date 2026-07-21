@@ -55,6 +55,14 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Coin set index (reference library — authenticated read) ───────────────
+    // Pre-cataloged set manifests populated by the backend ingestion pipeline.
+    // Any signed-in user may read; only the backend service account may write.
+    match /coin_set_index/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
     // ── Mint Error Library (reference data — authenticated read) ──────────────
     // Public-facing error encyclopedia populated by the backend ingestion pipeline.
     // Any signed-in user may read; client writes are forbidden (backend SA only).
