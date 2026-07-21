@@ -56,6 +56,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   // ─── Excel import state ─────────────────────────────────────────────────
   final _importNameCtrl = TextEditingController();
 
+  // ─── SKU Import state ───────────────────────────────────────────────────
+  final _skuCtrl = TextEditingController();
+  String _skuRetailer = 'US Mint';
+  bool _skuSearching = false;
+  Map<String, dynamic>? _skuSearchResult;
+  String _skuError = '';
+
   // ─── AI Photo ID state ───────────────────────────────────────────────────
   final _picYear    = TextEditingController();
   final _picDenom   = TextEditingController();
@@ -74,7 +81,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadSavedPcgsToken();
   }
 
@@ -85,6 +92,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _pcgsCertCtrl.dispose();
     _pcgsSingleCtrl.dispose();
     _importNameCtrl.dispose();
+    _skuCtrl.dispose();
     _picYear.dispose();   _picDenom.dispose();   _picSeries.dispose();
     _picTheme.dispose();  _picMint.dispose();    _picGrade.dispose();
     _picMetal.dispose();  _picVariety.dispose(); _picCost.dispose();
@@ -209,6 +217,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             children: [
               _buildUploadFilesTab(),
               _buildManualEntryTab(),
+              _buildSkuImportTab(),
               _buildPcgsImportTab(),
               _buildRollEntryTab(),
               _buildWorldItemsTab(),
@@ -262,6 +271,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         tabs: const [
           Tab(text: 'Upload Files',      icon: Icon(Icons.upload_file_outlined,  size: 20)),
           Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
+          Tab(text: 'Add by SKU',        icon: Icon(Icons.qr_code,               size: 20)),
           Tab(text: 'Import from PCGS',  icon: Icon(Icons.shield_outlined,       size: 20)),
           Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
           Tab(text: 'World & Specialty', icon: Icon(Icons.language_rounded,      size: 20)),
@@ -820,6 +830,603 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ─── SKU Number Import Tab ──────────────────────────────────────────────────
+
+  Widget _buildSkuImportTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Text(
+                'Add by SKU Number',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Add an item instantly by selecting the retailer and entering the product SKU number.',
+                style: TextStyle(color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 32),
+
+              // Form Card
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Retailer Dropdown
+                    const Text(
+                      'RETAILER',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _skuRetailer,
+                          isExpanded: true,
+                          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF64748B)),
+                          items: <String>['US Mint', 'Littleton Coin Company', 'APMEX', 'JM Bullion', 'Other']
+                              .map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value, style: const TextStyle(color: Color(0xFF1E293B))),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _skuRetailer = newValue ?? 'US Mint';
+                              _skuSearchResult = null;
+                              _skuError = '';
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // SKU Text Field
+                    const Text(
+                      'SKU / ITEM NUMBER',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _skuCtrl,
+                      style: const TextStyle(color: Color(0xFF1E293B)),
+                      decoration: InputDecoration(
+                        hintText: _skuRetailer == 'US Mint' ? 'e.g. 26RJ' : 'e.g. ST5866Z',
+                        hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFF63366), width: 1.5),
+                        ),
+                        prefixIcon: const Icon(Icons.tag, color: Color(0xFF94A3B8), size: 20),
+                      ),
+                      onSubmitted: (_) => _lookupSku(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Lookup Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _skuSearching ? null : _lookupSku,
+                        icon: _skuSearching
+                            ? const SizedBox(
+                                height: 18, width: 18,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.search, size: 18),
+                        label: Text(
+                          _skuSearching ? 'Searching…' : 'Lookup SKU',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (_skuError.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _skuError,
+                          style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              if (_skuSearchResult != null) ...[
+                const SizedBox(height: 28),
+                const Text(
+                  'Search Result',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 12),
+                _buildSkuPreviewCard(),
+              ],
+              const SizedBox(height: 64),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkuPreviewCard() {
+    if (_skuSearchResult == null) return const SizedBox.shrink();
+    final data = _skuSearchResult!;
+    final name = data['name'] ?? data['description'] ?? 'Unnamed Item';
+    final year = data['year'] ?? data['year']?.toString() ?? 'N/A';
+    final program = data['program'] ?? data['program_series'] ?? 'N/A';
+    final isSet = data['item_type'] == 'set';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xFF22C55E),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(14),
+                topRight: Radius.circular(14),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Verified SKU Match ($_skuRetailer)',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Metadata Table/Grid
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetaItem('Year', year),
+                    ),
+                    Expanded(
+                      child: _buildMetaItem('Type', isSet ? 'Coin Set' : 'Single Coin'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetaItem('Program/Series', program),
+                    ),
+                    if (!isSet)
+                      Expanded(
+                        child: _buildMetaItem('Condition', data['implied_condition'] ?? 'Uncirculated'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                
+                // Confirm and Add Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _addSkuToCollection,
+                    icon: _isProcessing
+                        ? const SizedBox(
+                            height: 18, width: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.add_circle_outline, size: 20),
+                    label: const Text(
+                      'Add to My Collection',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetaItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _lookupSku() async {
+    final rawSku = _skuCtrl.text.trim();
+    if (rawSku.isEmpty) {
+      setState(() => _skuError = 'Please enter a SKU number.');
+      return;
+    }
+    setState(() {
+      _skuSearching = true;
+      _skuSearchResult = null;
+      _skuError = '';
+    });
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> snap;
+      final docId = rawSku.replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase();
+
+      if (_skuRetailer == 'US Mint') {
+        snap = await FirebaseFirestore.instance
+            .collection('global_metadata')
+            .doc('usmint_sku_dictionary')
+            .collection('skus')
+            .doc(docId)
+            .get();
+      } else if (_skuRetailer == 'Littleton Coin Company') {
+        snap = await FirebaseFirestore.instance
+            .collection('global_metadata')
+            .doc('littleton_sku_dictionary')
+            .collection('skus')
+            .doc(docId)
+            .get();
+      } else {
+        setState(() {
+          _skuError = 'Automated lookups are currently only supported for US Mint and Littleton Coin Company.';
+          _skuSearching = false;
+        });
+        return;
+      }
+
+      if (!snap.exists) {
+        setState(() {
+          _skuError = 'SKU "$rawSku" not found in $_skuRetailer dictionary.';
+          _skuSearching = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _skuSearchResult = snap.data();
+        _skuSearching = false;
+      });
+    } catch (e) {
+      setState(() {
+        _skuError = 'Error looking up SKU: $e';
+        _skuSearching = false;
+      });
+    }
+  }
+
+  Future<void> _addSkuToCollection() async {
+    if (_skuSearchResult == null) return;
+    setState(() => _isProcessing = true);
+
+    try {
+      final data = _skuSearchResult!;
+      final isSetItem = data['item_type'] == 'set';
+      
+      final coinDoc = <String, dynamic>{
+        'source': 'manual_sku',
+        'Added': FieldValue.serverTimestamp(),
+        'created_at': FieldValue.serverTimestamp(),
+        'committed_at': FieldValue.serverTimestamp(),
+        'deep_dive_status': 'PENDING',
+      };
+
+      if (isSetItem) {
+        coinDoc.addAll({
+          'set_id': data['set_id'] ?? '',
+          'item_type': 'set',
+          'is_set': true,
+          'kept_as_set': true,
+          'set_broken_up': false,
+          'Year': data['year']?.toString() ?? '',
+          'Country': 'USA',
+          'Denomination': 'Set',
+          'Condition': 'Uncirculated',
+          'Quantity': 1,
+          'name': data['name'] ?? '',
+          'Program/Series': data['program'] ?? data['program_series'] ?? '',
+          'Theme/Subject': data['description'] ?? '',
+        });
+      } else {
+        coinDoc.addAll({
+          'Year': data['year']?.toString() ?? '',
+          'Mint Mark': data['mint_mark'] ?? '',
+          'Denomination': data['denomination'] ?? '',
+          'Program/Series': data['program_series'] ?? '',
+          'Theme/Subject': data['description'] ?? '',
+          'Condition': data['implied_condition'] ?? 'Uncirculated',
+          'Quantity': 1,
+          'Country': 'United States',
+          'item_type': 'coin',
+        });
+      }
+
+      final docRef = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .add(coinDoc);
+
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+
+      _showSkuAddedSuccessDialog(docRef.id);
+
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add SKU: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showSkuAddedSuccessDialog(String docId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Color(0xFF22C55E)),
+            SizedBox(width: 8),
+            Text('Item Added!', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: const Text(
+          'This item has been successfully added to your collection. '
+          'Would you like to add more details (such as cost, notes, or storage location) now?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _skuCtrl.clear();
+                _skuSearchResult = null;
+              });
+            },
+            child: const Text('No, Add More SKUs', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _editSkuDetailsDialog(docId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF63366),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Yes, Add Details', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editSkuDetailsDialog(String docId) {
+    final costCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Add Item Details', style: TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('PURCHASE COST (\$)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: costCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. 197.95',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Text('STORAGE LOCATION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: locationCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Safe Box A, Safe Deposit',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Text('NOTES / DESCRIPTION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: notesCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Any extra details...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _skuCtrl.clear();
+                _skuSearchResult = null;
+              });
+            },
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final costVal = costCtrl.text.trim();
+              final costStr = costVal.isNotEmpty ? '\$$costVal' : '';
+              
+              await FirebaseFirestore.instance
+                  .collection(AuthService.coinsPath)
+                  .doc(docId)
+                  .update({
+                'Cost': costStr,
+                'Purchase Cost': costStr,
+                'Storage Location': locationCtrl.text.trim(),
+                'Notes': notesCtrl.text.trim(),
+                'Personal Notes': notesCtrl.text.trim(),
+              });
+              
+              nav.pop();
+              setState(() {
+                _skuCtrl.clear();
+                _skuSearchResult = null;
+              });
+              
+              if (!mounted) return;
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Details saved successfully!'), backgroundColor: Color(0xFF22C55E)),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF63366),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save Details', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
