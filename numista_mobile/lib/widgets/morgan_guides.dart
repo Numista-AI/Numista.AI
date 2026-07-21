@@ -190,17 +190,16 @@ class MorganGuides {
     title: 'Browsing your collection',
     emoji: '🗂️',
     steps: [
-      // Step 1: bubble at top-right, big gold ← arrow pointing left at the search box
+      // Step 1: bubble at top-right with inline search — no separate search
+      // box exists on the 'All' dashboard, so Morgan provides search directly.
       MorganStep(
         narration:
             "Looking for a specific coin?\n"
-            "Type its name in the 🔍 Search box.\n\n"
-            "Try 'Dime', '1964', or 'Morgan Silver Dollar'.",
-        hint: "The Search box is to the left — tap it and start typing.",
+            "Type its name below and I'll search your whole collection!",
+        hint: "Works for coins, currency, and world items.",
         nextLabel: 'Got it →',
         position: GuidePosition.topRight,
-        showArrow: true,
-        arrowDirection: ArrowDirection.left,
+        showSearch: true,
       ),
       // Step 2: coin list is centre-screen; bubble bottom-right stays out of the way
       MorganStep(

@@ -180,3 +180,6 @@ jseaman_unresolved_coins.csv
 # Local beta test notes (personal, not source code)
 # ============================================================
 1 NUMISTA.AI/
+
+# Missing images log (generated data, not source code)
+missing_images_log.csv

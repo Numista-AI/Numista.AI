@@ -2657,10 +2657,10 @@ class _AiInsightsTab extends StatelessWidget {
                   data: insight,
                   styleSheet: MarkdownStyleSheet(
                     p: const TextStyle(fontSize: 14, color: _kText, height: 1.7),
-                    h1: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kDark, height: 2.0),
-                    h2: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _kDark, height: 2.0),
+                    h1: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
+                    h2: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
                     h3: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText, height: 1.8),
-                    strong: const TextStyle(fontWeight: FontWeight.bold, color: _kDark),
+                    strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                     listBullet: const TextStyle(fontSize: 14, color: _kText, height: 1.7),
                     blockquoteDecoration: BoxDecoration(
                       color: _kAccent.withAlpha(20),

@@ -32,6 +32,7 @@ import 'glossary_academy_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
+import '../widgets/morgan_greeter.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -48,10 +49,87 @@ class _BaseLayoutState extends State<BaseLayout> {
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
 
-  // ── Show Morgan as a full-screen dialog (doesn't lose current screen) ──────
+  // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
-    // Navigate to the Morgan chat — she knows your collection
-    setState(() => _activeRoute = 'AI Deepdive');
+    final gs = MorganGuideService.current.value;
+    if (gs != null) {
+      // A guide is already active — just un-collapse it if needed.
+      if (gs.collapsed) MorganGuideService.toggleCollapsed();
+      return;
+    }
+    // No active guide — show the Morgan Greeter as a dialog overlay so the
+    // user can pick a guide without losing their current screen.
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 700),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: MorganGreeter(
+              isFirstVisit: false,
+              onAction: (route) {
+                Navigator.of(ctx).pop();
+                if (route != null) setState(() => _activeRoute = route);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Morgan inline search — called by MorganGuidePanel ─────────────────────
+  Future<List<MorganSearchResult>> _onMorganSearch(String query) async {
+    try {
+      final email = FirebaseAuth.instance.currentUser?.email ?? '';
+      if (email.isEmpty) return [];
+      final q = query.toLowerCase();
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .get();
+      return snap.docs
+          .where((d) {
+            final data = d.data();
+            final denom   = (data['Denomination']   ?? '').toString().toLowerCase();
+            final year    = (data['Year']            ?? '').toString().toLowerCase();
+            final series  = (data['Program/Series']  ?? '').toString().toLowerCase();
+            final country = (data['Country']         ?? '').toString().toLowerCase();
+            final variety = (data['Variety']         ?? '').toString().toLowerCase();
+            return denom.contains(q)   || year.contains(q) ||
+                   series.contains(q)  || country.contains(q) ||
+                   variety.contains(q);
+          })
+          .take(5)
+          .map((d) {
+            final data   = d.data();
+            final year   = data['Year']?.toString() ?? '';
+            final denom  = data['Denomination']?.toString() ?? '';
+            final title  = '$year $denom'.trim();
+            final series = data['Program/Series']?.toString() ?? '';
+            final aiVal  = data['AI Estimated Value']?.toString() ?? '';
+            final valStr = (aiVal.isNotEmpty &&
+                            aiVal != 'Pending' &&
+                            aiVal != 'null')
+                ? '\$$aiVal'
+                : '';
+            return MorganSearchResult(
+              id:       d.id,
+              title:    title.isNotEmpty ? title : 'Coin',
+              subtitle: series,
+              value:    valStr,
+            );
+          })
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override
@@ -225,7 +303,13 @@ class _BaseLayoutState extends State<BaseLayout> {
               },
             ),
             // Morgan guide panel — floats above screen when a guide is active
-            const MorganGuidePanel(),
+            MorganGuidePanel(
+              onSearch: _onMorganSearch,
+              onSearchResultTap: (coinId) => setState(() {
+                _activeRoute     = 'My Collection';
+                _myCollectionTab = 'Coins';
+              }),
+            ),
           ],
         ),
       ),
@@ -515,7 +599,13 @@ class _BaseLayoutState extends State<BaseLayout> {
                   },
                 ),
                 // Morgan guide panel — floats above screen when a guide is active
-                const MorganGuidePanel(),
+                MorganGuidePanel(
+                  onSearch: _onMorganSearch,
+                  onSearchResultTap: (coinId) => setState(() {
+                    _activeRoute     = 'My Collection';
+                    _myCollectionTab = 'Coins';
+                  }),
+                ),
               ],
             ),
           ),
