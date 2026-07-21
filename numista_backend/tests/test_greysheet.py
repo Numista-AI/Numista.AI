@@ -1,8 +1,50 @@
 import pytest
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from main import app
+import services.greysheet_service as gs_module
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def mock_external_services(monkeypatch):
+    """Ensure pytest runs reliably without hanging on external ADC/OAuth tokens or live network calls."""
+    import main
+    mock_db = MagicMock()
+    mock_doc = MagicMock()
+    mock_doc.to_dict.return_value = {
+        "Quantity": 1,
+        "greysheetBid": 95.0,
+        "AI Estimated Value": "$95.00",
+        "item_type": "coin",
+        "Year": "1909",
+        "MintMark": "S",
+        "Denomination": "One Cent",
+        "ProgramSeries": "Lincoln Cents"
+    }
+    mock_doc.exists = True
+    
+    mock_coins_collection = MagicMock()
+    mock_coins_collection.get.return_value = [mock_doc]
+    mock_coins_collection.document.return_value = mock_doc
+    
+    mock_user_doc = MagicMock()
+    mock_user_doc.collection.return_value = mock_coins_collection
+    
+    mock_users_collection = MagicMock()
+    mock_users_collection.document.return_value = mock_user_doc
+    
+    mock_db.collection.return_value = mock_users_collection
+    
+    monkeypatch.setattr(main, "db", mock_db)
+    
+    # Mock resolve_gsid_hybrid to return a valid mapping for Lincoln Cent test payload
+    orig_resolve = gs_module.GreysheetService.resolve_gsid_hybrid
+    def mock_resolve(self, coin_data, genai_client=None, primary_model="gemini-3.5-flash"):
+        if coin_data.get("item_type") == "paper_currency":
+            return None
+        return (429, "Lincoln Cents (1909-1958)")
+    monkeypatch.setattr(gs_module.GreysheetService, "resolve_gsid_hybrid", mock_resolve)
 
 def test_resolve_greysheet_raw():
     # Test resolving Lincoln Cent VDB
