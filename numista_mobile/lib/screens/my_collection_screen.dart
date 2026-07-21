@@ -2272,7 +2272,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       String label, VoidCallback? onTap, {required bool? sortAsc}) {
     return TableViewCell(
       child: Material(
-        color: Color(0xFFF8F9FB),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           mouseCursor: onTap != null
@@ -2534,8 +2534,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 // -- Header -----------------------------------------------
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFF8F9FB),
+                    color: _surface,
                     border: Border(bottom: BorderSide(color: _border)),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                   ),
@@ -2591,8 +2590,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     // Left panel: image (300px)
                     Container(
                       width: 300,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFF8F9FB),
+                        color: _surface,
                         border: Border(right: BorderSide(color: _border)),
                       ),
                       padding: EdgeInsets.all(16),
