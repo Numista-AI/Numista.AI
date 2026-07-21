@@ -2154,6 +2154,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final series = m[_F.programSeries]?.toString() ?? '';
         final variety = m[_F.variety]?.toString() ?? '';
         final condition = m[_F.condition]?.toString() ?? '';
+        final theme = m[_F.themeSubject]?.toString() ?? '';
+        
+        final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
+        final displayTitle = '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
         
         final valCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
         final valBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
@@ -2226,7 +2230,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '$year $mint $denom'.trim(),
+                    displayTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -2272,7 +2276,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       String label, VoidCallback? onTap, {required bool? sortAsc}) {
     return TableViewCell(
       child: Material(
-        color: Color(0xFFF8F9FB),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           mouseCursor: onTap != null
@@ -2535,7 +2539,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: BoxDecoration(
-                    color: Color(0xFFF8F9FB),
+                    color: _surface,
                     border: Border(bottom: BorderSide(color: _border)),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                   ),
@@ -2592,7 +2596,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     Container(
                       width: 300,
                       decoration: BoxDecoration(
-                        color: Color(0xFFF8F9FB),
+                        color: _surface,
                         border: Border(right: BorderSide(color: _border)),
                       ),
                       padding: EdgeInsets.all(16),

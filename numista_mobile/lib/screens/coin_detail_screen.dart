@@ -33,6 +33,8 @@ import '../widgets/grade_badge_widget.dart';
 import '../widgets/glossary_tooltip_wrapper.dart';
 import '../models/mint_error.dart';
 import 'mint_error_detail_screen.dart';
+import '../widgets/coin_set_viewer.dart';
+import '../widgets/set_contents_panel.dart';
 
 // ─── Design tokens (match app-wide palette) ────────────────────────────────────
 const _kBg       = Color(0xFF0B1120);
@@ -840,6 +842,8 @@ class _HeroHeader extends StatelessWidget {
     final title = _buildTitle();
     final subtitle = _buildSubtitle();
 
+    final isSetItem = coin.isSet || (coin.setId != null && coin.setId!.isNotEmpty);
+
     return Container(
       color: _kDark,
       padding: const EdgeInsets.fromLTRB(20, 14, 12, 16),
@@ -848,8 +852,20 @@ class _HeroHeader extends StatelessWidget {
         children: [
           // Close + title row
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Coin images
-            _CoinImagePair(coin: coin),
+            // Coin images or Set icon
+            if (isSetItem)
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFC9A227).withAlpha(80)),
+                ),
+                child: const Icon(Icons.folder_open, color: Color(0xFFC9A227), size: 48),
+              )
+            else
+              _CoinImagePair(coin: coin),
             const SizedBox(width: 20),
             // Identity
             Expanded(
@@ -1424,21 +1440,37 @@ class _DetailsTab extends StatelessWidget {
       return _emptyState('No details recorded yet.\nTap Edit to add information.');
     }
 
+    final isSetItem = coin.isSet || (coin.setId != null && coin.setId!.isNotEmpty);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: fields.map((f) {
-          final isAuditable = const ['Year', 'Mint Mark', 'Variety / Error', 'Denomination'].contains(f.$1);
-          return _DetailTile(
-            label: f.$1,
-            value: f.$2,
-            onInspect: (isInspectorMode && isAuditable)
-                ? () => onInspectField(f.$1, f.$2)
-                : null,
-          );
-        }).toList(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: fields.map((f) {
+              final isAuditable = const ['Year', 'Mint Mark', 'Variety / Error', 'Denomination'].contains(f.$1);
+              return _DetailTile(
+                label: f.$1,
+                value: f.$2,
+                onInspect: (isInspectorMode && isAuditable)
+                    ? () => onInspectField(f.$1, f.$2)
+                    : null,
+              );
+            }).toList(),
+          ),
+          if (isSetItem) ...[
+            const SizedBox(height: 24),
+            const Divider(color: Colors.white12),
+            const SizedBox(height: 16),
+            if (coin.setContents != null && coin.setContents!.isNotEmpty)
+              SetContentsPanel(data: coin.toFirestore())
+            else if (coin.setId != null && coin.setId!.isNotEmpty)
+              CoinSetViewer(setId: coin.setId!),
+          ],
+        ],
       ),
     );
   }
