@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # run_tests.ps1 — Numista.AI Automated Test Runner
 # Called by Windows Task Scheduler every 2 days at 2:00 AM
 # Runs Playwright tests against https://numista.ai
@@ -51,7 +51,7 @@ Log "Old screenshots cleared."
 
 # 4. Run Playwright tests
 Log "Running Playwright tests against https://numista.ai ..."
-$testOutput = & npx playwright test --reporter=json,list 2>&1
+$testOutput = & npx playwright test 2>&1
 $exitCode = $LASTEXITCODE
 
 # Write raw output to log

@@ -8,8 +8,8 @@ class ThemeProvider extends ChangeNotifier {
     _loadTheme();
   }
 
-  // Set default to light mode per UI/UX stability guidelines
-  ThemeMode _themeMode = ThemeMode.light;
+  // Set default to dark mode per UI/UX stability guidelines
+  ThemeMode _themeMode = ThemeMode.dark;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -33,8 +33,11 @@ class ThemeProvider extends ChangeNotifier {
     if (savedMode != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (e) => e.name == savedMode,
-        orElse: () => ThemeMode.light,
+        orElse: () => ThemeMode.dark,
       );
+      notifyListeners();
+    } else {
+      _themeMode = ThemeMode.dark;
       notifyListeners();
     }
   }

@@ -16,6 +16,7 @@ import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
+import 'ai_chat_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
@@ -49,6 +50,13 @@ class CombinedDashboardData {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1120) : const Color(0xFFF4F4F2);
+  Color get _surface => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2937) : Colors.white;
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
+  Color get _subtext => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8B92B4) : const Color(0xFF5A5C69);
+  Color get _border => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D3143) : const Color(0xFFE2E6E9);
+  Color get _accent => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFC9A227) : const Color(0xFF8C7355);
+
   Stream<CombinedDashboardData> _getCombinedStream() {
     final controller = StreamController<CombinedDashboardData>();
     List<Map<String, dynamic>> coins = [];
@@ -495,7 +503,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             final fmt = intl.NumberFormat.currency(symbol: '\$');
 
-            return SingleChildScrollView(
+            final mainContent = SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1001,7 +1009,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ],
               ),
             );
-              },
+
+            if (outerConstraints.maxWidth >= 800) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: mainContent,
+                  ),
+                  VerticalDivider(width: 1, color: _border, thickness: 1),
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      color: _bg,
+                      child: const AiChatScreen(),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return mainContent;
+            }
+          },
             );
           },
         );
@@ -1023,33 +1053,33 @@ class _HomeDashboardState extends State<HomeDashboard> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(advanced ? 'EST. PORTFOLIO VALUE (RETAIL)' : 'EST. PORTFOLIO VALUE (ESTATE/LIQ)',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF5A5C69))),
+                color: _subtext)),
         const SizedBox(height: 2),
 
         // ── Main value display ──────────────────────────────────────────────
         if (hasValue)
           Text(fmt.format(displayVal),
-              style: const TextStyle(
-                  fontSize: 26,
+              style: TextStyle(
+                  fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F9D58)))
+                  color: _accent))
         else if (isRunning)
           Text(
             hasProgress ? '${fmt.format(displayVal)} (est.)' : 'Valuing\u2026',
-            style: const TextStyle(
-                fontSize: 22,
+            style: TextStyle(
+                fontSize: 26,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF0F9D58)),
+                color: _accent),
           )
         else
-          const Text('Pending AI Valuation',
+          Text('Pending AI Valuation',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF9CA3AF))),
+                  color: _subtext)),
 
         if (hasValue && advanced) ...[
           const SizedBox(height: 4),
@@ -1196,14 +1226,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _metricCard(String label, String value, {Color? valueColor}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E6E9)),
+        border: Border.all(color: _border),
         boxShadow: [BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2))],
       ),
@@ -1212,7 +1243,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         children: [
           Text(label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF5A5C69))),
+              style: TextStyle(fontSize: 11, color: _subtext)),
           const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -1220,7 +1251,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: valueColor ?? const Color(0xFF31333F))),
+                    color: valueColor ?? _text)),
           ),
         ],
       ),

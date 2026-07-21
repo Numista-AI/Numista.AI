@@ -63,46 +63,46 @@ class GradeBadgeWidget extends StatelessWidget {
   _BadgeColors _getBadgeColors(String code) {
     final clean = code.toUpperCase().trim();
     if (clean.startsWith('MS') || clean.startsWith('PF') || clean.startsWith('PR')) {
-      // Uncirculated / Proof — Gold
+      // Uncirculated / Proof — Solid Gold background, deep navy text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFFEF3C7),
-        borderColor: Color(0xFFF59E0B),
-        textColor: Color(0xFFB45309),
+        backgroundColor: Color(0xFFC9A227),
+        borderColor: Color(0xFFB38F1E),
+        textColor: Color(0xFF0B1120),
       );
     } else if (clean.startsWith('AU')) {
-      // About Uncirculated — Blue
+      // About Uncirculated — Solid Blue, white text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFDBEAFE),
-        borderColor: Color(0xFF3B82F6),
-        textColor: Color(0xFF1D4ED8),
+        backgroundColor: Color(0xFF1D4ED8),
+        borderColor: Color(0xFF172554),
+        textColor: Colors.white,
       );
     } else if (clean.startsWith('XF') || clean.startsWith('EF')) {
-      // Extremely Fine — Green
+      // Extremely Fine — Solid Green, white text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFD1FAE5),
-        borderColor: Color(0xFF10B981),
-        textColor: Color(0xFF047857),
+        backgroundColor: Color(0xFF047857),
+        borderColor: Color(0xFF022C22),
+        textColor: Colors.white,
       );
     } else if (clean.startsWith('VF')) {
-      // Very Fine — Purple
+      // Very Fine — Solid Purple, white text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFF3E8FF),
-        borderColor: Color(0xFF8B5CF6),
-        textColor: Color(0xFF6D28D9),
+        backgroundColor: Color(0xFF6D28D9),
+        borderColor: Color(0xFF2E1065),
+        textColor: Colors.white,
       );
     } else if (clean.startsWith('F')) {
-      // Fine — Orange
+      // Fine — Solid Orange, white text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFFFEDD5),
-        borderColor: Color(0xFFF97316),
-        textColor: Color(0xFFC2410C),
+        backgroundColor: Color(0xFFC2410C),
+        borderColor: Color(0xFF431407),
+        textColor: Colors.white,
       );
     } else {
-      // Slate/Grey for circulated/lower grades (VG, G, AG, FR, P)
+      // Lower circulated grades — Solid Slate, white text
       return const _BadgeColors(
-        backgroundColor: Color(0xFFF1F5F9),
-        borderColor: Color(0xFF94A3B8),
-        textColor: Color(0xFF475569),
+        backgroundColor: Color(0xFF475569),
+        borderColor: Color(0xFF0F172A),
+        textColor: Colors.white,
       );
     }
   }

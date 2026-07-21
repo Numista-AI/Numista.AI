@@ -35,17 +35,17 @@ import '../models/mint_error.dart';
 import 'mint_error_detail_screen.dart';
 
 // ─── Design tokens (match app-wide palette) ────────────────────────────────────
-const _kBg       = Color(0xFFF0F2F6);
-const _kSurface  = Color(0xFFFFFFFF);
-const _kDark     = Color(0xFF0E1117);
-const _kText     = Color(0xFF31333F);
-const _kSubtext  = Color(0xFF5A5C69);
-const _kAccent   = Color(0xFF4C8CDA);
+const _kBg       = Color(0xFF0B1120);
+const _kSurface  = Color(0xFF1E2937);
+const _kDark     = Color(0xFF0B1120);
+const _kText     = Color(0xFFE8EAF0);
+const _kSubtext  = Color(0xFF8B92B4);
+const _kAccent   = Color(0xFFC9A227);
 const _kBrand    = Color(0xFFF63366);
 const _kGreen    = Color(0xFF28A745);
 const _kRed      = Color(0xFFDC3545);
-const _kGold     = Color(0xFFFFD700);
-const _kBorder   = Color(0xFFE2E6E9);
+const _kGold     = Color(0xFFC9A227);
+const _kBorder   = Color(0xFF2D3143);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -889,7 +889,7 @@ class _HeroHeader extends StatelessWidget {
               _ActionBtn(
                 icon: isOnWishlist ? Icons.favorite : Icons.favorite_outline,
                 label: isOnWishlist ? 'Wishlisted' : 'Wishlist',
-                color: isOnWishlist ? _kBrand : Colors.white70,
+                color: isOnWishlist ? _kBrand : const Color(0xFFC9A227),
                 onTap: wishlistLoading ? null : onWishlist,
                 loading: wishlistLoading,
               ),
@@ -897,14 +897,14 @@ class _HeroHeader extends StatelessWidget {
               _ActionBtn(
                 icon: Icons.edit_outlined,
                 label: 'Edit',
-                color: Colors.white70,
+                color: const Color(0xFFC9A227),
                 onTap: onEdit,
               ),
               const SizedBox(width: 8),
               _ActionBtn(
                 icon: Icons.psychology_outlined,
                 label: 'AI Chat',
-                color: Colors.white70,
+                color: const Color(0xFFC9A227),
                 onTap: onAiChat,
               ),
               if (onPcgs != null) ...[
@@ -912,7 +912,7 @@ class _HeroHeader extends StatelessWidget {
                 _ActionBtn(
                   icon: Icons.open_in_new,
                   label: 'PCGS',
-                  color: Colors.white70,
+                  color: const Color(0xFFC9A227),
                   onTap: onPcgs,
                 ),
               ],
@@ -921,7 +921,7 @@ class _HeroHeader extends StatelessWidget {
                 _ActionBtn(
                   icon: Icons.assignment_turned_in_outlined,
                   label: 'Verify Manually',
-                  color: Colors.amberAccent,
+                  color: const Color(0xFFC9A227),
                   onTap: onVerifyManually,
                 ),
               ],
@@ -929,7 +929,7 @@ class _HeroHeader extends StatelessWidget {
               _ActionBtn(
                 icon: Icons.delete_outline,
                 label: 'Delete',
-                color: _kRed.withAlpha(200),
+                color: const Color(0xFFDC3545),
                 onTap: onDelete,
               ),
             ]),
@@ -1224,18 +1224,30 @@ class _CoinImageTile extends StatelessWidget {
               width: size,
               height: size,
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(12),
+                color: const Color(0xFF0B1120), // Dark background canvas
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withAlpha(30), width: 1),
+                border: Border.all(
+                  color: url.isNotEmpty ? const Color(0xFFC9A227).withAlpha(80) : Colors.white.withAlpha(30),
+                  width: url.isNotEmpty ? 1.5 : 1.0,
+                ),
+                boxShadow: url.isNotEmpty
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFC9A227).withAlpha(50),
+                          blurRadius: 14, // Subtle 12-16px blur radius glow
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(9),
                 child: isLoading && url.isEmpty
-                    ? _skeleton()   // Show shimmer while reference lookup is in flight
+                    ? _skeleton()
                     : url.isNotEmpty
                         ? Image.network(
                             url,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain, // BoxFit.contain to prevent clipping rim
                             errorBuilder: (ctx, err, st) => _placeholder(),
                             loadingBuilder: (ctx, child, progress) =>
                               progress == null ? child : _skeleton(),
@@ -1352,12 +1364,13 @@ class _ActionBtn extends StatelessWidget {
         if (result is Future) result.catchError((_) {});
       },
       borderRadius: BorderRadius.circular(8),
+      hoverColor: color.withAlpha(25),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(14),
+          color: color.withAlpha(15),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withAlpha(25)),
+          border: Border.all(color: color.withAlpha(60), width: 1.0),
         ),
         child: loading
             ? SizedBox(width: 14, height: 14,
@@ -1366,7 +1379,7 @@ class _ActionBtn extends StatelessWidget {
                 Icon(icon, size: 14, color: color),
                 const SizedBox(width: 5),
                 Text(label, style: TextStyle(color: color, fontSize: 12,
-                    fontWeight: FontWeight.w500)),
+                    fontWeight: FontWeight.w600)),
               ]),
       ),
     );
