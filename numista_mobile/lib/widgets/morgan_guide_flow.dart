@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  Morgan Guide Flow  (v2 — compact speech-bubble style)
-//  ──────────────────────────────────────────────────────
-//  Each guide step renders as a small floating bubble (≤300 px wide) that
-//  hovers near the UI element it's talking about.  Key design goals:
-//    • Feels like Morgan whispering a tip, NOT lecturing
-//    • Context-aware position per step (top / bottom, left / center / right)
-//    • Animated ↓ arrow points at the element being described
-//    • Animated progress dots (●○○) instead of a progress bar
-//    • Collapsible to a mini pill so the app stays usable
+//  Morgan Guide Flow  (v3 — draggable + searchable speech-bubble style)
+//  ──────────────────────────────────────────────────────────────────────────
+//  Changes from v2:
+//    • MorganGuidePanel is now a StatefulWidget so it can track drag state
+//      and inline search results.
+//    • Dragging: a ≡ handle in the bubble header lets the user drag it
+//      anywhere on screen.  A _dragDelta Offset is accumulated and applied via
+//      Transform.translate *inside* the Positioned child — this keeps
+//      Positioned as the direct Stack child (no intermediate RenderObjects),
+//      avoiding the dart2js -O4 StackParentData crash described below.
+//    • Search: MorganStep.showSearch == true reveals an inline TextField and
+//      compact result list.  Results come from an onSearch callback on
+//      MorganGuidePanel — keeping Firebase out of this widget.
 //
 //  IMPORTANT: _buildCollapsed / _buildExpanded must return a Positioned(…)
-//  directly — never wrap Positioned in a RenderObjectWidget (e.g. AnimatedSlide)
-//  because that creates an intermediate render object whose parentData is NOT
-//  StackParentData, causing a TypeError crash in dart2js -O4 release builds.
+//  directly — never wrap Positioned in a RenderObjectWidget (e.g. AnimatedSlide
+//  or LayoutBuilder) because that creates an intermediate render object whose
+//  parentData is NOT StackParentData, causing a TypeError crash in dart2js
+//  -O4 release builds.  Transform.translate is fine because it wraps the
+//  content *inside* Positioned, not the Positioned itself.
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
@@ -25,6 +31,23 @@ enum GuidePosition {
 }
 
 enum ArrowDirection { down, up, left, right, downLeft, downRight }
+
+// ── Search result data class ──────────────────────────────────────────────────
+
+/// A single coin / item returned by the Morgan inline search.
+class MorganSearchResult {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String value;
+
+  const MorganSearchResult({
+    required this.id,
+    required this.title,
+    this.subtitle = '',
+    this.value    = '',
+  });
+}
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -51,21 +74,26 @@ class MorganStep {
   /// Which direction the arrow bounces.
   final ArrowDirection arrowDirection;
 
+  /// When true, an inline search field is shown inside the bubble so the user
+  /// can search their collection without leaving the current screen.
+  final bool showSearch;
+
   const MorganStep({
     required this.narration,
     this.hint,
-    this.nextLabel = 'Next →',
-    this.waitForAction = false,
-    this.position = GuidePosition.bottomRight,
-    this.showArrow = false,
+    this.nextLabel      = 'Next →',
+    this.waitForAction  = false,
+    this.position       = GuidePosition.bottomRight,
+    this.showArrow      = false,
     this.arrowDirection = ArrowDirection.down,
+    this.showSearch     = false,
   });
 }
 
 /// A complete guided flow (e.g. "Browsing your collection").
 class MorganGuide {
   final String id;
-  final String title;     // Short label in the bubble header
+  final String title;   // Short label in the bubble header
   final String emoji;
   final List<MorganStep> steps;
 
@@ -83,6 +111,7 @@ class GuideState {
   final MorganGuide guide;
   final int step;
   final bool collapsed;
+
   const GuideState({
     required this.guide,
     required this.step,
@@ -132,24 +161,96 @@ class MorganGuideService {
 
 // ── Panel widget ──────────────────────────────────────────────────────────────
 
-class MorganGuidePanel extends StatelessWidget {
-  const MorganGuidePanel({super.key});
+class MorganGuidePanel extends StatefulWidget {
+  /// Called when the user types in the embedded search field.
+  /// Must return matching [MorganSearchResult]s to display inside the bubble.
+  /// Keep Firebase / Firestore logic in the caller — not in this widget.
+  final Future<List<MorganSearchResult>> Function(String query)? onSearch;
 
-  // Shared palette
-  static const _bg   = Color(0xFF0B1F3A);
-  static const _teal = Color(0xFF2DD4BF);
-  static const _gold = Color(0xFFD4A843);
-  static const _sub  = Color(0xFF94A3B8);
+  /// Called when the user taps a search result row.
+  /// [id] is the document ID of the matched coin / item.
+  final void Function(String id)? onSearchResultTap;
+
+  const MorganGuidePanel({
+    super.key,
+    this.onSearch,
+    this.onSearchResultTap,
+  });
+
+  // Shared palette — also used by child private widgets below.
+  static const bg   = Color(0xFF0B1F3A);
+  static const teal = Color(0xFF2DD4BF);
+  static const gold = Color(0xFFD4A843);
+  static const sub  = Color(0xFF94A3B8);
+
+  @override
+  State<MorganGuidePanel> createState() => _MorganGuidePanelState();
+}
+
+class _MorganGuidePanelState extends State<MorganGuidePanel> {
+  // ── Drag state ────────────────────────────────────────────────────────────
+  /// Offset accumulated from pan gestures on the bubble header.
+  /// Applied via Transform.translate inside the Positioned — see file comment.
+  Offset _dragDelta = Offset.zero;
+
+  /// True once the user has panned the bubble.  While false, the delta resets
+  /// each step so the bubble re-anchors to the step's GuidePosition corner.
+  bool _userHasDragged = false;
+
+  /// Tracks the last rendered step key to detect step changes.
+  String _lastStepKey = '';
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  List<MorganSearchResult> _searchResults = [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Search handler ────────────────────────────────────────────────────────
+
+  void _onSearchChanged(String query) async {
+    if (query.trim().isEmpty) {
+      if (mounted) setState(() { _searchResults = []; _searching = false; });
+      return;
+    }
+    if (mounted) setState(() => _searching = true);
+    final results = await widget.onSearch?.call(query) ?? [];
+    if (mounted) setState(() { _searchResults = results; _searching = false; });
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<GuideState?>(
       valueListenable: MorganGuideService.current,
       builder: (context, state, _) {
-        if (state == null) return const SizedBox.shrink();
+        if (state == null) {
+          // Guide finished — reset everything for next run.
+          _dragDelta     = Offset.zero;
+          _userHasDragged = false;
+          _lastStepKey   = '';
+          _searchCtrl.clear();
+          _searchResults = [];
+          return const SizedBox.shrink();
+        }
 
-        // Return Positioned directly — do NOT wrap in any RenderObjectWidget.
-        // See file-level note for the reason.
+        // Detect step change.
+        final stepKey = '${state.guide.id}_${state.step}';
+        if (stepKey != _lastStepKey) {
+          _lastStepKey = stepKey;
+          if (!_userHasDragged) _dragDelta = Offset.zero;
+          _searchCtrl.clear();
+          _searchResults = [];
+          _searching = false;
+        }
+
+        // Return Positioned directly — see file-level note.
         return state.collapsed
             ? _buildCollapsed(state)
             : _buildExpanded(state);
@@ -157,67 +258,78 @@ class MorganGuidePanel extends StatelessWidget {
     );
   }
 
-  // ── Collapsed mini-pill ──────────────────────────────────────────────────
+  // ── Collapsed mini-pill ───────────────────────────────────────────────────
 
   Widget _buildCollapsed(GuideState state) {
+    final pill = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: (d) => setState(() {
+        _userHasDragged = true;
+        _dragDelta += d.delta;
+      }),
+      onTap: MorganGuideService.toggleCollapsed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: MorganGuidePanel.bg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: MorganGuidePanel.gold.withAlpha(80), width: 1),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withAlpha(100), blurRadius: 10),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MiniOwl(size: 22),
+            const SizedBox(width: 6),
+            Text(
+              'Step ${state.step + 1}/${state.guide.steps.length}',
+              style: const TextStyle(
+                  color: MorganGuidePanel.teal,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.expand_less_rounded,
+                color: MorganGuidePanel.gold, size: 14),
+          ],
+        ),
+      ),
+    );
+
     return Positioned(
       bottom: 16,
       right: 16,
-      child: GestureDetector(
-        onTap: MorganGuideService.toggleCollapsed,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: _bg,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: _gold.withAlpha(80), width: 1),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withAlpha(100), blurRadius: 10),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _MiniOwl(size: 22),
-              const SizedBox(width: 6),
-              Text(
-                'Step ${state.step + 1}/${state.guide.steps.length}',
-                style: const TextStyle(
-                    color: _teal,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.expand_less_rounded, color: _gold, size: 14),
-            ],
-          ),
-        ),
-      ),
+      child: Transform.translate(offset: _dragDelta, child: pill),
     );
   }
 
   // ── Expanded speech bubble ────────────────────────────────────────────────
 
   Widget _buildExpanded(GuideState state) {
-    final step      = state.guide.steps[state.step];
-    final total     = state.guide.steps.length;
-    final isLast    = state.step == total - 1;
+    final step   = state.guide.steps[state.step];
+    final total  = state.guide.steps.length;
+    final isLast = state.step == total - 1;
 
-    // ── Bubble card ──────────────────────────────────────────────────────
+    // ── Bubble card ───────────────────────────────────────────────────────
     final bubble = Container(
       width: 300,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: _bg,
+        color: MorganGuidePanel.bg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _gold.withAlpha(70), width: 1),
+        border:
+            Border.all(color: MorganGuidePanel.gold.withAlpha(70), width: 1),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withAlpha(120),
               blurRadius: 16,
               offset: const Offset(0, 4)),
-          BoxShadow(color: _teal.withAlpha(15), blurRadius: 12),
+          BoxShadow(
+              color: MorganGuidePanel.teal.withAlpha(15), blurRadius: 12),
         ],
       ),
       child: Column(
@@ -225,74 +337,182 @@ class MorganGuidePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // ── Header: avatar + title + dots + collapse ─────────────────
-          Row(
-            children: [
-              _MiniOwl(size: 26),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${state.guide.emoji}  ${state.guide.title}',
-                  style: const TextStyle(
-                      color: _gold,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          // ── Header: drag handle + avatar + title + dots + collapse ─────
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onPanUpdate: (d) => setState(() {
+              _userHasDragged = true;
+              _dragDelta += d.delta;
+            }),
+            child: Row(
+              children: [
+                // Drag handle — visual cue that the bubble is movable
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.drag_indicator_rounded,
+                    color: Color(0xFF2A4A6B),
+                    size: 16,
+                  ),
                 ),
-              ),
-              _ProgressDots(current: state.step, total: total),
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: MorganGuideService.toggleCollapsed,
-                child: const Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Icon(Icons.expand_more_rounded,
-                      color: _sub, size: 18),
+                _MiniOwl(size: 26),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${state.guide.emoji}  ${state.guide.title}',
+                    style: const TextStyle(
+                        color: MorganGuidePanel.gold,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+                _ProgressDots(current: state.step, total: total),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: MorganGuideService.toggleCollapsed,
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(Icons.expand_more_rounded,
+                        color: MorganGuidePanel.sub, size: 18),
+                  ),
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: 8),
           const Divider(color: Color(0xFF1E3A5F), height: 1),
           const SizedBox(height: 10),
 
-          // ── Narration ─────────────────────────────────────────────────
+          // ── Narration ──────────────────────────────────────────────────
           Text(
             step.narration,
             style: const TextStyle(
                 color: Colors.white, fontSize: 14, height: 1.45),
           ),
 
-          // ── Hint ──────────────────────────────────────────────────────
+          // ── Hint ───────────────────────────────────────────────────────
           if (step.hint != null) ...[
             const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(Icons.lightbulb_outline_rounded,
-                    color: _gold, size: 12),
+                    color: MorganGuidePanel.gold, size: 12),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     step.hint!,
                     style: const TextStyle(
-                        color: _gold, fontSize: 11, height: 1.35),
+                        color: MorganGuidePanel.gold,
+                        fontSize: 11,
+                        height: 1.35),
                   ),
                 ),
               ],
             ),
           ],
 
+          // ── Inline search (when showSearch is true) ────────────────────
+          if (step.showSearch && widget.onSearch != null) ...[
+            const SizedBox(height: 10),
+
+            // Search text field
+            SizedBox(
+              height: 36,
+              child: TextField(
+                controller: _searchCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFF0F2744),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 0),
+                  hintText: 'Search your collection…',
+                  hintStyle: TextStyle(
+                      color: MorganGuidePanel.sub.withAlpha(140),
+                      fontSize: 13),
+                  prefixIcon: const Icon(Icons.search,
+                      color: MorganGuidePanel.teal, size: 16),
+                  suffixIcon: _searchCtrl.text.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() => _searchResults = []);
+                          },
+                          child: const Icon(Icons.close,
+                              color: MorganGuidePanel.sub, size: 14),
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                        color: MorganGuidePanel.teal.withAlpha(60)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                        color: MorganGuidePanel.teal.withAlpha(60)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                        color: MorganGuidePanel.teal, width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+
+            // Spinner
+            if (_searching)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        color: MorganGuidePanel.teal, strokeWidth: 2),
+                  ),
+                ),
+              )
+            // Result rows
+            else if (_searchResults.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Column(
+                  children: _searchResults
+                      .map((r) => _SearchResultTile(
+                            result: r,
+                            onTap: widget.onSearchResultTap != null
+                                ? () => widget.onSearchResultTap!(r.id)
+                                : null,
+                          ))
+                      .toList(),
+                ),
+              )
+            // Empty state
+            else if (_searchCtrl.text.isNotEmpty && !_searching)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'No matches — try a year, name, or series.',
+                  style: TextStyle(
+                      color: MorganGuidePanel.sub, fontSize: 11),
+                ),
+              ),
+          ],
+
           const SizedBox(height: 12),
 
-          // ── Navigation row ────────────────────────────────────────────
+          // ── Navigation row ─────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Back / Exit (left side — compact text tap target)
               if (state.step > 0)
                 GestureDetector(
                   onTap: MorganGuideService.back,
@@ -300,7 +520,8 @@ class MorganGuidePanel extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text('← Back',
                         style: TextStyle(
-                            color: _sub.withAlpha(180), fontSize: 12)),
+                            color: MorganGuidePanel.sub.withAlpha(180),
+                            fontSize: 12)),
                   ),
                 )
               else
@@ -310,17 +531,17 @@ class MorganGuidePanel extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text('✕ Exit',
                         style: TextStyle(
-                            color: _sub.withAlpha(110), fontSize: 11)),
+                            color: MorganGuidePanel.sub.withAlpha(110),
+                            fontSize: 11)),
                   ),
                 ),
-
-              // Next / Done (right side — pill button)
               ElevatedButton(
                 onPressed:
                     step.waitForAction ? null : MorganGuideService.next,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isLast ? const Color(0xFF22C55E) : _teal,
+                  backgroundColor: isLast
+                      ? const Color(0xFF22C55E)
+                      : MorganGuidePanel.teal,
                   foregroundColor: Colors.black87,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 8),
@@ -342,7 +563,7 @@ class MorganGuidePanel extends StatelessWidget {
       ),
     );
 
-    // ── Attach arrow: vertical directions go above/below; horizontal go beside ─
+    // ── Attach directional arrow ───────────────────────────────────────────
     Widget content;
     if (!step.showArrow) {
       content = bubble;
@@ -350,7 +571,6 @@ class MorganGuidePanel extends StatelessWidget {
       final arrow = _BouncingArrow(direction: step.arrowDirection);
       switch (step.arrowDirection) {
         case ArrowDirection.left:
-          // Arrow sits to the LEFT of the bubble, pointing at the element
           content = Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -370,8 +590,7 @@ class MorganGuidePanel extends StatelessWidget {
             children: [arrow, bubble],
           );
           break;
-        default:
-          // down / downLeft / downRight — arrow below bubble
+        default: // down / downLeft / downRight
           content = Column(
             mainAxisSize: MainAxisSize.min,
             children: [bubble, arrow],
@@ -379,30 +598,99 @@ class MorganGuidePanel extends StatelessWidget {
       }
     }
 
-    // ── Place the Positioned wrapper based on step.position ───────────────
-    //
-    // topCenter / bottomCenter: use left:0 + right:0 + Align so the fixed-
-    // width bubble is horizontally centred without hard-coding pixel offsets.
+    // ── Draggable wrapper: Transform.translate is INSIDE Positioned ────────
+    //    (see file-level comment — never wrap Positioned in a RenderObjectWidget)
+    final draggable = Transform.translate(
+      offset: _dragDelta,
+      child: content,
+    );
+
+    // ── Position anchor based on step.position ─────────────────────────────
     switch (step.position) {
       case GuidePosition.topLeft:
-        return Positioned(top: 16, left: 16, child: content);
+        return Positioned(top: 16, left: 16, child: draggable);
       case GuidePosition.topRight:
-        return Positioned(top: 16, right: 16, child: content);
+        return Positioned(top: 16, right: 16, child: draggable);
       case GuidePosition.topCenter:
         return Positioned(
           top: 16, left: 0, right: 0,
-          child: Align(alignment: Alignment.topCenter, child: content),
+          child: Align(alignment: Alignment.topCenter, child: draggable),
         );
       case GuidePosition.bottomLeft:
-        return Positioned(bottom: 16, left: 16, child: content);
+        return Positioned(bottom: 16, left: 16, child: draggable);
       case GuidePosition.bottomRight:
-        return Positioned(bottom: 16, right: 16, child: content);
+        return Positioned(bottom: 16, right: 16, child: draggable);
       case GuidePosition.bottomCenter:
         return Positioned(
           bottom: 16, left: 0, right: 0,
-          child: Align(alignment: Alignment.topCenter, child: content),
+          child: Align(alignment: Alignment.bottomCenter, child: draggable),
         );
     }
+  }
+}
+
+// ── Search Result Tile ────────────────────────────────────────────────────────
+
+class _SearchResultTile extends StatelessWidget {
+  final MorganSearchResult result;
+  final VoidCallback? onTap;
+
+  const _SearchResultTile({required this.result, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F2744),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: MorganGuidePanel.teal.withAlpha(40)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.monetization_on_rounded,
+                color: MorganGuidePanel.gold, size: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    result.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (result.subtitle.isNotEmpty)
+                    Text(
+                      result.subtitle,
+                      style: const TextStyle(
+                          color: MorganGuidePanel.sub, fontSize: 10),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            if (result.value.isNotEmpty)
+              Text(
+                result.value,
+                style: const TextStyle(
+                    color: MorganGuidePanel.teal,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -439,60 +727,58 @@ class _BouncingArrowState extends State<_BouncingArrow>
 
   @override
   Widget build(BuildContext context) {
-    final double d = _anim.value;
-    Offset offset;
-    IconData icon;
-    double size;
-    Color color;
-
-    switch (widget.direction) {
-      // ── Horizontal: big bold gold arrow ────────────────────────────────
-      case ArrowDirection.left:
-        offset = Offset(-d, 0);
-        icon = Icons.arrow_back_rounded;
-        size = 48;
-        color = const Color(0xFFD4A843); // gold — matches user's yellow arrow
-        break;
-      case ArrowDirection.right:
-        offset = Offset(d, 0);
-        icon = Icons.arrow_forward_rounded;
-        size = 48;
-        color = const Color(0xFFD4A843);
-        break;
-      // ── Diagonal ───────────────────────────────────────────────────────
-      case ArrowDirection.downLeft:
-        offset = Offset(-d * 0.7, d * 0.7);
-        icon = Icons.south_west;
-        size = 32;
-        color = const Color(0xFF2DD4BF);
-        break;
-      case ArrowDirection.downRight:
-        offset = Offset(d * 0.7, d * 0.7);
-        icon = Icons.south_east;
-        size = 32;
-        color = const Color(0xFF2DD4BF);
-        break;
-      // ── Vertical ───────────────────────────────────────────────────────
-      case ArrowDirection.up:
-        offset = Offset(0, -d);
-        icon = Icons.keyboard_arrow_up_rounded;
-        size = 32;
-        color = const Color(0xFF2DD4BF);
-        break;
-      case ArrowDirection.down:
-        offset = Offset(0, d);
-        icon = Icons.keyboard_arrow_down_rounded;
-        size = 32;
-        color = const Color(0xFF2DD4BF);
-        break;
-    }
-
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, child) => Transform.translate(
-        offset: offset,
-        child: Icon(icon, color: color, size: size),
-      ),
+      builder: (_, child) {
+        final double d = _anim.value;
+        Offset offset;
+        IconData icon;
+        double size;
+        Color color;
+
+        switch (widget.direction) {
+          case ArrowDirection.left:
+            offset = Offset(-d, 0);
+            icon   = Icons.arrow_back_rounded;
+            size   = 48;
+            color  = const Color(0xFFD4A843);
+            break;
+          case ArrowDirection.right:
+            offset = Offset(d, 0);
+            icon   = Icons.arrow_forward_rounded;
+            size   = 48;
+            color  = const Color(0xFFD4A843);
+            break;
+          case ArrowDirection.downLeft:
+            offset = Offset(-d * 0.7, d * 0.7);
+            icon   = Icons.south_west;
+            size   = 32;
+            color  = const Color(0xFF2DD4BF);
+            break;
+          case ArrowDirection.downRight:
+            offset = Offset(d * 0.7, d * 0.7);
+            icon   = Icons.south_east;
+            size   = 32;
+            color  = const Color(0xFF2DD4BF);
+            break;
+          case ArrowDirection.up:
+            offset = Offset(0, -d);
+            icon   = Icons.keyboard_arrow_up_rounded;
+            size   = 32;
+            color  = const Color(0xFF2DD4BF);
+            break;
+          case ArrowDirection.down:
+            offset = Offset(0, d);
+            icon   = Icons.keyboard_arrow_down_rounded;
+            size   = 32;
+            color  = const Color(0xFF2DD4BF);
+        }
+
+        return Transform.translate(
+          offset: offset,
+          child: Icon(icon, color: color, size: size),
+        );
+      },
     );
   }
 }
