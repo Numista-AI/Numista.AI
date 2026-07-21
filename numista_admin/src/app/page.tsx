@@ -68,6 +68,17 @@ export default function AdminDashboard() {
     fetchData();
   };
 
+  const handleApproveAll = async () => {
+    if (suggestions.length === 0) return;
+    const allIds = suggestions.map(s => s.id);
+    await fetch(`${API_BASE}/api/admin/brain/suggestions/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suggestion_ids: allIds, action: 'approved' })
+    });
+    fetchData();
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -146,14 +157,28 @@ export default function AdminDashboard() {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold flex items-center gap-2">
                 <span className="opacity-70">✨</span> Suggestions
+                {suggestions.length > 0 && (
+                  <span className="text-xs font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
+                    {suggestions.length}
+                  </span>
+                )}
             </h2>
             {suggestions.length > 0 && (
+              <div className="flex items-center gap-3">
                 <button 
                     onClick={toggleSelectAll}
                     className="text-[10px] uppercase font-bold opacity-50 hover:opacity-100"
                 >
                     {selectedIds.length === suggestions.length ? 'Deselect All' : 'Select All'}
                 </button>
+                <button
+                    onClick={handleApproveAll}
+                    className="text-[10px] uppercase font-bold bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                    title={`Approve all ${suggestions.length} pending suggestions at once`}
+                >
+                    ✓ Approve All
+                </button>
+              </div>
             )}
           </div>
 
