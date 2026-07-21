@@ -26,6 +26,11 @@ class CoinModel {
   final String originalDescription;
   final String country;
   
+  // Set details
+  final bool isSet;
+  final String? setId;
+  final List<dynamic>? setContents;
+  
   // Internal tracking
   final String aiEstimatedValue;
   final String meltValue;
@@ -86,6 +91,9 @@ class CoinModel {
     this.imageUrlReverse = '',
     this.country = 'USA',
     this.timestamp,
+    this.isSet = false,
+    this.setId,
+    this.setContents,
     this.source = '',
     this.sourceFile = '',
     this.binderDocId = '',
@@ -174,6 +182,9 @@ class CoinModel {
           ? (data['priceLastUpdated'] as Timestamp).toDate() 
           : null,
       hasCac: data['hasCac'] as bool? ?? false,
+      isSet: data['is_set'] as bool? ?? false,
+      setId: data['set_id']?.toString(),
+      setContents: data['set_contents'] as List<dynamic>?,
     );
   }
 
@@ -213,6 +224,9 @@ class CoinModel {
       'cpgRetail': cpgRetail,
       'priceLastUpdated': priceLastUpdated != null ? Timestamp.fromDate(priceLastUpdated!) : null,
       'hasCac': hasCac,
+      'is_set': isSet,
+      'set_id': setId,
+      'set_contents': setContents,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };
