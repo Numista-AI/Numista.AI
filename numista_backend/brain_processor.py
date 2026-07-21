@@ -110,6 +110,15 @@ def absorb_document(file_path: Path, user_intent: str = None):
                 
                 sug_data = sugg.get('data') or sugg
                 
+                confidence_raw = sugg.get('confidence')
+                try:
+                    confidence = float(confidence_raw) if confidence_raw is not None else None
+                    # Clamp to valid range
+                    if confidence is not None:
+                        confidence = max(0.0, min(1.0, confidence))
+                except (TypeError, ValueError):
+                    confidence = None
+
                 db.collection('brain_suggestions').add({
                     'source_doc_id': doc_id,
                     'source_filename': file_path.name,
@@ -117,6 +126,7 @@ def absorb_document(file_path: Path, user_intent: str = None):
                     'target_collection': sug_coll,
                     'target_doc_id': sugg.get('doc_id'),
                     'proposed_data': sug_data,
+                    'confidence': confidence,
                     'status': 'pending',
                     'created_at': firestore.SERVER_TIMESTAMP
                 })
@@ -143,6 +153,11 @@ def analyze_document(filename: str, file_bytes: bytes, mime_type: str, user_inte
         - "text": (string) Description of the fix (e.g., "Add 2027 Innovation Dollars")
         - "collection": (string) e.g., "coin_programs", "mint_errors"
         - "data": (dict) The fields and values to update/add.
+        - "confidence": (float, 0.0 to 1.0) Your confidence that this suggestion is accurate and
+          should be applied. Use these guidelines:
+          - 0.93–1.00: Directly stated in the source document with no ambiguity.
+          - 0.85–0.92: Strongly implied or consistent with well-known numismatic standards.
+          - 0.00–0.84: Inferred, ambiguous, or requires cross-referencing another source.
     """
     
     user_prompt = f"""
