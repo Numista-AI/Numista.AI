@@ -191,7 +191,7 @@ For each entry in the baseline list and each mint mark listed in its "mints" arr
    If there are no major varieties, do not invent them—just output the standard strike.
 
 Special Mappings:
-- 2026 Semiquincentennial (250th Anniversary) Coins: The standard variety MUST be the design name with "Liberty Bell 250 Privy Mark" (or Proof/Reverse Proof/Enhanced Uncirculated equivalent). The note must specify the dual date "1776 ~ 2026" and mention it commemorates the 250th Anniversary.
+- 2026 Semiquincentennial (250th Anniversary) Coins: Circulating coins (Jefferson Nickel, Emerging Liberty Dime, Enduring Liberty Half Dollar) and standard American Innovation Dollars do NOT carry a privy mark; they carry only the dual date "1776 ~ 2026". The standard circulating 2026 Declaration of Independence Quarter is dual-dated and has a special circulating version featuring the "July 4th Privy Mark" on the obverse. Official numismatic collector or bullion products (such as American Eagle and Gold Buffalo coins) carry the "Liberty Bell 250 Privy Mark". The note must specify the dual date "1776 ~ 2026" and mention it commemorates the 250th Anniversary.
 
 Your output MUST be a valid JSON array of objects. Each object must have these exact keys:
 - "year": string (e.g. "1999")
@@ -217,7 +217,7 @@ For each year and mint mark in the baseline, you must generate:
 
 Special Mappings:
 - 2021 O and CC Morgan Dollars: If the program name is Morgan Dollars, variety MUST be "O Privy Mark" / "CC Privy Mark" and the note must describe them as Philadelphia strikes with privy marks.
-- 2026 Semiquincentennial (250th Anniversary) Coins: The standard variety MUST be "Liberty Bell 250 Privy Mark" (or Proof/Reverse Proof/Enhanced Uncirculated equivalent). The note must specify the dual date "1776 ~ 2026" and mention it commemorates the 250th Anniversary.
+- 2026 Semiquincentennial (250th Anniversary) Coins: Circulating coins (Jefferson Nickel, Emerging Liberty Dime, Enduring Liberty Half Dollar) and standard American Innovation Dollars do NOT carry a privy mark; they carry only the dual date "1776 ~ 2026". The standard circulating 2026 Declaration of Independence Quarter is dual-dated and has a special circulating version featuring the "July 4th Privy Mark" on the obverse. Official numismatic collector or bullion products (such as American Eagle and Gold Buffalo coins) carry the "Liberty Bell 250 Privy Mark". The note must specify the dual date "1776 ~ 2026" and mention it commemorates the 250th Anniversary.
 
 Your output MUST be a valid JSON array of objects. Each object must have these exact keys:
 - "year": string (e.g. "1878")
@@ -275,10 +275,26 @@ Do not include any other fields. Ensure absolute historical accuracy. Do not wra
                     note = "Struck at Philadelphia Mint with Carson City Privy Mark. " + note
             
             if int_year == 2026:
-                if not variety:
-                    variety = "Liberty Bell 250 Privy Mark"
-                elif "Privy Mark" not in variety:
-                    variety = variety + " (Liberty Bell 250 Privy Mark)"
+                # 1. Bullion & collector products get "Liberty Bell 250 Privy Mark"
+                is_bullion_collector = any(x in program_name.lower() or x in variety.lower() or x in note.lower() for x in ["american eagle", "american buffalo", "proof set", "uncirculated set", "silver eagle", "gold eagle"])
+                
+                # 2. Declaration of Independence Quarter has standard and special July 4th versions
+                is_declaration_quarter = "declaration of independence" in variety.lower() or "declaration of independence" in program_name.lower() or "declaration of independence" in note.lower()
+                
+                # 3. Apply mappings
+                if is_bullion_collector:
+                    if not variety:
+                        variety = "Liberty Bell 250 Privy Mark"
+                    elif "Liberty Bell" not in variety:
+                        variety = variety + " (Liberty Bell 250 Privy Mark)"
+                elif is_declaration_quarter and ("july 4" in variety.lower() or "july 4" in note.lower()):
+                    variety = "July 4th Privy Mark"
+                    if "july 4" not in note.lower():
+                        note = "Special circulating release featuring the July 4th privy mark. " + note
+                else:
+                    if "Liberty Bell 250 Privy Mark" in variety:
+                        variety = variety.replace(" (Liberty Bell 250 Privy Mark)", "").replace("Liberty Bell 250 Privy Mark", "").strip()
+                
                 if "1776" not in note:
                     note = "Dual dated 1776 ~ 2026. Struck to commemorate the United States Semiquincentennial (250th Anniversary). " + note
 

@@ -2949,17 +2949,24 @@ Instructions:
 - When asked for "most valuable", rank the collection by Value.
 - Speak in plain, friendly English — explain any numismatic terms you use.
 - Keep responses concise: 2–4 short paragraphs maximum (under 30 seconds of spoken length).
+- Keep in mind that standard American Innovation Dollars and standard circulating coins (Lincoln Cent, Jefferson Nickel, Roosevelt Dime) do NOT carry a privy mark by default; they carry only the dual date 1776 ~ 2026 unless designated as a special collector proof/bullion issue.
 - If the question is about general numismatics (not their specific collection), answer as an expert using the reference data.
 - If a coin they mention is NOT in their collection data, say you don't see it and suggest they add it.
 - Do NOT invent or make up coin values — only reference what is in the data.
 - Do NOT claim coins they don't own.
-- If a coin is not in the reference database, say: 'I don't have that specific coin in my reference collection yet, but I'm constantly learning.'
+- If a coin they mention is not in the reference database, you may search the web or answer using general numismatic knowledge. In this case, explicitly state that your answer is based on general numismatic records or web sources (e.g. 'According to general numismatic records...' or 'Web search indicates...').
 """
 
         # ── 5. Call Gemini ─────────────────────────────────────────────────────
+        config = genai_types.GenerateContentConfig()
+        search_triggers = ["july 4th", "fourth of july", "privy", "250th", "semiquincentennial", "news", "release date", "bounty"]
+        if not knowledge_block or any(term in lower_query for term in search_triggers):
+            config.tools = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
+
         response = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
             contents=[genai_types.Part.from_text(text=prompt)],
+            config=config,
         )
         return {"status": "success", "response": response.text}
 

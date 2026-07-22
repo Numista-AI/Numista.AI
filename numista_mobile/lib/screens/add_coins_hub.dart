@@ -954,7 +954,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   border: Border.all(color: const Color(0xFFC9A227), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
