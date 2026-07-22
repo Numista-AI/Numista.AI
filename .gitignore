@@ -182,4 +182,5 @@ jseaman_unresolved_coins.csv
 1 NUMISTA.AI/
 
 # Missing images log (generated data, not source code)
-missing_images_log.csv
+**/missing_images_log.csv
+
