@@ -48,6 +48,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
+  String? _addCoinsInitialTabName;
 
   // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
@@ -59,6 +60,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     // No active guide — show the Morgan Greeter as a dialog overlay so the
     // user can pick a guide without losing their current screen.
+    final isWide = MediaQuery.of(context).size.width >= 800;
     showDialog<void>(
       context: context,
       barrierColor: Colors.black54,
@@ -67,14 +69,19 @@ class _BaseLayoutState extends State<BaseLayout> {
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 700),
+          constraints: BoxConstraints(maxWidth: isWide ? 800 : 560, maxHeight: 700),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: MorganGreeter(
               isFirstVisit: false,
-              onAction: (route) {
+              onAction: (route, tabName) {
                 Navigator.of(ctx).pop();
-                if (route != null) setState(() => _activeRoute = route);
+                if (route != null) {
+                  setState(() {
+                    _activeRoute = route;
+                    _addCoinsInitialTabName = tabName;
+                  });
+                }
               },
             ),
           ),
@@ -143,6 +150,8 @@ class _BaseLayoutState extends State<BaseLayout> {
     if (morganRoute != null) {
       WelcomeScreen.pendingRoute = null;  // consume once
       _activeRoute = morganRoute;
+      _addCoinsInitialTabName = WelcomeScreen.pendingTabName;
+      WelcomeScreen.pendingTabName = null;
     }
 
     // Load eBay credentials from Firestore into SharedPreferences.
@@ -208,7 +217,12 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Our Team':
         return const OurTeamScreen();
       case 'Add New Coins':
-        return AddCoinsHub(onNavigate: (route) => setState(() => _activeRoute = route));
+        final tabName = _addCoinsInitialTabName;
+        _addCoinsInitialTabName = null; // consume once
+        return AddCoinsHub(
+          onNavigate: (route) => setState(() => _activeRoute = route),
+          initialTabName: tabName,
+        );
       case 'World & Specialty':
         return AddWorldItemScreen(
           onNavigate: (route) => setState(() => _activeRoute = route),

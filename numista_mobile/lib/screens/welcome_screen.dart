@@ -15,6 +15,7 @@ class WelcomeScreen extends StatelessWidget {
   /// Optionally carry the chosen route up to BaseLayout.
   /// Set by the MorganGreeter tile tap, consumed in BaseLayout.initState.
   static String? pendingRoute;
+  static String? pendingTabName;
 
   const WelcomeScreen({super.key, required this.onDone});
 
@@ -35,8 +36,9 @@ class WelcomeScreen extends StatelessWidget {
     // dismiss this screen and enter the main app.
     return MorganGreeter(
       isFirstVisit: true,
-      onAction: (route) {
+      onAction: (route, tabName) {
         pendingRoute = route;   // consumed by BaseLayout
+        pendingTabName = tabName; // consumed by BaseLayout
         onDone();               // triggers main.dart setState → BaseLayout
       },
     );

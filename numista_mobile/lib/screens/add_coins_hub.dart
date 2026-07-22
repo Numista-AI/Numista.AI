@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import '../constants.dart';
 
 import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,7 +19,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
-  const AddCoinsHub({super.key, this.onNavigate});
+  final String? initialTabName;
+  const AddCoinsHub({super.key, this.onNavigate, this.initialTabName});
 
   @override
   State<AddCoinsHub> createState() => _AddCoinsHubState();
@@ -76,12 +82,58 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _picStorage = TextEditingController();
   final _picNotes   = TextEditingController();
 
+  // ─── Quick Camera Scanner State ───────────────────────────────────────────
+  Uint8List? _camObverseBytes;
+  Uint8List? _camReverseBytes;
+  String? _camObverseName;
+  String? _camReverseName;
+  bool _camLoading = false;
+  String? _camError;
+  Map<String, dynamic>? _camResult;
+  bool _camSaving = false;
+
   // Backend API URL
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    int initialIdx = 0;
+    if (widget.initialTabName != null) {
+      switch (widget.initialTabName) {
+        case 'camera':
+        case 'webcam':
+          initialIdx = 0;
+          break;
+        case 'upload':
+          initialIdx = 1;
+          break;
+        case 'manual':
+          initialIdx = 2;
+          break;
+        case 'sku':
+          initialIdx = 3;
+          break;
+        case 'pcgs':
+          initialIdx = 4;
+          break;
+        case 'roll':
+          initialIdx = 5;
+          break;
+        case 'world':
+          initialIdx = 6;
+          break;
+        case 'set':
+          initialIdx = 7;
+          break;
+        default:
+          initialIdx = 0;
+      }
+    }
+    _tabController = TabController(
+      length: 8,
+      vsync: this,
+      initialIndex: initialIdx,
+    );
     _loadSavedPcgsToken();
   }
 
@@ -219,6 +271,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           child: TabBarView(
             controller: _tabController,
             children: [
+              _buildCameraScannerTab(),
               _buildUploadFilesTab(),
               _buildManualEntryTab(),
               _buildSkuImportTab(),
@@ -274,6 +327,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         indicatorColor: const Color(0xFFF63366),
         indicatorWeight: 3,
         tabs: const [
+          Tab(text: 'Quick Camera',      icon: Icon(Icons.photo_camera_outlined, size: 20)),
           Tab(text: 'Upload Files',      icon: Icon(Icons.upload_file_outlined,  size: 20)),
           Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
           Tab(text: 'Add by SKU',        icon: Icon(Icons.qr_code,               size: 20)),
@@ -2680,8 +2734,618 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
-  // ─── AI Photo ID ────────────────────────────────────────────────────────────
+  // ─── Quick Camera Scanner Logic & UI ────────────────────────────────────────
 
+  Future<void> _pickCamImage(bool isObverse, ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        if (isObverse) {
+          _camObverseBytes = bytes;
+          _camObverseName = picked.name;
+        } else {
+          _camReverseBytes = bytes;
+          _camReverseName = picked.name;
+        }
+        _camResult = null;
+        _camError = null;
+      });
+    } catch (e) {
+      setState(() => _camError = 'Failed to capture image: $e');
+    }
+  }
 
+  void _showImageSourcePicker(bool isObverse) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFFF63366)),
+              title: const Text('Take Photo (Webcam / Phone)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickCamImage(isObverse, ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Color(0xFF4C8CDA)),
+              title: const Text('Choose from Gallery / Files'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickCamImage(isObverse, ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runCameraScan() async {
+    if (_camObverseBytes == null || _camReverseBytes == null) {
+      setState(() => _camError = 'Please capture or upload both obverse and reverse images.');
+      return;
+    }
+
+    setState(() {
+      _camLoading = true;
+      _camError = null;
+      _camResult = null;
+    });
+
+    try {
+      final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.fields['user_email'] = AuthService.userEmail;
+      request.fields['save_to_collection'] = 'false';
+
+      MediaType getMediaType(String filename) {
+        final ext = filename.split('.').last.toLowerCase();
+        final mime = {
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] ?? 'image/jpeg';
+        return MediaType.parse(mime);
+      }
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_a',
+        _camObverseBytes!,
+        filename: _camObverseName ?? 'obverse.jpg',
+        contentType: getMediaType(_camObverseName ?? 'obverse.jpg'),
+      ));
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_b',
+        _camReverseBytes!,
+        filename: _camReverseName ?? 'reverse.jpg',
+        contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
+      ));
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        final coin = data['coin'] as Map<String, dynamic>? ?? {};
+        setState(() {
+          _camResult = data as Map<String, dynamic>;
+          _camLoading = false;
+
+          // Populate the text fields with identified metadata
+          _picYear.text = coin['Year']?.toString() ?? '';
+          _picDenom.text = coin['Denomination']?.toString() ?? '';
+          _picSeries.text = coin['Program/Series']?.toString() ?? '';
+          _picTheme.text = coin['Theme/Subject']?.toString() ?? '';
+          _picMint.text = coin['Mint Mark']?.toString() ?? '';
+          _picGrade.text = coin['Condition']?.toString() ?? '';
+          _picMetal.text = coin['Metal Content']?.toString() ?? '';
+          _picVariety.text = coin['Variety']?.toString() ?? '';
+          _picCost.text = coin['Cost']?.toString() ?? '\$0.00';
+          _picStorage.text = coin['Storage Location']?.toString() ?? '';
+          _picNotes.text = coin['Personal Notes']?.toString() ?? '';
+        });
+      } else {
+        setState(() {
+          _camError = 'AI scan failed: Server returned ${streamedResponse.statusCode}';
+          _camLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _camError = 'Network or API error: $e';
+        _camLoading = false;
+      });
+    }
+  }
+
+  Future<void> _confirmAndSaveCameraCoin() async {
+    if (_camObverseBytes == null || _camReverseBytes == null) {
+      setState(() => _camError = 'Images missing.');
+      return;
+    }
+
+    setState(() {
+      _camSaving = true;
+      _camError = null;
+    });
+
+    try {
+      final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.fields['user_email'] = AuthService.userEmail;
+      request.fields['save_to_collection'] = 'true';
+
+      // Send the overrides edited by the user
+      request.fields['override_year'] = _picYear.text.trim();
+      request.fields['override_denom'] = _picDenom.text.trim();
+      request.fields['override_series'] = _picSeries.text.trim();
+      request.fields['override_theme'] = _picTheme.text.trim();
+      request.fields['override_mint'] = _picMint.text.trim();
+      request.fields['override_grade'] = _picGrade.text.trim();
+      request.fields['override_metal'] = _picMetal.text.trim();
+      request.fields['override_cost'] = _picCost.text.trim();
+      request.fields['override_storage'] = _picStorage.text.trim();
+      request.fields['override_notes'] = _picNotes.text.trim();
+
+      MediaType getMediaType(String filename) {
+        final ext = filename.split('.').last.toLowerCase();
+        final mime = {
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] ?? 'image/jpeg';
+        return MediaType.parse(mime);
+      }
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_a',
+        _camObverseBytes!,
+        filename: _camObverseName ?? 'obverse.jpg',
+        contentType: getMediaType(_camObverseName ?? 'obverse.jpg'),
+      ));
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'image_b',
+        _camReverseBytes!,
+        filename: _camReverseName ?? 'reverse.jpg',
+        contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
+      ));
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        setState(() {
+          _camSaving = false;
+        });
+
+        // Show a nice success dialog
+        if (mounted) {
+          _showSuccessDialog(1);
+          _resetCameraScanner();
+        }
+      } else {
+        setState(() {
+          _camError = 'Save failed: Server returned ${streamedResponse.statusCode} ($responseBody)';
+          _camSaving = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _camError = 'Save failed with error: $e';
+        _camSaving = false;
+      });
+    }
+  }
+
+  void _resetCameraScanner() {
+    setState(() {
+      _camObverseBytes = null;
+      _camReverseBytes = null;
+      _camObverseName = null;
+      _camReverseName = null;
+      _camResult = null;
+      _camError = null;
+      _camLoading = false;
+      _camSaving = false;
+      
+      _picYear.clear();
+      _picDenom.clear();
+      _picSeries.clear();
+      _picTheme.clear();
+      _picMint.clear();
+      _picGrade.clear();
+      _picMetal.clear();
+      _picVariety.clear();
+      _picCost.text = '\$0.00';
+      _picStorage.clear();
+      _picNotes.clear();
+    });
+  }
+
+  Widget _imageCamPickerBox(String label, Uint8List? bytes, bool isObverse) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _showImageSourcePicker(isObverse),
+          child: Container(
+            height: 160,
+            width: 160,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: bytes != null ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                width: bytes != null ? 3 : 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (bytes != null)
+                  ClipOval(
+                    child: Image.memory(
+                      bytes,
+                      width: 160,
+                      height: 160,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.add_a_photo_outlined, color: Color(0xFF64748B), size: 30),
+                      const SizedBox(height: 8),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: Color(0xFF334155),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                // Circular Framing Guide overlay
+                Container(
+                  width: 154,
+                  height: 154,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () => _pickCamImage(isObverse, ImageSource.camera),
+              icon: const Icon(Icons.photo_camera, size: 14, color: Color(0xFF4C8CDA)),
+              label: const Text('Take Photo', style: TextStyle(fontSize: 11, color: Color(0xFF4C8CDA))),
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+            ),
+            const SizedBox(width: 4),
+            TextButton.icon(
+              onPressed: () => _pickCamImage(isObverse, ImageSource.gallery),
+              icon: const Icon(Icons.upload, size: 14, color: Color(0xFF64748B)),
+              label: const Text('Upload', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildCameraScannerTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header callout / instruction ───────────────────────────────
+              Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.photo_camera_outlined,
+                        color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Quick Camera Scanner',
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                        Text('Identify and catalog specimens directly via webcam or phone camera',
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // ── Guidance Info Card ─────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Quick Camera Scan provides rapid identification and fast cataloging. '
+                        'For high-resolution error analysis, surface wear grading, and estate-grade verification, '
+                        'please use the Microscope Station.',
+                        style: TextStyle(
+                          color: const Color(0xFF1E3A8A),
+                          fontSize: 12.5,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // ── Camera Photo Capture Boxes ──────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _imageCamPickerBox('Obverse (Front)', _camObverseBytes, true),
+                  _imageCamPickerBox('Reverse (Back)', _camReverseBytes, false),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // ── Error Display ──────────────────────────────────────────────
+              if (_camError != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    _camError!,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── Actions: Scan Button or Loader ─────────────────────────────
+              if (_camLoading) ...[
+                const Center(
+                  child: Card(
+                    color: Color(0xFF0F172A),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(color: Color(0xFFEC4899)),
+                          SizedBox(height: 16),
+                          Text(
+                            'Morgan is scanning your coin...',
+                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Analyzing visual details & estimating grade...',
+                            style: TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ] else if (_camResult == null) ...[
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: (_camObverseBytes == null || _camReverseBytes == null) ? null : _runCameraScan,
+                    icon: const Icon(Icons.flash_on_rounded, size: 20),
+                    label: const Text('Scan Coin Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC4899),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.black12,
+                      disabledForegroundColor: Colors.black26,
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // ── AI Scan Results Preview Card ─────────────────────────────
+                _buildCameraResultCard(),
+              ],
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraResultCard() {
+    return Card(
+      color: const Color(0xFFF8FAFC),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Title Header
+            Row(
+              children: [
+                const Icon(Icons.insights, color: Color(0xFFEC4899), size: 24),
+                const SizedBox(width: 10),
+                const Text(
+                  'AI Identification Result',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _resetCameraScanner,
+                  child: const Text('Scan Another', style: TextStyle(color: Color(0xFFEC4899))),
+                ),
+              ],
+            ),
+            const Divider(height: 24, color: Color(0xFFE2E8F0)),
+
+            // Edit Fields Group
+            const Text(
+              'Verify and edit the AI extracted details below before adding to your collection:',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+
+            // Form inputs
+            _camInputField('Year', _picYear),
+            const SizedBox(height: 12),
+            _camInputField('Denomination', _picDenom),
+            const SizedBox(height: 12),
+            _camInputField('Program / Series', _picSeries),
+            const SizedBox(height: 12),
+            _camInputField('Theme / Subject', _picTheme),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _camInputField('Mint Mark', _picMint)),
+                const SizedBox(width: 12),
+                Expanded(child: _camInputField('Condition / Grade', _picGrade)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _camInputField('Metal Content', _picMetal),
+            const SizedBox(height: 12),
+            _camInputField('Variety / Errors', _picVariety),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _camInputField('Cost Paid', _picCost)),
+                const SizedBox(width: 12),
+                Expanded(child: _camInputField('Storage Location', _picStorage)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _camInputField('Personal Notes', _picNotes, maxLines: 3),
+            const SizedBox(height: 24),
+
+            // Confirm & Save Button
+            ElevatedButton.icon(
+              onPressed: _camSaving ? null : _confirmAndSaveCameraCoin,
+              icon: _camSaving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle_outline, size: 20),
+              label: Text(_camSaving ? 'Saving to Collection...' : 'Confirm & Save to Collection',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _camInputField(String label, TextEditingController ctrl, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+        const SizedBox(height: 6),
+        TextField(
+          controller: ctrl,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            fillColor: Colors.white,
+            filled: true,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFEC4899), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
 }

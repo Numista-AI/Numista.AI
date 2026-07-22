@@ -15,6 +15,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../services/checklist_generator_service.dart';
 import 'coin_search_screen.dart';
 import '../services/guest_seed_service.dart';
+import '../widgets/morgan_guide_flow.dart';
 
 class ProgramManagerScreen extends StatefulWidget {
   const ProgramManagerScreen({super.key});
@@ -368,6 +369,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 setState(() {
                   _selectedProgram = program;
                 });
+                _tryAdvanceMorganProgramSelect();
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF0F172A),
@@ -695,6 +697,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                           _selectedToAdd.remove(coinName);
                         }
                       });
+                      _tryAdvanceMorganCoinsChecked();
                     },
                     title: Text(coinName, style: const TextStyle(color: Color(0xFF475569))),
                   );
@@ -902,6 +905,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Successfully added ${_selectedToAdd.length} coins!'), backgroundColor: Colors.green),
         );
+        _tryAdvanceMorganCoinsCommitted();
         setState(() {
           _selectedToAdd.clear();
         });
@@ -912,6 +916,34 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
            SnackBar(content: Text('Error adding coins: $e'), backgroundColor: Colors.red),
         );
       }
+    }
+  }
+
+  void _tryAdvanceMorganProgramSelect() {
+    final gs = MorganGuideService.current.value;
+    if (gs != null &&
+        gs.guide.id == 'guide_programs' &&
+        gs.step == 0) {
+      MorganGuideService.next();
+    }
+  }
+
+  void _tryAdvanceMorganCoinsChecked() {
+    final gs = MorganGuideService.current.value;
+    if (gs != null &&
+        gs.guide.id == 'guide_programs' &&
+        gs.step == 1 &&
+        _selectedToAdd.isNotEmpty) {
+      MorganGuideService.next();
+    }
+  }
+
+  void _tryAdvanceMorganCoinsCommitted() {
+    final gs = MorganGuideService.current.value;
+    if (gs != null &&
+        gs.guide.id == 'guide_programs' &&
+        gs.step == 2) {
+      MorganGuideService.next();
     }
   }
 }

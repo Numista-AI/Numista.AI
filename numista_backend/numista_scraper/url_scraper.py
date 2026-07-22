@@ -579,7 +579,8 @@ def _make_doc_id(coin_def: dict, mint: str) -> str:
 def _build_firestore_record(coin_def: dict, mint: str,
                              obv_url: str, rev_url: str,
                              source_url: str) -> dict:
-    mintage = coin_def.get("mintage", {}).get(mint)
+    mintage_dict = coin_def.get("mintage")
+    mintage = mintage_dict.get(mint) if isinstance(mintage_dict, dict) else mintage_dict
     return {
         "year":              coin_def["year"],
         "denomination":      coin_def["denomination"],
@@ -645,53 +646,243 @@ def commit_coin(coin_def: dict, mint: str, obv_url: str, rev_url: str,
 
         return {"action": "CREATE", "doc_id": new_doc_id, "status": "created"}
 
-    else:  # UPDATE
-        update = {"last_enriched_at": now, "enrichment_source": "url_scraper",
-                  "source_url": source_url}
-        if obv_url:
-            update["image_url_obverse"] = obv_url
-        if rev_url:
-            update["image_url_reverse"] = rev_url
-        # Fill description fields if absent
-        existing_data = {}
+
+def resolve_query_to_url(query: str) -> str | None:
+    """
+    Resolve a text query to a valid Wikipedia or US Mint URL.
+    Attempts direct search first, then cleans query, then falls back to Wikipedia API.
+    """
+    import requests
+    import re
+    
+    q = query
+    print(f"  [Resolver] Resolving query: '{query}'")
+    
+    # Try Wikipedia Search API with cleaned terms
+    for attempt in range(3):
+        url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={requests.utils.quote(q)}&limit=5&namespace=0&format=json"
         try:
-            snap = db.collection("definitive_reference").document(doc_id).get()
-            existing_data = snap.to_dict() or {}
-        except Exception:
-            pass
-
-        for field, val in [
-            ("obverse_desc",  coin_def.get("obverse_desc")),
-            ("reverse_desc",  coin_def.get("reverse_desc")),
-            ("composition",   coin_def.get("composition")),
-        ]:
-            if val and not existing_data.get(field):
-                update[field] = val
-
-        if dry_run:
-            print(f"    [DRY-RUN] Would UPDATE {doc_id}: {list(update.keys())}")
-            return {"action": "UPDATE", "doc_id": doc_id, "status": "dry_run"}
-
-        try:
-            db.collection("definitive_reference").document(doc_id).update(update)
-            print(f"    [Firestore] ✅ UPDATED {doc_id}")
+            resp = requests.get(url, headers={"User-Agent": WIKI_UA}, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if len(data) >= 4 and data[3]:
+                    # Find first url that is not generic portal
+                    for u in data[3]:
+                        if not any(x in u.lower() for x in ["/portal:", "/wiki/special:", "/wiki/category:"]):
+                            print(f"  [Resolver] Resolved via Wikipedia: {u}")
+                            return u
         except Exception as e:
-            print(f"    ⚠ Firestore update error {doc_id}: {e}")
+            print(f"  [Resolver] Wikipedia search attempt {attempt} failed: {e}")
+            
+        # Clean query for next attempt
+        if attempt == 0:
+            # Strip specific terms
+            q = re.sub(r'(one ounce|proof|unc|uncirculated|coin|us mint|united states mint|1 oz)', '', q, flags=re.IGNORECASE)
+            q = re.sub(r'\s+', ' ', q).strip()
+        elif attempt == 1:
+            # Broaden to series
+            if 'eagle' in q.lower():
+                q = 'American Silver Eagle' if 'silver' in query.lower() else 'American Gold Eagle'
+            else:
+                break
+                
+    return None
 
-        if obv_url or rev_url:
-            update_coin_images_in_databases(doc_id, obv_url or existing_data.get("image_url_obverse", ""),
-                                            rev_url or existing_data.get("image_url_reverse", ""))
 
-        return {"action": "UPDATE", "doc_id": doc_id, "status": "updated"}
-
-
-# ─── Main Scrape Engine ───────────────────────────────────────────────────────
-
-def scrape_url(url: str, dry_run: bool = False) -> dict:
+def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> dict:
     """
-    Main entry point. Accepts any URL and ingests all coin data found on the page.
-    Returns a summary dict of actions taken.
+    General-purpose page scraper. Extracts coin details, downloads images,
+    fuzzy-matches with existing catalog, and writes to database.
     """
+    from bs4 import BeautifulSoup
+    import requests
+    from curl_cffi import requests as curl_requests
+    from urllib.parse import urlparse
+    
+    source_type = detect_source_type(url)
+    query_meta = query_meta or {}
+    
+    # 1. Fetch page content
+    html_text = ""
+    if source_type == "usmint":
+        # Load session cookies from Firestore
+        try:
+            doc = db.collection("config").document("usmint").get()
+            cookie_str = doc.to_dict().get("cookieString", "") if doc.exists else ""
+            user_agent = doc.to_dict().get("userAgent", "") if doc.exists else ""
+        except Exception:
+            cookie_str, user_agent = "", ""
+            
+        headers = {
+            "User-Agent": user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cookie": cookie_str,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Referer": "https://www.usmint.gov/"
+        }
+        try:
+            resp = curl_requests.get(url, headers=headers, timeout=20, impersonate="chrome120")
+            if resp.status_code == 200:
+                html_text = resp.text
+        except Exception as e:
+            print(f"    [Scraper] Error fetching US Mint page: {e}")
+    else:
+        # Wikipedia or other HTML
+        headers = {"User-Agent": WIKI_UA}
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code == 200:
+                html_text = resp.text
+        except Exception as e:
+            print(f"    [Scraper] Error fetching page: {e}")
+            
+    if not html_text:
+        return {"status": "error", "message": f"Failed to fetch page content from {url}"}
+        
+    soup = BeautifulSoup(html_text, "html.parser")
+    
+    # 2. Parse title
+    raw_title = ""
+    title_el = soup.find("h1") or soup.find("title")
+    if title_el:
+        raw_title = title_el.get_text().strip()
+        
+    if not raw_title:
+        raw_title = url.split("/")[-1].replace("-", " ").replace(".html", "")
+        
+    print(f"  Extracted page title: '{raw_title}'")
+    
+    # Parse metadata from title (fallback to query_meta)
+    year = query_meta.get("year")
+    if not year:
+        import re
+        year_match = re.search(r'\b(20\d{2}|19\d{2})\b', raw_title)
+        year = year_match.group(1) if year_match else "2026"
+        
+    denomination = query_meta.get("denomination")
+    if not denomination:
+        denomination = "One Dollar"
+        for denom in ("Dollar", "Half Dollar", "Dime", "Nickel", "Cent", "Penny", "Quarter"):
+            if denom.lower() in raw_title.lower():
+                denomination = "Cent" if denom == "Penny" else denom
+                break
+            
+    mint = query_meta.get("mint")
+    if not mint:
+        mint = "W" if "west point" in raw_title.lower() else ("S" if "san francisco" in raw_title.lower() else ("D" if "denver" in raw_title.lower() else "P"))
+    
+    # Clean variety name
+    variety = raw_title
+    import re
+    for stopword in (year, "Coin", "US Mint", "United States Mint", "U.S. Mint", "Official", "Silver", "Gold", "Proof", "Uncirculated"):
+        variety = re.sub(rf'\b{stopword}\b', '', variety, flags=re.IGNORECASE)
+    variety = re.sub(r'\s+', ' ', variety).strip()
+    if not variety or len(variety) < 3:
+        variety = query_meta.get("original_query", raw_title)
+        
+    # 3. Extract description
+    paragraphs = []
+    for p in soup.find_all("p"):
+        txt = p.get_text().strip()
+        if txt and len(txt) > 80 and not any(kw in txt.lower() for kw in ["copyright", "subscribe", "newsletter"]):
+            paragraphs.append(txt)
+    desc = "\n\n".join(paragraphs[:3])
+    
+    # 4. Extract image candidates
+    img_urls = []
+    for img in soup.find_all("img"):
+        src = img.get("src", "") or img.get("data-src", "")
+        alt = (img.get("alt", "") or "").lower()
+        if not src or len(src) < 10:
+            continue
+        if src.startswith("/"):
+            src = "https://www.usmint.gov" + src if source_type == "usmint" else urlparse(url).scheme + "://" + urlparse(url).netloc + src
+            
+        # Filter down to potential coin images
+        src_lc = src.lower()
+        if any(kw in src_lc or kw in alt for kw in ["coin", "obverse", "reverse", "heads", "tails", "product"]):
+            if not any(kw in src_lc for kw in ["logo", "icon", "banner", "150x", "300x"]):
+                img_urls.append((alt, src))
+                
+    obv_src, rev_src = None, None
+    if img_urls:
+        obv_src = next((u for a, u in img_urls if "obverse" in a or "obverse" in u.lower() or "head" in a or "heads" in u.lower()), None)
+        rev_src = next((u for a, u in img_urls if "reverse" in a or "reverse" in u.lower() or "tail" in a or "tails" in u.lower()), None)
+        if not obv_src:
+            obv_src = img_urls[0][1]
+        if not rev_src and len(img_urls) > 1:
+            rev_src = img_urls[1][1]
+            
+    # Assemble coin definition
+    coin_def = {
+        "slug":             re.sub(r'[^a-z0-9_]', '', variety.lower().replace(" ", "_")),
+        "series":           "American Eagle" if "eagle" in raw_title.lower() or "eagle" in variety.lower() else "Circulating Coins",
+        "denomination":     denomination,
+        "variety":          variety,
+        "year":             year,
+        "mints":            [mint],
+        "category":         "coin",
+        "composition":      "99.9% Silver" if "silver" in raw_title.lower() or "silver" in variety.lower() else ("91.67% Gold" if "gold" in raw_title.lower() else "Clad"),
+        "obverse_desc":     f"Obverse of {variety}",
+        "reverse_desc":     f"Reverse of {variety}",
+        "mintage":          None
+    }
+    
+    print(f"  Resolved coin meta:")
+    print(f"    Series: {coin_def['series']}")
+    print(f"    Denomination: {coin_def['denomination']}")
+    print(f"    Variety: {coin_def['variety']}")
+    print(f"    Year: {coin_def['year']} | Mint: {mint}")
+    
+    # Match to catalog
+    doc_id, confidence, existing_data, action = match_to_catalog(coin_def, mint)
+    pct = f"{confidence * 100:.1f}%"
+    print(f"  Catalog match: {pct} -> {action}  [{doc_id}]")
+    
+    # 5. Image waterfall (checks GCS -> uploads resolved)
+    obv_url, rev_url = None, None
+    attribution = ATTRIBUTION_MINT if source_type == "usmint" else ATTRIBUTION_WIKI
+    target_doc_id = doc_id if action == "UPDATE" else _make_doc_id(coin_def, mint)
+    
+    print(f"  Checking GCS for existing images ...")
+    gcs_imgs = check_gcs_existing(target_doc_id)
+    obv_url  = gcs_imgs["obverse"]
+    rev_url  = gcs_imgs["reverse"]
+    
+    if obv_url and rev_url:
+        print(f"  Both sides already in GCS.")
+    else:
+        if obv_src and not obv_url:
+            obv_url = download_and_upload(obv_src, target_doc_id, "obverse", attribution, dry_run)
+        if rev_src and not rev_url:
+            rev_url = download_and_upload(rev_src, target_doc_id, "reverse", attribution, dry_run)
+            
+    # Commit to DB
+    result = commit_coin(coin_def, mint, obv_url, rev_url, url, action, doc_id, dry_run=dry_run)
+    
+    return {
+        "status": "success",
+        "created": [result["doc_id"]] if action == "CREATE" and result["status"] != "dry_run" else [],
+        "updated": [doc_id] if action == "UPDATE" and result["status"] != "dry_run" else [],
+        "missing_images": [{"coin": raw_title, "side": "obverse", "doc_id": target_doc_id}] if not obv_url else [],
+        "errors": []
+    }
+
+
+def scrape_url(url_or_query: str, dry_run: bool = False) -> dict:
+    """
+    Main entry point. Accepts any URL or search query, resolves it,
+    and ingests coin data and images.
+    """
+    url = url_or_query.strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        print(f"🔍 Input is a query: '{url}'")
+        resolved_url = resolve_query_to_url(url)
+        if not resolved_url:
+            print(f"⚠  Failed to resolve query to a Wikipedia or US Mint URL.")
+            return {"status": "error", "message": f"Could not find a valid US Mint or Wikipedia URL for query: {url}"}
+        print(f"✓ Resolved to URL: {resolved_url}")
+        url = resolved_url
+        
     source_type = detect_source_type(url)
     print(f"\n🔗 URL: {url}")
     print(f"   Source type: {source_type}")
@@ -702,9 +893,7 @@ def scrape_url(url: str, dry_run: bool = False) -> dict:
         return _ingest_semiquincentennial(url, dry_run)
 
     # Generic fallback for other URLs
-    print("⚠  Generic URL scraping not yet implemented for this source type.")
-    print("   Currently supported: Wikipedia Semiquincentennial page")
-    return {"status": "unsupported_url", "url": url}
+    return _scrape_generic_page(url, dry_run)
 
 
 def _ingest_semiquincentennial(source_url: str, dry_run: bool) -> dict:
