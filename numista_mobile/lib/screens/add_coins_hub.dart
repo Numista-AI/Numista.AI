@@ -941,6 +941,106 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ),
               const SizedBox(height: 24),
 
+              // ── America250 Checklists Banner ────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFC9A227), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🏛️', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 10),
+                        const Text(
+                          "America250 Checklists",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC9A227),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            "2026 ONLY",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Track your collection of the U.S. Mint's Semiquincentennial coins. "
+                      "Separate checklists for Circulating Currency and Numismatic Collectibles.",
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.4),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF94A3B8)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              widget.onNavigate?.call('Coin Programs:2026_semiquincentennial_currency');
+                            },
+                            child: const Text(
+                              "Circulating Currency",
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFC9A227),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              widget.onNavigate?.call('Coin Programs:2026_semiquincentennial_collectibles');
+                            },
+                            child: const Text(
+                              "Collectibles",
+                              style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
               // ── Set details form ──────────────────────────────────────
               const Text('SET DETAILS', style: TextStyle(fontSize: 11,
                   fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
