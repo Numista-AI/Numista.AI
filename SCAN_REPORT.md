@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.0)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed successfully. Python unit tests are 100% passing, 631 Python files compiled cleanly with zero errors, model IDs are fully updated to `gemini-3.5-flash`, and Greysheet API endpoints returned HTTP 200 OK).
+* **Status:** 🟢 **PASS** (System scan completed with 100% test pass rate across all suites. All 14 Python unit tests passed, all 104 Playwright E2E tests passed, 631 Python files compiled cleanly, model IDs are fully updated to `gemini-3.5-flash`, and Greysheet API endpoints returned HTTP 200 OK).
 * **Scan Date:** 2026-07-22
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.0, Frontend v4.0
@@ -20,6 +20,9 @@
 * **Endpoint Probe Results (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/api/greysheet/config`: ✅ `200 OK` (`{"status":"active","mode":"fallback","tier":"Basic"}`)
   * `/api/greysheet/pricing/101`: ✅ `200 OK` (returns valid pricing payload for GSID 101)
+  * `/api/greysheet/resolve`: ✅ `200 OK`
+  * `/api/greysheet/cac`: ✅ `200 OK`
+  * `/api/portfolio/snapshot`: ✅ `200 OK`
 * **API Tier Detected:** `Basic` (GreyVal1 fallback)
 * **Fallback Rate Estimate:** `100%` (Backend uses standard fallback credentials when production environment tokens are omitted)
 
@@ -45,15 +48,16 @@
 * **Status:** 100% Clean
 * **Files Compiled:** 631 Python files compiled without any syntax or import errors.
 
-### 3. Flutter Dart Analyzer
+### 3. Frontend Playwright E2E Tests
+* **Total Specs:** 104 tests across 10 spec files in `numista_tests/tests`
+* **Passed:** 104 / 104 tests (100% pass rate in 18.8 minutes)
+* **Skipped / Failed:** 0
+
+### 4. Flutter Dart Analyzer
 * **Status:** 6 Info Warnings (0 Errors / 0 Warnings).
 * **Details:** Deprecated `withOpacity` usage flagged in:
   - `lib/screens/add_coins_hub.dart` (lines 385, 403, 451, 1029)
   - `lib/screens/wishlist_screen.dart` (line 390)
-
-### 4. Frontend Playwright E2E Tests
-* **Total Specs:** 104 tests in `numista_tests/tests`
-* **Status:** Active verification suite running cleanly against live target.
 
 ---
 
