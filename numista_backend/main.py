@@ -2871,6 +2871,50 @@ async def deep_dive(request: DeepDiveRequest):
             except Exception as kb_err:
                 logger.warning(f"Deep dive: knowledge base lookup warning: {kb_err}")
 
+        # ── 3b. Auto-Scraper Trigger for Missing Coins ─────────────────────────
+        lower_query = request.query.lower()
+        if any(x in lower_query for x in ["do we have", "is there", "add info for", "find images for", "scrape", "ordered", "released", "buy"]):
+            import re
+            import threading
+            import sqlite3
+            from numista_scraper.config import DB_PATH
+            from numista_scraper.url_scraper import scrape_url
+
+            search_term = request.query
+            for prefix in ["do we have the", "do we have", "is there a", "is there", "find images for the", "find images for", "add info for the", "add info for", "scrape the", "scrape", "ordered the", "ordered"]:
+                if lower_query.startswith(prefix):
+                    search_term = request.query[len(prefix):].strip()
+                    break
+
+            # Strip question mark at the end
+            search_term = search_term.rstrip("?").strip()
+
+            has_coin = False
+            try:
+                conn = sqlite3.connect(str(DB_PATH))
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cleaned_term = re.sub(r'[^a-zA-Z0-9\s]', '', search_term)
+                keywords = cleaned_term.split()
+                if keywords:
+                    sql = "SELECT doc_id FROM definitive_reference WHERE "
+                    sql += " AND ".join(["(variety LIKE ? OR obverse_desc LIKE ? OR series LIKE ?)" for _ in keywords])
+                    params = []
+                    for kw in keywords:
+                        params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+                    cur.execute(sql, params)
+                    matches = cur.fetchall()
+                    if matches:
+                        has_coin = True
+                conn.close()
+            except Exception as e:
+                logger.error(f"Catalog pre-check error: {e}")
+
+            if not has_coin and len(search_term) > 5:
+                print(f"🚀 [Morgan Chat] Triggering background scrape for query: '{search_term}'")
+                threading.Thread(target=scrape_url, args=(search_term, False), daemon=True).start()
+                knowledge_block += f"\n\n[SYSTEM NOTIFICATION] The user asked about a coin currently missing from the database: '{search_term}'. The system has automatically launched a background scraping task to find, scrape, and ingest this coin from the US Mint or Wikipedia. Acknowledge this action warmly and reassure the user that it will be ingested momentarily."
+
         # ── 4. Build prompt ────────────────────────────────────────────────────
         prompt = f"""You are Morgan, the friendly AI numismatic guide owl for Numista.AI.
 You are an enthusiastic, expert numismatic mentor — warm and patient like a trusted friend who happens to be a world-class coin expert.
