@@ -241,6 +241,48 @@ class MorganGuides {
     ],
   );
 
+  // ── 5. Coin Programs & Checklists ──────────────────────────────────────────
+  static const MorganGuide programs = MorganGuide(
+    id: 'guide_programs',
+    title: 'Coin Programs & Checklists',
+    emoji: '📋',
+    steps: [
+      // Step 1: Select a program
+      MorganStep(
+        narration:
+            "Welcome to Coin Programs!\n"
+            "Pick a program from the list to see its checklist of coins.",
+        hint: "Tap on any program card like 'Presidential Dollars' to begin.",
+        nextLabel: "Ready! →",
+        position: GuidePosition.bottomRight,
+      ),
+      // Step 2: Check the coins you want to add
+      MorganStep(
+        narration:
+            "Check the boxes next to the coins you have or want to track.",
+        hint: "Scroll down to see the entire checklist for this program.",
+        nextLabel: "Checked them →",
+        position: GuidePosition.bottomRight,
+      ),
+      // Step 3: Add selected coins
+      MorganStep(
+        narration:
+            "Tap the blue 'Add Selected Coins' button at the bottom.",
+        hint: "I'll save all selected coins directly to your collection tracker.",
+        nextLabel: "Add coins →",
+        position: GuidePosition.bottomRight,
+      ),
+      // Step 4: Celebration
+      MorganStep(
+        narration:
+            "🎉 Success! Those checklist coins are now saved in your collection.",
+        hint: "You can view them at any time in 'My Collection'.",
+        nextLabel: "All done! →",
+        position: GuidePosition.bottomCenter,
+      ),
+    ],
+  );
+
   /// Returns the guide matching a given route name, or null if none.
   static MorganGuide? forRoute(String route) {
     switch (route) {
@@ -250,6 +292,8 @@ class MorganGuides {
         return microscope;
       case 'My Collection':
         return collection;
+      case 'Coin Programs':
+        return programs;
       default:
         return null;
     }
@@ -266,6 +310,8 @@ class MorganGuides {
         return microscope;
       case 'collection':
         return collection;
+      case 'programs':
+        return programs;
       default:
         return null;
     }

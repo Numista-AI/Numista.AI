@@ -14,7 +14,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
-  const AddCoinsHub({super.key, this.onNavigate});
+  final String? initialTabName;
+  const AddCoinsHub({super.key, this.onNavigate, this.initialTabName});
 
   @override
   State<AddCoinsHub> createState() => _AddCoinsHubState();
@@ -81,7 +82,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    int initialIdx = 0;
+    if (widget.initialTabName != null) {
+      if (widget.initialTabName == 'manual') {
+        initialIdx = 1;
+      } else if (widget.initialTabName == 'upload') {
+        initialIdx = 0;
+      }
+    }
+    _tabController = TabController(
+      length: 7,
+      vsync: this,
+      initialIndex: initialIdx,
+    );
     _loadSavedPcgsToken();
   }
 
