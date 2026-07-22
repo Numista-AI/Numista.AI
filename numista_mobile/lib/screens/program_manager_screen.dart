@@ -118,13 +118,11 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     if (!_denominationMatches(coinData, expectedFamily)) return false;
 
     // ── Program/Series match ──────────────────────────────────────────────────
-    final progSeries = (coinData['Program/Series']?.toString() ?? '').toLowerCase();
-    final pNameLower = program.name.toLowerCase();
+    final progSeries = (coinData['Program/Series']?.toString() ?? '');
     final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').toLowerCase();
     final cNameLower = coinName.toLowerCase();
 
-    if (progSeries.isNotEmpty &&
-        (progSeries.contains(pNameLower) || pNameLower.contains(progSeries))) {
+    if (program.matchesDbSeries(progSeries)) {
       // Program matches — now check if this specific coin slot matches
       if (themeSub.isNotEmpty &&
           (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) {

@@ -145,6 +145,152 @@ class CoinProgram {
     };
   }
 
+  /// Check if a database Program/Series name belongs to this program.
+  bool matchesDbSeries(String dbSeries) {
+    final dbLower = dbSeries.toLowerCase().trim();
+    final progLower = name.toLowerCase().trim();
+
+    if (dbLower.isEmpty) return false;
+
+    // Direct substring matches
+    if (dbLower.contains(progLower) || progLower.contains(dbLower)) {
+      return true;
+    }
+
+    // 1. Presidential Dollars
+    if (progLower == 'presidential dollars') {
+      return dbLower.contains('presidential');
+    }
+
+    // 2. Sacagawea & Native American Dollars
+    if (progLower == 'sacagawea & native american dollars') {
+      return dbLower.contains('sacagawea') || dbLower.contains('native american');
+    }
+
+    // 3. American Innovation $1 Coin Program
+    if (progLower == 'american innovation \$1 coin program') {
+      return dbLower.contains('american innovation');
+    }
+
+    // 4. America the Beautiful Quarters (National Parks)
+    if (progLower == 'america the beautiful quarters (national parks)') {
+      return dbLower.contains('america the beautiful') || dbLower.contains('national park');
+    }
+
+    // 5. 50 State Quarters
+    if (progLower == '50 state quarters') {
+      return dbLower.contains('state quarters') || dbLower.contains('state and territory quarters');
+    }
+
+    // 6. Washington Quarters (Classic)
+    if (progLower == 'washington quarters (classic)') {
+      return dbLower.contains('washington') && dbLower.contains('quarter');
+    }
+
+    // 7. Lincoln Cents / Lincoln Wheat Pennies / Lincoln Memorial Cents / Lincoln Shield Cents
+    if (progLower == 'lincoln cents') {
+      return dbLower == 'lincoln cent' ||
+             dbLower == 'lincoln cents' ||
+             dbLower == 'lincoln head cent' ||
+             dbLower == 'lincoln head penny' ||
+             dbLower == 'lincoln penny';
+    }
+    if (progLower == 'lincoln wheat pennies') {
+      return dbLower.contains('wheat cent') ||
+             dbLower.contains('wheat penny') ||
+             dbLower.contains('wheat pennies') ||
+             dbLower.contains('wheat cents');
+    }
+    if (progLower == 'lincoln memorial cents') {
+      return dbLower.contains('memorial');
+    }
+    if (progLower == 'lincoln shield cents') {
+      return dbLower.contains('shield');
+    }
+
+    // 8. Flying Eagle & Indian Head Cents
+    if (progLower == 'flying eagle & indian head cents') {
+      return dbLower.contains('indian head') || dbLower.contains('flying eagle');
+    }
+
+    // 9. Liberty Head (V) Nickels
+    if (progLower == 'liberty head (v) nickels') {
+      return dbLower.contains('liberty head nickel') || dbLower.contains('v nickel');
+    }
+
+    // 10. Jefferson Nickels
+    if (progLower == 'jefferson nickels') {
+      return dbLower.contains('jefferson nickel');
+    }
+
+    // 11. Roosevelt Dimes
+    if (progLower == 'roosevelt dimes') {
+      return dbLower.contains('roosevelt dime');
+    }
+
+    // 12. Franklin Half Dollars
+    if (progLower == 'franklin half dollars') {
+      return dbLower.contains('franklin') && dbLower.contains('half');
+    }
+
+    // 13. Liberty Walking Half Dollars
+    if (progLower == 'liberty walking half dollars') {
+      return (dbLower.contains('liberty walking') || dbLower.contains('walking liberty')) && dbLower.contains('half');
+    }
+
+    // 14. Buffalo Nickels
+    if (progLower == 'buffalo nickels') {
+      return dbLower.contains('buffalo nickel');
+    }
+
+    // 15. Mercury Dimes
+    if (progLower == 'mercury dimes') {
+      return dbLower.contains('mercury');
+    }
+
+    // 16. Kennedy Half Dollars
+    if (progLower == 'kennedy half dollars') {
+      return dbLower.contains('kennedy');
+    }
+
+    // 17. Morgan Dollars
+    if (progLower == 'morgan dollars') {
+      return dbLower.contains('morgan');
+    }
+
+    // 18. Peace Dollars
+    if (progLower == 'peace dollars') {
+      return dbLower.contains('peace');
+    }
+
+    // 19. Eisenhower Dollars
+    if (progLower == 'eisenhower dollars') {
+      return dbLower.contains('eisenhower') || dbLower.contains('ike dollar');
+    }
+
+    // 20. Susan B. Anthony Dollars
+    if (progLower == 'susan b. anthony dollars') {
+      return dbLower.contains('susan b') || dbLower.contains('sba');
+    }
+
+    // 21. American Silver Eagles
+    if (progLower == 'american silver eagles') {
+      return dbLower.contains('silver eagle') || (dbLower.contains('american eagle') && !dbLower.contains('gold') && !dbLower.contains('platinum'));
+    }
+
+    // 22. American Women Quarters
+    if (progLower == 'american women quarters') {
+      return dbLower.contains('american women') || dbLower.contains('women\'s quarters') || dbLower.contains('women quarters');
+    }
+
+    // 23. U.S. Proof Sets
+    if (progLower == 'u.s. proof sets') {
+      return dbLower.contains('proof set') || dbLower == 'proof';
+    }
+
+    return false;
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) || (other is CoinProgram && other.id == id);

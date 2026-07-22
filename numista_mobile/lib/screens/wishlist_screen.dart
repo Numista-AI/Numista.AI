@@ -53,10 +53,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   /// Returns true if a Firestore coin doc belongs to the given program.
   bool _coinBelongsToProgram(Map<String, dynamic> coin, CoinProgram program) {
-    final series = (coin['Program/Series']?.toString() ?? '').toLowerCase().trim();
-    final programName = program.name.toLowerCase().trim();
-    if (series.isEmpty) return false;
-    return series.contains(programName) || programName.contains(series);
+    final series = (coin['Program/Series']?.toString() ?? '');
+    return program.matchesDbSeries(series);
   }
 
   /// Returns true if the user already owns at least one coin matching [pc] in [program].
