@@ -776,6 +776,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     ('25 Cents',     'America 250th Anniversary Quarter',    'Statue of Liberty',              'Cupro-Nickel'),
     ('25 Cents',     'America 250th Anniversary Quarter',    'Eagle',                          'Cupro-Nickel'),
     ('25 Cents',     'America 250th Anniversary Quarter',    'American Flag',                  'Cupro-Nickel'),
+    ('1 Dollar',     'Native American Dollar',                'Sacagawea and Her Infant Son',   'Manganese-Brass Clad Copper'),
   ];
 
   Widget _buildMintSetTab() {
@@ -873,7 +874,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         const Text('2026 US Mint Uncirculated Coin Set',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
                               color: Color(0xFF1E293B))),
-                        Text('20 coins · Philadelphia (P) + Denver (D) · 9 denominations each',
+                        Text('20 coins · Philadelphia (P) + Denver (D) · 10 denominations each',
                           style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                       ],
                     )),
