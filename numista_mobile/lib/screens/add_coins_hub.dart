@@ -8,6 +8,7 @@ import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 
 import '../services/auth_service.dart';
+import '../services/camera_capture_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
@@ -2738,21 +2739,33 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   Future<void> _pickCamImage(bool isObverse, ImageSource source) async {
     try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 80,
-      );
-      if (picked == null) return;
-      final bytes = await picked.readAsBytes();
+      Uint8List? bytes;
+      String? name;
+
+      if (source == ImageSource.camera) {
+        final result = await CameraCaptureService.capturePhoto(context);
+        if (result == null) return;
+        bytes = result.bytes;
+        name = result.name;
+      } else {
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1920,
+          maxHeight: 1920,
+          imageQuality: 80,
+        );
+        if (picked == null) return;
+        bytes = await picked.readAsBytes();
+        name = picked.name;
+      }
+
       setState(() {
         if (isObverse) {
           _camObverseBytes = bytes;
-          _camObverseName = picked.name;
+          _camObverseName = name;
         } else {
           _camReverseBytes = bytes;
-          _camReverseName = picked.name;
+          _camReverseName = name;
         }
         _camResult = null;
         _camError = null;
