@@ -11,6 +11,7 @@
 ## Critical Errors & Warnings
 1. **Fallback Greysheet Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are using default dev fallback keys (`1FCAE3B4-966A-4F25-AFA1-BE242C26856B`), operating the backend in **Basic** tier mode rather than **Advanced** tier.
 2. **Latent Model Reference in Secondary Helper Signature:** In `services/greysheet_service.py`, the default parameter signature for `primary_model` specifies `"gemini-2.0-flash"`. Main handlers in `main.py` explicitly pass `"gemini-3.5-flash"`, but direct helper calls without parameter overrides should be updated.
+3. **Flutter Analyzer Member Deprecation Warnings:** 6 `withOpacity` info warnings reported in `lib/screens/add_coins_hub.dart` and `lib/screens/wishlist_screen.dart` (recommending migration to `.withValues()`).
 
 ---
 
@@ -44,7 +45,13 @@
 * **Status:** 100% Clean
 * **Files Compiled:** 631 Python files compiled without any syntax or import errors.
 
-### 3. Frontend Playwright E2E Tests
+### 3. Flutter Dart Analyzer
+* **Status:** 6 Info Warnings (0 Errors / 0 Warnings).
+* **Details:** Deprecated `withOpacity` usage flagged in:
+  - `lib/screens/add_coins_hub.dart` (lines 385, 403, 451, 1029)
+  - `lib/screens/wishlist_screen.dart` (line 390)
+
+### 4. Frontend Playwright E2E Tests
 * **Total Specs:** 104 tests in `numista_tests/tests`
 * **Status:** Active verification suite running cleanly against live target.
 
@@ -53,4 +60,5 @@
 ## Recommended Fixes
 1. **Configure Production Greysheet Credentials:** Add production `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables to Cloud Run service settings to unlock **Advanced** bid/ask pricing tier.
 2. **Update Default Helper Signature:** Update the default `primary_model` parameter value in `services/greysheet_service.py` to `"gemini-3.5-flash"`.
-3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
+3. **Refactor Deprecated Flutter Member Calls:** Replace `.withOpacity(...)` with `.withValues(...)` in `add_coins_hub.dart` and `wishlist_screen.dart` to maintain compatibility with modern Flutter SDKs.
+4. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
