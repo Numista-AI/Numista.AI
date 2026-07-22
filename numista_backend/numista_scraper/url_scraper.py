@@ -407,6 +407,29 @@ def fetch_usmint_coin_images(coin: dict, mint: str) -> dict:
         return {"obverse": None, "reverse": None, "source": "usmint"}
 
 
+# ─── GCS Existence Check (Tier 0) ───────────────────────────────────────────
+
+def check_gcs_existing(doc_id: str) -> dict:
+    """
+    Tier 0: Check whether we already have obverse and/or reverse images
+    in our GCS bucket for this doc_id.  Tries .jpg, .png, .webp.
+    Returns {"obverse": public_url_or_None, "reverse": public_url_or_None}.
+    """
+    bucket  = gcs_client.bucket(BUCKET_NAME)
+    results = {"obverse": None, "reverse": None}
+    for side in ("obverse", "reverse"):
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            blob_path = f"{GCS_COIN_PREFIX}{doc_id}_{side}{ext}"
+            try:
+                if bucket.blob(blob_path).exists():
+                    results[side] = PUBLIC_URL_BASE.format(blob_path)
+                    print(f"    [GCS-Tier0] ✓ Already have {side}: {blob_path}")
+                    break
+            except Exception as e:
+                print(f"    [GCS-Tier0] ⚠ Check error for {blob_path}: {e}")
+    return results
+
+
 # ─── Image Download + GCS Upload ─────────────────────────────────────────────
 
 def _download_bytes(url: str, is_wikimedia: bool = False, is_usmint: bool = False) -> bytes | None:
@@ -714,33 +737,41 @@ def _ingest_semiquincentennial(source_url: str, dry_run: bool) -> dict:
             # 2. Waterfall image fetch
             obv_url, rev_url = None, None
             attribution = ATTRIBUTION_WIKI
+            target_doc_id = _make_doc_id(coin_def, mint)
 
-            # Tier 1: Wikimedia Commons
-            print(f"  Fetching images …")
-            wiki_imgs = resolve_wikimedia_coin_images(coin_def, mint)
-            if wiki_imgs["obverse"] or wiki_imgs["reverse"]:
-                wiki_obv = wiki_imgs["obverse"]
-                wiki_rev = wiki_imgs["reverse"]
-                # Download + upload to GCS
-                if wiki_obv:
-                    obv_url = download_and_upload(wiki_obv, _make_doc_id(coin_def, mint),
+            # Tier 0: GCS — check our own bucket first
+            print(f"  Checking GCS for existing images …")
+            gcs_imgs = check_gcs_existing(target_doc_id)
+            obv_url  = gcs_imgs["obverse"]
+            rev_url  = gcs_imgs["reverse"]
+
+            if obv_url and rev_url:
+                print(f"  Both sides already in GCS — skipping external sources.")
+            else:
+                # Tier 1: Wikimedia Commons (only if GCS is missing one or both)
+                print(f"  Fetching images from external sources …")
+                wiki_imgs = resolve_wikimedia_coin_images(coin_def, mint)
+                wiki_obv  = wiki_imgs["obverse"]
+                wiki_rev  = wiki_imgs["reverse"]
+                if wiki_obv and not obv_url:
+                    obv_url = download_and_upload(wiki_obv, target_doc_id,
                                                    "obverse", ATTRIBUTION_WIKI, dry_run)
-                if wiki_rev:
-                    rev_url = download_and_upload(wiki_rev, _make_doc_id(coin_def, mint),
+                if wiki_rev and not rev_url:
+                    rev_url = download_and_upload(wiki_rev, target_doc_id,
                                                    "reverse", ATTRIBUTION_WIKI, dry_run)
 
-            # Tier 2: US Mint website (if Wikimedia missed one or both)
-            if not obv_url or not rev_url:
-                mint_imgs = fetch_usmint_coin_images(coin_def, mint)
-                attribution = ATTRIBUTION_MINT
-                if mint_imgs["obverse"] and not obv_url:
-                    obv_url = download_and_upload(mint_imgs["obverse"],
-                                                   _make_doc_id(coin_def, mint),
-                                                   "obverse", ATTRIBUTION_MINT, dry_run)
-                if mint_imgs["reverse"] and not rev_url:
-                    rev_url = download_and_upload(mint_imgs["reverse"],
-                                                   _make_doc_id(coin_def, mint),
-                                                   "reverse", ATTRIBUTION_MINT, dry_run)
+                # Tier 2: US Mint website (if still missing one or both)
+                if not obv_url or not rev_url:
+                    mint_imgs = fetch_usmint_coin_images(coin_def, mint)
+                    attribution = ATTRIBUTION_MINT
+                    if mint_imgs["obverse"] and not obv_url:
+                        obv_url = download_and_upload(mint_imgs["obverse"],
+                                                       target_doc_id,
+                                                       "obverse", ATTRIBUTION_MINT, dry_run)
+                    if mint_imgs["reverse"] and not rev_url:
+                        rev_url = download_and_upload(mint_imgs["reverse"],
+                                                       target_doc_id,
+                                                       "reverse", ATTRIBUTION_MINT, dry_run)
 
             # Tier 3: Log as missing
             if not obv_url:
