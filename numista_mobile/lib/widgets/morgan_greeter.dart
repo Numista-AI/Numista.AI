@@ -200,14 +200,14 @@ class _MorganGreeterState extends State<MorganGreeter>
       route: 'Microscope Scanner',
     ),
     _ActionTile(
-      tileId: 'photo',
+      tileId: 'camera_scanner',
       emoji: '📷',
       icon: Icons.photo_camera_rounded,
       color: const Color(0xFFEC4899), // pink
-      title: 'Upload Photo to ID',
-      subtitle: 'Snap or upload photo to identify a coin',
+      title: 'Webcam / Camera Scanner',
+      subtitle: 'Snap obverse/reverse pictures to add instantly',
       route: 'Add New Coins',
-      tabName: 'upload',
+      tabName: 'camera',
     ),
     _ActionTile(
       tileId: 'manual',
