@@ -7693,6 +7693,25 @@ def release_scraper_lock():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ScrapeUrlRequest(BaseModel):
+    url: str
+    dry_run: bool = False
+
+
+@app.post("/api/scraper/scrape-url")
+def scrape_url_endpoint(data: ScrapeUrlRequest):
+    """
+    Trigger scraping of a specific URL (e.g. Wikipedia Semiquincentennial page).
+    """
+    try:
+        from numista_scraper.url_scraper import scrape_url
+        results = scrape_url(data.url, dry_run=data.dry_run)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.exception("Scraper URL execution error")
+        return {"status": "error", "message": str(e)}
+
+
 
 # ─── BRAIN ADMIN API ─────────────────────────────────────────────────────────
 
