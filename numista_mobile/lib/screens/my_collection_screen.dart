@@ -502,8 +502,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
 
   List<QueryDocumentSnapshot> _filtered(List<QueryDocumentSnapshot> docs) {
-    if (_searchQuery.isEmpty) return docs;
-    return docs.where((doc) {
+    // Option A: individual set-member coins are hidden from the default grid.
+    // Only the parent SET card is shown. When actively searching, ALL coins
+    // (including set members) are revealed so Morgan/AI never misses them.
+    final List<QueryDocumentSnapshot> visible = _searchQuery.isEmpty
+        ? docs.where((doc) {
+            final m = doc.data() as Map<String, dynamic>;
+            final parentSetId = m['parent_set_id']?.toString() ?? '';
+            return parentSetId.isEmpty;
+          }).toList()
+        : docs;
+
+    if (_searchQuery.isEmpty) return visible;
+    return visible.where((doc) {
       final m = doc.data() as Map<String, dynamic>;
       return [
         _F.year,

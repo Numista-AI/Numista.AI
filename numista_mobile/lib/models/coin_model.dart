@@ -30,6 +30,10 @@ class CoinModel {
   final bool isSet;
   final String? setId;
   final List<dynamic>? setContents;
+  // Nested set membership (for individual coins that belong to a parent set)
+  final String? parentSetId;       // doc ID of the parent SET record
+  final String? memberOf;          // sub-group label, e.g. "Philadelphia Mint"
+  final bool inOriginalPackaging;  // true = coins kept in original US Mint packaging
   
   // Internal tracking
   final String aiEstimatedValue;
@@ -94,6 +98,9 @@ class CoinModel {
     this.isSet = false,
     this.setId,
     this.setContents,
+    this.parentSetId,
+    this.memberOf,
+    this.inOriginalPackaging = false,
     this.source = '',
     this.sourceFile = '',
     this.binderDocId = '',
@@ -185,6 +192,9 @@ class CoinModel {
       isSet: data['is_set'] as bool? ?? false,
       setId: data['set_id']?.toString(),
       setContents: data['set_contents'] as List<dynamic>?,
+      parentSetId: data['parent_set_id']?.toString(),
+      memberOf: data['member_of']?.toString(),
+      inOriginalPackaging: data['in_original_packaging'] as bool? ?? false,
     );
   }
 
@@ -227,6 +237,9 @@ class CoinModel {
       'is_set': isSet,
       'set_id': setId,
       'set_contents': setContents,
+      'parent_set_id': parentSetId,
+      'member_of': memberOf,
+      'in_original_packaging': inOriginalPackaging,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };

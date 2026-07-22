@@ -81,7 +81,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _loadSavedPcgsToken();
   }
 
@@ -93,6 +93,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _pcgsSingleCtrl.dispose();
     _importNameCtrl.dispose();
     _skuCtrl.dispose();
+    _mintSetNameCtrl.dispose();
+    _mintSetCostCtrl.dispose();
+    _mintSetDateCtrl.dispose();
+    _mintSetRetailerCtrl.dispose();
     _picYear.dispose();   _picDenom.dispose();   _picSeries.dispose();
     _picTheme.dispose();  _picMint.dispose();    _picGrade.dispose();
     _picMetal.dispose();  _picVariety.dispose(); _picCost.dispose();
@@ -221,6 +225,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               _buildPcgsImportTab(),
               _buildRollEntryTab(),
               _buildWorldItemsTab(),
+              _buildMintSetTab(),
             ],
           ),
         ),
@@ -275,6 +280,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Tab(text: 'Import from PCGS',  icon: Icon(Icons.shield_outlined,       size: 20)),
           Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
           Tab(text: 'World & Specialty', icon: Icon(Icons.language_rounded,      size: 20)),
+          Tab(text: 'Mint Set',          icon: Icon(Icons.collections_bookmark,  size: 20)),
         ],
       ),
     );
@@ -382,7 +388,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))
                   ],
                 ),
                 child: Column(
@@ -400,7 +406,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0C040).withOpacity(0.2),
+                            color: const Color(0xFFF0C040).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text('4x Concurrency', style: TextStyle(color: Color(0xFFF0C040), fontSize: 11, fontWeight: FontWeight.bold)),
@@ -448,7 +454,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: item['status'] == 'Verified' ? const Color(0xFF22C55E).withOpacity(0.2) : const Color(0xFFF0C040).withOpacity(0.2),
+                                color: item['status'] == 'Verified' ? const Color(0xFF22C55E).withValues(alpha: 0.2) : const Color(0xFFF0C040).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -736,6 +742,392 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         ),
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MINT SET TAB
+  // Records a structured US Mint set as one parent SET document plus N
+  // individual coin documents (one per coin), all linked by parentSetId.
+  // The My Collection grid shows only the SET card; individual coins are
+  // fully searchable by Morgan/AI and visible in the Set Detail View.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Mint Set tab state ──────────────────────────────────────────────────
+  final _mintSetNameCtrl     = TextEditingController();
+  final _mintSetCostCtrl     = TextEditingController();
+  final _mintSetDateCtrl     = TextEditingController();
+  final _mintSetRetailerCtrl = TextEditingController();
+  bool   _mintSetSaving      = false;
+  String _mintSetMsg         = '';
+  bool   _mintSetDone        = false;
+
+  // Template: 2026 US Mint Uncirculated Coin Set
+  static const _kUncSet2026Name     = '2026 US Mint Uncirculated Coin Set';
+  static const _kUncSet2026Retailer = 'US Mint';
+  static const _kMints = ['P', 'D'];
+  static const _kCoins = [
+    // (denomination, programSeries, themeSubject, metalContent)
+    // Source: US Mint product description (exact 2026 Uncirculated Coin Set contents)
+    ('1 Cent',    'Lincoln Cent',                  '1776~2026 Bicentennial',                   'Copper-Plated Zinc'),
+    ('5 Cents',   'Jefferson Nickel',              '1776~2026 Bicentennial',                   'Cupro-Nickel'),
+    ('10 Cents',  'Emerging Liberty Dime',         'Liberty — first time since 1945',          'Cupro-Nickel'),
+    ('50 Cents',  'Enduring Liberty Half Dollar',  'Statue of Liberty — replaces Kennedy 2026 only', 'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Mayflower Compact',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Revolutionary War',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Declaration of Independence',              'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'U.S. Constitution',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Gettysburg Address',                       'Cupro-Nickel'),
+    ('1 Dollar',  'Native American Dollar',        'Polly Cooper / Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
+  ];
+
+  Widget _buildMintSetTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // ── Header ────────────────────────────────────────────────
+              Row(children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFC9A227), Color(0xFF1E3A5F)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.collections_bookmark, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Record a Mint Set',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B))),
+                    Text('Keeps packaging intact — records each coin individually',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  ],
+                )),
+              ]),
+              const SizedBox(height: 20),
+
+              // ── How it works banner ────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  border: Border.all(color: const Color(0xFFFCD34D)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Color(0xFFB45309), size: 18),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(
+                      'One parent set record is created (with your package photo) plus '
+                      'one individual record per coin. Your collection grid shows the set '
+                      'card only — Morgan and AI search see every individual coin. '
+                      'Nothing is removed from its original packaging.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF78350F), height: 1.5),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Template chooser ──────────────────────────────────────
+              const Text('SET TEMPLATE', style: TextStyle(fontSize: 11,
+                  fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  _mintSetNameCtrl.text     = _kUncSet2026Name;
+                  _mintSetRetailerCtrl.text = _kUncSet2026Retailer;
+                  setState(() {});
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _mintSetNameCtrl.text == _kUncSet2026Name
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF8FAFC),
+                    border: Border.all(
+                      color: _mintSetNameCtrl.text == _kUncSet2026Name
+                          ? const Color(0xFF3B82F6)
+                          : const Color(0xFFE2E8F0),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(children: [
+                    const Text('🏛️', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('2026 US Mint Uncirculated Coin Set',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B))),
+                        Text('20 coins · Philadelphia (P) + Denver (D) · 10 denominations each',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      ],
+                    )),
+                    if (_mintSetNameCtrl.text == _kUncSet2026Name)
+                      const Icon(Icons.check_circle, color: Color(0xFF3B82F6), size: 22),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Set details form ──────────────────────────────────────
+              const Text('SET DETAILS', style: TextStyle(fontSize: 11,
+                  fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+              const SizedBox(height: 10),
+              _mintSetField(_mintSetNameCtrl,     'Set Name',       'e.g. 2026 US Mint Uncirculated Coin Set'),
+              const SizedBox(height: 12),
+              _mintSetField(_mintSetCostCtrl,     'Purchase Price', 'e.g. \$27.95',
+                  keyboardType: TextInputType.number),
+              const SizedBox(height: 12),
+              _mintSetField(_mintSetDateCtrl,     'Purchase Date',  'e.g. 2026-07-22'),
+              const SizedBox(height: 12),
+              _mintSetField(_mintSetRetailerCtrl, 'Retailer',       'e.g. US Mint'),
+              const SizedBox(height: 28),
+
+              // ── Coin preview ──────────────────────────────────────────
+              if (_mintSetNameCtrl.text == _kUncSet2026Name) ...[
+                const Text('COINS THAT WILL BE CREATED (20 total)',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                      color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+                const SizedBox(height: 12),
+                for (final mint in _kMints) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                      color: mint == 'P'
+                          ? const Color(0xFF1E40AF).withAlpha(20)
+                          : const Color(0xFFBF360C).withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: mint == 'P'
+                            ? const Color(0xFF1E40AF).withAlpha(60)
+                            : const Color(0xFFBF360C).withAlpha(60),
+                      ),
+                    ),
+                    child: Text(
+                      mint == 'P' ? '🔵 Philadelphia Mint (P)' : '🔴 Denver Mint (D)',
+                      style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.bold,
+                        color: mint == 'P'
+                            ? const Color(0xFF1E40AF)
+                            : const Color(0xFFBF360C),
+                      ),
+                    ),
+                  ),
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: _kCoins.map((c) {
+                      final label = c.$3.isNotEmpty ? c.$3 : c.$2;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '2026-$mint ${c.$1}\n$label',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF334155)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                const SizedBox(height: 8),
+              ],
+
+              // ── Status/error message ──────────────────────────────────
+              if (_mintSetMsg.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: _mintSetDone
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _mintSetDone
+                          ? const Color(0xFF86EFAC)
+                          : const Color(0xFFFCA5A5),
+                    ),
+                  ),
+                  child: Text(
+                    _mintSetMsg,
+                    style: TextStyle(
+                      color: _mintSetDone
+                          ? const Color(0xFF166534)
+                          : const Color(0xFF991B1B),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+
+              // ── Save button ───────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: _mintSetSaving
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _mintSetSaving
+                        ? 'Creating set & coins…'
+                        : 'Create Set + ${_mintSetNameCtrl.text == _kUncSet2026Name ? "20" : "N"} Coins',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC9A227),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: _mintSetSaving ? null : _saveMintSet,
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mintSetField(TextEditingController ctrl, String label, String hint,
+      {TextInputType? keyboardType}) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: keyboardType,
+      onChanged: (_) => setState(() {}),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Future<void> _saveMintSet() async {
+    final name     = _mintSetNameCtrl.text.trim();
+    final cost     = _mintSetCostCtrl.text.trim();
+    final date     = _mintSetDateCtrl.text.trim();
+    final retailer = _mintSetRetailerCtrl.text.trim();
+
+    if (name.isEmpty) {
+      setState(() => _mintSetMsg = 'Please enter a set name.');
+      return;
+    }
+
+    setState(() { _mintSetSaving = true; _mintSetMsg = ''; _mintSetDone = false; });
+
+    try {
+      final db    = FirebaseFirestore.instance;
+      final col   = db.collection(AuthService.coinsPath);
+      final batch = db.batch();
+
+      // ── 1. Create the parent SET document ──────────────────────────
+      final setRef = col.doc();
+      final setId  = setRef.id;
+      final List<String> coinDocIds = [];
+
+      batch.set(setRef, {
+        'is_set'               : true,
+        'in_original_packaging': true,
+        'Program/Series'       : name,
+        'Denomination'         : 'Set',
+        'Year'                 : '2026',
+        'Mint Mark'            : '',
+        'Purchase Cost'        : cost.isEmpty ? '' : cost,
+        'Purchase Date'        : date,
+        'Retailer/Website'     : retailer.isEmpty ? _kUncSet2026Retailer : retailer,
+        'Condition'            : 'MS',
+        'Country'              : 'USA',
+        'sub_sets'             : _kMints.map((m) =>
+            m == 'P' ? 'Philadelphia Mint' : 'Denver Mint').toList(),
+        'set_contents'         : [],         // back-filled below after IDs are known
+        'image_url_obverse'    : '',
+        'image_url_reverse'    : '',
+        'image_verification_status': 'unverified',
+        'timestamp'            : FieldValue.serverTimestamp(),
+      });
+
+      // ── 2. Create individual coin documents ────────────────────────
+      for (final mint in _kMints) {
+        final mintLabel = mint == 'P' ? 'Philadelphia Mint' : 'Denver Mint';
+        for (final coin in _kCoins) {
+          final ref = col.doc();
+          coinDocIds.add(ref.id);
+          batch.set(ref, {
+            'is_set'               : false,
+            'set_id'               : setId,
+            'parent_set_id'        : setId,
+            'member_of'            : mintLabel,
+            'in_original_packaging': true,
+            'Year'                 : '2026',
+            'Mint Mark'            : mint,
+            'Denomination'         : coin.$1,
+            'Program/Series'       : coin.$2,
+            'Theme/Subject'        : coin.$3,
+            'Metal Content'        : coin.$4,
+            'Condition'            : 'MS',
+            'Country'              : 'USA',
+            'Purchase Cost'        : '', // cost tracked at set level
+            'Purchase Date'        : date,
+            'Retailer/Website'     : retailer.isEmpty ? _kUncSet2026Retailer : retailer,
+            'image_url_obverse'    : '',
+            'image_url_reverse'    : '',
+            'image_verification_status': 'unverified',
+            'is_reviewed'          : true,   // skip Review Hub — set coins are confirmed
+            'timestamp'            : FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // ── 3. Back-fill set_contents with the generated coin IDs ──────
+      batch.update(setRef, {'set_contents': coinDocIds});
+
+      await batch.commit();
+
+      setState(() {
+        _mintSetDone    = true;
+        _mintSetSaving  = false;
+        _mintSetMsg     =
+            '✅ Set created! 1 parent set + ${coinDocIds.length} coins added to My Collection.';
+      });
+    } catch (e) {
+      setState(() {
+        _mintSetSaving = false;
+        _mintSetMsg    = 'Error: $e';
+        _mintSetDone   = false;
+      });
+    }
   }
 
 
@@ -1026,7 +1418,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
