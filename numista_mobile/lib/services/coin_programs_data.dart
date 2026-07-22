@@ -165,7 +165,7 @@ class CoinProgramsData {
             ChecklistVariety(id: "W-PROOF", label: "W (Proof)"),
             ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)")
           ]),
-          ProgramCoin(id: "2026_innovation_dollar", name: "2026 American Innovation $1 Coin (with 250 Privy)", varieties: [
+          ProgramCoin(id: "2026_innovation_dollar", name: "2026 American Innovation \$1 Coin (with 250 Privy)", varieties: [
             ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)"),
             ChecklistVariety(id: "D-UNC", label: "D (Uncirculated)"),
             ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),
@@ -185,4 +185,5 @@ class CoinProgramsData {
         ],
       )
     ]
+  };
 }
