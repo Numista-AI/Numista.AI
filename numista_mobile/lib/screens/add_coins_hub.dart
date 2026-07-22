@@ -767,16 +767,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   static const _kMints = ['P', 'D'];
   static const _kCoins = [
     // (denomination, programSeries, themeSubject, metalContent)
-    ('1 Cent',       'Lincoln Shield Cent',                  '',                               'Copper-Plated Zinc'),
-    ('5 Cents',      'Jefferson Nickel',                     'Monticello',                     'Cupro-Nickel'),
-    ('10 Cents',     'Roosevelt Dime',                       'Torch, Olive Branch & Oak Branch','Cupro-Nickel'),
-    ('50 Cents',     'Kennedy Half Dollar',                  '',                               'Cupro-Nickel'),
-    ('25 Cents',     'America 250th Anniversary Quarter',    'We the People',                  'Cupro-Nickel'),
-    ('25 Cents',     'America 250th Anniversary Quarter',    'Liberty Bell',                   'Cupro-Nickel'),
-    ('25 Cents',     'America 250th Anniversary Quarter',    'Statue of Liberty',              'Cupro-Nickel'),
-    ('25 Cents',     'America 250th Anniversary Quarter',    'Eagle',                          'Cupro-Nickel'),
-    ('25 Cents',     'America 250th Anniversary Quarter',    'American Flag',                  'Cupro-Nickel'),
-    ('1 Dollar',     'Native American Dollar',                'Sacagawea and Her Infant Son',   'Manganese-Brass Clad Copper'),
+    // Source: US Mint product description (exact 2026 Uncirculated Coin Set contents)
+    ('1 Cent',    'Lincoln Cent',                  '1776~2026 Bicentennial',                   'Copper-Plated Zinc'),
+    ('5 Cents',   'Jefferson Nickel',              '1776~2026 Bicentennial',                   'Cupro-Nickel'),
+    ('10 Cents',  'Emerging Liberty Dime',         'Liberty — first time since 1945',          'Cupro-Nickel'),
+    ('50 Cents',  'Enduring Liberty Half Dollar',  'Statue of Liberty — replaces Kennedy 2026 only', 'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Mayflower Compact',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Revolutionary War',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Declaration of Independence',              'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'U.S. Constitution',                        'Cupro-Nickel'),
+    ('25 Cents',  'Semiquincentennial Quarter',    'Gettysburg Address',                       'Cupro-Nickel'),
+    ('1 Dollar',  'Native American Dollar',        'Polly Cooper / Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
   ];
 
   Widget _buildMintSetTab() {
