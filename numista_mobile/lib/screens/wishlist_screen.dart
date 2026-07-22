@@ -387,7 +387,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0F9D58).withOpacity(0.15),
+                              color: const Color(0xFF0F9D58).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(

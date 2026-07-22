@@ -382,7 +382,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))
                   ],
                 ),
                 child: Column(
@@ -400,7 +400,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0C040).withOpacity(0.2),
+                            color: const Color(0xFFF0C040).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text('4x Concurrency', style: TextStyle(color: Color(0xFFF0C040), fontSize: 11, fontWeight: FontWeight.bold)),
@@ -448,7 +448,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: item['status'] == 'Verified' ? const Color(0xFF22C55E).withOpacity(0.2) : const Color(0xFFF0C040).withOpacity(0.2),
+                                color: item['status'] == 'Verified' ? const Color(0xFF22C55E).withValues(alpha: 0.2) : const Color(0xFFF0C040).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -1026,7 +1026,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
