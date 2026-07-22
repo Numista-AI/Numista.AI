@@ -18,7 +18,8 @@ import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 
 class ProgramManagerScreen extends StatefulWidget {
-  const ProgramManagerScreen({super.key});
+  final String? initialProgramId;
+  const ProgramManagerScreen({super.key, this.initialProgramId});
 
   @override
   State<ProgramManagerScreen> createState() => _ProgramManagerScreenState();
@@ -158,6 +159,18 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             }
 
             final docs = snapshot.data?.docs ?? [];
+            
+            if (_selectedProgram == null && widget.initialProgramId != null) {
+              for (final entry in allProgramsMap.entries) {
+                for (final prog in entry.value) {
+                  if (prog.id == widget.initialProgramId) {
+                    _selectedProgram = prog;
+                    break;
+                  }
+                }
+                if (_selectedProgram != null) break;
+              }
+            }
             
             // Single Program View Mode
             if (_selectedProgram != null) {

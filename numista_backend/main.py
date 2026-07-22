@@ -163,6 +163,23 @@ COIN_DICTIONARY = [
 
 # Coin nicknames → official Program/Series name
 COIN_NICKNAMES: dict[str, str] = {
+    # America250
+    'mayflower compact quarter': 'America250 Quarters Program',
+    'mayflower quarter': 'America250 Quarters Program',
+    'valley forge quarter': 'America250 Quarters Program',
+    'revolutionary war quarter': 'America250 Quarters Program',
+    'declaration quarter': 'America250 Quarters Program',
+    'liberty bell quarter': 'America250 Quarters Program',
+    'constitution quarter': 'America250 Quarters Program',
+    'we the people quarter': 'America250 Quarters Program',
+    'gettysburg quarter': 'America250 Quarters Program',
+    'gettysburg address quarter': 'America250 Quarters Program',
+    'lincoln quarter': 'America250 Quarters Program',
+    'emerging liberty dime': 'America250 Core',
+    'enduring liberty half dollar': 'America250 Core',
+    'enduring liberty half': 'America250 Core',
+    'america250': 'America250 Core',
+    'semiquincentennial': 'America250 Core',
     # Dollars
     'ike': 'Eisenhower Dollar',
     'ike dollar': 'Eisenhower Dollar',
@@ -2898,7 +2915,7 @@ async def deep_dive(request: DeepDiveRequest):
                 keywords = cleaned_term.split()
                 if keywords:
                     sql = "SELECT doc_id FROM definitive_reference WHERE "
-                    sql += " AND ".join(["(variety LIKE ? OR obverse_desc LIKE ? OR series LIKE ?)" for _ in keywords])
+                    sql += " AND ".join(["(variety LIKE ? OR design_obverse LIKE ? OR series LIKE ?)" for _ in keywords])
                     params = []
                     for kw in keywords:
                         params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%"])

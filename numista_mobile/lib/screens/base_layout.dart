@@ -49,6 +49,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
   String? _addCoinsInitialTabName;
+  String? _programManagerInitialId;
 
   // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
@@ -187,21 +188,33 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
   }
 
+  void _navigateTo(String route) {
+    setState(() {
+      if (route.startsWith('Coin Programs:')) {
+        final parts = route.split(':');
+        _programManagerInitialId = parts[1];
+        _activeRoute = 'Coin Programs';
+      } else {
+        _activeRoute = route;
+      }
+    });
+  }
+
   Widget _buildBody() {
     switch (_activeRoute) {
       case 'Home Dashboard':
         return HomeDashboard(
-          onAskMorgan: () => setState(() => _activeRoute = 'AI Deepdive'),
+          onAskMorgan: () => _navigateTo('AI Deepdive'),
           onAskMorganWithQuery: (query) => setState(() {
             _aiInitialQuery = query;
             _activeRoute = 'AI Deepdive';
           }),
-          onNavigateToCollection: () => setState(() => _activeRoute = 'My Collection'),
+          onNavigateToCollection: () => _navigateTo('My Collection'),
         );
       case 'My Collection':
         return MyCollectionScreen(
           initialTab: _myCollectionTab,
-          onNavigate: (route) => setState(() => _activeRoute = route),
+          onNavigate: _navigateTo,
           onNavigateWithQuery: (route, query) => setState(() {
             _activeRoute = route;
             _aiInitialQuery = query;
@@ -211,7 +224,9 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Microscope Scanner':
         return const MicroscopeScanScreen();
       case 'Coin Programs':
-        return const ProgramManagerScreen();
+        final progId = _programManagerInitialId;
+        _programManagerInitialId = null; // consume
+        return ProgramManagerScreen(initialProgramId: progId);
       case 'Settings & Backup':
         return const SettingsScreen();
       case 'Our Team':
@@ -220,12 +235,12 @@ class _BaseLayoutState extends State<BaseLayout> {
         final tabName = _addCoinsInitialTabName;
         _addCoinsInitialTabName = null; // consume once
         return AddCoinsHub(
-          onNavigate: (route) => setState(() => _activeRoute = route),
+          onNavigate: _navigateTo,
           initialTabName: tabName,
         );
       case 'World & Specialty':
         return AddWorldItemScreen(
-          onNavigate: (route) => setState(() => _activeRoute = route),
+          onNavigate: _navigateTo,
         );
       case 'AI Deepdive':
         // Consume the initial query once, then clear it so subsequent opens
