@@ -1,0 +1,786 @@
+#!/usr/bin/env python3
+"""
+url_scraper.py
+==============
+Source-aware URL ingestion engine.
+
+Given any URL, this module:
+  1. Detects the source type (wikipedia | usmint | generic_html)
+  2. Extracts structured coin records from the page
+  3. Fuzzy-matches each coin to existing definitive_reference docs
+  4. Updates existing docs (≥ 92% match) OR creates new ai_approval_pending docs
+  5. Downloads images via a 3-tier waterfall:
+       Wikimedia Commons → US Mint website → logs as missing
+
+Usage (standalone):
+    from numista_scraper.url_scraper import scrape_url
+    results = scrape_url("https://en.wikipedia.org/wiki/...", dry_run=True)
+"""
+
+import os
+import re
+import sys
+import json
+import time
+import sqlite3
+import hashlib
+import requests
+from pathlib import Path
+from datetime import datetime, timezone
+from urllib.parse import urlparse, quote
+
+# ─── Relative imports with fallback ──────────────────────────────────────────
+try:
+    from .config import DB_PATH, KEY_PATH, BUCKET_NAME, GCP_PROJECT, get_scrape_proxy
+    from .storage import db, gcs_client, upload_to_gcs, ensure_sqlite_schema, update_coin_images_in_databases
+except ImportError:
+    _here = Path(__file__).parent.parent
+    sys.path.insert(0, str(_here))
+    from numista_scraper.config import DB_PATH, KEY_PATH, BUCKET_NAME, GCP_PROJECT, get_scrape_proxy
+    from numista_scraper.storage import db, gcs_client, upload_to_gcs, ensure_sqlite_schema, update_coin_images_in_databases
+
+try:
+    from rapidfuzz import fuzz, process as rfprocess
+except ImportError:
+    raise ImportError("rapidfuzz is required: pip install rapidfuzz")
+
+# ─── Constants ────────────────────────────────────────────────────────────────
+WIKI_API        = "https://en.wikipedia.org/api/rest_v1"
+COMMONS_API     = "https://commons.wikimedia.org/w/api.php"
+WIKI_UA         = "NumistaAICoinScraper/2.0 (https://numista-vault.web.app/; contact@numista.ai)"
+AUTO_COMMIT_THRESHOLD = 0.92
+GCS_COIN_PREFIX = "coins/"
+PUBLIC_URL_BASE = f"https://storage.googleapis.com/{BUCKET_NAME}/{{}}"
+ATTRIBUTION_WIKI = "Wikimedia Commons. Public domain (US government work). CC-BY-SA."
+ATTRIBUTION_MINT = "United States Mint. Public domain (17 U.S.C. § 105). Source: usmint.gov"
+
+# ─── 2026 Semiquincentennial Master Coin Definitions ─────────────────────────
+# Keyed by a stable slug used to build doc_ids and Wikimedia filenames.
+SEMIQ_COINS = [
+    # ── Five Semiquincentennial Quarters ────────────────────────────────────
+    {
+        "slug":             "mayflower_compact",
+        "series":           "Semiquincentennial Quarters",
+        "denomination":     "Quarter Dollar",
+        "variety":          "Mayflower Compact",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {"P": 115_200_000, "D": 121_400_000},
+        "category":         "coin",
+        "obverse_desc":     "Standard Washington portrait with dual date 1776–2026",
+        "reverse_desc":     "Recognizes the colony at Plymouth and the Compact as a precursor to the Declaration of Independence and the U.S. Constitution.",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Mayflower",     # → SemiQ-Mayflower-Obverse-Unc-{Mint}.jpg
+        "usmint_slug":      "mayflower-compact",
+    },
+    {
+        "slug":             "revolutionary_war",
+        "series":           "Semiquincentennial Quarters",
+        "denomination":     "Quarter Dollar",
+        "variety":          "Revolutionary War",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {"P": 100_400_000, "D": 101_400_000},
+        "category":         "coin",
+        "obverse_desc":     "Standard Washington portrait with dual date 1776–2026",
+        "reverse_desc":     "Honors the will and strength to overcome the trials of war in pursuit of liberty.",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Revolutionary-War",
+        "usmint_slug":      "revolutionary-war",
+    },
+    {
+        "slug":             "declaration_of_independence",
+        "series":           "Semiquincentennial Quarters",
+        "denomination":     "Quarter Dollar",
+        "variety":          "Declaration of Independence",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {"P": 63_000_000, "D": 84_800_000},
+        "category":         "coin",
+        "obverse_desc":     "Standard Washington portrait with dual date 1776–2026",
+        "reverse_desc":     "Features the Liberty Bell, an iconic symbol of the country's founding era and a symbol closely associated with the Declaration of Independence.",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Declaration",
+        "usmint_slug":      "declaration-of-independence",
+    },
+    {
+        "slug":             "us_constitution",
+        "series":           "Semiquincentennial Quarters",
+        "denomination":     "Quarter Dollar",
+        "variety":          "U.S. Constitution",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {"P": 1_600_000, "D": 1_400_000},
+        "category":         "coin",
+        "obverse_desc":     "Standard Washington portrait with dual date 1776–2026",
+        "reverse_desc":     "Depicts Independence Hall in Philadelphia, where the Liberty Bell was housed and where both the Declaration of Independence and U.S. Constitution were written, debated, and signed.",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Constitution",
+        "usmint_slug":      "us-constitution",
+    },
+    {
+        "slug":             "gettysburg_address",
+        "series":           "Semiquincentennial Quarters",
+        "denomination":     "Quarter Dollar",
+        "variety":          "Gettysburg Address",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {"P": 1_400_000, "D": 1_400_000},
+        "category":         "coin",
+        "obverse_desc":     "Standard Washington portrait with dual date 1776–2026",
+        "reverse_desc":     "Honors the Gettysburg Address, recognized as one of the most poignant and moving speeches in American history.",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Gettysburg",
+        "usmint_slug":      "gettysburg-address",
+    },
+    # ── Native American Dollar ───────────────────────────────────────────────
+    {
+        "slug":             "native_american_dollar_polly_cooper",
+        "series":           "Native American Dollar",
+        "denomination":     "Dollar",
+        "variety":          "Polly Cooper — Oneida Allies at Valley Forge",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {},
+        "category":         "coin",
+        "obverse_desc":     "Portrait of Sacagawea carrying her infant son Jean-Baptiste. Inscriptions: LIBERTY, IN GOD WE TRUST.",
+        "reverse_desc":     "Polly Cooper holding a basket as she shares the Oneidas' gift of corn with General Washington. Inscriptions: UNITED STATES OF AMERICA, POLLY COOPER, $1, ONEIDA ALLIES AT VALLEY FORGE.",
+        "composition":      "Manganese brass",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Dollar",
+        "usmint_slug":      "native-american-dollar",
+    },
+    # ── Enduring Liberty Half Dollar ─────────────────────────────────────────
+    {
+        "slug":             "enduring_liberty_half_dollar",
+        "series":           "Semiquincentennial",
+        "denomination":     "Half Dollar",
+        "variety":          "Enduring Liberty",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {},
+        "category":         "coin",
+        "obverse_desc":     "Statue of Liberty (replaces Kennedy — one year only, 2026).",
+        "reverse_desc":     "Presidential Coat of Arms (standard Kennedy reverse).",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Half-Dollar",
+        "usmint_slug":      "half-dollar",
+    },
+    # ── Emerging Liberty Dime ────────────────────────────────────────────────
+    {
+        "slug":             "emerging_liberty_dime",
+        "series":           "Semiquincentennial",
+        "denomination":     "Dime",
+        "variety":          "Emerging Liberty",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {},
+        "category":         "coin",
+        "obverse_desc":     "Liberty on obverse (first time since 1945).",
+        "reverse_desc":     "Torch and olive branch (standard Roosevelt reverse).",
+        "composition":      "Copper-nickel clad copper",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Dime",
+        "usmint_slug":      "dime",
+    },
+    # ── Jefferson Nickel — Semiquincentennial ────────────────────────────────
+    {
+        "slug":             "jefferson_nickel_semiquincentennial",
+        "series":           "Jefferson Nickel",
+        "denomination":     "Five Cents",
+        "variety":          "Semiquincentennial — 1776~2026",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {},
+        "category":         "coin",
+        "obverse_desc":     "Standard Jefferson portrait marked with dual dates 1776 ~ 2026.",
+        "reverse_desc":     "Monticello (standard Jefferson reverse).",
+        "composition":      "Copper-nickel",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Nickel",
+        "usmint_slug":      "nickel",
+    },
+    # ── Lincoln Cent — Semiquincentennial ────────────────────────────────────
+    {
+        "slug":             "lincoln_cent_semiquincentennial",
+        "series":           "Lincoln Cent",
+        "denomination":     "Cent",
+        "variety":          "Semiquincentennial — 1776~2026",
+        "year":             "2026",
+        "mints":            ["P", "D"],
+        "mintage":          {},
+        "category":         "coin",
+        "obverse_desc":     "Standard Lincoln portrait marked with dual dates 1776 ~ 2026.",
+        "reverse_desc":     "Union Shield (standard Lincoln cent reverse).",
+        "composition":      "Copper plated zinc",
+        "designer":         None,
+        "wiki_file_stem":   "SemiQ-Penny",
+        "usmint_slug":      "penny",
+    },
+]
+
+# ─── Source Detection ─────────────────────────────────────────────────────────
+
+def detect_source_type(url: str) -> str:
+    host = urlparse(url).netloc.lower()
+    if "wikipedia.org" in host:
+        return "wikipedia"
+    if "usmint.gov" in host:
+        return "usmint"
+    return "generic_html"
+
+
+# ─── Wikimedia Commons Image Resolver ────────────────────────────────────────
+
+def resolve_wikimedia_file_url(file_title: str) -> str | None:
+    """
+    Resolve a Wikimedia Commons File: title to its full-resolution URL.
+    e.g. "File:SemiQ-Mayflower-Reverse-Unc.jpg"
+         → "https://upload.wikimedia.org/wikipedia/commons/0/0d/SemiQ-Mayflower-Reverse-Unc.jpg"
+    Returns None if the file doesn't exist.
+    """
+    params = {
+        "action": "query",
+        "titles": file_title,
+        "prop": "imageinfo",
+        "iiprop": "url",
+        "format": "json",
+    }
+    try:
+        resp = requests.get(
+            COMMONS_API, params=params,
+            headers={"User-Agent": WIKI_UA}, timeout=10
+        )
+        resp.raise_for_status()
+        pages = resp.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            info = page.get("imageinfo", [])
+            if info:
+                return info[0]["url"]
+    except Exception as e:
+        print(f"    ⚠ Wikimedia resolve error for {file_title}: {e}")
+    return None
+
+
+def resolve_wikimedia_coin_images(coin: dict, mint: str) -> dict:
+    """
+    Try to find obverse + reverse on Wikimedia Commons using the SemiQ naming pattern.
+    Returns {"obverse": url_or_none, "reverse": url_or_none, "source": "wikimedia"}
+    """
+    stem = coin.get("wiki_file_stem", "")
+    if not stem:
+        return {"obverse": None, "reverse": None, "source": "wikimedia"}
+
+    results = {}
+    for side in ("Obverse", "Reverse"):
+        # Try mint-specific first, then generic
+        candidates = [
+            f"File:{stem}-{side}-Unc-{mint}.jpg",
+            f"File:{stem}-{side}-Unc.jpg",
+            f"File:{stem}-{side}-Proof-{mint}.jpg",
+        ]
+        found_url = None
+        for candidate in candidates:
+            url = resolve_wikimedia_file_url(candidate)
+            if url:
+                print(f"    [Wikimedia] ✓ {candidate}")
+                found_url = url
+                break
+            else:
+                print(f"    [Wikimedia] ✗ {candidate}")
+        results[side.lower()] = found_url
+
+    results["source"] = "wikimedia"
+    return results
+
+
+# ─── US Mint Image Fetcher ────────────────────────────────────────────────────
+
+# ── Per-coin US Mint product page URLs ────────────────────────────────────────
+# Maps coin slug → specific product page URL.
+# Using dedicated per-denomination pages avoids scraping the generic program page
+# which lists all coins together and causes wrong image matches.
+_USMINT_COIN_PRODUCT_URLS = {
+    "mayflower_compact":              "https://www.usmint.gov/coins/coin-programs/semiquincentennial/mayflower-compact-quarter",
+    "revolutionary_war":              "https://www.usmint.gov/coins/coin-programs/semiquincentennial/revolutionary-war-quarter",
+    "declaration_of_independence":    "https://www.usmint.gov/coins/coin-programs/semiquincentennial/declaration-of-independence-quarter",
+    "us_constitution":                "https://www.usmint.gov/coins/coin-programs/semiquincentennial/us-constitution-quarter",
+    "gettysburg_address":             "https://www.usmint.gov/coins/coin-programs/semiquincentennial/gettysburg-address-quarter",
+    "native_american_dollar_polly_cooper": "https://www.usmint.gov/coins/coin-programs/native-american-dollar-coins/2026-native-american-dollar-coin",
+    "enduring_liberty_half_dollar":   "https://www.usmint.gov/coins/coin-programs/semiquincentennial/enduring-liberty-half-dollar",
+    "emerging_liberty_dime":          "https://www.usmint.gov/coins/coin-programs/semiquincentennial/emerging-liberty-dime",
+    "jefferson_nickel_semiquincentennial": "https://www.usmint.gov/coins/coin-programs/semiquincentennial/jefferson-nickel",
+    "lincoln_cent_semiquincentennial": "https://www.usmint.gov/coins/coin-programs/semiquincentennial/lincoln-penny",
+}
+
+
+def fetch_usmint_coin_images(coin: dict, mint: str) -> dict:
+    """
+    Try to scrape coin images from the US Mint website using stored session cookie.
+    Only uses coin-specific product pages (never the generic program listing page)
+    to avoid picking up the wrong coin's images.
+    Returns {"obverse": url_or_none, "reverse": url_or_none, "source": "usmint"}
+    """
+    from curl_cffi import requests as curl_requests
+    from bs4 import BeautifulSoup
+
+    # Look up the specific product page for this coin
+    slug = coin.get("slug", "")
+    product_url = _USMINT_COIN_PRODUCT_URLS.get(slug)
+    if not product_url:
+        print(f"    [USMint] ✗ No specific product URL for slug: {slug} — skipping to avoid wrong image")
+        return {"obverse": None, "reverse": None, "source": "usmint"}
+
+    # Load session cookie from Firestore
+    try:
+        doc = db.collection("config").document("usmint").get()
+        cookie_str = doc.to_dict().get("cookieString", "") if doc.exists else ""
+        user_agent = doc.to_dict().get("userAgent", "") if doc.exists else ""
+    except Exception:
+        cookie_str = ""
+        user_agent = ""
+
+    if not cookie_str:
+        print(f"    [USMint] ✗ No cookie configured — skipping")
+        return {"obverse": None, "reverse": None, "source": "usmint"}
+
+    headers = {
+        "User-Agent": user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": cookie_str,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.usmint.gov/coins/coin-programs/semiquincentennial/",
+    }
+
+    try:
+        resp = curl_requests.get(product_url, headers=headers, timeout=20, impersonate="chrome120")
+        if resp.status_code != 200:
+            print(f"    [USMint] ✗ HTTP {resp.status_code} for {product_url}")
+            return {"obverse": None, "reverse": None, "source": "usmint"}
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # On a per-coin page, look for images with obverse/reverse in URL or alt text
+        img_urls = []
+        for img in soup.find_all("img"):
+            src = img.get("src", "") or img.get("data-src", "")
+            alt = (img.get("alt", "") or "").lower()
+            if not src or len(src) < 10:
+                continue
+            if src.startswith("/"):
+                src = "https://www.usmint.gov" + src
+            # Must be a usmint.gov image (not analytics/icons)
+            if "usmint.gov" not in src:
+                continue
+            # Must be in the image-library or similar media path
+            if not any(kw in src.lower() for kw in ["image-library", "coin", "/coins/", "/2026/"]):
+                continue
+            img_urls.append((alt, src))
+
+        if not img_urls:
+            print(f"    [USMint] ✗ No coin images found on {product_url}")
+            return {"obverse": None, "reverse": None, "source": "usmint"}
+
+        # Match obverse/reverse by alt text or URL keyword
+        obv = next((u for a, u in img_urls if "obverse" in a or "obverse" in u.lower()), None)
+        rev = next((u for a, u in img_urls if "reverse" in a or "reverse" in u.lower()), None)
+
+        # Only fall back to positional if we got hits on this specific page
+        if not obv and not rev and img_urls:
+            obv = img_urls[0][1]
+            rev = img_urls[1][1] if len(img_urls) > 1 else None
+
+        if obv or rev:
+            print(f"    [USMint] ✓ Found images on {product_url}")
+        else:
+            print(f"    [USMint] ✗ Images found but no obverse/reverse identified on {product_url}")
+
+        return {"obverse": obv, "reverse": rev, "source": "usmint"}
+
+    except Exception as e:
+        print(f"    [USMint] ✗ Error fetching {product_url}: {e}")
+        return {"obverse": None, "reverse": None, "source": "usmint"}
+
+
+# ─── Image Download + GCS Upload ─────────────────────────────────────────────
+
+def _download_bytes(url: str, is_wikimedia: bool = False, is_usmint: bool = False) -> bytes | None:
+    """Download raw image bytes from a URL."""
+    try:
+        headers = {"User-Agent": WIKI_UA if is_wikimedia else
+                   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        if is_usmint:
+            from curl_cffi import requests as curl_requests
+            try:
+                doc = db.collection("config").document("usmint").get()
+                cookie_str = doc.to_dict().get("cookieString", "") if doc.exists else ""
+                if cookie_str:
+                    headers["Cookie"] = cookie_str
+            except Exception:
+                pass
+            resp = curl_requests.get(url, headers=headers, timeout=20, impersonate="chrome120")
+        else:
+            resp = requests.get(url, headers=headers, timeout=20)
+
+        if resp.status_code == 200 and len(resp.content) > 2000:
+            return resp.content
+        else:
+            print(f"    ⚠ Download failed {url} → HTTP {resp.status_code}")
+    except Exception as e:
+        print(f"    ⚠ Download error {url}: {e}")
+    return None
+
+
+def download_and_upload(image_url: str, doc_id: str, side: str,
+                        attribution: str, dry_run: bool = False) -> str | None:
+    """Download image from URL and upload to GCS. Returns public URL."""
+    ext = ".jpg"
+    if ".png" in image_url.lower():
+        ext = ".png"
+    elif ".webp" in image_url.lower():
+        ext = ".webp"
+
+    gcs_path  = f"{GCS_COIN_PREFIX}{doc_id}_{side}{ext}"
+    public_url = PUBLIC_URL_BASE.format(gcs_path)
+
+    if dry_run:
+        print(f"    [DRY-RUN] Would download {image_url}")
+        print(f"    [DRY-RUN] Would upload → gs://{BUCKET_NAME}/{gcs_path}")
+        return public_url
+
+    is_wiki   = "wikimedia.org" in image_url or "wikipedia.org" in image_url
+    is_usmint = "usmint.gov" in image_url
+
+    img_bytes = _download_bytes(image_url, is_wikimedia=is_wiki, is_usmint=is_usmint)
+    if not img_bytes:
+        return None
+
+    try:
+        bucket = gcs_client.bucket(BUCKET_NAME)
+        blob   = bucket.blob(gcs_path)
+        ct     = "image/jpeg" if ext == ".jpg" else ("image/png" if ext == ".png" else "image/webp")
+        blob.upload_from_string(img_bytes, content_type=ct)
+        blob.metadata = {
+            "attribution": attribution,
+            "source":      "wikimedia" if is_wiki else ("usmint_gov" if is_usmint else "scraped"),
+            "license":     "cc_by_sa_4" if is_wiki else "public_domain_us_government",
+            "copyright":   "Wikimedia Commons contributors" if is_wiki else "Public Domain",
+        }
+        blob.patch()
+        try:
+            blob.make_public()
+        except Exception:
+            pass
+        print(f"    [GCS] ✅ Uploaded → {gcs_path}")
+        return public_url
+    except Exception as e:
+        print(f"    ⚠ GCS upload error for {gcs_path}: {e}")
+        return None
+
+
+# ─── Catalog Matching ─────────────────────────────────────────────────────────
+
+_catalog_cache: list = []
+
+def _load_catalog() -> list:
+    global _catalog_cache
+    if _catalog_cache:
+        return _catalog_cache
+    print("📚 Loading definitive_reference catalog …")
+    docs = db.collection("definitive_reference").stream()
+    for doc in docs:
+        d = doc.to_dict()
+        d["doc_id"] = doc.id
+        parts = [
+            str(d.get("year") or ""),
+            str(d.get("denomination") or ""),
+            str(d.get("series") or ""),
+            str(d.get("variety") or ""),
+            str(d.get("mint_mark") or ""),
+        ]
+        match_str = " ".join(p for p in parts if p).lower()
+        _catalog_cache.append({"doc_id": doc.id, "match_string": match_str, "data": d})
+    print(f"  Loaded {len(_catalog_cache)} records.")
+    return _catalog_cache
+
+
+def match_to_catalog(coin_def: dict, mint: str) -> tuple:
+    """
+    Returns (doc_id, confidence, existing_data, action)
+    action: "UPDATE" | "CREATE"
+    """
+    catalog = _load_catalog()
+    query_parts = [
+        coin_def.get("year", ""),
+        coin_def.get("denomination", ""),
+        coin_def.get("series", ""),
+        coin_def.get("variety", ""),
+        mint,
+    ]
+    query = " ".join(p for p in query_parts if p).lower()
+
+    # Pre-filter by year
+    year = coin_def.get("year", "")
+    candidates = [c for c in catalog if year in c["match_string"]] if year else catalog
+    if not candidates:
+        candidates = catalog
+
+    match_strings = [c["match_string"] for c in candidates]
+    best_score, best_idx = 0, 0
+    for scorer in (fuzz.token_set_ratio, fuzz.WRatio):
+        result = rfprocess.extractOne(query, match_strings, scorer=scorer, score_cutoff=0)
+        if result and result[1] > best_score:
+            best_score, best_idx = result[1], result[2]
+
+    confidence = best_score / 100.0
+    best = candidates[best_idx]
+    action = "UPDATE" if confidence >= AUTO_COMMIT_THRESHOLD else "CREATE"
+    return best["doc_id"], confidence, best["data"], action
+
+
+# ─── Firestore / SQLite Writers ───────────────────────────────────────────────
+
+def _make_doc_id(coin_def: dict, mint: str) -> str:
+    """Generate a canonical doc_id for a new 2026 Semiquincentennial coin."""
+    slug  = coin_def.get("slug", "unknown")
+    year  = coin_def.get("year", "2026")
+    mint_lc = mint.lower()
+    return f"ref_coin_semiquincentennial_{slug}_{year}_{mint_lc}"
+
+
+def _build_firestore_record(coin_def: dict, mint: str,
+                             obv_url: str, rev_url: str,
+                             source_url: str) -> dict:
+    mintage = coin_def.get("mintage", {}).get(mint)
+    return {
+        "year":              coin_def["year"],
+        "denomination":      coin_def["denomination"],
+        "series":            coin_def["series"],
+        "variety":           coin_def["variety"],
+        "mint_mark":         mint,
+        "category":          coin_def.get("category", "coin"),
+        "composition":       coin_def.get("composition", ""),
+        "designer":          coin_def.get("designer") or "",
+        "obverse_desc":      coin_def.get("obverse_desc", ""),
+        "reverse_desc":      coin_def.get("reverse_desc", ""),
+        "mintage":           mintage,
+        "image_url_obverse": obv_url or "",
+        "image_url_reverse": rev_url or "",
+        "status":            "ai_approval_pending",
+        "source_url":        source_url,
+        "enrichment_source": "url_scraper",
+        "last_enriched_at":  datetime.now(timezone.utc).isoformat(),
+        "country":           "United States",
+        "country_code":      "US",
+    }
+
+
+def commit_coin(coin_def: dict, mint: str, obv_url: str, rev_url: str,
+                source_url: str, action: str, doc_id: str,
+                dry_run: bool = False) -> dict:
+    """Write or update Firestore + SQLite for one coin × mint."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    if action == "CREATE":
+        new_doc_id = _make_doc_id(coin_def, mint)
+        record     = _build_firestore_record(coin_def, mint, obv_url, rev_url, source_url)
+        if dry_run:
+            print(f"    [DRY-RUN] Would CREATE Firestore doc: {new_doc_id}")
+            print(f"              obverse: {obv_url or '(none)'}")
+            print(f"              reverse: {rev_url or '(none)'}")
+            return {"action": "CREATE", "doc_id": new_doc_id, "status": "dry_run"}
+
+        try:
+            db.collection("definitive_reference").document(new_doc_id).set(record)
+            print(f"    [Firestore] ✅ CREATED {new_doc_id}")
+        except Exception as e:
+            print(f"    ⚠ Firestore create error {new_doc_id}: {e}")
+
+        # SQLite insert
+        try:
+            ensure_sqlite_schema()
+            conn = sqlite3.connect(str(DB_PATH))
+            cur  = conn.cursor()
+            cur.execute("""
+                INSERT OR REPLACE INTO definitive_reference
+                (doc_id, year, denomination, series, variety, mint_mark, category,
+                 image_url_obverse, image_url_reverse)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            """, (new_doc_id, record["year"], record["denomination"],
+                  record["series"], record["variety"], record["mint_mark"],
+                  record["category"], obv_url, rev_url))
+            conn.commit()
+            conn.close()
+            print(f"    [SQLite]    ✅ INSERTED {new_doc_id}")
+        except Exception as e:
+            print(f"    ⚠ SQLite insert error {new_doc_id}: {e}")
+
+        return {"action": "CREATE", "doc_id": new_doc_id, "status": "created"}
+
+    else:  # UPDATE
+        update = {"last_enriched_at": now, "enrichment_source": "url_scraper",
+                  "source_url": source_url}
+        if obv_url:
+            update["image_url_obverse"] = obv_url
+        if rev_url:
+            update["image_url_reverse"] = rev_url
+        # Fill description fields if absent
+        existing_data = {}
+        try:
+            snap = db.collection("definitive_reference").document(doc_id).get()
+            existing_data = snap.to_dict() or {}
+        except Exception:
+            pass
+
+        for field, val in [
+            ("obverse_desc",  coin_def.get("obverse_desc")),
+            ("reverse_desc",  coin_def.get("reverse_desc")),
+            ("composition",   coin_def.get("composition")),
+        ]:
+            if val and not existing_data.get(field):
+                update[field] = val
+
+        if dry_run:
+            print(f"    [DRY-RUN] Would UPDATE {doc_id}: {list(update.keys())}")
+            return {"action": "UPDATE", "doc_id": doc_id, "status": "dry_run"}
+
+        try:
+            db.collection("definitive_reference").document(doc_id).update(update)
+            print(f"    [Firestore] ✅ UPDATED {doc_id}")
+        except Exception as e:
+            print(f"    ⚠ Firestore update error {doc_id}: {e}")
+
+        if obv_url or rev_url:
+            update_coin_images_in_databases(doc_id, obv_url or existing_data.get("image_url_obverse", ""),
+                                            rev_url or existing_data.get("image_url_reverse", ""))
+
+        return {"action": "UPDATE", "doc_id": doc_id, "status": "updated"}
+
+
+# ─── Main Scrape Engine ───────────────────────────────────────────────────────
+
+def scrape_url(url: str, dry_run: bool = False) -> dict:
+    """
+    Main entry point. Accepts any URL and ingests all coin data found on the page.
+    Returns a summary dict of actions taken.
+    """
+    source_type = detect_source_type(url)
+    print(f"\n🔗 URL: {url}")
+    print(f"   Source type: {source_type}")
+    print(f"   Mode: {'DRY-RUN' if dry_run else 'LIVE'}\n")
+
+    # For Wikipedia pages about US coin programs, use the master coin list
+    if source_type == "wikipedia" and "semiquincentennial" in url.lower():
+        return _ingest_semiquincentennial(url, dry_run)
+
+    # Generic fallback for other URLs
+    print("⚠  Generic URL scraping not yet implemented for this source type.")
+    print("   Currently supported: Wikipedia Semiquincentennial page")
+    return {"status": "unsupported_url", "url": url}
+
+
+def _ingest_semiquincentennial(source_url: str, dry_run: bool) -> dict:
+    """
+    Ingest all 2026 Semiquincentennial coins using the master definition list.
+    Tries Wikimedia Commons first, then US Mint site, then marks as missing.
+    """
+    results = {
+        "source_url": source_url,
+        "created": [],
+        "updated": [],
+        "missing_images": [],
+        "errors": [],
+        "run_timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    total_coins = sum(len(c["mints"]) for c in SEMIQ_COINS)
+    print(f"📋 Processing {len(SEMIQ_COINS)} coin types × mints = {total_coins} records\n")
+
+    for coin_def in SEMIQ_COINS:
+        for mint in coin_def["mints"]:
+            label = f"{coin_def['year']} {coin_def['denomination']} {coin_def['variety']} ({mint})"
+            print(f"─── {label}")
+
+            # 1. Match to catalog
+            doc_id, confidence, existing_data, action = match_to_catalog(coin_def, mint)
+            pct = f"{confidence * 100:.1f}%"
+            print(f"  Catalog match: {pct} → {action}  [{doc_id}]")
+
+            # 2. Waterfall image fetch
+            obv_url, rev_url = None, None
+            attribution = ATTRIBUTION_WIKI
+
+            # Tier 1: Wikimedia Commons
+            print(f"  Fetching images …")
+            wiki_imgs = resolve_wikimedia_coin_images(coin_def, mint)
+            if wiki_imgs["obverse"] or wiki_imgs["reverse"]:
+                wiki_obv = wiki_imgs["obverse"]
+                wiki_rev = wiki_imgs["reverse"]
+                # Download + upload to GCS
+                if wiki_obv:
+                    obv_url = download_and_upload(wiki_obv, _make_doc_id(coin_def, mint),
+                                                   "obverse", ATTRIBUTION_WIKI, dry_run)
+                if wiki_rev:
+                    rev_url = download_and_upload(wiki_rev, _make_doc_id(coin_def, mint),
+                                                   "reverse", ATTRIBUTION_WIKI, dry_run)
+
+            # Tier 2: US Mint website (if Wikimedia missed one or both)
+            if not obv_url or not rev_url:
+                mint_imgs = fetch_usmint_coin_images(coin_def, mint)
+                attribution = ATTRIBUTION_MINT
+                if mint_imgs["obverse"] and not obv_url:
+                    obv_url = download_and_upload(mint_imgs["obverse"],
+                                                   _make_doc_id(coin_def, mint),
+                                                   "obverse", ATTRIBUTION_MINT, dry_run)
+                if mint_imgs["reverse"] and not rev_url:
+                    rev_url = download_and_upload(mint_imgs["reverse"],
+                                                   _make_doc_id(coin_def, mint),
+                                                   "reverse", ATTRIBUTION_MINT, dry_run)
+
+            # Tier 3: Log as missing
+            if not obv_url:
+                print(f"  ⚠  No obverse image found — added to missing_images_log")
+                results["missing_images"].append({
+                    "coin": label, "side": "obverse",
+                    "doc_id": _make_doc_id(coin_def, mint),
+                })
+            if not rev_url:
+                print(f"  ⚠  No reverse image found — added to missing_images_log")
+                results["missing_images"].append({
+                    "coin": label, "side": "reverse",
+                    "doc_id": _make_doc_id(coin_def, mint),
+                })
+
+            # 3. Commit to DB
+            result = commit_coin(coin_def, mint, obv_url, rev_url, source_url,
+                                  action, doc_id, dry_run=dry_run)
+
+            if result["status"] in ("created", "dry_run") and action == "CREATE":
+                results["created"].append(result["doc_id"])
+            elif result["status"] in ("updated", "dry_run") and action == "UPDATE":
+                results["updated"].append(result["doc_id"])
+
+            print()
+            time.sleep(0.5)  # Polite delay
+
+    # Summary
+    print("═" * 60)
+    print("INGEST SUMMARY")
+    print("═" * 60)
+    print(f"  Created  (new records) : {len(results['created'])}")
+    print(f"  Updated  (existing)    : {len(results['updated'])}")
+    print(f"  Missing images         : {len(results['missing_images'])}")
+    print(f"  Errors                 : {len(results['errors'])}")
+    print("═" * 60)
+
+    if results["missing_images"]:
+        print("\n📋 Missing images (add to manual_image_intake.py queue):")
+        for m in results["missing_images"]:
+            print(f"  {m['coin']} — {m['side']}")
+
+    return results
