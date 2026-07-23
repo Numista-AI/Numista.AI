@@ -55,7 +55,7 @@ BrandingText "${PRODUCT_PUBLISHER}"
 
 ; Finish page
 !define MUI_FINISHPAGE_TITLE   "Numista.AI Desktop Agent Installed!"
-!define MUI_FINISHPAGE_TEXT    "The Numista.AI Desktop Agent has been installed and started.$\r$\n$\r$\nLook for the gold coin icon in your system tray. The agent will start automatically every time Windows starts.$\r$\n$\r$\nOn first launch, you will see a brief setup window to enter your Numista.AI email."
+!define MUI_FINISHPAGE_TEXT    "The Numista.AI Desktop Agent has been installed and started.$\r$\n$\r$\nLook for the gold coin icon in your system tray.$\r$\n$\r$\nOn first launch, you will see a brief setup window to enter your Numista.AI email."
 !define MUI_FINISHPAGE_LINK    "Open Numista.AI"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://numista.ai"
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
@@ -83,9 +83,9 @@ Section "Main" SecMain
     ; If -user fails on some systems, try without (may need elevated rights)
     ; The installer already requested user-level execution, so -user should work.
 
-    ; ── Registry: add to Windows autostart ──────────────────────────────────
-    DetailPrint "Setting Windows autostart..."
-    WriteRegStr HKCU "${REG_RUN_KEY}" "NumistaAgent" '"$INSTDIR\${PRODUCT_EXE}"'
+    ; ── Registry: add to Windows autostart (disabled by default) ────────────
+    ; DetailPrint "Setting Windows autostart..."
+    ; WriteRegStr HKCU "${REG_RUN_KEY}" "NumistaAgent" '"$INSTDIR\${PRODUCT_EXE}"'
 
     ; ── Start Menu shortcut ─────────────────────────────────────────────────
     DetailPrint "Creating Start Menu shortcut..."
