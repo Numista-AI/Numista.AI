@@ -64,16 +64,17 @@ Copy-Item $ExeSrc $ExeDest -Force
 Write-Host "  OK - Copied NumistaAgent.exe to $ExeDest" -ForegroundColor Green
 Write-Host ""
 
-# ---- [3/4] Set registry autostart key ----------------------------------------
-Write-Host "  [3/4] Setting Windows autostart registry key..." -ForegroundColor Yellow
-Set-ItemProperty -Path $RegPath -Name $RegName -Value "`"$ExeDest`"" -Type String
-$regVal = Get-ItemProperty -Path $RegPath -Name $RegName -ErrorAction SilentlyContinue
-if ($regVal) {
-    Write-Host "  OK - Registry key: HKCU\...\Run\$RegName" -ForegroundColor Green
-    Write-Host "       -> $ExeDest" -ForegroundColor DarkGray
-} else {
-    Write-Host "  WARNING: Could not verify registry key." -ForegroundColor DarkYellow
-}
+# ---- [3/4] Set registry autostart key (disabled by default) ------------------
+# Write-Host "  [3/4] Setting Windows autostart registry key..." -ForegroundColor Yellow
+# Set-ItemProperty -Path $RegPath -Name $RegName -Value "`"$ExeDest`"" -Type String
+# $regVal = Get-ItemProperty -Path $RegPath -Name $RegName -ErrorAction SilentlyContinue
+# if ($regVal) {
+#     Write-Host "  OK - Registry key: HKCU\...\Run\$RegName" -ForegroundColor Green
+#     Write-Host "       -> $ExeDest" -ForegroundColor DarkGray
+# } else {
+#     Write-Host "  WARNING: Could not verify registry key." -ForegroundColor DarkYellow
+# }
+Write-Host "  [3/4] Registry autostart bypassed (disabled by default)" -ForegroundColor DarkGray
 Write-Host ""
 
 # ---- [4/4] Launch agent now --------------------------------------------------
@@ -96,7 +97,6 @@ Write-Host "    Installation Complete!                       " -ForegroundColor 
 Write-Host "  ================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  The agent will now:" -ForegroundColor White
-Write-Host "    - Start automatically every time Windows starts" -ForegroundColor White
 Write-Host "    - Appear as a gold coin icon in your system tray" -ForegroundColor White
 Write-Host "    - Serve HTTPS on localhost:5000 (trusted by Chrome)" -ForegroundColor White
 Write-Host "    - Listen for scan commands from numista.ai" -ForegroundColor White
