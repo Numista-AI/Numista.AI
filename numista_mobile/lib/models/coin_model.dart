@@ -65,6 +65,11 @@ class CoinModel {
   final String importSessionId; // import session that created this coin record
   final String importBatch;     // import_batch tag (e.g. 'lincoln_missing_2026-06-20')
 
+  // Lateral Transfer & Passport Ledger fields
+  final List<dynamic> provenanceLedger;
+  final String transferStatus; // 'none', 'pending', 'transferred', 'claimed'
+  final String transferId;
+
   CoinModel({
     required this.id,
     this.year = '',
@@ -116,6 +121,9 @@ class CoinModel {
     this.cpgRetail = 0.0,
     this.priceLastUpdated,
     this.hasCac = false,
+    this.provenanceLedger = const [],
+    this.transferStatus = 'none',
+    this.transferId = '',
   });
 
   factory CoinModel.fromFirestore(DocumentSnapshot doc) {
@@ -195,6 +203,9 @@ class CoinModel {
       parentSetId: data['parent_set_id']?.toString(),
       memberOf: data['member_of']?.toString(),
       inOriginalPackaging: data['in_original_packaging'] as bool? ?? false,
+      provenanceLedger: data['provenanceLedger'] as List<dynamic>? ?? [],
+      transferStatus: data['transferStatus']?.toString() ?? data['transfer_status']?.toString() ?? 'none',
+      transferId: data['transferId']?.toString() ?? data['transfer_id']?.toString() ?? '',
     );
   }
 
@@ -240,6 +251,9 @@ class CoinModel {
       'parent_set_id': parentSetId,
       'member_of': memberOf,
       'in_original_packaging': inOriginalPackaging,
+      'provenanceLedger': provenanceLedger,
+      'transferStatus': transferStatus,
+      'transferId': transferId,
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };
