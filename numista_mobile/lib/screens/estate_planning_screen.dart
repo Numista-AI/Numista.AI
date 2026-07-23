@@ -3997,6 +3997,16 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
         ),
         const SizedBox(height: 4),
         TextFormField(
+          controller: ctrl,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: _kTextPrimary, fontSize: 13),
+          decoration: _inputDecoration(hint: hint ?? '').copyWith(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          ),
+          validator: required
+              ? (v) => (v == null || v.trim().isEmpty) ? 'Required field' : null
+              : null,
+        ),
         const SizedBox(height: 8),
       ],
     );
@@ -4435,16 +4445,15 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
       certVerified: true,
     );
 
+    if (!mounted) return;
     setState(() => _isAuditing = false);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Spot-check complete! SHA-256 Audit Hash: ${record.auditHash.substring(0, 16)}...'),
-          backgroundColor: const Color(0xFF161B27),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Spot-check complete! SHA-256 Audit Hash: ${record.auditHash.substring(0, 16)}...'),
+        backgroundColor: const Color(0xFF161B27),
+      ),
+    );
   }
 }
 
@@ -4624,14 +4633,13 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
       totalFmv: 0.0,
     );
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Issued Document Register Record: ${record.docNumber} — Stepped-Up Basis Logged.'),
-          backgroundColor: const Color(0xFF161B27),
-        ),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Issued Document Register Record: ${record.docNumber} — Stepped-Up Basis Logged.'),
+        backgroundColor: const Color(0xFF161B27),
+      ),
+    );
   }
 }
 
