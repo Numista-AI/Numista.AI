@@ -80,6 +80,14 @@ let report = `# ${statusEmoji} Numista.AI Automated Test Report
 
 ---
 
+## Environment & Target Configuration
+- **Target Release**: Beta (1 AUG 26) / Launch (1 NOV 26) Desktop Readiness
+- **Viewport**: 1920x1080 (Desktop Browser Enforced)
+- **Test Account Isolation**: \`ericdcman@gmail.com\` / Demo Suite (Zero Production Data Mutation)
+- **Model Binding Check**: Gemini 3.6 Flash / 3.5 Flash Active
+
+---
+
 ## Summary
 
 | Metric | Value |

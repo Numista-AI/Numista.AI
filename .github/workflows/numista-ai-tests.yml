@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # numista-ai-tests.yml
 # GitHub Actions Workflow: Automated E2E tests for numista.ai
 #
@@ -11,9 +11,9 @@ name: Numista.AI Automated Tests
 
 on:
   schedule:
-    # Every 2 days at 06:00 UTC = 2:00 AM Eastern
+    # Daily at 06:00 UTC = 2:00 AM Eastern (runs off-laptop every morning)
     # Cron: minute hour day-of-month month day-of-week
-    - cron: '0 6 */2 * *'
+    - cron: '0 6 * * *'
 
   # Also run on push to main branch (catches regressions before deploy)
   push:

@@ -1,10 +1,7 @@
-﻿# ================================================================
+# ================================================================
 # setup_scheduler.ps1
 # Registers a Windows Task Scheduler job to run Numista.AI tests
-# every 2 days at 2:00 AM automatically.
-#
-# Run ONCE to install:  .\setup_scheduler.ps1
-# To remove the task:   Unregister-ScheduledTask -TaskName "NumistaAI-Tests" -Confirm:$false
+# daily at 2:00 AM automatically.
 # ================================================================
 
 $TaskName   = "NumistaAI-AutoTests"
@@ -23,57 +20,29 @@ if ($existing) {
   Write-Host "  Removed existing task: $TaskName" -ForegroundColor Yellow
 }
 
-# Define the action: run PowerShell with the test script
-$action = New-ScheduledTaskAction `
-  -Execute "powershell.exe" `
-  -Argument "-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`"" `
-  -WorkingDirectory $TestDir
-
-# Trigger: every 2 days at 2:00 AM, starting tonight
+# Define action, trigger, settings, principal
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`"" -WorkingDirectory $TestDir
 $startTime = (Get-Date -Hour 2 -Minute 0 -Second 0).AddDays(1)
-$trigger = New-ScheduledTaskTrigger `
-  -Daily `
-  -DaysInterval 2 `
-  -At $startTime
+$trigger = New-ScheduledTaskTrigger -Daily -DaysInterval 1 -At $startTime
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -MultipleInstances IgnoreNew
+$principal = New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 
-# Settings: run even on battery, do not stop if computer becomes idle
-$settings = New-ScheduledTaskSettingsSet `
-  -StartWhenAvailable `
-  -RunOnlyIfNetworkAvailable `
-  -ExecutionTimeLimit (New-TimeSpan -Hours 2) `
-  -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Automated Playwright tests for https://numista.ai — runs daily at 2 AM" -Force | Out-Null
 
-# Principal: run as current user
-$principal = New-ScheduledTaskPrincipal `
-  -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) `
-  -LogonType Interactive `
-  -RunLevel Limited
-
-# Register the task
-try {
-  Register-ScheduledTask `
-    -TaskName $TaskName `
-    -Action $action `
-    -Trigger $trigger `
-    -Settings $settings `
-    -Principal $principal `
-    -Description "Automated Playwright tests for https://numista.ai — runs every 2 days at 2 AM" `
-    -Force | Out-Null
-
-  Write-Host "  Task registered successfully!" -ForegroundColor Green
-  Write-Host ""
-  Write-Host "  Task Name   : $TaskName" -ForegroundColor White
-  Write-Host "  Schedule    : Every 2 days at 2:00 AM" -ForegroundColor White
-  Write-Host "  First Run   : $($startTime.ToString('yyyy-MM-dd HH:mm'))" -ForegroundColor White
-  Write-Host "  Script      : $ScriptPath" -ForegroundColor White
-  Write-Host "  Reports     : $TestDir\reports\" -ForegroundColor White
-  Write-Host ""
-  Write-Host "  To view in Task Scheduler: taskschd.msc" -ForegroundColor DarkGray
-  Write-Host "  To run now manually:       Start-ScheduledTask -TaskName '$TaskName'" -ForegroundColor DarkGray
-  Write-Host "  To remove:                 Unregister-ScheduledTask -TaskName '$TaskName' -Confirm:`$false" -ForegroundColor DarkGray
-  Write-Host ""
-} catch {
-  Write-Host "  ERROR registering task: $_" -ForegroundColor Red
-  Write-Host "  Try running this script as Administrator." -ForegroundColor Yellow
-  exit 1
+# Disable WakeToRun on NumistaAI_DailyBackup to prevent display waking at night
+$backupTask = Get-ScheduledTask -TaskName "NumistaAI_DailyBackup" -ErrorAction SilentlyContinue
+if ($backupTask) {
+  $backupTask.Settings.WakeToRun = $false
+  Set-ScheduledTask -InputObject $backupTask -ErrorAction SilentlyContinue | Out-Null
+  Write-Host "  Updated NumistaAI_DailyBackup: WakeToRun set to False" -ForegroundColor Green
 }
+
+Write-Host "  Task registered successfully!" -ForegroundColor Green
+Write-Host ""
+Write-Host "  Task Name   : $TaskName" -ForegroundColor White
+Write-Host "  Schedule    : Daily at 2:00 AM" -ForegroundColor White
+$firstRunStr = $startTime.ToString('yyyy-MM-dd HH:mm')
+Write-Host "  First Run   : $firstRunStr" -ForegroundColor White
+Write-Host "  Script      : $ScriptPath" -ForegroundColor White
+Write-Host "  Reports     : $TestDir\reports\" -ForegroundColor White
+Write-Host ""
