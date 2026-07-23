@@ -9144,6 +9144,103 @@ async def check_wishlist_deals(req: WishlistCheckRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─── LATERAL TRANSFER — "THE SECURE PASSPORT PROTOCOL" ────────────────────────
+
+class InitiateTransferRequest(BaseModel):
+    user_id: str
+    item_ids: List[str]
+    recipient_email: Optional[str] = None
+    privacy_toggles: Optional[Dict[str, bool]] = None
+
+class ClaimTransferRequest(BaseModel):
+    user_id: str
+    transfer_id: str
+    claim_pin: str
+    selected_item_ids: Optional[List[str]] = None
+
+class RecallTransferRequest(BaseModel):
+    user_id: str
+    transfer_id: str
+
+@app.post("/api/transfer/initiate")
+async def api_initiate_transfer(req: InitiateTransferRequest):
+    """
+    Initiates a lateral property transfer with server-side privacy sanitization.
+    """
+    try:
+        from services.transfer_service import initiate_transfer
+        result = initiate_transfer(
+            db=db,
+            user_a_id=req.user_id,
+            item_ids=req.item_ids,
+            recipient_email=req.recipient_email,
+            privacy_toggles=req.privacy_toggles
+        )
+        return {"status": "success", "transfer": result}
+    except Exception as e:
+        logger.exception("Initiate transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/claim")
+async def api_claim_transfer(req: ClaimTransferRequest):
+    """
+    Claims a pending lateral transfer, creating item(s) in recipient's vault.
+    """
+    try:
+        from services.transfer_service import claim_transfer
+        result = claim_transfer(
+            db=db,
+            user_b_id=req.user_id,
+            transfer_id=req.transfer_id,
+            claim_pin=req.claim_pin,
+            selected_item_ids=req.selected_item_ids
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Claim transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/recall")
+async def api_recall_transfer(req: RecallTransferRequest):
+    """
+    Recalls an unclaimed pending transfer.
+    """
+    try:
+        from services.transfer_service import recall_transfer
+        result = recall_transfer(
+            db=db,
+            user_a_id=req.user_id,
+            transfer_id=req.transfer_id
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Recall transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+from fastapi.responses import Response
+
+@app.get("/api/transfer/passport-pdf/{transfer_id}")
+async def api_get_passport_pdf(transfer_id: str):
+    """
+    Generates and downloads the official dual-format Passport PDF (8.5x11" + 3x5").
+    """
+    try:
+        from services.passport_pdf_generator import generate_passport_pdf
+        transfer_doc = db.collection("transfers").document(transfer_id).get()
+        if not transfer_doc.exists:
+            raise HTTPException(status_code=404, detail="Transfer not found")
+        
+        pdf_bytes = generate_passport_pdf(transfer_doc.to_dict())
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=passport_{transfer_id}.pdf"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("PDF generation failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

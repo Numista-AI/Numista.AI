@@ -15,7 +15,7 @@ module.exports = defineConfig({
   use: {
     baseURL: 'https://numista.ai',
     headless: true,
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 1920, height: 1080 },
     screenshot: 'on',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',

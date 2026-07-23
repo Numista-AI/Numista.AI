@@ -1,0 +1,60 @@
+"""
+Unit tests for Transfer Service & Passport PDF Generator.
+"""
+
+import pytest
+from unittest.mock import MagicMock
+from services.transfer_service import sanitize_item_payload, initiate_transfer, claim_transfer, recall_transfer
+from services.passport_pdf_generator import generate_passport_pdf
+
+def test_sanitize_item_payload():
+    raw_item = {
+        "id": "coin_123",
+        "title": "1921 Morgan Silver Dollar",
+        "grade": "MS-65",
+        "purchase_price": 1250.0,
+        "private_notes": "Inherited from grandfather",
+        "storage_location": "Safe Box #4",
+        "invoice_id": "INV-998822"
+    }
+
+    toggles = {
+        "hide_cost_basis": True,
+        "hide_private_notes": True,
+        "hide_storage_location": True,
+        "hide_invoices": True
+    }
+
+    sanitized = sanitize_item_payload(raw_item, toggles)
+
+    assert "purchase_price" not in sanitized
+    assert "private_notes" not in sanitized
+    assert "storage_location" not in sanitized
+    assert "invoice_id" not in sanitized
+    assert sanitized["title"] == "1921 Morgan Silver Dollar"
+    assert sanitized["grade"] == "MS-65"
+
+def test_generate_passport_pdf():
+    mock_transfer_data = {
+        "transfer_id": "tf_test_9988",
+        "claim_pin": "654321",
+        "sender_id": "test_sender@numista.ai",
+        "created_at": "2026-07-23T15:00:00Z",
+        "expires_at": "2026-09-21T15:00:00Z",
+        "items": [
+            {
+                "title": "1881-S Morgan Dollar",
+                "year": "1881",
+                "mint_mark": "S",
+                "grade": "MS66",
+                "category": "Coin"
+            }
+        ]
+    }
+
+    pdf_bytes = generate_passport_pdf(mock_transfer_data)
+
+    assert pdf_bytes is not None
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 500  # Ensure non-trivial PDF content was built
+    assert pdf_bytes.startswith(b"%PDF")
