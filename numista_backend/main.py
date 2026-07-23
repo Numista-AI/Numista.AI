@@ -7924,6 +7924,34 @@ async def reprocess_knowledge(req: BrainKnowledgeUpdate):
     return {"status": "reprocessing_started"}
 
 
+@app.post("/api/admin/brain/sync_canon")
+async def sync_brain_canon_to_gcp():
+    """
+    On-demand sync:
+    1. Formats approved/high-confidence Brain docs into Markdown payloads and uploads to GCS.
+    2. Triggers Vertex AI Search Data Store re-indexing.
+    """
+    try:
+        from services.canon_sync_service import sync_canon_to_gcs
+        from scripts.refresh_vertex_data_store import refresh_vertex_data_store
+
+        sync_result = sync_canon_to_gcs()
+        if sync_result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=sync_result.get("message"))
+
+        vertex_result = refresh_vertex_data_store()
+
+        return {
+            "status": "success",
+            "gcs_sync": sync_result,
+            "vertex_reindex": vertex_result
+        }
+    except Exception as e:
+        logger.error(f"Canon sync endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ─── GREYSHEET API INTEGRATION ───────────────────────────────────────────────
 
 class GreysheetResolveRequest(BaseModel):
