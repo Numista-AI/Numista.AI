@@ -487,5 +487,79 @@ def generate_estate_report():
     return response
 
 
+@app.route("/initialize_estate_upgrade", methods=["POST"])
+@limiter.limit("10 per minute")
+def initialize_estate_upgrade():
+    """
+    POST /initialize_estate_upgrade
+
+    Performs high-scale batch overlay initialization (500 docs per chunk) when a
+    user upgrades to the Premium Estate Suite. Automatically issues Document
+    Register #1 (NUM-DOC-YYYY-00001) for the Initial Estate Baseline Lock.
+    """
+    import logging as _logging
+    log = _logging.getLogger(__name__)
+
+    body = request.get_json(force=True, silent=True) or {}
+    uid = (body.get('uid') or '').strip()
+    if not uid:
+        return jsonify({'error': 'uid is required'}), 400
+
+    try:
+        coins_ref = db.collection('users').document(uid).collection('coins').stream()
+        coin_docs = list(coins_ref)
+        total_coins = len(coin_docs)
+        total_fmv = 0.0
+
+        for cd in coin_docs:
+            data = cd.to_dict()
+            total_fmv += float(data.get('est_value') or data.get('purchase_price') or 0.0)
+
+        year = datetime.utcnow().year
+        doc_number = f"NUM-DOC-{year}-00001"
+
+        # Issue Document Register Record #1
+        doc_reg_record = {
+            'docType': 'baseline_lock',
+            'createdAt': firestore.SERVER_TIMESTAMP,
+            'assetCount': total_coins,
+            'totalFmv': total_fmv,
+            'title': 'Initial Estate Baseline Lock',
+            'signatureHash': hashlib.sha256(f"{uid}|{doc_number}|{total_fmv}".encode()).hexdigest(),
+        }
+
+        db.collection('users').document(uid) \
+          .collection('document_register').document(doc_number) \
+          .set(doc_reg_record)
+
+        # Batch write in 500-item chunks for high-scale collections (10,000+ coins)
+        chunk_size = 500
+        for i in range(0, total_coins, chunk_size):
+            chunk = coin_docs[i:i + chunk_size]
+            batch = db.batch()
+            for doc in chunk:
+                estate_ref = db.collection('users').document(uid) \
+                               .collection('estate_data').document(doc.id)
+                batch.set(estate_ref, {
+                    'coinId': doc.id,
+                    'custodialLocation': 'Primary Storage / Home Safe',
+                    'isHeirloom': False,
+                    'excludeFromReport': False,
+                }, merge=True)
+            batch.commit()
+
+        log.info(f'[estate_upgrade] Successfully initialized estate overlay for {uid} ({total_coins} coins, baseline doc {doc_number})')
+        return jsonify({
+            'status': 'success',
+            'doc_number': doc_number,
+            'total_coins': total_coins,
+            'total_fmv': total_fmv,
+        })
+
+    except Exception as exc:
+        log.error(f'[estate_upgrade] Failed to initialize estate overlay for {uid}: {exc}')
+        return jsonify({'error': f'Failed to initialize estate overlay: {exc}'}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

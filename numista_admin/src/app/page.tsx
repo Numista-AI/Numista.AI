@@ -219,6 +219,7 @@ export default function AdminDashboard() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [rescoring, setRescoring] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -237,6 +238,21 @@ export default function AdminDashboard() {
       console.error('Failed to fetch admin data', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncCanon = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/brain/sync_canon`, { method: 'POST' });
+      const data = await res.json();
+      alert(`🚀 Canon Sync Complete!\n${data.gcs_sync?.total_files_uploaded || 0} Markdown files synced to GCS.\nVertex AI Data Store re-index triggered.`);
+      fetchData();
+    } catch (err) {
+      console.error('Canon sync failed', err);
+      alert(`Sync failed: ${err}`);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -288,6 +304,14 @@ export default function AdminDashboard() {
           <p className="opacity-60 text-sm">Monitoring autonomous knowledge absorption and self-healing suggestions.</p>
         </div>
         <div className="flex gap-4 items-center">
+          <button
+            onClick={handleSyncCanon}
+            disabled={syncing}
+            className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-semibold hover:bg-blue-500/20 transition-all flex items-center gap-2"
+            title="Upload approved Brain Canon Markdown files to GCS and re-index Vertex AI Data Store"
+          >
+            <span>🚀</span> {syncing ? 'Syncing...' : 'Sync Canon to GCP'}
+          </button>
           <a href="/deals" className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-semibold hover:bg-emerald-500/20 transition-all flex items-center gap-2">
             <span>💰</span> Deals &amp; Arbitrage
           </a>

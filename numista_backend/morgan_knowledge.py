@@ -259,30 +259,53 @@ def get_coin_context_vertex(query: str, max_results: int = MAX_RESULTS) -> Optio
             doc = hit.document
             sd = _extract_struct(doc.struct_data)
             
-            entry_lines = [
-                f"COIN: {sd.get('program_name', 'Unknown Series')} — {sd.get('coin_year', '')} {sd.get('coin_name', '')}",
-                f"  Category:      {sd.get('category', '')}",
-                f"  Denomination:  {sd.get('denomination', '')}",
-                f"  Metal:         {sd.get('metal', '')}",
-                f"  Mint marks:    {sd.get('mint_marks', '')}",
-            ]
+            # Check for unstructured content snippets (e.g. Canon Markdown files)
+            derived = _extract_struct(getattr(doc, "derived_struct_data", None))
+            snippets = derived.get("snippets", [])
+            snippet_text = ""
+            if isinstance(snippets, list) and len(snippets) > 0:
+                s_obj = snippets[0]
+                if isinstance(s_obj, dict):
+                    snippet_text = s_obj.get("snippet", "")
+            elif isinstance(snippets, str):
+                snippet_text = snippets
             
-            content_str = sd.get("content", "")
-            obverse_match = re.search(r"Obverse:\s*(.*?)(?=\s*\|\s*(?:Reverse:|Base baseline|$))", content_str)
-            reverse_match = re.search(r"Reverse:\s*(.*?)(?=\s*\|\s*(?:Base baseline|$))", content_str)
+            title = derived.get("title") or sd.get("program_name") or sd.get("coin_name") or "Numista Canon Document"
             
-            obverse_text = obverse_match.group(1).strip() if obverse_match else ""
-            reverse_text = reverse_match.group(1).strip() if reverse_match else ""
-            
-            if obverse_text:
-                entry_lines.append(f"  Obverse:       {obverse_text}")
-            if reverse_text:
-                entry_lines.append(f"  Reverse:       {reverse_text}")
+            if not sd.get("program_name") and not sd.get("coin_name") and snippet_text:
+                # Unstructured Canon Document Hit
+                entry_lines = [
+                    f"DOCUMENT: {title}",
+                    f"  Excerpt: {snippet_text}",
+                ]
+            else:
+                # Structured Coin Program Hit
+                entry_lines = [
+                    f"COIN: {sd.get('program_name', 'Unknown Series')} — {sd.get('coin_year', '')} {sd.get('coin_name', '')}",
+                    f"  Category:      {sd.get('category', '')}",
+                    f"  Denomination:  {sd.get('denomination', '')}",
+                    f"  Metal:         {sd.get('metal', '')}",
+                    f"  Mint marks:    {sd.get('mint_marks', '')}",
+                ]
                 
-            if sd.get('designer'):
-                entry_lines.append(f"  Designer:      {sd.get('designer')}")
-            if sd.get('notes'):
-                entry_lines.append(f"  Description:   {sd.get('notes')}")
+                content_str = sd.get("content", "")
+                obverse_match = re.search(r"Obverse:\s*(.*?)(?=\s*\|\s*(?:Reverse:|Base baseline|$))", content_str)
+                reverse_match = re.search(r"Reverse:\s*(.*?)(?=\s*\|\s*(?:Base baseline|$))", content_str)
+                
+                obverse_text = obverse_match.group(1).strip() if obverse_match else ""
+                reverse_text = reverse_match.group(1).strip() if reverse_match else ""
+                
+                if obverse_text:
+                    entry_lines.append(f"  Obverse:       {obverse_text}")
+                if reverse_text:
+                    entry_lines.append(f"  Reverse:       {reverse_text}")
+                    
+                if sd.get('designer'):
+                    entry_lines.append(f"  Designer:      {sd.get('designer')}")
+                if sd.get('notes'):
+                    entry_lines.append(f"  Description:   {sd.get('notes')}")
+                if snippet_text and not obverse_text and not reverse_text:
+                    entry_lines.append(f"  Snippet:       {snippet_text}")
                 
             formatted_entries.append("\n".join(entry_lines))
             

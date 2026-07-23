@@ -209,6 +209,12 @@ class CoinEstateData {
   final String? assignedHeirId;
   final bool divisionLocked;
 
+  final String? custodialLocation;
+  final String? subHandReceiptHolder;
+  final DateTime? handReceiptSignedAt;
+  final String? handReceiptHash;
+  final String? trustScheduleIdentifier;
+
   const CoinEstateData({
     required this.coinId,
     this.beneficiaryId,
@@ -223,6 +229,11 @@ class CoinEstateData {
     this.excludeFromReport = false,
     this.assignedHeirId,
     this.divisionLocked = false,
+    this.custodialLocation,
+    this.subHandReceiptHolder,
+    this.handReceiptSignedAt,
+    this.handReceiptHash,
+    this.trustScheduleIdentifier,
   });
 
   factory CoinEstateData.fromFirestore(DocumentSnapshot doc) {
@@ -245,6 +256,13 @@ class CoinEstateData {
       excludeFromReport:   m['excludeFromReport'] == true || m['exclude_from_report'] == true,
       assignedHeirId:       m['assignedHeirId']?.toString() ?? m['assigned_heir_id']?.toString(),
       divisionLocked:       m['divisionLocked'] == true || m['division_locked'] == true,
+      custodialLocation:    m['custodialLocation']?.toString() ?? m['custodial_location']?.toString(),
+      subHandReceiptHolder: m['subHandReceiptHolder']?.toString() ?? m['sub_hand_receipt_holder']?.toString(),
+      handReceiptSignedAt: m['handReceiptSignedAt'] is Timestamp
+          ? (m['handReceiptSignedAt'] as Timestamp).toDate()
+          : null,
+      handReceiptHash:      m['handReceiptHash']?.toString() ?? m['hand_receipt_hash']?.toString(),
+      trustScheduleIdentifier: m['trustScheduleIdentifier']?.toString() ?? m['trust_schedule_identifier']?.toString(),
     );
   }
 
@@ -264,6 +282,13 @@ class CoinEstateData {
     'excludeFromReport':    excludeFromReport,
     'assignedHeirId':       assignedHeirId,
     'divisionLocked':       divisionLocked,
+    'custodialLocation':    custodialLocation,
+    'subHandReceiptHolder': subHandReceiptHolder,
+    'handReceiptSignedAt':  handReceiptSignedAt != null
+        ? Timestamp.fromDate(handReceiptSignedAt!)
+        : null,
+    'handReceiptHash':      handReceiptHash,
+    'trustScheduleIdentifier': trustScheduleIdentifier,
   };
 
   CoinEstateData copyWith({
@@ -280,6 +305,11 @@ class CoinEstateData {
     bool? excludeFromReport,
     Object? assignedHeirId = _sentinel,
     bool? divisionLocked,
+    Object? custodialLocation = _sentinel,
+    Object? subHandReceiptHolder = _sentinel,
+    Object? handReceiptSignedAt = _sentinel,
+    Object? handReceiptHash = _sentinel,
+    Object? trustScheduleIdentifier = _sentinel,
   }) {
     return CoinEstateData(
       coinId:               coinId ?? this.coinId,
@@ -295,6 +325,11 @@ class CoinEstateData {
       excludeFromReport:    excludeFromReport ?? this.excludeFromReport,
       assignedHeirId:       assignedHeirId == _sentinel ? this.assignedHeirId : assignedHeirId as String?,
       divisionLocked:       divisionLocked ?? this.divisionLocked,
+      custodialLocation:    custodialLocation == _sentinel ? this.custodialLocation : custodialLocation as String?,
+      subHandReceiptHolder: subHandReceiptHolder == _sentinel ? this.subHandReceiptHolder : subHandReceiptHolder as String?,
+      handReceiptSignedAt:  handReceiptSignedAt == _sentinel ? this.handReceiptSignedAt : handReceiptSignedAt as DateTime?,
+      handReceiptHash:      handReceiptHash == _sentinel ? this.handReceiptHash : handReceiptHash as String?,
+      trustScheduleIdentifier: trustScheduleIdentifier == _sentinel ? this.trustScheduleIdentifier : trustScheduleIdentifier as String?,
     );
   }
 }
@@ -373,5 +408,127 @@ class EstateReportRecord {
     'link_expires_at': linkExpiresAt != null
         ? Timestamp.fromDate(linkExpiresAt!)
         : null,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EstateAuditRecord — stored at users/{uid}/estate_audits/{auditId}
+// Inspired by GCSS-Army Sensitive Item & Cyclic Spot-Check Audits
+// ─────────────────────────────────────────────────────────────────────────────
+class EstateAuditRecord {
+  final String auditId;
+  final String coinId;
+  final String auditType;            // 'routine_spot_check' | 'high_value_verification' | 'annual_100_percent'
+  final DateTime verifiedAt;
+  final String verifiedByAlias;
+  final String physicalConditionCode; // 'Choice', 'Impaired', 'Damaged'
+  final bool certVerified;
+  final String auditHash;            // SHA-256 tamper-evident hash
+
+  const EstateAuditRecord({
+    required this.auditId,
+    required this.coinId,
+    this.auditType = 'routine_spot_check',
+    required this.verifiedAt,
+    this.verifiedByAlias = 'Owner',
+    this.physicalConditionCode = 'Choice',
+    this.certVerified = true,
+    this.auditHash = '',
+  });
+
+  factory EstateAuditRecord.fromFirestore(DocumentSnapshot doc) {
+    final m = doc.data() as Map<String, dynamic>? ?? {};
+    return EstateAuditRecord(
+      auditId:               doc.id,
+      coinId:                m['coinId']?.toString() ?? '',
+      auditType:             m['auditType']?.toString() ?? 'routine_spot_check',
+      verifiedAt: m['verifiedAt'] is Timestamp
+          ? (m['verifiedAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      verifiedByAlias:       m['verifiedByAlias']?.toString() ?? 'Owner',
+      physicalConditionCode: m['physicalConditionCode']?.toString() ?? 'Choice',
+      certVerified:          m['certVerified'] == true,
+      auditHash:             m['auditHash']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+    'coinId':                coinId,
+    'auditType':             auditType,
+    'verifiedAt':            Timestamp.fromDate(verifiedAt),
+    'verifiedByAlias':       verifiedByAlias,
+    'physicalConditionCode': physicalConditionCode,
+    'certVerified':          certVerified,
+    'auditHash':             auditHash,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EstateDocumentRegisterRecord — stored at users/{uid}/document_register/{docNumber}
+// Inspired by DA Form 3161 / GCSS-Army Sequential Document Registers
+// Format: NUM-DOC-YYYY-XXXXX
+// ─────────────────────────────────────────────────────────────────────────────
+class EstateDocumentRegisterRecord {
+  final String docNumber;             // e.g. "NUM-DOC-2026-00001"
+  final String docType;               // 'baseline_lock' | 'custody_transfer' | 'appraisal_entry' | 'stepped_up_basis' | 'bequest_transfer'
+  final DateTime createdAt;
+  final int assetCount;
+  final double totalFmv;
+  final String signatureHash;
+  final String? pdfStoragePath;
+  final String title;
+
+  const EstateDocumentRegisterRecord({
+    required this.docNumber,
+    required this.docType,
+    required this.createdAt,
+    required this.assetCount,
+    required this.totalFmv,
+    this.signatureHash = '',
+    this.pdfStoragePath,
+    required this.title,
+  });
+
+  String get typeLabel {
+    switch (docType) {
+      case 'baseline_lock':
+        return 'Initial Estate Baseline Lock';
+      case 'custody_transfer':
+        return 'Custody Transfer & Loan Agreement';
+      case 'appraisal_entry':
+        return 'Formal Appraisal Register Entry';
+      case 'stepped_up_basis':
+        return 'Stepped-Up Basis Snapshot (IRC § 1014)';
+      case 'bequest_transfer':
+        return 'Executor Receipt of Bequest Distribution';
+      default:
+        return 'Document Register Record';
+    }
+  }
+
+  factory EstateDocumentRegisterRecord.fromFirestore(DocumentSnapshot doc) {
+    final m = doc.data() as Map<String, dynamic>? ?? {};
+    return EstateDocumentRegisterRecord(
+      docNumber:      doc.id,
+      docType:        m['docType']?.toString() ?? 'baseline_lock',
+      createdAt: m['createdAt'] is Timestamp
+          ? (m['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      assetCount:     (m['assetCount'] as num?)?.toInt() ?? 0,
+      totalFmv:       (m['totalFmv'] as num?)?.toDouble() ?? 0.0,
+      signatureHash:  m['signatureHash']?.toString() ?? '',
+      pdfStoragePath: m['pdfStoragePath']?.toString(),
+      title:          m['title']?.toString() ?? 'Estate Document Record',
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+    'docType':        docType,
+    'createdAt':      Timestamp.fromDate(createdAt),
+    'assetCount':     assetCount,
+    'totalFmv':       totalFmv,
+    'signatureHash':  signatureHash,
+    'pdfStoragePath': pdfStoragePath,
+    'title':          title,
   };
 }
