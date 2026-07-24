@@ -1,0 +1,90 @@
+{
+  "dataset_path": "C:\\Users\\ericd\\Documents\\MyVertexProject\\1 NUMISTA.AI\\BETA TEST\\MY TESTING\\qa_dataset",
+  "microscope_images": [
+    {
+      "filename": "1963_Roosevelt_Dime_D_Obverse_20260411_1226.jpg",
+      "expected_year": "1963",
+      "expected_coin": "Roosevelt Dime",
+      "expected_mint": "D",
+      "side": "Obverse",
+      "category": "Microscope"
+    },
+    {
+      "filename": "1963_Roosevelt_Dime_D_Reverse_20260411_1226.jpg",
+      "expected_year": "1963",
+      "expected_coin": "Roosevelt Dime",
+      "expected_mint": "D",
+      "side": "Reverse",
+      "category": "Microscope"
+    },
+    {
+      "filename": "1973_Kennedy_Half_Dollar_AU_Obverse_20260408_1727.jpg",
+      "expected_year": "1973",
+      "expected_coin": "Kennedy Half Dollar",
+      "expected_grade": "AU",
+      "side": "Obverse",
+      "category": "Microscope"
+    },
+    {
+      "filename": "1973_Kennedy_Half_Dollar_AU_Reverse_20260408_1727.jpg",
+      "expected_year": "1973",
+      "expected_coin": "Kennedy Half Dollar",
+      "expected_grade": "AU",
+      "side": "Reverse",
+      "category": "Microscope"
+    },
+    {
+      "filename": "2007_George_Washington_Presidential_Dollar_Obverse_20260324_1628.jpg",
+      "expected_year": "2007",
+      "expected_coin": "George Washington Presidential Dollar",
+      "side": "Obverse",
+      "category": "Microscope"
+    },
+    {
+      "filename": "2026_D_Semiquincentennial_Half_Dollar_Obverse_20260408_1846.jpg",
+      "expected_year": "2026",
+      "expected_coin": "Semiquincentennial Half Dollar",
+      "expected_mint": "D",
+      "side": "Obverse",
+      "category": "Microscope"
+    }
+  ],
+  "standard_coin_images": [
+    {
+      "obverse": "$5 Indianhead 1914 obverse.jpg",
+      "reverse": "$5 Indianhead 1914 reverse.jpg",
+      "expected_year": "1914",
+      "expected_coin": "$5 Indian Head Half Eagle",
+      "category": "Standard"
+    },
+    {
+      "obverse": "50 K Fil front.jpg",
+      "reverse": "50 K Fil reverse.jpg",
+      "expected_coin": "50 Korean Fil",
+      "category": "Standard"
+    },
+    {
+      "filename": "5 Star Generals coin.jpg",
+      "expected_coin": "5 Star Generals Commemorative",
+      "category": "Standard"
+    },
+    {
+      "filename": "5. US Army Silver Eagle $1.jpg",
+      "expected_coin": "US Army Silver Eagle $1",
+      "category": "Standard"
+    }
+  ],
+  "spreadsheets": [
+    "Paper Money.xlsx",
+    "Roosevelt Dimes.xlsx",
+    "State and Territory quarters.xlsx",
+    "Washington Silver Quarter.xlsx"
+  ],
+  "documents": [
+    "Receipt_2026-01-28_161342.pdf",
+    "Receipt_2026-06-03_093603.pdf"
+  ],
+  "database": [
+    "GovMintCom.accdb"
+  ]
+}
