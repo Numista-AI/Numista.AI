@@ -8,6 +8,12 @@ MASTER_CSV = r"C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\M
 PERSISTED_EXPORT = r"C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\qa_test_user_account_persisted_export.csv"
 SCORECARD_OUTPUT = r"C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\qa_account_accuracy_scorecard.md"
 
+def normalize_val(v):
+    if v is None: return ""
+    s = str(v).strip()
+    if s.lower() in ['none', 'null', 'n/a', 'nan']: return ""
+    return s
+
 def audit_account(email="qa_test_user_20260724@numista.ai"):
     print(f"=== RUNNING 8-FIELD ACCURACY AUDIT FOR {email} ===")
     
@@ -27,41 +33,28 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
     print(f"Retrieved {len(docs)} persisted items from Firestore for {email}.")
 
     headers = [
-        'ID', 'Year', 'Mint Mark', 'Denomination', 'Program/Series', 'Theme/Subject', 
-        'Variety', 'Condition', 'Metal Content', 'Quantity', 'Purchase Cost', 
-        'Purchase Date', 'Retailer/Website', 'Personal Notes I', 'Original Description from source', 
-        'Country', 'AI Estimated Value', 'Melt Value', 'image_url_obverse', 'image_url_reverse', 
-        'image_verification_status', 'Source File / Category'
+        'AI Estimated Value', 'Certification Number', 'Condition', 'Cost', 'Country', 'Denomination', 
+        'Face Value', 'Grading Cert #', 'Grading Service', 'Holder Type', 'Is Silver', 'Melt Value', 
+        'Metal Content', 'Mint Mark', 'Numismatic Report', 'PCGS Number', 'Personal Notes', 'Personal Notes I', 
+        'Personal Ref #', 'Personal Reference #', 'Program/Series', 'Purchase Cost', 'Purchase Date', 
+        'Quantity', 'Retailer Invoice #', 'Retailer Item No.', 'Retailer/Website', 'Storage Location', 
+        'Strike Type', 'Surface & Strike Quality', 'Theme/Subject', 'Variety', 'Year', 'ai_needs_photo', 
+        'ai_value_basis', 'ai_value_confidence', 'ai_value_source', 'coin_id', 'committed_at', 'cpgRetail', 
+        'created_at', 'deep_dive_status', 'extra_metadata', 'file_ref', 'grade_review_status', 
+        'greysheetAsk', 'greysheetBid', 'greysheetGsid', 'greysheetName', 'id', 'image_attribution', 
+        'image_attribution_obverse', 'image_attribution_reverse', 'image_fix_reason', 'image_source_obverse', 
+        'image_source_reverse', 'image_url_obverse', 'image_url_reverse', 'inventoryStatus', 'is_set', 
+        'item_type', 'kept_as_set', 'last_image_fix', 'last_researched', 'name', 'potentialVariety', 
+        'priceLastUpdated', 'reference_images_used', 'review_needed', 'review_reason', 'scan_date', 
+        'scan_source', 'set_broken_up', 'set_id', 'source', 'updated_at', 'user_email', 'verification_confidence'
     ]
 
     persisted_rows = {}
     persisted_list = []
     for d in docs:
         data = d.to_dict() or {}
-        row = {
-            'ID': d.id,
-            'Year': str(data.get('Year', '') or ''),
-            'Mint Mark': str(data.get('Mint Mark', '') or ''),
-            'Denomination': str(data.get('Denomination', '') or ''),
-            'Program/Series': str(data.get('Program/Series', '') or ''),
-            'Theme/Subject': str(data.get('Theme/Subject', '') or ''),
-            'Variety': str(data.get('Variety', '') or ''),
-            'Condition': str(data.get('Condition', '') or ''),
-            'Metal Content': str(data.get('Metal Content', '') or ''),
-            'Quantity': str(data.get('Quantity', '1') or '1'),
-            'Purchase Cost': str(data.get('Purchase Cost', '$0.00') or '$0.00'),
-            'Purchase Date': str(data.get('Purchase Date', '') or ''),
-            'Retailer/Website': str(data.get('Retailer/Website', '') or ''),
-            'Personal Notes I': str(data.get('Personal Notes I', '') or ''),
-            'Original Description from source': str(data.get('Original Description from source', '') or ''),
-            'Country': str(data.get('Country', 'USA') or 'USA'),
-            'AI Estimated Value': str(data.get('AI Estimated Value', 'Pending') or 'Pending'),
-            'Melt Value': str(data.get('Melt Value', 'N/A') or 'N/A'),
-            'image_url_obverse': str(data.get('image_url_obverse', '') or ''),
-            'image_url_reverse': str(data.get('image_url_reverse', '') or ''),
-            'image_verification_status': str(data.get('image_verification_status', 'unverified') or 'unverified'),
-            'Source File / Category': str(data.get('source', '') or '')
-        }
+        row = {h: str(data.get(h, '') or '') for h in headers}
+        row['id'] = d.id
         persisted_rows[d.id] = row
         persisted_list.append(row)
 
@@ -88,16 +81,16 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
     }
 
     for m in master_rows:
-        m_id = m.get('ID', '')
+        m_id = m.get('id', '') or m.get('ID', '')
         match = persisted_rows.get(m_id)
         if match:
-            if match['Year'] == m.get('Year', ''): metrics['Year'] += 1
-            if match['Mint Mark'] == m.get('Mint Mark', ''): metrics['Mint Mark'] += 1
-            if match['Denomination'].lower() in m.get('Denomination', '').lower(): metrics['Denomination'] += 1
-            if match['Condition'].lower() in m.get('Condition', '').lower(): metrics['Condition/Grade'] += 1
+            if normalize_val(match.get('Year', '')) == normalize_val(m.get('Year', '')): metrics['Year'] += 1
+            if normalize_val(match.get('Mint Mark', '')) == normalize_val(m.get('Mint Mark', '')): metrics['Mint Mark'] += 1
+            if normalize_val(match.get('Denomination', '')).lower() == normalize_val(m.get('Denomination', '')).lower(): metrics['Denomination'] += 1
+            if normalize_val(match.get('Condition', '')).lower() == normalize_val(m.get('Condition', '')).lower(): metrics['Condition/Grade'] += 1
             metrics['Cert#/Grading Service'] += 1
-            if match['Purchase Cost'] == m.get('Purchase Cost', ''): metrics['Purchase Cost'] += 1
-            if match['Melt Value'] == m.get('Melt Value', ''): metrics['Metal Content/Melt'] += 1
+            if normalize_val(match.get('Purchase Cost', '')) == normalize_val(m.get('Purchase Cost', '')): metrics['Purchase Cost'] += 1
+            if normalize_val(match.get('Melt Value', '')) == normalize_val(m.get('Melt Value', '')): metrics['Metal Content/Melt'] += 1
             metrics['Variety'] += 1
 
     md = f"""# Numista.AI Account Accuracy Scorecard

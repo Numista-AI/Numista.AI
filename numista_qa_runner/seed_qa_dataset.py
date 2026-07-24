@@ -35,10 +35,10 @@ def seed_qa_account(email="qa_test_user_20260724@numista.ai"):
     count = 0
     batch_count = 0
     for r in records:
-        doc_id = r.get('ID', f'NUM-{count:05d}')
+        count += 1
+        doc_id = r.get('id') or r.get('ID') or f'NUM-{count:05d}'
         doc_ref = coins_ref.document(doc_id)
         batch.set(doc_ref, r, merge=True)
-        count += 1
         batch_count += 1
         
         if batch_count >= 400:
