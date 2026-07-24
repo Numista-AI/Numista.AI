@@ -31,6 +31,8 @@ import 'mint_error_library_screen.dart';
 import 'glossary_academy_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
+import 'attorney_portal_screen.dart';
+import 'lateral_transfer_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_greeter.dart';
 
@@ -254,6 +256,11 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const WishlistScreen();
       case 'Estate Planning':
         return const EstatePlanningScreen();
+      case 'Attorney Portal':
+        return const AttorneyPortalScreen();
+      case 'Lateral Transfer':
+        final email = FirebaseAuth.instance.currentUser?.email ?? '';
+        return LateralTransferScreen(userId: email, itemsToTransfer: const []);
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
       case 'Admin: Grade Flags':
@@ -491,7 +498,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'My Wishlist',
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
+
+                        const _SidebarSectionHeader(title: 'ESTATE & ASSET VAULT'),
                         _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
+                        _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
+                        _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
 
                         const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
                         WizardNavPulse(

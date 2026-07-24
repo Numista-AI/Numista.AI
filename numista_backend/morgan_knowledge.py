@@ -422,3 +422,65 @@ def get_coin_by_id(db: firestore.Client, coin_id: str) -> Optional[dict]:
     except Exception as e:
         print(f"[morgan_knowledge] Lookup error for {coin_id}: {e}")
         return None
+
+
+def build_user_collection_snapshot(db: firestore.Client, user_email: str) -> str:
+    """
+    Builds a compact ~300 token system prompt header summarizing the user's collection.
+    Allows Morgan to be 'Coin-Aware' of holdings, total value, top coins, and gaps.
+    """
+    try:
+        user_coins_ref = db.collection('users').document(user_email).collection('portfolio').limit(100).stream()
+        coins = [c.to_dict() for c in user_coins_ref]
+        if not coins:
+            # Fallback to collection 'coins'
+            user_coins_ref = db.collection('users').document(user_email).collection('coins').limit(100).stream()
+            coins = [c.to_dict() for c in user_coins_ref]
+
+        if not coins:
+            return f"USER PORTFOLIO CONTEXT:\n- User '{user_email}' currently has 0 coins logged in portfolio.\n"
+
+        total_count = len(coins)
+        total_val = 0.0
+        series_counts = {}
+        top_items = []
+
+        for c in coins:
+            val_str = str(c.get('market_value', c.get('cost_basis', c.get('Price Paid', 0)))).replace('$', '').replace(',', '')
+            try:
+                val = float(val_str)
+            except ValueError:
+                val = 0.0
+            total_val += val
+
+            ser = c.get('programSeries', c.get('denomination', 'US Coins'))
+            series_counts[ser] = series_counts.get(ser, 0) + 1
+
+            yr = c.get('year', c.get('Year', ''))
+            mint = c.get('mint_mark', c.get('Mint Mark', ''))
+            grade = c.get('condition', c.get('Grade', 'Ungraded'))
+            title = f"{yr} {mint} {ser} ({grade})".strip()
+            top_items.append((val, title))
+
+        top_items.sort(key=lambda x: x[0], reverse=True)
+        top_str = ", ".join(f"{title} [${val:,.2f}]" for val, title in top_items[:5] if val > 0)
+        if not top_str and top_items:
+            top_str = ", ".join(title for _, title in top_items[:5])
+
+        top_series_str = ", ".join(f"{k} ({v})" for k, v in list(series_counts.items())[:4])
+
+        snapshot = (
+            f"📊 USER PORTFOLIO SNAPSHOT (Live Context):\n"
+            f"- Owner: {user_email}\n"
+            f"- Total Tracked Items: {total_count} coins\n"
+            f"- Estimated Collection Value: ${total_val:,.2f}\n"
+            f"- Key Series Tracked: {top_series_str if top_series_str else 'General US Coins'}\n"
+            f"- Top Holdings: {top_str if top_str else 'N/A'}\n"
+            f"Use this personal collection context to answer questions about what the user owns or needs!\n"
+        )
+        return snapshot
+
+    except Exception as e:
+        print(f"[morgan_knowledge] Collection snapshot error: {e}")
+        return f"USER PORTFOLIO CONTEXT:\n- Owner: {user_email}\n"
+

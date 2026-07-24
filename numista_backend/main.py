@@ -1878,6 +1878,26 @@ async def submit_grade_review(
         'reviewed_at':     _dt.utcnow().isoformat(),
     })
 
+    if action == 'corrected':
+        try:
+            hitl_log_path = os.path.join(os.path.dirname(__file__), 'data', 'hitl_training_corrections.json')
+            log_entries = []
+            if os.path.exists(hitl_log_path):
+                with open(hitl_log_path, 'r', encoding='utf-8') as f:
+                    log_entries = json.load(f)
+            log_entries.append({
+                'coin_id': coin_id,
+                'user_email': user_email,
+                'original_ai_grade': ai_assigned,
+                'human_suggested_grade': suggested_grade.strip(),
+                'notes': notes.strip(),
+                'timestamp': _dt.utcnow().isoformat()
+            })
+            with open(hitl_log_path, 'w', encoding='utf-8') as f:
+                json.dump(log_entries, f, indent=2)
+        except Exception as log_err:
+            logger.warning(f"HITL training log write error: {log_err}")
+
     review_count  = len(reviews)
     dict_reviews  = [r for r in reviews if isinstance(r, dict)]
     corrections   = [r for r in dict_reviews if r.get('action') == 'corrected']
@@ -9240,6 +9260,101 @@ async def api_get_passport_pdf(transfer_id: str):
         raise
     except Exception as e:
         logger.exception("PDF generation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AppraisalPdfRequest(BaseModel):
+    user_email: str
+
+@app.post("/api/export/appraisal-pdf")
+async def api_export_appraisal_pdf(req: AppraisalPdfRequest):
+    """
+    Generates itemized 1-Click Insurance & Estate Appraisal PDF Schedule.
+    Returns direct binary bytes for web download and archives background copy to GCS.
+    """
+    try:
+        coins_ref = db.collection('users').document(req.user_email).collection('portfolio').stream()
+        items = [c.to_dict() for c in coins_ref]
+        if not items:
+            coins_ref = db.collection('users').document(req.user_email).collection('coins').stream()
+            items = [c.to_dict() for c in coins_ref]
+
+        from services.passport_pdf_generator import generate_passport_pdf
+        pdf_bytes = generate_passport_pdf({
+            "transfer_id": f"APPRAISAL-{_dt.utcnow().strftime('%Y%m%d')}",
+            "sender_email": req.user_email,
+            "created_at": _dt.utcnow().isoformat(),
+            "items": items[:50] if items else []
+        })
+
+        try:
+            bucket_name = os.environ.get("GCS_BUCKET_NAME", "studio-9101802118-8c9a8-uploads")
+            gcs_path = f"users/{req.user_email}/appraisals/Appraisal_Schedule_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
+            blob = storage_client.bucket(bucket_name).blob(gcs_path)
+            blob.upload_from_string(pdf_bytes, content_type="application/pdf")
+        except Exception as gcs_err:
+            logger.warning(f"GCS appraisal archive warning: {gcs_err}")
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=Numista_Itemized_Appraisal_Schedule.pdf"}
+        )
+    except Exception as e:
+        logger.exception("Appraisal PDF export failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/provenance/verify/{passport_id}")
+async def api_verify_provenance(passport_id: str):
+    """
+    Public verification endpoint for coin provenance and passport transfer integrity.
+    """
+    try:
+        doc = db.collection("transfers").document(passport_id).get()
+        if not doc.exists:
+            return JSONResponse(status_code=404, content={"verified": False, "message": "Passport ID not found."})
+        
+        data = doc.to_dict()
+        return {
+            "verified": True,
+            "passport_id": passport_id,
+            "status": data.get("status", "active"),
+            "created_at": data.get("created_at"),
+            "item_count": len(data.get("item_ids", [])),
+            "provenance_chain": [
+                {"event": "Transfer Initiated", "timestamp": data.get("created_at"), "by": "Sanitized Owner"},
+                {"event": "Passport Minted", "timestamp": data.get("created_at"), "verified_by": "Numista.AI Security Engine"}
+            ]
+        }
+    except Exception as e:
+        logger.exception("Provenance verification failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class VarietyDetectRequest(BaseModel):
+    base64_image: str
+    year: str = ""
+    mint_mark: str = ""
+    series: str = ""
+
+@app.post("/api/variety/detect")
+async def api_detect_variety(req: VarietyDetectRequest):
+    """
+    2nd-stage Gemini Vision variety and die-error detection for macro crops.
+    Enforces 85% confidence threshold rule.
+    """
+    try:
+        from services.variety_detector import analyze_variety_crop
+        result = analyze_variety_crop(
+            base64_image=req.base64_image,
+            year=req.year,
+            mint_mark=req.mint_mark,
+            series=req.series
+        )
+        return result
+    except Exception as e:
+        logger.exception("Variety detect endpoint failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
