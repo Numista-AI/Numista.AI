@@ -10,6 +10,7 @@ import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/camera_capture_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
 import '../services/wishlist_service.dart';
@@ -2236,13 +2237,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             onPressed: _pcgsImporting ? null : () async {
               final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv'], withData: true);
               if (result?.files.first.bytes != null) {
-                final certs = PcgsImportService.parseCertNumbersFromCsv(String.fromCharCodes(result!.files.first.bytes!));
-                if (certs.isNotEmpty && mounted) {
-                  setState(() => _pcgsCertCtrl.text = certs.join('\n'));
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Found ${certs.length} cert numbers.'),
-                    backgroundColor: const Color(0xFF7C3AED)));
-                }
+                final csvText = String.fromCharCodes(result!.files.first.bytes!);
+                _showInteractiveMappingWizard(csvText);
               }
             },
             icon: const Icon(Icons.upload_file, size: 16),
@@ -3458,6 +3454,219 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ),
         ),
       ],
+    );
+  }
+
+  // ─── Interactive CSV Column Mapping Wizard & 5-Row Live Preview ────────────
+
+  void _showInteractiveMappingWizard(String csvText) {
+    final lines = csvText.split(RegExp(r'\r?\n')).where((l) => l.trim().isNotEmpty).toList();
+    if (lines.isEmpty) return;
+
+    List<String> parseCsvLine(String line) {
+      final List<String> result = [];
+      bool inQuotes = false;
+      final StringBuffer current = StringBuffer();
+      for (int i = 0; i < line.length; i++) {
+        final char = line[i];
+        if (char == '"') {
+          inQuotes = !inQuotes;
+        } else if (char == ',' && !inQuotes) {
+          result.add(current.toString().trim().replaceAll('"', ''));
+          current.clear();
+        } else {
+          current.write(char);
+        }
+      }
+      result.add(current.toString().trim().replaceAll('"', ''));
+      return result;
+    }
+
+    final headers = parseCsvLine(lines.first);
+    final rawRows = lines.skip(1).map(parseCsvLine).where((r) => r.length == headers.length || r.length >= (headers.length / 2).floor()).toList();
+    if (rawRows.isEmpty) return;
+
+    final certs = PcgsImportService.parseCertNumbersFromCsv(csvText);
+    if (certs.isNotEmpty) {
+      setState(() => _pcgsCertCtrl.text = certs.join('\n'));
+    }
+
+    String? findMatchingHeader(List<String> keywords) {
+      for (final h in headers) {
+        final lower = h.toLowerCase();
+        if (keywords.any((k) => lower.contains(k))) return h;
+      }
+      return headers.isNotEmpty ? headers.first : null;
+    }
+
+    String selectedYearHeader = findMatchingHeader(['year', 'date']) ?? headers.first;
+    String selectedMintHeader = findMatchingHeader(['mint', 'mm']) ?? (headers.length > 1 ? headers[1] : headers.first);
+    String selectedDenomHeader = findMatchingHeader(['denom', 'type', 'coin', 'description', 'title', 'item']) ?? (headers.length > 2 ? headers[2] : headers.first);
+    String selectedGradeHeader = findMatchingHeader(['grade', 'condition', 'pcgs', 'ngc', 'state']) ?? (headers.length > 3 ? headers[3] : headers.first);
+    String selectedCostHeader = findMatchingHeader(['cost', 'price', 'paid', 'value', 'amount']) ?? (headers.length > 4 ? headers[4] : headers.first);
+    String selectedVarietyHeader = findMatchingHeader(['variety', 'note', 'error', 'detail', 'attribute']) ?? (headers.length > 5 ? headers[5] : headers.first);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setWizardState) {
+            final previewRows = rawRows.take(5).toList();
+
+            String getValue(List<String> row, String headerName) {
+              final idx = headers.indexOf(headerName);
+              if (idx >= 0 && idx < row.length) return row[idx];
+              return '';
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: const [
+                  Icon(Icons.table_chart, color: Color(0xFF7C3AED)),
+                  SizedBox(width: 8),
+                  Text('Spreadsheet Mapping Wizard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              content: SizedBox(
+                width: 750,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Map your file columns to the Numista Golden Schema standards. Check the 5-row live preview below before importing.',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 12,
+                        children: [
+                          _buildColumnMapperDropdown('Year', selectedYearHeader, headers, (val) => setWizardState(() => selectedYearHeader = val!)),
+                          _buildColumnMapperDropdown('Mint Mark', selectedMintHeader, headers, (val) => setWizardState(() => selectedMintHeader = val!)),
+                          _buildColumnMapperDropdown('Denomination / Type', selectedDenomHeader, headers, (val) => setWizardState(() => selectedDenomHeader = val!)),
+                          _buildColumnMapperDropdown('Grade / Condition', selectedGradeHeader, headers, (val) => setWizardState(() => selectedGradeHeader = val!)),
+                          _buildColumnMapperDropdown('Cost Basis (\$)', selectedCostHeader, headers, (val) => setWizardState(() => selectedCostHeader = val!)),
+                          _buildColumnMapperDropdown('Variety / Notes', selectedVarietyHeader, headers, (val) => setWizardState(() => selectedVarietyHeader = val!)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Text('🔍 5-Row Live Preview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            headingRowHeight: 36,
+                            dataRowHeight: 42,
+                            columns: const [
+                              DataColumn(label: Text('Year', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Mint', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Denomination / Series', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Cost', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Variety', style: TextStyle(fontWeight: FontWeight.bold))),
+                            ],
+                            rows: previewRows.map((r) {
+                              return DataRow(cells: [
+                                DataCell(Text(getValue(r, selectedYearHeader))),
+                                DataCell(Text(getValue(r, selectedMintHeader))),
+                                DataCell(Text(getValue(r, selectedDenomHeader))),
+                                DataCell(Text(getValue(r, selectedGradeHeader))),
+                                DataCell(Text(getValue(r, selectedCostHeader))),
+                                DataCell(Text(getValue(r, selectedVarietyHeader))),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle, size: 18),
+                  label: Text('Confirm & Import (${rawRows.length} Coins)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null || user.email == null) return;
+                    int count = 0;
+                    for (final r in rawRows) {
+                      final itemData = {
+                        'year': getValue(r, selectedYearHeader),
+                        'mint_mark': getValue(r, selectedMintHeader),
+                        'denomination': getValue(r, selectedDenomHeader),
+                        'condition': getValue(r, selectedGradeHeader),
+                        'cost_basis': getValue(r, selectedCostHeader),
+                        'variety': getValue(r, selectedVarietyHeader),
+                        'status': 'pending_review',
+                        'created_at': DateTime.now().toIso8601String(),
+                      };
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user.email)
+                          .collection('review_queue')
+                          .add(itemData);
+                      count++;
+                    }
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('Successfully imported $count coins into your Review Queue!'),
+                        backgroundColor: const Color(0xFF10B981),
+                      ));
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildColumnMapperDropdown(String fieldName, String currentValue, List<String> headers, ValueChanged<String?> onChanged) {
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(fieldName, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+          DropdownButton<String>(
+            value: headers.contains(currentValue) ? currentValue : headers.first,
+            isExpanded: true,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7C3AED)),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
+            items: headers.map((h) => DropdownMenuItem(value: h, child: Text(h, overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 
