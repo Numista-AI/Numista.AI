@@ -10,7 +10,6 @@
 
 ## Critical Errors & Warnings
 1. **Fallback Greysheet Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are using default dev fallback keys (`1FCAE3B4-966A-4F25-AFA1-BE242C26856B`), operating the backend in **Basic** tier mode rather than **Advanced** tier.
-2. **Flutter Analyzer Deprecation Info Warnings:** 5 `withOpacity` info messages reported in `lib/screens/add_coins_hub.dart` (4) and `lib/screens/wishlist_screen.dart` (1) (recommending migration to `.withValues()`).
 
 ---
 
@@ -69,8 +68,6 @@
 ### 4. Flutter Dart Analyzer
 * **Status:** 10 Info Messages (0 Errors / 0 Warnings).
 * **Details:** Info lints flagged in `numista_mobile`:
-  - `lib/screens/add_coins_hub.dart`: Deprecated `withOpacity` (lines 385, 403, 451, 1029)
-  - `lib/screens/wishlist_screen.dart`: Deprecated `withOpacity` (line 390)
   - `lib/screens/estate_planning_screen.dart`: `use_build_context_synchronously` (lines 4251, 4451, 4637)
   - `lib/screens/lateral_transfer_screen.dart`: `use_super_parameters`, `library_private_types_in_public_api`, `use_build_context_synchronously`
   - `lib/screens/transfer_inbox_screen.dart`: `use_super_parameters`, `library_private_types_in_public_api`, `use_build_context_synchronously`
@@ -79,5 +76,4 @@
 
 ## Recommended Fixes
 1. **Configure Production Greysheet Credentials:** Add production `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables to Cloud Run service settings to unlock **Advanced** bid/ask pricing tier.
-2. **Refactor Deprecated Flutter Member Calls:** Replace `.withOpacity(...)` with `.withValues(...)` in `add_coins_hub.dart` and `wishlist_screen.dart` to maintain compatibility with modern Flutter SDKs.
-3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
+2. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
