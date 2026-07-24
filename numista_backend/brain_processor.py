@@ -10,10 +10,12 @@ from google.genai import types as genai_types
 from google.cloud import firestore
 import google.auth
 
+from config import GEMINI_FLASH_MODEL
+
 # --- CONFIGURATION ---
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "global"
-PRIMARY_MODEL = "gemini-3.5-flash"
+PRIMARY_MODEL = GEMINI_FLASH_MODEL
 
 logging.basicConfig(
     level=logging.INFO,

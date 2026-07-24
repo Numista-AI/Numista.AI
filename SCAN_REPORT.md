@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.0)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 100% test pass rate across unit test suites. All 16 Python backend unit tests passed, 645 Python files compiled cleanly, Flutter Dart analyzer passed with 0 errors/0 warnings, Gemini model IDs strictly adhere to 2026 production standards (`gemini-3.5-flash`), and Greysheet API endpoints returned HTTP 200 OK).
+* **Status:** 🟢 **PASS** (System scan completed with 100% test pass rate across unit test suites. All 16 Python backend unit tests passed, 645 Python files compiled cleanly, Flutter Dart analyzer passed with 0 errors/0 warnings, Gemini model IDs strictly adhere to 2026 production standards (`gemini-3.6-flash`), and Greysheet API endpoints returned HTTP 200 OK).
 * **Scan Date:** 2026-07-24
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.0, Frontend v4.0
@@ -15,7 +15,7 @@
 
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. No usages of deprecated/retired model IDs (e.g. `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) in active codebase.
-* **Production Model Alignment:** Primary model across active backend services (`services/greysheet_service.py`, `main.py`, `brain_processor.py`) is `gemini-3.5-flash` or `gemini-3.1-pro-preview` in compliance with Rule 6.
+* **Production Model Alignment:** Primary model across active backend services (`config.py`, `main.py`, `brain_processor.py`) is `gemini-3.6-flash` or `gemini-3.1-pro-preview` in compliance with Rule 6.
 
 ---
 

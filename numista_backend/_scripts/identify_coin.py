@@ -4,8 +4,12 @@ import pandas as pd
 from google import genai
 from dotenv import load_dotenv
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from config import GEMINI_FLASH_MODEL
+
 # --- CONFIGURATION ---
-# Safely loads your API key from the .env file. Never hardcode keys in code!
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
@@ -41,7 +45,7 @@ def run_numista_report(obv_path, rev_path):
         """
         
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model=GEMINI_FLASH_MODEL,
             contents=[prompt, img1, img2]
         )
         analysis = response.text

@@ -26,6 +26,7 @@ from pathlib import Path
 import time
 from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
 logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
@@ -135,11 +136,10 @@ GRADE_WRITE_TIMESTAMPS = {}
 #   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
 #   gemini-3.5-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
 #
-# NOTE: All Gemini 3.x models require location='global' on Vertex AI.
-# MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-PRIMARY_MODEL = "gemini-3.5-flash"
-PRO_MODEL     = "gemini-3.1-pro-preview"
-IMAGE_MODEL   = "gemini-3.5-flash-image"
+# Model bindings are centralized in config.py
+PRIMARY_MODEL = GEMINI_FLASH_MODEL
+PRO_MODEL     = GEMINI_PRO_MODEL
+IMAGE_MODEL   = GEMINI_IMAGE_MODEL
 
 # Initialize google-genai client (Vertex AI backend)
 # Override via GEMINI_LOCATION env var if needed, default to 'global'

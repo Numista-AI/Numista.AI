@@ -21,10 +21,8 @@ const COIN_DICTIONARY = [
     { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar"] }
 ];
 
-// 3. Define the Model
-// Using 'gemini-3.5-flash' for production consistency.
-// MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-const modelId = 'gemini-3.5-flash';
+// Using process.env.GEMINI_FLASH_MODEL (defaults to gemini-3.6-flash)
+const modelId = process.env.GEMINI_FLASH_MODEL || 'gemini-3.6-flash';
 
 async function mapToSchema(entities) {
     // Lazy Initialization
