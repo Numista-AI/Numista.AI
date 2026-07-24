@@ -34,10 +34,11 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
         'image_verification_status', 'Source File / Category'
     ]
 
-    persisted_rows = []
+    persisted_rows = {}
+    persisted_list = []
     for d in docs:
         data = d.to_dict() or {}
-        persisted_rows.append({
+        row = {
             'ID': d.id,
             'Year': str(data.get('Year', '') or ''),
             'Mint Mark': str(data.get('Mint Mark', '') or ''),
@@ -60,13 +61,15 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
             'image_url_reverse': str(data.get('image_url_reverse', '') or ''),
             'image_verification_status': str(data.get('image_verification_status', 'unverified') or 'unverified'),
             'Source File / Category': str(data.get('source', '') or '')
-        })
+        }
+        persisted_rows[d.id] = row
+        persisted_list.append(row)
 
     # Save persisted export CSV
     with open(PERSISTED_EXPORT, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
-        writer.writerows(persisted_rows)
+        writer.writerows(persisted_list)
     print(f"Exported persisted Firestore database to: {PERSISTED_EXPORT}")
 
     # Load Master CSV for comparison
@@ -77,7 +80,7 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
             master_rows = list(reader)
 
     total_master = len(master_rows)
-    total_persisted = len(persisted_rows)
+    total_persisted = len(persisted_list)
 
     metrics = {
         'Year': 0, 'Mint Mark': 0, 'Denomination': 0, 'Condition/Grade': 0,
@@ -86,9 +89,7 @@ def audit_account(email="qa_test_user_20260724@numista.ai"):
 
     for m in master_rows:
         m_id = m.get('ID', '')
-        m_desc = m.get('Original Description from source', '')
-        
-        match = next((p for p in persisted_rows if p['ID'] == m_id or p['Original Description from source'] == m_desc), None)
+        match = persisted_rows.get(m_id)
         if match:
             if match['Year'] == m.get('Year', ''): metrics['Year'] += 1
             if match['Mint Mark'] == m.get('Mint Mark', ''): metrics['Mint Mark'] += 1
