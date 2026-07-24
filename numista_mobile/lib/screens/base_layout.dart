@@ -257,7 +257,9 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Estate Planning':
         return const EstatePlanningScreen();
       case 'Attorney Portal':
-        return const AttorneyPortalScreen();
+        final user = FirebaseAuth.instance.currentUser;
+        final userUid = user?.uid ?? user?.email ?? '';
+        return AttorneyPortalScreen(uid: userUid, token: '');
       case 'Lateral Transfer':
         final email = FirebaseAuth.instance.currentUser?.email ?? '';
         return LateralTransferScreen(userId: email, itemsToTransfer: const []);

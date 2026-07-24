@@ -10,6 +10,7 @@ import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/camera_capture_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
 import '../services/wishlist_service.dart';
