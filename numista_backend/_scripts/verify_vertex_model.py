@@ -11,6 +11,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from config import GEMINI_FLASH_MODEL
+
 load_dotenv()
 PROJECT_ID = "studio-9101802118-8c9a8"
 
@@ -30,8 +34,8 @@ def test_model(model_name, location):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="gemini-3.5-flash")
-    parser.add_argument("--location", default="us-central1")
+    parser.add_argument("--model", default=GEMINI_FLASH_MODEL)
+    parser.add_argument("--location", default="global")
     args = parser.parse_args()
     
     # Test specific model/location

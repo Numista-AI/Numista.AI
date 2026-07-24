@@ -14,9 +14,9 @@ const admin = require('firebase-admin');
 const { processInvoice } = require('./invoiceService');
 const fs = require('fs');
 
-// Initialize Configuration
+require('dotenv').config();
 const PROJECT_ID = 'studio-9101802118-8c9a8';
-const MODEL_NAME = 'gemini-3.5-flash';
+const MODEL_NAME = process.env.GEMINI_FLASH_MODEL || 'gemini-3.6-flash';
 
 // Initialize Firebase
 try {
