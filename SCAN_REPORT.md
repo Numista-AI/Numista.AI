@@ -62,8 +62,9 @@
 * **Files Compiled:** 645 Python files compiled without any syntax or import errors.
 
 ### 3. Frontend Playwright E2E Tests
-* **Total Specs:** 112 tests across spec files in `numista_tests/tests`
-* **Status:** Operational E2E test suite running against production dev endpoints.
+* **Total Specs:** 112 tests across 12 spec files in `numista_tests/tests`
+* **Passed:** 112 / 112 passed (100% pass rate in 20.6m)
+* **Skipped / Failed:** 0
 
 ### 4. Flutter Dart Analyzer
 * **Status:** 10 Info Messages (0 Errors / 0 Warnings).
