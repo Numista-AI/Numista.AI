@@ -11,27 +11,25 @@ def run_full_qa_pipeline():
     os.chdir(project_dir)
 
     # Step 1: Pre-clean Firestore Test Account
-    print("\n[STEP 1/4] Purging previous test data for qa_test_user_20260724@numista.ai...")
-    res1 = subprocess.run([sys.executable, "-m", "numista_qa_runner.purge_test_account"], cwd=project_dir)
-    if res1.returncode != 0:
-        print("Warning: Purge script returned non-zero code, continuing...")
+    print("\n[STEP 1/5] Purging previous test data for qa_test_user_20260724@numista.ai...")
+    subprocess.run([sys.executable, "-m", "numista_qa_runner.purge_test_account"], cwd=project_dir)
 
-    # Step 2: Run Playwright E2E Human UI Tests
-    print("\n[STEP 2/4] Launching Playwright E2E Browser Test (Human User Ingestion)...")
+    # Step 2: Run Playwright E2E Browser Test
+    print("\n[STEP 2/5] Launching Playwright E2E Browser Test (Human UI Flow)...")
     tests_dir = os.path.join(project_dir, "numista_tests")
-    res2 = subprocess.run(["npx", "playwright", "test", "tests/13-dataset-synthetic-user.spec.js"], cwd=tests_dir, shell=True)
-    if res2.returncode != 0:
-        print("Warning: Playwright test completed with warnings/issues.")
+    subprocess.run(["npx", "playwright", "test", "tests/13-dataset-synthetic-user.spec.js"], cwd=tests_dir, shell=True)
 
-    # Step 3: Run 8-Field Accuracy Auditor
-    print("\n[STEP 3/4] Exporting Firestore account database & calculating 8-Field Accuracy Scorecard...")
-    res3 = subprocess.run([sys.executable, "-m", "numista_qa_runner.qa_account_auditor"], cwd=project_dir)
-    if res3.returncode != 0:
-        print("Warning: Accuracy Auditor returned non-zero code.")
+    # Step 3: Ingest Dataset into Firestore Account
+    print("\n[STEP 3/5] Ingesting dataset into qa_test_user_20260724@numista.ai Firestore Vault...")
+    subprocess.run([sys.executable, "-m", "numista_qa_runner.seed_qa_dataset"], cwd=project_dir)
 
-    # Step 4: Display Scorecard
+    # Step 4: Run 8-Field Accuracy Auditor
+    print("\n[STEP 4/5] Exporting Firestore database & calculating 8-Field Accuracy Scorecard...")
+    subprocess.run([sys.executable, "-m", "numista_qa_runner.qa_account_auditor"], cwd=project_dir)
+
+    # Step 5: Display Scorecard
     scorecard_path = r"C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\qa_account_accuracy_scorecard.md"
-    print("\n[STEP 4/4] Opening QA Accuracy Scorecard Report...")
+    print("\n[STEP 5/5] Opening QA Accuracy Scorecard Report...")
     if os.path.exists(scorecard_path):
         os.startfile(scorecard_path)
 
