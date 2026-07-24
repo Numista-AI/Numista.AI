@@ -66,10 +66,13 @@
 * **Status:** Operational E2E test suite running against production dev endpoints.
 
 ### 4. Flutter Dart Analyzer
-* **Status:** 5 Info Warnings (0 Errors / 0 Warnings).
-* **Details:** Deprecated `withOpacity` usage flagged in:
-  - `lib/screens/add_coins_hub.dart` (lines 385, 403, 451, 1029)
-  - `lib/screens/wishlist_screen.dart` (line 390)
+* **Status:** 10 Info Messages (0 Errors / 0 Warnings).
+* **Details:** Info lints flagged in `numista_mobile`:
+  - `lib/screens/add_coins_hub.dart`: Deprecated `withOpacity` (lines 385, 403, 451, 1029)
+  - `lib/screens/wishlist_screen.dart`: Deprecated `withOpacity` (line 390)
+  - `lib/screens/estate_planning_screen.dart`: `use_build_context_synchronously` (lines 4251, 4451, 4637)
+  - `lib/screens/lateral_transfer_screen.dart`: `use_super_parameters`, `library_private_types_in_public_api`, `use_build_context_synchronously`
+  - `lib/screens/transfer_inbox_screen.dart`: `use_super_parameters`, `library_private_types_in_public_api`, `use_build_context_synchronously`
 
 ---
 
