@@ -92,11 +92,71 @@ if os.path.exists(_env_path):
 else:
     logging.warning("[TRAY] .env not found at %s — API keys may be missing", _env_path)
 
-# ─── Import the agent logic ───────────────────────────────────────────────────
+# ─── Import the agent logic & certificate installer ───────────────────────────
 import auto_capture
+import install_cert
+
+# ─── Single-Instance Mutex Check (Windows) ────────────────────────────────────
+_single_instance_mutex = None
+
+def _acquire_single_instance():
+    global _single_instance_mutex
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            mutex_name = "Global\\NumistaAgentSingleInstanceMutex"
+            _single_instance_mutex = kernel32.CreateMutexW(None, False, mutex_name)
+            last_error = kernel32.GetLastError()
+            ERROR_ALREADY_EXISTS = 183
+            if last_error == ERROR_ALREADY_EXISTS:
+                logging.warning("[TRAY] Another instance of NumistaAgent is already running. Exiting.")
+                sys.exit(0)
+        except Exception as e:
+            logging.warning(f"[TRAY] Single instance check warning: {e}")
+
+# ─── Windows Autostart Registry Helper ─────────────────────────────────────────
+def _is_autostart_enabled():
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_READ,
+        )
+        winreg.QueryValueEx(key, "NumistaAgent")
+        winreg.CloseKey(key)
+        return True
+    except Exception:
+        return False
+
+def _toggle_autostart(icon, item):
+    if sys.platform != "win32":
+        return
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_SET_VALUE | winreg.KEY_READ,
+        )
+        if _is_autostart_enabled():
+            winreg.DeleteValue(key, "NumistaAgent")
+            logging.info("[TRAY] Windows autostart disabled.")
+        else:
+            exe_path = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
+            winreg.SetValueEx(key, "NumistaAgent", 0, winreg.REG_SZ, f'"{exe_path}"')
+            logging.info(f"[TRAY] Windows autostart enabled → \"{exe_path}\"")
+        winreg.CloseKey(key)
+    except Exception as e:
+        logging.error(f"[TRAY] Failed to toggle autostart: {e}")
 
 # ─── Tray Icon Drawing ────────────────────────────────────────────────────────
-def _make_icon(color="#4C8CDA"):
+def _make_icon(color="#00C853"):
     """Draws a coin icon for the tray: gold ring + coloured centre."""
     img  = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -105,10 +165,9 @@ def _make_icon(color="#4C8CDA"):
     return img
 
 
-_ICON_IDLE  = _make_icon("#4C8CDA")   # Blue  — ready / online
-_ICON_BUSY  = _make_icon("#FFAB00")   # Amber — scanning
-_ICON_ERROR = _make_icon("#FF5252")   # Red   — error / offline
-_ICON_OK    = _make_icon("#00C853")   # Green — just saved a coin
+_ICON_GREEN  = _make_icon("#00C853")   # Green  — online / connected & ready
+_ICON_YELLOW = _make_icon("#FFAB00")   # Yellow — linking / unpaired / scanning
+_ICON_RED    = _make_icon("#FF5252")   # Red    — error / offline
 
 # ─── Global tray reference ────────────────────────────────────────────────────
 _tray_icon: pystray.Icon | None = None
@@ -135,12 +194,16 @@ def _update_tray_icon():
     global _tray_icon
     while _tray_icon is not None:
         s = auto_capture.capture_status
+        email = auto_capture.USER_EMAIL or _cfg.get_user_email() or None
         if s.get("error"):
-            icon_img = _ICON_ERROR
+            icon_img = _ICON_RED
+        elif not email:
+            icon_img = _ICON_YELLOW
         elif s.get("is_active"):
-            icon_img = _ICON_BUSY
+            icon_img = _ICON_YELLOW
         else:
-            icon_img = _ICON_IDLE
+            icon_img = _ICON_GREEN
+
         if _tray_icon:
             _tray_icon.icon  = icon_img
             _tray_icon.title = _get_status_text()
@@ -151,7 +214,10 @@ def _open_numista(icon, item):
     webbrowser.open("https://numista.ai")
 
 def _open_log(icon, item):
-    os.startfile(LOG_FILE)
+    if os.path.exists(LOG_FILE):
+        os.startfile(LOG_FILE)
+    else:
+        logging.warning(f"[TRAY] Log file not found at {LOG_FILE}")
 
 def _open_settings(icon, item):
     """Re-open the setup wizard so the user can change their email."""
@@ -169,7 +235,7 @@ def _open_settings(icon, item):
 
 def _quit(icon, item):
     global _tray_icon
-    logging.info("[TRAY] User requested quit.")
+    logging.info("[TRAY] User requested quit — performing clean shutdown.")
     _tray_icon = None
     icon.stop()
     os._exit(0)
@@ -179,14 +245,12 @@ def _status_label():
     s = auto_capture.capture_status
     email = auto_capture.USER_EMAIL or _cfg.get_user_email() or None
     if s.get("error"):
-        return f"⚠  Error: {s['error'][:30]}"
+        return f"🔴  Status: Error — {s['error'][:30]}"
     if s.get("is_active"):
-        return f"🔬  Scanning — {s.get('current_step', '…')}"
-    if s.get("last_report"):
-        return "✓  Online — scan complete"
+        return f"🟡  Status: Scanning — {s.get('current_step', '…')}"
     if not email:
-        return "🟡  Unpaired — open Numista.AI to link"
-    return "🟢  Online — Ready"
+        return "🟡  Status: Linking / Unpaired"
+    return f"🟢  Status: Connected ({email})"
 
 def _build_menu():
     return pystray.Menu(
@@ -198,10 +262,15 @@ def _build_menu():
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Open Numista.AI",          _open_numista),
+        pystray.MenuItem(
+            "Auto-Start on Login",
+            _toggle_autostart,
+            checked=lambda item: _is_autostart_enabled(),
+        ),
         pystray.MenuItem("Open Log File",            _open_log),
         pystray.MenuItem("Switch Account / Settings…", _open_settings),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Quit", _quit),
+        pystray.MenuItem("Exit", _quit),
     )
 
 # ─── Patch auto_capture USER_EMAIL from config ───────────────────────────────
@@ -217,9 +286,8 @@ def _patch_auto_capture_user():
 
 # ─── Agent thread: Firestore watcher + HTTPS Flask server ─────────────────────
 def _start_agent():
-    # Fix certificate path for packaged exe
-    cert = _bundle_path("localhost.crt")
-    key  = _bundle_path("localhost.key")
+    # Ensure SSL certificate is generated and registered in Windows Root store
+    cert, key = install_cert.ensure_ssl_cert()
 
     try:
         auto_capture.start_command_watcher()
@@ -252,8 +320,7 @@ def _start_agent():
         except Exception as e:
             logging.error(f"[TRAY] Flask (HTTPS) error: {e}", exc_info=True)
     else:
-        logging.warning("[TRAY] No SSL cert found — serving HTTP (Chrome will block from HTTPS pages)")
-        logging.warning(f"[TRAY] Expected: {cert}")
+        logging.warning("[TRAY] Serving HTTP on port 5000")
         try:
             auto_capture.app.run(
                 host="0.0.0.0", port=5000,
@@ -262,65 +329,31 @@ def _start_agent():
         except Exception as e:
             logging.error(f"[TRAY] Flask (HTTP) error: {e}", exc_info=True)
 
-# ─── First-run wizard guard ────────────────────────────────────────────────────
-def _ensure_configured():
-    """
-    If no config exists, block until the user completes the setup wizard.
-    Returns True if configured, False if user cancelled.
-    """
-    if _cfg.is_configured():
-        return True
-
-    logging.info("[TRAY] No config found — launching setup wizard.")
-
-    _configured = threading.Event()
-    _cancelled  = [False]
-
-    def _on_complete(email, device):
-        _cfg.reload()
-        _configured.set()
-
-    def _on_cancel():
-        _cancelled[0] = True
-        _configured.set()
-
-    # Run wizard (wizard is its own Tk main loop — must run on main thread
-    # before pystray takes over, which is why we call this before _tray_icon.run())
-    from agent_setup import run_setup_wizard
-    run_setup_wizard(on_complete=_on_complete, on_cancel=_on_cancel)
-
-    if _cancelled[0]:
-        logging.warning("[TRAY] User cancelled setup — agent cannot start without an email.")
-        return False
-    return True
-
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
     global _tray_icon
+
+    _acquire_single_instance()
 
     logging.info("=" * 55)
     logging.info("  Numista.AI Hardware Agent v2.0")
     logging.info(f"  Log file: {LOG_FILE}")
     logging.info("=" * 55)
 
-    # [1] Apply any previously saved email config to auto_capture.
-    #     If no email is stored yet, the agent starts in "Unpaired" state.
-    #     The Flutter web app will call POST /pair automatically when the user
-    #     opens the Microscope Scanner page, so no manual entry is needed.
     _patch_auto_capture_user()
     if _cfg.get_user_email():
         logging.info(f"[TRAY] Restored saved account: {_cfg.get_user_email()!r}")
     else:
         logging.info("[TRAY] No saved account — waiting for web app to pair via /pair endpoint.")
 
-    # [2] Start Firestore watcher + Flask server in background
+    # Start Firestore watcher + Flask server in background daemon thread
     agent_thread = threading.Thread(target=_start_agent, daemon=True)
     agent_thread.start()
 
-    # [3] Build and run the system tray icon (blocks until quit)
+    # Build and run the system tray icon on the main OS thread (blocks until exit)
     _tray_icon = pystray.Icon(
         name="NumistaAgent",
-        icon=_ICON_IDLE,
+        icon=_ICON_GREEN,
         title="Numista.AI Hardware Agent — open Numista.AI to link",
         menu=_build_menu(),
     )
@@ -332,3 +365,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
