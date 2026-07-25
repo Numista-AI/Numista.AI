@@ -32,7 +32,7 @@ def run_build():
         print(f"❌ Spec file not found: {SPEC_FILE}", file=sys.stderr)
         sys.exit(1)
 
-    cmd = [sys.executable, "-m", "PyInstaller", str(SPEC_FILE), "--noconfirm", "--clean"]
+    cmd = [sys.executable, "-m", "PyInstaller", str(SPEC_FILE), "--noconfirm"]
     print(f"[BUILD] Executing: {' '.join(cmd)}")
 
     res = subprocess.run(cmd, cwd=str(HERE))
