@@ -24,12 +24,16 @@ logging.basicConfig(
 logger = logging.getLogger("BrainProcessor")
 
 # Initialize Clients
+db = None
+genai_client = None
 try:
     credentials, _ = google.auth.default()
     db = firestore.Client(credentials=credentials, project=PROJECT_ID)
     genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+    logger.info("BrainProcessor clients initialized successfully.")
 except Exception as e:
     logger.error(f"Failed to initialize clients: {e}")
+    raise RuntimeError(f"BrainProcessor cannot start — auth/client init failed: {e}") from e
 
 def absorb_document(file_path: Path, user_intent: str = None):
     """
