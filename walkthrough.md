@@ -1,25 +1,33 @@
-# Walkthrough — System Scan Audit & Status Verification (2026-07-24)
+# Walkthrough — Daily Task Schedule Reconfiguration (7:00 AM)
 
-I have executed a full system scan, verified backend unit tests and Playwright E2E suites, confirmed Flutter analyzer results, and updated the project audit records on the `dev` branch.
+I have reconfigured the local Windows Task Scheduler automated test job (`NumistaAI-AutoTests`) to run every morning at **7:00 AM** with `WakeToRun` enabled.
 
-## 1. Audit & Verification Summary
+## 🛠️ Changes Implemented
 
-The latest `SCAN_REPORT.md` returns an overall status of **🟢 PASS**:
-- **Backend Unit Tests (`pytest`)**: 16/16 tests passed (100% pass rate in 28.45s).
-- **Python Compilation**: 645/645 Python files compiled 100% clean with zero syntax or import errors.
-- **Frontend Playwright E2E Tests**: 112/112 tests passed across 12 spec files (100% pass rate in 20.6m).
-- **Flutter Dart Analyzer**: 0 Errors / 0 Warnings (10 Info messages style lints in newly added screens).
-- **Model Binding & LLM Health**: All model references across active backend services (`services/greysheet_service.py`, `main.py`, `brain_processor.py`) adhere strictly to production standards (`gemini-3.5-flash` or `gemini-3.1-pro-preview`).
-- **Greysheet API Health**: Endpoint probes return HTTP 200 OK (Basic Tier fallback).
+1. **Schedule Configuration Update**:
+   - **[setup_scheduler.ps1](file:///C:/Users/ericd/Documents/MyVertexProject/numista_tests/setup_scheduler.ps1)**:
+     - Reconfigured `$startTime` to **7:00 AM** (`-Hour 7 -Minute 0 -Second 0`).
+     - Added `-WakeToRun` to `New-ScheduledTaskSettingsSet` so Windows will automatically wake the laptop at 7:00 AM if it is sleeping.
+     - Updated description and task outputs.
 
----
-
-## 2. Updated Audit Records
-- Updated [SCAN_REPORT.md](file:///C:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) to accurately reflect zero remaining `withOpacity` deprecation warnings in the codebase.
+2. **Windows Task Scheduler Registration**:
+   - Executed `setup_scheduler.ps1` to update the active Windows Task Scheduler task `NumistaAI-AutoTests`.
+   - Verified that `NextRunTime` is now set to **7/26/2026 7:00:00 AM** with `WakeToRun: True`.
 
 ---
 
-## 3. Git Synchronization
-- Committed and pushed updated audit documentation to `origin/dev`:
-  - Commit hash: `1015442`
-  - Remote sync confirmed: `dev -> dev`.
+## 🧪 Verification Results
+
+* **Task Name**: `NumistaAI-AutoTests`
+* **State**: `Ready`
+* **Schedule**: Daily at 7:00 AM
+* **Next Run Time**: 7/26/2026 7:00:00 AM
+* **WakeToRun**: `True` (Windows will wake computer to execute test suite at 7 AM)
+
+---
+
+## 📦 Git Synchronization
+- Committed and pushed changes to `origin/dev` (commit `6101b3b`):
+  ```bash
+  git pull --rebase origin dev && git push origin dev
+  ```
