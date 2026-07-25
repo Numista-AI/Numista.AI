@@ -161,8 +161,8 @@ class CoinModel {
       condition: data['Condition']?.toString() ?? 'Ungraded',
       strikeType: data['Strike Type']?.toString() ?? '',
       holderType: data['Holder Type']?.toString() ?? '',
-      gradingService: data['Grading Service']?.toString() ?? '',
-      certificationNumber: data['Certification Number']?.toString() ?? '',
+      gradingService: data['Grading Service']?.toString() ?? data['Holder Type']?.toString() ?? data['Grading Svc']?.toString() ?? '',
+      certificationNumber: data['Certification Number']?.toString() ?? data['Cert #']?.toString() ?? data['Cert No']?.toString() ?? data['Certification #']?.toString() ?? '',
       metalContent: data['Metal Content']?.toString() ?? '',
       quantity: data['Quantity']?.toString() ?? '1',
       purchaseCost: data['Purchase Cost']?.toString() ?? data['Cost']?.toString() ?? '\$0.00',
@@ -258,4 +258,29 @@ class CoinModel {
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };
   }
+
+  /// Returns the direct official verification URL for slabbed coins,
+  /// or null if uncertified, raw, or missing cert number.
+  /// Supports PCGS, NGC, ANACS, CAC (Sticker), and CACG (Slab).
+  String? getVerificationUrl() {
+    final cert = certificationNumber.replaceAll(RegExp(r'\D'), '').trim();
+    if (cert.isEmpty) return null;
+
+    final svc = (gradingService.isNotEmpty ? gradingService : holderType).trim().toUpperCase();
+    final holder = holderType.trim().toUpperCase();
+
+    if (svc.contains('PCGS')) {
+      return 'https://www.pcgs.com/cert/$cert';
+    } else if (svc.contains('NGC')) {
+      return 'https://www.ngccoin.com/certlookup/$cert/';
+    } else if (svc.contains('ANACS')) {
+      return 'https://www.anacs.com/Verify/CertVerification.aspx?Cert=$cert';
+    } else if (svc.contains('CACG') || holder.contains('CACG')) {
+      return 'https://www.cacgrading.com/cert-verify/$cert';
+    } else if (svc.contains('CAC') || holder.contains('CAC') || hasCac) {
+      return 'https://www.caccoin.com/cert-lookup/';
+    }
+    return null;
+  }
 }
+
