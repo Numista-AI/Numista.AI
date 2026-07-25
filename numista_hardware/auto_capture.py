@@ -793,20 +793,35 @@ def pair_agent_route():
         return jsonify({"status": "success", "paired_email": email})
     return jsonify({"status": "error", "message": "Email not provided"}), 400
 
+_camera_list_lock = _threading.Lock()
+_cached_camera_data = {"cameras": [], "active": -1, "ts": 0.0}
+
 @app.route('/list-cameras', methods=['GET'])
 def list_cameras_route():
-    available = []
-    for idx in range(5):
-        if active_camera_idx == idx:
-            available.append(idx)
-            continue
-        temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-        if temp.isOpened():
-            ret, _ = temp.read()
-            if ret:
+    now = time.time()
+    with _camera_list_lock:
+        if now - _cached_camera_data["ts"] < 5.0 and _cached_camera_data["cameras"]:
+            return jsonify({"cameras": _cached_camera_data["cameras"], "active": active_camera_idx})
+
+        available = []
+        for idx in range(4):
+            if active_camera_idx == idx:
                 available.append(idx)
-        temp.release()
-    return jsonify({"cameras": available, "active": active_camera_idx})
+                continue
+            try:
+                temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+                if temp.isOpened():
+                    ret, _ = temp.read()
+                    if ret:
+                        available.append(idx)
+                temp.release()
+            except Exception as e:
+                logging.warning(f"[CAMERA] Probing camera index {idx} failed: {e}")
+
+        _cached_camera_data["cameras"] = available
+        _cached_camera_data["active"] = active_camera_idx
+        _cached_camera_data["ts"] = now
+        return jsonify({"cameras": available, "active": active_camera_idx})
 
 @app.route('/set-camera', methods=['POST', 'OPTIONS'])
 def set_camera_route():
@@ -1020,10 +1035,10 @@ if __name__ == "__main__":
         _ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
         _ctx.load_cert_chain(_cert, _key)
         logging.info("SSL cert loaded — serving HTTPS on port 5000")
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, ssl_context=_ctx)
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True, ssl_context=_ctx)
     else:
         logging.warning("No SSL cert found — falling back to plain HTTP.")
         logging.warning("Run:  python gen_cert.py  to fix this.")
         logging.warning("Then trust the cert: visit https://localhost:5000 in Chrome and click Proceed.")
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
 

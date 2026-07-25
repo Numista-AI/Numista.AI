@@ -315,6 +315,7 @@ def _start_agent():
             auto_capture.app.run(
                 host="0.0.0.0", port=5000,
                 debug=False, use_reloader=False,
+                threaded=True,
                 ssl_context=ctx,
             )
         except Exception as e:
@@ -325,6 +326,7 @@ def _start_agent():
             auto_capture.app.run(
                 host="0.0.0.0", port=5000,
                 debug=False, use_reloader=False,
+                threaded=True,
             )
         except Exception as e:
             logging.error(f"[TRAY] Flask (HTTP) error: {e}", exc_info=True)
