@@ -209,6 +209,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _ColDef(_F.themeSubject,     'Theme/Subject', 140),
     _ColDef(_F.variety,          'Variety/Error', 120),
     _ColDef(_F.condition,        'Condition',      70),
+    _ColDef(_F.gradingService,   'Service',        90),
+    _ColDef(_F.gradingCert,      'Cert #',        120),
     _ColDef(_F.aiValue,          'AI Value',      100), // moved left — visible on load
     _ColDef(_F.cost,             'Cost',           90),
     _ColDef(_F.isSilver,         'Metal',          62), // moved right
@@ -2073,38 +2075,59 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             final colDef = visCols[col - 1];
             final value  = _getCellValue(colDef, m, advanced: advanced);
 
-            // -- Cert # column: tappable PCGS link -------------------------
+            // -- Cert # column: interactive verification link pop-up -------------------------
             if (colDef.field == _F.gradingCert && value.isNotEmpty) {
-              final gradingService =
-                  m[_F.gradingService]?.toString().toUpperCase() ?? '';
-              final isPcgs = gradingService.contains('PCGS');
+              final coinModel = CoinModel.fromMap(m, doc.id);
+              final verifyUrl = coinModel.getVerificationUrl();
+              final hasUrl = verifyUrl != null;
+              final svcName = coinModel.gradingService.isNotEmpty
+                  ? coinModel.gradingService
+                  : (coinModel.holderType.isNotEmpty ? coinModel.holderType : 'Service');
+
               return TableViewCell(
-                child: InkWell(
-                  onTap: isPcgs
-                      ? () async {
-                          final uri = Uri.parse(
-                              'https://www.pcgs.com/cert/${value.replaceAll(RegExp(r'\D'), '')}');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
+                child: Tooltip(
+                  message: hasUrl ? 'Verify cert on $svcName' : value,
+                  child: InkWell(
+                    onTap: hasUrl
+                        ? () async {
+                            final uri = Uri.parse(verifyUrl);
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                                webOnlyWindowName: '_blank',
+                              );
+                            }
                           }
-                        }
-                      : onTap,
-                  hoverColor: _accent.withAlpha(20),
-                  mouseCursor: isPcgs
-                      ? SystemMouseCursors.click
-                      : MouseCursor.defer,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: isPcgs ? _accent : _text,
-                          decoration: isPcgs
-                              ? TextDecoration.underline
-                              : TextDecoration.none),
+                        : onTap,
+                    hoverColor: _accent.withAlpha(20),
+                    mouseCursor: hasUrl
+                        ? SystemMouseCursors.click
+                        : MouseCursor.defer,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              value,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: hasUrl ? _accent : _text,
+                                decoration: hasUrl
+                                    ? TextDecoration.underline
+                                    : TextDecoration.none,
+                              ),
+                            ),
+                          ),
+                          if (hasUrl) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.open_in_new_rounded, size: 12, color: _accent),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -2353,6 +2376,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         return dRaw[0].toUpperCase() + dRaw.substring(1);
       case _F.condition:
         return _conditionLabel(m[_F.condition]?.toString().trim() ?? '');
+      case _F.gradingService:
+        final svc = m[_F.gradingService]?.toString().trim() ??
+                    m[_F.holderType]?.toString().trim() ?? '';
+        return (svc.isEmpty || svc == 'null') ? '' : svc;
+      case _F.gradingCert:
+        final cert = m[_F.gradingCert]?.toString().trim() ??
+                     m['Cert #']?.toString().trim() ??
+                     m['Cert No']?.toString().trim() ?? '';
+        return (cert.isEmpty || cert == 'null') ? '' : cert;
       case _F.isSilver:
         // Derive metal type from Metal Content field
         final mc2 = (m[_F.metalContent]?.toString() ?? '').toLowerCase();

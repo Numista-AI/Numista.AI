@@ -60,73 +60,55 @@ const List<WizardStep> _guestSteps = [
     id: 'welcome',
     title: "Welcome to Numista.AI! 👋",
     message:
-        "Hi there! I'm your personal guide — think of me as someone sitting "
-        "right next to you. You have 100 real coins already loaded and ready "
-        "to explore. I'll walk you through everything, one step at a time. "
+        "Hi there! I'm your personal guide. You have 100 demo items already loaded "
+        "and ready to explore across Coins, Currency, and World items. "
         "Tap 'Let's Start' whenever you're ready — there's no rush!",
     buttonLabel: "Let's Start →",
   ),
   WizardStep(
     id: 'collection',
-    title: "Your Coin Collection 🪙",
+    title: "Your Collection & AI Values 🪙",
     message:
-        "This is where all your coins live. I've loaded 100 coins for you — "
-        "Silver Eagles, Mercury Dimes, Morgan Dollars, State Quarters, and "
-        "more. See those green dollar amounts next to each coin? Numista.AI's "
-        "AI estimated the value of every single one automatically. Pretty "
-        "handy, right?",
+        "This is your collection dashboard. I've pre-loaded 100 items for you — "
+        "Silver Eagles, Morgans, Lincoln Cents, Banknotes, and World Gold. "
+        "Notice the green values next to each coin? Numista.AI estimated the "
+        "value of every single one automatically!",
     buttonLabel: "Show Me My Collection →",
     targetRoute: 'My Collection',
     autoNavigate: true,
   ),
   WizardStep(
     id: 'programs',
-    title: "Coin Programs & Sets 🏅",
+    title: "Coin Programs & Checklists 🏅",
     message:
-        "Notice the 50 State Quarters and the brand-new 2026 "
-        "Semiquincentennial coins in your collection? This screen tracks "
-        "complete coin sets — it shows you which coins you already have "
-        "and which ones you're still looking for. Great for collectors who "
-        "love completing a series!",
+        "Notice the 50 State Quarters and 2026 Semiquincentennial coins? "
+        "This screen tracks complete coin sets — showing what you have and "
+        "what you're still looking for. Perfect for completing a series!",
     buttonLabel: "Explore Coin Programs →",
     targetRoute: 'Coin Programs',
     autoNavigate: true,
   ),
   WizardStep(
-    id: 'wishlist',
-    title: "My Wishlist & eBay Tracking 💛",
-    message:
-        "See a coin you'd love to own someday? Add it to your Wishlist. "
-        "Numista.AI will search eBay for matching listings in real time and "
-        "show you what they're selling for — so you know exactly what to "
-        "look for and what a fair price looks like. No more guessing!",
-    buttonLabel: "See My Wishlist →",
-    targetRoute: 'My Wishlist',
-    autoNavigate: true,
-  ),
-  WizardStep(
     id: 'add_coins',
-    title: "Adding Your Own Coins 📤",
+    title: "Add Coins Hub & 7 Entry Methods 📤",
     message:
-        "Ready to try adding a coin? You have four options: type one in by "
-        "hand, upload a photo, import a spreadsheet, or scan with our "
-        "microscope attachment. Any coin you add here gets reviewed by our "
-        "volunteer community — real people who help make the AI smarter for "
-        "everyone!",
-    buttonLabel: "Try Adding a Coin →",
+        "Ready to add your own coins? Numista.AI offers 7 powerful entry methods: "
+        "Quick Camera, Upload Files/PDFs, Manual Entry, Add by SKU, PCGS/NGC Cert Lookup, "
+        "Roll/Batch Entry, and World/Mint Sets!",
+    buttonLabel: "Explore Add Coins →",
     targetRoute: 'Add New Coins',
     autoNavigate: true,
   ),
   WizardStep(
     id: 'complete',
-    title: "You're All Set! 🎉",
+    title: "Wishlist & You're All Set! 🎉",
     message:
-        "Great job! You've seen the highlights of Numista.AI. Feel free to "
-        "keep exploring your demo collection at your own pace. And when "
-        "you're ready to track your real coins, just create a free account "
-        "— everything you've done in this session comes along with you. "
-        "Nothing gets lost!",
-    buttonLabel: "Create My Free Account →",
+        "Track wanted items on your Wishlist with real-time eBay pricing. "
+        "Feel free to explore your demo collection. When you're ready to track "
+        "your real collection, create a free account — your progress comes with you!",
+    buttonLabel: "Start Exploring →",
+    targetRoute: 'My Wishlist',
+    autoNavigate: true,
   ),
 ];
 

@@ -21,6 +21,7 @@ import 'package:http_parser/http_parser.dart';
 
 import '../constants.dart';
 import 'auth_service.dart';
+import 'guest_seed_service.dart';
 
 // ── Data Models ───────────────────────────────────────────────────────────────
 
@@ -469,6 +470,23 @@ class WorldItemService {
   /// Real-time stream of all world items for the current user,
   /// ordered newest first.
   static Stream<List<WorldItem>> worldItemsStream() {
+    if (GuestSeedService.isBrowseDemoMode) {
+      final demoWorld = GuestSeedService.demoCoinCache
+          .where((item) => item['Category'] == 'World' || (item['Country'] != null && item['Country'] != 'USA'))
+          .map((item) => WorldItem(
+                id: 'demo_${item['Year']}_${item['Denomination']}',
+                itemCategory: WorldItemType.foreignCoin,
+                name: '${item['Year']} ${item['Country']} ${item['Denomination']}',
+                country: item['Country']?.toString() ?? 'World',
+                denomination: item['Denomination']?.toString() ?? '',
+                condition: item['Condition']?.toString() ?? 'Ungraded',
+                estimatedValue: double.tryParse((item['AI Estimated Value'] ?? '').toString().replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0,
+                material: item['Metal Content']?.toString() ?? '',
+                era: item['Year']?.toString() ?? '',
+              ))
+          .toList();
+      return Stream.value(demoWorld);
+    }
     return _col
         .orderBy('created_at', descending: true)
         .snapshots()

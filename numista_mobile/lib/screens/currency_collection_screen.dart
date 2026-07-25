@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../services/guest_seed_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
 ///  CurrencyCollectionScreen
@@ -63,6 +64,22 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
   Future<void> _loadNotes() async {
     setState(() => _loading = true);
     try {
+      if (GuestSeedService.isBrowseDemoMode) {
+        final demoNotes = GuestSeedService.demoCoinCache
+            .where((item) =>
+                item['Is Currency'] == true ||
+                item['Category'] == 'Currency' ||
+                (item['Denomination']?.toString().contains('Bill') ?? false) ||
+                (item['Denomination']?.toString().contains('Note') ?? false))
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        setState(() {
+          _allNotes = demoNotes;
+          _loading = false;
+          _applyFilter();
+        });
+        return;
+      }
       final snap = await FirebaseFirestore.instance
           .collection(AuthService.currencyPath)
           .get();

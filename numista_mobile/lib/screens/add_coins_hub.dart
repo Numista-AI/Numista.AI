@@ -5,8 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import '../constants.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/camera_capture_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,6 +17,8 @@ import '../models/coin_model.dart';
 import '../services/pcgs_import_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants.dart';
+
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
@@ -137,6 +138,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       initialIndex: initialIdx,
     );
     _loadSavedPcgsToken();
+    _checkBannerDismissed();
+  }
+
+  bool _bannerDismissed = true;
+
+  void _checkBannerDismissed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool('add_coins_hub_tour_dismissed') ?? false;
+    if (mounted) {
+      setState(() => _bannerDismissed = dismissed);
+    }
+  }
+
+  void _dismissBanner() async {
+    setState(() => _bannerDismissed = true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('add_coins_hub_tour_dismissed', true);
   }
 
   @override
@@ -268,6 +286,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(context),
+        if (!_bannerDismissed) _buildOnboardingBanner(),
         _buildTabBar(),
         Expanded(
           child: TabBarView(
@@ -286,6 +305,45 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         ),
         if (_isProcessing) _buildProcessingOverlay(),
       ],
+    );
+  }
+
+  Widget _buildOnboardingBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.tips_and_updates_outlined, color: Color(0xFF38BDF8), size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Explore 7 Ways to Add Coins & Items to Numista.AI',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Quick Camera • Upload Files/PDFs • Manual Entry • Add by SKU • PCGS/NGC Cert • Roll/Batch • World & Mint Sets',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: Color(0xFF94A3B8)),
+            onPressed: _dismissBanner,
+            tooltip: 'Dismiss Tour Banner',
+          ),
+        ],
+      ),
     );
   }
 
