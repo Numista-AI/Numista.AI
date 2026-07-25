@@ -17,6 +17,8 @@ import '../models/coin_model.dart';
 import '../services/pcgs_import_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants.dart';
+
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
