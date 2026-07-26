@@ -273,6 +273,28 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFF59E0B).withAlpha(80)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.gavel_rounded, color: Color(0xFFF59E0B), size: 20),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "LEGAL DISCLAIMER: This document is an inventory schedule prepared for estate reference purposes only. It does not constitute formal legal or tax advice. Consult a licensed probate attorney.",
+                    style: TextStyle(color: Color(0xFFF59E0B), fontSize: 12, fontWeight: FontWeight.w600, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           _buildHeader(r),
           const SizedBox(height: 24),
           _buildSummaryCards(r),

@@ -7,6 +7,7 @@ import 'screens/base_layout.dart';
 import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
+import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -14,10 +15,36 @@ import 'package:google_fonts/google_fonts.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final uri = Uri.base;
+
+  // ── Public Wishlist deep-link detection ──────────────────────────────────
+  final isPublicWishlist = uri.path.contains('/wishlist/') ||
+      (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'wishlist') ||
+      uri.queryParameters.containsKey('wishlist');
+  if (isPublicWishlist) {
+    String token = uri.queryParameters['wishlist'] ?? '';
+    if (token.isEmpty && uri.pathSegments.length >= 2 && uri.pathSegments.first == 'wishlist') {
+      token = uri.pathSegments[1];
+    }
+    if (token.isEmpty && uri.path.contains('/wishlist/')) {
+      token = uri.path.split('/wishlist/').last.split('?').first.split('#').first;
+    }
+    if (token.isNotEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      runApp(MaterialApp(
+        title: 'Numista.AI — Public Wish List',
+        debugShowCheckedModeBanner: false,
+        home: PublicWishlistViewScreen(token: token),
+      ));
+      return;
+    }
+  }
+
   // ── Attorney portal deep-link detection ──────────────────────────────────
   // If the URL contains /attorney?uid=...&token=... we skip auth entirely and
   // render the read-only attorney portal instead of the normal app.
-  final uri = Uri.base;
   final isAttorneyPortal = uri.path.contains('/attorney') ||
       (uri.queryParameters.containsKey('uid') &&
        uri.queryParameters.containsKey('token'));
