@@ -14,6 +14,7 @@ import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
+import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../constants.dart';
 import 'ai_chat_screen.dart';
@@ -161,25 +162,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Future<void> _fetchNews({bool isRefresh = false}) async {
-    // On refresh: show the shimmer bar but keep old articles visible — don't
-    // clear _news until we have a successful response.  This prevents a blank
-    // list + possible index-out-of-bounds crash during the in-flight period.
     if (!isRefresh) {
       if (mounted) setState(() => _isLoadingNews = true);
     }
     try {
-      final response = await http.get(
-          Uri.parse('$kApiBaseUrl/api/mint_news'));
+      final articles = await MarketNewsService.fetchNewsFeed();
       if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _news = List<dynamic>.from(data['news'] ?? []);
-          _isLoadingNews = false;
-        });
-      } else {
-        setState(() => _isLoadingNews = false);
-      }
+      setState(() {
+        _news = articles.map((a) => {
+          'title': a.title,
+          'link': a.link,
+          'source': a.source,
+          'published': a.published,
+          'summary': a.summary,
+        }).toList();
+        _isLoadingNews = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingNews = false);

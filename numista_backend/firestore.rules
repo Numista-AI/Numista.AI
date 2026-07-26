@@ -93,6 +93,17 @@ service cloud.firestore {
       allow write: if false; // Only agent (SA) writes
     }
 
+    // ── Public Wishlists (read-only for clients, backend-only write) ─────────
+    match /public_wishlists/{token} {
+      allow read: if true;
+      allow write: if false;  // backend service account only (via /api/wishlist/create-share)
+    }
+
+    // ── Stripe Webhook Idempotency Events (backend-only read/write) ───────────
+    match /stripe_events/{eventId} {
+      allow read, write: if false; // backend service account only
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

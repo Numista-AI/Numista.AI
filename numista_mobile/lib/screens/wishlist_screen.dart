@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -85,6 +87,106 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   // ── Program Tracker UI ────────────────────────────────────────────────────
 
+  Future<void> _handleShareWishlist(BuildContext context) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
+      );
+
+      final userEmail = AuthService.userEmail;
+      final items = <Map<String, dynamic>>[];
+      for (var coin in _userCoins) {
+        items.add({
+          'title': coin['Denomination'] != null ? "${coin['Year'] ?? ''} ${coin['Denomination']}" : "Numismatic Coin",
+          'target_grade': coin['Grade'] ?? 'Any',
+          'max_price': coin['Purchase Price'] ?? 'Market',
+        });
+      }
+
+      if (items.isEmpty) {
+        items.add({
+          'title': '1921 Morgan Silver Dollar',
+          'target_grade': 'MS65',
+          'max_price': 'Market',
+        });
+      }
+
+      final response = await http.post(
+        Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/wishlist/create-share'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_email': userEmail,
+          'owner_alias': userEmail.split('@').first,
+          'items': items,
+        }),
+      );
+
+      if (context.mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final shareUrl = data['share_url'] as String;
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              backgroundColor: const Color(0xFF161B27),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.share, color: Color(0xFF10B981)),
+                  SizedBox(width: 10),
+                  Text("Share Wish List", style: TextStyle(color: Colors.white)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Your read-only public wish list link is ready:", style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0E1117),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF2A3045)),
+                    ),
+                    child: SelectableText(shareUrl, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Close", style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Share.share("Check out my Numista.AI coin wish list: $shareUrl");
+                  },
+                  icon: const Icon(Icons.send, size: 16),
+                  label: const Text("Share Link"),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to share wish list: $e")),
+        );
+      }
+    }
+  }
+
   Widget _buildAutoMissingSection(Map<String, List<CoinProgram>> allProgramsMap) {
     if (!_coinsLoaded) {
       return const Padding(
@@ -98,11 +200,26 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Coin Programs',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF1E293B))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Coin Programs',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1E293B))),
+            ElevatedButton.icon(
+              onPressed: () => _handleShareWishlist(context),
+              icon: const Icon(Icons.share, size: 15),
+              label: const Text('Share Wish List'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 4),
         const Text(
           'Tap a program to see your full checklist and shop for missing coins.',
