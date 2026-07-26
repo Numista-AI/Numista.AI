@@ -9627,7 +9627,9 @@ async def api_stripe_webhook(request: Request):
     webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
     
     event = None
-    if webhook_secret and sig_header:
+    if webhook_secret:
+        if not sig_header:
+            raise HTTPException(status_code=400, detail="Missing signature header")
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except Exception as e:
