@@ -93,7 +93,7 @@ def get_random_scrape_proxy() -> dict:
         return {"http": None, "https": None}
     global _proxy_pool
     if not _proxy_pool:
-        _proxy_pool = _load_proxy_pool()
+        _proxy_pool = _load_proxy_pool() or []
     if not _proxy_pool:
         return {"http": None, "https": None}
     proxy_url = _random.choice(_proxy_pool)
