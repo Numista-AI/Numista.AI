@@ -90,7 +90,7 @@ def main():
 
             pdf_part = genai_types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
             response = client.models.generate_content(
-                model="gemini-2.5-pro",
+                model="gemini-3.5-flash",
                 contents=[pdf_part, prompt],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

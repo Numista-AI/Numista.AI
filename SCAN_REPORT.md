@@ -10,15 +10,14 @@
 
 ## Critical Errors & Warnings
 1. **Fallback Greysheet Credentials:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` are using default dev fallback keys (`1FCAE3B4-966A-4F25-AFA1-BE242C26856B`), operating the backend in **Basic** tier mode rather than **Advanced** tier.
-2. **Legacy Script Model References:** 6 occurrences of retired model ID `gemini-2.5-pro` detected in legacy one-off scripts under `numista_backend/_scripts/`. All production services and Flutter frontend strictly use active 2026 Gemini models.
 
 ---
 
 ## Model Binding & LLM Health
-* **Model ID Verification:** Verified. No active production services or Flutter frontend components use deprecated/retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`).
-* **Production Model Alignment:** Primary models across active backend services (`config.py`, `main.py`, `brain_processor.py`, `vertex_client.py`) are `gemini-3.6-flash`, `gemini-3.5-flash`, and `gemini-3.1-pro-preview` in strict compliance with AGENTS.md Rule 6.
+* **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across the entire repository.
+* **Production Model Alignment:** Primary models across backend services, scripts, and Flutter frontend (`config.py`, `main.py`, `brain_processor.py`, `vertex_client.py`) are `gemini-3.6-flash`, `gemini-3.5-flash`, and `gemini-3.1-pro-preview` in strict compliance with AGENTS.md Rule 6.
 * **Model Usage Counts Across Codebase:**
-  - `gemini-3.5-flash`: 51 usages
+  - `gemini-3.5-flash`: 56 usages
   - `gemini-3.6-flash`: 2 usages
   - `gemini-3.1-pro-preview`: 4 usages
   - `gemini-3.5-flash-lite`: 3 usages
@@ -80,5 +79,4 @@
 
 ## Recommended Fixes
 1. **Configure Production Greysheet Credentials:** Add production `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables to Cloud Run service settings to unlock **Advanced** bid/ask pricing tier.
-2. **Update Legacy Script Model IDs:** Migrate legacy helper scripts in `numista_backend/_scripts/` from `gemini-2.5-pro` to `gemini-3.5-flash` or `gemini-3.6-flash`.
-3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
+2. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with the production Cloud Run URL (`numista-backend-568985927038.us-central1.run.app`).
