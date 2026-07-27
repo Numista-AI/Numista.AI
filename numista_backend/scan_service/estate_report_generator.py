@@ -129,11 +129,11 @@ def fetch_coins(db: firestore.Client, uid: str) -> list[dict]:
 
 def fetch_estate_profile(db: firestore.Client, uid: str) -> dict:
     """
-    Fetch the estate profile document at users/{uid}/estate_profile.
+    Fetch the estate profile document at users/{uid}/estate_profile/primary.
     Returns an empty dict if missing.
     """
     try:
-        doc = db.collection('users').document(uid).document('estate_profile').get()
+        doc = db.collection('users').document(uid).collection('estate_profile').document('primary').get()
         return doc.to_dict() or {} if doc.exists else {}
     except Exception as exc:
         log.warning(f'[estate] Could not fetch estate_profile for uid={uid}: {exc}')
