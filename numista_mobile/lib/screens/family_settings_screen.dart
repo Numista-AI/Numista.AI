@@ -11,8 +11,9 @@ class FamilySettingsScreen extends StatefulWidget {
     this.userTier = 'Pro',
   }) : super(key: key);
 
-  @override:
+  @override
   State<FamilySettingsScreen> createState() => _FamilySettingsScreenState();
+
 }
 
 class _FamilySettingsScreenState extends State<FamilySettingsScreen> {

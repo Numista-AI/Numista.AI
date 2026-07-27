@@ -16,6 +16,7 @@ import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
+import '../widgets/beta_checklist_widget.dart';
 import '../constants.dart';
 import 'ai_chat_screen.dart';
 
@@ -522,7 +523,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             fontSize: 11,
                             color: Color(0xFF166534))),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  const BetaChecklistWidget(),
+                  const SizedBox(height: 16),
 
                   // ── Header: title + portfolio value ──────────────────────
                   Row(
