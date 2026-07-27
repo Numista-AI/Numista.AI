@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/morgan_chat_context.dart';
+import '../services/tts_voice_service.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../constants.dart';
 
@@ -502,25 +503,60 @@ class _AiChatScreenState extends State<AiChatScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 16, height: 16,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16, height: 16,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                            ),
+                          ),
+                          child: const Icon(Icons.smart_toy_rounded,
+                              color: Colors.white, size: 9),
+                        ),
+                        const SizedBox(width: 5),
+                        const Text('Morgan',
+                            style: TextStyle(
+                                color: _gold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    InkWell(
+                      onTap: () {
+                        TtsVoiceService.toggleSpeak(content, onStateChange: () {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              TtsVoiceService.isPlaying && TtsVoiceService.currentlySpeakingText == content
+                                  ? Icons.stop_circle_outlined
+                                  : Icons.volume_up_outlined,
+                              color: _teal,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              TtsVoiceService.isPlaying && TtsVoiceService.currentlySpeakingText == content
+                                  ? 'Stop'
+                                  : 'Listen',
+                              style: const TextStyle(
+                                  color: _teal, fontSize: 11, fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Icon(Icons.smart_toy_rounded,
-                          color: Colors.white, size: 9),
                     ),
-                    const SizedBox(width: 5),
-                    const Text('Morgan',
-                        style: TextStyle(
-                            color: _gold,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),

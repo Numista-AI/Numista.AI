@@ -18,6 +18,7 @@ import '../utils/file_saver_stub.dart'
 
 import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
+import '../services/backup_export_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -182,39 +183,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Divider(color: borderColor),
           const SizedBox(height: 24),
  
-          // ── Data Export Card ───────────────────────────────────────
+          // ── Data Export & Legal Backup Card ───────────────────────
           _buildSettingsCard(
             context,
-            icon: Icons.download,
-            title: 'Export Collection to CSV',
-            description: 'Download a complete spreadsheet of your entire Numista.AI collection.',
-            actionLabel: 'Download CSV',
-            onAction: () {
+            icon: Icons.download_for_offline_outlined,
+            title: 'Export Collection (JSON / CSV)',
+            description: 'Download your full collection in schemaVersion: 1 JSON (with spot price baseline) or CSV format.',
+            actionLabel: 'Download JSON',
+            onAction: () async {
               if (!GuestSeedService.canDownload) {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: cardBg,
-                    title: Text('Create a Free Account', style: TextStyle(color: headerColor)),
-                    content: Text(
-                        'CSV export is available to registered users. Create a free account to download your collection — your current session will be saved automatically.',
-                        style: TextStyle(color: descColor)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Not Now', style: TextStyle(color: descColor))),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Create Account', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                );
+                _showCreateAccountDialog(context);
               } else {
-                _exportToCsv(context);
+                await BackupExportService.exportJsonDownload();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Collection JSON exported successfully!')),
+                  );
+                }
               }
             },
             isPrimary: true,
           ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.table_chart_outlined, size: 16),
+              label: const Text('Download Companion CSV'),
+              onPressed: () async {
+                if (!GuestSeedService.canDownload) {
+                  _showCreateAccountDialog(context);
+                } else {
+                  await BackupExportService.exportCsvDownload();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Collection CSV spreadsheet downloaded!')),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+
+  void _showCreateAccountDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardBg = theme.cardColor;
+    final headerColor = theme.textTheme.titleMedium?.color ?? Colors.white;
+    final descColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardBg,
+        title: Text('Create a Free Account', style: TextStyle(color: headerColor)),
+        content: Text(
+            'Collection export is available to registered users. Create a free account to download your collection — your current session will be saved automatically.',
+            style: TextStyle(color: descColor)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Not Now', style: TextStyle(color: descColor))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Create Account', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
  
           const SizedBox(height: 16),
           // ── Dedup Sweep card ───────────────────────────────────────────────

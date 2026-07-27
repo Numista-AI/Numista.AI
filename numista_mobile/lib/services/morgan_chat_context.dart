@@ -28,6 +28,10 @@ class MorganCollectionContext {
   final Set<String> metals;
   final int gradeCount;  // coins with a numeric PCGS/NGC grade
 
+  // ── Golden Schema Verification Indicators ──────────────────────────────────
+  final int verifiedCount;       // coins with verification_confidence == HIGH or cert number
+  final int unverifiedCount;     // unverified or self-entered coins
+
   // ── Owner ────────────────────────────────────────────────────────────────
   final String userName;
 
@@ -42,12 +46,14 @@ class MorganCollectionContext {
     required this.bySeries,
     required this.metals,
     required this.gradeCount,
+    required this.verifiedCount,
+    required this.unverifiedCount,
     required this.userName,
   });
 
   bool get isEmpty => totalCoins == 0;
 
-  // ── Build the system-prompt string ────────────────────────────────────────
+  // ── Build the system-prompt string (Max ~1,200 tokens) ─────────────────────
   String get systemPrompt {
     if (isEmpty) {
       return '''You are Morgan, an expert AI numismatic guide for Numista.AI.
@@ -57,14 +63,15 @@ Always speak in plain English — avoid jargon.
 Keep responses concise (1-3 short paragraphs max).''';
     }
 
-    final topList = topCoinsByValue.take(10).join('\n  • ');
+    final topList = topCoinsByValue.take(8).join('\n  • ');
     final recentList = recentlyAdded.take(5).join(', ');
     final denomList = byDenomination.entries
-        .map((e) => '${e.key} (${e.value})')
+        .take(6)
+        .map((e) => '${e.key}: ${e.value}')
         .join(', ');
     final seriesList = bySeries.entries
         .take(5)
-        .map((e) => '${e.key} (${e.value})')
+        .map((e) => '${e.key}: ${e.value}')
         .join(', ');
     final metalList = metals.join(', ');
     final profitStr = profit >= 0
@@ -72,32 +79,33 @@ Keep responses concise (1-3 short paragraphs max).''';
         : '-\$${profit.abs().toStringAsFixed(2)}';
 
     return '''You are Morgan, an expert AI numismatic guide for Numista.AI.
-You know $userName's coin collection intimately. Here is their current collection data:
+You know $userName's coin collection intimately. Here is their current collection summary:
 
-COLLECTION SUMMARY:
-  • Total coins: $totalCoins
-  • Estimated portfolio value: \$${portfolioValue.toStringAsFixed(2)}
-  • Acquisition cost: \$${acquisitionCost.toStringAsFixed(2)}
-  • Profit / Loss: $profitStr
-  • Professionally graded coins: $gradeCount
+COLLECTION METRICS (GOLDEN SCHEMA VERIFIED):
+  • Total Coins: $totalCoins ($verifiedCount Verified / PCGS/NGC Slabs, $unverifiedCount Self-Entered)
+  • Estimated Portfolio Value: \$${portfolioValue.toStringAsFixed(2)}
+  • Total Acquisition Cost: \$${acquisitionCost.toStringAsFixed(2)}
+  • Portfolio P/L: $profitStr
+  • Certified Graded Coins: $gradeCount
 
-TOP COINS BY VALUE:
+TOP COINS BY ESTIMATED VALUE:
   • $topList
 
 RECENTLY ADDED:
   $recentList
 
-BREAKDOWN BY DENOMINATION:
-  $denomList
+SERIES & DENOMINATION BREAKDOWN:
+  • Denominations: $denomList
+  • Key Programs/Series: $seriesList
+  • Metals Present: $metalList
 
-KEY SERIES / PROGRAMS:
-  $seriesList
-
-METALS IN COLLECTION:
-  $metalList
-
-INSTRUCTIONS:
+INSTRUCTIONS & CONSTRAINTS:
   - Address the user as "$userName" naturally in conversation.
+  - Rely on verified slab data for valuation statements when supporting estate planning queries.
+  - Always speak in plain, friendly English — explain numismatic terms clearly.
+  - Keep responses concise and focused (max 1-3 short paragraphs).
+  - If asked about a coin not in the data, state clearly that it is not present in their collection catalog.''';
+  }
   - Use this collection data to answer any questions about their specific coins.
   - When asked "what is my most valuable coin?" use the TOP COINS list above.
   - Always speak in plain, friendly English — no jargon without explanation.
@@ -189,6 +197,8 @@ class MorganChatContextService {
       double portfolioValue = 0;
       double acquisitionCost = 0;
       int gradeCount = 0;
+      int verifiedCount = 0;
+      int unverifiedCount = 0;
 
       final Map<String, int> byDenomination = {};
       final Map<String, int> bySeries = {};
@@ -205,9 +215,17 @@ class MorganChatContextService {
         portfolioValue  += value;
         acquisitionCost += cost;
 
-        // Grade count
+        // Grade & Verification count
         final condition = data['Condition']?.toString() ?? '';
+        final certNo = data['Certification Number']?.toString().trim() ?? '';
+        final confidence = data['verification_confidence']?.toString().toUpperCase() ?? '';
+
         if (RegExp(r'\d{2,3}').hasMatch(condition)) gradeCount++;
+        if (certNo.isNotEmpty || confidence == 'HIGH') {
+          verifiedCount++;
+        } else {
+          unverifiedCount++;
+        }
 
         // By denomination
         final denom = data['Denomination']?.toString().trim() ?? '';
@@ -295,6 +313,8 @@ class MorganChatContextService {
         bySeries: bySeries,
         metals: metals,
         gradeCount: gradeCount,
+        verifiedCount: verifiedCount,
+        unverifiedCount: unverifiedCount,
         userName: userName,
       );
 
@@ -317,6 +337,8 @@ class MorganChatContextService {
         bySeries: {},
         metals: {},
         gradeCount: 0,
+        verifiedCount: 0,
+        unverifiedCount: 0,
         userName: userName,
       );
 }
