@@ -15,11 +15,12 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
   Map<String, dynamic>? _coaResult;
 
   Future<void> _pickAndAnalyzeCoa() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['jpg', 'png', 'pdf', 'jpeg'],
       withData: true,
     );
+
 
     if (result == null || result.files.isEmpty) return;
 
