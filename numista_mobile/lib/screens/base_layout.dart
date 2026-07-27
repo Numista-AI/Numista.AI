@@ -35,7 +35,6 @@ import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
 import '../widgets/beta_feedback_widget.dart';
-import '../widgets/beta_checklist_widget.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_greeter.dart';
 
