@@ -105,6 +105,26 @@ try:
 except Exception as _vx_err:
     logger.warning(f"Vertex AI Search not available: {_vx_err}")
 
+# ─── RAG INFO BOT ENDPOINT (gemini-embedding-2) ──────────────────────────────
+class RagQueryRequest(BaseModel):
+    query: str
+    collection_context: Optional[dict] = None
+
+@app.post("/api/v1/rag/query")
+async def rag_query_endpoint(req: RagQueryRequest):
+    """Executes RAG similarity search and generates grounded Morgan AI responses."""
+    try:
+        import sys
+        numista_ai_dir = str(Path(__file__).parent.parent / "numista_ai")
+        if numista_ai_dir not in sys.path:
+            sys.path.append(numista_ai_dir)
+        from info_bot import query_rag_info_bot
+        res = query_rag_info_bot(req.query, req.collection_context)
+        return res
+    except Exception as e:
+        logger.error(f"RAG query endpoint error: {e}")
+        return {"query": req.query, "answer": f"RAG search error: {str(e)}", "status": "error"}
+
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "global"
 
