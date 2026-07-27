@@ -97,7 +97,8 @@ numista_hardware/captures/
 numista_hardware/verified_images/
 numista_hardware/build/
 numista_hardware/*.exe
-numista_hardware/*.msi
+# Local RAG generated index
+rag_index.json
 numista_hardware/*.dmg
 numista_backend/scans/
 numista_backend/receipt_labels/
