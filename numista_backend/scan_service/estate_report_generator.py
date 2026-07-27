@@ -188,7 +188,20 @@ def build_collection_summary(
         override = estate_overrides.get(doc_id, {})
 
         # ── FMV ───────────────────────────────────────────────────────────────
-        raw_fmv_str = coin.get('AI Estimated Value', '') or coin.get('ai_estimated_value', '')
+        # Valuation hierarchy: AI Estimated Value -> Greysheet Bid/Ask -> Purchase Cost
+        raw_fmv_str = (
+            coin.get('AI Estimated Value', '') or
+            coin.get('ai_estimated_value', '')
+        )
+        if not raw_fmv_str or str(raw_fmv_str).strip() in ('Pending', 'Pending Valuation', 'N/A', '', 'None', 'null'):
+            raw_fmv_str = (
+                coin.get('greysheetBid', '') or
+                coin.get('greysheetAsk', '') or
+                coin.get('greysheet_value', '') or
+                coin.get('Purchase Cost', '') or
+                coin.get('Cost', '') or
+                coin.get('purchase_cost', '')
+            )
         fmv_override = override.get('fmv_override')
 
         if fmv_override is not None:
