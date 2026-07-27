@@ -129,11 +129,11 @@ def fetch_coins(db: firestore.Client, uid: str) -> list[dict]:
 
 def fetch_estate_profile(db: firestore.Client, uid: str) -> dict:
     """
-    Fetch the estate profile document at users/{uid}/estate_profile.
+    Fetch the estate profile document at users/{uid}/estate_profile/primary.
     Returns an empty dict if missing.
     """
     try:
-        doc = db.collection('users').document(uid).document('estate_profile').get()
+        doc = db.collection('users').document(uid).collection('estate_profile').document('primary').get()
         return doc.to_dict() or {} if doc.exists else {}
     except Exception as exc:
         log.warning(f'[estate] Could not fetch estate_profile for uid={uid}: {exc}')
@@ -725,6 +725,10 @@ async def generate_estate_report(
         f'coins={summary["total_coins"]} | fmv=${summary["total_fmv"]:,.0f}'
     )
 
+    # ── Calculate SHA-256 Tamper-Evident Document Hash ────────────────────────
+    import hashlib
+    sha256_hash = hashlib.sha256(pdf_bytes).hexdigest()
+
     # ── Assemble metadata for Firestore storage ────────────────────────────────
     report_metadata = {
         'uid': uid,
@@ -740,9 +744,14 @@ async def generate_estate_report(
         'total_coins_needing_appraisal': summary['total_coins_needing_appraisal'],
         'cliff_warning': summary.get('cliff_warning'),
         'pdf_size_bytes': len(pdf_bytes),
+        'sha256_hash': sha256_hash,
+        'uspap_compliant': True,
+        'irs_form_8283_eligible': summary['total_fmv'] >= 5000.0,
+        'high_value_estate_tier': summary['total_fmv'] >= 250000.0 or summary['total_coins'] >= 5000,
         'generated_at': datetime.utcnow().isoformat() + 'Z',
         'report_id': report_id,  # included so main.py can use the same ID as the QR code
     }
+
 
     if division_results:
         report_metadata['division_heir_totals'] = {

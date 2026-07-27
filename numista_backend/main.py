@@ -57,6 +57,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routes.subaccount_routes import router as subaccount_router
+app.include_router(subaccount_router)
+
+from scan_service.coa_parser_service import parse_coa_document
+
+@app.post("/api/v1/coa/parse")
+async def api_parse_coa(file: UploadFile = File(...)):
+    """Parse scanned US Mint COA card and extract serial numbers and specs."""
+    content = await file.read()
+    result = parse_coa_document(content, filename=file.filename or "coa_scan.jpg")
+    return result
+
+
+
 # ─── REQUEST OBSERVABILITY MIDDLEWARE ──────────────────────────────────────────
 import contextvars
 

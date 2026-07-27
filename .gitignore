@@ -185,3 +185,8 @@ jseaman_unresolved_coins.csv
 # Missing images log (generated data, not source code)
 **/missing_images_log.csv
 
+
+# Scratch search output
+pin_matches.txt
+search_output.txt
+search_output_refined.txt
