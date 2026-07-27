@@ -140,8 +140,8 @@ class BetaChecklistService {
   ];
 
   static DocumentReference<Map<String, dynamic>> _getDocRef() {
-    final userEmail = AuthService.currentUserEmail.isNotEmpty
-        ? AuthService.currentUserEmail
+    final userEmail = AuthService.userEmail.isNotEmpty
+        ? AuthService.userEmail
         : 'guest_demo_user';
     return _firestore
         .collection('users')

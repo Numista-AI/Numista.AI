@@ -151,7 +151,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
-                        crossAxisAlignment: CrossAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header Row
                           Row(
@@ -299,7 +299,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-            crossAlignment: CrossAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Add Tester Card
               Card(
