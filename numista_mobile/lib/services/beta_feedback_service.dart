@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:typed_data';
 import 'auth_service.dart';
 import 'beta_screenshot_service.dart';
 
@@ -34,10 +33,10 @@ class BetaFeedbackService {
   /// Submits a feedback payload to Firestore under `beta_feedback/{id}`.
   static Future<bool> submitFeedback(BetaFeedbackPayload payload) async {
     try {
-      final userEmail = AuthService.currentUserEmail.isNotEmpty
-          ? AuthService.currentUserEmail
+      final userEmail = AuthService.userEmail.isNotEmpty
+          ? AuthService.userEmail
           : 'anonymous_tester';
-      final userId = AuthService.currentUserId;
+      final userId = AuthService.currentUser?.uid ?? '';
 
       String? screenshotUrl;
       if (payload.screenshotBytes != null) {

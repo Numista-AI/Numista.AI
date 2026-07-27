@@ -108,7 +108,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
                     Row(

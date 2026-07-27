@@ -95,7 +95,7 @@ class BetaChecklistModal extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Row(
@@ -152,7 +152,7 @@ class BetaChecklistModal extends StatelessWidget {
               final double progressRatio = (totalDone / totalTasks).clamp(0.0, 1.0);
 
               return Column(
-                crossAxisAlignment: CrossAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -232,7 +232,7 @@ class BetaChecklistModal extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment:
-                                      CrossAlignment.start,
+                                      CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       children: [
