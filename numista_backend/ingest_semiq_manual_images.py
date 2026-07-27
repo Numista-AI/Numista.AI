@@ -1,4 +1,4 @@
-"""
+r"""
 ingest_semiq_manual_images.py
 ==============================
 Direct ingest of manually-downloaded Semiquincentennial coin images.
