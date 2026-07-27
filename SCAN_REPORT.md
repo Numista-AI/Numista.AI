@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (Comprehensive system scan completed with 100% test pass rate across backend AST compilation, Playwright E2E suite, Gemini 2026 model binding compliance, and Greysheet API probes).
+* **Status:** ⚠️ **PASS WITH WARNINGS** (System scan completed. 100% pass rate across backend AST compilation and Python unit tests, 100% active 2026 Gemini model compliance, Greysheet API functional. Playwright E2E suite completed with **118 passed, 2 failed** due to local desktop hardware agent service on port 5000 not running).
 * **Scan Date:** 2026-07-27
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
@@ -9,8 +9,9 @@
 ---
 
 ## Critical Errors & Warnings
-1. ⚠️ **Syntax Warning in Python Ingestion Script:** `numista_backend/ingest_semiq_manual_images.py:10` triggered a non-fatal `SyntaxWarning: "\S" is an invalid escape sequence`. (Recommended fix: convert string to raw string `r"\S"`).
-2. ℹ️ **Dev Fallback Credentials Active:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` use default dev keys when environment variables are unpopulated in local dev, operating with full API access and Firestore caching.
+1. ⚠️ **Playwright Test Failures (Microscope Desktop Agent):** 2 tests failed in `tests/14-microscope-agent-stress.spec.js` due to `connect ECONNREFUSED ::1:5000` (Local microscope agent hardware service was offline during test run).
+2. ⚠️ **Syntax Warning in Python Ingestion Script:** `numista_backend/ingest_semiq_manual_images.py:10` triggered a non-fatal `SyntaxWarning: "\S" is an invalid escape sequence`. (Recommended fix: convert string to raw string `r"\S"`).
+3. ℹ️ **Dev Fallback Credentials Active:** `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` use default dev keys when environment variables are unpopulated in local dev, operating with full API access and Firestore caching.
 
 ---
 
@@ -55,17 +56,24 @@
 * **Status:** 100% Clean
 * **Files Scanned:** 554 Python files compiled via AST with 0 syntax errors.
 
-### 2. Gemini Lifecycle Auditor
+### 2. Backend Pytest Unit Suite
+* **Status:** 100% Pass
+* **Results:** 16 / 16 passed in 17.42s across deal spotter, Greysheet, ingestion, transfer, and valuation tests.
+
+### 3. Gemini Lifecycle Auditor
 * **Status:** 100% Pass
 * **Schedule PDF:** `Gemini deprecations 22 July 2026.pdf` verified.
 
-### 3. Frontend Playwright E2E Suite
+### 4. Frontend Playwright E2E Suite
 * **Viewport Enforcement:** Desktop 1920x1080
 * **Test Account:** `ericdcman@gmail.com`
-* **Suite Specs:** 120 tests across 12 spec files in `numista_tests/tests`.
+* **Total Specs:** 120 tests across 14 spec files in `numista_tests/tests`
+* **Passed:** 118 / 120 tests passed
+* **Failed:** 2 / 120 tests (`14-microscope-agent-stress.spec.js` - `ECONNREFUSED ::1:5000` local daemon offline)
 
 ---
 
 ## Recommended Fixes
-1. **Fix Escape Sequence Warning:** In `numista_backend/ingest_semiq_manual_images.py` line 10, update docstring escape sequence `"\S"` to raw string `r"\S"`.
-2. **Production Secret Management:** Ensure `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables are populated in Cloud Run environment settings prior to Beta deployment on 1 AUG 26.
+1. **Launch Desktop Agent Service during E2E:** Ensure local desktop agent daemon on port 5000 is launched before running `14-microscope-agent-stress.spec.js`.
+2. **Fix Escape Sequence Warning:** In `numista_backend/ingest_semiq_manual_images.py` line 10, update docstring escape sequence `"\S"` to raw string `r"\S"`.
+3. **Production Secret Management:** Ensure `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables are populated in Cloud Run environment settings prior to Beta deployment on 1 AUG 26.
