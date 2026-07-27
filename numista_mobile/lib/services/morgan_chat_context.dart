@@ -255,13 +255,13 @@ class MorganChatContextService {
           (b['_parsedValue'] as double).compareTo(a['_parsedValue'] as double));
 
       // Build top coins list
-      final topCoinsByValue = ranked.take(10).map((data) {
-        final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-        final mint   = data['Mint Mark']?.toString() ?? '';
-        final series = data['Program/Series']?.toString() ?? '';
-        final theme  = data['Theme/Subject']?.toString() ?? '';
-        final denom  = data['Denomination']?.toString() ?? '';
-        final value  = data['_parsedValue'] as double;
+      final topCoinsByValue = ranked.take(10).map((item) {
+        final year   = item['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        final mint   = item['Mint Mark']?.toString() ?? '';
+        final series = item['Program/Series']?.toString() ?? '';
+        final theme  = item['Theme/Subject']?.toString() ?? '';
+        final denom  = item['Denomination']?.toString() ?? '';
+        final value  = item['_parsedValue'] as double;
 
         final name = series.isNotEmpty && series != 'Multiple'
             ? series
@@ -294,10 +294,10 @@ class MorganChatContextService {
       });
 
       final recentlyAdded = sorted.take(5).map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-        final series = data['Program/Series']?.toString() ?? '';
-        final denom  = data['Denomination']?.toString() ?? '';
+        final item = doc.data() as Map<String, dynamic>;
+        final year   = item['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        final series = item['Program/Series']?.toString() ?? '';
+        final denom  = item['Denomination']?.toString() ?? '';
         final name = series.isNotEmpty && series != 'Multiple' ? series : denom;
         return year.isNotEmpty ? '$year $name' : name;
       }).where((s) => s.trim().isNotEmpty).toList();
