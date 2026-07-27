@@ -225,32 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-  void _showCreateAccountDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    final cardBg = theme.cardColor;
-    final headerColor = theme.textTheme.titleMedium?.color ?? Colors.white;
-    final descColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: cardBg,
-        title: Text('Create a Free Account', style: TextStyle(color: headerColor)),
-        content: Text(
-            'Collection export is available to registered users. Create a free account to download your collection — your current session will be saved automatically.',
-            style: TextStyle(color: descColor)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Not Now', style: TextStyle(color: descColor))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Create Account', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
- 
           const SizedBox(height: 16),
           // ── Dedup Sweep card ───────────────────────────────────────────────
           _buildDedupCard(context),
@@ -1643,6 +1618,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
   }
+
+  void _showCreateAccountDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardBg = theme.cardColor;
+    final headerColor = theme.textTheme.titleMedium?.color ?? Colors.white;
+    final descColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardBg,
+        title: Text('Create a Free Account', style: TextStyle(color: headerColor)),
+        content: Text(
+            'Collection export is available to registered users. Create a free account to download your collection \u2014 your current session will be saved automatically.',
+            style: TextStyle(color: descColor)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Not Now', style: TextStyle(color: descColor))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Create Account', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Duplicate Results Dialog ─────────────────────────────────────────────────
@@ -2209,4 +2210,3 @@ class _DedupDialogState extends State<_DedupDialog> {
     );
   }
 }
-
