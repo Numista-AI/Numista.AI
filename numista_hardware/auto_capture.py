@@ -1003,6 +1003,11 @@ def start_command_watcher():
 # This makes the flow work from any HTTPS browser without mixed-content blocks.
 
 if __name__ == "__main__":
+    import sys
+    IS_MOCK_HARDWARE = "--mock-hardware" in sys.argv or "--mock" in sys.argv
+    if IS_MOCK_HARDWARE:
+        logging.info("[MOCK] Running in Mock Hardware Mode for automated testing.")
+
     logging.info("="*55)
     logging.info("  Numista.AI Hardware Agent")
     logging.info("  Flask status server  -> https://localhost:5000")
@@ -1014,14 +1019,17 @@ if __name__ == "__main__":
 
     # Start idle preview worker so the Flutter app shows the camera feed
     # immediately, before the user presses Start Scan.
-    _preview_thread = threading.Thread(
-        target=_idle_preview_worker, daemon=True, name="IdlePreview"
-    )
-    _preview_thread.start()
-    logging.info("[PREVIEW] Idle preview thread launched.")
+    if not IS_MOCK_HARDWARE:
+        _preview_thread = threading.Thread(
+            target=_idle_preview_worker, daemon=True, name="IdlePreview"
+        )
+        _preview_thread.start()
+        logging.info("[PREVIEW] Idle preview thread launched.")
+    else:
+        logging.info("[MOCK] Bypassing camera preview thread for headless test runner.")
 
     # Start Firestore command watcher (non-blocking — runs on SDK background thread)
-    if USER_EMAIL:
+    if USER_EMAIL and not IS_MOCK_HARDWARE:
         _watcher = start_command_watcher()
 
     # Load SSL cert so Chrome (HTTPS page) can reach this local server.

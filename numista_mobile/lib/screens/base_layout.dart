@@ -33,6 +33,9 @@ import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
+import 'admin_feedback_screen.dart';
+import '../widgets/beta_feedback_widget.dart';
+import '../widgets/beta_checklist_widget.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_greeter.dart';
 
@@ -267,6 +270,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const HumanAiTrainerScreen();
       case 'Admin: Grade Flags':
         return const AdminGradeFlagsScreen();
+      case 'Admin: Beta Dashboard':
+        return const AdminFeedbackScreen();
       case 'Customer Service':
         return const CustomerServiceScreen();
       case 'Inventory':
@@ -347,6 +352,10 @@ class _BaseLayoutState extends State<BaseLayout> {
                 _activeRoute     = 'My Collection';
                 _myCollectionTab = 'Coins';
               }),
+            ),
+            BetaFeedbackWidget(
+              currentRoute: _activeRoute,
+              pageTitle: _activeRoute,
             ),
           ],
         ),
@@ -647,6 +656,10 @@ class _BaseLayoutState extends State<BaseLayout> {
                     _activeRoute     = 'My Collection';
                     _myCollectionTab = 'Coins';
                   }),
+                ),
+                BetaFeedbackWidget(
+                  currentRoute: _activeRoute,
+                  pageTitle: _activeRoute,
                 ),
               ],
             ),
