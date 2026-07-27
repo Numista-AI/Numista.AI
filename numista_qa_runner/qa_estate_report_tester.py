@@ -43,7 +43,7 @@ def seed_estate_profile_and_beneficiary(db: firestore.Client, email: str = TEST_
         "attorney_name": "Robert Vance, Esq.",
         "attorney_firm": "Vance & Associates Estate Law",
         "attorney_phone": "(555) 234-5678",
-        "state": "FL",
+        "state": "NC",
         "beneficiaries": [
             {
                 "id": "ben_nat_001",
@@ -68,7 +68,7 @@ async def run_estate_report_test():
     
     report_request = {
         "mode": "estate_bequest",
-        "state": "FL",
+        "state": "NC",
         "owner_name": "Eric",
         "report_date": datetime.now().strftime("%B %d, %Y"),
         "beneficiaries": [
