@@ -1,17 +1,23 @@
 # ================================================================
-# run_tests.ps1 — Numista.AI Automated Test Runner
-# Called by Windows Task Scheduler every 2 days at 2:00 AM
-# Runs Playwright tests against https://numista.ai
-# Generates a markdown morning report in ./reports/
+# run_tests.ps1 — Numista.AI Multi-Layer Automated Audit & Test Runner
+# Called by Windows Task Scheduler daily at 7:00 AM
+# Performs:
+#   1. Pre-test HTTP cold-start site & API warming
+#   2. Python backend Pytest unit suite execution
+#   3. Playwright E2E test suite execution against https://numista.ai
+#   4. Multi-layer morning report generation & SCAN_REPORT.md auto-sync
+#   5. Screenshot & log artifact cleanup (> 14 days)
 #
 # Manual run: cd numista_tests && .\run_tests.ps1
 # ================================================================
 
 $TestDir    = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$ProjectDir = Split-Path -Parent $TestDir
 $LogFile    = Join-Path $TestDir "reports\runner.log"
+$PytestLog  = Join-Path $TestDir "reports\pytest-output.txt"
 $Date       = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-# Ensure reports dir exists
+# Ensure directories exist
 $null = New-Item -ItemType Directory -Force -Path (Join-Path $TestDir "reports")
 $null = New-Item -ItemType Directory -Force -Path (Join-Path $TestDir "screenshots")
 
@@ -19,17 +25,26 @@ function Log($msg) {
   $ts = Get-Date -Format "HH:mm:ss"
   $line = "[$ts] $msg"
   Write-Host $line
-  Add-Content -Path $LogFile -Value $line
+  Add-Content -Path $LogFile -Value $line -ErrorAction SilentlyContinue
 }
 
 Log "========================================"
-Log "Numista.AI Test Run Starting: $Date"
+Log "Numista.AI Multi-Layer Audit Starting: $Date"
 Log "========================================"
 
-# Navigate to test directory
 Push-Location $TestDir
 
-# 1. Install/update dependencies
+# 0. Pre-test Cold-Start Site Warming
+Log "Warming up site & backend endpoints (cold-start mitigation)..."
+try {
+  $null = Invoke-WebRequest -Uri "https://numista.ai" -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
+  $null = Invoke-WebRequest -Uri "https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config" -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
+  Log "Site warm-up complete."
+} catch {
+  Log "Site warm-up completed with fallback."
+}
+
+# 1. Install/update npm dependencies
 Log "Installing dependencies..."
 $npmResult = & npm install 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -39,49 +54,63 @@ if ($LASTEXITCODE -ne 0) {
 }
 Log "Dependencies ready."
 
-# 2. Install Playwright browsers (chromium only)
+# 2. Ensure Playwright chromium browser is installed
 Log "Ensuring Playwright browsers are installed..."
 & npx playwright install chromium 2>&1 | Out-Null
 Log "Browsers ready."
 
-# 3. Clear old screenshots
+# 3. Clean up old screenshots (> 14 days old)
 $screenshotDir = Join-Path $TestDir "screenshots"
-Get-ChildItem -Path $screenshotDir -Filter "*.png" | Remove-Item -Force -ErrorAction SilentlyContinue
-Log "Old screenshots cleared."
+Get-ChildItem -Path $screenshotDir -Filter "*.png" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } | Remove-Item -Force -ErrorAction SilentlyContinue
+Log "Screenshots storage verified & cleaned."
 
-# 4. Run Playwright tests
-Log "Running Playwright tests against https://numista.ai ..."
+# 4. Run Backend Pytest Unit Suite
+Log "Running Python backend Pytest unit suite..."
+$pytestExe = Join-Path $ProjectDir "numista_backend\.venv\Scripts\pytest.exe"
+$pytestExit = 0
+if (Test-Path $pytestExe) {
+  Push-Location (Join-Path $ProjectDir "numista_backend")
+  $pytestOutput = & $pytestExe "tests" --capture=no 2>&1
+  $pytestExit = $LASTEXITCODE
+  Pop-Location
+  Set-Content -Path $PytestLog -Value $pytestOutput
+  if ($pytestExit -eq 0) {
+    Log "Backend Pytest unit suite PASSED."
+  } else {
+    Log "WARNING: Pytest unit suite reported failures."
+  }
+} else {
+  Log "WARNING: Backend venv pytest executable not found at $pytestExe"
+}
+
+# 5. Run Playwright E2E UI Tests
+Log "Running Playwright E2E tests against https://numista.ai ..."
 $testOutput = & npx playwright test 2>&1
 $exitCode = $LASTEXITCODE
-
-# Write raw output to log
 Add-Content -Path $LogFile -Value $testOutput
 
 if ($exitCode -eq 0) {
-  Log "All tests PASSED."
+  Log "Playwright E2E suite PASSED."
 } else {
-  Log "WARNING: Some tests FAILED (exit code $exitCode)."
+  Log "WARNING: Playwright E2E suite reported failures (exit code $exitCode)."
 }
 
-# 5. Generate morning report
-Log "Generating morning report..."
+# 6. Generate 360-Degree Morning Report & Auto-Sync SCAN_REPORT.md
+Log "Generating 360-degree morning report..."
 $reportOutput = & node generate_report.js 2>&1
 Add-Content -Path $LogFile -Value $reportOutput
 Log $reportOutput
 
-# 6. Find the report file and print path
-$reportDate = Get-Date -Format "yyyy-MM-dd"
-$reportFile = Join-Path $TestDir "reports\${reportDate}_morning_report.md"
-if (Test-Path $reportFile) {
-  Log "Morning report: $reportFile"
-} else {
-  Log "WARNING: Report file not found at expected path."
+# 7. Non-blocking alert logging if failures occur
+if ($exitCode -ne 0 -or $pytestExit -ne 0) {
+  Log "ALERT: Failures detected in automated audit! Check reports folder."
 }
 
-Pop-Location
+# 8. Artifact Cleanup (old logs older than 30 days)
+Get-ChildItem -Path (Join-Path $TestDir "reports") -Filter "*.log" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force -ErrorAction SilentlyContinue
 
-Log "Test run complete."
+Pop-Location
+Log "Multi-layer audit run complete."
 Log "========================================"
 
-# Return exit code so Task Scheduler can track failures
 exit $exitCode
