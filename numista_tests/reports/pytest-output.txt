@@ -1,0 +1,40 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
+configfile: pytest.ini
+plugins: anyio-4.13.0
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+collected 16 items
+
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [d7a2aada] GET /api/wishlist/deals/test@numista.ai -> 200 (4ms)
+[32mINFO   [0m [main] [c32dbcb7] POST /api/wishlist/deals/check -> 200 (2ms)
+.
+tests\test_greysheet.py [32mINFO   [0m [main] [dca99421] POST /api/greysheet/resolve -> 200 (1ms)
+.[32mINFO   [0m [main] [253f4bd9] POST /api/greysheet/resolve -> 200 (1ms)
+.[32mINFO   [0m [main] [a36ea8d9] GET /api/greysheet/pricing/429 -> 200 (7ms)
+.[32mINFO   [0m [main] [dc7afa33] GET /api/greysheet/deals -> 200 (1ms)
+[32mINFO   [0m [main] [25f74291] POST /api/greysheet/deals/refresh -> 200 (1ms)
+.[32mINFO   [0m [main] [07107664] POST /api/portfolio/snapshot/daily -> 200 (6ms)
+.
+tests\test_ingestion.py [32mINFO   [0m [main] [7a8a6931] GET /api/ingestion/jobs -> 200 (1ms)
+.[32mINFO   [0m [main] [ae61badf] POST /api/ingestion/batch_async -> 200 (2ms)
+[32mINFO   [0m [main] [3623173b] GET /api/ingestion/status/job_afe381df -> 200 (1ms)
+.
+tests\test_transfer.py ..
+tests\test_valuations.py ....
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\google\genai\types.py:43
+  C:\Users\ericd\Documents\MyVertexProject\numista_backend\.venv\Lib\site-packages\google\genai\types.py:43: DeprecationWarning: '_UnionGenericAlias' is deprecated and slated for removal in Python 3.17
+    VersionedUnionType = Union[builtin_types.UnionType, _UnionGenericAlias]
+
+tests/test_greysheet.py::test_daily_snapshot_endpoint
+  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+
+tests/test_greysheet.py::test_daily_snapshot_endpoint
+  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8679: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    response_snapshot["timestamp"] = datetime.utcnow().isoformat()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 16 passed, 3 warnings in 5.36s ========================
