@@ -163,12 +163,12 @@ GRADE_STATS_CACHE = {}
 GRADE_WRITE_TIMESTAMPS = {}
 
 # ─── GEMINI MODEL CONFIGURATION ──────────────────────────────────────────────
-# Per official deprecation schedule as of Jun 11, 2026
-# (see: Gemini Models as of 11 JUN 2026.png)
+# Per official deprecation schedule as of July 21, 2026:
 #
-#   gemini-3.5-flash       Released May 19, 2026. NO shutdown announced. → PRIMARY
+#   gemini-3.6-flash       Released July 21, 2026. NO shutdown announced. → PRIMARY WORKHORSE
 #   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
-#   gemini-3.5-flash-lite  Released May 7, 2026.  Shutdown May 7, 2027.  → lite tasks
+#   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced. → LITE TASKS
+#   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced. → IMAGE EDITING
 #
 # Model bindings are centralized in config.py
 PRIMARY_MODEL = GEMINI_FLASH_MODEL
