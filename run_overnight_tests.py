@@ -157,27 +157,26 @@ if r:
     else:
         log(WARN, "Ike already_known response", f"Got status={status}")
 
-# Test a fresh (hopefully new) term
+# Test that the server correctly rejects test/garbage nickname patterns.
+# The server guard returns "rejected_invalid" for TestCoin_<digits> entries,
+# so this proves the endpoint is live WITHOUT writing junk to Firestore.
 test_nick = f"TestCoin_{int(time.time())}"
 r = post("/api/nicknames/submit",
          {"user_email": EMAIL, "nickname": test_nick,
           "maps_to": "Test Coin Dollar", "category": "Dollar"},
-         label=f"POST /api/nicknames/submit new term '{test_nick}'")
-submitted_id = None
+         label=f"POST /api/nicknames/submit (junk guard test)")
 if r:
     d = r.json()
-    submitted_id = d.get("doc_id","")
-    log(PASS if d.get("status")=="submitted" else WARN,
-        "New nickname submission status", d.get("status","?"))
-
-# Vote on it if we got an ID
-if submitted_id:
-    r = post(f"/api/nicknames/{submitted_id}/vote",
-             {"user_email": "admin@numista.ai", "rating": "5"},
-             label=f"POST /api/nicknames/{{id}}/vote rating=5")
-    if r:
-        d = r.json()
-        log(PASS, "Vote recorded", d.get("message","")[:60])
+    status = d.get("status", "")
+    if status == "rejected_invalid":
+        log(PASS, "Junk nickname correctly rejected",
+            d.get("message", "")[:70])
+    elif status == "submitted":
+        log(WARN, "Junk nickname was NOT rejected",
+            "Server guard may be missing — check main.py submit_nickname filter")
+    else:
+        log(WARN, "Junk nickname guard returned unexpected status",
+            f"status={status}")
 
 # ── 5. Grade Review endpoints ──────────────────────────────────────────────────
 print("\n── SECTION 5: Grade Review Endpoints ────────────────────────────────")

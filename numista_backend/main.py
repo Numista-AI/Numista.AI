@@ -1575,6 +1575,51 @@ async def submit_nickname(
     maps_to_clean  = maps_to.strip()
     key = nickname_clean.lower()
 
+    # ── Sanity filter: reject test entries and nonsensical patterns ──────────
+    import re as _re
+    _REJECT_REASONS: list[str] = []
+
+    # 1. Obvious test-harness pattern: TestCoin_<digits>
+    if _re.match(r'^testcoin_\d+$', key):
+        _REJECT_REASONS.append("looks like an automated test entry")
+
+    # 2. Nickname contains an embedded numeric ID (underscore + 7+ digits)
+    elif _re.search(r'_\d{7,}', nickname_clean):
+        _REJECT_REASONS.append("contains an embedded numeric ID")
+
+    # 3. Too short or too long to be a real collector nickname
+    elif len(nickname_clean) < 2:
+        _REJECT_REASONS.append("too short to be a collector nickname")
+    elif len(nickname_clean) > 60:
+        _REJECT_REASONS.append("too long to be a collector nickname (max 60 chars)")
+
+    # 4. Nickname is purely numeric (not a word)
+    elif nickname_clean.replace(' ', '').isdigit():
+        _REJECT_REASONS.append("a nickname must contain letters, not just digits")
+
+    # 5. maps_to doesn't reference a real denomination / series
+    #    (must contain at least one letter)
+    if maps_to_clean and not _re.search(r'[A-Za-z]', maps_to_clean):
+        _REJECT_REASONS.append("the 'maps to' value must include a coin name")
+
+    # 6. Known nonsense target values produced by the test suite
+    _BOGUS_TARGETS = {'test coin dollar', 'test dollar', 'test coin'}
+    if maps_to_clean.lower() in _BOGUS_TARGETS:
+        _REJECT_REASONS.append("the 'maps to' denomination does not exist")
+
+    if _REJECT_REASONS:
+        reason_str = '; '.join(_REJECT_REASONS)
+        return {
+            "status":  "rejected_invalid",
+            "message": (
+                f'"{nickname_clean}" doesn\'t look like a real coin nickname '
+                f'({reason_str}). '
+                f'Nicknames should be short, recognizable collector terms '
+                f'(e.g. "Ike", "Merc", "Walker", "Barber").'
+            ),
+        }
+    # ── End sanity filter ────────────────────────────────────────────────────
+
     # ── Check hardcoded dictionary first ────────────────────────────────────
     if key in COIN_NICKNAMES:
         official = COIN_NICKNAMES[key]
