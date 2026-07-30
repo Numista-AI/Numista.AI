@@ -9,6 +9,7 @@ import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../constants.dart';
+import 'add_coins_hub.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  AiChatScreen — Phase 3: Collection-Aware Morgan Chat
@@ -567,6 +568,41 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   color: isUser ? Colors.white : Colors.white.withAlpha(230),
                   height: 1.55),
             ),
+            if (!isUser && content.toLowerCase().contains('not in your collection')) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub()));
+                    },
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('➕ Add Coin to Collection'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _teal,
+                      foregroundColor: Colors.black87,
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub(initialTabName: 'camera')));
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                    label: const Text('📷 Scan Coin Photo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: _teal),
+                      textStyle: const TextStyle(fontSize: 13),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -613,27 +649,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: _bg,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: _teal.withAlpha(60)),
-              ),
-              child: TextField(
-                controller: _controller,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Ask Morgan about your collection…',
-                  hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                ),
-                onSubmitted: _send,
-                textInputAction: TextInputAction.send,
-                maxLines: null,
                 textCapitalization: TextCapitalization.sentences,
               ),
             ),

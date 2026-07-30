@@ -456,58 +456,23 @@ class _LoginScreenState extends State<LoginScreen>
         Center(
           child: TextButton(
             onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-            child: Text('Forgot your PIN?', style: TextStyle(color: _grey, fontSize: 13)),
+            child: Text('Forgot your 6-digit PIN?', style: TextStyle(color: _grey, fontSize: 13)),
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _divider('explore without an account'),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        // ── Guest Entry Options ─────────────────────────────────────────
-        Row(
-          children: [
-            // Browse Demo — read-only
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _loading ? null : _browseDemo,
-                icon: const Icon(Icons.search_rounded, size: 18),
-                label: const Text('Browse Demo'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _sub,
-                  side: const BorderSide(color: _border),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Try It Free — anonymous auth + wizard
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _loading ? null : _signInAsGuest,
-                icon: _loading
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.rocket_launch_rounded, size: 18),
-                label: const Text('Try It Free'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488), // teal — distinct from blue sign-in
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        // ── Guest & Demo Streamlined Option ─────────────────────────────
         Center(
-          child: Text(
-            'Browse Demo: read-only  •  Try It Free: all features, no commitment',
-            style: TextStyle(color: _grey, fontSize: 11),
-            textAlign: TextAlign.center,
+          child: TextButton.icon(
+            onPressed: _loading ? null : _browseDemo,
+            icon: const Icon(Icons.explore_outlined, size: 18, color: _blue),
+            label: const Text(
+              'Explore Read-Only Demo →',
+              style: TextStyle(color: _blue, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
       ],
@@ -639,10 +604,10 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Reset Your PIN',
+        const Text('Reset Your 6-Digit PIN',
             style: TextStyle(color: _text, fontSize: 26, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text("Enter your email and we'll send you a link to reset your PIN.",
+        const Text("Enter your account email address. We'll send a 6-digit PIN reset link from auth@numista.ai directly to your Inbox.",
             style: TextStyle(color: _sub, fontSize: 14)),
         const SizedBox(height: 32),
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
@@ -651,7 +616,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         _textField(controller: _resetEmailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 24),
-        _primaryButton(label: _loading ? 'Sending…' : 'Send Reset Link', onTap: _loading ? null : _sendResetLink),
+        _primaryButton(label: _loading ? 'Sending…' : 'Send 6-Digit PIN Reset Link', onTap: _loading ? null : _sendResetLink),
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => setState(() { _showResetForm = false; _error = null; _successMsg = null; }),
