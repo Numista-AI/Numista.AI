@@ -64,9 +64,12 @@ class GreysheetService:
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         self._lazy_init()
         url = f"{BASE_URL}/{endpoint}"
+        query_params = dict(params) if params else {}
+        if "apiLevel" not in query_params:
+            query_params["apiLevel"] = "advanced"
         try:
             # Bypass SSL certificate verification for expired host certs
-            response = requests.get(url, headers=self._headers, params=params, verify=False, timeout=15)
+            response = requests.get(url, headers=self._headers, params=query_params, verify=False, timeout=15)
             if response.status_code == 200:
                 return response.json()
             else:
