@@ -722,6 +722,25 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  Widget _mintChip(String label, String code) => Padding(
+    padding: const EdgeInsets.only(right: 6),
+    child: InkWell(
+      onTap: () {
+        _controller.text = code;
+        _send(code);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _teal.withAlpha(80)),
+        ),
+        child: Text(label, style: const TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold)),
+      ),
+    ),
+  );
+
   Widget _pill(String label) => GestureDetector(
     onTap: () => _send(label),
     child: Container(
