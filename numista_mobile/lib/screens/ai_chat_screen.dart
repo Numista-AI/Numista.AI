@@ -9,6 +9,7 @@ import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../constants.dart';
+import 'add_coins_hub.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  AiChatScreen — Phase 3: Collection-Aware Morgan Chat
@@ -567,6 +568,41 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   color: isUser ? Colors.white : Colors.white.withAlpha(230),
                   height: 1.55),
             ),
+            if (!isUser && content.toLowerCase().contains('not in your collection')) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub()));
+                    },
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('➕ Add Coin to Collection'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _teal,
+                      foregroundColor: Colors.black87,
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub(initialTabName: 'camera')));
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                    label: const Text('📷 Scan Coin Photo'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: _teal),
+                      textStyle: const TextStyle(fontSize: 13),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -613,57 +649,97 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: _bg,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: _teal.withAlpha(60)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Tap-friendly Mint Mark Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Text('Mint Marks: ', style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 4),
+                  _mintChip('Philadelphia (P)', 'P'),
+                  _mintChip('Denver (D)', 'D'),
+                  _mintChip('San Francisco (S)', 'S'),
+                  _mintChip('Carson City (CC)', 'CC'),
+                  _mintChip('New Orleans (O)', 'O'),
+                ],
               ),
-              child: TextField(
-                controller: _controller,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Ask Morgan about your collection…',
-                  hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
+            ),
+            Row(children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: _bg,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: _teal.withAlpha(60)),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Ask Morgan about your collection…',
+                      hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    onSubmitted: _send,
+                    textInputAction: TextInputAction.send,
+                    maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
                 ),
-                onSubmitted: _send,
-                textInputAction: TextInputAction.send,
-                maxLines: null,
-                textCapitalization: TextCapitalization.sentences,
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _isLoading ? null : () => _send(_controller.text),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                color: _isLoading ? _surf : _teal,
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: _isLoading
-                        ? Colors.transparent
-                        : _teal.withAlpha(200),
-                    width: 1.5),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isLoading ? null : () => _send(_controller.text),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: _isLoading ? _surf : _teal,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: _isLoading
+                            ? Colors.transparent
+                            : _teal.withAlpha(200),
+                        width: 1.5),
+                  ),
+                  child: Icon(
+                    _isLoading ? Icons.hourglass_bottom_rounded : Icons.send_rounded,
+                    color: _isLoading ? _sub : Colors.black87,
+                    size: 20,
+                  ),
+                ),
               ),
-              child: Icon(
-                _isLoading ? Icons.hourglass_bottom_rounded : Icons.send_rounded,
-                color: _isLoading ? _sub : Colors.black87,
-                size: 20,
-              ),
-            ),
-          ),
-        ]),
+            ]),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _mintChip(String label, String code) => Padding(
+    padding: const EdgeInsets.only(right: 6),
+    child: InkWell(
+      onTap: () {
+        _controller.text = code;
+        _send(code);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _teal.withAlpha(80)),
+        ),
+        child: Text(label, style: const TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold)),
+      ),
+    ),
+  );
 
   Widget _pill(String label) => GestureDetector(
     onTap: () => _send(label),

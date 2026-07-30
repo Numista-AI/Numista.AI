@@ -107,7 +107,7 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
       return AuthResult.success(
-          message: 'PIN reset link sent to ${email.trim()}');
+          message: 'PIN reset email sent to ${email.trim()}. Please check your Inbox (and Trash/Spam folder if not visible). Email comes from auth@numista.ai.');
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
     }
