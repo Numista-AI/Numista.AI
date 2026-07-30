@@ -1225,7 +1225,18 @@ Omit any user headers with no reasonable match."""
     col_ref = db.collection('users').document(user_email).collection('review_queue')
     batch    = db.batch()
 
+    MOCK_CERTS = {"43521234", "80912345", "60123984"}
+    MOCK_KEYWORDS = ["example - delete me", "placeholder"]
+
     for _, row in df.iterrows():
+        # Skip example/template rows if user forgot to delete them
+        row_values_str = [str(x).strip().lower() for x in row.values if pd.notna(x)]
+        has_mock_cert = any(c in row_values_str for c in MOCK_CERTS)
+        has_mock_kw = any(any(kw in val for kw in MOCK_KEYWORDS) for val in row_values_str)
+        if has_mock_cert or has_mock_kw:
+            logger.info("Skipping example template row: %s", row_values_str)
+            continue
+
         new_doc: dict = {
             'Program/Series':       '',
             'Theme/Subject':        '',
@@ -2938,24 +2949,203 @@ class DeepDiveRequest(BaseModel):
     collection_context: str = ""
     user_name: str = ""
 
+# ── Morgan Conversational Coin Addition Tools ──────────────────────────────────
+
+def normalize_denomination(raw_denom: str) -> str:
+    if not raw_denom:
+        return "Cent"
+    val = raw_denom.strip().lower()
+    if any(k in val for k in ["penny", "pennies", "1c", "1 cent", "wheat", "lincoln"]):
+        return "Cent"
+    if any(k in val for k in ["nickel", "nickels", "5c", "5 cents", "jefferson"]):
+        return "Five Cents"
+    if any(k in val for k in ["dime", "dimes", "10c", "roosevelt", "mercury"]):
+        return "Dime"
+    if any(k in val for k in ["quarter", "quarters", "25c", "washington", "statehood", "park"]):
+        return "Quarter Dollar"
+    if any(k in val for k in ["half", "halves", "50c", "kennedy", "walking liberty", "franklin"]):
+        return "Half Dollar"
+    if any(k in val for k in ["dollar", "dollars", "buck", "morgan", "peace", "ike", "eisenhower", "sacagawea", "sba", "susan b"]):
+        return "Dollar"
+    return raw_denom.strip().title()
+
+
+def execute_add_coin(
+    user_email: str,
+    year: str,
+    denomination: str,
+    mint_mark: str = "",
+    storage_location: str = "",
+    condition: str = "",
+    cost: str = "",
+    personal_notes: str = "",
+    quantity: int = 1
+) -> dict:
+    try:
+        import re
+        import os
+        from datetime import datetime
+        from firebase_admin import firestore
+
+        norm_denom = normalize_denomination(denomination)
+        
+        clean_mint = (mint_mark or "").strip().upper()
+        if clean_mint in ["NONE", "PLAIN", "NO MARK", "PHILADELPHIA (NO MARK)", "PHILADELPHIA"]:
+            try:
+                yr_int = int(re.sub(r'\D', '', str(year)))
+            except Exception:
+                yr_int = 2026
+            if norm_denom in ["Cent", "Dime", "Quarter Dollar", "Five Cents"] and yr_int < 1980:
+                clean_mint = ""
+            elif clean_mint in ["NONE", "PLAIN", "NO MARK"]:
+                clean_mint = ""
+
+        # Catalog enrichment
+        series_name = f"{norm_denom}s"
+        theme_subject = ""
+        metal_content = "Cupronickel"
+        is_silver = False
+        est_value = "$0.00"
+        melt_value = "$0.00"
+
+        try:
+            from numista_scraper.config import DB_PATH
+            import sqlite3
+            if os.path.exists(str(DB_PATH)):
+                conn = sqlite3.connect(str(DB_PATH))
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT series, variety, obverse_designer, metal_composition, estimated_value "
+                    "FROM definitive_reference WHERE (variety LIKE ? OR series LIKE ?) LIMIT 1",
+                    (f"%{year}%{norm_denom}%", f"%{norm_denom}%")
+                )
+                row = cur.fetchone()
+                if row:
+                    if row["series"]: series_name = row["series"]
+                    if row["variety"]: theme_subject = row["variety"]
+                    if row["metal_composition"]: metal_content = row["metal_composition"]
+                    if row["estimated_value"]: est_value = row["estimated_value"]
+                conn.close()
+        except Exception as cat_err:
+            logger.warning(f"Catalog enrichment warning: {cat_err}")
+
+        # Check silver by year if unspecified
+        try:
+            yr_val = int(re.sub(r'\D', '', str(year)))
+            if norm_denom in ["Dime", "Quarter Dollar", "Half Dollar", "Dollar"] and yr_val <= 1964:
+                is_silver = True
+                metal_content = "90% Silver, 10% Copper"
+        except Exception:
+            pass
+
+        # Duplicate check in Firestore
+        col_ref = db.collection('users').document(user_email).collection('coins')
+        is_dupe = False
+        try:
+            existing = col_ref.where('Year', '==', str(year)) \
+                              .where('Denomination', '==', norm_denom) \
+                              .where('Mint Mark', '==', clean_mint) \
+                              .limit(1).get()
+            is_dupe = len(existing) > 0
+        except Exception:
+            pass
+
+        # Save coin document
+        new_doc_ref = col_ref.document()
+        coin_data = {
+            "Year": str(year),
+            "Mint Mark": clean_mint,
+            "Denomination": norm_denom,
+            "Program/Series": series_name,
+            "Theme/Subject": theme_subject or f"{year} {norm_denom}",
+            "Condition": condition or "Ungraded / Raw",
+            "Storage Location": storage_location or "Cardboard Holder / Binder",
+            "Cost": cost or "$0.00",
+            "Purchase Date": datetime.now().strftime("%Y-%m-%d"),
+            "Personal Notes": personal_notes or "",
+            "Quantity": int(quantity or 1),
+            "Metal Content": metal_content,
+            "Is Silver": is_silver,
+            "AI Estimated Value": est_value if est_value != "$0.00" else "$0.50",
+            "Melt Value": melt_value,
+            "Source": "Morgan AI Assistant Chat",
+            "created_at": firestore.SERVER_TIMESTAMP,
+        }
+        new_doc_ref.set(coin_data)
+
+        return {
+            "action": "add_coin",
+            "status": "success",
+            "coin_id": new_doc_ref.id,
+            "year": str(year),
+            "mint_mark": clean_mint,
+            "denomination": norm_denom,
+            "series": series_name,
+            "storage_location": storage_location or "Cardboard Holder / Binder",
+            "condition": condition or "Ungraded / Raw",
+            "cost": cost or "$0.00",
+            "is_duplicate": is_dupe,
+            "prompt_extra_details": not bool(storage_location and condition and cost and cost != "$0.00")
+        }
+    except Exception as e:
+        logger.exception("Error executing add_coin")
+        return {"action": "add_coin", "status": "error", "message": str(e)}
+
+
+def execute_update_coin(
+    user_email: str,
+    coin_id: str,
+    storage_location: str = None,
+    condition: str = None,
+    cost: str = None,
+    personal_notes: str = None
+) -> dict:
+    try:
+        doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
+        updates = {}
+        if storage_location: updates["Storage Location"] = storage_location
+        if condition: updates["Condition"] = condition
+        if cost: updates["Cost"] = cost
+        if personal_notes: updates["Personal Notes"] = personal_notes
+        if updates:
+            doc_ref.update(updates)
+        return {"action": "update_coin", "status": "success", "coin_id": coin_id, "updated": list(updates.keys())}
+    except Exception as e:
+        logger.exception("Error executing update_coin")
+        return {"action": "update_coin", "status": "error", "message": str(e)}
+
+
+def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
+    try:
+        doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
+        doc_ref.delete()
+        return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
+    except Exception as e:
+        logger.exception("Error executing undo_add_coin")
+        return {"action": "undo_add_coin", "status": "error", "message": str(e)}
+
+
 @app.post("/api/deep_dive")
 async def deep_dive(request: DeepDiveRequest):
     """
-    Morgan AI chat: answers questions about the user's coin collection.
-
-    Two modes:
-      • Flutter provides collection_context  → use it directly (faster, no extra Firestore read)
-      • No collection_context provided       → fetch collection from Firestore (backward-compatible)
-
-    Always responds as Morgan, Numista.AI's warm numismatic guide owl.
+    Morgan AI chat: answers questions about the user's coin collection and logs/updates coins via tools.
     """
     try:
+        # ── 0. Handle Direct Button Commands (Undo / Quick Actions) ─────────────────
+        if request.query.startswith("INTERNAL_UNDO:"):
+            target_id = request.query.split(":")[-1].strip()
+            res = execute_undo_add_coin(request.user_email, target_id)
+            return {
+                "status": "success",
+                "response": "I've removed that coin from your collection binder.",
+                "action_payload": res
+            }
+
         # ── 1. Resolve collection context ──────────────────────────────────────
         if request.collection_context and len(request.collection_context.strip()) > 50:
-            # Flutter already built and sent the collection summary
             context = request.collection_context.strip()
         else:
-            # Fallback: fetch directly from Firestore (keeps backward compatibility)
             col_ref = db.collection('users').document(request.user_email).collection('coins')
             docs = col_ref.stream()
             inventory_items = []
@@ -3005,7 +3195,6 @@ async def deep_dive(request: DeepDiveRequest):
                     search_term = request.query[len(prefix):].strip()
                     break
 
-            # Strip question mark at the end
             search_term = search_term.rstrip("?").strip()
 
             has_coin = False
@@ -3043,33 +3232,95 @@ You have encyclopedic knowledge of US coinage history, mint marks, designers, er
 Here is the user's current coin collection data:
 {context}{knowledge_block}
 
-User's Question: {request.query}
+User's Input: {request.query}
 
-Instructions:
-- Answer based on the collection data above whenever the question is about their specific coins.
-- If NUMISMATIC REFERENCE DATA is provided above, use those verified facts to answer accurately. Cite design details, compositions, and historical context from that data.
-- When asked for "most valuable", rank the collection by Value.
-- Speak in plain, friendly English — explain any numismatic terms you use.
-- Keep responses concise: 2–4 short paragraphs maximum (under 30 seconds of spoken length).
-- Keep in mind that standard American Innovation Dollars and standard circulating coins (Lincoln Cent, Jefferson Nickel, Roosevelt Dime) do NOT carry a privy mark by default; they carry only the dual date 1776 ~ 2026 unless designated as a special collector proof/bullion issue.
-- If the question is about general numismatics (not their specific collection), answer as an expert using the reference data.
-- If a coin they mention is NOT in their collection data, say you don't see it and suggest they add it.
-- Do NOT invent or make up coin values — only reference what is in the data.
-- Do NOT claim coins they don't own.
-- If a coin they mention is not in the reference database, you may search the web or answer using general numismatic knowledge. In this case, explicitly state that your answer is based on general numismatic records or web sources (e.g. 'According to general numismatic records...' or 'Web search indicates...').
+CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
+- YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, and `undo_add_coin`.
+- When the user expresses intent to add a coin or describes a coin they got/want to add (e.g. "add a 2026 P Dime in a cardboard holder"), YOU MUST CALL `add_coin_to_collection`.
+- NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it. You add coins directly!
+- Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection` immediately with smart defaults.
+- AFTER adding a coin with minimal details, warmly confirm the addition AND ask the user if they would like to add more details NOW (like condition, storage location, or purchase price) or complete those LATER.
+- If the user chooses LATER or skips, explain clearly how to edit it later: "No problem! You can edit this item anytime by going to My Collection -> tap on [Coin Name] -> tap Edit Details."
+- Keep responses warm, concise, and helpful (under 30 seconds of spoken length).
 """
 
-        # ── 5. Call Gemini ─────────────────────────────────────────────────────
-        config = genai_types.GenerateContentConfig()
-        search_triggers = ["july 4th", "fourth of july", "privy", "250th", "semiquincentennial", "news", "release date", "bounty"]
-        if not knowledge_block or any(term in lower_query for term in search_triggers):
-            config.tools = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
+        # ── 5. Define Tools for Gemini ─────────────────────────────────────────
+        fn_add = genai_types.FunctionDeclaration(
+            name="add_coin_to_collection",
+            description="Adds a coin directly to the user's collection binder in Firestore.",
+            parameters=genai_types.Schema(
+                type=genai_types.Type.OBJECT,
+                properties={
+                    "year": genai_types.Schema(type=genai_types.Type.STRING, description="4-digit year, e.g. '2026'"),
+                    "denomination": genai_types.Schema(type=genai_types.Type.STRING, description="Denomination e.g. 'Dime', 'Cent', 'Quarter Dollar', 'Dollar'"),
+                    "mint_mark": genai_types.Schema(type=genai_types.Type.STRING, description="Mint mark if specified e.g. 'P', 'D', 'S', 'W', 'CC'"),
+                    "storage_location": genai_types.Schema(type=genai_types.Type.STRING, description="Storage flip, cardboard holder, album, or binder"),
+                    "condition": genai_types.Schema(type=genai_types.Type.STRING, description="Condition or grade e.g. 'Ungraded', 'BU', 'MS-65'"),
+                    "cost": genai_types.Schema(type=genai_types.Type.STRING, description="Purchase cost e.g. '$0.10'"),
+                    "personal_notes": genai_types.Schema(type=genai_types.Type.STRING, description="Personal notes"),
+                    "quantity": genai_types.Schema(type=genai_types.Type.INTEGER, description="Quantity of coins (default 1)")
+                },
+                required=["year", "denomination"]
+            )
+        )
+        fn_update = genai_types.FunctionDeclaration(
+            name="update_coin_in_collection",
+            description="Updates optional fields (storage, condition, cost, notes) for a coin.",
+            parameters=genai_types.Schema(
+                type=genai_types.Type.OBJECT,
+                properties={
+                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of the coin"),
+                    "storage_location": genai_types.Schema(type=genai_types.Type.STRING, description="Updated storage location"),
+                    "condition": genai_types.Schema(type=genai_types.Type.STRING, description="Updated condition/grade"),
+                    "cost": genai_types.Schema(type=genai_types.Type.STRING, description="Updated purchase cost"),
+                    "personal_notes": genai_types.Schema(type=genai_types.Type.STRING, description="Updated personal notes")
+                },
+                required=["coin_id"]
+            )
+        )
+        fn_undo = genai_types.FunctionDeclaration(
+            name="undo_add_coin",
+            description="Undoes/removes a recently added coin from the collection.",
+            parameters=genai_types.Schema(
+                type=genai_types.Type.OBJECT,
+                properties={
+                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of coin to delete")
+                },
+                required=["coin_id"]
+            )
+        )
+
+        config = genai_types.GenerateContentConfig(
+            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo])]
+        )
 
         response = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
             contents=[genai_types.Part.from_text(text=prompt)],
             config=config,
         )
+
+        action_payload = None
+
+        if response.function_calls:
+            for call in response.function_calls:
+                c_name = call.name
+                c_args = call.args or {}
+                if c_name == "add_coin_to_collection":
+                    action_payload = execute_add_coin(request.user_email, **c_args)
+                elif c_name == "update_coin_in_collection":
+                    action_payload = execute_update_coin(request.user_email, **c_args)
+                elif c_name == "undo_add_coin":
+                    action_payload = execute_undo_add_coin(request.user_email, **c_args)
+
+            # Second turn to generate Morgan's final response after executing tool
+            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+            response2 = genai_client.models.generate_content(
+                model=PRIMARY_MODEL,
+                contents=[genai_types.Part.from_text(text=second_prompt)],
+            )
+            return {"status": "success", "response": response2.text, "action_payload": action_payload}
+
         return {"status": "success", "response": response.text}
 
     except Exception as e:

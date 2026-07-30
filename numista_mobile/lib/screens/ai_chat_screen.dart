@@ -24,7 +24,19 @@ import 'add_coins_hub.dart';
 class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
   final String? initialQuery;
-  const AiChatScreen({super.key, this.initialQuery});
+  final bool isPopout;
+  final VoidCallback? onClose;
+  final ValueChanged<DragUpdateDetails>? onDragUpdate;
+  final VoidCallback? onDragEnd;
+
+  const AiChatScreen({
+    super.key,
+    this.initialQuery,
+    this.isPopout = false,
+    this.onClose,
+    this.onDragUpdate,
+    this.onDragEnd,
+  });
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -34,6 +46,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final List<Map<String, String>> _messages = [];
+  late final FocusNode _focusNode;
 
   bool _isLoading = false;
   bool _isLoadingHistory = true;
@@ -67,7 +80,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _loadEverything();
+    if (widget.isPopout) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
   }
 
   Future<void> _loadEverything() async {
@@ -172,6 +191,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void dispose() {
     _controller.dispose();
     _scrollCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -188,8 +208,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            '$kApiBaseUrl/api/deep_dive'),
+        Uri.parse('$kApiBaseUrl/api/deep_dive'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
@@ -201,14 +220,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (!mounted) return;
 
       String replyText;
+      String? actionPayloadJson;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         replyText = data['response'] ?? 'No response.';
+        if (data['action_payload'] != null) {
+          actionPayloadJson = jsonEncode(data['action_payload']);
+        }
       } else {
         replyText = 'Error ${response.statusCode}: please try again.';
       }
 
-      final aiMsg = {'role': 'assistant', 'content': replyText};
+      final aiMsg = {
+        'role': 'assistant',
+        'content': replyText,
+        if (actionPayloadJson != null) 'action_payload': actionPayloadJson,
+      };
       setState(() {
         _messages.add(aiMsg);
         _isLoading = false;
@@ -342,6 +369,71 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final dragHandle = Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: widget.onDragUpdate,
+        onPanEnd: (_) => widget.onDragEnd?.call(),
+        child: Row(
+          children: [
+            if (widget.isPopout)
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(Icons.drag_indicator_rounded, color: _teal, size: 18),
+              ),
+            // Morgan owl avatar
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                ),
+                border: Border.all(color: _teal.withAlpha(100), width: 1.5),
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/morgan_avatar.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (ctx, err, stack) => const Icon(
+                      Icons.smart_toy_rounded,
+                      color: Color(0xFF2DD4BF),
+                      size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Ask Morgan',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                  Text(
+                    _isLoadingContext
+                        ? 'Loading your collection…'
+                        : _ctx == null || _ctx!.isEmpty
+                            ? 'Your personal numismatic guide'
+                            : '${_ctx!.totalCoins} coins · \$${_ctx!.portfolioValue.toStringAsFixed(2)}',
+                    style: const TextStyle(color: _sub, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
       decoration: BoxDecoration(
@@ -350,51 +442,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       child: Row(
         children: [
-          // Morgan owl avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
-              ),
-              border: Border.all(color: _teal.withAlpha(100), width: 1.5),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/morgan_avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => const Icon(
-                    Icons.smart_toy_rounded,
-                    color: Color(0xFF2DD4BF),
-                    size: 22),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Ask Morgan',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-                Text(
-                  _isLoadingContext
-                      ? 'Loading your collection…'
-                      : _ctx == null || _ctx!.isEmpty
-                          ? 'Your personal numismatic guide'
-                          : '${_ctx!.totalCoins} coins · \$${_ctx!.portfolioValue.toStringAsFixed(2)} portfolio',
-                  style: const TextStyle(color: _sub, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
+          dragHandle,
           // Settings
           IconButton(
             icon: const Icon(Icons.tune_rounded, color: _sub, size: 20),
@@ -427,6 +475,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
             tooltip: 'New chat',
             onPressed: _isLoading ? null : _onNewChat,
           ),
+          if (widget.isPopout && widget.onClose != null)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: _sub, size: 20),
+              tooltip: 'Close chat',
+              onPressed: widget.onClose,
+            ),
         ],
       ),
     );
@@ -471,13 +525,115 @@ class _AiChatScreenState extends State<AiChatScreen> {
         }
         final msg    = _messages[i];
         final isUser = msg['role'] == 'user';
-        return _messageBubble(
-            content: msg['content'] ?? '', isUser: isUser);
+        return _messageBubble(msg: msg, isUser: isUser);
       },
     );
   }
 
-  Widget _messageBubble({required String content, required bool isUser}) {
+  Widget _buildConfirmationCard(Map<String, dynamic> payload) {
+    final year = payload['year'] ?? '';
+    final denom = payload['denomination'] ?? '';
+    final mint = payload['mint_mark'] ?? '';
+    final storage = payload['storage_location'] ?? 'Binder';
+    final condition = payload['condition'] ?? 'Ungraded';
+    final coinId = payload['coin_id'] ?? '';
+    final isDupe = payload['is_duplicate'] == true;
+    final promptExtra = payload['prompt_extra_details'] == true;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10, bottom: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _teal.withAlpha(120), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: _teal, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Added to Binder: $year${mint.isNotEmpty ? "-$mint" : ""} $denom',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+              if (isDupe)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: Colors.amber.withAlpha(50),
+                      borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Duplicate',
+                      style: TextStyle(
+                          color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Storage: $storage  •  Condition: $condition',
+              style: const TextStyle(color: _sub, fontSize: 11)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: () => _send('INTERNAL_UNDO:$coinId'),
+                icon: const Icon(Icons.undo, size: 14, color: Colors.redAccent),
+                label: const Text('Undo',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+              ),
+              Row(
+                children: [
+                  if (promptExtra) ...[
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _teal,
+                        side: const BorderSide(color: _teal),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      onPressed: () => _send("I'd like to add details now"),
+                      child: const Text('Add Details Now'),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _teal,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      textStyle:
+                          const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      if (Navigator.canPop(context)) Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.collections_bookmark, size: 14),
+                    label: const Text('View Binder'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _messageBubble({required Map<String, String> msg, required bool isUser}) {
+    final content = msg['content'] ?? '';
+    Map<String, dynamic>? payload;
+    if (msg['action_payload'] != null && msg['action_payload']!.isNotEmpty) {
+      try {
+        payload = jsonDecode(msg['action_payload']!) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -568,41 +724,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   color: isUser ? Colors.white : Colors.white.withAlpha(230),
                   height: 1.55),
             ),
-            if (!isUser && content.toLowerCase().contains('not in your collection')) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub()));
-                    },
-                    icon: const Icon(Icons.add_circle_outline, size: 16),
-                    label: const Text('➕ Add Coin to Collection'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _teal,
-                      foregroundColor: Colors.black87,
-                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub(initialTabName: 'camera')));
-                    },
-                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                    label: const Text('📷 Scan Coin Photo'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: _teal),
-                      textStyle: const TextStyle(fontSize: 13),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            if (payload != null && payload['action'] == 'add_coin')
+              _buildConfirmationCard(payload),
           ],
         ),
       ),
@@ -679,6 +802,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   child: TextField(
                     controller: _controller,
+                    focusNode: _focusNode,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Ask Morgan about your collection…',

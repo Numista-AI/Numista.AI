@@ -1,27 +1,25 @@
-# Walkthrough — Daily Scan Audit & Test Resolution (2026-07-30)
+# Walkthrough — Ask Morgan Pop-out & CSV Safeguards (2026-07-30)
 
-I have audited the system scan report, resolved the demo navigation timing flakiness in Playwright E2E tests, verified all 120 Playwright E2E tests and 16 Pytest unit tests, and updated the audit records on `dev`.
+I have implemented and verified all approved improvements on the `dev` branch.
 
-## 1. Audit & Verification Summary
+## 1. Accomplishments
 
-The latest `SCAN_REPORT.md` (Scan Date: 2026-07-30) returns an overall status of **🟢 PASS**:
-- **Automated Morning Schedule**: The daily Windows Task Scheduler job (`NumistaAI-AutoTests`) ran at **7:30 AM** this morning and generated `2026-07-30_morning_report.md`.
-- **E2E Test Fix**: Refactored `enterDemo` helper in `08-greysheet-valuation.spec.js` with explicit `waitFor({ state: 'visible' })` state checking before clicking, eliminating demo entry timing flakiness.
-- **Full Verification Suite Run (09:49 AM)**: Re-executed `run_tests.ps1` — **120 / 120 Playwright tests passed cleanly (0 failures, 100% pass rate)**.
-- **Backend Pytest Unit Suite**: **16 / 16 passed in 6.12s**.
-- **Python Compilation (AST)**: Core Python backend scripts compiled cleanly with 0 syntax errors.
-- **Flutter Dart Analyzer**: 0 Issues Found (0 errors, 0 warnings, 0 lints).
-- **Model Binding & LLM Policy**: **0 usages** of retired/deprecated Gemini models (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active backend and frontend code paths.
-- **Greysheet API Health**: Endpoint probes return HTTP 200 OK.
+### Draggable & Resizable 'Ask Morgan' Pop-Out
+- Created the floating `MorganChatPopout` wrapper widget ([morgan_chat_popout.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/widgets/morgan_chat_popout.dart)) with `SharedPreferences` state persistence for size and position, `CallbackShortcuts` for `Esc` key closing, and a custom diagonal resize painter.
+- Modified `AiChatScreen` ([ai_chat_screen.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/ai_chat_screen.dart)) to support pop-out hooks, input field auto-focus via `FocusNode`, and drag indicators/close buttons.
+- Integrated the pop-out overlay inside `BaseLayout` ([base_layout.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/base_layout.dart)) on desktop viewports, while maintaining mobile full-screen tab routing.
 
----
+### CSV Ingestion safeguards
+- Added caution warning banner UI in `AddCoinsHub` ([add_coins_hub.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/add_coins_hub.dart)).
+- Implemented dual-layer template row filters in both frontend `AddCoinsHub` and backend `main.py` ([main.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/main.py)) to skip rows matching template cert numbers or example keywords (`"example - delete me"`, `"placeholder"`).
+- Excluded template certification numbers from PCGS import parser in `PcgsImportService` ([pcgs_import_service.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/services/pcgs_import_service.dart)).
 
-## 2. Code Modifications
-- **[08-greysheet-valuation.spec.js](file:///C:/Users/ericd/Documents/MyVertexProject/numista_tests/tests/08-greysheet-valuation.spec.js)**: Refactored `enterDemo` helper with explicit `waitFor({ state: 'visible' })` handling.
-- **[SCAN_REPORT.md](file:///C:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md)**: Updated system audit status to 🟢 PASS (0 failed tests, 0 warnings).
+### Enriched CSV Collection Export
+- Appended `Theme/Subject` and `Storage Location` columns in `BackupExportService` ([backup_export_service.dart](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/services/backup_export_service.dart)) export file.
+- Tagged example rows as `(Example - Delete Me)` inside the downloadable template file.
 
 ---
 
-## 3. Git Synchronization
-- Staged, committed, and pushed changes to `origin/dev`:
+## 2. Git Synchronization
+- Staged, committed, and pushed all updates to `origin/dev`:
   - Remote sync confirmed: `dev -> dev`.
