@@ -111,3 +111,21 @@ def test_daily_snapshot_endpoint():
     assert "snapshot" in data
     assert "totalValue" in data["snapshot"]
     assert "categories" in data["snapshot"]
+
+def test_advanced_api_level_default(monkeypatch):
+    """Verify that GreysheetService requests include apiLevel=advanced."""
+    service = gs_module.GreysheetService()
+    captured_params = {}
+    
+    def fake_requests_get(url, headers=None, params=None, verify=False, timeout=15):
+        nonlocal captured_params
+        captured_params = params
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"Data": []}
+        return mock_resp
+
+    monkeypatch.setattr("requests.get", fake_requests_get)
+    service._get("GetPricingRequest", {"Gsid": 429})
+    assert captured_params.get("apiLevel") == "advanced"
+    assert captured_params.get("Gsid") == 429

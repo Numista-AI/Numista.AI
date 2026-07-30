@@ -8399,7 +8399,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         greysheet_bid = clean_val(matched_price.get("GreyVal") or matched_price.get("GreyVal1"))
         if greysheet_bid == 0.0:
             greysheet_bid = cpg_retail * 0.80
-        greysheet_ask = greysheet_bid * 1.15
+
+        greysheet_ask = clean_val(matched_price.get("GreyAskVal") or matched_price.get("GreyAskVal1") or matched_price.get("GreyAsk"))
+        if greysheet_ask == 0.0:
+            greysheet_ask = greysheet_bid * 1.15
+
+        pcgs_val = clean_val(matched_price.get("PcgsVal") or matched_price.get("PcgsVal1"))
+        ngc_val = clean_val(matched_price.get("NgcVal") or matched_price.get("NgcVal1"))
         
         # If the coin has CAC but the matched record was NOT CAC (fallback), apply manual +20% premium
         if has_cac and not bool(matched_price.get("IsCac", False)):
@@ -8462,6 +8468,8 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
             "cpgRetail": cpg_retail,
+            "pcgsVal": pcgs_val,
+            "ngcVal": ngc_val,
             "greysheetGrade": grade_label,       # e.g. "VG-8", "MS-63" — plain language
             "greysheetName": cached_gs_name,     # e.g. "1909-S Barber Quarter" — plain language
             "priceLastUpdated": firestore.SERVER_TIMESTAMP,
@@ -8883,7 +8891,13 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
                 greysheet_bid = clean_val(matched_price.get("GreyVal") or matched_price.get("GreyVal1"))
                 if greysheet_bid == 0.0:
                     greysheet_bid = cpg_retail * 0.80
-                greysheet_ask = greysheet_bid * 1.15
+
+                greysheet_ask = clean_val(matched_price.get("GreyAskVal") or matched_price.get("GreyAskVal1") or matched_price.get("GreyAsk"))
+                if greysheet_ask == 0.0:
+                    greysheet_ask = greysheet_bid * 1.15
+
+                pcgs_val = clean_val(matched_price.get("PcgsVal") or matched_price.get("PcgsVal1"))
+                ngc_val = clean_val(matched_price.get("NgcVal") or matched_price.get("NgcVal1"))
                 
                 if has_cac and not bool(matched_price.get("IsCac", False)):
                     cpg_retail *= 1.20
@@ -8895,6 +8909,8 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
                     "greysheetBid": greysheet_bid,
                     "greysheetAsk": greysheet_ask,
                     "cpgRetail": cpg_retail,
+                    "pcgsVal": pcgs_val,
+                    "ngcVal": ngc_val,
                     "priceLastUpdated": firestore.SERVER_TIMESTAMP
                 })
                 batch_count += 1
