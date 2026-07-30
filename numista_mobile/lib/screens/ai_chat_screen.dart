@@ -9,7 +9,6 @@ import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../constants.dart';
-import 'add_coins_hub.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  AiChatScreen — Phase 3: Collection-Aware Morgan Chat
@@ -25,7 +24,9 @@ class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
   final String? initialQuery;
   final bool isPopout;
+  final bool isMinimized;
   final VoidCallback? onClose;
+  final VoidCallback? onMinimize;
   final ValueChanged<DragUpdateDetails>? onDragUpdate;
   final VoidCallback? onDragEnd;
 
@@ -33,7 +34,9 @@ class AiChatScreen extends StatefulWidget {
     super.key,
     this.initialQuery,
     this.isPopout = false,
+    this.isMinimized = false,
     this.onClose,
+    this.onMinimize,
     this.onDragUpdate,
     this.onDragEnd,
   });
@@ -349,19 +352,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
       child: Column(
         children: [
           _buildHeader(),
-          if (_isLoadingHistory || _isLoadingContext)
-            LinearProgressIndicator(
-              color: _teal, backgroundColor: _surf, minHeight: 2),
+          if (!widget.isMinimized) ...[
+            if (_isLoadingHistory || _isLoadingContext)
+              LinearProgressIndicator(
+                color: _teal, backgroundColor: _surf, minHeight: 2),
 
-          // Suggestion pills (empty state)
-          if (_messages.isEmpty && !_isLoadingHistory && !_isLoadingContext)
-            _buildSuggestions(),
+            // Suggestion pills (empty state)
+            if (_messages.isEmpty && !_isLoadingHistory && !_isLoadingContext)
+              _buildSuggestions(),
 
-          // Message list
-          Expanded(child: _buildMessageList()),
+            // Message list
+            Expanded(child: _buildMessageList()),
 
-          // Input bar
-          _buildInputBar(),
+            // Input bar
+            _buildInputBar(),
+          ],
         ],
       ),
     );
@@ -444,37 +449,50 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           dragHandle,
           // Settings
-          IconButton(
-            icon: const Icon(Icons.tune_rounded, color: _sub, size: 20),
-            tooltip: 'Morgan settings',
-            onPressed: () async {
-              final changed = await showMorganSettings(context);
-              if (changed && mounted) {
-                final name = await MorganPrefs.getDisplayName();
-                final ctx  = await MorganChatContextService.load(forceRefresh: true);
-                setState(() {
-                  _displayName = name;
-                  _ctx = ctx;
-                });
-              }
-            },
-          ),
+          if (!widget.isMinimized)
+            IconButton(
+              icon: const Icon(Icons.tune_rounded, color: _sub, size: 20),
+              tooltip: 'Morgan settings',
+              onPressed: () async {
+                final changed = await showMorganSettings(context);
+                if (changed && mounted) {
+                  final name = await MorganPrefs.getDisplayName();
+                  final ctx  = await MorganChatContextService.load(forceRefresh: true);
+                  setState(() {
+                    _displayName = name;
+                    _ctx = ctx;
+                  });
+                }
+              },
+            ),
           // Refresh context
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: _sub, size: 20),
-            tooltip: 'Refresh collection data',
-            onPressed: () async {
-              MorganChatContextService.invalidate();
-              final ctx = await MorganChatContextService.load(forceRefresh: true);
-              if (mounted) setState(() => _ctx = ctx);
-            },
-          ),
+          if (!widget.isMinimized)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: _sub, size: 20),
+              tooltip: 'Refresh collection data',
+              onPressed: () async {
+                MorganChatContextService.invalidate();
+                final ctx = await MorganChatContextService.load(forceRefresh: true);
+                if (mounted) setState(() => _ctx = ctx);
+              },
+            ),
           // New chat
-          IconButton(
-            icon: const Icon(Icons.add_comment_outlined, color: _sub, size: 20),
-            tooltip: 'New chat',
-            onPressed: _isLoading ? null : _onNewChat,
-          ),
+          if (!widget.isMinimized)
+            IconButton(
+              icon: const Icon(Icons.add_comment_outlined, color: _sub, size: 20),
+              tooltip: 'New chat',
+              onPressed: _isLoading ? null : _onNewChat,
+            ),
+          if (widget.isPopout && widget.onMinimize != null)
+            IconButton(
+              icon: Icon(
+                widget.isMinimized ? Icons.open_in_full_rounded : Icons.remove_rounded,
+                color: _sub,
+                size: 20,
+              ),
+              tooltip: widget.isMinimized ? 'Restore chat' : 'Minimize chat',
+              onPressed: widget.onMinimize,
+            ),
           if (widget.isPopout && widget.onClose != null)
             IconButton(
               icon: const Icon(Icons.close_rounded, color: _sub, size: 20),

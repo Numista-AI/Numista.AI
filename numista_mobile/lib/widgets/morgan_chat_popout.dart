@@ -23,6 +23,8 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
   double _top = 100;
   double _left = 100;
   bool _isInitialized = false;
+  bool _isMinimized = false;
+  double _restoredHeight = 550;
 
   @override
   void initState() {
@@ -37,6 +39,8 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
       final savedHeight = prefs.getDouble('morgan_popout_height');
       final savedTop = prefs.getDouble('morgan_popout_top');
       final savedLeft = prefs.getDouble('morgan_popout_left');
+      final savedMinimized = prefs.getBool('morgan_popout_minimized');
+      final savedRestoredHeight = prefs.getDouble('morgan_popout_restored_height');
 
       if (mounted) {
         setState(() {
@@ -44,6 +48,8 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
           if (savedHeight != null) _height = savedHeight;
           if (savedTop != null) _top = savedTop;
           if (savedLeft != null) _left = savedLeft;
+          if (savedMinimized != null) _isMinimized = savedMinimized;
+          if (savedRestoredHeight != null) _restoredHeight = savedRestoredHeight;
           _isInitialized = true;
         });
       }
@@ -64,9 +70,24 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
       await prefs.setDouble('morgan_popout_height', _height);
       await prefs.setDouble('morgan_popout_top', _top);
       await prefs.setDouble('morgan_popout_left', _left);
+      await prefs.setBool('morgan_popout_minimized', _isMinimized);
+      await prefs.setDouble('morgan_popout_restored_height', _restoredHeight);
     } catch (e) {
       debugPrint('[MorganChatPopout] Save state failed: $e');
     }
+  }
+
+  void _toggleMinimize() {
+    setState(() {
+      _isMinimized = !_isMinimized;
+      if (_isMinimized) {
+        _restoredHeight = _height;
+        _height = 60.0;
+      } else {
+        _height = _restoredHeight;
+      }
+    });
+    _saveState();
   }
 
   @override
@@ -107,6 +128,8 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
               child: AiChatScreen(
                 initialQuery: widget.initialQuery,
                 isPopout: true,
+                isMinimized: _isMinimized,
+                onMinimize: _toggleMinimize,
                 onClose: widget.onClose,
                 onDragUpdate: (details) {
                   setState(() {
@@ -119,25 +142,26 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
             ),
 
             // Diagonal Resize handle in the bottom-right corner
-            Positioned(
-              bottom: 0,
-              right: 0,
-              width: 24,
-              height: 24,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanUpdate: (details) {
-                  setState(() {
-                    _width = (_width + details.delta.dx).clamp(320.0, screenSize.width * 0.9);
-                    _height = (_height + details.delta.dy).clamp(380.0, screenSize.height * 0.9);
-                  });
-                },
-                onPanEnd: (_) => _saveState(),
-                child: CustomPaint(
-                  painter: _ResizeHandlePainter(),
+            if (!_isMinimized)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                width: 24,
+                height: 24,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _width = (_width + details.delta.dx).clamp(320.0, screenSize.width * 0.9);
+                      _height = (_height + details.delta.dy).clamp(380.0, screenSize.height * 0.9);
+                    });
+                  },
+                  onPanEnd: (_) => _saveState(),
+                  child: CustomPaint(
+                    painter: _ResizeHandlePainter(),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
