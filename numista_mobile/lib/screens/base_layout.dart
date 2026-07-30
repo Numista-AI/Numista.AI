@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/coin_normalizer_service.dart';
 import '../services/epn_service.dart';
@@ -587,7 +588,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
                         final body = Uri.encodeComponent(
                           'Beta tester: $email\n'
-                          'Version: v3.9\n\n'
+                          'Version: $kAppVersion\n\n'
                           'Feedback / Bug Report:\n\n'
                           '---\n'
                           '(Please describe what happened, what you expected, and any steps to reproduce)\n',

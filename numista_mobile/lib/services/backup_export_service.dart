@@ -95,6 +95,31 @@ class BackupExportService {
     }
   }
 
+  /// Generates and triggers download of a pre-formatted CSV template containing
+  /// the full Numista Golden Schema headers and example rows for Coins, Banknotes, and Medals.
+  static Future<void> downloadCsvTemplate() async {
+    final StringBuffer csv = StringBuffer();
+    // UTF-8 BOM for automatic Excel/Google Sheets encoding recognition
+    csv.write('\uFEFF');
+    csv.writeln('Category,Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Variety,Condition/Grade,Grading Service,Certification Number,Strike Type,Holder Type,Metal Content,Quantity,Purchase Cost,Purchase Date,Retailer/Dealer,Storage Location,Personal Notes,Country');
+
+    // Example 1: Coin
+    csv.writeln('"Coin","1921","S","Morgan Dollar","Morgan Silver Dollars","Liberty Head","VAM-1A Top 100","MS64","PCGS","43521234","Business","Slab","90% Silver","1","65.00","2024-03-15","GreatCollections","Safe Box A","Toned obverse","USA"');
+    // Example 2: Banknote / Paper Money
+    csv.writeln('"Banknote","1934","","\$20 Silver Certificate","US Federal Reserve Notes","Julian-Morgenthau","Fr. 2201-A","EPQ65","PMG","80912345","Regular Issue","Slab","Paper","1","120.00","2024-05-10","Heritage Auctions","Binder 1","Crisp Uncirculated","USA"');
+    // Example 3: Medal / Token
+    csv.writeln('"Medal","1969","","Apollo 11 Commemorative Medal","NASA Space Medals","First Moon Landing","Robbins Medal #123","MS67","NGC","60123984","Proof","Slab","Sterling Silver","1","250.00","2024-06-20","Stack\'s Bowers","Display Case","Original capsule","USA"');
+
+    const filename = 'numista_bulk_import_template.csv';
+
+    if (kIsWeb) {
+      _triggerWebDownload(csv.toString(), filename, 'text/csv;charset=utf-8;');
+    } else {
+      debugPrint('[BackupExportService] CSV template non-web download length: ${csv.length}');
+    }
+  }
+
+
   static String _cleanCsvCell(dynamic val) {
     if (val == null) return '""';
     final str = val.toString().replaceAll('"', '""');

@@ -15,6 +15,7 @@ import '../widgets/extraction_success_dialog.dart';
 import '../services/wishlist_service.dart';
 import '../models/coin_model.dart';
 import '../services/pcgs_import_service.dart';
+import '../services/backup_export_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
@@ -486,6 +487,74 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         )),
                       ]),
                     )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Downloadable CSV Schema Template Card ─────────────────────
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.table_chart_rounded, color: Color(0xFF2563EB), size: 22),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Pre-formatted CSV Bulk Import Template',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF1E3A8A),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Full Schema',
+                            style: TextStyle(
+                              color: Color(0xFF2563EB),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Download our standard CSV spreadsheet pre-formatted with our full schema headers (Coins, Paper Money/Notes, and Medals). Fill out your collection info in Excel, Google Sheets, or Numbers, then upload the CSV file.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: () => BackupExportService.downloadCsvTemplate(),
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text(
+                        'Download CSV Template (.csv)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1D4ED8),
+                        side: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
                   ],
                 ),
               ),
