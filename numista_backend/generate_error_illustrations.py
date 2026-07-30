@@ -89,43 +89,44 @@ def main():
             continue
             
         # Determine the search query for the coin image base
-        denom = error_data.get("denominations", ["quarter"])[0]
+        denom = error_data.get("denominations", ["quarter"])[0].lower()
         year = error_data.get("years", [1999])[0] if error_data.get("years") else 1999
         
         print(f"\n🎨 Processing error: {error_id} ({year} {denom})")
         
-        # 1. Search the image index for a reference GCS image
-        # Standard State Quarters are indexed by state name subject
-        subject_query = "new-jersey" if "new-jersey" in error_id else None
-        
-        image_docs = db.collection("coin_image_index")
-        query = image_docs.where("program", "==", "50-state-quarters")
-        if subject_query:
-            query = query.where("subject", "==", subject_query)
-            
-        results = list(query.limit(1).stream())
-        if not results:
-            print(f"  ❌ No reference coin image found in coin_image_index matching queries.")
-            continue
-            
-        ref_image = results[0].to_dict()
-        
-        # Check obverse first, then reverse
-        side_data = ref_image.get("obverse") or ref_image.get("reverse")
-        if not side_data or not isinstance(side_data, dict):
-            print(f"  ❌ No obverse/reverse details found in image index doc.")
-            continue
-            
-        ref_gcs_path = side_data.get("gcs_path")
-        
-        if not ref_gcs_path or not ref_gcs_path.startswith("gs://"):
-            print(f"  ❌ Invalid GCS reference path: {ref_gcs_path}")
-            continue
-            
-        # Parse GCS path details
-        ref_parts = ref_gcs_path.replace("gs://", "").split("/", 1)
-        src_bucket_name = ref_parts[0]
-        src_blob_name = ref_parts[1]
+        # Explicit reference mapping dictionary to guarantee exact coin matching
+        EXACT_REF_MAP = {
+            "2020-w-bat-quarter-die-chip": ("numista-reference-library", "reference_library/bulk_programs/america_the_beautiful/2020-america-the-beautiful-quarters-coin-national-park-of-american-samoa-uncirculated-reverse.jpg"),
+            "1999-nj-quarter-die-gouge": ("numista-reference-library", "reference_library/bulk_programs/50_state_quarters/1999-50-state-quarters-coin-new-jersey-uncirculated-reverse.jpg"),
+            "1999-nj-quarter-struck-through": ("numista-reference-library", "reference_library/bulk_programs/50_state_quarters/1999-50-state-quarters-coin-new-jersey-uncirculated-reverse.jpg"),
+            "2004-d-wisconsin-extra-leaf-high": ("numista-reference-library", "reference_library/bulk_programs/50_state_quarters/2004-50-state-quarters-coin-wisconsin-uncirculated-reverse.jpg"),
+            "1955-ddo-lincoln-cent": ("numista-reference-library", "reference_library/bulk_programs/penny/2017-lincoln-penny-uncirculated-obverse-philadelphia.jpg"),
+        }
+
+        if error_id in EXACT_REF_MAP:
+            src_bucket_name, src_blob_name = EXACT_REF_MAP[error_id]
+        else:
+            # Fallback search matching exact denomination and subject in coin_image_index
+            image_docs = db.collection("coin_image_index")
+            query = image_docs.where("denomination", "==", denom)
+            if year:
+                query = query.where("year", "==", year)
+            results = list(query.limit(1).stream())
+            if not results:
+                print(f"  ❌ No reference coin image found matching denomination={denom}, year={year}.")
+                continue
+            ref_image = results[0].to_dict()
+            side_data = ref_image.get("obverse") or ref_image.get("reverse")
+            if not side_data or not isinstance(side_data, dict):
+                print(f"  ❌ No obverse/reverse details found in image index doc.")
+                continue
+            ref_gcs_path = side_data.get("gcs_path")
+            if not ref_gcs_path or not ref_gcs_path.startswith("gs://"):
+                print(f"  ❌ Invalid GCS reference path: {ref_gcs_path}")
+                continue
+            ref_parts = ref_gcs_path.replace("gs://", "").split("/", 1)
+            src_bucket_name = ref_parts[0]
+            src_blob_name = ref_parts[1]
         
         print(f"  📥 Downloading base image from: gs://{src_bucket_name}/{src_blob_name}")
         

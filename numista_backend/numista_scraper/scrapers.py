@@ -428,10 +428,16 @@ def get_scored_images(soup, error, content_div, is_general_query=False):
         
     keywords = list(set(keywords))
     
+    junk_terms = [
+        "logo", "avatar", "advertis", "banner", "icon", "widget", "bio", "author", 
+        "staff", "headshot", "person", "profile", "gravatar", "comment", "reply", 
+        "youtube", "tinfoil", "social", "forum_user", "thumb", "screenshot", "subscribe"
+    ]
+
     scored_images = []
     for img in content_div.find_all("img", src=True):
         src = img["src"]
-        if any(x in src.lower() for x in ["logo", "avatar", "advertis", "banner", "icon", "widget", "bio", "author", "staff", "headshot", "person", "profile", "gravatar"]):
+        if any(x in src.lower() for x in junk_terms):
             continue
             
         for attr in ["bv-data-src", "data-orig-file", "data-large-file", "data-src", "src"]:
@@ -443,6 +449,10 @@ def get_scored_images(soup, error, content_div, is_general_query=False):
         alt = img.get("alt", "").lower()
         src_lower = src.lower()
         
+        # Check if the image source or alt text is a social comment or UI snippet
+        if any(x in (alt + " " + src_lower) for x in ["comment", "reply", "youtube", "tinfoil", "social", "screenshot"]):
+            continue
+        
         parent_text = ""
         parent = img.parent
         for _ in range(2):
@@ -450,6 +460,10 @@ def get_scored_images(soup, error, content_div, is_general_query=False):
                 parent_text += " " + parent.get_text()
                 parent = parent.parent
         parent_text = parent_text.lower()
+        
+        # Reject if parent text is obviously a social media comment or UI block
+        if any(x in parent_text for x in ["how is no-one talking", "link to coronavirus", "bad timing", "foreshadowing", "reply 58"]):
+            continue
         
         score = 0
         for kw in keywords:
@@ -459,6 +473,20 @@ def get_scored_images(soup, error, content_div, is_general_query=False):
                 score += 15
             if kw in parent_text:
                 score += 5
+                
+        # Denomination & Coin Type Alignment Check
+        denoms = error.get("denominations", [])
+        if denoms and not is_general_query:
+            target_denom = denoms[0].lower()
+            filename = src_lower.split("/")[-1]
+            text_context = (alt + " " + filename).lower()
+            
+            # If target is quarter, penalize cent/penny images heavily
+            if target_denom == "quarter" and ("cent" in text_context or "penny" in text_context or "1c" in text_context or "lincoln" in text_context):
+                score = -9999
+            # If target is cent, penalize quarter/dollar images
+            elif target_denom in ["cent", "penny"] and ("quarter" in text_context or "25c" in text_context or "dollar" in text_context):
+                score = -9999
                 
         # Year penalty: check for mismatching 4-digit years if the error has target years and is not general
         years = error.get("years")
