@@ -1002,7 +1002,7 @@ class _CoinImageLightboxDialogState extends State<_CoinImageLightboxDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
-        maxWidth: 900,
+        constraints: const BoxConstraints(maxWidth: 900),
         decoration: BoxDecoration(
           color: const Color(0xFF0F172A),
           borderRadius: BorderRadius.circular(16),
