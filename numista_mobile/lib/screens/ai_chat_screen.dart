@@ -208,8 +208,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            '$kApiBaseUrl/api/deep_dive'),
+        Uri.parse('$kApiBaseUrl/api/deep_dive'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
@@ -221,14 +220,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (!mounted) return;
 
       String replyText;
+      String? actionPayloadJson;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         replyText = data['response'] ?? 'No response.';
+        if (data['action_payload'] != null) {
+          actionPayloadJson = jsonEncode(data['action_payload']);
+        }
       } else {
         replyText = 'Error ${response.statusCode}: please try again.';
       }
 
-      final aiMsg = {'role': 'assistant', 'content': replyText};
+      final aiMsg = {
+        'role': 'assistant',
+        'content': replyText,
+        if (actionPayloadJson != null) 'action_payload': actionPayloadJson,
+      };
       setState(() {
         _messages.add(aiMsg);
         _isLoading = false;
@@ -518,13 +525,115 @@ class _AiChatScreenState extends State<AiChatScreen> {
         }
         final msg    = _messages[i];
         final isUser = msg['role'] == 'user';
-        return _messageBubble(
-            content: msg['content'] ?? '', isUser: isUser);
+        return _messageBubble(msg: msg, isUser: isUser);
       },
     );
   }
 
-  Widget _messageBubble({required String content, required bool isUser}) {
+  Widget _buildConfirmationCard(Map<String, dynamic> payload) {
+    final year = payload['year'] ?? '';
+    final denom = payload['denomination'] ?? '';
+    final mint = payload['mint_mark'] ?? '';
+    final storage = payload['storage_location'] ?? 'Binder';
+    final condition = payload['condition'] ?? 'Ungraded';
+    final coinId = payload['coin_id'] ?? '';
+    final isDupe = payload['is_duplicate'] == true;
+    final promptExtra = payload['prompt_extra_details'] == true;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10, bottom: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _teal.withAlpha(120), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: _teal, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Added to Binder: $year${mint.isNotEmpty ? "-$mint" : ""} $denom',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+              if (isDupe)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: Colors.amber.withAlpha(50),
+                      borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Duplicate',
+                      style: TextStyle(
+                          color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Storage: $storage  •  Condition: $condition',
+              style: const TextStyle(color: _sub, fontSize: 11)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: () => _send('INTERNAL_UNDO:$coinId'),
+                icon: const Icon(Icons.undo, size: 14, color: Colors.redAccent),
+                label: const Text('Undo',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+              ),
+              Row(
+                children: [
+                  if (promptExtra) ...[
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _teal,
+                        side: const BorderSide(color: _teal),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      onPressed: () => _send("I'd like to add details now"),
+                      child: const Text('Add Details Now'),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _teal,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      textStyle:
+                          const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      if (Navigator.canPop(context)) Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.collections_bookmark, size: 14),
+                    label: const Text('View Binder'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _messageBubble({required Map<String, String> msg, required bool isUser}) {
+    final content = msg['content'] ?? '';
+    Map<String, dynamic>? payload;
+    if (msg['action_payload'] != null && msg['action_payload']!.isNotEmpty) {
+      try {
+        payload = jsonDecode(msg['action_payload']!) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -615,41 +724,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   color: isUser ? Colors.white : Colors.white.withAlpha(230),
                   height: 1.55),
             ),
-            if (!isUser && content.toLowerCase().contains('not in your collection')) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub()));
-                    },
-                    icon: const Icon(Icons.add_circle_outline, size: 16),
-                    label: const Text('➕ Add Coin to Collection'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _teal,
-                      foregroundColor: Colors.black87,
-                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCoinsHub(initialTabName: 'camera')));
-                    },
-                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                    label: const Text('📷 Scan Coin Photo'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: _teal),
-                      textStyle: const TextStyle(fontSize: 13),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            if (payload != null && payload['action'] == 'add_coin')
+              _buildConfirmationCard(payload),
           ],
         ),
       ),

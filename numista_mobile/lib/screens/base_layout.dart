@@ -578,7 +578,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         const _SidebarDivider(),
                         _buildNavItem('Our Team', icon: Icons.people_outline),
                         _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
-                        _buildNavItem('🔍 Numista Lookup'),
+                        _buildNavItem('🔍 Numista Lookup', icon: Icons.search_outlined),
                       ],
                     ),
                   ),
@@ -720,6 +720,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Microscope Scanner',
             'Coin Programs',
             'Coin Search',
+            '🔍 Numista Lookup',
             'Add New Coins',
             'My Wishlist',
             'Estate Planning',
@@ -749,6 +750,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                   setState(() => _activeRoute = 'Add New Coins');
                 } else if (title == 'Admin Grade Flags') {
                   setState(() => _activeRoute = 'Admin: Grade Flags');
+                } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
+                  setState(() => _activeRoute = 'Coin Search');
                 } else if (title == 'AI Deepdive') {
                   if (MediaQuery.of(context).size.width >= 800) {
                     setState(() {
