@@ -35,6 +35,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // Set of coins selected to add to collection
   final Set<String> _selectedToAdd = {};
 
+  // Program preferences cache: programId -> goal ("Full Master Set", "Circulation / Business Strikes Only", "Standard Set")
+  final Map<String, String> _programGoals = {};
+  final Map<String, bool> _programManualComplete = {};
+
   // Scan state
   bool _isScanning = false;
   final ImagePicker _imagePicker = ImagePicker();
@@ -45,6 +49,68 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   void initState() {
     super.initState();
     _loadTotalReferenceCount();
+    _loadProgramPreferences();
+  }
+
+  Future<void> _loadProgramPreferences() async {
+    try {
+      final userEmail = AuthService.userEmail;
+      if (userEmail.isEmpty) return;
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .collection('program_preferences')
+          .get();
+
+      final goals = <String, String>{};
+      final completes = <String, bool>{};
+
+      for (var doc in snap.docs) {
+        final d = doc.data();
+        if (d['goal'] != null) goals[doc.id] = d['goal'] as String;
+        if (d['is_manually_completed'] != null) {
+          completes[doc.id] = d['is_manually_completed'] as bool;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _programGoals.addAll(goals);
+          _programManualComplete.addAll(completes);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading program preferences: $e');
+    }
+  }
+
+  Future<void> _saveProgramPreference(String programId, {String? goal, bool? isManuallyCompleted}) async {
+    try {
+      final userEmail = AuthService.userEmail;
+      if (userEmail.isEmpty) return;
+
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .collection('program_preferences')
+          .doc(programId);
+
+      final updateData = <String, dynamic>{};
+      if (goal != null) {
+        updateData['goal'] = goal;
+        _programGoals[programId] = goal;
+      }
+      if (isManuallyCompleted != null) {
+        updateData['is_manually_completed'] = isManuallyCompleted;
+        _programManualComplete[programId] = isManuallyCompleted;
+      }
+
+      setState(() {});
+
+      await docRef.set(updateData, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving program preference: $e');
+    }
   }
 
   Future<void> _loadTotalReferenceCount() async {
@@ -571,6 +637,103 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             ),
           ),
           
+          // Collection Goal Selector & Manual Complete Toggle Card
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE2E6E9)),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(8),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.tune_rounded, color: Color(0xFF3B82F6), size: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Set Collection Goal & Completion',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Choose what type of collection you are building to customize completion stats.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Goal Dropdown
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _programGoals[program.id] ?? 'Full Master Set',
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Full Master Set',
+                          child: Text('Full Master Set (All Varieties)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Circulation Only',
+                          child: Text('Circulation / Business Strikes Only (P & D)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Standard Set',
+                          child: Text('Standard Set (P, D, S Clad Proofs)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          _saveProgramPreference(program.id, goal: val);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Manual Complete Switch
+                Row(
+                  children: [
+                    Switch(
+                      value: _programManualComplete[program.id] ?? false,
+                      activeColor: const Color(0xFF10B981),
+                      onChanged: (val) {
+                        _saveProgramPreference(program.id, isManuallyCompleted: val);
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _programManualComplete[program.id] == true ? 'Goal Met ✓' : 'Mark Complete',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _programManualComplete[program.id] == true ? const Color(0xFF10B981) : const Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
           // Program Progress Dashboard Banner
           const SizedBox(height: 24),
           Container(

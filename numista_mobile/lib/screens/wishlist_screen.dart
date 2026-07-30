@@ -97,12 +97,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
       final userEmail = AuthService.userEmail;
       final items = <Map<String, dynamic>>[];
-      for (var coin in _userCoins) {
-        items.add({
-          'title': coin['Denomination'] != null ? "${coin['Year'] ?? ''} ${coin['Denomination']}" : "Numismatic Coin",
-          'target_grade': coin['Grade'] ?? 'Any',
-          'max_price': coin['Purchase Price'] ?? 'Market',
-        });
+
+      // Export missing coins from tracked in-progress programs
+      final trackedPrograms = _getTrackedPrograms(CoinProgramsData.usPrograms);
+      for (final prog in trackedPrograms) {
+        for (final pc in prog.coins) {
+          if (!_userHasProgramCoin(prog, pc)) {
+            items.add({
+              'title': '${prog.name}: ${pc.name}${pc.year != null && pc.year!.isNotEmpty ? " (${pc.year})" : ""}',
+              'program_id': prog.id,
+              'program_name': prog.name,
+              'coin_id': pc.id,
+              'coin_name': pc.name,
+              'year': pc.year ?? '',
+              'target_grade': 'Uncirculated / AU',
+              'max_price': 'Market Value',
+            });
+          }
+        }
       }
 
       if (items.isEmpty) {
@@ -566,16 +578,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
           return StreamBuilder<List<WishlistItem>>(
             stream: WishlistService.getWishlistStream(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              final items = snapshot.data!;
+              final items = snapshot.data ?? [];
               final individualItems = items.where((i) => i.type == 'individual').toList();
               final programs = items.where((i) => i.type == 'program').toList();
+              final trackedPrograms = _getTrackedPrograms(allProgramsMap);
+
+              if (items.isEmpty && trackedPrograms.isEmpty && _coinsLoaded) {
+                return _buildEmptyState();
+              }
 
               return LayoutBuilder(
                 builder: (context, constraints) {

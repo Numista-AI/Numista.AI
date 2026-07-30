@@ -523,9 +523,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: const Color(0xFF86EFAC)),
                     ),
-                    child: const Text('Numista.AI v3.9',
+                    child: Text('Numista.AI $kAppVersion',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 11,
                             color: Color(0xFF166534))),
@@ -1542,10 +1542,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.1',
+    date: '2026-07-30',
+    description: 'Greysheet Valuation, Bulk Upload & System Resilience',
+    isLatest: true,
+    changes: [
+      'Greysheet Market Valuation Integration: real-time CDN bid/ask prices, CPG retail attribution, and daily portfolio snapshot sync.',
+      'Automated Arbitrage Deal Finder & Wishlist EPN matcher: spot underpriced coins and affiliate matches instantly.',
+      'Bulk Upload Template: streamlined CSV/Excel ingestion template for uploading collections in bulk.',
+      'Financials & Melt Valuation Card: live melt calculations for gold, silver, platinum, and palladium spot prices.',
+      'Scraper Resilience Pass: TLS fingerprint bypass (curl_cffi) and direct candidates routing for US Mint, PCGS, and NGC sources.',
+      'Backend Observability & System Audit: API request logging, automated diagnostic audit scripts, and Cloud Run health monitoring.',
+    ],
+  ),
+  _Release(
     version: 'v4.0',
     date: '2026-07-08',
     description: 'Greysheet Market Valuation Integration',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Greysheet CDN API integrated: real-time bid/ask valuations for circulating and key-date US coins.',
       'Valuation pipeline hardened: graceful fallback when Greysheet returns no data for a coin type.',

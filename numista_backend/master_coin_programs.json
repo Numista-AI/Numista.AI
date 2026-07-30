@@ -16074,11 +16074,11 @@
     "Coins": [
       {
         "year": "1921",
-        "name": "1921",
+        "name": "1921 High Relief",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           }
         ]
       },
@@ -16184,7 +16184,7 @@
       },
       {
         "year": "1928",
-        "name": "1928",
+        "name": "1928 Key Date",
         "varieties": [
           {
             "id": "P",
@@ -16194,7 +16194,9 @@
             "id": "S",
             "label": "S"
           }
-        ]
+        ],
+        "is_key_date": true,
+        "estimated_value": 350.0
       },
       {
         "year": "1934",
@@ -16230,21 +16232,21 @@
       },
       {
         "year": "2021",
-        "name": "2021",
+        "name": "2021 100th Anniversary",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P Uncirculated"
           }
         ]
       },
       {
         "year": "2023",
-        "name": "2023",
+        "name": "2023 High Relief / Modern",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P Uncirculated"
           },
           {
             "id": "S-Proof",
@@ -18226,7 +18228,7 @@
       {
         "id": "atb_2019_frank_church_river_of_no_retur",
         "year": "2019",
-        "name": "Frank Church\u2013River of No Return Wilderness (Idaho)",
+        "name": "Frank Church–River of No Return Wilderness (Idaho)",
         "varieties": [
           {
             "id": "P",
@@ -20765,15 +20767,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20784,15 +20786,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20803,15 +20805,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20822,15 +20824,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20841,15 +20843,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20860,15 +20862,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20879,15 +20881,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20898,15 +20900,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20917,15 +20919,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20936,15 +20938,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20955,15 +20957,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20974,15 +20976,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -20993,15 +20995,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21012,15 +21014,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21031,15 +21033,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21050,15 +21056,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21069,15 +21079,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21088,15 +21102,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21107,15 +21125,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21126,34 +21148,42 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
       {
         "id": "na_dollar_2020",
         "year": "2020",
-        "name": "Elizabeth Peratrovich \u2014 Anti-Discrimination Law",
+        "name": "Elizabeth Peratrovich — Anti-Discrimination Law",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21164,15 +21194,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21183,15 +21217,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21202,15 +21240,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21221,15 +21263,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21240,15 +21286,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       },
@@ -21258,15 +21308,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S (Proof)"
+          },
+          {
+            "id": "S-REVERSE-PROOF",
+            "label": "S (Reverse Proof)"
           }
         ]
       }
@@ -21289,15 +21343,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21308,15 +21362,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21327,15 +21381,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21346,15 +21400,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21365,15 +21419,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21384,15 +21438,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21403,15 +21457,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21422,15 +21476,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21441,15 +21495,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21460,15 +21514,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21479,15 +21533,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21498,15 +21552,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21517,15 +21571,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21536,15 +21590,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21555,15 +21609,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21574,15 +21628,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21593,15 +21647,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21612,15 +21666,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21631,15 +21685,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21650,15 +21704,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21669,15 +21723,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21688,15 +21742,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21707,15 +21761,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21726,15 +21780,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21745,15 +21799,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21764,15 +21818,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21783,15 +21837,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21802,15 +21856,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21821,15 +21875,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21840,15 +21894,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21859,15 +21913,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21878,15 +21932,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21897,15 +21951,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21916,15 +21970,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21935,15 +21989,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21954,15 +22008,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21973,15 +22027,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -21992,15 +22046,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -22011,15 +22065,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -22030,15 +22084,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S (Proof)"
           }
         ]
       }
@@ -23867,7 +23921,7 @@
       {
         "id": "awq_2024_zitkala__a",
         "year": "2024",
-        "name": "Zitkala-\u0160a",
+        "name": "Zitkala-Ša",
         "varieties": [
           {
             "id": "P",
@@ -24019,27 +24073,27 @@
         "varieties": [
           {
             "id": "P-Near-Date",
-            "label": "P Near Date"
+            "label": "P (Near Date)"
           },
           {
             "id": "P-Far-Date",
-            "label": "P Far Date"
+            "label": "P (Far Date)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S (Uncirculated)"
           },
           {
             "id": "S-Proof-Filled-S",
-            "label": "S Proof (Filled S)"
+            "label": "S Proof (Filled S - Type 1)"
           },
           {
             "id": "S-Proof-Clear-S",
-            "label": "S Proof (Clear S)"
+            "label": "S Proof (Clear S - Type 2)"
           }
         ]
       },
@@ -24049,19 +24103,19 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S (Uncirculated)"
           },
           {
             "id": "S-Proof",
-            "label": "S Proof"
+            "label": "S (Proof)"
           }
         ]
       },
@@ -24071,23 +24125,23 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S (Uncirculated)"
           },
           {
             "id": "S-Proof-Filled-S",
-            "label": "S Proof (Filled S)"
+            "label": "S Proof (Filled S - Type 1)"
           },
           {
             "id": "S-Proof-Clear-S",
-            "label": "S Proof (Clear S)"
+            "label": "S Proof (Clear S - Type 2)"
           }
         ]
       },
@@ -24097,15 +24151,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
-          },
-          {
-            "id": "P-Proof",
-            "label": "P Proof"
+            "label": "P (Uncirculated)"
           },
           {
             "id": "D",
-            "label": "D"
+            "label": "D (Uncirculated)"
+          },
+          {
+            "id": "P-Proof",
+            "label": "P (Proof)"
           }
         ]
       }

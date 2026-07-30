@@ -332,9 +332,12 @@
         <span class="file-type-pill">&#128248; .webp / .heic</span>
         <span class="file-type-pill">&#128193; Whole Folders</span>
       </div>
-      <div class="drop-actions">
+      <div class="drop-actions" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
         <button class="btn btn-primary" id="files-btn" onclick="document.getElementById('file-input').click()">
           &#128193; Browse Files or Folder
+        </button>
+        <button class="btn btn-secondary" id="csv-template-btn" onclick="downloadCsvTemplate()">
+          &#128202; Download CSV Template (.csv)
         </button>
       </div>
             <input type="file" id="file-input" multiple
@@ -1014,6 +1017,22 @@ function maskPII(text) {
   let masked = text.replace(emailRegex, '[REDACTED EMAIL]');
   masked = masked.replace(phoneRegex, '[REDACTED PHONE]');
   return masked;
+}
+
+function downloadCsvTemplate() {
+  const csvContent = "\uFEFFCategory,Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Variety,Condition/Grade,Grading Service,Certification Number,Strike Type,Holder Type,Metal Content,Quantity,Purchase Cost,Purchase Date,Retailer/Dealer,Storage Location,Personal Notes,Country\n" +
+    '"Coin","1921","S","Morgan Dollar","Morgan Silver Dollars","Liberty Head","VAM-1A Top 100","MS64","PCGS","43521234","Business","Slab","90% Silver","1","65.00","2024-03-15","GreatCollections","Safe Box A","Toned obverse","USA"\n' +
+    '"Banknote","1934","","$20 Silver Certificate","US Federal Reserve Notes","Julian-Morgenthau","Fr. 2201-A","EPQ65","PMG","80912345","Regular Issue","Slab","Paper","1","120.00","2024-05-10","Heritage Auctions","Binder 1","Crisp Uncirculated","USA"\n' +
+    '"Medal","1969","","Apollo 11 Commemorative Medal","NASA Space Medals","First Moon Landing","Robbins Medal #123","MS67","NGC","60123984","Proof","Slab","Sterling Silver","1","250.00","2024-06-20","Stack\'s Bowers","Display Case","Original capsule","USA"\n';
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "numista_bulk_import_template.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // Kick off the count fetch on page load

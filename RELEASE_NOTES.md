@@ -7,6 +7,17 @@
 ---
 
 
+
+## v4.1 — 2026-07-30
+**Greysheet Valuation, Bulk Upload & System Resilience**
+
+- Greysheet Market Valuation Integration: real-time CDN bid/ask prices, CPG retail attribution, and daily portfolio snapshot sync.
+- Automated Arbitrage Deal Finder & Wishlist EPN matcher: spot underpriced coins and affiliate matches instantly.
+- Bulk Upload Template: streamlined CSV/Excel ingestion template for uploading collections in bulk.
+- Financials & Melt Valuation Card: live melt calculations for gold, silver, platinum, and palladium spot prices.
+- Scraper Resilience Pass: TLS fingerprint bypass (curl_cffi) and direct candidates routing for US Mint, PCGS, and NGC sources.
+- Backend Observability & System Audit: API request logging, automated diagnostic audit scripts, and Cloud Run health monitoring.
+
 ## v4.0 — 2026-07-08
 **Greysheet Market Valuation Integration**
 

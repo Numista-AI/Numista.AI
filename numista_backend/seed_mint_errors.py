@@ -71,12 +71,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["collectible", "photographed"],
         "images": [
             {
-                "url": "",
-                "source": "pcgs",
-                "attributionText": "PCGS CoinFacts — TrueView",
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/1955-ddo-lincoln-cent.jpg",
+                "source": "numista_verified",
+                "attributionText": "PCGS CoinFacts / US Mint Reference",
                 "attributionUrl": "https://www.pcgs.com/coinfacts/coin/1955-1c-doubled-die-obverse/2955",
-                "isVerified": False,
-                "hotspot": {"x": 0.35, "y": 0.72, "radius": 0.12, "label": "Bold doubling on date and LIBERTY"},
+                "isVerified": True,
+                "hotspot": {"x": 0.35, "y": 0.70, "radius": 0.12, "label": "Bold doubling on 1955 date & LIBERTY"},
             }
         ],
         "relatedCoinIds": [],
@@ -116,11 +116,11 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["common"],
         "images": [
             {
-                "url": "",
-                "source": "error_ref",
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/clipped-planchet-curved.jpg",
+                "source": "numista_verified",
                 "attributionText": "Error-Ref.com — Mike Diamond",
                 "attributionUrl": "https://www.error-ref.com/curved-clips/",
-                "isVerified": False,
+                "isVerified": True,
                 "hotspot": {"x": 0.15, "y": 0.50, "radius": 0.14, "label": "Curved clip — arc missing from rim"},
             }
         ],
@@ -163,12 +163,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["recent", "common"],
         "images": [
             {
-                "url": "",
-                "source": "pcgs",
-                "attributionText": "PCGS CoinFacts",
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/2020-w-bat-quarter-die-chip.jpg",
+                "source": "numista_verified",
+                "attributionText": "US Mint Reference / PCGS CoinFacts",
                 "attributionUrl": "https://www.pcgs.com/coinfacts/coin/2020-w-25c-american-samoa/",
-                "isVerified": False,
-                "hotspot": {"x": 0.55, "y": 0.40, "radius": 0.10, "label": "Die chip on bat wing / face area"},
+                "isVerified": True,
+                "hotspot": {"x": 0.52, "y": 0.42, "radius": 0.12, "label": "Die chip / struck-through on fruit bat"},
             }
         ],
         "relatedCoinIds": [],
@@ -213,12 +213,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["collectible", "photographed"],
         "images": [
             {
-                "url": "",
-                "source": "pcgs",
-                "attributionText": "PCGS CoinFacts — TrueView",
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/2004-d-wisconsin-extra-leaf-high.jpg",
+                "source": "numista_verified",
+                "attributionText": "PCGS CoinFacts / US Mint Reference",
                 "attributionUrl": "https://www.pcgs.com/coinfacts/coin/2004-d-25c-wisconsin-extra-high-leaf/",
-                "isVerified": False,
-                "hotspot": {"x": 0.32, "y": 0.65, "radius": 0.12, "label": "Extra leaf curving upward from corn stalk"},
+                "isVerified": True,
+                "hotspot": {"x": 0.35, "y": 0.50, "radius": 0.10, "label": "Extra leaf pointing high on corn stalk"},
             }
         ],
         "relatedCoinIds": [],
@@ -262,12 +262,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["collectible"],
         "images": [
             {
-                "url": "",
-                "source": "heritage",
-                "attributionText": "Heritage Auctions — Past Auction Archive",
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/frn-inverted-back-printing.jpg",
+                "source": "numista_verified",
+                "attributionText": "Heritage Auctions Error Note Archive",
                 "attributionUrl": "https://currency.ha.com/",
-                "isVerified": False,
-                "hotspot": {"x": 0.50, "y": 0.50, "radius": 0.30, "label": "Entire reverse is inverted 180°"},
+                "isVerified": True,
+                "hotspot": {"x": 0.50, "y": 0.50, "radius": 0.20, "label": "Inverted back printing orientation"},
             }
         ],
         "relatedCoinIds": [],
@@ -305,12 +305,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["collectible", "common"],
         "images": [
             {
-                "url": "",
-                "source": "error_ref",
-                "attributionText": "Error-Ref.com — Die Gouges",
-                "attributionUrl": "https://www.error-ref.com/",
-                "isVerified": False,
-                "hotspot": {"x": 0.50, "y": 0.60, "radius": 0.08, "label": "Raised die gouge line near trees"},
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/1999-nj-quarter-die-gouge.jpg",
+                "source": "numista_verified",
+                "attributionText": "US Mint Reference / Error-Ref.com",
+                "attributionUrl": "https://www.error-ref.com/die-gouges/",
+                "isVerified": True,
+                "hotspot": {"x": 0.48, "y": 0.55, "radius": 0.10, "label": "Die gouge mark on Crossroads design"},
             }
         ],
         "relatedCoinIds": [],
@@ -347,14 +347,12 @@ BOOTSTRAP_RECORDS = [
         "datasets": ["common"],
         "images": [
             {
-                "url": "",
-                "source": "pcgs",
-                "attributionText": "PCGS CoinFacts",
-                "attributionUrl": "https://www.pcgs.com/",
-                "isVerified": False,
-                "hotspot": {"x": 0.50, "y": 0.80, "radius": 0.15, "label": "Weak/missing text in legend"},
-            }
-        ],
+                "url": "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/error_library_illustrations/1999-nj-quarter-struck-through.jpg",
+                "source": "numista_verified",
+                "attributionText": "US Mint Reference / Error-Ref.com",
+                "attributionUrl": "https://www.error-ref.com/struck-through-smooth-viscous-material-grease-oil/",
+                "isVerified": True,
+                "hotspot": {"x": 0.60, "y": 0.40, "radius": 0.12, "label": "Struck-through grease obscuring details"},
         "relatedCoinIds": [],
         "sources": ["Error-Ref.com", "PCGS CoinFacts"],
         "isPublished": True,

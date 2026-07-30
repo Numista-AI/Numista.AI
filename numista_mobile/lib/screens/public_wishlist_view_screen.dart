@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/epn_service.dart';
 
 class PublicWishlistViewScreen extends StatefulWidget {
   final String token;
@@ -15,6 +16,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _wishlistData;
+  Set<int> _reservedIndices = {};
 
   @override
   void initState() {
@@ -39,9 +41,13 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
         return;
       }
 
+      final data = doc.data();
+      final reservedList = List<int>.from(data?['reserved_items'] ?? []);
+
       if (mounted) {
         setState(() {
-          _wishlistData = doc.data();
+          _wishlistData = data;
+          _reservedIndices = reservedList.toSet();
           _loading = false;
         });
       }
@@ -55,12 +61,38 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     }
   }
 
-  Future<void> _openEbaySearch(String query) async {
-    final cleanQuery = Uri.encodeComponent(query);
-    // EPN Affiliate Link structure targeting campaign 5339148752
-    final url = Uri.parse(
-      'https://www.ebay.com/sch/i.html?_nkw=$cleanQuery&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid=5339148752&customid=public_wishlist'
+  Future<void> _toggleReservation(int index) async {
+    final isReserved = _reservedIndices.contains(index);
+    setState(() {
+      if (isReserved) {
+        _reservedIndices.remove(index);
+      } else {
+        _reservedIndices.add(index);
+      }
+    });
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('public_wishlists')
+          .doc(widget.token)
+          .update({'reserved_items': _reservedIndices.toList()});
+    } catch (e) {
+      debugPrint('Error toggling reservation: $e');
+    }
+  }
+
+  Future<void> _openEbaySearch(String query, {double? estimatedValue, String? programId}) async {
+    final ownerEmail = _wishlistData?['owner_email'] ?? 'guest';
+    final userHash = ownerEmail.split('@').first;
+    final customId = '${userHash}_${programId ?? "gift_list"}';
+
+    final urlString = EpnService.buildSearchUrlFromQuery(
+      query,
+      estimatedValue: estimatedValue,
+      customId: customId,
     );
+
+    final url = Uri.parse(urlString);
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
@@ -68,28 +100,25 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final alias = _wishlistData?['owner_alias'] ?? "Numista Collector";
     return Scaffold(
       backgroundColor: const Color(0xFF0E1117),
       appBar: AppBar(
         backgroundColor: const Color(0xFF161B27),
+        elevation: 0,
         title: Row(
           children: [
             const Icon(Icons.card_giftcard, color: Color(0xFF10B981)),
             const SizedBox(width: 10),
-            Text(
-              _wishlistData?['owner_alias'] != null
-                  ? "${_wishlistData!['owner_alias']}'s Wish List"
-                  : "Public Wish List",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text("$alias's Wish List", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
       ),
-      body: _buildBody(),
+      body: _buildBody(alias),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(String alias) {
     if (_loading) {
       return const Center(
         child: Column(
@@ -97,7 +126,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
           children: [
             CircularProgressIndicator(color: Color(0xFF10B981)),
             SizedBox(height: 16),
-            Text("Loading Wish List...", style: TextStyle(color: Colors.white70)),
+            Text("Loading Gift Wish List...", style: TextStyle(color: Colors.white70)),
           ],
         ),
       );
@@ -111,7 +140,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF161B27),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+            border: Border.all(color: Colors.redAccent.withAlpha(120)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -132,91 +161,245 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     final items = List<Map<String, dynamic>>.from(_wishlistData?['items'] ?? []);
     final dateDisplay = _wishlistData?['snapshot_date_display'] ?? "Recent";
 
-    return Column(
-      children: [
-        // Top Banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          color: const Color(0xFF10B981).withOpacity(0.15),
-          child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 900;
+        final horizontalPadding = isDesktop ? 48.0 : 16.0;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.info_outline, color: Color(0xFF10B981), size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Read-Only Gift List — Snapshot taken on $dateDisplay",
-                  style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+              // Top Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF10B981).withAlpha(80)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.stars_rounded, color: Color(0xFF10B981), size: 28),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Gift List for $alias",
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Snapshot updated on $dateDisplay • Tap 'Find on eBay' to view verified listings.",
+                            style: const TextStyle(color: Color(0xFF10B981), fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
+              const SizedBox(height: 16),
 
-        // Items List
-        Expanded(
-          child: items.isEmpty
-              ? const Center(
-                  child: Text(
-                    "No items currently in this wish list.",
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
+              // Buyer Safety Warning Box
+              _buildBuyerSafetyBox(),
+
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Missing Coins & Wanted Items",
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "${items.length} items total",
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Items Grid / List
+              if (items.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Text(
+                      "No items currently in this wish list.",
+                      style: TextStyle(color: Colors.white54, fontSize: 16),
+                    ),
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+              else if (isDesktop)
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 2.2,
+                  ),
                   itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final title = item['title'] ?? item['name'] ?? 'Numismatic Coin Item';
-                    final targetGrade = item['target_grade'] ?? item['grade'] ?? 'Any Grade';
-                    final maxPrice = item['max_price'] != null ? "\$${item['max_price']}" : "Market";
-
-                    return Card(
-                      color: const Color(0xFF161B27),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: Color(0xFF2A3045)),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                          child: const Icon(Icons.monetization_on, color: Color(0xFF10B981)),
-                        ),
-                        title: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            "Target Grade: $targetGrade • Budget: $maxPrice",
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ),
-                        trailing: ElevatedButton.icon(
-                          onPressed: () => _openEbaySearch("$title $targetGrade"),
-                          icon: const Icon(Icons.open_in_new, size: 16),
-                          label: const Text("Find on eBay"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3B82F6),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) => _buildGiftCard(items[index], index),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) => _buildGiftCard(items[index], index),
                 ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBuyerSafetyBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B).withAlpha(100)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.shield_outlined, color: Color(0xFFF59E0B), size: 24),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "🛡️ Numista Safety Tips for Gift Buyers",
+                  style: TextStyle(color: Color(0xFFF59E0B), fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  "• Prefer eBay sellers with 99%+ positive feedback and 100+ sales.\n"
+                  "• For items over \$200, links automatically search for PCGS or NGC slabbed/certified coins.\n"
+                  "• Check listing photos carefully to ensure they are actual coin photos, not stock images.",
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGiftCard(Map<String, dynamic> item, int index) {
+    final title = item['title'] ?? item['name'] ?? 'Numismatic Coin Item';
+    final targetGrade = item['target_grade'] ?? item['grade'] ?? 'Any Grade';
+    final maxPrice = item['max_price'] != null ? "\$${item['max_price']}" : "Market";
+    final programId = item['program_id'] as String?;
+    final estimatedValue = item['estimated_value'] != null ? (item['estimated_value'] as num).toDouble() : null;
+
+    final isReserved = _reservedIndices.contains(index);
+
+    return Card(
+      color: isReserved ? const Color(0xFF16231C) : const Color(0xFF161B27),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isReserved ? const Color(0xFF10B981) : const Color(0xFF2A3045),
+          width: isReserved ? 1.5 : 1.0,
         ),
-      ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: isReserved
+                  ? const Color(0xFF10B981).withAlpha(40)
+                  : const Color(0xFF3B82F6).withAlpha(40),
+              radius: 22,
+              child: Icon(
+                isReserved ? Icons.check_circle : Icons.monetization_on_outlined,
+                color: isReserved ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isReserved ? const Color(0xFF10B981) : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Target Grade: $targetGrade • Est. Budget: $maxPrice",
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  if (isReserved)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        "✓ Marked as Gifted / Reserved",
+                        style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _openEbaySearch("$title $targetGrade", estimatedValue: estimatedValue, programId: programId),
+                  icon: const Icon(Icons.open_in_new, size: 14),
+                  label: const Text("Find on eBay", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                OutlinedButton(
+                  onPressed: () => _toggleReservation(index),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: BorderSide(color: isReserved ? const Color(0xFF10B981) : Colors.white38),
+                  ),
+                  child: Text(
+                    isReserved ? "Reserved" : "I Bought This",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isReserved ? const Color(0xFF10B981) : Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
