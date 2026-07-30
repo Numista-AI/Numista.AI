@@ -17,6 +17,7 @@ import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
+import '../widgets/beta_welcome_dialog.dart';
 import '../constants.dart';
 import 'ai_chat_screen.dart';
 
@@ -140,6 +141,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
     _valuation = BatchValuationService.instance.current;
     // Restore persisted progress so Resume banner appears after page refresh
     BatchValuationService.instance.restoreFromFirestore();
+    // Auto-prompt Beta Welcome Dialog for new or uninitiated testers
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (await BetaWelcomeDialog.shouldAutoShow()) {
+        if (mounted) BetaWelcomeDialog.show(context);
+      }
+    });
   }
 
   @override
@@ -524,7 +531,77 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             color: Color(0xFF166534))),
                   ),
                   const SizedBox(height: 12),
-                  const BetaChecklistWidget(),
+                  // ── Welcome Beta Tester Banner Card ─────────────────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.4)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Row(
+                                children: [
+                                  const Text('👋 Welcome Beta Tester!',
+                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF166534),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('ACTIVE THROUGH SEPT 1',
+                                        style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Thank you for helping us test Numista.AI! Please use our 18-step checklist to test coin scanning, cert lookups, and collection tools.',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () => BetaWelcomeDialog.show(context),
+                              icon: const Icon(Icons.info_outline, size: 16),
+                              label: const Text('Read Beta Guide & Info'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const BetaChecklistWidget(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // ── Header: title + portfolio value ──────────────────────
