@@ -577,6 +577,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           
           return StreamBuilder<List<WishlistItem>>(
             stream: WishlistService.getWishlistStream(),
+            builder: (context, snapshot) {
               final items = snapshot.data ?? [];
               final individualItems = items.where((i) => i.type == 'individual').toList();
               final programs = items.where((i) => i.type == 'program').toList();
