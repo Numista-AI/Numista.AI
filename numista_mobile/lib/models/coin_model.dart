@@ -47,6 +47,9 @@ class CoinModel {
   final double greysheetBid;
   final double greysheetAsk;
   final double cpgRetail;
+  final double pcgsValue;
+  final double ngcValue;
+  final double blueBookValue;
   final DateTime? priceLastUpdated;
   final bool hasCac;
 
@@ -119,6 +122,9 @@ class CoinModel {
     this.greysheetBid = 0.0,
     this.greysheetAsk = 0.0,
     this.cpgRetail = 0.0,
+    this.pcgsValue = 0.0,
+    this.ngcValue = 0.0,
+    this.blueBookValue = 0.0,
     this.priceLastUpdated,
     this.hasCac = false,
     this.provenanceLedger = const [],
@@ -147,35 +153,35 @@ class CoinModel {
   factory CoinModel.fromMap(Map<String, dynamic> data, String id) {
     // Split combined Year+Mint before assigning (e.g. "2006D" → year='2006' mint='D')
     final (year, mintMark) = _splitYearMint(
-      data['Year']?.toString().trim() ?? '',
-      data['Mint Mark']?.toString().trim() ?? '',
+      data['Year']?.toString().trim() ?? data['year']?.toString().trim() ?? '',
+      data['Mint Mark']?.toString().trim() ?? data['mintMark']?.toString().trim() ?? data['MintMark']?.toString().trim() ?? '',
     );
     return CoinModel(
       id: id,
       year: year,
       mintMark: mintMark,
-      denomination: data['Denomination']?.toString() ?? '',
-      programSeries: data['Program/Series']?.toString() ?? '',
-      themeSubject: data['Theme/Subject']?.toString() ?? '',
-      variety: data['Variety']?.toString() ?? '',
-      condition: data['Condition']?.toString() ?? 'Ungraded',
-      strikeType: data['Strike Type']?.toString() ?? '',
-      holderType: data['Holder Type']?.toString() ?? '',
-      gradingService: data['Grading Service']?.toString() ?? data['Holder Type']?.toString() ?? data['Grading Svc']?.toString() ?? '',
-      certificationNumber: data['Certification Number']?.toString() ?? data['Cert #']?.toString() ?? data['Cert No']?.toString() ?? data['Certification #']?.toString() ?? '',
-      metalContent: data['Metal Content']?.toString() ?? '',
-      quantity: data['Quantity']?.toString() ?? '1',
-      purchaseCost: data['Purchase Cost']?.toString() ?? data['Cost']?.toString() ?? '\$0.00',
-      purchaseDate: data['Purchase Date']?.toString() ?? '',
-      retailer: data['Retailer/Website']?.toString() ?? '',
-      retailerItemNo: data['Retailer Item No.']?.toString() ?? '',
-      retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? '',
-      storageLocation: data['Storage Location']?.toString() ?? '',
-      personalNotes: data['Personal Notes I']?.toString() ?? '',
-      personalRef: data['Personal Reference #']?.toString() ?? '',
-      originalDescription: data['Original Description from source']?.toString() ?? '',
-      aiEstimatedValue: data['AI Estimated Value']?.toString() ?? 'Pending',
-      meltValue: data['Melt Value']?.toString() ?? 'N/A',
+      denomination: data['Denomination']?.toString() ?? data['denomination']?.toString() ?? '',
+      programSeries: data['Program/Series']?.toString() ?? data['programSeries']?.toString() ?? data['ProgramSeries']?.toString() ?? '',
+      themeSubject: data['Theme/Subject']?.toString() ?? data['themeSubject']?.toString() ?? '',
+      variety: data['Variety']?.toString() ?? data['variety']?.toString() ?? '',
+      condition: data['Condition']?.toString() ?? data['condition']?.toString() ?? 'Ungraded',
+      strikeType: data['Strike Type']?.toString() ?? data['strikeType']?.toString() ?? '',
+      holderType: data['Holder Type']?.toString() ?? data['holderType']?.toString() ?? '',
+      gradingService: data['Grading Service']?.toString() ?? data['gradingService']?.toString() ?? '',
+      certificationNumber: data['Certification Number']?.toString() ?? data['certificationNumber']?.toString() ?? '',
+      metalContent: data['Metal Content']?.toString() ?? data['metalContent']?.toString() ?? '',
+      quantity: data['Quantity']?.toString() ?? data['quantity']?.toString() ?? '1',
+      purchaseCost: data['Purchase Cost']?.toString() ?? data['purchaseCost']?.toString() ?? '\$0.00',
+      purchaseDate: data['Purchase Date']?.toString() ?? data['purchaseDate']?.toString() ?? '',
+      retailer: data['Retailer/Website']?.toString() ?? data['retailer']?.toString() ?? '',
+      retailerItemNo: data['Retailer Item No.']?.toString() ?? data['retailerItemNo']?.toString() ?? '',
+      retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? data['retailerInvoiceNo']?.toString() ?? '',
+      storageLocation: data['Storage Location']?.toString() ?? data['storageLocation']?.toString() ?? '',
+      personalNotes: data['Personal Notes I']?.toString() ?? data['personalNotes']?.toString() ?? '',
+      personalRef: data['Personal Reference #']?.toString() ?? data['personalRef']?.toString() ?? '',
+      originalDescription: data['Original Description from source']?.toString() ?? data['originalDescription']?.toString() ?? '',
+      aiEstimatedValue: data['AI Estimated Value']?.toString() ?? data['aiEstimatedValue']?.toString() ?? 'Pending',
+      meltValue: data['Melt Value']?.toString() ?? data['meltValue']?.toString() ?? 'N/A',
       imageUrlObverse: data['image_url_obverse']?.toString() ?? '',
       imageUrlReverse: data['image_url_reverse']?.toString() ?? '',
       country: data['Country']?.toString() ?? 'USA',
@@ -189,14 +195,17 @@ class CoinModel {
       importBatch: data['import_batch']?.toString() ?? '',
       imageVerificationStatus: data['image_verification_status']?.toString() ?? 'unverified',
       imageVerificationReason: data['image_verification_reason']?.toString() ?? '',
-      greysheetGsid: data['greysheetGsid']?.toString() ?? '',
-      greysheetBid: (data['greysheetBid'] as num?)?.toDouble() ?? 0.0,
-      greysheetAsk: (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0,
-      cpgRetail: (data['cpgRetail'] as num?)?.toDouble() ?? 0.0,
+      greysheetGsid: data['greysheetGsid']?.toString() ?? data['greysheet_gsid']?.toString() ?? '',
+      greysheetBid: (data['greysheet_bid'] as num?)?.toDouble() ?? (data['greysheetBid'] as num?)?.toDouble() ?? 0.0,
+      greysheetAsk: (data['greysheet_ask'] as num?)?.toDouble() ?? (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0,
+      cpgRetail: (data['cpg_retail'] as num?)?.toDouble() ?? (data['cpgRetail'] as num?)?.toDouble() ?? 0.0,
+      pcgsValue: (data['pcgs_value'] as num?)?.toDouble() ?? (data['pcgsVal'] as num?)?.toDouble() ?? 0.0,
+      ngcValue: (data['ngc_value'] as num?)?.toDouble() ?? (data['ngcVal'] as num?)?.toDouble() ?? 0.0,
+      blueBookValue: (data['blue_book_value'] as num?)?.toDouble() ?? (data['blueBookVal'] as num?)?.toDouble() ?? 0.0,
       priceLastUpdated: data['priceLastUpdated'] is Timestamp 
           ? (data['priceLastUpdated'] as Timestamp).toDate() 
           : null,
-      hasCac: data['hasCac'] as bool? ?? false,
+      hasCac: (data['cac_premium_flag'] as bool?) ?? (data['hasCac'] as bool?) ?? false,
       isSet: data['is_set'] as bool? ?? false,
       setId: data['set_id']?.toString(),
       setContents: data['set_contents'] as List<dynamic>?,

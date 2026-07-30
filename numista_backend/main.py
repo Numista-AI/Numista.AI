@@ -8461,10 +8461,23 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
             )
 
-        # 5. Write to Firestore — always write the value, flag if suspicious
+        # 5. Write to Firestore — write both Golden Schema canonical fields & legacy fields for full compatibility
         grade_label = matched_price.get("GradeLabel", condition)
         cached_gs_name = coin_data.get("greysheetName", "")
+        blue_book_val = clean_val(matched_price.get("BlueBookVal") or matched_price.get("BlueBook"))
+        has_cac_flag = bool(matched_price.get("IsCac", has_cac))
+
         update_payload = {
+            # Canonical Golden Schema Fields
+            "cpg_retail": cpg_retail,
+            "greysheet_bid": greysheet_bid,
+            "greysheet_ask": greysheet_ask,
+            "pcgs_value": pcgs_val,
+            "ngc_value": ngc_val,
+            "blue_book_value": blue_book_val,
+            "cac_premium_flag": has_cac_flag,
+
+            # Legacy fields for backward compatibility
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
             "cpgRetail": cpg_retail,
@@ -8482,9 +8495,15 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             update_payload["valuationFlag"] = firestore.DELETE_FIELD
         coin_ref.update(update_payload)
 
-        
         return {
             "status": "success",
+            "cpg_retail": cpg_retail,
+            "greysheet_bid": greysheet_bid,
+            "greysheet_ask": greysheet_ask,
+            "pcgs_value": pcgs_val,
+            "ngc_value": ngc_val,
+            "blue_book_value": blue_book_val,
+            "cac_premium_flag": has_cac_flag,
             "cpgRetail": cpg_retail,
             "greysheetBid": greysheet_bid,
             "greysheetAsk": greysheet_ask,
@@ -8506,6 +8525,24 @@ async def get_greysheet_pricing_table(gsid: int):
         service = GreysheetService(db=db)
         prices = service.get_pricing(gsid)
         return {"gsid": gsid, "pricing": prices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/greysheet/quota")
+async def get_greysheet_quota_status():
+    """
+    Returns monthly Greysheet API quota usage, warning status, and hard-cap state.
+    """
+    try:
+        from services.greysheet_quota_service import GreysheetQuotaService
+        quota_svc = GreysheetQuotaService(db=db)
+        usage = quota_svc.get_monthly_usage()
+        return {
+            "status": "success",
+            "usage": usage,
+            "warning_threshold": 25000,
+            "hard_cap_threshold": 50000,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
