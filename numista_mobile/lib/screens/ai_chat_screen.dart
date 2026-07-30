@@ -649,33 +649,75 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       child: SafeArea(
         top: false,
-                textCapitalization: TextCapitalization.sentences,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Tap-friendly Mint Mark Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Text('Mint Marks: ', style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 4),
+                  _mintChip('Philadelphia (P)', 'P'),
+                  _mintChip('Denver (D)', 'D'),
+                  _mintChip('San Francisco (S)', 'S'),
+                  _mintChip('Carson City (CC)', 'CC'),
+                  _mintChip('New Orleans (O)', 'O'),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _isLoading ? null : () => _send(_controller.text),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                color: _isLoading ? _surf : _teal,
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: _isLoading
-                        ? Colors.transparent
-                        : _teal.withAlpha(200),
-                    width: 1.5),
+            Row(children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: _bg,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: _teal.withAlpha(60)),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Ask Morgan about your collection…',
+                      hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    onSubmitted: _send,
+                    textInputAction: TextInputAction.send,
+                    maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                ),
               ),
-              child: Icon(
-                _isLoading ? Icons.hourglass_bottom_rounded : Icons.send_rounded,
-                color: _isLoading ? _sub : Colors.black87,
-                size: 20,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isLoading ? null : () => _send(_controller.text),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: _isLoading ? _surf : _teal,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: _isLoading
+                            ? Colors.transparent
+                            : _teal.withAlpha(200),
+                        width: 1.5),
+                  ),
+                  child: Icon(
+                    _isLoading ? Icons.hourglass_bottom_rounded : Icons.send_rounded,
+                    color: _isLoading ? _sub : Colors.black87,
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ]),
+            ]),
+          ],
+        ),
       ),
     );
   }
