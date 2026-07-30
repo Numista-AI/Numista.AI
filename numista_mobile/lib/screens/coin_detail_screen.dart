@@ -1939,14 +1939,18 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
               dataRowMaxHeight: 36,
               columns: const [
                 DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('CPG Retail', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('Wholesale Bid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('Red Book (CPG® Retail)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('PCGS® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('NGC® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+                DataColumn(label: Text('Blue Book', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
               ],
               rows: _pricing.map<DataRow>((p) {
                 final gradeLabel = p['GradeLabel'] ?? '—';
-                final cpgVal = p['CpgVal'] ?? '—';
-                final greyVal = p['GreyVal'] ?? '—';
-                final isCac = p['IsCac'] ?? false;
+                final cpgVal = p['CpgVal'] ?? p['cpg_retail'] ?? '—';
+                final pcgsVal = p['PcgsVal'] ?? p['pcgs_value'] ?? '—';
+                final ngcVal = p['NgcVal'] ?? p['ngc_value'] ?? '—';
+                final blueBookVal = p['BlueBookVal'] ?? p['blue_book_value'] ?? '—';
+                final isCac = p['IsCac'] ?? p['cac_premium_flag'] ?? false;
                 final gradeNo = p['Grade'] as int?;
 
                 final isCurrent = gradeNo != null && gradeNo == targetGradeNo && !isCac;
@@ -1967,7 +1971,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                       ),
                     )),
                     DataCell(Text(
-                      cpgVal.isEmpty ? '—' : '\$$cpgVal',
+                      cpgVal.toString().isEmpty || cpgVal.toString() == '0' ? '—' : '\$$cpgVal',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
@@ -1975,11 +1979,24 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                       ),
                     )),
                     DataCell(Text(
-                      greyVal.isEmpty ? '—' : '\$$greyVal',
+                      pcgsVal.toString().isEmpty || pcgsVal.toString() == '0' ? '—' : '\$$pcgsVal',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? _kAccent : _kText,
+                        color: _kText,
+                      ),
+                    )),
+                    DataCell(Text(
+                      ngcVal.toString().isEmpty || ngcVal.toString() == '0' ? '—' : '\$$ngcVal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _kText,
+                      ),
+                    )),
+                    DataCell(Text(
+                      blueBookVal.toString().isEmpty || blueBookVal.toString() == '0' ? '—' : '\$$blueBookVal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _kText,
                       ),
                     )),
                   ],
@@ -1989,7 +2006,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
           ),
         ),
         const SizedBox(height: 8),
-        // ── Attribution footnote (§4.4 / §4.5 of CDN API license) ──────
+        // ── Compliant Attribution Footnote (§4.4 / §4.5 of CDN API license) ──────
         GestureDetector(
           onTap: () async {
             final uri = Uri.parse('https://www.greysheet.com');
@@ -1999,9 +2016,9 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
             text: TextSpan(
               style: const TextStyle(fontSize: 10, color: _kSubtext, fontStyle: FontStyle.italic),
               children: [
-                const TextSpan(text: 'Coin, note & medal value estimate based on CPG data from '),
+                const TextSpan(text: 'Coin, note & medal value estimates based on Red Book / CPG® Retail data from '),
                 const TextSpan(
-                  text: 'Greysheet',
+                  text: 'Greysheet.com',
                   style: TextStyle(
                     color: Color(0xFF60A5FA),
                     decoration: TextDecoration.underline,
@@ -2010,8 +2027,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                 ),
                 if (widget.priceLastUpdated != null)
                   TextSpan(
-                    text: ' (${_fmtPriceMonth(widget.priceLastUpdated!)})',
-                    style: const TextStyle(fontStyle: FontStyle.italic),
+                    text: ' (Refreshed ${_fmtPriceMonth(widget.priceLastUpdated!)})',
                   ),
               ],
             ),

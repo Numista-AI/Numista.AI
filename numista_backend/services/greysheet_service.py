@@ -8,6 +8,8 @@ from google.cloud import firestore
 import google.auth
 from google.genai import types
 
+from services.greysheet_quota_service import GreysheetQuotaService
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("greysheet_service")
@@ -28,6 +30,7 @@ class GreysheetService:
         self._leaf_nodes_cache = None  # In-memory cache of leaf nodes
         self._collectibles_cache = {}  # Cache of node_id -> collectibles list
         self._pricing_cache = {}       # Cache of gsid -> pricing data list
+        self._quota_service = GreysheetQuotaService(db=db)
         
     def _lazy_init(self):
         """Lazy load credentials and setup headers."""
@@ -63,6 +66,12 @@ class GreysheetService:
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         self._lazy_init()
+        
+        # Hard cap check before making external call
+        if self._quota_service.is_hard_cap_engaged():
+            logger.warning(f"[Greysheet] Hard cap (50,000 calls) engaged. Skipping external call to {endpoint}.")
+            return None
+
         url = f"{BASE_URL}/{endpoint}"
         query_params = dict(params) if params else {}
         if "apiLevel" not in query_params:
@@ -71,6 +80,8 @@ class GreysheetService:
             # Bypass SSL certificate verification for expired host certs
             response = requests.get(url, headers=self._headers, params=query_params, verify=False, timeout=15)
             if response.status_code == 200:
+                # Increment atomic call count on successful response
+                self._quota_service.increment_call_count()
                 return response.json()
             else:
                 logger.error(f"[Greysheet] API Error: {url} returned status {response.status_code}: {response.text[:200]}")
@@ -85,7 +96,7 @@ class GreysheetService:
         return res.get("Data", []) if res else []
 
     def get_collectible_by_node(self, node_id: int) -> List[Dict[str, Any]]:
-        """Fetch all collectibles under a leaf node."""
+        """Fetch all collectibles under a leaf node with 24h cache TTL."""
         if node_id in self._collectibles_cache:
             return self._collectibles_cache[node_id]
 
@@ -98,15 +109,11 @@ class GreysheetService:
                 if doc.exists:
                     cache_data = doc.to_dict()
                     updated_at = cache_data.get("updated_at")
-                    if updated_at:
-                        if updated_at.tzinfo is None:
-                            updated_at = updated_at.replace(tzinfo=timezone.utc)
-                        delta = datetime.now(timezone.utc) - updated_at
-                        if delta.days < 30:
-                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
-                            data = cache_data.get("data", [])
-                            self._collectibles_cache[node_id] = data
-                            return data
+                    if self._quota_service.is_cache_valid(updated_at, ttl_hours=24) or self._quota_service.is_hard_cap_engaged():
+                        logger.info(f"[Greysheet Cache] Hit (24h TTL) for {cache_key}")
+                        data = cache_data.get("data", [])
+                        self._collectibles_cache[node_id] = data
+                        return data
             except Exception as e:
                 logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
 
@@ -129,11 +136,11 @@ class GreysheetService:
         return data
 
     def get_pricing(self, gsid: int) -> List[Dict[str, Any]]:
-        """Fetch pricing table for a specific GSID."""
+        """Fetch pricing table for a specific GSID with 24h cache TTL."""
         if gsid in self._pricing_cache:
             return self._pricing_cache[gsid]
 
-        # 1. Try Firestore Cache
+        # 1. Try Firestore Cache (24h TTL)
         cache_key = f"pricing_{gsid}"
         if self._db:
             try:
@@ -142,15 +149,11 @@ class GreysheetService:
                 if doc.exists:
                     cache_data = doc.to_dict()
                     updated_at = cache_data.get("updated_at")
-                    if updated_at:
-                        if updated_at.tzinfo is None:
-                            updated_at = updated_at.replace(tzinfo=timezone.utc)
-                        delta = datetime.now(timezone.utc) - updated_at
-                        if delta.days < 30:
-                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
-                            data = cache_data.get("data", [])
-                            self._pricing_cache[gsid] = data
-                            return data
+                    if self._quota_service.is_cache_valid(updated_at, ttl_hours=24) or self._quota_service.is_hard_cap_engaged():
+                        logger.info(f"[Greysheet Cache] Hit (24h TTL) for {cache_key}")
+                        data = cache_data.get("data", [])
+                        self._pricing_cache[gsid] = data
+                        return data
             except Exception as e:
                 logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
 
@@ -173,7 +176,7 @@ class GreysheetService:
         return data
 
     def get_collectible(self, gsid: int) -> Optional[Dict[str, Any]]:
-        """Fetch a single collectible's metadata by GSID."""
+        """Fetch a single collectible's metadata by GSID with 24h cache TTL."""
         # 1. Try Firestore Cache
         cache_key = f"collectible_{gsid}"
         if self._db:
@@ -183,13 +186,9 @@ class GreysheetService:
                 if doc.exists:
                     cache_data = doc.to_dict()
                     updated_at = cache_data.get("updated_at")
-                    if updated_at:
-                        if updated_at.tzinfo is None:
-                            updated_at = updated_at.replace(tzinfo=timezone.utc)
-                        delta = datetime.now(timezone.utc) - updated_at
-                        if delta.days < 30:
-                            logger.info(f"[Greysheet Cache] Hit for {cache_key}")
-                            return cache_data.get("data")
+                    if self._quota_service.is_cache_valid(updated_at, ttl_hours=24) or self._quota_service.is_hard_cap_engaged():
+                        logger.info(f"[Greysheet Cache] Hit (24h TTL) for {cache_key}")
+                        return cache_data.get("data")
             except Exception as e:
                 logger.warning(f"[Greysheet Cache] Error reading cache for {cache_key}: {e}")
 

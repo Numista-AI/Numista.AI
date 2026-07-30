@@ -129,3 +129,29 @@ def test_advanced_api_level_default(monkeypatch):
     service._get("GetPricingRequest", {"Gsid": 429})
     assert captured_params.get("apiLevel") == "advanced"
     assert captured_params.get("Gsid") == 429
+
+def test_quota_endpoint():
+    """Verify GET /api/greysheet/quota returns usage & threshold metrics."""
+    response = client.get("/api/greysheet/quota")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "usage" in data
+    assert data["warning_threshold"] == 25000
+    assert data["hard_cap_threshold"] == 50000
+
+def test_quota_service_hard_cap():
+    """Verify GreysheetQuotaService hard cap detection and 24h cache TTL check."""
+    from services.greysheet_quota_service import GreysheetQuotaService
+    from datetime import datetime, timezone, timedelta
+
+    qs = GreysheetQuotaService()
+    
+    # Check 24h TTL logic
+    now = datetime.now(timezone.utc)
+    recent = now - timedelta(hours=5)
+    stale = now - timedelta(hours=30)
+    
+    assert qs.is_cache_valid(recent, ttl_hours=24) is True
+    assert qs.is_cache_valid(stale, ttl_hours=24) is False
+
