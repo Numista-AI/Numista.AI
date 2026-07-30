@@ -181,17 +181,49 @@ class EpnService {
     return '$baseSearch&$epnParams';
   }
 
+  // ── Known Key Dates & High Value Varieties ──────────────────────────────────
+  static const Set<String> _keyDateKeywords = {
+    '1909-s vdb', '1909-s', '1914-d', '1931-s', '1922 no d', '1955 doubled die',
+    '1916-d', '1942/1', '1932-d', '1932-s', '1901-s', '1893-s', '1889-cc',
+    '1895 morgan', '1895-o', '1892-s', '1928 peace', '1979-s type 2', '1981-s type 2',
+    '1995-w', '2019-w', '1877 cent', '1908-s cent', '1912-s nickel', '1913-s type 2',
+    '1921 peace', '1878-cc', '1879-cc', '1890-cc', '1891-cc', '1892-cc'
+  };
+
+  /// Returns true if coin query or value qualifies as a high-value / key date ($200+).
+  static bool isKeyDateOrHighValue(String query, {double? estimatedValue}) {
+    if (estimatedValue != null && estimatedValue >= 200.0) return true;
+    final lower = query.toLowerCase();
+    return _keyDateKeywords.any((k) => lower.contains(k));
+  }
+
   // ── Sync URL builder for raw query strings (e.g. missing program coins) ──
   // Uses hardcoded defaults so it can be called synchronously without
   // awaiting SharedPreferences — safe because campaign ID is non-secret.
   // _sacat=11116 = eBay Coins & Paper Money category.
-  static String buildSearchUrlFromQuery(String query, {bool soldOnly = false}) {
-    final encodedQuery = Uri.encodeComponent(query);
+  static String buildSearchUrlFromQuery(
+    String query, {
+    bool soldOnly = false,
+    double? estimatedValue,
+    String? customId,
+  }) {
+    String searchTerms = query.trim();
+    if (isKeyDateOrHighValue(searchTerms, estimatedValue: estimatedValue)) {
+      searchTerms = '$searchTerms PCGS NGC CAC';
+    }
+
+    final encodedQuery = Uri.encodeComponent(searchTerms);
+    final customIdParam = (customId != null && customId.isNotEmpty)
+        ? '&customid=${Uri.encodeComponent(customId)}'
+        : '&customid=public_wishlist';
+
     return 'https://www.ebay.com/sch/i.html'
         '?_nkw=$encodedQuery'
         '&_sacat=11116'
         '${soldOnly ? "&LH_Sold=1&LH_Complete=1" : ""}'
         '&mkevt=1&mkcid=1&mkrid=$_defaultMkrid'
-        '&campid=$_defaultCampId&toolid=10001&siteid=0';
+        '&campid=$_defaultCampId&toolid=10001&siteid=0'
+        '$customIdParam';
   }
 }
+

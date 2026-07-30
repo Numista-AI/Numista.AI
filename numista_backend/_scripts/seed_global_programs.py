@@ -8,14 +8,15 @@ import re
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-cred_path = r'c:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json.json'
+cred_path = r'c:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json'
 if not firebase_admin._apps:
     cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
-with open('master_coin_programs.json', 'r') as f:
+master_path = r'c:\Users\ericd\Documents\MyVertexProject\numista_backend\master_coin_programs.json'
+with open(master_path, 'r', encoding='utf-8') as f:
     programs = json.load(f)
 
 # Skip these non-programs
@@ -29,21 +30,14 @@ def make_doc_id(name):
     clean = re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
     return clean
 
-existing = {d.id for d in db.collection('global_programs').stream()}
-print(f"Already in Firestore: {len(existing)} programs")
-
 added = 0
-skipped = 0
+updated = 0
 for p in programs:
-    name = p['name']
-    if name in SKIP:
+    name = p.get('Name') or p.get('name', '')
+    if not name or name in SKIP:
         continue
 
-    doc_id = make_doc_id(name)
-    if doc_id in existing:
-        print(f"  SKIP (exists): {name}")
-        skipped += 1
-        continue
+    doc_id = p.get('Id') or p.get('id') or make_doc_id(name)
 
     # Normalize varieties: ensure each variety is a dict
     coins = p.get('coins', [])
@@ -74,8 +68,8 @@ for p in programs:
     }
 
     db.collection('global_programs').document(doc_id).set(doc)
-    print(f"  ADDED: {name} ({len(normalized_coins)} coins) -> {doc_id}")
+    print(f"  UPDATED: {name} ({len(normalized_coins)} coins) -> {doc_id}")
 
-    added += 1
+    updated += 1
 
-print(f"\nDone. Added: {added}, Skipped (already existed): {skipped}")
+print(f"\nDone. Updated: {updated} programs in Firestore global_programs")
