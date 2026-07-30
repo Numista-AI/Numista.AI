@@ -69,7 +69,7 @@ class BackupExportService {
     final List coins = payload['coins'] as List;
 
     final StringBuffer csv = StringBuffer();
-    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Condition,Cost,AI Estimated Value,Certification Number,Added');
+    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Cost,AI Estimated Value,Certification Number,Storage Location,Added');
 
     for (final c in coins) {
       final map = c as Map<String, dynamic>;
@@ -78,10 +78,12 @@ class BackupExportService {
         _cleanCsvCell(map['Mint Mark']),
         _cleanCsvCell(map['Denomination']),
         _cleanCsvCell(map['Program/Series']),
+        _cleanCsvCell(map['Theme/Subject']),
         _cleanCsvCell(map['Condition']),
         _cleanCsvCell(map['Cost']),
         _cleanCsvCell(map['AI Estimated Value']),
         _cleanCsvCell(map['Certification Number']),
+        _cleanCsvCell(map['Storage Location']),
         _cleanCsvCell(map['Added']),
       ].join(','));
     }
@@ -104,11 +106,11 @@ class BackupExportService {
     csv.writeln('Category,Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Variety,Condition/Grade,Grading Service,Certification Number,Strike Type,Holder Type,Metal Content,Quantity,Purchase Cost,Purchase Date,Retailer/Dealer,Storage Location,Personal Notes,Country');
 
     // Example 1: Coin
-    csv.writeln('"Coin","1921","S","Morgan Dollar","Morgan Silver Dollars","Liberty Head","VAM-1A Top 100","MS64","PCGS","43521234","Business","Slab","90% Silver","1","65.00","2024-03-15","GreatCollections","Safe Box A","Toned obverse","USA"');
+    csv.writeln('"Coin (Example - Delete Me)","1921","S","Morgan Dollar","Morgan Silver Dollars","Liberty Head","VAM-1A Top 100","MS64","PCGS","43521234","Business","Slab","90% Silver","1","65.00","2024-03-15","GreatCollections","Safe Box A","Toned obverse","USA"');
     // Example 2: Banknote / Paper Money
-    csv.writeln('"Banknote","1934","","\$20 Silver Certificate","US Federal Reserve Notes","Julian-Morgenthau","Fr. 2201-A","EPQ65","PMG","80912345","Regular Issue","Slab","Paper","1","120.00","2024-05-10","Heritage Auctions","Binder 1","Crisp Uncirculated","USA"');
+    csv.writeln('"Banknote (Example - Delete Me)","1934","","\$20 Silver Certificate","US Federal Reserve Notes","Julian-Morgenthau","Fr. 2201-A","EPQ65","PMG","80912345","Regular Issue","Slab","Paper","1","120.00","2024-05-10","Heritage Auctions","Binder 1","Crisp Uncirculated","USA"');
     // Example 3: Medal / Token
-    csv.writeln('"Medal","1969","","Apollo 11 Commemorative Medal","NASA Space Medals","First Moon Landing","Robbins Medal #123","MS67","NGC","60123984","Proof","Slab","Sterling Silver","1","250.00","2024-06-20","Stack\'s Bowers","Display Case","Original capsule","USA"');
+    csv.writeln('"Medal (Example - Delete Me)","1969","","Apollo 11 Commemorative Medal","NASA Space Medals","First Moon Landing","Robbins Medal #123","MS67","NGC","60123984","Proof","Slab","Sterling Silver","1","250.00","2024-06-20","Stack\'s Bowers","Display Case","Original capsule","USA"');
 
     const filename = 'numista_bulk_import_template.csv';
 

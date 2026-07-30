@@ -37,7 +37,7 @@ import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
 import '../widgets/beta_feedback_widget.dart';
 import '../widgets/morgan_guide_flow.dart';
-import '../widgets/morgan_greeter.dart';
+import '../widgets/morgan_chat_popout.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -55,6 +55,8 @@ class _BaseLayoutState extends State<BaseLayout> {
   String? _aiInitialQuery;
   String? _addCoinsInitialTabName;
   String? _programManagerInitialId;
+  bool _isMorganPopoutOpen = false;
+  String? _popoutInitialQuery;
 
   // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
@@ -64,36 +66,22 @@ class _BaseLayoutState extends State<BaseLayout> {
       if (gs.collapsed) MorganGuideService.toggleCollapsed();
       return;
     }
-    // No active guide — show the Morgan Greeter as a dialog overlay so the
-    // user can pick a guide without losing their current screen.
-    final isWide = MediaQuery.of(context).size.width >= 800;
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black54,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 800 : 560, maxHeight: 700),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: MorganGreeter(
-              isFirstVisit: false,
-              onAction: (route, tabName) {
-                Navigator.of(ctx).pop();
-                if (route != null) {
-                  setState(() {
-                    _activeRoute = route;
-                    _addCoinsInitialTabName = tabName;
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-      ),
-    );
+
+    if (MediaQuery.of(context).size.width < 800) {
+      // Mobile: Switch tab to AI Deepdive
+      setState(() {
+        _activeRoute = 'AI Deepdive';
+      });
+      return;
+    }
+
+    // Desktop: Toggle resizable/draggable popout!
+    setState(() {
+      _isMorganPopoutOpen = !_isMorganPopoutOpen;
+      if (_isMorganPopoutOpen) {
+        _popoutInitialQuery = null;
+      }
+    });
   }
 
   // ── Morgan inline search — called by MorganGuidePanel ─────────────────────
@@ -194,6 +182,16 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
   void _navigateTo(String route) {
+    if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
+      setState(() {
+        _isMorganPopoutOpen = true;
+        _popoutInitialQuery = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _popoutInitialQuery = null;
+      });
+      return;
+    }
     setState(() {
       if (route.startsWith('Coin Programs:')) {
         final parts = route.split(':');
@@ -210,20 +208,44 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Home Dashboard':
         return HomeDashboard(
           onAskMorgan: () => _navigateTo('AI Deepdive'),
-          onAskMorganWithQuery: (query) => setState(() {
-            _aiInitialQuery = query;
-            _activeRoute = 'AI Deepdive';
-          }),
+          onAskMorganWithQuery: (query) {
+            if (MediaQuery.of(context).size.width >= 800) {
+              setState(() {
+                _isMorganPopoutOpen = true;
+                _popoutInitialQuery = query;
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _popoutInitialQuery = null;
+              });
+            } else {
+              setState(() {
+                _aiInitialQuery = query;
+                _activeRoute = 'AI Deepdive';
+              });
+            }
+          },
           onNavigateToCollection: () => _navigateTo('My Collection'),
         );
       case 'My Collection':
         return MyCollectionScreen(
           initialTab: _myCollectionTab,
           onNavigate: _navigateTo,
-          onNavigateWithQuery: (route, query) => setState(() {
-            _activeRoute = route;
-            _aiInitialQuery = query;
-          }),
+          onNavigateWithQuery: (route, query) {
+            if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
+              setState(() {
+                _isMorganPopoutOpen = true;
+                _popoutInitialQuery = query;
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _popoutInitialQuery = null;
+              });
+            } else {
+              setState(() {
+                _activeRoute = route;
+                _aiInitialQuery = query;
+              });
+            }
+          },
           onTabChanged: (tab) => setState(() => _myCollectionTab = tab),
         );
       case 'Microscope Scanner':
@@ -661,6 +683,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                   currentRoute: _activeRoute,
                   pageTitle: _activeRoute,
                 ),
+                if (_isMorganPopoutOpen)
+                  MorganChatPopout(
+                    initialQuery: _popoutInitialQuery,
+                    onClose: () => setState(() => _isMorganPopoutOpen = false),
+                  ),
               ],
             ),
           ),
@@ -722,6 +749,17 @@ class _BaseLayoutState extends State<BaseLayout> {
                   setState(() => _activeRoute = 'Add New Coins');
                 } else if (title == 'Admin Grade Flags') {
                   setState(() => _activeRoute = 'Admin: Grade Flags');
+                } else if (title == 'AI Deepdive') {
+                  if (MediaQuery.of(context).size.width >= 800) {
+                    setState(() {
+                      _isMorganPopoutOpen = !_isMorganPopoutOpen;
+                      if (_isMorganPopoutOpen) {
+                        _popoutInitialQuery = null;
+                      }
+                    });
+                  } else {
+                    setState(() => _activeRoute = title);
+                  }
                 } else {
                   setState(() => _activeRoute = title);
                 }

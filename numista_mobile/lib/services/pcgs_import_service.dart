@@ -346,6 +346,8 @@ class PcgsImportService {
 
     if (certIndex < 0) return [];
 
+    final templateCerts = {'43521234', '80912345', '60123984'};
+
     return lines
         .skip(1)
         .where((line) => line.trim().isNotEmpty)
@@ -356,7 +358,7 @@ class PcgsImportService {
           }
           return '';
         })
-        .where((cert) => cert.isNotEmpty && RegExp(r'^\d+$').hasMatch(cert))
+        .where((cert) => cert.isNotEmpty && RegExp(r'^\d+$').hasMatch(cert) && !templateCerts.contains(cert))
         .toList();
   }
 

@@ -1225,7 +1225,18 @@ Omit any user headers with no reasonable match."""
     col_ref = db.collection('users').document(user_email).collection('review_queue')
     batch    = db.batch()
 
+    MOCK_CERTS = {"43521234", "80912345", "60123984"}
+    MOCK_KEYWORDS = ["example - delete me", "placeholder"]
+
     for _, row in df.iterrows():
+        # Skip example/template rows if user forgot to delete them
+        row_values_str = [str(x).strip().lower() for x in row.values if pd.notna(x)]
+        has_mock_cert = any(c in row_values_str for c in MOCK_CERTS)
+        has_mock_kw = any(any(kw in val for kw in MOCK_KEYWORDS) for val in row_values_str)
+        if has_mock_cert or has_mock_kw:
+            logger.info("Skipping example template row: %s", row_values_str)
+            continue
+
         new_doc: dict = {
             'Program/Series':       '',
             'Theme/Subject':        '',

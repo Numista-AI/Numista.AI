@@ -24,7 +24,19 @@ import 'add_coins_hub.dart';
 class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
   final String? initialQuery;
-  const AiChatScreen({super.key, this.initialQuery});
+  final bool isPopout;
+  final VoidCallback? onClose;
+  final ValueChanged<DragUpdateDetails>? onDragUpdate;
+  final VoidCallback? onDragEnd;
+
+  const AiChatScreen({
+    super.key,
+    this.initialQuery,
+    this.isPopout = false,
+    this.onClose,
+    this.onDragUpdate,
+    this.onDragEnd,
+  });
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -34,6 +46,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final List<Map<String, String>> _messages = [];
+  late final FocusNode _focusNode;
 
   bool _isLoading = false;
   bool _isLoadingHistory = true;
@@ -67,7 +80,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
     _loadEverything();
+    if (widget.isPopout) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
   }
 
   Future<void> _loadEverything() async {
@@ -172,6 +191,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void dispose() {
     _controller.dispose();
     _scrollCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -342,6 +362,71 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final dragHandle = Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: widget.onDragUpdate,
+        onPanEnd: (_) => widget.onDragEnd?.call(),
+        child: Row(
+          children: [
+            if (widget.isPopout)
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(Icons.drag_indicator_rounded, color: _teal, size: 18),
+              ),
+            // Morgan owl avatar
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
+                ),
+                border: Border.all(color: _teal.withAlpha(100), width: 1.5),
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/morgan_avatar.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (ctx, err, stack) => const Icon(
+                      Icons.smart_toy_rounded,
+                      color: Color(0xFF2DD4BF),
+                      size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Ask Morgan',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                  Text(
+                    _isLoadingContext
+                        ? 'Loading your collection…'
+                        : _ctx == null || _ctx!.isEmpty
+                            ? 'Your personal numismatic guide'
+                            : '${_ctx!.totalCoins} coins · \$${_ctx!.portfolioValue.toStringAsFixed(2)}',
+                    style: const TextStyle(color: _sub, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
       decoration: BoxDecoration(
@@ -350,51 +435,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       child: Row(
         children: [
-          // Morgan owl avatar
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD4A843), Color(0xFF8B6914)],
-              ),
-              border: Border.all(color: _teal.withAlpha(100), width: 1.5),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/morgan_avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => const Icon(
-                    Icons.smart_toy_rounded,
-                    color: Color(0xFF2DD4BF),
-                    size: 22),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Ask Morgan',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-                Text(
-                  _isLoadingContext
-                      ? 'Loading your collection…'
-                      : _ctx == null || _ctx!.isEmpty
-                          ? 'Your personal numismatic guide'
-                          : '${_ctx!.totalCoins} coins · \$${_ctx!.portfolioValue.toStringAsFixed(2)} portfolio',
-                  style: const TextStyle(color: _sub, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
+          dragHandle,
           // Settings
           IconButton(
             icon: const Icon(Icons.tune_rounded, color: _sub, size: 20),
@@ -427,6 +468,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
             tooltip: 'New chat',
             onPressed: _isLoading ? null : _onNewChat,
           ),
+          if (widget.isPopout && widget.onClose != null)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: _sub, size: 20),
+              tooltip: 'Close chat',
+              onPressed: widget.onClose,
+            ),
         ],
       ),
     );
@@ -679,6 +726,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   child: TextField(
                     controller: _controller,
+                    focusNode: _focusNode,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Ask Morgan about your collection…',

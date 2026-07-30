@@ -555,6 +555,31 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFBBF24)),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Warning: The template includes example rows. Please delete these test rows before uploading, or the system will skip them automatically.',
+                              style: TextStyle(
+                                color: Color(0xFF92400E),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -3610,7 +3635,20 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     }
 
     final headers = parseCsvLine(lines.first);
-    final rawRows = lines.skip(1).map(parseCsvLine).where((r) => r.length == headers.length || r.length >= (headers.length / 2).floor()).toList();
+    final templateCerts = {'43521234', '80912345', '60123984'};
+    final mockKeywords = ['example - delete me', 'placeholder'];
+    final rawRows = lines.skip(1)
+        .map(parseCsvLine)
+        .where((r) {
+          if (r.length < (headers.length / 2).floor()) return false;
+          final hasExample = r.any((cell) {
+            final trimmed = cell.trim().toLowerCase();
+            return templateCerts.contains(trimmed) ||
+                mockKeywords.any((keyword) => trimmed.contains(keyword));
+          });
+          return !hasExample;
+        })
+        .toList();
     if (rawRows.isEmpty) return;
 
     final certs = PcgsImportService.parseCertNumbersFromCsv(csvText);
