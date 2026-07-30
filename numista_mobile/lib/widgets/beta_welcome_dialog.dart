@@ -210,7 +210,7 @@ class BetaWelcomeDialog extends StatelessWidget {
         children: [
           const Text('• ', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 16, fontWeight: FontWeight.bold)),
           Expanded(
-            child: Text(text, style: const TextStyle(color: Colors.white87, fontSize: 13, height: 1.4)),
+            child: Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.87), fontSize: 13, height: 1.4)),
           ),
         ],
       ),
