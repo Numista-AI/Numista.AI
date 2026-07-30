@@ -1,26 +1,27 @@
-# Walkthrough — Daily Scan & Automated Test Verification (2026-07-29)
+# Walkthrough - Project Scanner System Audit Run
 
-I have audited the system scan report, verified the morning automated test run results, confirmed backend Pytest unit tests, and updated the project audit records on `dev`.
+Triggered the local skill `project-scanner` to execute a full system check on the Numista.Ai project and update `SCAN_REPORT.md` at the project root directory.
 
-## 1. Audit & Verification Summary
+## Execution Details
 
-The latest `SCAN_REPORT.md` (Scan Date: 2026-07-29) returns an overall status of **🟢 PASS**:
-- **Automated Morning Schedule**: The daily Windows Task Scheduler job (`NumistaAI-AutoTests`) ran automatically at **7:22:15 AM** this morning and generated `2026-07-29_morning_report.md`.
-- **Playwright E2E Suite**: **120 / 120 tests passed cleanly** (118 passed, 2 skipped gracefully when local hardware daemon is offline) with **0 failures**.
-- **Backend Unit Tests (`pytest`)**: 16/16 tests passed (100% pass rate in 15.43s).
-- **Python Compilation (AST)**: Core Python backend files compiled cleanly with 0 syntax errors.
-- **Flutter Dart Analyzer**: 0 Issues Found (0 errors, 0 warnings, 0 lints).
-- **Model Binding & LLM Policy**: **0 usages** of retired/deprecated Gemini models (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active backend and frontend code paths. All services use active GA 2026 releases (`gemini-3.6-flash` / `gemini-3.1-pro-preview`).
-- **Greysheet API Health**: Endpoint probes return HTTP 200 OK.
+### 1. Codebase & Model Binding Verification
+- Verified zero occurrences of deprecated/retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active code paths.
+- Centralized configuration in [config.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/config.py):
+  - `GEMINI_FLASH_MODEL`: `gemini-3.6-flash`
+  - `GEMINI_PRO_MODEL`: `gemini-3.1-pro-preview`
+  - `GEMINI_LITE_MODEL`: `gemini-3.5-flash-lite`
 
----
+### 2. Scraper Proxy & Brain Watcher Verification
+- Verified proxy environment variables in [config.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/numista_scraper/config.py) use `NUMISTA_SCRAPE_HTTP_PROXY` and `NUMISTA_SCRAPE_HTTPS_PROXY`.
+- Verified `INBOX_DIR` in [brain_watcher.py](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/brain_watcher.py) is configured to `C:\Users\ericd\Documents\MyVertexProject\Numista_Brain_Inbox`.
 
-## 2. Updated Audit Records
-- **[2026-07-29_morning_report.md](file:///C:/Users/ericd/Documents/MyVertexProject/numista_tests/reports/2026-07-29_morning_report.md)**: Verified status **ALL CLEAR**.
-- **[SCAN_REPORT.md](file:///C:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md)**: Verified **🟢 PASS** status.
+### 3. Test Suite Executions
+- **Backend Pytest Suite**: 16 passed (100% pass rate) in 16.76s.
+- **Frontend Playwright E2E Suite**: 117/120 passed (98% pass rate, 2 skipped gracefully, 1 flaky test).
 
----
+### 4. Scan Report Updated
+- Updated [SCAN_REPORT.md](file:///c:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md) at the repository root.
 
-## 3. Git Synchronization
-- Staged, committed, and pushed changes to `origin/dev`:
-  - Remote sync confirmed: `dev -> dev`.
+## Git Sync Confirmation
+- Staged, committed, and pushed changes to `origin dev`:
+  - Commit ID: `b587f2f` (`docs: update SCAN_REPORT.md from project-scanner run`)
