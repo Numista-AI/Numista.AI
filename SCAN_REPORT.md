@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 16 passed, 3 warnings in 5.36s. Playwright E2E: 118/120 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-07-29
+* **Status:** 🟢 **PASS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 16 passed, 3 warnings in 6.12s. Playwright E2E: 118/120 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-07-30
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -31,7 +31,7 @@
 ---
 
 ## Test Summary
-* **Backend Pytest Unit Suite:** 16 passed, 3 warnings in 5.36s
+* **Backend Pytest Unit Suite:** 16 passed, 3 warnings in 6.12s
 * **Frontend Playwright E2E Suite:** 118/120 passed (2 skipped)
 
 ---
