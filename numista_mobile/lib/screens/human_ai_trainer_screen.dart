@@ -61,10 +61,11 @@ class NicknameSuggestion {
 
 class GradeReviewCoin {
   final String coinId, year, mintMark, denomination, programSeries,
-      themeSubject, condition, source, imageUrl, reviewStatus;
+      themeSubject, condition, source, scanSource, imageUrl, imageUrlObverse, imageUrlReverse, reviewStatus;
   final double confidenceScore;
   final bool lowConfidence, hasBbox;
   final int reviewCount;
+  final Map<String, dynamic> slotBbox;
 
   GradeReviewCoin({
     required this.coinId, required this.year, required this.mintMark,
@@ -73,6 +74,10 @@ class GradeReviewCoin {
     required this.confidenceScore, required this.lowConfidence,
     required this.source, required this.imageUrl,
     required this.reviewStatus, required this.reviewCount,
+    this.scanSource = '',
+    this.imageUrlObverse = '',
+    this.imageUrlReverse = '',
+    this.slotBbox = const {},
     this.hasBbox = false,
   });
 
@@ -81,6 +86,8 @@ class GradeReviewCoin {
     final hasBbox = bbox.isNotEmpty &&
         ((bbox['w_pct'] ?? 0.0) as num) > 0 &&
         ((bbox['h_pct'] ?? 0.0) as num) > 0;
+    final obv = j['image_url_obverse'] ?? j['imageUrlObverse'] ?? '';
+    final rev = j['image_url_reverse'] ?? j['imageUrlReverse'] ?? '';
     return GradeReviewCoin(
       coinId: j['coin_id'] ?? '', year: j['year'] ?? '',
       mintMark: j['mint_mark'] ?? '', denomination: j['denomination'] ?? '',
@@ -90,7 +97,11 @@ class GradeReviewCoin {
       confidenceScore: (j['confidence_score'] ?? 0.0).toDouble(),
       lowConfidence: j['low_confidence'] ?? false,
       source: j['source'] ?? '',
-      imageUrl: j['image_url_obverse'] ?? '',
+      scanSource: j['scan_source'] ?? j['source'] ?? '',
+      imageUrl: obv,
+      imageUrlObverse: obv,
+      imageUrlReverse: rev,
+      slotBbox: Map<String, dynamic>.from(bbox),
       reviewStatus: j['grade_review_status'] ?? 'pending',
       reviewCount: j['grade_review_count'] ?? 0,
       hasBbox: hasBbox,
@@ -560,29 +571,74 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Coin info row
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Coin image — uses slot crop for Binder Scan coins, full page otherwise
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: coin.source == 'Binder Scan' && coin.imageUrl.isNotEmpty
-                    ? _CoinCropImage(
-                        coinId: coin.coinId,
-                        userEmail: _userEmail,
-                        fallbackUrl: coin.imageUrl,
-                        hasBbox: coin.hasBbox,
-                        size: 72,
-                      )
-                    : coin.imageUrl.isNotEmpty
-                        ? Image.network(coin.imageUrl, width: 72, height: 72,
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) => _placeholder())
-                        : _placeholder(),
+              // Coin image with interactive high-res pop-out trigger
+              GestureDetector(
+                onTap: () => _openLightbox(context, coin, _userEmail),
+                child: Tooltip(
+                  message: 'Tap to view full resolution high-res image & zoom',
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: coin.source == 'Binder Scan' && coin.imageUrl.isNotEmpty
+                            ? _CoinCropImage(
+                                coinId: coin.coinId,
+                                userEmail: _userEmail,
+                                fallbackUrl: coin.imageUrl,
+                                hasBbox: coin.hasBbox,
+                                size: 76,
+                              )
+                            : coin.imageUrl.isNotEmpty
+                                ? Image.network(coin.imageUrl, width: 76, height: 76,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => _placeholder())
+                                : _placeholder(),
+                      ),
+                      Positioned(
+                        right: 4,
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(coin.displayName, style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15, color: Color(0xFF0F172A))),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(coin.displayName, style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15, color: Color(0xFF0F172A))),
+                      ),
+                      InkWell(
+                        onTap: () => _openLightbox(context, coin, _userEmail),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.fullscreen, size: 16, color: Color(0xFF6366F1)),
+                              SizedBox(width: 2),
+                              Text('Pop-Out High-Res View', style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1))),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   if (coin.themeSubject.isNotEmpty)
                     Text(coin.themeSubject, style: const TextStyle(
                         fontSize: 12, color: Color(0xFF64748B))),
@@ -885,6 +941,330 @@ class _CoinCropImageState extends State<_CoinCropImage> {
 }
 
 enum _CropState { loading, cropped, fallback }
+
+// ─── High-Resolution Pop-Out Image Lightbox ─────────────────────────────────
+
+void _openLightbox(BuildContext context, GradeReviewCoin coin, String userEmail) {
+  showDialog(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.85),
+    builder: (ctx) => _CoinImageLightboxDialog(coin: coin, userEmail: userEmail),
+  );
+}
+
+class _CoinImageLightboxDialog extends StatefulWidget {
+  final GradeReviewCoin coin;
+  final String userEmail;
+
+  const _CoinImageLightboxDialog({
+    required this.coin,
+    required this.userEmail,
+  });
+
+  @override
+  State<_CoinImageLightboxDialog> createState() => _CoinImageLightboxDialogState();
+}
+
+class _CoinImageLightboxDialogState extends State<_CoinImageLightboxDialog> {
+  late final TransformationController _transCtrl;
+  String _activeSide = 'obverse';
+  bool _showFullBinder = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _transCtrl = TransformationController();
+  }
+
+  @override
+  void dispose() {
+    _transCtrl.dispose();
+    super.dispose();
+  }
+
+  void _resetZoom() {
+    _transCtrl.value = Matrix4.identity();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coin = widget.coin;
+    final hasReverse = coin.imageUrlReverse.isNotEmpty;
+    final isMicroscope = coin.source.toLowerCase().contains('microscope') ||
+        coin.scanSource.toLowerCase().contains('microscope');
+    final isBinder = coin.source == 'Binder Scan';
+
+    String currentUrl = _activeSide == 'obverse'
+        ? (coin.imageUrlObverse.isNotEmpty ? coin.imageUrlObverse : coin.imageUrl)
+        : coin.imageUrlReverse;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        maxWidth: 900,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF334155)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.5),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header bar
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                coin.displayName,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFF6366F1)),
+                              ),
+                              child: Text(
+                                'AI Grade: ${coin.condition}',
+                                style: const TextStyle(
+                                  color: Color(0xFF818CF8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isMicroscope
+                                    ? const Color(0xFF059669).withValues(alpha: 0.25)
+                                    : const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isMicroscope
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFF3B82F6),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isMicroscope
+                                        ? Icons.science_outlined
+                                        : isBinder
+                                            ? Icons.folder_open
+                                            : Icons.camera_alt_outlined,
+                                    size: 13,
+                                    color: isMicroscope
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFF60A5FA),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isMicroscope
+                                        ? '🔬 Digital Microscope Scan (High Resolution)'
+                                        : isBinder
+                                            ? '📁 Binder Page Scan'
+                                            : '📸 High-Res Photo (${coin.source})',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isMicroscope
+                                          ? const Color(0xFF34D399)
+                                          : const Color(0xFF60A5FA),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8)),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1, color: Color(0xFF1E293B)),
+
+            // View Controls / Side Toggle
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFF1E293B),
+              child: Row(
+                children: [
+                  if (hasReverse) ...[
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'obverse', label: Text('Obverse (Front)')),
+                        ButtonSegment(value: 'reverse', label: Text('Reverse (Back)')),
+                      ],
+                      selected: {_activeSide},
+                      onSelectionChanged: (set) {
+                        setState(() {
+                          _activeSide = set.first;
+                          _resetZoom();
+                        });
+                      },
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        selectedBackgroundColor: const Color(0xFF6366F1),
+                        selectedForegroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF94A3B8),
+                        backgroundColor: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+
+                  if (isBinder && coin.hasBbox) ...[
+                    FilterChip(
+                      label: Text(_showFullBinder ? 'Full Binder Page' : 'Cropped Slot'),
+                      selected: _showFullBinder,
+                      onSelected: (val) {
+                        setState(() {
+                          _showFullBinder = val;
+                          _resetZoom();
+                        });
+                      },
+                      selectedColor: const Color(0xFF6366F1),
+                      labelStyle: TextStyle(
+                        color: _showFullBinder ? Colors.white : const Color(0xFF94A3B8),
+                        fontSize: 12,
+                      ),
+                      avatar: Icon(
+                        _showFullBinder ? Icons.description_outlined : Icons.crop_outlined,
+                        size: 14,
+                        color: _showFullBinder ? Colors.white : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+
+                  const Spacer(),
+
+                  OutlinedButton.icon(
+                    onPressed: _resetZoom,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF94A3B8),
+                      side: const BorderSide(color: Color(0xFF475569)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    icon: const Icon(Icons.restart_alt, size: 16),
+                    label: const Text('Reset Zoom', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+            // High-Resolution Interactive Image View Canvas
+            Container(
+              height: 480,
+              width: double.infinity,
+              color: Colors.black,
+              child: ClipRect(
+                child: InteractiveViewer(
+                  transformationController: _transCtrl,
+                  minScale: 0.5,
+                  maxScale: 10.0,
+                  child: Center(
+                    child: (isBinder && !_showFullBinder && currentUrl.isNotEmpty)
+                        ? _CoinCropImage(
+                            coinId: coin.coinId,
+                            userEmail: widget.userEmail,
+                            fallbackUrl: currentUrl,
+                            hasBbox: coin.hasBbox,
+                            size: 400,
+                          )
+                        : currentUrl.isNotEmpty
+                            ? Image.network(
+                                currentUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (ctx, err, stack) => const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+                                    SizedBox(height: 8),
+                                    Text('Failed to load high resolution photo', style: TextStyle(color: Colors.white54)),
+                                  ],
+                                ),
+                              )
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.monetization_on_outlined, color: Colors.white38, size: 48),
+                                  SizedBox(height: 8),
+                                  Text('No high resolution photo available', style: TextStyle(color: Colors.white54)),
+                                ],
+                              ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Footer hint bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F172A),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.zoom_in, size: 14, color: Color(0xFF94A3B8)),
+                  SizedBox(width: 6),
+                  Text(
+                    'Pinch or scroll to zoom up to 10x high-res details · Drag to pan around coin',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 
 // ─── Tab 2: Community Nickname Review ────────────────────────────────────────
 

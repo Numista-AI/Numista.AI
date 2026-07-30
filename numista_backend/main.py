@@ -1892,7 +1892,10 @@ def grade_review_queue(user_email: str, limit: int = 30):
             'confidence_score':    round(conf, 2),
             'low_confidence':      conf < LOW_CONFIDENCE_THRESHOLD,
             'source':              source,
+            'scan_source':         d.get('scan_source', source),
             'image_url_obverse':   d.get('image_url_obverse', ''),
+            'image_url_reverse':   d.get('image_url_reverse', ''),
+            'slot_bbox':           d.get('slot_bbox', {}),
             'grade_review_status': d.get('grade_review_status', 'pending'),
             'grade_review_count':  d.get('grade_review_count', 0),
         })
