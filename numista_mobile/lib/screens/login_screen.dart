@@ -464,16 +464,22 @@ class _LoginScreenState extends State<LoginScreen>
         _divider('explore without an account'),
         const SizedBox(height: 16),
 
-        // ── Guest & Demo Streamlined Option ─────────────────────────────
-        Center(
-          child: TextButton.icon(
-            onPressed: _loading ? null : _browseDemo,
-            icon: const Icon(Icons.explore_outlined, size: 18, color: _blue),
-            label: const Text(
-              'Explore Read-Only Demo →',
-              style: TextStyle(color: _blue, fontSize: 14, fontWeight: FontWeight.w600),
+        // ── Guest & Demo Streamlined Options ───────────────────────────
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: _loading ? null : _browseDemo,
+              icon: const Icon(Icons.search_rounded, size: 16, color: _sub),
+              label: const Text('Browse Demo (Read-Only)', style: TextStyle(color: _sub, fontSize: 13)),
             ),
-          ),
+            const Text(' • ', style: TextStyle(color: _grey)),
+            TextButton.icon(
+              onPressed: _loading ? null : _signInAsGuest,
+              icon: const Icon(Icons.rocket_launch_outlined, size: 16, color: _blue),
+              label: const Text('Try Guest Mode →', style: TextStyle(color: _blue, fontSize: 13, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ],
     );
