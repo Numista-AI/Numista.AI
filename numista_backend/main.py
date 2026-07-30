@@ -3088,9 +3088,9 @@ def execute_add_coin(
             "is_duplicate": is_dupe,
             "prompt_extra_details": not bool(storage_location and condition and cost and cost != "$0.00")
         }
-    except Exception as e:
+    except Exception:
         logger.exception("Error executing add_coin")
-        return {"action": "add_coin", "status": "error", "message": str(e)}
+        return {"action": "add_coin", "status": "error", "message": "Failed to add coin. Please try again."}
 
 
 def execute_update_coin(
@@ -3111,9 +3111,9 @@ def execute_update_coin(
         if updates:
             doc_ref.update(updates)
         return {"action": "update_coin", "status": "success", "coin_id": coin_id, "updated": list(updates.keys())}
-    except Exception as e:
+    except Exception:
         logger.exception("Error executing update_coin")
-        return {"action": "update_coin", "status": "error", "message": str(e)}
+        return {"action": "update_coin", "status": "error", "message": "Failed to update coin. Please try again."}
 
 
 def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
@@ -3121,9 +3121,9 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
         doc_ref.delete()
         return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
-    except Exception as e:
+    except Exception:
         logger.exception("Error executing undo_add_coin")
-        return {"action": "undo_add_coin", "status": "error", "message": str(e)}
+        return {"action": "undo_add_coin", "status": "error", "message": "Failed to undo. Please try again."}
 
 
 @app.post("/api/deep_dive")
@@ -3323,9 +3323,9 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 
         return {"status": "success", "response": response.text}
 
-    except Exception as e:
+    except Exception:
         logger.exception("Deep dive error")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
 
 @app.post("/api/review/commit")
 async def commit_reviews(request: CommitReviewsRequest):
