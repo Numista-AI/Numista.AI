@@ -2033,10 +2033,6 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
             ),
           ),
         ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
