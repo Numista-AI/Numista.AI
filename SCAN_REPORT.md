@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 19 passed, 3 warnings in 15.73s. Playwright E2E: 118/120 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Status:** 🟢 **PASS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 19 passed, 3 warnings in 8.85s. Playwright E2E: 118/120 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
 * **Scan Date:** 2026-07-31
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
@@ -9,8 +9,7 @@
 ---
 
 ## Critical Errors & Warnings
-1. ⚠️ **Backend Script AST Warning:** `numista_backend/seed_mint_errors.py` has an unclosed dictionary literal on line 320 preventing clean module compilation.
-2. ℹ️ **Greysheet API Dev Fallback Active:** Local `.env` unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN`, defaulting to Tier 0 fallback mode and Firestore `config/greysheet` cache.
+1. ℹ️ **Greysheet API Dev Fallback Active:** Local `.env` unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN`, defaulting to Tier 0 fallback mode and Firestore `config/greysheet` cache.
 
 ---
 
@@ -41,13 +40,12 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 19 passed, 3 warnings in 15.73s (100% pass rate)
+* **Backend Pytest Unit Suite:** 19 passed, 3 warnings in 8.85s
 * **Frontend Playwright E2E Suite:** 118/120 passed (2 skipped gracefully)
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
 
 ## Recommended Fixes
-1. **Fix Seed Script Syntax Error:** Resolve dictionary structure syntax in `numista_backend/seed_mint_errors.py` (line 320).
-2. **Production Secret Management:** Ensure `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
-3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
+1. **Production Secret Management:** Ensure `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
+2. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.

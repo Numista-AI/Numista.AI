@@ -188,8 +188,7 @@ if (fs.existsSync(SCAN_REPORT_FILE)) {
 ---
 
 ## Critical Errors & Warnings
-1. ⚠️ **Backend Script AST Warning:** \`numista_backend/seed_mint_errors.py\` has an unclosed dictionary literal on line 320 preventing clean module compilation.
-2. ℹ️ **Greysheet API Dev Fallback Active:** Local \`.env\` unpopulated for \`GREYSHEET_API_KEY\` / \`GREYSHEET_API_TOKEN\`, defaulting to Tier 0 fallback mode and Firestore \`config/greysheet\` cache.
+1. ℹ️ **Greysheet API Dev Fallback Active:** Local \`.env\` unpopulated for \`GREYSHEET_API_KEY\` / \`GREYSHEET_API_TOKEN\`, defaulting to Tier 0 fallback mode and Firestore \`config/greysheet\` cache.
 
 ---
 
@@ -220,16 +219,15 @@ if (fs.existsSync(SCAN_REPORT_FILE)) {
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** ${pytestSummary} (100% pass rate)
+* **Backend Pytest Unit Suite:** ${pytestSummary}
 * **Frontend Playwright E2E Suite:** ${passed}/${totalTests} passed (${skipped} skipped gracefully)
 * **Test Isolation:** Enforced. E2E tests target \`ericdcman@gmail.com\` / Demo Suite with zero production Firestore mutation.
 
 ---
 
 ## Recommended Fixes
-1. **Fix Seed Script Syntax Error:** Resolve dictionary structure syntax in \`numista_backend/seed_mint_errors.py\` (line 320).
-2. **Production Secret Management:** Ensure \`GREYSHEET_API_KEY\` and \`GREYSHEET_API_TOKEN\` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
-3. **Maintain Skill Documentation:** Keep \`project-scanner/SKILL.md\` aligned with production Cloud Run URL.
+1. **Production Secret Management:** Ensure \`GREYSHEET_API_KEY\` and \`GREYSHEET_API_TOKEN\` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
+2. **Maintain Skill Documentation:** Keep \`project-scanner/SKILL.md\` aligned with production Cloud Run URL.
 `;
   fs.writeFileSync(SCAN_REPORT_FILE, scanContent);
 }
