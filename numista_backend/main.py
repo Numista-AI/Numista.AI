@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -15,7 +16,7 @@ from google.cloud import storage as gcs
 import google.auth
 from google.cloud import documentai
 
-# AI SDK — google-genai (replaces deprecated vertexai SDK, shutdown Jun 24 2026)
+# AI SDK -- google-genai (replaces deprecated vertexai SDK, shutdown Jun 24 2026)
 # Migration guide: https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk
 from google import genai
 from google.genai import types as genai_types
@@ -35,7 +36,7 @@ try:
     MORGAN_KNOWLEDGE_AVAILABLE = True
 except ImportError:
     MORGAN_KNOWLEDGE_AVAILABLE = False
-    logger.info("morgan_knowledge.py not found — coin reference lookup disabled")
+    logger.info("morgan_knowledge.py not found -- coin reference lookup disabled")
 
 app = FastAPI(title="Numista.AI Backend API")
 
@@ -71,7 +72,7 @@ async def api_parse_coa(file: UploadFile = File(...)):
 
 
 
-# ─── REQUEST OBSERVABILITY MIDDLEWARE ──────────────────────────────────────────
+# --- REQUEST OBSERVABILITY MIDDLEWARE ------------------------------------------
 import contextvars
 
 @app.middleware("http")
@@ -109,8 +110,8 @@ async def observability_middleware(request: Request, call_next):
     )
     return response
 
-# ─── VERTEX AI SEARCH — Coin Reference Library ───────────────────────────────
-# Registers GET /api/coin_search — open endpoint, no auth required.
+# --- VERTEX AI SEARCH -- Coin Reference Library -------------------------------
+# Registers GET /api/coin_search -- open endpoint, no auth required.
 # Data store: numista-coin-library (1,913 coin documents, Enterprise + LLM tier)
 try:
     from vertex_search.coin_search_endpoint import register_coin_search
@@ -119,7 +120,7 @@ try:
 except Exception as _vx_err:
     logger.warning(f"Vertex AI Search not available: {_vx_err}")
 
-# ─── RAG INFO BOT ENDPOINT (gemini-embedding-2) ──────────────────────────────
+# --- RAG INFO BOT ENDPOINT (gemini-embedding-2) ------------------------------
 class RagQueryRequest(BaseModel):
     query: str
     collection_context: Optional[dict] = None
@@ -142,7 +143,7 @@ async def rag_query_endpoint(req: RagQueryRequest):
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "global"
 
-# ─── GCS USER CONTENT BUCKET ────────────────────────────────────────────────
+# --- GCS USER CONTENT BUCKET ------------------------------------------------
 # All user-uploaded files live here under a structured path:
 #   gs://numista-user-content/{user_email}/{content_type}/{uuid}/
 # Sub-folders: binder_scans/ | checklists/ | microscope/ | invoices/
@@ -162,13 +163,13 @@ GRADE_STATS_CACHE = {}
 # Structure: {user_email: float}
 GRADE_WRITE_TIMESTAMPS = {}
 
-# ─── GEMINI MODEL CONFIGURATION ──────────────────────────────────────────────
+# --- GEMINI MODEL CONFIGURATION ----------------------------------------------
 # Per official deprecation schedule as of July 21, 2026:
 #
-#   gemini-3.6-flash       Released July 21, 2026. NO shutdown announced. → PRIMARY WORKHORSE
-#   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. → PRO
-#   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced. → LITE TASKS
-#   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced. → IMAGE EDITING
+#   gemini-3.6-flash       Released July 21, 2026. NO shutdown announced. -> PRIMARY WORKHORSE
+#   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. -> PRO
+#   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced. -> LITE TASKS
+#   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced. -> IMAGE EDITING
 #
 # Model bindings are centralized in config.py
 PRIMARY_MODEL = GEMINI_FLASH_MODEL
@@ -191,11 +192,11 @@ COIN_DICTIONARY = [
     { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar", "peace"] }
 ]
 
-# ── Normalization dictionaries ─────────────────────────────────────────────────
+# -- Normalization dictionaries -------------------------------------------------
 # Used by import_spreadsheet and the backfill endpoint to interpret colloquial,
 # abbreviated, or inconsistently-formatted coin data entered by collectors.
 
-# Coin nicknames → official Program/Series name
+# Coin nicknames -> official Program/Series name
 COIN_NICKNAMES: dict[str, str] = {
     # America250
     'mayflower compact quarter': 'America250 Quarters Program',
@@ -310,7 +311,7 @@ COIN_NICKNAMES: dict[str, str] = {
     'mint set': 'Uncirculated Mint Set',
 }
 
-# Mint place-names / abbreviations → mint mark code
+# Mint place-names / abbreviations -> mint mark code
 MINT_NAMES: dict[str, str] = {
     'philadelphia': 'P',
     'philly': 'P',
@@ -336,9 +337,9 @@ MINT_NAMES: dict[str, str] = {
     'm': 'M',
 }
 
-# Condition / grade strings → standard numismatic grade
+# Condition / grade strings -> standard numismatic grade
 CONDITION_MAP: dict[str, str] = {
-    # Uncirculated / Mint State — numeric
+    # Uncirculated / Mint State -- numeric
     'ms60': 'MS-60', 'ms-60': 'MS-60',
     'ms61': 'MS-61', 'ms-61': 'MS-61',
     'ms62': 'MS-62', 'ms-62': 'MS-62',
@@ -350,7 +351,7 @@ CONDITION_MAP: dict[str, str] = {
     'ms68': 'MS-68', 'ms-68': 'MS-68',
     'ms69': 'MS-69', 'ms-69': 'MS-69',
     'ms70': 'MS-70', 'ms-70': 'MS-70',
-    # Uncirculated — descriptive
+    # Uncirculated -- descriptive
     'bu': 'MS-63',
     'brilliant uncirculated': 'Uncirculated',
     'brilliant unc': 'Uncirculated',
@@ -364,7 +365,7 @@ CONDITION_MAP: dict[str, str] = {
     'ch bu': 'MS-63',
     'choice bu': 'MS-63',
     'choice brilliant uncirculated': 'MS-63',
-    # Proof — numeric
+    # Proof -- numeric
     'proof60': 'PF-60', 'proof-60': 'PF-60', 'pr60': 'PF-60', 'pf60': 'PF-60',
     'proof61': 'PF-61', 'proof-61': 'PF-61', 'pr61': 'PF-61', 'pf61': 'PF-61',
     'proof62': 'PF-62', 'proof-62': 'PF-62', 'pr62': 'PF-62', 'pf62': 'PF-62',
@@ -376,7 +377,7 @@ CONDITION_MAP: dict[str, str] = {
     'proof68': 'PF-68', 'proof-68': 'PF-68', 'pr68': 'PF-68', 'pf68': 'PF-68',
     'proof69': 'PF-69', 'proof-69': 'PF-69', 'pr69': 'PF-69', 'pf69': 'PF-69',
     'proof70': 'PF-70', 'proof-70': 'PF-70', 'pr70': 'PF-70', 'pf70': 'PF-70',
-    # Proof — descriptive
+    # Proof -- descriptive
     'proof': 'Proof',
     'gem proof': 'PF-65',
     'gem pf': 'PF-65',
@@ -451,6 +452,102 @@ CONDITION_MAP: dict[str, str] = {
     '': 'Ungraded',
 }
 
+LOCAL_HEADER_MAP: dict[str, str] = {
+    # Year / Date
+    "year": "Year", "yr": "Year", "date": "Year", "series year": "Year", "year/date": "Year", "series_year_parsed": "Year",
+    # Mint Mark
+    "mint mark": "Mint Mark", "mint": "Mint Mark", "mm": "Mint Mark", "m.m.": "Mint Mark", "mintmark": "Mint Mark",
+    # Denomination
+    "denomination": "Denomination", "denom": "Denomination", "face value": "Denomination", "value": "Denomination", "denomination_parsed": "Denomination",
+    # Cost / Price
+    "cost": "Purchase Cost", "price": "Purchase Cost", "purchase price": "Purchase Cost",
+    "price paid": "Purchase Cost", "amount paid": "Purchase Cost", "purchased for": "Purchase Cost",
+    "purchase cost": "Purchase Cost", "cost/price": "Purchase Cost", "paid": "Purchase Cost",
+    # Notes / Description
+    "personal notes": "Personal Notes I", "personal note": "Personal Notes I", "my notes": "Personal Notes I",
+    "notes": "Personal Notes I", "personal notes i": "Personal Notes I", "comments": "Personal Notes I",
+    "description": "Original Description from source",
+    # Condition / Grade
+    "condition": "Condition", "grade": "Condition", "quality": "Condition", "state": "Condition",
+    # Program / Series
+    "program/series": "Program/Series", "program": "Program/Series", "series": "Program/Series",
+    "type_parsed": "Program/Series", "coin type": "Program/Series",
+    # Item Type
+    "item type": "item_type", "itemtype": "item_type", "type": "item_type", "category": "item_type",
+    "class": "item_type", "format": "item_type",
+    # Country / Issuer
+    "country": "Country", "issuer": "Country", "origin": "Country", "issuer_parsed": "Country",
+    # Quantity
+    "quantity": "Quantity", "qty": "Quantity", "count": "Quantity",
+    # Certification Number
+    "grading cert #": "Certification Number", "grading cert no": "Certification Number",
+    "cert #": "Certification Number", "certification #": "Certification Number",
+    # Personal Reference
+    "personal ref #": "Personal Reference #", "personal ref no": "Personal Reference #",
+    "personal reference #": "Personal Reference #",
+    # Storage Location
+    "storage location": "Storage Location", "location": "Storage Location",
+}
+
+
+def _read_spreadsheet_bytes(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Reads a CSV or Excel spreadsheet using multi-encoding fallbacks to handle Windows/Excel dialects."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext == "csv" or not ext:
+        for enc in ("utf-8", "utf-8-sig", "latin1", "cp1252"):
+            try:
+                return pd.read_csv(io.BytesIO(file_bytes), encoding=enc, engine="python", on_bad_lines="skip")
+            except Exception:
+                continue
+        return pd.read_csv(io.BytesIO(file_bytes))
+    else:
+        return pd.read_excel(io.BytesIO(file_bytes))
+
+
+def _fast_map_spreadsheet_headers(headers: list[str], is_currency: bool = False) -> dict[str, str]:
+    """
+    Local-first Golden Schema column mapping. Resolves standard headers deterministically
+    in < 1ms, using Gemini LLM only as a fast 5s fallback for unrecognized headers.
+    """
+    mapping: dict[str, str] = {}
+    unmapped: list[str] = []
+
+    for h in headers:
+        nh = str(h).strip().lower()
+        if nh in LOCAL_HEADER_MAP:
+            mapping[h] = LOCAL_HEADER_MAP[nh]
+        else:
+            unmapped.append(h)
+
+    # If all headers are mapped locally, return immediately (< 1ms)
+    if not unmapped:
+        return mapping
+
+    # Fast 5s Gemini LLM fallback ONLY for remaining unmapped headers
+    try:
+        mapping_prompt = f"""Map user spreadsheet headers to standard numismatic schema keys.
+Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
+ "Theme/Subject", "Condition", "Cost", "Purchase Date", "Certification Number", "Personal Notes", "Storage Location", "item_type"]
+Headers to map: {unmapped}
+Output ONLY raw JSON object: {{"user_header": "schema_key"}}"""
+
+        resp = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[genai_types.Part.from_text(text=mapping_prompt)],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+        ai_mapping = json.loads(resp.text)
+        if isinstance(ai_mapping, dict):
+            for k, v in ai_mapping.items():
+                if k in headers and v:
+                    mapping[k] = v
+    except Exception as e:
+        logger.warning(f"AI header mapping skipped or timed out for unmapped headers {unmapped}: {e}")
+
+    return mapping
+
 
 def clean_valuation_value(value) -> float:
     """
@@ -462,7 +559,7 @@ def clean_valuation_value(value) -> float:
     if value is None:
         return 0.0
     val_str = str(value).strip()
-    if not val_str or val_str.lower() in ('none', 'pending', 'null', '—', '--'):
+    if not val_str or val_str.lower() in ('none', 'pending', 'null', '--', '--'):
         return 0.0
 
     # Replace en-dash, em-dash, and figure-dash with standard hyphen
@@ -506,14 +603,14 @@ def _parse_year_mint(raw: str) -> tuple[str, str]:
             return (year, 'CC')
         if mint in ('NO',):
             return (year, 'O')
-        # Unrecognised suffix — keep year, discard suffix
+        # Unrecognised suffix -- keep year, discard suffix
         return (year, '')
 
     # Pure 4-digit year
     if re.match(r'^\d{4}$', raw):
         return (raw, '')
 
-    # 2-digit year — ambiguous, pass through as-is
+    # 2-digit year -- ambiguous, pass through as-is
     if re.match(r'^\d{2}$', raw):
         return (raw, '')
 
@@ -550,7 +647,7 @@ def _norm_condition(raw: str) -> str:
 
 import time as _time
 
-# ── Community nickname cache (refreshed every 60 s) ───────────────────────────
+# -- Community nickname cache (refreshed every 60 s) ---------------------------
 _community_cache: dict[str, str] = {}
 _community_cache_ts: float = 0.0
 
@@ -828,18 +925,18 @@ def get_live_metal_prices():
         return {"Gold": 3100.0, "Silver": 35.0, "Platinum": 1000.0, "Palladium": 1000.0}
 
 
-# ─── WORLD ITEM IDENTIFICATION ────────────────────────────────────────────────
+# --- WORLD ITEM IDENTIFICATION ------------------------------------------------
 # New endpoint: POST /api/identify-world-item
 #
 # Two-stage pipeline:
 #   1. Gemini Vision analyses the uploaded image (or text hints) and returns a
-#      structured JSON identification with a 0–1 confidence score.
-#   2. If confidence ≥ 0.90, we query the Numista API v3 text search for up to
+#      structured JSON identification with a 0-1 confidence score.
+#   2. If confidence >= 0.90, we query the Numista API v3 text search for up to
 #      3 catalogue matches.  Below 0.90 we skip the API call and return the
 #      Gemini-only result with show_disclaimer = True.
 #
 # The Numista API key is the same one already used in scripts/fetch_numista_coins.py.
-# Text search is FREE — no per-request charges.
+# Text search is FREE -- no per-request charges.
 
 NUMISTA_API_KEY    = "ExpST6TaGRDXkcEt6QajYJ0Lj76JZ8oqBPPpWhe"
 NUMISTA_SEARCH_URL = "https://api.numista.com/v3/types"
@@ -850,18 +947,18 @@ _WORLD_CONFIDENCE_THRESHOLD = 0.90
 _WORLD_ITEM_PROMPT = """You are an expert numismatist and world-currency specialist.
 Examine the provided image carefully. Identify what this appears to be.
 
-Your response MUST be valid JSON only — no markdown, no commentary outside the JSON.
+Your response MUST be valid JSON only -- no markdown, no commentary outside the JSON.
 Return exactly these fields:
 
 {
   "identification": "<one complete natural-language sentence starting with 'This appears to be'>",
   "item_type": "<one of: coin | banknote | bullion | medal | token | collectible | ancient_coin | unknown>",
   "country": "<best-guess issuing country in English, or 'Unknown'>",
-  "era": "<year, decade, or period — e.g. '1921', '1860s', 'Roman Imperial c.250 AD', or 'Unknown'>",
+  "era": "<year, decade, or period -- e.g. '1921', '1860s', 'Roman Imperial c.250 AD', or 'Unknown'>",
   "denomination": "<denomination text as it appears on the item, or null>",
-  "material": "<dominant metal or material — e.g. 'Silver', 'Gold', 'Bronze', 'Paper', or null>",
-  "design_keywords": ["<2–4 short keyword phrases describing key design elements for catalogue search>"],
-  "confidence": <float 0.0–1.0 — your confidence in the above identification>,
+  "material": "<dominant metal or material -- e.g. 'Silver', 'Gold', 'Bronze', 'Paper', or null>",
+  "design_keywords": ["<2-4 short keyword phrases describing key design elements for catalogue search>"],
+  "confidence": <float 0.0-1.0 -- your confidence in the above identification>,
   "confidence_notes": "<brief plain-English reason if confidence < 0.90, otherwise null>"
 }
 
@@ -879,7 +976,7 @@ Year / Era: {year}
 Item type: {item_type}
 Additional notes: {notes}
 
-Your response MUST be valid JSON only — no markdown, no commentary outside the JSON.
+Your response MUST be valid JSON only -- no markdown, no commentary outside the JSON.
 Return exactly these fields:
 
 {{
@@ -889,15 +986,15 @@ Return exactly these fields:
   "era": "<year, decade, or period, or 'Unknown'>",
   "denomination": "<denomination text or null>",
   "material": "<dominant metal or material, or null>",
-  "design_keywords": ["<2–4 keyword phrases for catalogue search>"],
-  "confidence": <float 0.0–1.0>,
+  "design_keywords": ["<2-4 keyword phrases for catalogue search>"],
+  "confidence": <float 0.0-1.0>,
   "confidence_notes": "<brief reason if confidence < 0.90, otherwise null>"
 }}
 
 Rules:
 - Start 'identification' with the phrase 'This appears to be'.
 - Confidence should reflect how specific and certain the provided hints are.
-- Text-only identifications should generally score ≤ 0.75 unless highly specific.
+- Text-only identifications should generally score <= 0.75 unless highly specific.
 """
 
 
@@ -971,15 +1068,15 @@ async def identify_world_item(
     collectible using Gemini Vision + Numista catalogue lookup.
 
     Pipeline:
-      1. If an image is provided  → call Gemini Vision with world-item prompt.
-      2. If no image              → call Gemini text model with hint-only prompt.
-      3. If Gemini confidence ≥ 0.90 → search Numista catalogue for matches.
+      1. If an image is provided  -> call Gemini Vision with world-item prompt.
+      2. If no image              -> call Gemini text model with hint-only prompt.
+      3. If Gemini confidence >= 0.90 -> search Numista catalogue for matches.
       4. Return combined result.
 
     Response shape:
     {
       "gemini": {
-        "identification": "This appears to be…",
+        "identification": "This appears to be...",
         "item_type": "coin",
         "country": "Germany",
         "era": "1921",
@@ -989,16 +1086,16 @@ async def identify_world_item(
         "confidence": 0.94,
         "confidence_notes": null
       },
-      "numista_matches": [ { numista_id, title, issuer, min_year, max_year, composition, image_obverse, catalogue_url }, … ],
+      "numista_matches": [ { numista_id, title, issuer, min_year, max_year, composition, image_obverse, catalogue_url }, ... ],
       "show_disclaimer": false,
       "disclaimer_reason": null
     }
     """
-    # ── Stage 1: Gemini identification ────────────────────────────────────────
+    # -- Stage 1: Gemini identification ----------------------------------------
     gemini_result: dict = {}
     try:
         if image is not None:
-            # Image path — use Gemini Vision
+            # Image path -- use Gemini Vision
             img_bytes = await image.read()
             img_b64   = base64.b64encode(img_bytes).decode()
 
@@ -1025,7 +1122,7 @@ async def identify_world_item(
                 ),
             )
         else:
-            # Text-only path — hints only
+            # Text-only path -- hints only
             filled_prompt = _WORLD_TEXT_ONLY_PROMPT.format(
                 country=country_hint   or "Unknown",
                 year=year_hint         or "Unknown",
@@ -1042,7 +1139,7 @@ async def identify_world_item(
             )
 
         raw_text = response.text.strip()
-        # Strip markdown code fences if model wraps in ```json … ```
+        # Strip markdown code fences if model wraps in ```json ... ```
         if raw_text.startswith("```"):
             raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
             raw_text = re.sub(r"\s*```$",          "", raw_text, flags=re.MULTILINE)
@@ -1061,7 +1158,7 @@ async def identify_world_item(
             gemini_result["identification"] = "This appears to be " + ident
 
     except json.JSONDecodeError as e:
-        # Gemini returned non-JSON — wrap the raw text gracefully
+        # Gemini returned non-JSON -- wrap the raw text gracefully
         logger.error(f"Gemini JSON parse error: {e}. Raw: {raw_text[:300]}")
         gemini_result = {
             "identification":   "This appears to be an unidentified numismatic item.",
@@ -1078,12 +1175,12 @@ async def identify_world_item(
         logger.exception("Gemini call error")
         raise HTTPException(status_code=500, detail=f"AI identification failed: {str(e)}")
 
-    # ── Stage 2: Numista lookup (only when confidence is high enough) ─────────
+    # -- Stage 2: Numista lookup (only when confidence is high enough) ---------
     numista_matches = []
     if gemini_result.get("confidence", 0) >= _WORLD_CONFIDENCE_THRESHOLD:
         numista_matches = _numista_search(gemini_result)
 
-    # ── Stage 3: Build response ───────────────────────────────────────────────
+    # -- Stage 3: Build response -----------------------------------------------
     show_disclaimer   = gemini_result.get("confidence", 0) < _WORLD_CONFIDENCE_THRESHOLD
     disclaimer_reason = gemini_result.get("confidence_notes") if show_disclaimer else None
 
@@ -1095,7 +1192,7 @@ async def identify_world_item(
     }
 
 
-# ─── END WORLD ITEM IDENTIFICATION ───────────────────────────────────────────
+# --- END WORLD ITEM IDENTIFICATION -------------------------------------------
 
 @app.post("/api/import_spreadsheet")
 async def import_spreadsheet(
@@ -1107,20 +1204,10 @@ async def import_spreadsheet(
 ):
     """
     Ingests an Excel/CSV file into the user's review_queue.
-
-    Pipeline:
-      1. AI maps column NAMES to the Golden Schema (one call, fast).
-      2. Per-row rule-based normalization:
-           - Year column: split combined "2007W" → Year + Mint Mark
-           - Condition: expand abbreviations/colloquial grades
-           - Program/Series: expand coin nicknames (Ike, Merc, Walker …)
-      3. AI fallback: rows whose Condition or Series still look unresolved
-         go through a lightweight AI interpretation pass (batched, 10 rows/call).
     """
     contents = await file.read()
     try:
-        df = pd.read_csv(io.BytesIO(contents)) if str(file.filename).lower().endswith('.csv') \
-             else pd.read_excel(io.BytesIO(contents))
+        df = _read_spreadsheet_bytes(contents, str(file.filename))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
 
@@ -1130,45 +1217,9 @@ async def import_spreadsheet(
     if item_type == "paper_currency" or "currency" in fname or "banknote" in fname or "bill" in fname:
         is_currency = True
 
-    # ── 1. AI column-name mapping ────────────────────────────────────────────
+    # -- 1. Fast Golden Schema column-name mapping ----------------------------
     headers = list(df.columns)
-    nickname_hint = ', '.join(f'"{k}" → "{v}"' for k, v in list(COIN_NICKNAMES.items())[:20])
-    mapping_prompt = f"""You are an expert data migration agent for a numismatic (coin collecting) application.
-
-Golden Schema keys:
-["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
- "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
- "Certification Number", "Metal Content", "Cost", "Purchase Date",
- "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
- "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source", "Item Type"]
-
-User spreadsheet headers: {headers}
-
-Map each user header to the closest schema key. Common abbreviations:
-  Yr/Date → Year, Grade/Quality → Condition,
-  Purchased For/Amount Paid/Price/Cost/Purchase Price/Price Paid → Cost,
-  Series/Type/Kind → Program/Series, Desc/Description/Subject → Theme/Subject,
-  Mint/MM → Mint Mark, Qty → Quantity, Location → Storage Location,
-  Notes/Personal Notes/My Notes/Personal Note → Personal Notes,
-  Type/Category/Class → Item Type.
-
-Coin nickname reference (first 20): {nickname_hint}
-
-Output ONLY a raw JSON object: {{"user_header": "schema_key", ...}}
-Omit any user headers with no reasonable match."""
-
-    try:
-        resp = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=[genai_types.Part.from_text(text=mapping_prompt)],
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
-        mapping: dict = json.loads(resp.text)
-    except Exception as e:
-        logger.exception("AI column-mapping error")
-        mapping = {h: h for h in headers}   # 1-to-1 fallback
+    mapping = _fast_map_spreadsheet_headers(headers, is_currency)
 
     # Standardize column mappings based on known discrepancies and schema requirements.
     # These overrides ensure beginner uploads with variant column names always land on
@@ -1178,7 +1229,7 @@ Omit any user headers with no reasonable match."""
         "grading cert no":      "Certification Number",
         "cert #":               "Certification Number",
         "certification #":      "Certification Number",
-        # Cost variants → canonical "Purchase Cost"
+        # Cost variants -> canonical "Purchase Cost"
         "cost":                 "Purchase Cost",
         "price":                "Purchase Cost",
         "purchase price":       "Purchase Cost",
@@ -1186,13 +1237,13 @@ Omit any user headers with no reasonable match."""
         "amount paid":          "Purchase Cost",
         "purchased for":        "Purchase Cost",
         "purchase cost":        "Purchase Cost",
-        # Notes variants → canonical "Personal Notes I"
+        # Notes variants -> canonical "Personal Notes I"
         "personal notes":       "Personal Notes I",
         "personal note":        "Personal Notes I",
         "my notes":             "Personal Notes I",
         "notes":                "Personal Notes I",
         "personal notes i":     "Personal Notes I",
-        # Reference number variants → canonical "Personal Reference #"
+        # Reference number variants -> canonical "Personal Reference #"
         "personal ref #":       "Personal Reference #",
         "personal ref no":      "Personal Reference #",
         "personal reference #": "Personal Reference #",
@@ -1218,7 +1269,7 @@ Omit any user headers with no reasonable match."""
         if normalized_h in mapping_override:
             mapping[h] = mapping_override[normalized_h]
 
-    # ── 2. Per-row ingestion + rule-based normalization ──────────────────────
+    # -- 2. Per-row ingestion + rule-based normalization ----------------------
     added_count = 0
     ai_fallback_needed: list[tuple] = []   # (doc_ref, partial_doc) for AI pass
 
@@ -1278,7 +1329,7 @@ Omit any user headers with no reasonable match."""
                 if val:  # only write non-empty strings
                     new_doc[schema_col] = val
 
-        # ── Rule-based normalizations ──────────────────────────────────────
+        # -- Rule-based normalizations --------------------------------------
         if is_currency:
             # Relaxed validation pipeline for banknotes/paper currency
             new_doc['item_type'] = 'paper_currency'
@@ -1376,7 +1427,7 @@ Omit any user headers with no reasonable match."""
         if not is_currency:
             new_doc['item_type'] = _classify_item_type(new_doc)
 
-        # ── Source provenance ──────────────────────────────────────────────
+        # -- Source provenance ----------------------------------------------
         new_doc['upload_method']       = 'spreadsheet_import'
         new_doc['source_file']         = file.filename
         new_doc['import_name']         = import_name or file.filename
@@ -1405,7 +1456,7 @@ Omit any user headers with no reasonable match."""
     if added_count % 490 != 0:
         batch.commit()
 
-    # ── 3. AI fallback for unresolved rows (batched 10 at a time) ───────────
+    # -- 3. AI fallback for unresolved rows (batched 10 at a time) -----------
     ai_fixed = 0
     if ai_fallback_needed:
         for i in range(0, len(ai_fallback_needed), 10):
@@ -1499,7 +1550,7 @@ async def normalize_backfill(user_email: str = Form(...)):
         d       = doc.to_dict()
         updates = {}
 
-        # ── Year + Mint Mark ─────────────────────────────────────────────
+        # -- Year + Mint Mark ---------------------------------------------
         raw_year = str(d.get('Year', '')).strip()
         yr, mm   = _parse_year_mint(raw_year)
         if yr != raw_year:
@@ -1508,19 +1559,19 @@ async def normalize_backfill(user_email: str = Form(...)):
         if mm and not existing_mm:
             updates['Mint Mark'] = mm
 
-        # ── Condition ────────────────────────────────────────────────────
+        # -- Condition ----------------------------------------------------
         raw_cond  = str(d.get('Condition', '')).strip()
         norm_cond = _norm_condition(raw_cond)
         if norm_cond != raw_cond:
             updates['Condition'] = norm_cond
 
-        # ── Program/Series ───────────────────────────────────────────────
+        # -- Program/Series -----------------------------------------------
         raw_series  = str(d.get('Program/Series', '')).strip()
         exp_series  = _expand_series(raw_series)
         if exp_series != raw_series:
             updates['Program/Series'] = exp_series
 
-        # ── Theme/Subject ────────────────────────────────────────────────
+        # -- Theme/Subject ------------------------------------------------
         raw_theme  = str(d.get('Theme/Subject', '')).strip()
         exp_theme  = _expand_series(raw_theme)
         series_for_theme_check = exp_series if (exp_series != raw_series) else raw_series
@@ -1531,12 +1582,12 @@ async def normalize_backfill(user_email: str = Form(...)):
             updates['Theme/Subject'] = exp_theme
 
         if updates:
-            # Log BEFORE adding SERVER_TIMESTAMP — Sentinel isn't JSON-serializable
+            # Log BEFORE adding SERVER_TIMESTAMP -- Sentinel isn't JSON-serializable
             log_entry = {k: str(v) for k, v in updates.items()}
             changes_log.append({'id': doc.id, 'changes': log_entry})
 
             updates['normalized_at'] = firestore.SERVER_TIMESTAMP
-            # Use set(merge=True) instead of update() — update() treats '/'
+            # Use set(merge=True) instead of update() -- update() treats '/'
             # as a Firestore field-path separator, breaking 'Theme/Subject' etc.
             batch.set(coins_ref.document(doc.id), updates, merge=True)
             batch_count += 1
@@ -1560,9 +1611,9 @@ async def normalize_backfill(user_email: str = Form(...)):
     }
 
 
-# ════════════════════════════════════════════════════════════════════════════
+# ============================================================================
 #  Community Coin Nickname System
-# ════════════════════════════════════════════════════════════════════════════
+# ============================================================================
 
 NICKNAME_COLLECTION = 'coin_nickname_suggestions'
 
@@ -1586,7 +1637,7 @@ async def submit_nickname(
     maps_to_clean  = maps_to.strip()
     key = nickname_clean.lower()
 
-    # ── Sanity filter: reject test entries and nonsensical patterns ──────────
+    # -- Sanity filter: reject test entries and nonsensical patterns ----------
     import re as _re
     _REJECT_REASONS: list[str] = []
 
@@ -1629,20 +1680,20 @@ async def submit_nickname(
                 f'(e.g. "Ike", "Merc", "Walker", "Barber").'
             ),
         }
-    # ── End sanity filter ────────────────────────────────────────────────────
+    # -- End sanity filter ----------------------------------------------------
 
-    # ── Check hardcoded dictionary first ────────────────────────────────────
+    # -- Check hardcoded dictionary first ------------------------------------
     if key in COIN_NICKNAMES:
         official = COIN_NICKNAMES[key]
         return {
             "status":  "already_known",
             "message": f'✨ Great minds think alike! "{nickname_clean}" is already in the '
-                       f'Numista.AI dictionary — it maps to "{official}". '
+                       f'Numista.AI dictionary -- it maps to "{official}". '
                        f'No need to submit it again.',
             "maps_to": official,
         }
 
-    # ── Check existing community submissions ─────────────────────────────────
+    # -- Check existing community submissions ---------------------------------
     existing = db.collection(NICKNAME_COLLECTION) \
                  .where('nickname_lower', '==', key) \
                  .limit(1).stream()
@@ -1654,20 +1705,20 @@ async def submit_nickname(
             return {
                 "status":  "already_known",
                 "message": f'"{nickname_clean}" was already submitted by the community '
-                           f'and approved — it maps to "{doc.get("maps_to", "")}"! '
+                           f'and approved -- it maps to "{doc.get("maps_to", "")}"! '
                            f'Head to the Approved Dictionary tab to see it.',
                 "maps_to": doc.get('maps_to', ''),
             }
         elif status == 'pending':
             return {
                 "status":  "already_pending",
-                "message": f'"{nickname_clean}" is already in community review — '
+                "message": f'"{nickname_clean}" is already in community review -- '
                            f'go vote on it in the Community Review tab!',
                 "doc_id":  existing_list[0].id,
             }
-        # Rejected — allow resubmission
+        # Rejected -- allow resubmission
 
-    # ── Create new submission ────────────────────────────────────────────────
+    # -- Create new submission ------------------------------------------------
     doc_ref = db.collection(NICKNAME_COLLECTION).document()
     doc_ref.set({
         'nickname':       nickname_clean,
@@ -1732,7 +1783,7 @@ def list_nicknames(status: str = 'pending', limit: int = 50, offset: int = 0):
             'is_builtin':   False,
         })
 
-    # When requesting approved — also include a sample of built-ins for context
+    # When requesting approved -- also include a sample of built-ins for context
     if status == 'approved':
         builtin_sample = [
             {'id': f'builtin_{k}', 'nickname': k.title(), 'maps_to': v,
@@ -1752,7 +1803,7 @@ async def vote_nickname(
     user_email: str = Form(...),
     rating:     int = Form(...),
 ):
-    """Cast or update a star rating (1–5) on a community nickname submission."""
+    """Cast or update a star rating (1-5) on a community nickname submission."""
     if not 1 <= rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
 
@@ -1839,13 +1890,13 @@ def nickname_stats():
         "approved": approved,
         "rejected": rejected,
         "builtin":  len(COIN_NICKNAMES),
-        "top_contributor": top_user.split('@')[0] if top_user else '—',
+        "top_contributor": top_user.split('@')[0] if top_user else '--',
     }
 
 
-# ════════════════════════════════════════════════════════════════════════════
+# ============================================================================
 #  AI Grade Review System
-# ════════════════════════════════════════════════════════════════════════════
+# ============================================================================
 
 from datetime import datetime as _dt
 
@@ -1864,7 +1915,7 @@ def grade_review_queue(user_email: str, limit: int = 30):
     """
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
-    # ── Server-side filter: only pull explicitly pending coins (avoids full-collection scan) ──
+    # -- Server-side filter: only pull explicitly pending coins (avoids full-collection scan) --
     seen_ids: set[str] = set()
     raw_docs: list     = []
     
@@ -1931,7 +1982,7 @@ async def submit_grade_review(
 ):
     """
     Record a grade review on one of the user's own coins.
-    No auto-correction — if 2/3+ of reviews disagree with the AI grade,
+    No auto-correction -- if 2/3+ of reviews disagree with the AI grade,
     the coin is flagged in admin_grade_flags for human review.
     """
     if not 1 <= rating <= 5:
@@ -2046,9 +2097,9 @@ async def submit_grade_review(
     if action == 'confirmed':
         msg = '✓ Grade confirmed! Thank you for helping improve Numista.AI.'
     else:
-        msg = f'Correction submitted — "{suggested_grade}" has been noted.'
+        msg = f'Correction submitted -- "{suggested_grade}" has been noted.'
         if flagged:
-            msg += (' 🚩 Community consensus differs from the AI grade — '
+            msg += (' 🚩 Community consensus differs from the AI grade -- '
                     'this coin has been flagged for admin review.')
 
     # Eventual consistency fix: record write timestamp and optimistically update cache
@@ -2077,14 +2128,14 @@ async def submit_grade_review(
     }
 
 
-# ─── Admin: Grade Flag Dashboard ─────────────────────────────────────────────
+# --- Admin: Grade Flag Dashboard ---------------------------------------------
 
 @app.get("/api/admin/grade_flags")
 def admin_grade_flags(resolved: bool = False, limit: int = 100):
     """
     Returns all coins flagged for admin grade review.
-    resolved=false (default) → open flags only.
-    resolved=true            → already-resolved flags.
+    resolved=false (default) -> open flags only.
+    resolved=true            -> already-resolved flags.
     """
     try:
         q = (db.collection('admin_grade_flags')
@@ -2093,7 +2144,7 @@ def admin_grade_flags(resolved: bool = False, limit: int = 100):
                .limit(limit))
         docs = list(q.stream())
     except Exception:
-        # Index may still be building — fall back to unordered
+        # Index may still be building -- fall back to unordered
         docs = list(
             db.collection('admin_grade_flags')
               .where('resolved', '==', resolved)
@@ -2168,8 +2219,8 @@ async def resolve_grade_flag(
 ):
     """
     Admin resolves a flagged coin grade.
-    decision='accept_community' → updates coin Condition to community_grade
-    decision='keep_ai'          → keeps existing AI grade, marks flag resolved
+    decision='accept_community' -> updates coin Condition to community_grade
+    decision='keep_ai'          -> keeps existing AI grade, marks flag resolved
     """
     flag_ref = db.collection('admin_grade_flags').document(flag_id)
     flag_doc = flag_ref.get()
@@ -2310,7 +2361,7 @@ async def process_invoice(
     # Actually, Gemini 1.5/2.5 Pro Multimodal can read PDFs natively, performing both OCR and AI structuration in one pass!
     # This is *significantly* more robust than legacy DocumentAI.
     try:
-        # Detect MIME type from extension — ignore browser fallback 'application/octet-stream'
+        # Detect MIME type from extension -- ignore browser fallback 'application/octet-stream'
         ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
         mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
         reported_type = file.content_type or ""
@@ -2322,13 +2373,13 @@ async def process_invoice(
         else:
             # Magic byte sniff: PDFs start with %PDF (hex 25 50 44 46)
             mime_type = "application/pdf" if contents[:4] == b"%PDF" else "application/octet-stream"
-        logger.info(f"Processing invoice: filename={file.filename!r} reported={reported_type!r} → using mime={mime_type!r}")
+        logger.info(f"Processing invoice: filename={file.filename!r} reported={reported_type!r} -> using mime={mime_type!r}")
         pdf_part = genai_types.Part.from_bytes(data=contents, mime_type=mime_type)
 
 
-        # ─── Helper functions ─────────────────────────────────────────────────
+        # --- Helper functions -------------------------------------------------
         def _parse_cost(cost_str: str) -> float:
-            """'$10.00' → 10.0. Returns 0.0 on any parse failure."""
+            """'$10.00' -> 10.0. Returns 0.0 on any parse failure."""
             return clean_valuation_value(cost_str)
 
         def _apply_defaults(it: dict):
@@ -2340,7 +2391,7 @@ async def process_invoice(
                 it['Condition'] = 'Ungraded'
             if 'Cost' not in it:
                 it['Cost'] = '$0.00'
-            # Auto-split combined Year+Mint (e.g. "2006D" → Year="2006", Mint Mark="D")
+            # Auto-split combined Year+Mint (e.g. "2006D" -> Year="2006", Mint Mark="D")
             import re as _re
             raw_year = str(it.get('Year', '')).strip()
             raw_mint = str(it.get('Mint Mark', '')).strip()
@@ -2360,7 +2411,7 @@ async def process_invoice(
 
         extraction_prompt = f"""
         You are an expert numismatic accountant and collectibles specialist. Review this PDF invoice/receipt.
-        Extract EVERY line item — coins, currency, stamps, medals, sets, supplies, and other collectibles.
+        Extract EVERY line item -- coins, currency, stamps, medals, sets, supplies, and other collectibles.
         Classify each item by type and return a full, accurate record.
         {pii_rule}
 
@@ -2369,29 +2420,29 @@ async def process_invoice(
         truly contains zero purchasable items (e.g. it is a blank page or a pure shipping notice). ***
 
         CRITICAL RULES:
-        1. Ignore shipping, tax, discount, and subtotal rows — extract only purchasable line items.
+        1. Ignore shipping, tax, discount, and subtotal rows -- extract only purchasable line items.
         2. Extract ALL item types, not just coins. Use the item_type field to classify each.
         3. MULTI-LINE DESCRIPTIONS: Many invoices have item descriptions that span several lines within
            a single table row (e.g. the club name on line 1, coin name on line 2, grade/service on
            line 3, notation like "Taxable Item" on line 4). Treat all those lines TOGETHER as ONE item.
-        4. RETAILER IDENTIFICATION — use these fingerprints even if the company name does NOT appear on the invoice:
-           - Phone "1-800-645-3122" OR Customer# starting with "54" (5-8 digits) → "Littleton Coin Company"
-           - Phone "1-800-546-2995" OR "littletoncoin.com" → "Littleton Coin Company"
+        4. RETAILER IDENTIFICATION -- use these fingerprints even if the company name does NOT appear on the invoice:
+           - Phone "1-800-645-3122" OR Customer# starting with "54" (5-8 digits) -> "Littleton Coin Company"
+           - Phone "1-800-546-2995" OR "littletoncoin.com" -> "Littleton Coin Company"
            - "Washington Quarter Club" OR "Statehood Quarter Club" OR "Morgan Dollar Club" OR
-             "Lincoln Cent Club" OR any "[Coin Type] Club Selection" heading → "Littleton Coin Company"
+             "Lincoln Cent Club" OR any "[Coin Type] Club Selection" heading -> "Littleton Coin Company"
              (These are Littleton subscription club programs. Each invoice is ONE individual coin purchase.)
-           - "shop.usmint.gov" OR "United States Mint" OR "usmint.gov" OR phone "1-800-872-6468" → "US Mint"
-           - "APMEX" OR "apmex.com" → "APMEX"
-           - "JM Bullion" OR "jmbullion.com" → "JM Bullion"
-           - "SD Bullion" OR "sdbullion.com" → "SD Bullion"
-           - "Provident Metals" OR "providentmetals.com" → "Provident Metals"
-           - "BGASC" OR "bgasc.com" → "BGASC"
-           - "MCM" OR "moderncoinmart.com" → "Modern Coin Mart"
-           - "GovMint" OR "govmint.com" → "GovMint"
-           - "American Mint" OR "americanmint.com" → "American Mint"
-           - "PCS Coins" OR "PCS Stamps" OR "PCS Coins and Stamps" OR "pcscoins.com" → "PCS Stamps & Coins"
-           - "JP Capital Collectibles" OR "JP CAPITAL COLLECTIBLES" → "JP Capital Collectibles LLC"
-           - "Danbury Mint" OR "danburymint.com" → "The Danbury Mint"
+           - "shop.usmint.gov" OR "United States Mint" OR "usmint.gov" OR phone "1-800-872-6468" -> "US Mint"
+           - "APMEX" OR "apmex.com" -> "APMEX"
+           - "JM Bullion" OR "jmbullion.com" -> "JM Bullion"
+           - "SD Bullion" OR "sdbullion.com" -> "SD Bullion"
+           - "Provident Metals" OR "providentmetals.com" -> "Provident Metals"
+           - "BGASC" OR "bgasc.com" -> "BGASC"
+           - "MCM" OR "moderncoinmart.com" -> "Modern Coin Mart"
+           - "GovMint" OR "govmint.com" -> "GovMint"
+           - "American Mint" OR "americanmint.com" -> "American Mint"
+           - "PCS Coins" OR "PCS Stamps" OR "PCS Coins and Stamps" OR "pcscoins.com" -> "PCS Stamps & Coins"
+           - "JP Capital Collectibles" OR "JP CAPITAL COLLECTIBLES" -> "JP Capital Collectibles LLC"
+           - "Danbury Mint" OR "danburymint.com" -> "The Danbury Mint"
            If you cannot determine the retailer, set "Retailer/Website" to "Unknown".
 
         CLUB/SUBSCRIPTION PROGRAM INVOICES:
@@ -2403,41 +2454,41 @@ async def process_invoice(
                                                   1871 Liberty Seated Silver Quarter
                                                   ANACS
                                                   Taxable Item           Extremely Fi  $432.00
-          → Extract as item_type "coin", Year "1871", Denomination "Liberty Seated Quarter",
+          -> Extract as item_type "coin", Year "1871", Denomination "Liberty Seated Quarter",
             Grading Service "ANACS", Condition "Extremely Fine", Cost "$432.00".
-          DO NOT skip these items. The coin IS purchasable — the "Club Selection" heading is just
+          DO NOT skip these items. The coin IS purchasable -- the "Club Selection" heading is just
           the program name, not a separate line item.
 
         TRUNCATED TEXT COMPLETION:
           Scanned invoices often cut off text at column boundaries. Complete using numismatic knowledge:
-          - "Extremely Fi" → Condition: "Extremely Fine" (EF)
-          - "Very Fi" → Condition: "Very Fine" (VF)
-          - "Very Go" → Condition: "Very Good" (VG)
-          - "Mint St" → Condition: "Mint State"
-          - "Uncircula" or "Uncirc" → Condition: "Uncirculated"
-          - "Brillian" → Condition: "Brilliant Uncirculated"
-          - "About Un" → Condition: "About Uncirculated" (AU)
-          - "Choice Un" → Condition: "Choice Uncirculated"
-          - "Fine" alone → Condition: "Fine" (F-12)
+          - "Extremely Fi" -> Condition: "Extremely Fine" (EF)
+          - "Very Fi" -> Condition: "Very Fine" (VF)
+          - "Very Go" -> Condition: "Very Good" (VG)
+          - "Mint St" -> Condition: "Mint State"
+          - "Uncircula" or "Uncirc" -> Condition: "Uncirculated"
+          - "Brillian" -> Condition: "Brilliant Uncirculated"
+          - "About Un" -> Condition: "About Uncirculated" (AU)
+          - "Choice Un" -> Condition: "Choice Uncirculated"
+          - "Fine" alone -> Condition: "Fine" (F-12)
           Always complete grade words; do not leave them truncated in the output.
 
-        ITEM TYPE CLASSIFICATION — set item_type for every record:
-          "coin"           → individual coin, bullion coin, or token
-          "set"            → a named group of coins sold together (e.g. "1971-1978 Ike Set", "Lincoln Cent Collection")
+        ITEM TYPE CLASSIFICATION -- set item_type for every record:
+          "coin"           -> individual coin, bullion coin, or token
+          "set"            -> a named group of coins sold together (e.g. "1971-1978 Ike Set", "Lincoln Cent Collection")
                              MUST also populate set_contents listing each individual coin in the set
-          "paper_currency" → banknote, Silver Certificate, Federal Reserve Note, Obsolete Note, Fractional Currency, Legal Tender Note
-          "medal"          → commemorative medal, token, or non-monetary medallion
-          "stamp"          → postage stamp or stamp block
-          "supply"         → binder, coin page, holder, slab, capsule, album, magnifier, shipping supply
-          "other"          → anything not covered above
+          "paper_currency" -> banknote, Silver Certificate, Federal Reserve Note, Obsolete Note, Fractional Currency, Legal Tender Note
+          "medal"          -> commemorative medal, token, or non-monetary medallion
+          "stamp"          -> postage stamp or stamp block
+          "supply"         -> binder, coin page, holder, slab, capsule, album, magnifier, shipping supply
+          "other"          -> anything not covered above
 
-        STAMP DISAMBIGUATION — this is CRITICAL:
+        STAMP DISAMBIGUATION -- this is CRITICAL:
           Postage stamps often appear on the SAME invoice as coins from retailers like Littleton.
           A line item is a STAMP (not a coin) if ANY of these are true:
             - The description contains the word "stamp" or "block of [N]"
             - It has a Scott catalog number (e.g. "#1234" or "Scott 1234")
             - The subject is clearly historical art/event (e.g. "Iwo Jima", "Lexington & Concord",
-              "Military Academy West Point") AND the face value is a small postage amount (≤$1.00)
+              "Military Academy West Point") AND the face value is a small postage amount (<=$1.00)
             - The quantity is listed as a "block" (e.g. "(15)" or "block of 4")
           EXAMPLE: "1937 5c Military Academy West Point (15)" = STAMP, not a Buffalo Nickel.
           EXAMPLE: "1990 25c Eisenhower" on a Littleton invoice alongside stamps = STAMP.
@@ -2445,7 +2496,7 @@ async def process_invoice(
           NOTE: Pre-1900 US coins (1800s Liberty Seated, Bust, Draped Bust, Capped Bust series,
           Early American coins, Morgan Dollars, Barber coins, etc.) are always COINS, not stamps.
 
-        FOR SETS — when item_type is "set":
+        FOR SETS -- when item_type is "set":
           Enumerate the individual coins in set_contents. Use your numismatic knowledge to list
           each coin by year, mint mark, and denomination. Example for "1971-1978 Ike Set Unc & Proof":
           set_contents should list 1971-P, 1971-D, 1972-P, 1972-D ... through 1978.
@@ -2457,7 +2508,7 @@ async def process_invoice(
             "item_type": "coin | set | paper_currency | medal | stamp | supply | other",
             "Country": "Country of origin (USA for US items)",
             "Year": "numeric year or year range",
-            "Mint Mark": "e.g. P, D, S, W — blank if none",
+            "Mint Mark": "e.g. P, D, S, W -- blank if none",
             "Denomination": "e.g. Lincoln Cent, Morgan Dollar, $1 Silver Certificate",
             "Quantity": 1,
             "Program/Series": "e.g. 50 State Quarters, American Women Quarters",
@@ -2549,7 +2600,7 @@ async def process_invoice(
 
         items = json.loads(_repair_gemini_json(raw_text)) if raw_text.strip() else []
         if isinstance(items, dict):
-            # Gemini sometimes wraps the list in an outer object —
+            # Gemini sometimes wraps the list in an outer object --
             # try every known wrapper key before falling back to [the dict itself].
             for _key in ('items', 'coins', 'line_items', 'results', 'data',
                          'extracted_items', 'invoice_items', 'coin_items'):
@@ -2561,10 +2612,10 @@ async def process_invoice(
         if not isinstance(items, list):
             items = []
 
-        # ─── Retry pass: if first extraction returned nothing, try a simpler ──────
+        # --- Retry pass: if first extraction returned nothing, try a simpler ------
         # directive prompt focused purely on "find me the items with prices".
         if not items:
-            logger.warning("Invoice first pass empty — firing directive retry prompt")
+            logger.warning("Invoice first pass empty -- firing directive retry prompt")
             retry_prompt = """
             This is a coin/numismatic purchase invoice or receipt. I need you to extract every
             purchasable item that has a dollar amount > $0 associated with it.
@@ -2576,8 +2627,8 @@ async def process_invoice(
 
             Rules:
             - If a description spans multiple lines in the same row, combine them into one item.
-            - Complete truncated text: "Extremely Fi" → "Extremely Fine",
-              "Very Fi" → "Very Fine", "About Un" → "About Uncirculated", etc.
+            - Complete truncated text: "Extremely Fi" -> "Extremely Fine",
+              "Very Fi" -> "Very Fine", "About Un" -> "About Uncirculated", etc.
             - For "Club Selection" invoices, the coin is on line 2 of the description block.
             - Ignore shipping, tax, and subtotal lines.
             - Pre-1900 coins (Liberty Seated, Barber, Morgan, etc.) are coins, not stamps.
@@ -2587,7 +2638,7 @@ async def process_invoice(
               "item_type": "coin",
               "Year": "year from description",
               "Denomination": "coin type (e.g. Liberty Seated Quarter, Morgan Dollar)",
-              "Condition": "grade — complete any truncated words",
+              "Condition": "grade -- complete any truncated words",
               "Grading Service": "PCGS / NGC / ANACS / ICG / or empty",
               "Cost": "dollar amount formatted like $432.00",
               "Retailer/Website": "seller name",
@@ -2621,16 +2672,16 @@ async def process_invoice(
                     items = retry_items
                     logger.info(f"Invoice retry succeeded: {len(items)} item(s) recovered")
                 else:
-                    logger.warning("Invoice retry also returned empty — genuinely nothing found")
+                    logger.warning("Invoice retry also returned empty -- genuinely nothing found")
             except Exception as retry_err:
                 logger.error(f"Invoice retry failed: {retry_err!r}")
 
-        # ─── Route items by type ──────────────────────────────────────────────
-        added_count    = 0   # coins, currency, medals, set-records → review_queue
+        # --- Route items by type ----------------------------------------------
+        added_count    = 0   # coins, currency, medals, set-records -> review_queue
         set_count      = 0   # number of set records
         set_coins_inside = 0 # total coins inside all sets
-        pending_count  = 0   # stamps, other → pending_items
-        supplies_count = 0   # supplies → supplies_log
+        pending_count  = 0   # stamps, other -> pending_items
+        supplies_count = 0   # supplies -> supplies_log
 
         batch   = db.batch()
         col_ref = db.collection('users').document(user_email).collection('review_queue')
@@ -2660,7 +2711,7 @@ async def process_invoice(
             _apply_defaults(item)
 
             if item_type == 'set':
-                # Store as a single SET RECORD — user decides Break Up or Keep as Set
+                # Store as a single SET RECORD -- user decides Break Up or Keep as Set
                 set_id       = str(uuid.uuid4())
                 set_contents = item.get('set_contents', [])
                 if not isinstance(set_contents, list):
@@ -2677,25 +2728,25 @@ async def process_invoice(
                 set_coins_inside += n_coins
 
             elif item_type in ('coin', 'paper_currency', 'medal', 'other', ''):
-                # Numismatic items → review_queue
+                # Numismatic items -> review_queue
                 doc_ref = col_ref.document(str(uuid.uuid4()))
                 batch.set(doc_ref, item)
                 added_count += 1
 
             elif item_type == 'stamp':
-                # Stamps → pending_items (future Stamps module)
+                # Stamps -> pending_items (future Stamps module)
                 doc_ref = pending_ref.document(str(uuid.uuid4()))
                 batch.set(doc_ref, item)
                 pending_count += 1
 
             elif item_type == 'supply':
-                # Supplies → supplies_log (Inventory / expense tracking)
+                # Supplies -> supplies_log (Inventory / expense tracking)
                 doc_ref = supplies_ref.document(str(uuid.uuid4()))
                 batch.set(doc_ref, item)
                 supplies_count += 1
 
             else:
-                # Unknown types → pending_items for safety
+                # Unknown types -> pending_items for safety
                 doc_ref = pending_ref.document(str(uuid.uuid4()))
                 batch.set(doc_ref, item)
                 pending_count += 1
@@ -2727,14 +2778,14 @@ def get_mint_news():
     Aggregates numismatic news for the Numista.AI Market Intel feed.
 
     Priority:
-      1. NewsAPI.org  — key from NEWSAPI_KEY env var or Firestore config/newsapi
-      2. RSS fallback — CoinWorld + Numismatic News if key unavailable / API fails
+      1. NewsAPI.org  -- key from NEWSAPI_KEY env var or Firestore config/newsapi
+      2. RSS fallback -- CoinWorld + Numismatic News if key unavailable / API fails
 
     Each article: {title, source, published, summary, link}
     """
     import requests as req
 
-    # ── 1. Resolve NewsAPI key ─────────────────────────────────────────────────
+    # -- 1. Resolve NewsAPI key -------------------------------------------------
     news_api_key = os.environ.get("NEWSAPI_KEY", "").strip()
     if not news_api_key:
         try:
@@ -2745,10 +2796,10 @@ def get_mint_news():
         except Exception as e:
             logger.exception("Mint news: Firestore key lookup failed")
 
-    # ── 2. Try NewsAPI.org ─────────────────────────────────────────────────────
+    # -- 2. Try NewsAPI.org -----------------------------------------------------
     if news_api_key:
         try:
-            # Collector-focused query — specific enough to avoid commodity/finance noise.
+            # Collector-focused query -- specific enough to avoid commodity/finance noise.
             # Exclusions (-term) prevent astronomy (NGC=galaxy catalog), crypto, beer, fashion.
             # "American Eagle" alone matches Anheuser-Busch; use exact numismatic phrases.
             # NGC alone matches New General Catalogue (astronomy); remove standalone NGC.
@@ -2863,10 +2914,10 @@ def get_mint_news():
         except Exception as e:
             logger.exception("NewsAPI call failed")
 
-    # ── 3. RSS fallback — verified working feeds with per-feed timeout ─────────
+    # -- 3. RSS fallback -- verified working feeds with per-feed timeout ---------
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     feeds = [
-        # US Mint first — official government releases, always relevant
+        # US Mint first -- official government releases, always relevant
         ("https://www.usmint.gov/rss/news.xml",       "US Mint"),
         # Top collector trade publications
         ("https://coinweek.com/feed/",                "CoinWeek"),
@@ -2900,11 +2951,11 @@ def get_mint_news():
     return {"status": "ok", "source": "rss", "news": all_entries}
 
 
-# ── News curation: user dismissal endpoints ────────────────────────────────────
+# -- News curation: user dismissal endpoints ------------------------------------
 
 class DismissNewsRequest(BaseModel):
     user_email: str
-    article_id: str   # SHA-1 hex of the article URL — computed client-side
+    article_id: str   # SHA-1 hex of the article URL -- computed client-side
 
 @app.post("/api/dismiss_news")
 def dismiss_news(req: DismissNewsRequest):
@@ -2945,11 +2996,11 @@ class DeepDiveRequest(BaseModel):
     query: str
     # Optional fields sent by the Flutter app (Phase 3 Morgan Chat).
     # When collection_context is provided the backend skips its own Firestore
-    # fetch — faster and avoids double-reading the same data.
+    # fetch -- faster and avoids double-reading the same data.
     collection_context: str = ""
     user_name: str = ""
 
-# ── Morgan Conversational Coin Addition Tools ──────────────────────────────────
+# -- Morgan Conversational Coin Addition Tools ----------------------------------
 
 def normalize_denomination(raw_denom: str) -> str:
     if not raw_denom:
@@ -3132,7 +3183,7 @@ async def deep_dive(request: DeepDiveRequest):
     Morgan AI chat: answers questions about the user's coin collection and logs/updates coins via tools.
     """
     try:
-        # ── 0. Handle Direct Button Commands (Undo / Quick Actions) ─────────────────
+        # -- 0. Handle Direct Button Commands (Undo / Quick Actions) -----------------
         if request.query.startswith("INTERNAL_UNDO:"):
             target_id = request.query.split(":")[-1].strip()
             res = execute_undo_add_coin(request.user_email, target_id)
@@ -3142,7 +3193,7 @@ async def deep_dive(request: DeepDiveRequest):
                 "action_payload": res
             }
 
-        # ── 1. Resolve collection context ──────────────────────────────────────
+        # -- 1. Resolve collection context --------------------------------------
         if request.collection_context and len(request.collection_context.strip()) > 50:
             context = request.collection_context.strip()
         else:
@@ -3166,11 +3217,11 @@ async def deep_dive(request: DeepDiveRequest):
             else:
                 context = json.dumps(inventory_items, default=str)
 
-        # ── 2. Personalisation ─────────────────────────────────────────────────
+        # -- 2. Personalisation -------------------------------------------------
         name = (request.user_name or "").strip()
         name_line = f"You are speaking with {name}." if name else ""
 
-        # ── 3. RAG: look up coin knowledge base ────────────────────────────────
+        # -- 3. RAG: look up coin knowledge base --------------------------------
         knowledge_block = ""
         if MORGAN_KNOWLEDGE_AVAILABLE:
             try:
@@ -3180,7 +3231,7 @@ async def deep_dive(request: DeepDiveRequest):
             except Exception as kb_err:
                 logger.warning(f"Deep dive: knowledge base lookup warning: {kb_err}")
 
-        # ── 3b. Auto-Scraper Trigger for Missing Coins ─────────────────────────
+        # -- 3b. Auto-Scraper Trigger for Missing Coins -------------------------
         lower_query = request.query.lower()
         if any(x in lower_query for x in ["do we have", "is there", "add info for", "find images for", "scrape", "ordered", "released", "buy"]):
             import re
@@ -3223,9 +3274,9 @@ async def deep_dive(request: DeepDiveRequest):
                 threading.Thread(target=scrape_url, args=(search_term, False), daemon=True).start()
                 knowledge_block += f"\n\n[SYSTEM NOTIFICATION] The user asked about a coin currently missing from the database: '{search_term}'. The system has automatically launched a background scraping task to find, scrape, and ingest this coin from the US Mint or Wikipedia. Acknowledge this action warmly and reassure the user that it will be ingested momentarily."
 
-        # ── 4. Build prompt ────────────────────────────────────────────────────
+        # -- 4. Build prompt ----------------------------------------------------
         prompt = f"""You are Morgan, the friendly AI numismatic guide owl for Numista.AI.
-You are an enthusiastic, expert numismatic mentor — warm and patient like a trusted friend who happens to be a world-class coin expert.
+You are an enthusiastic, expert numismatic mentor -- warm and patient like a trusted friend who happens to be a world-class coin expert.
 You have encyclopedic knowledge of US coinage history, mint marks, designers, errors, and varieties.
 {name_line}
 
@@ -3244,7 +3295,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 - Keep responses warm, concise, and helpful (under 30 seconds of spoken length).
 """
 
-        # ── 5. Define Tools for Gemini ─────────────────────────────────────────
+        # -- 5. Define Tools for Gemini -----------------------------------------
         fn_add = genai_types.FunctionDeclaration(
             name="add_coin_to_collection",
             description="Adds a coin directly to the user's collection binder in Firestore.",
@@ -3348,8 +3399,8 @@ async def commit_reviews(request: CommitReviewsRequest):
             if doc_snapshot.exists:
                 data = doc_snapshot.to_dict()
                 
-                # ── Hybrid Duplicate Detection ──────────────────────────────────────
-                # Primary: invoice-based (if invoice# matches + item# matches → definite dupe)
+                # -- Hybrid Duplicate Detection --------------------------------------
+                # Primary: invoice-based (if invoice# matches + item# matches -> definite dupe)
                 # Fallback: attribute-based (Year + Mint + normalized Denomination)
                 inv_no  = (data.get('Retailer Invoice #') or '').strip()
                 item_no = (data.get('Retailer Item No.')  or '').strip()
@@ -3363,12 +3414,12 @@ async def commit_reviews(request: CommitReviewsRequest):
                             .limit(1).get()
                         is_dupe = len(q) > 0
                     except Exception:
-                        pass  # Index may be missing — fall through to attribute check
+                        pass  # Index may be missing -- fall through to attribute check
 
                 if not is_dupe:
                     # Attribute-based fallback: normalise denomination before compare
                     raw_d  = (data.get('Denomination') or '').strip()
-                    norm_d = raw_d.lstrip('$').strip()   # "$5" → "5", "5" → "5"
+                    norm_d = raw_d.lstrip('$').strip()   # "$5" -> "5", "5" -> "5"
                     denom_variants = list({raw_d, norm_d, f'${norm_d}'})
                     try:
                         q2 = coins_ref \
@@ -3434,7 +3485,7 @@ async def break_up_set(request: Request):
         set_data     = set_snap.to_dict()
         set_contents = set_data.get('set_contents', [])
         if not isinstance(set_contents, list) or len(set_contents) == 0:
-            raise HTTPException(status_code=422, detail="set_contents is empty — cannot break up")
+            raise HTTPException(status_code=422, detail="set_contents is empty -- cannot break up")
 
         set_name       = set_data.get('Original Description from source', set_data.get('Theme/Subject', 'Unknown Set'))
         set_cost_label = set_data.get('set_cost_label', set_data.get('Cost', ''))
@@ -3504,7 +3555,7 @@ async def keep_set_as_is(request: Request):
 
         set_data = set_snap.to_dict()
 
-        # Build the committed set record — keep set_contents for reference,
+        # Build the committed set record -- keep set_contents for reference,
         # but mark it as committed and strip the queue-only flag.
         committed = {**set_data}
         committed['item_type']      = 'set'
@@ -3579,11 +3630,11 @@ async def dedup_sweep(user_email: str = Form(...)):
     Scans a user's coins collection for potential duplicates.
 
     Match types (in order of confidence):
-      - 'invoice'   : Same Invoice# AND Item# → near-certain re-import duplicate
+      - 'invoice'   : Same Invoice# AND Item# -> near-certain re-import duplicate
       - 'attribute' : Same Year/Mint/Denom/Series/Theme/Condition/Date (normalized)
-                      → same coin imported twice on the same date
+                      -> same coin imported twice on the same date
       - 'possible'  : Same Year/Mint/Denom/Series/Theme/Condition but DIFFERENT dates
-                      → flag for human review only; may be intentional multiples
+                      -> flag for human review only; may be intentional multiples
 
     Coins that differ in Theme/Subject (e.g. different state/park quarters)
     are never grouped together.
@@ -3592,9 +3643,9 @@ async def dedup_sweep(user_email: str = Form(...)):
         coins_ref = db.collection('users').document(user_email).collection('coins')
         docs = coins_ref.stream()
 
-        invoice_groups: dict  = {}   # invoice+item → list
-        attr_groups: dict     = {}   # attribute key WITH date → list
-        noddate_groups: dict  = {}   # attribute key WITHOUT date → list (for possible tier)
+        invoice_groups: dict  = {}   # invoice+item -> list
+        attr_groups: dict     = {}   # attribute key WITH date -> list
+        noddate_groups: dict  = {}   # attribute key WITHOUT date -> list (for possible tier)
 
         for doc in docs:
             d = doc.to_dict()
@@ -3623,18 +3674,18 @@ async def dedup_sweep(user_email: str = Form(...)):
                 'cost':    str(d.get('Cost', d.get('Purchase Cost', ''))),
             }
 
-            # 1️⃣ Invoice key — only when BOTH invoice# AND item# are non-empty
+            # 1️⃣ Invoice key -- only when BOTH invoice# AND item# are non-empty
             if inv_no and item_no:
                 inv_key = f'inv::{inv_no}::{item_no}::{denom}'
                 invoice_groups.setdefault(inv_key, []).append(snippet)
             else:
-                # 2️⃣ Attribute key WITH normalized date — true duplicates
+                # 2️⃣ Attribute key WITH normalized date -- true duplicates
                 #    (same coin imported twice on the same date)
                 base_key  = f'{year}::{mint}::{denom}::{series}::{theme}::{cond}'
                 attr_key  = f'attr::{base_key}::{norm_date}'
                 attr_groups.setdefault(attr_key, []).append(snippet)
 
-                # 3️⃣ No-date key — for possible-duplicate detection across dates
+                # 3️⃣ No-date key -- for possible-duplicate detection across dates
                 #    We only promote to 'possible' if no attr group already covers it
                 noddate_groups.setdefault(f'poss::{base_key}', []).append(snippet)
 
@@ -3649,7 +3700,7 @@ async def dedup_sweep(user_email: str = Form(...)):
                 duplicates.append({'key': k, 'match_type': 'attribute',
                                    'count': len(v), 'coins': v})
 
-        # Collect possible duplicates — coins that share all attributes but have
+        # Collect possible duplicates -- coins that share all attributes but have
         # DIFFERENT normalized dates.  Only include singleton-by-date coins so we
         # don't double-count coins already in an attribute-match group.
         for k, v in noddate_groups.items():
@@ -3661,7 +3712,7 @@ async def dedup_sweep(user_email: str = Form(...)):
                 nd = _norm_date(s['date'])
                 by_date.setdefault(nd, []).append(s)
             if len(by_date) <= 1:
-                continue   # all same date → already in attr_groups, skip
+                continue   # all same date -> already in attr_groups, skip
             # Collect only the dates that have exactly ONE copy (true singletons).
             # Dates with 2+ copies are already surfaced in the attribute tier.
             singleton_coins = [coins[0] for coins in by_date.values() if len(coins) == 1]
@@ -3670,7 +3721,7 @@ async def dedup_sweep(user_email: str = Form(...)):
             duplicates.append({'key': k, 'match_type': 'possible',
                                'count': len(singleton_coins), 'coins': singleton_coins})
 
-        # Sort: invoice → attribute → possible, then by count desc within each tier
+        # Sort: invoice -> attribute -> possible, then by count desc within each tier
         tier = {'invoice': 0, 'attribute': 1, 'possible': 2}
         duplicates.sort(key=lambda x: (tier.get(x['match_type'], 9), -x['count']))
 
@@ -3696,7 +3747,7 @@ async def dedup_auto_clean(user_email: str = Form(...)):
 
     - Invoice groups  (Invoice# + Item# + Denom):   keeps first, deletes the rest.
     - Attribute groups (Year/Mint/Denom/Series/Theme/Condition/Date-normalized):
-      also keeps first, deletes the rest — same-date exact matches are
+      also keeps first, deletes the rest -- same-date exact matches are
       just as safe as invoice matches for removing spreadsheet import duplicates.
     - Possible groups (same attributes, different dates): NEVER auto-deleted.
 
@@ -3774,12 +3825,12 @@ async def dedup_auto_clean(user_email: str = Form(...)):
 
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  PHASE 1: BINDER / HOLDER SCAN ENDPOINTS                                   ║
-# ║  These endpoints power the "Add Coins by Holder Image" feature.             ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  PHASE 1: BINDER / HOLDER SCAN ENDPOINTS                                   |
+# |  These endpoints power the "Add Coins by Holder Image" feature.             |
+# +==============================================================================+
 
-# ─── GCS helpers ─────────────────────────────────────────────────────────────
+# --- GCS helpers -------------------------------------------------------------
 
 def _upload_to_gcs(file_bytes: bytes, dest_path: str, content_type: str = "image/jpeg") -> str:
     """
@@ -3797,9 +3848,9 @@ def _bytes_to_b64(file_bytes: bytes) -> str:
     return base64.b64encode(file_bytes).decode("utf-8")
 
 
-# ─── The 50-State Quarters + DC/Territories master coin list ─────────────────
+# --- The 50-State Quarters + DC/Territories master coin list -----------------
 # Used to validate / cross-check AI output and fill in any gaps.
-# Order matches physical binder layout (1999→2009).
+# Order matches physical binder layout (1999->2009).
 STATE_QUARTER_PROGRAM = [
     # 1999
     {"year": "1999", "subject": "Delaware",          "abbr": "DE"},
@@ -3874,13 +3925,13 @@ STATE_QUARTER_PROGRAM = [
 _SQ_BY_SUBJECT = {c["subject"].lower(): c for c in STATE_QUARTER_PROGRAM}
 
 
-# ─── The Spatial Analysis Prompt ─────────────────────────────────────────────
+# --- The Spatial Analysis Prompt ---------------------------------------------
 
 BINDER_SCAN_SYSTEM_PROMPT = """
 You are an expert numismatic AI with advanced spatial reasoning capabilities.
 You are analyzing photographs of a physical coin collection binder.
 
-═══ YOUR TASK ═══
+=== YOUR TASK ===
 For every coin SLOT visible across ALL provided images, determine:
   1. Is a physical coin currently inserted in the slot? 
      - PRESENT = a coin is clearly visible (metallic disc, design visible)
@@ -3888,7 +3939,7 @@ For every coin SLOT visible across ALL provided images, determine:
   2. Which coin belongs in this slot (year, subject/state, denomination)?
   3. What MINT MARK applies based on the page context?
 
-═══ PAGE IDENTIFICATION RULES ═══
+=== PAGE IDENTIFICATION RULES ===
 You will receive one or more images. Identify each page type:
 
   MAP PAGE (Main Collection Page):
@@ -3911,7 +3962,7 @@ You will receive one or more images. Identify each page type:
   - A printed list format (not a map) showing all coins in a program
   - May show check boxes, stamps, or handwritten marks indicating ownership
 
-═══ SLOT OCCUPANCY DETECTION ═══
+=== SLOT OCCUPANCY DETECTION ===
 To determine if a coin is PRESENT vs ABSENT:
   PRESENT indicators:
     - Metallic/silver colored round disc visible
@@ -3925,10 +3976,10 @@ To determine if a coin is PRESENT vs ABSENT:
   PARTIALLY VISIBLE: If a coin appears partially visible or obstructed,
   mark as PRESENT with "partially_visible": true
 
-═══ OUTPUT FORMAT ═══
+=== OUTPUT FORMAT ===
 Return ONLY valid JSON matching this exact schema:
 {
-  "book_title": "string — detected title from any visible text, e.g. '50 State Commemorative Quarters Collector\'s Map'",
+  "book_title": "string -- detected title from any visible text, e.g. '50 State Commemorative Quarters Collector\'s Map'",
   "programs_detected": ["string", "..."],
   "page_count": integer,
   "pages": [
@@ -3938,7 +3989,7 @@ Return ONLY valid JSON matching this exact schema:
       "mint_assigned": "P | D | S | W | unknown",
       "mint_confidence": "high | medium | low",
       "mint_reasoning": "brief explanation of why this mint was assigned",
-      "image_gcs_url": "to be filled server-side — leave as empty string",
+      "image_gcs_url": "to be filled server-side -- leave as empty string",
       "slots_detected": integer
     }
   ],
@@ -3953,7 +4004,7 @@ Return ONLY valid JSON matching this exact schema:
       "mint_uncertain": false,
       "present": true,
       "partially_visible": false,
-      "slot_condition_note": "optional — any note about damage or ambiguity",
+      "slot_condition_note": "optional -- any note about damage or ambiguity",
       "slot_bbox": {
         "x_pct": 0.25,
         "y_pct": 0.35,
@@ -3966,8 +4017,8 @@ Return ONLY valid JSON matching this exact schema:
   "mint_clarification_needed": false
 }
 
-═══ SLOT BOUNDING BOXES ═══
-For each coin_slot, provide slot_bbox as PERCENTAGE coordinates (0.0–1.0) of the PAGE IMAGE:
+=== SLOT BOUNDING BOXES ===
+For each coin_slot, provide slot_bbox as PERCENTAGE coordinates (0.0-1.0) of the PAGE IMAGE:
   x_pct = left edge of the circular slot / image width
   y_pct = top edge of the circular slot / image height
   w_pct = diameter of the slot / image width
@@ -3976,7 +4027,7 @@ Add a small margin (~20%) so the crop includes the slot label below the coin.
 For map pages where slots are positioned geographically, estimate position as best you can.
 If you genuinely cannot determine position, use: {"x_pct": 0, "y_pct": 0, "w_pct": 0, "h_pct": 0}
 
-═══ IMPORTANT RULES ═══
+=== IMPORTANT RULES ===
 - Report EVERY slot visible in the images, whether filled or empty
 - Do NOT skip any slot, even if the coin is absent
 - If reading the state label is ambiguous, use your best judgment and set
@@ -3988,7 +4039,7 @@ If you genuinely cannot determine position, use: {"x_pct": 0, "y_pct": 0, "w_pct
 """
 
 
-# ─── Coin Crop Endpoint ───────────────────────────────────────────────────────
+# --- Coin Crop Endpoint -------------------------------------------------------
 # Dependencies: google-cloud-storage, Pillow (already in requirements.txt)
 import base64, io as _io
 from PIL import Image as _PILImage
@@ -4000,7 +4051,7 @@ def get_coin_crop(coin_id: str, user_email: str):
     Returns a base64-encoded JPEG crop of the specific coin's binder slot.
 
     Strategy:
-    1. Load the coin doc → get scan_uuid, page_index, slot_bbox from Firestore.
+    1. Load the coin doc -> get scan_uuid, page_index, slot_bbox from Firestore.
     2. If slot_bbox exists (new scans): download the GCS page image, PIL crop, return.
     3. If slot_bbox is missing (old scans): return {"fallback": true} so Flutter
        displays the full binder page image instead (graceful degradation).
@@ -4024,7 +4075,7 @@ def get_coin_crop(coin_id: str, user_email: str):
                 or slot_bbox.get('h_pct', 0) == 0):
             return {
                 'status':    'fallback',
-                'message':   'No crop data for this coin — showing full binder page.',
+                'message':   'No crop data for this coin -- showing full binder page.',
                 'image_url': gcs_url,
                 'coin_id':   coin_id,
             }
@@ -4051,7 +4102,7 @@ def get_coin_crop(coin_id: str, user_email: str):
             # Fall back to full-page display
             return {
                 'status':    'fallback',
-                'message':   'Image not in GCS — showing full binder page.',
+                'message':   'Image not in GCS -- showing full binder page.',
                 'image_url': gcs_url,
                 'coin_id':   coin_id,
             }
@@ -4116,7 +4167,7 @@ async def analyze_binder_scan(
     images:       List[UploadFile] = File(...),
 ):
     """
-    PHASE 1 — Main binder scan endpoint.
+    PHASE 1 -- Main binder scan endpoint.
 
     Accepts 1-N photos of a coin collection binder/folder. Each image
     is uploaded to GCS and then sent to Gemini 1.5 Flash for spatial
@@ -4125,7 +4176,7 @@ async def analyze_binder_scan(
 
     Supports delta detection: if a prior binder_scan document already
     exists for this user+title, the response includes a 'new_coins' list
-    containing only slots that changed from absent → present since the
+    containing only slots that changed from absent -> present since the
     last scan.
     """
     if not images:
@@ -4135,7 +4186,7 @@ async def analyze_binder_scan(
     gcs_urls   = []
     image_parts = []
 
-    # ── 1. Upload each image to GCS and prepare multimodal parts ─────────────
+    # -- 1. Upload each image to GCS and prepare multimodal parts -------------
     for idx, img_file in enumerate(images):
         raw_bytes   = await img_file.read()
         content_type = img_file.content_type or "image/jpeg"
@@ -4147,11 +4198,11 @@ async def analyze_binder_scan(
         gcs_url  = _upload_to_gcs(raw_bytes, gcs_path, content_type)
         gcs_urls.append(gcs_url)
 
-        # Send inline (base64) to Gemini — faster than signed URL round-trip
+        # Send inline (base64) to Gemini -- faster than signed URL round-trip
         image_parts.append(genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type))
         image_parts.append(genai_types.Part.from_text(text=f"[Image {idx + 1} of {len(images)}: page_{idx:02d}.{ext}]"))
 
-    # ── 2. Call Gemini 2.5 Flash with all images + system prompt ──────────────────
+    # -- 2. Call Gemini 2.5 Flash with all images + system prompt ------------------
     try:
         prompt_parts = image_parts + [genai_types.Part.from_text(text=BINDER_SCAN_SYSTEM_PROMPT)]
 
@@ -4181,7 +4232,7 @@ async def analyze_binder_scan(
         logger.exception("Binder scan Gemini error")
         raise HTTPException(status_code=500, detail=f"AI analysis failed: {e}")
 
-    # ── 3. Post-process: inject GCS URLs into page records ───────────────────
+    # -- 3. Post-process: inject GCS URLs into page records -------------------
     for idx, page in enumerate(ai_result.get("pages", [])):
         if idx < len(gcs_urls):
             page["image_gcs_url"] = gcs_urls[idx]
@@ -4192,7 +4243,7 @@ async def analyze_binder_scan(
 
     book_title = ai_result.get("book_title", "Unknown Binder")
 
-    # ── 4. Cross-reference with known program data ───────────────────────────
+    # -- 4. Cross-reference with known program data ---------------------------
     # For each AI slot, verify it matches our master program list.
     # Fill in any subjects the AI may have missed based on slot order.
     validated_slots = _validate_and_enrich_slots(
@@ -4201,7 +4252,7 @@ async def analyze_binder_scan(
     )
     ai_result["coin_slots"] = validated_slots
 
-    # ── 5. Delta detection — compare to previous scan ────────────────────────
+    # -- 5. Delta detection -- compare to previous scan ------------------------
     new_coins     = []
     prior_scan_id = None
 
@@ -4241,13 +4292,13 @@ async def analyze_binder_scan(
 
     except Exception as e:
         logger.warning(f"Binder scan delta detection warning: {e}")
-        # Non-fatal — delta detection is best-effort
+        # Non-fatal -- delta detection is best-effort
 
     is_first_scan = (prior_scan_id is None)
     present_coins = [s for s in validated_slots if s.get("present")]
     absent_coins  = [s for s in validated_slots if not s.get("present")]
 
-    # ── 6. Save the raw scan result to Firestore ─────────────────────────────
+    # -- 6. Save the raw scan result to Firestore -----------------------------
     # This registers the scan for delta detection on future uploads.
     try:
         scan_doc = {
@@ -4277,7 +4328,7 @@ async def analyze_binder_scan(
         logger.warning(f"Binder scan Firestore save warning: {e}")
         binder_doc_id = scan_uuid  # Use scan UUID as fallback
 
-    # ── 7. Return full payload to Flutter ────────────────────────────────────
+    # -- 7. Return full payload to Flutter ------------------------------------
     return {
         "status":           "success",
         "binder_doc_id":    binder_doc_id,
@@ -4324,7 +4375,7 @@ def _validate_and_enrich_slots(
                 else "50 State Quarters"
             )
         else:
-            # Subject not in master list — keep AI value, flag it
+            # Subject not in master list -- keep AI value, flag it
             enriched_slot["validation_warning"] = f"Subject '{slot.get('subject', '')}' not in program master list"
 
         enriched.append(enriched_slot)
@@ -4333,13 +4384,13 @@ def _validate_and_enrich_slots(
 
 
 
-# ─── Document AI Configuration ───────────────────────────────────────────────
-# RECEIPT processor (DO NOT CHANGE): c113e9bb62be1554 — "Coin Receipts Data Extractor"
+# --- Document AI Configuration -----------------------------------------------
+# RECEIPT processor (DO NOT CHANGE): c113e9bb62be1554 -- "Coin Receipts Data Extractor"
 #   Used by invoice/receipt endpoints elsewhere in this file.
 #
-# CHECKLIST processor (new, dedicated): 7425afc720652ee4 — "Coin Checklist Extractor"
+# CHECKLIST processor (new, dedicated): 7425afc720652ee4 -- "Coin Checklist Extractor"
 #   Created 2026-04-15. Trained on 650 synthetic Littleton checklist PDFs.
-#   To retrain: Cloud Console → Document AI → Coin Checklist Extractor → Train
+#   To retrain: Cloud Console -> Document AI -> Coin Checklist Extractor -> Train
 DOCUMENT_AI_PROCESSOR_PATH = (
     "projects/568985927038/locations/us/processors/261d6897c84ca28b"
     "/processorVersions/5d758c133d6114a0"  # littleton-v1 (fine-tuned 2026-04-17)
@@ -4353,13 +4404,13 @@ KNOWN_CHECKLIST_FORMATS = {
     "numista":    "Numista.AI Export",
 }
 
-# ─── Series Name → Program Routing Table ─────────────────────────────────────
-# Maps the `series_name` entity extracted by littleton-v1 → canonical program
+# --- Series Name -> Program Routing Table -------------------------------------
+# Maps the `series_name` entity extracted by littleton-v1 -> canonical program
 # name and denomination used throughout the Firestore schema.
 # Keys are lowercase for case-insensitive matching. Extend as new series are
 # added to the Document AI training dataset.
 SERIES_NAME_ROUTING = {
-    # ── Silver Dollars ───────────────────────────────────────────────────────
+    # -- Silver Dollars -------------------------------------------------------
     "morgan dollar":               {"program": "Morgan Silver Dollars",        "denomination": "Dollar"},
     "morgan silver dollar":        {"program": "Morgan Silver Dollars",        "denomination": "Dollar"},
     "peace dollar":                {"program": "Peace Silver Dollars",         "denomination": "Dollar"},
@@ -4367,32 +4418,32 @@ SERIES_NAME_ROUTING = {
     "eisenhower dollar":           {"program": "Eisenhower Dollars",           "denomination": "Dollar"},
     "susan b. anthony dollar":     {"program": "Susan B. Anthony Dollars",     "denomination": "Dollar"},
     "sacagawea dollar":            {"program": "Sacagawea Dollars",            "denomination": "Dollar"},
-    # ── Half Dollars ─────────────────────────────────────────────────────────
+    # -- Half Dollars ---------------------------------------------------------
     "liberty walking half dollar": {"program": "Walking Liberty Half Dollars", "denomination": "Half Dollar"},
     "walking liberty half dollar": {"program": "Walking Liberty Half Dollars", "denomination": "Half Dollar"},
     "franklin half dollar":        {"program": "Franklin Half Dollars",        "denomination": "Half Dollar"},
     "kennedy half dollar":         {"program": "Kennedy Half Dollars",         "denomination": "Half Dollar"},
     "barber half dollar":          {"program": "Barber Half Dollars",          "denomination": "Half Dollar"},
     "barber halves":               {"program": "Barber Half Dollars",          "denomination": "Half Dollar"},
-    # ── Nickels ──────────────────────────────────────────────────────────────
+    # -- Nickels --------------------------------------------------------------
     "liberty head nickel":         {"program": "Liberty Head Nickels",         "denomination": "Nickel"},
     "liberty head nickels":        {"program": "Liberty Head Nickels",         "denomination": "Nickel"},
     "buffalo nickel":              {"program": "Buffalo Nickels",              "denomination": "Nickel"},
     "buffalo nickels":             {"program": "Buffalo Nickels",              "denomination": "Nickel"},
     "jefferson nickel":            {"program": "Jefferson Nickels",            "denomination": "Nickel"},
-    # ── Dimes ────────────────────────────────────────────────────────────────
+    # -- Dimes ----------------------------------------------------------------
     "barber dime":                 {"program": "Barber Dimes",                 "denomination": "Dime"},
     "barber dimes":                {"program": "Barber Dimes",                 "denomination": "Dime"},
     "mercury dime":                {"program": "Mercury Dimes",                "denomination": "Dime"},
     "winged liberty head dime":    {"program": "Mercury Dimes",                "denomination": "Dime"},
     "roosevelt dime":              {"program": "Roosevelt Dimes",              "denomination": "Dime"},
     "roosevelt dimes":             {"program": "Roosevelt Dimes",              "denomination": "Dime"},
-    # ── Cents ────────────────────────────────────────────────────────────────
+    # -- Cents ----------------------------------------------------------------
     "lincoln cent":                {"program": "Lincoln Cents",                "denomination": "Cent"},
     "lincoln cents":               {"program": "Lincoln Cents",                "denomination": "Cent"},
     "flying eagle cent":           {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
     "indian head cent":            {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
-    # ── Proof & Special Sets ─────────────────────────────────────────────────
+    # -- Proof & Special Sets -------------------------------------------------
     "u.s. proof sets":             {"program": "U.S. Proof Sets",              "denomination": "Set"},
     "us proof sets":               {"program": "U.S. Proof Sets",              "denomination": "Set"},
     "proof sets":                  {"program": "U.S. Proof Sets",              "denomination": "Set"},
@@ -4404,12 +4455,12 @@ def _parse_coin_subject(subject: str) -> tuple:
     Parses a v4 `coin_subject` string into (year, mint_mark).
 
     Handles formats produced by Littleton checklists:
-      "1907"               → ("1907", "P")   plain Philadelphia year
-      "1912-D"             → ("1912", "D")   Denver
-      "1912-S"             → ("1912", "S")   San Francisco
-      "1921-O"             → ("1921", "O")   New Orleans
-      "1883 Without Cents" → ("1883", "P")   descriptive subject, no explicit mint
-      "1955 Proof Set"     → ("1955", "S")   proof sets default to S mint
+      "1907"               -> ("1907", "P")   plain Philadelphia year
+      "1912-D"             -> ("1912", "D")   Denver
+      "1912-S"             -> ("1912", "S")   San Francisco
+      "1921-O"             -> ("1921", "O")   New Orleans
+      "1883 Without Cents" -> ("1883", "P")   descriptive subject, no explicit mint
+      "1955 Proof Set"     -> ("1955", "S")   proof sets default to S mint
 
     Returns (year_str, mint_str). mint defaults to "P" when not explicit.
     """
@@ -4433,7 +4484,7 @@ def _detect_checklist_format(filename: str, content_type: str) -> str:
     Attempts to detect the checklist format from filename/content-type hints.
     Returns a format key from KNOWN_CHECKLIST_FORMATS, or 'unknown'.
 
-    This is a lightweight heuristic — the Flutter app can also pass format_hint
+    This is a lightweight heuristic -- the Flutter app can also pass format_hint
     directly to bypass detection.
     """
     name_lower = filename.lower()
@@ -4451,10 +4502,10 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
     Sends a checklist PDF to the Document AI Custom Extraction Processor (littleton-v1).
 
     Schema v4 entities extracted:
-      - series_name   (top-level)  → identifies the coin series (e.g. "Liberty Head Nickels")
-      - coin_entry    (parent)     → one entity per checklist row
-          - coin_subject  (child)  → e.g. "1907", "1912-D", "1955 Proof Set"
-          - is_owned      (child)  → checkbox: True if circle is filled (owned)
+      - series_name   (top-level)  -> identifies the coin series (e.g. "Liberty Head Nickels")
+      - coin_entry    (parent)     -> one entity per checklist row
+          - coin_subject  (child)  -> e.g. "1907", "1912-D", "1955 Proof Set"
+          - is_owned      (child)  -> checkbox: True if circle is filled (owned)
 
     Returns:
       {
@@ -4481,7 +4532,7 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
         logger.exception("Document AI processing error")
         return {"series_name": "", "slots": []}
 
-    # ── 1. Extract top-level series_name ─────────────────────────────────────
+    # -- 1. Extract top-level series_name -------------------------------------
     # series_name is a document-level entity (not nested inside coin_entry).
     # Used to resolve the canonical program name and denomination via SERIES_NAME_ROUTING.
     series_name = ""
@@ -4495,7 +4546,7 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
     denomination = routing.get("denomination", "Unknown")
     logger.info(f"Document AI: series_name='{series_name}' -> program='{program}'")
 
-    # ── 2. Extract coin_entry entities (one per checklist row) ────────────────
+    # -- 2. Extract coin_entry entities (one per checklist row) ----------------
     coin_slots = []
     for entity in document.entities:
         if entity.type_.lower() != "coin_entry":
@@ -4553,8 +4604,8 @@ async def analyze_checklist(
     Analyzes a printed coin program checklist (PDF or image scan).
 
     HYBRID ROUTING:
-    1. If format is KNOWN → Document AI Custom Extractor (fast, 2-5s)
-    2. If format is UNKNOWN or Document AI fails → Gemini 3-flash (flexible, ~15-20s)
+    1. If format is KNOWN -> Document AI Custom Extractor (fast, 2-5s)
+    2. If format is UNKNOWN or Document AI fails -> Gemini 3-flash (flexible, ~15-20s)
 
     Supports:
     - Littleton Coin Company style PDF checklists (Document AI)
@@ -4577,7 +4628,7 @@ async def analyze_checklist(
         gcs_urls.append(gcs_url)
         all_raw_bytes.append((raw_bytes, content_type, f.filename))
 
-    # ── Determine format and routing ─────────────────────────────────────────
+    # -- Determine format and routing -----------------------------------------
     detected_format = format_hint or "unknown"
     if detected_format == "unknown" and all_raw_bytes:
         first_filename, first_ct = all_raw_bytes[0][2], all_raw_bytes[0][1]
@@ -4589,12 +4640,12 @@ async def analyze_checklist(
     ai_result = None
     doc_ai_slots = []
 
-    # ── Path A: Document AI (littleton-v1, schema v4) ────────────────────────
+    # -- Path A: Document AI (littleton-v1, schema v4) ------------------------
     doc_ai_series_name = ""
     if use_document_ai:
         logger.info(f"Analyze checklist: using Document AI for format: {detected_format}")
         try:
-            # Process each file — collect slots and the extracted series_name
+            # Process each file -- collect slots and the extracted series_name
             for raw_bytes, content_type, filename in all_raw_bytes:
                 if content_type == "application/pdf":
                     result     = _analyze_checklist_with_document_ai(raw_bytes, content_type)
@@ -4628,13 +4679,13 @@ async def analyze_checklist(
                 }
                 analysis_engine = "document_ai"
             else:
-                logger.warning("Analyze checklist: Document AI returned no entities — falling back to Gemini")
+                logger.warning("Analyze checklist: Document AI returned no entities -- falling back to Gemini")
                 use_document_ai = False  # Force fallback
         except Exception as e:
             logger.warning(f"Analyze checklist: Document AI error, falling back to Gemini: {e}")
             use_document_ai = False
 
-    # ── Path B: Gemini 3-flash fallback ────────────────────────────────────
+    # -- Path B: Gemini 3-flash fallback ------------------------------------
     if not use_document_ai or ai_result is None:
         logger.info(f"Analyze checklist: using Gemini {PRIMARY_MODEL}")
         analysis_engine = "gemini"
@@ -4723,7 +4774,7 @@ IMPORTANT:
             if idx < len(gcs_urls):
                 page["image_gcs_url"] = gcs_urls[idx]
 
-    # ── Post-process: validate and enrich slots ──────────────────────────────
+    # -- Post-process: validate and enrich slots ------------------------------
     if binder_title:
         ai_result["book_title"] = binder_title
 
@@ -4772,7 +4823,7 @@ class ConfirmBinderScanRequest(BaseModel):
 @app.post("/api/confirm_binder_scan")
 async def confirm_binder_scan(request: ConfirmBinderScanRequest):
     """
-    PHASE 1 — Confirmation endpoint.
+    PHASE 1 -- Confirmation endpoint.
 
     Takes the user-confirmed coin list from the Flutter review wizard
     and stages all coins into the review_queue for final commit.
@@ -4781,7 +4832,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
     - Sets Storage Location = request.storage_location on all coins
     - Sets image_url_obverse = the binder page GCS URL (if use_binder_image=True)
     - Performs duplicate detection: checks if same Year+Mint+Denomination already
-      exists in coins collection with a DIFFERENT storage location — if so, returns
+      exists in coins collection with a DIFFERENT storage location -- if so, returns
       that info for user confirmation rather than auto-creating a duplicate
     - Saves the confirmed state back to binder_scans/{binder_doc_id}.coin_slots
       (marks confirmed slots as having coinId references)
@@ -4808,7 +4859,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
         if request.use_binder_image and request.primary_page_gcs_url:
             coin_image_url = request.primary_page_gcs_url
 
-        # ── Cross-location duplicate check ────────────────────────────────────
+        # -- Cross-location duplicate check ------------------------------------
         # A coin is a duplicate ONLY if Year + Mint + Denomination match AND
         # it's stored in a DIFFERENT location. Same-location copies are allowed.
         try:
@@ -4844,7 +4895,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
         except Exception as e:
             logger.warning(f"Binder scan duplicate check warning for {year}{mint} {subject}: {e}")
 
-        # ── Stage the coin in review_queue ────────────────────────────────────
+        # -- Stage the coin in review_queue ------------------------------------
         new_doc = {
             # Golden Schema fields
             "Year":                year,
@@ -4869,7 +4920,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
             "Personal Reference #": "",
             "Storage Location":    request.storage_location,
             "Original Description from source": (
-                f"Added via Binder Scan — {request.book_title}"
+                f"Added via Binder Scan -- {request.book_title}"
             ),
 
             # Image fields
@@ -4907,7 +4958,7 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
     if staged_count % 400 != 0:
         batch.commit()
 
-    # ── Update binder_scans doc to reflect confirmed state ────────────────────
+    # -- Update binder_scans doc to reflect confirmed state --------------------
     try:
         confirmed_keys = {
             f"{s.get('year')}|{s.get('subject')}|{s.get('mint')}"
@@ -5012,21 +5063,21 @@ async def get_binder_detail(user_email: str, binder_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  PCGS CERT LOOKUP — DIRECT API                                              ║
-# ║  Calls api.pcgs.com/publicapi/coindetail/GetCoinFactsByCertNo/{certNo}      ║
-# ║  using a bearer token stored in Firestore (config/pcgs → bearerToken).      ║
-# ║                                                                              ║
-# ║  ⚠️  Root cause of previous 404s: cert was passed as ?CertNo=X (query)     ║
-# ║       instead of as a PATH parameter: /GetCoinFactsByCertNo/X               ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  PCGS CERT LOOKUP -- DIRECT API                                              |
+# |  Calls api.pcgs.com/publicapi/coindetail/GetCoinFactsByCertNo/{certNo}      |
+# |  using a bearer token stored in Firestore (config/pcgs -> bearerToken).      |
+# |                                                                              |
+# |  ⚠️  Root cause of previous 404s: cert was passed as ?CertNo=X (query)     |
+# |       instead of as a PATH parameter: /GetCoinFactsByCertNo/X               |
+# +==============================================================================+
 
 import requests as _requests
 
 _PCGS_API_BASE = "https://api.pcgs.com/publicapi"
 
 def _get_pcgs_token() -> Optional[str]:
-    """Reads the PCGS bearer token from Firestore config/pcgs → bearerToken."""
+    """Reads the PCGS bearer token from Firestore config/pcgs -> bearerToken."""
     try:
         doc = db.collection("config").document("pcgs").get()
         token = doc.to_dict().get("bearerToken") if doc.exists else None
@@ -5041,15 +5092,15 @@ async def pcgs_cert_lookup(cert_no: str):
     Looks up a PCGS certification number via the PCGS Public API.
 
     Endpoint: GET /publicapi/coindetail/GetCoinFactsByCertNo/{certNo}
-              (certNo is a PATH parameter — not a query string)
+              (certNo is a PATH parameter -- not a query string)
 
-    Bearer token is read from Firestore at: config/pcgs → bearerToken
+    Bearer token is read from Firestore at: config/pcgs -> bearerToken
     Stored there by admin via the app's Advanced token UI or directly in Firebase.
     """
     if not cert_no.isdigit() or not (6 <= len(cert_no) <= 9):
         raise HTTPException(status_code=400, detail="cert_no must be 6-9 digits.")
 
-    # ── Fetch token ───────────────────────────────────────────────────────────
+    # -- Fetch token -----------------------------------------------------------
     token = _get_pcgs_token()
     if not token:
         raise HTTPException(
@@ -5057,7 +5108,7 @@ async def pcgs_cert_lookup(cert_no: str):
             detail="PCGS bearer token not configured. Add bearerToken to Firestore config/pcgs."
         )
 
-    # ── Call PCGS API — cert as PATH param (not query string!) ───────────────
+    # -- Call PCGS API -- cert as PATH param (not query string!) ---------------
     url = f"{_PCGS_API_BASE}/coindetail/GetCoinFactsByCertNo/{cert_no}"
     params = {"retrieveAllData": "true"}
     headers = {
@@ -5095,7 +5146,7 @@ async def pcgs_cert_lookup(cert_no: str):
         msg = data.get("ServerMessage", "Cert not found.")
         return {"found": False, "certNo": cert_no, "message": msg}
 
-    # ── Normalise into our standard coinDetail shape ──────────────────────────
+    # -- Normalise into our standard coinDetail shape --------------------------
     coin_detail = {
         # Core identity
         "CertNo":       cert_no,
@@ -5142,20 +5193,20 @@ async def pcgs_cert_lookup(cert_no: str):
     return {"found": True, "certNo": cert_no, "coinDetail": coin_detail}
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AI PHOTO IDENTIFIER — POST /api/identify_coin_photo                        ║
-# ║  Two-pass Gemini coin identification from user-uploaded obverse + reverse    ║
-# ║  images. Identifies, grades, estimates value, detects errors/varieties.      ║
-# ║  Saves coin + images to Firestore/GCS on confirmation.                      ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  AI PHOTO IDENTIFIER -- POST /api/identify_coin_photo                        |
+# |  Two-pass Gemini coin identification from user-uploaded obverse + reverse    |
+# |  images. Identifies, grades, estimates value, detects errors/varieties.      |
+# |  Saves coin + images to Firestore/GCS on confirmation.                      |
+# +==============================================================================+
 
 PHOTO_ID_PASS1_PROMPT = """
 You are a professional numismatist examining two coin images uploaded by a collector.
-Image A and Image B are provided — the collector may have uploaded them in any order.
+Image A and Image B are provided -- the collector may have uploaded them in any order.
 
 YOUR TASKS:
 1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE.
-2. IDENTIFICATION: Identify the coin precisely — Year, Country, Denomination, Program/Series, Theme/Subject.
+2. IDENTIFICATION: Identify the coin precisely -- Year, Country, Denomination, Program/Series, Theme/Subject.
    - For Presidential $1 Coins:
      - "program_series" MUST be exactly "Presidential $1 Coin Program".
      - "theme_subject" MUST be the official title used by the US Mint (including middle initials, e.g. "Ulysses S. Grant", "Chester A. Arthur", "James A. Garfield", "Richard M. Nixon", "Gerald R. Ford", "George H.W. Bush", and term suffixes for Grover Cleveland, i.e. "Grover Cleveland (First Term)" or "Grover Cleveland (Second Term)"). NEVER shorten names to "Grant", "Lincoln", "Monroe", etc.
@@ -5176,7 +5227,7 @@ YOUR TASKS:
 6. NUMISMATIC REPORT: Write 2-4 sentences on the coin's historical significance and collectibility.
 7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies.
 
-Return ONLY valid JSON — no markdown fences, no commentary:
+Return ONLY valid JSON -- no markdown fences, no commentary:
 {
   "obverse_image": "A" or "B",
   "year": integer,
@@ -5204,7 +5255,7 @@ You are a senior grading expert performing a VERIFICATION PASS on a coin already
 You are looking at the same two images (A and B) again.
 
 YOUR TASKS:
-1. VERIFY the identification — correct year, denomination, or series if wrong.
+1. VERIFY the identification -- correct year, denomination, or series if wrong.
 2. REFINE the grade to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
 3. CHECK for mint errors: doubled dies, repunched mint marks (RPM), off-center strikes,
    die cracks, cuds, lamination errors, rotated dies, or any other varieties.
@@ -5247,9 +5298,9 @@ async def identify_coin_photo(
     """
     Two-pass Gemini AI coin identification from obverse + reverse photos.
 
-    Pass 1  — Identification: determines which image is obverse/reverse,
+    Pass 1  -- Identification: determines which image is obverse/reverse,
               identifies year/denomination/series/mint mark/grade/metal.
-    Pass 2  — Verification:   refines grade, checks for errors/varieties,
+    Pass 2  -- Verification:   refines grade, checks for errors/varieties,
               estimates retail value, confirms or corrects identification.
 
     When save_to_collection=True, the identified coin (with any user overrides
@@ -5260,7 +5311,7 @@ async def identify_coin_photo(
     """
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
-    # ── 1. Read image bytes ───────────────────────────────────────────────────
+    # -- 1. Read image bytes ---------------------------------------------------
     bytes_a      = await image_a.read()
     bytes_b      = await image_b.read()
     mime_a       = image_a.content_type or "image/jpeg"
@@ -5271,7 +5322,7 @@ async def identify_coin_photo(
     label_a      = genai_types.Part.from_text(text="[Image A]")
     label_b      = genai_types.Part.from_text(text="[Image B]")
 
-    # ── 2. PASS 1 — Identification ────────────────────────────────────────────
+    # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
         resp1 = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
@@ -5295,7 +5346,7 @@ async def identify_coin_photo(
         logger.exception("Coin ID pass 1 error")
         raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
 
-    # ── 3. PASS 2 — Verification ──────────────────────────────────────────────
+    # -- 3. PASS 2 -- Verification ----------------------------------------------
     pass2: dict = {}
     try:
         pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
@@ -5326,10 +5377,10 @@ async def identify_coin_photo(
         pass2 = json.loads(raw2)
         logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
     except Exception as e:
-        # Non-fatal — continue with Pass 1 results only
+        # Non-fatal -- continue with Pass 1 results only
         logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
 
-    # ── 4. Merge Pass 1 + Pass 2 results ─────────────────────────────────────
+    # -- 4. Merge Pass 1 + Pass 2 results -------------------------------------
     final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
     final_denom  = pass2.get("corrected_denomination") or pass1.get("denomination", "")
     final_series = pass2.get("corrected_series")    or pass1.get("program_series", "")
@@ -5383,7 +5434,7 @@ async def identify_coin_photo(
         "deep_dive_status": "PENDING",
     }
 
-    # ── 5. Optionally save to Firestore + GCS ─────────────────────────────────
+    # -- 5. Optionally save to Firestore + GCS ---------------------------------
     coin_id      = str(uuid.uuid4())
     gcs_obv_uri  = ""
     gcs_rev_uri  = ""
@@ -5423,7 +5474,7 @@ async def identify_coin_photo(
         db.collection(f"users/{user_email}/coins").document(coin_id).set(coin_doc)
         logger.info(f"Saved coin {coin_id}", extra={"user_email": user_email})
     else:
-        # Preview mode — return b64 images for the Flutter review screen
+        # Preview mode -- return b64 images for the Flutter review screen
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
         rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
 
@@ -5438,7 +5489,7 @@ async def identify_coin_photo(
     }
 
 
-# ─── Multi-Modal Coin Grading Advisor ──────────────────────────────────────────
+# --- Multi-Modal Coin Grading Advisor ------------------------------------------
 
 @app.post("/api/analyze/grade-coin")
 async def analyze_grade_coin(
@@ -5495,7 +5546,7 @@ async def analyze_grade_coin(
         )
 
 
-# ─── Text-Only Coin Valuation (Batch Estimator) ───────────────────────────────
+# --- Text-Only Coin Valuation (Batch Estimator) -------------------------------
 
 
 class TextValuationRequest(BaseModel):
@@ -5522,15 +5573,15 @@ A user has a coin with these details:
 Estimate the current retail market value range for this coin.
 Return ONLY valid JSON with exactly these fields:
 {{
-  "estimated_value": "string — a price RANGE in USD, e.g. '$15 – $35' or '$1,200 – $1,800'. Never a single point value.",
+  "estimated_value": "string -- a price RANGE in USD, e.g. '$15 - $35' or '$1,200 - $1,800'. Never a single point value.",
   "confidence": "HIGH, MEDIUM, or LOW",
   "basis": "one sentence explaining your estimate (grade, series, metal content, demand)"
 }}
 
 Rules:
-- Always return a RANGE (low – high), never a single number.
+- Always return a RANGE (low - high), never a single number.
 - If grade/condition is unknown, widen the range accordingly.
-- If the coin is common and low-value, '$1 – $3' is a valid answer.
+- If the coin is common and low-value, '$1 - $3' is a valid answer.
 - If you cannot estimate (unknown coin, insufficient data), return estimated_value: 'Pending' and confidence: 'LOW'.
 - Do NOT add any text outside the JSON object.
 """
@@ -5538,7 +5589,7 @@ Rules:
 @app.post("/api/estimate_value_text")
 async def estimate_value_text(request: TextValuationRequest):
     """
-    Text-only coin value estimation — no photos required.
+    Text-only coin value estimation -- no photos required.
 
     Used by the Flutter BatchValuationService to estimate values for coins
     imported via CSV, Excel, or PDF invoice that have no photos attached.
@@ -5582,7 +5633,7 @@ async def estimate_value_text(request: TextValuationRequest):
             "estimated_value": estimated,
             "confidence":      confidence,
             "basis":           basis,
-            "needs_photo":     True,   # always — text estimate cannot confirm grade visually
+            "needs_photo":     True,   # always -- text estimate cannot confirm grade visually
             "source":          "text_estimator",
         }
     except Exception as e:
@@ -5590,7 +5641,7 @@ async def estimate_value_text(request: TextValuationRequest):
         raise HTTPException(status_code=500, detail=f"Valuation failed: {e}")
 
 
-# ─── Generic Text-Only Valuation ──────────────────────────────────────────────
+# --- Generic Text-Only Valuation ----------------------------------------------
 
 class GeneralValuationRequest(BaseModel):
     item_type:      str
@@ -5615,15 +5666,15 @@ A user has a {item_type} with these details:
 Estimate the current retail market value range for this item in USD.
 Return ONLY valid JSON with exactly these fields:
 {{
-  "estimated_value": "string — a price RANGE in USD, e.g. '$15 – $35' or '$1,200 – $1,800'. Never a single point value.",
+  "estimated_value": "string -- a price RANGE in USD, e.g. '$15 - $35' or '$1,200 - $1,800'. Never a single point value.",
   "confidence": "HIGH, MEDIUM, or LOW",
   "basis": "one sentence explaining your estimate (grade, rarity, demand, metal content, or catalog reference)"
 }}
 
 Rules:
-- Always return a RANGE (low – high), never a single number.
+- Always return a RANGE (low - high), never a single number.
 - If grade/condition is unknown, widen the range accordingly.
-- If the item is common and low-value, '$1 – $3' is a valid answer.
+- If the item is common and low-value, '$1 - $3' is a valid answer.
 - If you cannot estimate (unknown item, insufficient data), return estimated_value: 'Pending' and confidence: 'LOW'.
 - Do NOT add any text outside the JSON object.
 """
@@ -5676,24 +5727,24 @@ async def estimate_value_general(request: GeneralValuationRequest):
 
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# BULK IMPORT & PAPER TRAIL  (Add Coins — unified tab)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
+# BULK IMPORT & PAPER TRAIL  (Add Coins -- unified tab)
+# ===============================================================================
 #
 # Three-step flow:
-#   1. POST /api/import/start        → create session, return GCS signed upload URLs
+#   1. POST /api/import/start        -> create session, return GCS signed upload URLs
 #   2. Browser uploads files directly to GCS (no server in the loop)
-#   3. POST /api/import/process      → orchestrate AI processing of all files
-#      GET  /api/import/status/{id}  → live progress polling
+#   3. POST /api/import/process      -> orchestrate AI processing of all files
+#      GET  /api/import/status/{id}  -> live progress polling
 #
 # Paper Trail:
-#   GET  /api/receipts/{email}                    → all receipts for a user
-#   GET  /api/receipts/{email}/{id}/view_url      → fresh signed URL for original PDF
-# ───────────────────────────────────────────────────────────────────────────────
+#   GET  /api/receipts/{email}                    -> all receipts for a user
+#   GET  /api/receipts/{email}/{id}/view_url      -> fresh signed URL for original PDF
+# -------------------------------------------------------------------------------
 
 import asyncio
 import hashlib
@@ -5701,7 +5752,7 @@ import threading
 
 IMPORT_BUCKET = USER_CONTENT_BUCKET  # reuse the existing bucket
 
-# ── File type classifier ──────────────────────────────────────────────────────
+# -- File type classifier ------------------------------------------------------
 
 def _classify_file(filename: str, first_bytes: bytes = b"") -> str:
     """Return 'spreadsheet' | 'invoice' | 'image' | 'other'."""
@@ -5715,14 +5766,14 @@ def _classify_file(filename: str, first_bytes: bytes = b"") -> str:
     return "other"
 
 
-# ── Duplicate detection ───────────────────────────────────────────────────────
+# -- Duplicate detection -------------------------------------------------------
 
 def _score_duplicate(new_coin: dict, existing_coin: dict) -> float:
     """
-    Return a 0.0–1.0 duplicate confidence score.
-    >= 0.90  → Strong duplicate (flag, don't add)
-    0.60–0.89 → Possible duplicate (flag with warning, still add)
-    < 0.60   → Unique
+    Return a 0.0-1.0 duplicate confidence score.
+    >= 0.90  -> Strong duplicate (flag, don't add)
+    0.60-0.89 -> Possible duplicate (flag with warning, still add)
+    < 0.60   -> Unique
     """
     score = 0.0
     def _norm(v):
@@ -5817,12 +5868,11 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
               .collection("review_queue").document(coin_id)\
               .update({"duplicate_flag": "possible", "duplicate_score": best_score})
 
-    # Write flags to session
     session_ref.update({"duplicate_flags": flags})
     return {"strong": strong_count, "possible": possible_count}
 
 
-# ── Receipt → Coin linker ─────────────────────────────────────────────────────
+# ── Receipt -> Coin linker ─────────────────────────────────────────────────────
 
 def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
     """
@@ -5830,17 +5880,15 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
     to a coin record added in this session.
 
     Match tiers:
-      EXACT  — retailer + invoice# + item# all agree → auto-link
-      STRONG — year + mint + series all agree         → auto-link
-      PARTIAL — series agrees, year/mint unclear      → AI suggestion (not auto-linked)
-      NONE   — mark as unlinked_item
+      EXACT  -- retailer + invoice# + item# all agree -> auto-link
+      STRONG -- year + mint + series all agree         -> auto-link
+      PARTIAL -- series agrees, year/mint unclear      -> AI suggestion (not auto-linked)
+      NONE   -- mark as unlinked_item
     """
-    # Load all receipts for this session
     receipts = list(
         db.collection("users").document(user_email).collection("receipts")
           .where("session_id", "==", session_id).stream()
     )
-    # Load all coins added in this session
     coins = list(
         db.collection("users").document(user_email).collection("review_queue")
           .where("import_session_id", "==", session_id).stream()
@@ -5884,14 +5932,12 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                 c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
                 c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
 
-                # EXACT match
                 if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
                         and item_no and c_item_no == item_no:
                     matched_coin_id = c_id
                     match_tier = "exact"
                     break
 
-                # STRONG match
                 if item_yr and c_yr == item_yr \
                         and c_mm == item_mm \
                         and item_ser and c_ser and item_ser in c_ser:
@@ -5902,7 +5948,6 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
             if matched_coin_id:
                 linked_coin_ids.append(matched_coin_id)
                 linked_total += 1
-                # Write paper_trail back to the coin record
                 purchase_date = (
                     item.get("Purchase Date") or
                     item.get("Invoice Date") or
@@ -5934,17 +5979,14 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                       },
                       "Purchase Date": purchase_date,
                   })
-                # Also mark the line item as linked
                 item["linked_coin_id"] = matched_coin_id
                 item["match_tier"] = match_tier
             else:
-                # Partial match suggestion (series only) — leave for user
                 item["linked_coin_id"] = None
                 item["match_tier"] = "none"
                 unlinked_items.append(item)
                 unlinked_total += 1
 
-        # Update receipt with links
         db.collection("users").document(user_email).collection("receipts")\
           .document(rec_id).update({
               "linked_coin_ids": linked_coin_ids,
@@ -5959,10 +6001,6 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
 
 def _save_to_gcs(user_email: str, session_id: str, filename: str,
                  data: bytes, file_type: str) -> str:
-    """
-    Upload raw bytes to GCS under the user's import session path.
-    Returns the gs:// path.
-    """
     bucket = gcs_client.bucket(IMPORT_BUCKET)
     safe_name = filename.replace(" ", "_")
     blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
@@ -5985,11 +6023,6 @@ class ImportStartRequest(BaseModel):
 
 @app.post("/api/import/start")
 def import_start(req: ImportStartRequest):
-    """
-    Create a Firestore session document and return one GCS signed upload URL
-    per file. The browser uploads directly to GCS — no data passes through
-    Cloud Run, keeping large batches fast.
-    """
     session_ref = db.collection("users").document(req.user_email)\
                     .collection("import_sessions").document(req.session_id)
     session_ref.set({
@@ -6010,7 +6043,6 @@ def import_start(req: ImportStartRequest):
         },
     })
 
-    # Generate one signed URL per file (15-min write window)
     bucket = gcs_client.bucket(IMPORT_BUCKET)
     signed_urls = []
     for f in req.file_manifest:
@@ -6019,7 +6051,7 @@ def import_start(req: ImportStartRequest):
         blob = bucket.blob(blob_path)
         url = blob.generate_signed_url(
             version="v4",
-            expiration=900,       # 15 minutes
+            expiration=900,
             method="PUT",
             content_type=f.get("mime", "application/octet-stream"),
         )
@@ -6032,32 +6064,21 @@ def import_start(req: ImportStartRequest):
 
 @app.get("/api/import/status/{session_id}")
 def import_status(session_id: str, user_email: str):
-    """Live progress polling — called every 2 s by the browser progress bar."""
     doc = db.collection("users").document(user_email)\
             .collection("import_sessions").document(session_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Session not found")
     data = doc.to_dict()
-    # Strip server timestamps for JSON serialisation
     data.pop("started_at", None)
     return data
 
 
 # ── POST /api/import/process ───────────────────────────────────────────────────
-
-class ImportProcessRequest(BaseModel):
-    user_email: str
-    session_id: str
-    mask_pii:   bool = False
-
-@app.post("/api/import/process")
-async def import_process(req: ImportProcessRequest):
+@app.post("/api/import/process", status_code=202)
+async def import_process(req: ImportProcessRequest, background_tasks: BackgroundTasks):
     """
-    Orchestrates AI processing of every file in the session.
-    Files must already be in GCS (uploaded by the browser via signed URLs).
-
-    Processing runs synchronously here (Cloud Run timeout = 3600 s).
-    For very large sessions the client polls /api/import/status for progress.
+    Orchestrates AI processing of every file in the session asynchronously.
+    Returns 202 Accepted immediately so frontend polling tracks status without event-loop blocking.
     """
     user_email = req.user_email
     session_id = req.session_id
@@ -6070,485 +6091,387 @@ async def import_process(req: ImportProcessRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     session_ref.update({"status": "processing"})
-    per_file: list[dict] = session_snap.to_dict().get("per_file", [])
+    background_tasks.add_task(_execute_import_process_worker, user_email, session_id, mask_pii)
+    return {"status": "processing", "session_id": session_id}
 
-    bucket = gcs_client.bucket(IMPORT_BUCKET)
-    summary = {
-        "coins_identified":   0,
-        "receipts_parsed":    0,
-        "total_purchase_value": 0.0,
-        "unlinked_receipts":  0,
-    }
-    new_coin_ids: list[str] = []
 
-    # ── Pre-compute obverse/reverse image pairs ───────────────────────────────
-    # Group image-type files by their filename stem (minus suffix keywords).
-    # e.g. '1935_penny_obv.jpg' and '1935_penny_rev.jpg' share stem '1935_penny'.
-    _IMG_SUFFIXES = (
-        "_obv", "_rev", "_obverse", "_reverse", "_front", "_back",
-        "_a", "_b", "_1", "_2",
-    )
-    def _img_stem(name: str) -> str:
-        """Return filename stem with common obv/rev suffixes stripped."""
-        base = name.rsplit(".", 1)[0].lower().rstrip("_")
-        for sfx in _IMG_SUFFIXES:
-            if base.endswith(sfx):
-                return base[:-len(sfx)].rstrip("_")
-        return base
+def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: bool):
+    """
+    Worker function executed in background task worker to process all session files.
+    """
+    session_ref = db.collection("users").document(user_email)\
+                    .collection("import_sessions").document(session_id)
+    try:
+        session_snap = session_ref.get()
+        if not session_snap.exists:
+            return
 
-    # Map: stem -> [per_file indices]
-    _img_stem_map: dict[str, list[int]] = {}
-    for _i, _fm in enumerate(per_file):
-        if (_fm.get("type") or _classify_file(_fm["name"])) == "image":
-            _s = _img_stem(_fm["name"])
-            _img_stem_map.setdefault(_s, []).append(_i)
-    # Set of indices already processed as part of a pair
-    _paired_idx_done: set[int] = set()
-    # ──────────────────────────────────────────────────────────────────────────
+        per_file: list[dict] = session_snap.to_dict().get("per_file", [])
 
-    for idx, file_meta in enumerate(per_file):
-        fname     = file_meta["name"]
-        ftype     = file_meta.get("type") or _classify_file(fname)
-        safe_name = fname.replace(" ", "_")
-        blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
-        blob      = bucket.blob(blob_path)
-        gcs_path  = f"gs://{IMPORT_BUCKET}/{blob_path}"
+        bucket = gcs_client.bucket(IMPORT_BUCKET)
+        summary = {
+            "coins_identified":   0,
+            "receipts_parsed":    0,
+            "total_purchase_value": 0.0,
+            "unlinked_receipts":  0,
+        }
+        new_coin_ids: list[str] = []
 
-        # Update per-file status to "processing"
-        per_file[idx]["status"] = "processing"
-        session_ref.update({"per_file": per_file, "processed_files": idx})
+        # -- Pre-compute obverse/reverse image pairs -------------------------------
+        _IMG_SUFFIXES = (
+            "_obv", "_rev", "_obverse", "_reverse", "_front", "_back",
+            "_a", "_b", "_1", "_2",
+        )
+        def _img_stem(name: str) -> str:
+            base = name.rsplit(".", 1)[0].lower().rstrip("_")
+            for sfx in _IMG_SUFFIXES:
+                if base.endswith(sfx):
+                    return base[:-len(sfx)].rstrip("_")
+            return base
 
-        try:
-            file_bytes = blob.download_as_bytes()
-        except Exception as e:
-            per_file[idx]["status"] = "error"
-            per_file[idx]["error"]  = str(e)
-            session_ref.update({"per_file": per_file})
-            continue
+        _img_stem_map: dict[str, list[int]] = {}
+        for _i, _fm in enumerate(per_file):
+            if (_fm.get("type") or _classify_file(_fm["name"])) == "image":
+                _s = _img_stem(_fm["name"])
+                _img_stem_map.setdefault(_s, []).append(_i)
+        _paired_idx_done: set[int] = set()
 
-        result_meta: dict = {}
+        for idx, file_meta in enumerate(per_file):
+            fname     = file_meta["name"]
+            ftype     = file_meta.get("type") or _classify_file(fname)
+            safe_name = fname.replace(" ", "_")
+            blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
+            blob      = bucket.blob(blob_path)
+            gcs_path  = f"gs://{IMPORT_BUCKET}/{blob_path}"
 
-        # ── Route by file type ─────────────────────────────────────────────────
-        if ftype == "spreadsheet":
+            per_file[idx]["status"] = "processing"
+            session_ref.update({"per_file": per_file, "processed_files": idx})
+
             try:
-                ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
-                df  = pd.read_csv(io.BytesIO(file_bytes)) if ext == "csv" \
-                      else pd.read_excel(io.BytesIO(file_bytes))
-
-                # Sniff if the file is currency / banknote
-                is_currency = False
-                if "currency" in fname.lower() or "banknote" in fname.lower() or "bill" in fname.lower():
-                    is_currency = True
-
-                # Reuse existing column-mapping logic
-                headers = list(df.columns)
-                mapping_prompt = f"""You are an expert data migration agent for a numismatic app.
-Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
- "Theme/Subject", "Condition", "Strike Type", "Holder Type", "Grading Service",
- "Certification Number", "Metal Content", "Cost", "Purchase Date",
- "Retailer/Website", "Retailer Item No.", "Retailer Invoice #", "Variety",
- "Personal Notes", "Personal Reference #", "Storage Location", "Original Description from source", "Item Type"]
-User spreadsheet headers: {headers}
-Map each user header to the closest schema key.
-  Cost/Purchase Price/Price Paid/Amount Paid/Price → Cost
-  Notes/Personal Notes/My Notes/Personal Note → Personal Notes
-  Type/Category/Class → Item Type
-Output ONLY a raw JSON object: {{"user_header": "schema_key"}}"""
-
-                resp = genai_client.models.generate_content(
-                    model=PRIMARY_MODEL,
-                    contents=[genai_types.Part.from_text(text=mapping_prompt)],
-                    config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
-                )
-                mapping: dict = json.loads(resp.text)
-
-                # Standardize column mappings — same rules as /api/import_spreadsheet.
-                # "Cost" and "Personal Notes" are the canonical Golden Schema keys.
-                mapping_override = {
-                    "grading cert #":       "Certification Number",
-                    "grading cert no":      "Certification Number",
-                    "cert #":               "Certification Number",
-                    "certification #":      "Certification Number",
-                    # Cost variants → canonical "Purchase Cost"
-                    "cost":                 "Purchase Cost",
-                    "price":                "Purchase Cost",
-                    "purchase price":       "Purchase Cost",
-                    "price paid":           "Purchase Cost",
-                    "amount paid":          "Purchase Cost",
-                    "purchased for":        "Purchase Cost",
-                    "purchase cost":        "Purchase Cost",
-                    # Notes variants → canonical "Personal Notes I"
-                    "personal notes":       "Personal Notes I",
-                    "personal note":        "Personal Notes I",
-                    "my notes":             "Personal Notes I",
-                    "notes":                "Personal Notes I",
-                    "personal notes i":     "Personal Notes I",
-                    # Reference number variants → canonical "Personal Reference #"
-                    "personal ref #":       "Personal Reference #",
-                    "personal ref no":      "Personal Reference #",
-                    "personal reference #": "Personal Reference #",
-                    # Item Type variants -> canonical "item_type"
-                    "item type":            "item_type",
-                    "itemtype":             "item_type",
-                    "type":                 "item_type",
-                    "category":             "item_type",
-                    "class":                "item_type",
-                    "format":               "item_type",
-                }
-                if is_currency:
-                    mapping_override.update({
-                        "denomination_parsed":  "Denomination",
-                        "series_year_parsed":   "Year",
-                        "type_parsed":          "Program/Series",
-                        "description":          "Original Description from source",
-                        "issuer_parsed":        "Country",
-                    })
-
-                for h in headers:
-                    normalized_h = h.strip().lower()
-                    if normalized_h in mapping_override:
-                        mapping[h] = mapping_override[normalized_h]
-
-                col_ref  = db.collection("users").document(user_email).collection("review_queue")
-                batch    = db.batch()
-                count    = 0
-                for _, row in df.iterrows():
-                    doc = {
-                        "Program/Series":       "",
-                        "Year":                 "",
-                        "Mint Mark":            "",
-                        "Denomination":         "",
-                        "Condition":            "Ungraded",
-                        # Canonical and Schema cost/notes fields
-                        "Cost":                 None,
-                        "Purchase Cost":        None,
-                        "Purchase Date":        "",
-                        "Country":              "United States",
-                        "deep_dive_status":     "PENDING",
-                        "upload_method":        "spreadsheet_import",
-                        "source_file":          fname,
-                        "import_session_id":    session_id,
-                        "source_type":          "spreadsheet",
-                        "created_at":           firestore.SERVER_TIMESTAMP,
-                        "Certification Number": "",
-                        "Personal Notes":       "",
-                        "Personal Notes I":     "",
-                        "Personal Reference #": "",
-                        "item_type":            "coin",
-                    }
-                    # Apply column mapping — safe .get() so missing columns default cleanly.
-                    for uc, sc in mapping.items():
-                        try:
-                            if hasattr(row, 'get'):
-                                raw_val = row.get(uc)
-                            elif hasattr(row, 'index') and uc in row.index:
-                                raw_val = row[uc]
-                            elif uc in row:
-                                raw_val = row[uc]
-                            else:
-                                raw_val = None
-                        except Exception:
-                            raw_val = None
-
-                        if raw_val is not None and pd.notna(raw_val):
-                            val = str(raw_val).strip()
-                            if val:  # only write non-empty strings
-                                doc[sc] = val
-
-                    # ── Rule-based normalizations for currency/banknotes ──
-                    if is_currency:
-                        doc['item_type'] = 'paper_currency'
-                        doc['Mint Mark'] = ''
-                        
-                        raw_year = doc.get('Year') or ''
-                        doc['Year'] = str(raw_year).strip()
-                        
-                        if not (doc.get('Denomination') or '').strip():
-                            doc['Denomination'] = 'One Dollar'
-                            
-                        raw_cond = doc.get('Condition') or ''
-                        doc['Condition'] = str(raw_cond).strip() or 'Ungraded'
-
-                    # Strip leading $ from Cost / Denomination
-                    for fld in ('Cost', 'Denomination'):
-                        val = doc.get(fld)
-                        if isinstance(val, str) and val.startswith('$'):
-                            doc[fld] = val[1:]
-
-                    # Capture unmapped columns and append them to Personal Notes
-                    unmapped_notes = []
-                    for col in headers:
-                        # If the column was NOT mapped to any Golden Schema key
-                        if col not in mapping:
-                            try:
-                                if hasattr(row, 'get'):
-                                    val = row.get(col)
-                                elif hasattr(row, 'index') and col in row.index:
-                                    val = row[col]
-                                elif col in row:
-                                    val = row[col]
-                                else:
-                                    val = None
-                            except Exception:
-                                val = None
-
-                            if val is not None and pd.notna(val):
-                                val_str = str(val).strip()
-                                if val_str:
-                                    unmapped_notes.append(f"{col}: {val_str}")
-                    
-                    if unmapped_notes:
-                        existing_notes = doc.get("Personal Notes") or ""
-                        additional = " | ".join(unmapped_notes)
-                        if existing_notes:
-                            doc["Personal Notes"] = f"{existing_notes} | {additional}"
-                        else:
-                            doc["Personal Notes"] = additional
-
-                    # Cost and Notes synchronization to maintain backwards compatibility
-                    cost_val = doc.get('Cost') or doc.get('Purchase Cost')
-                    if cost_val is not None:
-                        if isinstance(cost_val, str) and cost_val.startswith('$'):
-                            cost_val = cost_val[1:]
-                        doc['Cost'] = cost_val
-                        doc['Purchase Cost'] = cost_val
-
-                    notes_val = doc.get('Personal Notes') or doc.get('Personal Notes I')
-                    if notes_val is not None:
-                        doc['Personal Notes'] = notes_val
-                        doc['Personal Notes I'] = notes_val
-
-                    # Classify the item type based on row contents (only if not already paper_currency)
-                    if not is_currency:
-                        doc['item_type'] = _classify_item_type(doc)
-
-                    doc_ref = col_ref.document(str(uuid.uuid4()))
-                    batch.set(doc_ref, doc)
-                    new_coin_ids.append(doc_ref.id)
-                    count += 1
-                    if count % 490 == 0:
-                        batch.commit()
-                        batch = db.batch()
-                if count % 490 != 0:
-                    batch.commit()
-
-                summary["coins_identified"] += count
-                result_meta = {"coins_added": count}
-                per_file[idx]["status"]      = "done"
-                per_file[idx]["coins_added"] = count
-
+                file_bytes = blob.download_as_bytes()
             except Exception as e:
                 per_file[idx]["status"] = "error"
                 per_file[idx]["error"]  = str(e)
-                logger.exception(f"Bulk import spreadsheet error ({fname})")
-
-        elif ftype == "invoice":
-            try:
-                # Reuse existing process_invoice Gemini logic (inline)
-                ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
-                mime_map_local = {"pdf": "application/pdf", "png": "image/png",
-                                  "jpg": "image/jpeg", "jpeg": "image/jpeg"}
-                mime_type = mime_map_local.get(ext, "application/pdf")
-                if file_bytes[:4] == b"%PDF":
-                    mime_type = "application/pdf"
-
-                pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
-
-                pii_rule = ""
-                if mask_pii:
-                    pii_rule = """
-                    CRITICAL SECURITY RULE (PII REDACTION):
-                    The user has requested to mask personal identifiable information (PII).
-                    Do NOT extract or include any customer name, customer phone number, customer email, customer shipping/billing address, credit card numbers, or other sensitive personal info in any extracted fields (e.g. in the "Personal Notes", "Original Description from source", or "Retailer Name" fields). If these details are present, replace them with '[REDACTED]'.
-                    """
-
-                extraction_prompt = f"""You are an expert numismatic accountant.
-Extract every purchasable line item from this invoice/receipt.
-Return JSON array. Each object must include:
-{{
-  "item_type": "coin|set|stamp|supply|paper_currency|medal|other",
-  "Program/Series": "...", "Year": "...", "Mint Mark": "...",
-  "Denomination": "...", "Condition": "...",
-  "Cost": "$0.00", "Purchase Date": "YYYY-MM-DD or as printed",
-  "Retailer Name": "...", "Retailer Invoice #": "...", "Retailer Item No.": "..."
-}}
-Ignore shipping, tax, subtotal rows.
-{pii_rule}"""
-
-                try:
-                    response = genai_client.models.generate_content(
-                        model=PRO_MODEL,
-                        contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
-                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
-                    )
-                except Exception:
-                    response = genai_client.models.generate_content(
-                        model=PRIMARY_MODEL,
-                        contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
-                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
-                    )
-
-                raw = response.text or ""
-                items = json.loads(raw) if raw.strip() else []
-                if isinstance(items, dict):
-                    for k in ("items", "coins", "line_items", "results"):
-                        if k in items and isinstance(items[k], list):
-                            items = items[k]; break
-                    else:
-                        items = [items]
-                if not isinstance(items, list):
-                    items = []
-
-                # Derive receipt-level metadata from first item
-                first_coin = next((i for i in items if isinstance(i, dict)
-                                   and str(i.get("item_type", "coin")).lower()
-                                   in ("coin", "paper_currency", "medal", "other", "")), {})
-                retailer    = first_coin.get("Retailer Name", "Unknown Retailer")
-                inv_no      = first_coin.get("Retailer Invoice #", "")
-                inv_date    = first_coin.get("Purchase Date", "")
-
-                total_val = 0.0
-                line_items_out = []
-                added_this_file = 0
-
-                col_ref = db.collection("users").document(user_email).collection("review_queue")
-                batch   = db.batch()
-
-                for item in items:
-                    if not isinstance(item, dict):
-                        continue
-                    item_type = str(item.get("item_type", "coin")).lower()
-                    cost_str  = item.get("Purchase Cost") or item.get("Cost") or "0"
-                    cost_val = clean_valuation_value(cost_str)
-                    total_val += cost_val
-
-                    if item_type in ("coin", "paper_currency", "medal", "other", ""):
-                        item["import_session_id"] = session_id
-                        item["source_type"]       = "invoice_scan"
-                        item["source_file"]       = fname
-                        item["upload_method"]     = "invoice_scan"
-                        item["deep_dive_status"]  = "PENDING"
-                        item["created_at"]        = firestore.SERVER_TIMESTAMP
-                        doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, item)
-                        new_coin_ids.append(doc_ref.id)
-                        line_items_out.append({**item, "coin_doc_id": doc_ref.id})
-                        added_this_file += 1
-
-                batch.commit()
-
-                # Save original PDF to GCS (already there from upload, just record path)
-                receipt_id  = str(uuid.uuid4())
-                receipt_doc = {
-                    "session_id":        session_id,
-                    "original_filename": fname,
-                    "gcs_path":          gcs_path,
-                    "retailer":          retailer,
-                    "invoice_number":    inv_no,
-                    "invoice_date":      inv_date,
-                    "total_amount":      total_val,
-                    "line_items":        line_items_out,
-                    "linked_coin_ids":   [],
-                    "unlinked_items":    [],
-                    "uploaded_at":       firestore.SERVER_TIMESTAMP,
-                }
-                db.collection("users").document(user_email)\
-                  .collection("receipts").document(receipt_id).set(receipt_doc)
-
-                summary["coins_identified"]     += added_this_file
-                summary["receipts_parsed"]      += 1
-                summary["total_purchase_value"] += total_val
-                result_meta = {"coins_added": added_this_file, "receipt_id": receipt_id,
-                               "total_value": total_val}
-                per_file[idx]["status"]      = "done"
-                per_file[idx]["coins_added"] = added_this_file
-                per_file[idx]["receipt_id"]  = receipt_id
-
-            except Exception as e:
-                per_file[idx]["status"] = "error"
-                per_file[idx]["error"]  = str(e)
-                logger.exception(f"Bulk import invoice error ({fname})")
-
-        elif ftype == "image":
-            # Skip this image if it was already handled as part of a pair
-            if idx in _paired_idx_done:
-                per_file[idx]["status"] = "done"
-                per_file[idx]["note"]   = "Processed as part of an obverse/reverse pair"
-                session_ref.update({"per_file": per_file, "processed_files": idx + 1})
+                session_ref.update({"per_file": per_file})
                 continue
 
-            try:
-                ext_lower = fname.rsplit(".", 1)[-1].lower() if "." in fname else "jpg"
-                mime_a    = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
-                             "png": "image/png",  "webp": "image/webp",
-                             "heic": "image/heic"}.get(ext_lower, "image/jpeg")
-                bytes_a   = file_bytes
+            result_meta: dict = {}
 
-                # Check if there is a paired image (obverse + reverse)
-                partner_bytes: bytes = file_bytes   # default: use same image for both passes
-                partner_mime:  str   = mime_a
-                partner_idx:   int | None = None
-                stem = _img_stem(fname)
-                companions = [i for i in _img_stem_map.get(stem, []) if i != idx]
-                if companions:
-                    partner_idx = companions[0]
-                    _paired_idx_done.add(partner_idx)
-                    partner_meta  = per_file[partner_idx]
-                    partner_safe  = partner_meta["name"].replace(" ", "_")
-                    partner_blob  = bucket.blob(
-                        f"{user_email}/imports/{session_id}/raw/{partner_safe}"
-                    )
-                    try:
-                        partner_bytes = partner_blob.download_as_bytes()
-                        pext = partner_meta["name"].rsplit(".", 1)[-1].lower() if "." in partner_meta["name"] else "jpg"
-                        partner_mime  = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
-                                         "png": "image/png",  "webp": "image/webp",
-                                         "heic": "image/heic"}.get(pext, "image/jpeg")
-                    except Exception as pair_e:
-                        logger.warning(f"Bulk import: could not load partner image: {pair_e}")
-                        partner_bytes = bytes_a
-                        partner_mime  = mime_a
-
-                # ── Pass 1 — Full identification (mirrors identify_coin_photo) ──
-                part_a = genai_types.Part.from_bytes(data=bytes_a,   mime_type=mime_a)
-                part_b = genai_types.Part.from_bytes(data=partner_bytes, mime_type=partner_mime)
-
-                resp1 = genai_client.models.generate_content(
-                    model=PRIMARY_MODEL,
-                    contents=[
-                        genai_types.Part.from_text(text="[Image A]"), part_a,
-                        genai_types.Part.from_text(text="[Image B]"), part_b,
-                        genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
-                    ],
-                    config=genai_types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.1,
-                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-                    ),
-                )
-                raw1 = resp1.text.strip()
-                if raw1.startswith("```"):
-                    raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                pass1: dict = json.loads(raw1)
-
-                # ── Pass 2 — Verification (non-fatal) ────────────────────────
-                pass2: dict = {}
+            # -- Route by file type -------------------------------------------------
+            if ftype == "spreadsheet":
                 try:
-                    pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
-                        year          = pass1.get("year", ""),
-                        country       = pass1.get("country", ""),
-                        denomination  = pass1.get("denomination", ""),
-                        program_series= pass1.get("program_series", ""),
-                        mint_mark     = pass1.get("mint_mark", ""),
-                        grade         = pass1.get("grade", ""),
-                        metal_content = pass1.get("metal_content", ""),
+                    df = _read_spreadsheet_bytes(file_bytes, fname)
+                    is_currency = False
+                    if "currency" in fname.lower() or "banknote" in fname.lower() or "bill" in fname.lower():
+                        is_currency = True
+
+                    headers = list(df.columns)
+                    mapping = _fast_map_spreadsheet_headers(headers, is_currency)
+
+                    col_ref  = db.collection("users").document(user_email).collection("review_queue")
+                    batch    = db.batch()
+                    count    = 0
+                    for _, row in df.iterrows():
+                        # Skip template/example rows if user left them in
+                        row_values_str = [str(x).strip().lower() for x in row.values if pd.notna(x)]
+                        if any(c in row_values_str for c in {"43521234", "80912345", "60123984"}) or \
+                           any(any(kw in val for kw in ["example - delete me", "placeholder"]) for val in row_values_str):
+                            logger.info("Skipping example template row in bulk import: %s", row_values_str)
+                            continue
+
+                        doc = {
+                            "Program/Series":       "",
+                            "Year":                 "",
+                            "Mint Mark":            "",
+                            "Denomination":         "",
+                            "Condition":            "Ungraded",
+                            "Cost":                 None,
+                            "Purchase Cost":        None,
+                            "Purchase Date":        "",
+                            "Country":              "United States",
+                            "deep_dive_status":     "PENDING",
+                            "upload_method":        "spreadsheet_import",
+                            "source_file":          fname,
+                            "import_session_id":    session_id,
+                            "source_type":          "spreadsheet",
+                            "created_at":           firestore.SERVER_TIMESTAMP,
+                            "Certification Number": "",
+                            "Personal Notes":       "",
+                            "Personal Notes I":     "",
+                            "Personal Reference #": "",
+                            "item_type":            "coin",
+                        }
+                        for uc, sc in mapping.items():
+                            try:
+                                if hasattr(row, 'get'):
+                                    raw_val = row.get(uc)
+                                elif hasattr(row, 'index') and uc in row.index:
+                                    raw_val = row[uc]
+                                elif uc in row:
+                                    raw_val = row[uc]
+                                else:
+                                    raw_val = None
+                            except Exception:
+                                raw_val = None
+
+                            if raw_val is not None and pd.notna(raw_val):
+                                val = str(raw_val).strip()
+                                if val:
+                                    doc[sc] = val
+
+                        if is_currency:
+                            doc['item_type'] = 'paper_currency'
+                            doc['Mint Mark'] = ''
+                            raw_year = doc.get('Year') or ''
+                            doc['Year'] = str(raw_year).strip()
+                            if not (doc.get('Denomination') or '').strip():
+                                doc['Denomination'] = 'One Dollar'
+                            raw_cond = doc.get('Condition') or ''
+                            doc['Condition'] = str(raw_cond).strip() or 'Ungraded'
+
+                        for fld in ('Cost', 'Denomination'):
+                            val = doc.get(fld)
+                            if isinstance(val, str) and val.startswith('$'):
+                                doc[fld] = val[1:]
+
+                        unmapped_notes = []
+                        for col in headers:
+                            if col not in mapping:
+                                try:
+                                    if hasattr(row, 'get'):
+                                        val = row.get(col)
+                                    elif hasattr(row, 'index') and col in row.index:
+                                        val = row[col]
+                                    elif col in row:
+                                        val = row[col]
+                                    else:
+                                        val = None
+                                except Exception:
+                                    val = None
+
+                                if val is not None and pd.notna(val):
+                                    val_str = str(val).strip()
+                                    if val_str:
+                                        unmapped_notes.append(f"{col}: {val_str}")
+
+                        if unmapped_notes:
+                            existing_notes = doc.get("Personal Notes") or ""
+                            additional = " | ".join(unmapped_notes)
+                            if existing_notes:
+                                doc["Personal Notes"] = f"{existing_notes} | {additional}"
+                            else:
+                                doc["Personal Notes"] = additional
+
+                        cost_val = doc.get('Cost') or doc.get('Purchase Cost')
+                        if cost_val is not None:
+                            if isinstance(cost_val, str) and cost_val.startswith('$'):
+                                cost_val = cost_val[1:]
+                            doc['Cost'] = cost_val
+                            doc['Purchase Cost'] = cost_val
+
+                        notes_val = doc.get('Personal Notes') or doc.get('Personal Notes I')
+                        if notes_val is not None:
+                            doc['Personal Notes'] = notes_val
+                            doc['Personal Notes I'] = notes_val
+
+                        if not is_currency:
+                            doc['item_type'] = _classify_item_type(doc)
+
+                        doc_ref = col_ref.document(str(uuid.uuid4()))
+                        batch.set(doc_ref, doc)
+                        new_coin_ids.append(doc_ref.id)
+                        count += 1
+                        if count % 490 == 0:
+                            batch.commit()
+                            batch = db.batch()
+                    if count % 490 != 0:
+                        batch.commit()
+
+                    summary["coins_identified"] += count
+                    result_meta = {"coins_added": count}
+                    per_file[idx]["status"]      = "done"
+                    per_file[idx]["coins_added"] = count
+
+                except Exception as e:
+                    per_file[idx]["status"] = "error"
+                    per_file[idx]["error"]  = str(e)
+                    logger.exception(f"Bulk import spreadsheet error ({fname})")
+
+            elif ftype == "invoice":
+                try:
+                    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+                    mime_map_local = {"pdf": "application/pdf", "png": "image/png",
+                                      "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+                    mime_type = mime_map_local.get(ext, "application/pdf")
+                    if file_bytes[:4] == b"%PDF":
+                        mime_type = "application/pdf"
+
+                    pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+
+                    pii_rule = ""
+                    if mask_pii:
+                        pii_rule = """
+                        CRITICAL SECURITY RULE (PII REDACTION):
+                        Do NOT include any buyer names, home addresses, phone numbers, or credit card numbers in any output field.
+                        Extract only coin specifications, item numbers, purchase prices, invoice numbers, and dealer names.
+                        """
+
+                    invoice_prompt = f"""
+                    You are an expert numismatic document processing AI. Extract structured coin details from this invoice or receipt document.
+                    {pii_rule}
+
+                    Required JSON output structure:
+                    {{
+                        "retailer": "Dealer or store name",
+                        "invoice_number": "Invoice or order number",
+                        "invoice_date": "YYYY-MM-DD",
+                        "total_amount": 0.00,
+                        "line_items": [
+                            {{
+                                "Program/Series": "Coin series (e.g. Morgan Dollar, Lincoln Cent)",
+                                "Year": "Year (e.g. 1921)",
+                                "Mint Mark": "Mint mark (e.g. S, D, O, CC, or blank)",
+                                "Denomination": "Denomination (e.g. Dollar, Quarter, Cent)",
+                                "Condition": "Grade or condition if mentioned (e.g. MS-65, VF-20, Ungraded)",
+                                "Cost": 0.00,
+                                "Certification Number": "Cert number if graded",
+                                "Personal Notes": "Any item description or catalog number"
+                            }}
+                        ]
+                    }}
+                    Output ONLY valid JSON.
+                    """
+
+                    resp = genai_client.models.generate_content(
+                        model=PRIMARY_MODEL,
+                        contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
+                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
                     )
-                    resp2 = genai_client.models.generate_content(
+                    data = json.loads(resp.text)
+                    items = data.get("line_items", [])
+                    added_this_file = 0
+                    total_val = 0.0
+                    col_ref = db.collection("users").document(user_email).collection("review_queue")
+                    batch = db.batch()
+                    receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
+                    line_items_out = []
+
+                    for it in items:
+                        cost_v = clean_valuation_value(it.get("Cost") or 0.0)
+                        total_val += cost_v
+                        doc = {
+                            "Program/Series":       it.get("Program/Series", ""),
+                            "Year":                 it.get("Year", ""),
+                            "Mint Mark":            it.get("Mint Mark", ""),
+                            "Denomination":         it.get("Denomination", ""),
+                            "Condition":            it.get("Condition", "Ungraded"),
+                            "Cost":                 cost_v,
+                            "Purchase Cost":        cost_v,
+                            "Purchase Date":        data.get("invoice_date", ""),
+                            "Retailer/Website":     data.get("retailer", ""),
+                            "Retailer Invoice #":   data.get("invoice_number", ""),
+                            "Certification Number": it.get("Certification Number", ""),
+                            "Personal Notes":       it.get("Personal Notes", ""),
+                            "Country":              "United States",
+                            "deep_dive_status":     "PENDING",
+                            "upload_method":        "pdf_invoice_import",
+                            "source_file":          fname,
+                            "import_session_id":    session_id,
+                            "source_type":          "invoice",
+                            "receipt_id":           receipt_id,
+                            "created_at":           firestore.SERVER_TIMESTAMP,
+                            "item_type":            "coin",
+                        }
+                        doc["item_type"] = _classify_item_type(doc)
+                        doc_ref = col_ref.document(str(uuid.uuid4()))
+                        batch.set(doc_ref, doc)
+                        new_coin_ids.append(doc_ref.id)
+                        added_this_file += 1
+                        line_items_out.append({**doc, "id": doc_ref.id})
+
+                    batch.commit()
+
+                    receipt_doc = {
+                        "receipt_id":          receipt_id,
+                        "session_id":          session_id,
+                        "original_filename":   fname,
+                        "gcs_path":            gcs_path,
+                        "retailer":            data.get("retailer", ""),
+                        "invoice_number":      data.get("invoice_number", ""),
+                        "invoice_date":        data.get("invoice_date", ""),
+                        "total_amount":        data.get("total_amount") or total_val,
+                        "line_items":          line_items_out,
+                        "linked_coin_ids":     [],
+                        "unlinked_items":      [],
+                        "uploaded_at":         firestore.SERVER_TIMESTAMP,
+                    }
+                    db.collection("users").document(user_email)\
+                      .collection("receipts").document(receipt_id).set(receipt_doc)
+
+                    summary["coins_identified"]     += added_this_file
+                    summary["receipts_parsed"]      += 1
+                    summary["total_purchase_value"] += total_val
+                    result_meta = {"coins_added": added_this_file, "receipt_id": receipt_id,
+                                   "total_value": total_val}
+                    per_file[idx]["status"]      = "done"
+                    per_file[idx]["coins_added"] = added_this_file
+                    per_file[idx]["receipt_id"]  = receipt_id
+
+                except Exception as e:
+                    per_file[idx]["status"] = "error"
+                    per_file[idx]["error"]  = str(e)
+                    logger.exception(f"Bulk import invoice error ({fname})")
+
+            elif ftype == "image":
+                # Skip this image if it was already handled as part of a pair
+                if idx in _paired_idx_done:
+                    per_file[idx]["status"] = "done"
+                    per_file[idx]["note"]   = "Processed as part of an obverse/reverse pair"
+                    session_ref.update({"per_file": per_file, "processed_files": idx + 1})
+                    continue
+
+                try:
+                    ext_lower = fname.rsplit(".", 1)[-1].lower() if "." in fname else "jpg"
+                    mime_a    = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                                 "png": "image/png",  "webp": "image/webp",
+                                 "heic": "image/heic"}.get(ext_lower, "image/jpeg")
+                    bytes_a   = file_bytes
+
+                    # Check if there is a paired image (obverse + reverse)
+                    partner_bytes: bytes = file_bytes   # default: use same image for both passes
+                    partner_mime:  str   = mime_a
+                    partner_idx:   int | None = None
+                    stem = _img_stem(fname)
+                    companions = [i for i in _img_stem_map.get(stem, []) if i != idx]
+                    if companions:
+                        partner_idx = companions[0]
+                        _paired_idx_done.add(partner_idx)
+                        partner_meta  = per_file[partner_idx]
+                        partner_safe  = partner_meta["name"].replace(" ", "_")
+                        partner_blob  = bucket.blob(
+                            f"{user_email}/imports/{session_id}/raw/{partner_safe}"
+                        )
+                        try:
+                            partner_bytes = partner_blob.download_as_bytes()
+                            pext = partner_meta["name"].rsplit(".", 1)[-1].lower() if "." in partner_meta["name"] else "jpg"
+                            partner_mime  = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                                             "png": "image/png",  "webp": "image/webp",
+                                             "heic": "image/heic"}.get(pext, "image/jpeg")
+                        except Exception as pair_e:
+                            logger.warning(f"Bulk import: could not load partner image: {pair_e}")
+                            partner_bytes = bytes_a
+                            partner_mime  = mime_a
+
+                    # -- Pass 1 -- Full identification (mirrors identify_coin_photo) --
+                    part_a = genai_types.Part.from_bytes(data=bytes_a,   mime_type=mime_a)
+                    part_b = genai_types.Part.from_bytes(data=partner_bytes, mime_type=partner_mime)
+
+                    resp1 = genai_client.models.generate_content(
                         model=PRIMARY_MODEL,
                         contents=[
                             genai_types.Part.from_text(text="[Image A]"), part_a,
                             genai_types.Part.from_text(text="[Image B]"), part_b,
-                            genai_types.Part.from_text(text=pass2_prompt),
+                            genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
                         ],
                         config=genai_types.GenerateContentConfig(
                             response_mime_type="application/json",
@@ -6556,75 +6479,105 @@ Ignore shipping, tax, subtotal rows.
                             thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                         ),
                     )
-                    raw2 = resp2.text.strip()
-                    if raw2.startswith("```"):
-                        raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                    pass2 = json.loads(raw2)
-                except Exception as p2e:
-                    logger.warning(f"Bulk import: image pass 2 non-fatal: {p2e}")
+                    raw1 = resp1.text.strip()
+                    if raw1.startswith("```"):
+                        raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                    pass1: dict = json.loads(raw1)
 
-                # ── Merge results ─────────────────────────────────────────────
-                final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
-                final_denom  = pass2.get("corrected_denomination") or pass1.get("denomination", "")
-                final_series = pass2.get("corrected_series")    or pass1.get("program_series", "")
-                final_grade  = pass2.get("refined_grade")       or pass1.get("grade", "")
-                final_conf   = pass2.get("confidence")          or pass1.get("confidence", "")
-                errors       = pass2.get("errors_detected", []) or []
-                variety_str  = "; ".join(errors) if errors else pass1.get("variety_notes", "")
-                est_value    = pass2.get("estimated_value_usd", "Pending")
-                cond_notes   = pass2.get("condition_notes", "")
-                full_report  = pass1.get("report", "")
-                if cond_notes:
-                    full_report += f"\n\nCondition: {cond_notes}"
-                if errors:
-                    full_report += f"\n\nErrors/Varieties: {variety_str}"
-                full_report += f"\n\n[AI Confidence: {final_conf}]"
+                    # -- Pass 2 -- Verification (non-fatal) ------------------------
+                    pass2: dict = {}
+                    try:
+                        pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
+                            year          = pass1.get("year", ""),
+                            country       = pass1.get("country", ""),
+                            denomination  = pass1.get("denomination", ""),
+                            program_series= pass1.get("program_series", ""),
+                            mint_mark     = pass1.get("mint_mark", ""),
+                            grade         = pass1.get("grade", ""),
+                            metal_content = pass1.get("metal_content", ""),
+                        )
+                        resp2 = genai_client.models.generate_content(
+                            model=PRIMARY_MODEL,
+                            contents=[
+                                genai_types.Part.from_text(text="[Image A]"), part_a,
+                                genai_types.Part.from_text(text="[Image B]"), part_b,
+                                genai_types.Part.from_text(text=pass2_prompt),
+                            ],
+                            config=genai_types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                temperature=0.1,
+                                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                            ),
+                        )
+                        raw2 = resp2.text.strip()
+                        if raw2.startswith("```"):
+                            raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                        pass2 = json.loads(raw2)
+                    except Exception as p2e:
+                        logger.warning(f"Bulk import: image pass 2 non-fatal: {p2e}")
 
-                gcs_path_img = f"gs://{IMPORT_BUCKET}/{user_email}/imports/{session_id}/raw/{safe_name}"
+                    # -- Merge results ---------------------------------------------
+                    final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
+                    final_denom  = pass2.get("corrected_denomination") or pass1.get("denomination", "")
+                    final_series = pass2.get("corrected_series")    or pass1.get("program_series", "")
+                    final_grade  = pass2.get("refined_grade")       or pass1.get("grade", "")
+                    final_conf   = pass2.get("confidence")          or pass1.get("confidence", "")
+                    errors       = pass2.get("errors_detected", []) or []
+                    variety_str  = "; ".join(errors) if errors else pass1.get("variety_notes", "")
+                    est_value    = pass2.get("estimated_value_usd", "Pending")
+                    cond_notes   = pass2.get("condition_notes", "")
+                    full_report  = pass1.get("report", "")
+                    if cond_notes:
+                        full_report += f"\n\nCondition: {cond_notes}"
+                    if errors:
+                        full_report += f"\n\nErrors/Varieties: {variety_str}"
+                    full_report += f"\n\n[AI Confidence: {final_conf}]"
 
-                coin_doc = {
-                    "Year":              final_year,
-                    "Country":           pass1.get("country", "USA"),
-                    "Denomination":      final_denom,
-                    "Program/Series":    final_series,
-                    "Theme/Subject":     pass1.get("theme_subject", ""),
-                    "Mint Mark":         pass1.get("mint_mark", ""),
-                    "Condition":         final_grade,
-                    "Metal Content":     pass1.get("metal_content", ""),
-                    "Variety":           variety_str,
-                    "AI Estimated Value": est_value,
-                    "Numismatic Report": full_report,
-                    "ai_confidence":     final_conf,
-                    "is_silver":         pass1.get("is_silver", False),
-                    "is_gold":           pass1.get("is_gold",   False),
-                    "source":            "AI Photo Identifier",
-                    "deep_dive_status":  "PENDING",
-                    "import_session_id": session_id,
-                    "source_type":       "image",
-                    "source_file":       fname,
-                    "upload_method":     "image_upload",
-                    "gcs_image_path":    gcs_path_img,
-                    "has_paired_image":  partner_idx is not None,
-                    "created_at":        firestore.SERVER_TIMESTAMP,
-                }
+                    gcs_path_img = f"gs://{IMPORT_BUCKET}/{user_email}/imports/{session_id}/raw/{safe_name}"
 
-                col_ref = db.collection("users").document(user_email).collection("review_queue")
-                doc_ref = col_ref.document(str(uuid.uuid4()))
-                doc_ref.set(coin_doc)
-                new_coin_ids.append(doc_ref.id)
-                summary["coins_identified"] += 1
-                per_file[idx]["status"]      = "done"
-                per_file[idx]["coins_added"] = 1
-                per_file[idx]["coin_doc_id"] = doc_ref.id
-                logger.info(f"Bulk import image identified: {final_year} {final_denom} conf={final_conf} pair={'yes' if partner_idx is not None else 'no'}")
+                    coin_doc = {
+                        "Year":              final_year,
+                        "Country":           pass1.get("country", "USA"),
+                        "Denomination":      final_denom,
+                        "Program/Series":    final_series,
+                        "Theme/Subject":     pass1.get("theme_subject", ""),
+                        "Mint Mark":         pass1.get("mint_mark", ""),
+                        "Condition":         final_grade,
+                        "Metal Content":     pass1.get("metal_content", ""),
+                        "Variety":           variety_str,
+                        "AI Estimated Value": est_value,
+                        "Numismatic Report": full_report,
+                        "ai_confidence":     final_conf,
+                        "is_silver":         pass1.get("is_silver", False),
+                        "is_gold":           pass1.get("is_gold",   False),
+                        "source":            "AI Photo Identifier",
+                        "deep_dive_status":  "PENDING",
+                        "import_session_id": session_id,
+                        "source_type":       "image",
+                        "source_file":       fname,
+                        "upload_method":     "image_upload",
+                        "gcs_image_path":    gcs_path_img,
+                        "has_paired_image":  partner_idx is not None,
+                        "created_at":        firestore.SERVER_TIMESTAMP,
+                    }
 
-            except Exception as e:
-                per_file[idx]["status"] = "error"
-                per_file[idx]["error"]  = str(e)
-                logger.exception(f"Bulk import image error ({fname})")
+                    col_ref = db.collection("users").document(user_email).collection("review_queue")
+                    doc_ref = col_ref.document(str(uuid.uuid4()))
+                    doc_ref.set(coin_doc)
+                    new_coin_ids.append(doc_ref.id)
+                    summary["coins_identified"] += 1
+                    per_file[idx]["status"]      = "done"
+                    per_file[idx]["coins_added"] = 1
+                    per_file[idx]["coin_doc_id"] = doc_ref.id
+                    logger.info(f"Bulk import image identified: {final_year} {final_denom} conf={final_conf} pair={'yes' if partner_idx is not None else 'no'}")
 
-        else:
-            per_file[idx]["status"] = "skipped"
+                except Exception as e:
+                    per_file[idx]["status"] = "error"
+                    per_file[idx]["error"]  = str(e)
+                    logger.exception(f"Bulk import image error ({fname})")
+
+            else:
+                per_file[idx]["status"] = "skipped"
             per_file[idx]["note"]   = "File type not recognized"
 
         # Push progress after each file
@@ -6634,32 +6587,27 @@ Ignore shipping, tax, subtotal rows.
             "summary":        summary,
         })
 
-    # ── Post-processing: duplicate sweep + receipt linking ────────────────────
-    session_ref.update({"status": "linking"})
+        # -- Post-processing: duplicate sweep + receipt linking --------------------
+        session_ref.update({"status": "linking"})
 
-    dup_result  = _run_duplicate_sweep(user_email, session_id, new_coin_ids)
-    link_result = _link_receipts_to_coins(user_email, session_id)
+        dup_result  = _run_duplicate_sweep(user_email, session_id, new_coin_ids)
+        link_result = _link_receipts_to_coins(user_email, session_id)
 
-    summary["duplicates_flagged"]  = dup_result["strong"] + dup_result["possible"]
-    summary["unlinked_receipts"]   = link_result["unlinked"]
+        summary["duplicates_flagged"]  = dup_result["strong"] + dup_result["possible"]
+        summary["unlinked_receipts"]   = link_result["unlinked"]
 
-    session_ref.update({
-        "status":           "done",
-        "processed_files":  len(per_file),
-        "summary":          summary,
-        "per_file":         per_file,
-    })
-
-    return {
-        "status":       "done",
-        "session_id":   session_id,
-        "summary":      summary,
-        "duplicates":   dup_result,
-        "links":        link_result,
-    }
+        session_ref.update({
+            "status":           "done",
+            "processed_files":  len(per_file),
+            "summary":          summary,
+            "per_file":         per_file,
+        })
+    except Exception as exc:
+        logger.exception(f"Import process background worker failed for session {session_id}")
+        session_ref.update({"status": "error", "error": str(exc)})
 
 
-# ── GET /api/receipts/{user_email} ────────────────────────────────────────────
+# -- GET /api/receipts/{user_email} --------------------------------------------
 
 @app.get("/api/receipts/{user_email}")
 def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
@@ -6678,7 +6626,7 @@ def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
     return {"receipts": results}
 
 
-# ── GET /api/receipts/{user_email}/{receipt_id}/view_url ──────────────────────
+# -- GET /api/receipts/{user_email}/{receipt_id}/view_url ----------------------
 
 @app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
 def receipt_view_url(user_email: str, receipt_id: str):
@@ -6716,11 +6664,11 @@ def receipt_view_url(user_email: str, receipt_id: str):
 
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  COLLECTION MANAGEMENT — BULK CLEAR                                         ║
-# ║  Allows a user's entire coin collection to be wiped in one call.            ║
-# ║  Protected by a mandatory confirm=DELETE guard.                             ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  COLLECTION MANAGEMENT -- BULK CLEAR                                         |
+# |  Allows a user's entire coin collection to be wiped in one call.            |
+# |  Protected by a mandatory confirm=DELETE guard.                             |
+# +==============================================================================+
 
 class ClearCollectionRequest(BaseModel):
     user_email: str
@@ -6731,7 +6679,7 @@ class ClearCollectionRequest(BaseModel):
 def collection_count(user_email: str):
     """
     Return the number of coins in a user's collection using Firestore's
-    aggregation query (COUNT) — reads zero documents, billed as a single
+    aggregation query (COUNT) -- reads zero documents, billed as a single
     aggregation query.
 
     Returns:
@@ -6752,10 +6700,10 @@ def collection_count(user_email: str):
 @app.post("/api/collection/clear")
 def collection_clear(req: ClearCollectionRequest):
     """
-    Permanently delete ALL coins from a user's collection.
+    Permanently delete ALL coins from a user collection.
 
     Safety gate:
-        req.confirm must be the exact string "DELETE" — the endpoint returns
+        req.confirm must be the exact string "DELETE" -- the endpoint returns
         400 immediately if it is anything else.
 
     Only the `coins` sub-collection is affected.  All other user data
@@ -6764,7 +6712,7 @@ def collection_clear(req: ClearCollectionRequest):
 
     Implementation:
         Streams document references in pages and deletes in Firestore batches
-        of ≤ 490 writes (hard limit is 500).  Never loads the full collection
+        of <= 490 writes (hard limit is 500).  Never loads the full collection
         into memory.
 
     Returns:
@@ -6804,9 +6752,9 @@ def collection_clear(req: ClearCollectionRequest):
         logger.exception("Collection clear error", extra={"user_email": req.user_email})
         raise HTTPException(status_code=500, detail=str(e))
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  DEFINITIVE CATALOG & COMPLETION METRICS ENDPOINTS                          ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  DEFINITIVE CATALOG & COMPLETION METRICS ENDPOINTS                          |
+# +==============================================================================+
 
 import sqlite3
 
@@ -7351,19 +7299,19 @@ def reference_db_update_check():
     return {"version": "unknown", "size_bytes": 0}
 
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  LITTLETON COIN COMPANY INTEGRATION                                          ║
-# ║  POST /api/import/littleton_sync                                             ║
-# ║                                                                              ║
-# ║  Accepts a JSON array of scraped Littleton order records and resolves each   ║
-# ║  item against the hybrid 3-layer SKU cache before writing to review_queue.  ║
-# ║                                                                              ║
-# ║  Layer 1 → SQLite static seed   (numista.db, deploy-time pre-populated)     ║
-# ║  Layer 2 → Firestore shared cache (global_metadata/littleton_sku_dictionary) ║
-# ║  Layer 3 → Gemini 3.5-flash fallback + Firestore write-back                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# +==============================================================================+
+# |  LITTLETON COIN COMPANY INTEGRATION                                          |
+# |  POST /api/import/littleton_sync                                             |
+# |                                                                              |
+# |  Accepts a JSON array of scraped Littleton order records and resolves each   |
+# |  item against the hybrid 3-layer SKU cache before writing to review_queue.  |
+# |                                                                              |
+# |  Layer 1 -> SQLite static seed   (numista.db, deploy-time pre-populated)     |
+# |  Layer 2 -> Firestore shared cache (global_metadata/littleton_sku_dictionary) |
+# |  Layer 3 -> Gemini 3.5-flash fallback + Firestore write-back                 |
+# +==============================================================================+
 
-# Lazy import guard — only loaded on first request to avoid startup penalty
+# Lazy import guard -- only loaded on first request to avoid startup penalty
 _littleton_helper = None
 
 def _get_littleton_helper():
@@ -7377,13 +7325,13 @@ def _get_littleton_helper():
     return _littleton_helper
 
 
-# ─── numista.db path (writable SKU asset — separate from read-only reference catalog) ─
+# --- numista.db path (writable SKU asset -- separate from read-only reference catalog) -
 # Cloud Run containers include this file baked into the image at deploy time.
 # seed_littleton_skus.py pre-populates it before each deploy.
 _NUMISTA_DB_PATH = os.path.join(os.path.dirname(__file__), "database", "numista.db")
 
 
-# ─── Pydantic Models for Reference Guide ──────────────────────────────────────
+# --- Pydantic Models for Reference Guide --------------------------------------
 
 class GradeReferenceResponse(BaseModel):
     grade_code: str
@@ -7411,7 +7359,7 @@ class ReferenceSearchResponse(BaseModel):
     term: Optional[GlossaryTermResponse] = None
 
 
-# ─── Reference endpoints helper ───────────────────────────────────────────────
+# --- Reference endpoints helper -----------------------------------------------
 
 def _gcs_to_http_url(url: Optional[str]) -> Optional[str]:
     if not url:
@@ -7421,7 +7369,7 @@ def _gcs_to_http_url(url: Optional[str]) -> Optional[str]:
     return url
 
 
-# ─── Reference API endpoints ──────────────────────────────────────────────────
+# --- Reference API endpoints --------------------------------------------------
 
 @app.get("/api/reference/grade/{grade_code}", response_model=GradeReferenceResponse)
 def get_reference_grade(grade_code: str):
@@ -7576,7 +7524,7 @@ def search_reference(request: ReferenceSearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ─── Pydantic Models ──────────────────────────────────────────────────────────
+# --- Pydantic Models ----------------------------------------------------------
 
 class LittletonOrderRecord(BaseModel):
     """
@@ -7599,13 +7547,13 @@ class LittletonSyncRequest(BaseModel):
     import_session_id: Optional[str] = None   # Links records to a bulk import session
 
 
-# ─── Cost normalization helper ────────────────────────────────────────────────
+# --- Cost normalization helper ------------------------------------------------
 
 def _normalize_lcc_cost(raw_cost: str) -> str:
     """
     Strip currency symbols and normalize the cost string.
-    e.g. "$14.95" → "14.95", "  $3.00 " → "3.00"
-    Returns empty string on blank/invalid input — never raises.
+    e.g. "$14.95" -> "14.95", "  $3.00 " -> "3.00"
+    Returns empty string on blank/invalid input -- never raises.
     """
     if not raw_cost:
         return ""
@@ -7615,7 +7563,7 @@ def _normalize_lcc_cost(raw_cost: str) -> str:
     return cleaned
 
 
-# ─── Endpoint ─────────────────────────────────────────────────────────────────
+# --- Endpoint -----------------------------------------------------------------
 
 @app.post("/api/import/littleton_sync")
 async def littleton_sync(request: LittletonSyncRequest):
@@ -7624,33 +7572,33 @@ async def littleton_sync(request: LittletonSyncRequest):
     authenticated user's review_queue.
 
     Pipeline per record
-    ───────────────────
+    -------------------
     1.  Open numista.db (Layer-1 static seed), call ensure_sku_table.
-    2.  resolve_sku() → 3-layer hybrid lookup:
-          SQLite hit   → instant return, no network
-          Firestore hit → shared runtime cache
-          Gemini miss  → classify description, write result to Firestore
+    2.  resolve_sku() -> 3-layer hybrid lookup:
+          SQLite hit   -> instant return, no network
+          Firestore hit -> shared runtime cache
+          Gemini miss  -> classify description, write result to Firestore
     3.  Map all resolved + incoming fields to the 23-column Golden Schema.
     4.  Write document to Firestore: users/{email}/review_queue/{uuid}
     5.  Return structured summary: counts of total / from_cache_sqlite /
         from_cache_firestore / gemini_resolved / errors.
 
     Golden Schema field mapping
-    ───────────────────────────
-    purchase_date   → "Purchase Date"
-    littleton_sku   → "Retailer Item No."
-    description     → "Original Description from source"
-    cost (stripped) → "Cost"
-    qty             → "Quantity"
-    Gemini series   → "Program/Series"
-    Gemini year     → "Year"
-    Gemini mint     → "Mint Mark"
-    Gemini denom    → "Denomination"
-    Gemini cond     → "Condition"
-    Gemini type     → "item_type"
-    canonical_ref   → "Personal Reference #"
-    fixed           → "Retailer/Website" = "Littleton Coin Company"
-    fixed           → "upload_method"    = "littleton_sync"
+    ---------------------------
+    purchase_date   -> "Purchase Date"
+    littleton_sku   -> "Retailer Item No."
+    description     -> "Original Description from source"
+    cost (stripped) -> "Cost"
+    qty             -> "Quantity"
+    Gemini series   -> "Program/Series"
+    Gemini year     -> "Year"
+    Gemini mint     -> "Mint Mark"
+    Gemini denom    -> "Denomination"
+    Gemini cond     -> "Condition"
+    Gemini type     -> "item_type"
+    canonical_ref   -> "Personal Reference #"
+    fixed           -> "Retailer/Website" = "Littleton Coin Company"
+    fixed           -> "upload_method"    = "littleton_sync"
     """
     lh = _get_littleton_helper()
     if lh is None:
@@ -7676,9 +7624,9 @@ async def littleton_sync(request: LittletonSyncRequest):
             "errors":               0,
         }
 
-    # ── Open SQLite connection for the duration of this request ───────────────
+    # -- Open SQLite connection for the duration of this request ---------------
     # The DB is opened read-write so ensure_sku_table can CREATE TABLE IF NOT
-    # EXISTS on first run. No runtime INSERTs happen here — those go to Firestore.
+    # EXISTS on first run. No runtime INSERTs happen here -- those go to Firestore.
     conn = None
     try:
         conn = sqlite3.connect(_NUMISTA_DB_PATH)
@@ -7688,7 +7636,7 @@ async def littleton_sync(request: LittletonSyncRequest):
         # Non-fatal: continue without SQLite layer (Firestore + Gemini still work)
         conn = None
 
-    # ── Firestore batch setup ─────────────────────────────────────────────────
+    # -- Firestore batch setup -------------------------------------------------
     review_queue_ref = (
         db.collection("users")
           .document(user_email)
@@ -7697,7 +7645,7 @@ async def littleton_sync(request: LittletonSyncRequest):
     batch       = db.batch()
     batch_size  = 0
 
-    # ── Counters ──────────────────────────────────────────────────────────────
+    # -- Counters --------------------------------------------------------------
     committed            = 0
     from_cache_sqlite    = 0
     from_cache_firestore = 0
@@ -7717,7 +7665,7 @@ async def littleton_sync(request: LittletonSyncRequest):
                 errors += 1
                 continue
 
-            # ── 3-layer SKU resolution ────────────────────────────────────────
+            # -- 3-layer SKU resolution ----------------------------------------
             resolution = lh.resolve_sku(
                 sku          = sku,
                 description  = description,
@@ -7736,8 +7684,8 @@ async def littleton_sync(request: LittletonSyncRequest):
             else:
                 gemini_resolved += 1
 
-            # ── Map to Golden Schema ──────────────────────────────────────────
-            # All field access uses .get() — no KeyError possible.
+            # -- Map to Golden Schema ------------------------------------------
+            # All field access uses .get() -- no KeyError possible.
             new_doc: dict = {
                 # Provenance fields
                 "upload_method":                  "littleton_sync",
@@ -7785,7 +7733,7 @@ async def littleton_sync(request: LittletonSyncRequest):
             }
 
             # Run rule-based normalizations consistent with import_spreadsheet
-            # Year + Mint Mark split (e.g. "1921D" → Year=1921, Mint=D)
+            # Year + Mint Mark split (e.g. "1921D" -> Year=1921, Mint=D)
             raw_year = new_doc.get("Year") or ""
             if raw_year:
                 yr, mm = _parse_year_mint(raw_year)
@@ -7793,7 +7741,7 @@ async def littleton_sync(request: LittletonSyncRequest):
                 if mm and not (new_doc.get("Mint Mark") or "").strip():
                     new_doc["Mint Mark"] = mm
 
-            # Condition normalization (e.g. "BU" → "MS-63")
+            # Condition normalization (e.g. "BU" -> "MS-63")
             raw_cond = new_doc.get("Condition") or ""
             new_doc["Condition"] = _norm_condition(raw_cond) if raw_cond else "Uncirculated"
 
@@ -7802,7 +7750,7 @@ async def littleton_sync(request: LittletonSyncRequest):
             if raw_series:
                 new_doc["Program/Series"] = _expand_series(raw_series)
 
-            # ── Write to Firestore batch ──────────────────────────────────────
+            # -- Write to Firestore batch --------------------------------------
             doc_ref = review_queue_ref.document(str(uuid.uuid4()))
             batch.set(doc_ref, new_doc)
             batch_size  += 1
@@ -7818,7 +7766,7 @@ async def littleton_sync(request: LittletonSyncRequest):
             logger.exception(f"Littleton sync: error processing record '{order.littleton_sku}'")
             errors += 1
 
-    # ── Flush remaining batch ─────────────────────────────────────────────────
+    # -- Flush remaining batch -------------------------------------------------
     if batch_size > 0:
         try:
             batch.commit()
@@ -7827,7 +7775,7 @@ async def littleton_sync(request: LittletonSyncRequest):
             errors += batch_size
             committed -= batch_size
 
-    # ── Close SQLite connection ───────────────────────────────────────────────
+    # -- Close SQLite connection -----------------------------------------------
     if conn is not None:
         try:
             conn.close()
@@ -7851,7 +7799,7 @@ async def littleton_sync(request: LittletonSyncRequest):
         "destination":          f"users/{user_email}/review_queue",
     }
 
-# ─── END LITTLETON COIN COMPANY INTEGRATION ───────────────────────────────────
+# --- END LITTLETON COIN COMPANY INTEGRATION -----------------------------------
 
 
 @app.get("/api/cron/campaigns")
@@ -8134,7 +8082,7 @@ def scrape_url_endpoint(data: ScrapeUrlRequest):
 
 
 
-# ─── BRAIN ADMIN API ─────────────────────────────────────────────────────────
+# --- BRAIN ADMIN API ---------------------------------------------------------
 
 @app.get("/api/admin/brain/knowledge")
 async def get_brain_knowledge():
@@ -8194,7 +8142,7 @@ async def rescore_unscored_suggestions():
     """
     Re-evaluates all pending suggestions that have no confidence score.
     Sends them to Gemini in a single batch and writes scores back to Firestore.
-    Does NOT approve or reject anything — purely adds confidence metadata.
+    Does NOT approve or reject anything -- purely adds confidence metadata.
     """
     # Fetch all pending suggestions missing a confidence score
     docs = list(db.collection('brain_suggestions').where('status', '==', 'pending').stream())
@@ -8203,7 +8151,7 @@ async def rescore_unscored_suggestions():
     if not unscored:
         return {"status": "nothing_to_score", "count": 0}
 
-    # Build a compact payload for Gemini — id + suggestion text + target collection
+    # Build a compact payload for Gemini -- id + suggestion text + target collection
     items = [
         {
             "id": d.id,
@@ -8217,16 +8165,16 @@ async def rescore_unscored_suggestions():
 database suggestions with a confidence value between 0.0 and 1.0.
 
 Confidence guidelines:
-- 0.93–1.00: Well-established numismatic fact or standard terminology — no ambiguity.
-- 0.85–0.92: Strongly implied by standard numismatic convention or common usage.
-- 0.00–0.84: Inferred, ambiguous, specialised, or requires cross-referencing.
+- 0.93-1.00: Well-established numismatic fact or standard terminology -- no ambiguity.
+- 0.85-0.92: Strongly implied by standard numismatic convention or common usage.
+- 0.00-0.84: Inferred, ambiguous, specialised, or requires cross-referencing.
 
 Suggestions to score:
 {json.dumps(items, ensure_ascii=False)}
 
 Return ONLY a valid JSON array with one object per suggestion, in the same order:
 [{{"id": "firestore_doc_id", "confidence": 0.95}}, ...]
-No markdown, no explanation — raw JSON only."""
+No markdown, no explanation -- raw JSON only."""
 
     try:
         from google.genai import types as genai_types
@@ -8305,7 +8253,7 @@ async def sync_brain_canon_to_gcp():
 
 
 
-# ─── GREYSHEET API INTEGRATION ───────────────────────────────────────────────
+# --- GREYSHEET API INTEGRATION -----------------------------------------------
 
 class GreysheetResolveRequest(BaseModel):
     user_id: Optional[str] = None
@@ -8348,7 +8296,7 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
                 "item_type": req.item_type or ""
             }
         
-        # 2. Instantiate service and resolve — returns (gsid, name) tuple
+        # 2. Instantiate service and resolve -- returns (gsid, name) tuple
         result = service.resolve_gsid_hybrid(
             coin_data=coin_data,
             genai_client=genai_client,
@@ -8435,7 +8383,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         "priceLastUpdated": firestore.SERVER_TIMESTAMP,
                         "greysheet_aggregate_basis": f"Calculated by summing Greysheet values across {valid_coins_count} constituent coins.",
                         "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Bid ${agg_bid:.2f} / Ask ${agg_ask:.2f} / Retail ${agg_retail:.2f}.",
-                        "AI Estimated Value": f"${agg_bid:.2f} – ${agg_retail:.2f}"
+                        "AI Estimated Value": f"${agg_bid:.2f} - ${agg_retail:.2f}"
                     }
                     coin_ref.update(update_payload)
                     return {
@@ -8481,7 +8429,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         import re
                         cand_years = [int(y) for y in re.findall(r'\b\d{4}\b', cand_name)]
                         if cand_years:
-                            range_match = re.search(r'(\d{4})\s*[-–to\s]+\s*(\d{4})', cand_name)
+                            range_match = re.search(r'(\d{4})\s*[--to\s]+\s*(\d{4})', cand_name)
                             year_mismatch = False
                             if range_match:
                                 start_yr = int(range_match.group(1))
@@ -8530,7 +8478,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         "grade_review_status": "pending",
                         "valuationFlag": (
                             f"Greysheet series name '{cached_name}' does not match this coin's "
-                            f"description ({reason}). GSID cleared — will re-resolve on next refresh."
+                            f"description ({reason}). GSID cleared -- will re-resolve on next refresh."
                         ),
                     })
                     return {
@@ -8714,14 +8662,14 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             logger.info("Greysheet: applying manual +20% CAC premium fallback (IsCac row missing)")
         
         if melt_val > 0.0 and melt_val > cpg_retail:
-            # Melt value exceeds market price — note it but do NOT use melt as
+            # Melt value exceeds market price -- note it but do NOT use melt as
             # cpgRetail.  Melt is a floor (liquidation estimate), not a retail
             # price.  Using it as cpgRetail caused the 1914 Half Eagle $48K bug.
             logger.info(f"Greysheet: melt value ({melt_val:.2f}) > cpg_retail ({cpg_retail:.2f}): coin worth more as metal. Keeping market price and logging melt for reference.")
 
-        # ── Valuation sanity check → Review Hub flag (no silent caps) ———————————
+        # -- Valuation sanity check -> Review Hub flag (no silent caps) ----------------------
         # Instead of blocking or capping suspicious values, we write the value and
-        # flag the coin for the user to review in Review Hub. The user decides —
+        # flag the coin for the user to review in Review Hub. The user decides --
         # the system never silently discards a Greysheet price.
         #
         # A coin is flagged when either:
@@ -8745,7 +8693,7 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 f"series/grade for this coin."
             )
             logger.warning(
-                f"Greysheet: flagging for review — cpgRetail={cpg_retail:.2f} is >10x "
+                f"Greysheet: flagging for review -- cpgRetail={cpg_retail:.2f} is >10x "
                 f"AI low ({ai_low:.2f}). GSID {gsid}, "
                 f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
             )
@@ -8755,12 +8703,12 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                 f"Estimated Value on file yet. Please confirm this valuation is correct."
             )
             logger.warning(
-                f"Greysheet: flagging for review — cpgRetail={cpg_retail:.2f} with no "
+                f"Greysheet: flagging for review -- cpgRetail={cpg_retail:.2f} with no "
                 f"AI estimate. GSID {gsid}, "
                 f"'{coin_data.get('Denomination')} {coin_data.get('Year')}'."
             )
 
-        # 5. Write to Firestore — write both Golden Schema canonical fields & legacy fields for full compatibility
+        # 5. Write to Firestore -- write both Golden Schema canonical fields & legacy fields for full compatibility
         grade_label = matched_price.get("GradeLabel", condition)
         cached_gs_name = coin_data.get("greysheetName", "")
         blue_book_val = clean_val(matched_price.get("BlueBookVal") or matched_price.get("BlueBook"))
@@ -8782,8 +8730,8 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             "cpgRetail": cpg_retail,
             "pcgsVal": pcgs_val,
             "ngcVal": ngc_val,
-            "greysheetGrade": grade_label,       # e.g. "VG-8", "MS-63" — plain language
-            "greysheetName": cached_gs_name,     # e.g. "1909-S Barber Quarter" — plain language
+            "greysheetGrade": grade_label,       # e.g. "VG-8", "MS-63" -- plain language
+            "greysheetName": cached_gs_name,     # e.g. "1909-S Barber Quarter" -- plain language
             "priceLastUpdated": firestore.SERVER_TIMESTAMP,
         }
         if valuation_flag:
@@ -8845,7 +8793,7 @@ async def get_greysheet_quota_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ─── DEALS & ARBITRAGE SPOTTER ───────────────────────────────────────────────
+# --- DEALS & ARBITRAGE SPOTTER -----------------------------------------------
 
 DEALS_DB = [
     {
@@ -8928,7 +8876,7 @@ async def refresh_arbitrage_deals():
     DEALS_DB = new_deals
     return {"status": "success", "count": len(DEALS_DB)}
 
-# ─── DAILY PORTFOLIO SNAPSHOTS ────────────────────────────────────────────────
+# --- DAILY PORTFOLIO SNAPSHOTS ------------------------------------------------
 
 class DailySnapshotRequest(BaseModel):
     user_id: str
@@ -8973,8 +8921,8 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
             # Default to Bid value as standard valuation
             val = float(coin.get("greysheetBid") or 0.0)
             if val == 0.0:
-                # Fallback to AI Value — use clean_valuation_value() which
-                # correctly handles range strings like "$1,150 – $1,350"
+                # Fallback to AI Value -- use clean_valuation_value() which
+                # correctly handles range strings like "$1,150 - $1,350"
                 # (returns the low end).  A bare float() call would throw a
                 # ValueError on any range and silently return 0.0.
                 val = clean_valuation_value(coin.get("AI Estimated Value") or "0")
@@ -9270,7 +9218,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ─── PLAYWRIGHT SPEC ENDPOINT ALIGNMENTS ──────────────────────────────────────────
+# --- PLAYWRIGHT SPEC ENDPOINT ALIGNMENTS ------------------------------------------
 
 @app.get("/api/greysheet/config")
 async def get_greysheet_config():
@@ -9450,7 +9398,7 @@ async def get_portfolio_snapshot_history(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ─── HIGH-THROUGHPUT PARALLEL INGESTION & BATCH OPS ───────────────────────────
+# --- HIGH-THROUGHPUT PARALLEL INGESTION & BATCH OPS ---------------------------
 
 from typing import Dict, Any
 from datetime import timezone
@@ -9539,7 +9487,7 @@ async def start_parallel_batch_ingestion(req: ParallelBatchIngestRequest):
         job["status"] = "completed"
         job["milestones"].append({
             "time": datetime.now(timezone.utc).strftime("%H:%M:%S"),
-            "event": "Parallel ingestion finished — all items staged"
+            "event": "Parallel ingestion finished -- all items staged"
         })
 
     asyncio.create_task(_process_parallel())
@@ -9562,7 +9510,7 @@ async def list_recent_ingestion_jobs():
     """
     return {"jobs": list(INGESTION_JOBS.values())}
 
-# ─── REAL-TIME WISHLIST DEAL SPOTTER & ARBITRAGE ROUTES ────────────────────────
+# --- REAL-TIME WISHLIST DEAL SPOTTER & ARBITRAGE ROUTES ------------------------
 
 class WishlistCheckRequest(BaseModel):
     user_email: str
@@ -9601,7 +9549,7 @@ async def check_wishlist_deals(req: WishlistCheckRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ─── LATERAL TRANSFER — "THE SECURE PASSPORT PROTOCOL" ────────────────────────
+# --- LATERAL TRANSFER -- "THE SECURE PASSPORT PROTOCOL" ------------------------
 
 class InitiateTransferRequest(BaseModel):
     user_id: str
@@ -9795,7 +9743,7 @@ async def api_detect_variety(req: VarietyDetectRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==============================================================================
-# 🚀 SPRINT 3 ENDPOINTS — MONETIZATION, PUBLIC WISHLIST, NEWS PROXY & ATTORNEY URLS
+# 🚀 SPRINT 3 ENDPOINTS -- MONETIZATION, PUBLIC WISHLIST, NEWS PROXY & ATTORNEY URLS
 # ==============================================================================
 
 # 1. EPN Query Normalization with Static Nickname Cache
