@@ -438,6 +438,43 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   ],
                 )),
               ]),
+              const SizedBox(height: 16),
+
+              // ── Launch button (Hero Action) ──────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    // Pass the logged-in email as a query param so the
+                    // standalone page can identify the user instantly,
+                    // without relying on Firebase JS SDK session timing.
+                    final email = AuthService.userEmail;
+                    final path  = '/add_coins.html?email=${Uri.encodeComponent(email)}';
+                    final uri   = kIsWeb
+                        ? Uri.base.resolve(path)
+                        : Uri.parse('https://numista-vault.web.app$path');
+                    await launchUrl(uri, mode: LaunchMode.platformDefault);
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('Open Bulk Import →',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF0C040),
+                    foregroundColor: const Color(0xFF1E293B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Center(
+                child: Text(
+                  'Opens in a dedicated full-screen import page',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                ),
+              ),
               const SizedBox(height: 24),
 
               // ── Description card ─────────────────────────────────────
@@ -690,43 +727,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── Launch button ─────────────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    // Pass the logged-in email as a query param so the
-                    // standalone page can identify the user instantly,
-                    // without relying on Firebase JS SDK session timing.
-                    final email = AuthService.userEmail;
-                    final path  = '/add_coins.html?email=${Uri.encodeComponent(email)}';
-                    final uri   = kIsWeb
-                        ? Uri.base.resolve(path)
-                        : Uri.parse('https://numista-vault.web.app$path');
-                    await launchUrl(uri, mode: LaunchMode.platformDefault);
-                  },
-                  icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('Open Bulk Import →',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF0C040),
-                    foregroundColor: const Color(0xFF1E293B),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Center(
-                child: Text(
-                  'Opens in a dedicated full-screen import page',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                 ),
               ),
             ],

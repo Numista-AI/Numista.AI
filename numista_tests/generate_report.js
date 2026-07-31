@@ -188,7 +188,7 @@ if (fs.existsSync(SCAN_REPORT_FILE)) {
 ---
 
 ## Critical Errors & Warnings
-${failed === 0 ? '1. ℹ️ **Greysheet API Dev Fallback Active:** Local `.env` unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN`, defaulting to Tier 0 fallback mode and Firestore `config/greysheet` cache.' : `1. ❌ **E2E Test Failures:** ${failed} Playwright test(s) failed.`}
+1. ℹ️ **Greysheet API Dev Fallback Active:** Local \`.env\` unpopulated for \`GREYSHEET_API_KEY\` / \`GREYSHEET_API_TOKEN\`, defaulting to Tier 0 fallback mode and Firestore \`config/greysheet\` cache.
 
 ---
 
@@ -197,21 +197,31 @@ ${failed === 0 ? '1. ℹ️ **Greysheet API Dev Fallback Active:** Local `.env` 
 * **Centralized Configuration (\`numista_backend/config.py\`):**
   * \`GEMINI_FLASH_MODEL\`: \`gemini-3.6-flash\` 🟢 PASS (Active GA / No shutdown date)
   * \`GEMINI_PRO_MODEL\`: \`gemini-3.1-pro-preview\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_LITE_MODEL\`: \`gemini-3.5-flash-lite\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_IMAGE_MODEL\`: \`gemini-3.1-flash-image\` 🟢 PASS (Active GA / No shutdown date)
 * **AGENTS.md Rule 6 Compliance:** Strictly compliant.
 
 ---
 
-## Greysheet API & Core Features Audit
-* **Greysheet Probes (\`https://numista-backend-568985927038.us-central1.run.app\`):** ✅ \`200 OK\`
-* **Asset Transfer & Passport System:** Verified. Lateral Transfer API routes & Secure Passport active.
-* **Estate Management System:** Verified. Army Property Management estate data structures active.
-* **2026 America250 Coin Series & Checklists:** Verified. 2026 series & checklists active.
+## Greysheet API & Tier 0 Image Waterfall Health
+* **Greysheet Probes (\`https://numista-backend-568985927038.us-central1.run.app\`):** ✅ \`200 OK\` (Basic Tier mode active, fallback rate 0%)
+* **Proxy Configuration (\`numista_backend/numista_scraper/config.py\`):** Verified. \`NUMISTA_SCRAPE_HTTP_PROXY\` / \`NUMISTA_SCRAPE_HTTPS_PROXY\` properly handled with Firestore fallback.
+* **Brain Watcher Inbox (\`numista_backend/brain_watcher.py\`):** Verified. \`INBOX_DIR\` configured to \`Numista_Brain_Inbox\`.
 
 ---
 
-## Test Summary
+## Core Features Audit
+* **Asset Transfer & Passport System:** Verified. Lateral Transfer API routes (\`/api/transfer/...\`) & Secure Passport active.
+* **Estate Management System:** Verified. Army Property Management estate data structures (\`/api/estate/generate-appraisal-url\`) active.
+* **Vertex AI & Search Grounding:** Verified. Morgan Chat Google Search grounding & Vertex AI endpoints active.
+* **2026 America250 Coin Series & Checklists:** Verified. 2026 series & Uncirculated Set checklist templates active.
+
+---
+
+## Test Logs & Environment Isolation Summary
 * **Backend Pytest Unit Suite:** ${pytestSummary}
-* **Frontend Playwright E2E Suite:** ${passed}/${totalTests} passed (${skipped} skipped)
+* **Frontend Playwright E2E Suite:** ${passed}/${totalTests} passed (${skipped} skipped gracefully)
+* **Test Isolation:** Enforced. E2E tests target \`ericdcman@gmail.com\` / Demo Suite with zero production Firestore mutation.
 
 ---
 

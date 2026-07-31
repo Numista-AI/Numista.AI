@@ -353,6 +353,8 @@ BOOTSTRAP_RECORDS = [
                 "attributionUrl": "https://www.error-ref.com/struck-through-smooth-viscous-material-grease-oil/",
                 "isVerified": True,
                 "hotspot": {"x": 0.60, "y": 0.40, "radius": 0.12, "label": "Struck-through grease obscuring details"},
+            }
+        ],
         "relatedCoinIds": [],
         "sources": ["Error-Ref.com", "PCGS CoinFacts"],
         "isPublished": True,
