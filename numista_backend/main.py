@@ -6073,6 +6073,11 @@ def import_status(session_id: str, user_email: str):
     return data
 
 
+class ImportProcessRequest(BaseModel):
+    user_email: str
+    session_id: str
+    mask_pii:   bool = False
+
 # ── POST /api/import/process ───────────────────────────────────────────────────
 @app.post("/api/import/process", status_code=202)
 async def import_process(req: ImportProcessRequest, background_tasks: BackgroundTasks):
