@@ -42,22 +42,17 @@ def main():
         doc = doc_ref.get()
         if doc.exists:
             data = doc.to_dict()
-            saved_key = data.get("apiKey", "")
-            saved_token = data.get("apiToken", "")
+            if data.get("apiKey") and data.get("apiToken"):
+                print("\n[SUCCESS] Credentials successfully written to Firestore!")
+                print(f"  - Document: config/greysheet")
+                print("  - apiKey:   [set]")
+                print("  - apiToken: [set]")
+            else:
+                print("\n[ERROR] Document config/greysheet could not be verified after write.")
+                sys.exit(1)
             
-            masked_key = saved_key[:4] + "..." + saved_key[-4:] if len(saved_key) > 8 else "..."
-            masked_token = saved_token[:4] + "..." + saved_token[-4:] if len(saved_token) > 8 else "..."
-            
-            print("\n[SUCCESS] Credentials successfully written to Firestore!")
-            print(f"  - Document: config/greysheet")
-            print(f"  - apiKey:   {masked_key}")
-            print(f"  - apiToken: {masked_token}")
-        else:
-            print("\n[ERROR] Document config/greysheet could not be verified after write.")
-            sys.exit(1)
-            
-    except Exception as e:
-        print(f"\n[ERROR] Failed to write credentials: {e}")
+    except Exception:
+        print("\n[ERROR] Failed to write credentials. Check your GCP credentials and Firestore access.")
         sys.exit(1)
 
 if __name__ == "__main__":
