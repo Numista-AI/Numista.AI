@@ -131,8 +131,10 @@ class MorganGuideService {
 
   static final current = ValueNotifier<GuideState?>(null);
 
-  static void start(MorganGuide guide) =>
-      current.value = GuideState(guide: guide, step: 0);
+  static void start(MorganGuide guide, [int initialStep = 0]) {
+    final step = (initialStep >= 0 && initialStep < guide.steps.length) ? initialStep : 0;
+    current.value = GuideState(guide: guide, step: step);
+  }
 
   static void next() {
     final s = current.value;
