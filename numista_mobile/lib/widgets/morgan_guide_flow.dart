@@ -131,8 +131,10 @@ class MorganGuideService {
 
   static final current = ValueNotifier<GuideState?>(null);
 
-  static void start(MorganGuide guide) =>
-      current.value = GuideState(guide: guide, step: 0);
+  static void start(MorganGuide guide, [int initialStep = 0]) {
+    final step = (initialStep >= 0 && initialStep < guide.steps.length) ? initialStep : 0;
+    current.value = GuideState(guide: guide, step: step);
+  }
 
   static void next() {
     final s = current.value;
@@ -293,7 +295,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                   fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.expand_less_rounded,
+            const Icon(Icons.add_rounded,
                 color: MorganGuidePanel.gold, size: 14),
           ],
         ),
@@ -371,12 +373,29 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                 ),
                 _ProgressDots(current: state.step, total: total),
                 const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: MorganGuideService.toggleCollapsed,
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(Icons.expand_more_rounded,
-                        color: MorganGuidePanel.sub, size: 18),
+                Tooltip(
+                  message: 'Minimize Morgan (-)',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: MorganGuideService.toggleCollapsed,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.remove_rounded,
+                          color: MorganGuidePanel.sub, size: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Tooltip(
+                  message: 'Close Guide',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: MorganGuideService.exit,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded,
+                          color: Color(0xFF64748B), size: 16),
+                    ),
                   ),
                 ),
               ],

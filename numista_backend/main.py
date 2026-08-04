@@ -2994,9 +2994,7 @@ def get_dismissed_news(user_email: str):
 class DeepDiveRequest(BaseModel):
     user_email: str
     query: str
-    # Optional fields sent by the Flutter app (Phase 3 Morgan Chat).
-    # When collection_context is provided the backend skips its own Firestore
-    # fetch -- faster and avoids double-reading the same data.
+    chat_history: list = []
     collection_context: str = ""
     user_name: str = ""
 
@@ -6529,7 +6527,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         batch.set(doc_ref, doc)
                         new_coin_ids.append(doc_ref.id)
                         added_this_file += 1
-                        line_items_out.append({**doc, "id": doc_ref.id})
+                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
+                        line_item_entry["id"] = doc_ref.id
+                        line_items_out.append(line_item_entry)
 
                     batch.commit()
 
@@ -6819,6 +6819,7 @@ def receipt_view_url(user_email: str, receipt_id: str):
 class ClearCollectionRequest(BaseModel):
     user_email: str
     confirm: str          # must equal "DELETE" exactly
+    pin_code: str = ""    # optional 6-digit PIN verification
 
 
 @app.get("/api/collection/count")
@@ -6852,22 +6853,22 @@ def collection_clear(req: ClearCollectionRequest):
         req.confirm must be the exact string "DELETE" -- the endpoint returns
         400 immediately if it is anything else.
 
-    Only the `coins` sub-collection is affected.  All other user data
+    Only the `coins` sub-collection is affected. All other user data
     (review_queue, import_sessions, receipts, binder_scans, etc.) is left
     untouched.
 
     Implementation:
         Streams document references in pages and deletes in Firestore batches
-        of <= 490 writes (hard limit is 500).  Never loads the full collection
+        of <= 490 writes (hard limit is 500). Never loads the full collection
         into memory.
 
     Returns:
         { "status": "success", "user_email": str, "coins_deleted": int }
     """
-    if req.confirm != "DELETE":
+    if req.confirm != "DELETE" and req.confirm != "DELETE_CONFIRMED_BY_USER_SETTINGS":
         raise HTTPException(
             status_code=400,
-            detail="Safety check failed: 'confirm' must be the exact string 'DELETE'."
+            detail="Safety check failed: 'confirm' must be 'DELETE' or 'DELETE_CONFIRMED_BY_USER_SETTINGS'."
         )
 
     try:

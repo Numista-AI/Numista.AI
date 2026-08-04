@@ -567,7 +567,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       color: const Color(0xFF166534),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('ACTIVE THROUGH SEPT 1',
+                                    child: const Text('ACTIVE THROUGH OCT 1',
                                         style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ),
                                 ],

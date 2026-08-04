@@ -90,7 +90,7 @@ class BetaWelcomeDialog extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Official Test Phase Active through September 1, 2026',
+                'Official Test Phase Active through October 1, 2026',
                 style: TextStyle(
                   color: Color(0xFF94A3B8),
                   fontSize: 13,

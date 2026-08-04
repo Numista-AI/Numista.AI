@@ -81,6 +81,70 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     }
   }
 
+  void _showReservationDialog(int index, bool currentlyReserved) {
+    if (currentlyReserved) {
+      // Toggle off directly if already reserved
+      _toggleReservation(index);
+      return;
+    }
+
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Row(
+          children: [
+            Icon(Icons.card_giftcard, color: Color(0xFF10B981)),
+            SizedBox(width: 10),
+            Text("Reserve Gift", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Mark this item as reserved to prevent duplicate gift purchases by other family members.",
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: "Your Name (Optional)",
+                labelStyle: const TextStyle(color: Colors.white54),
+                hintText: "e.g. Aunt Sarah",
+                hintStyle: const TextStyle(color: Colors.white30),
+                filled: true,
+                fillColor: const Color(0xFF0F172A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dctx);
+              _toggleReservation(index);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Confirm Reservation ✓"),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openEbaySearch(String query, {double? estimatedValue, String? programId}) async {
     final ownerEmail = _wishlistData?['owner_email'] ?? 'guest';
     final userHash = ownerEmail.split('@').first;
@@ -368,19 +432,24 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => _openEbaySearch("$title $targetGrade", estimatedValue: estimatedValue, programId: programId),
-                  icon: const Icon(Icons.open_in_new, size: 14),
-                  label: const Text("Find on eBay", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: isReserved
+                      ? null
+                      : () => _openEbaySearch("$title $targetGrade", estimatedValue: estimatedValue, programId: programId),
+                  icon: Icon(isReserved ? Icons.check_circle : Icons.open_in_new, size: 14),
+                  label: Text(
+                    isReserved ? "Reserved ✓" : "Find on eBay",
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
+                    backgroundColor: isReserved ? Colors.grey.withAlpha(50) : const Color(0xFF3B82F6),
+                    foregroundColor: isReserved ? Colors.white38 : Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
                 const SizedBox(height: 6),
                 OutlinedButton(
-                  onPressed: () => _toggleReservation(index),
+                  onPressed: () => _showReservationDialog(index, isReserved),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     minimumSize: Size.zero,
@@ -388,7 +457,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
                     side: BorderSide(color: isReserved ? const Color(0xFF10B981) : Colors.white38),
                   ),
                   child: Text(
-                    isReserved ? "Reserved" : "I Bought This",
+                    isReserved ? "Reserved ✓" : "I Bought This",
                     style: TextStyle(
                       fontSize: 10,
                       color: isReserved ? const Color(0xFF10B981) : Colors.white70,

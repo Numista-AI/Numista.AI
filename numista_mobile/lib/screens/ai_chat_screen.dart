@@ -199,9 +199,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   Future<void> _send(String query) async {
-    if (query.trim().isEmpty) return;
+    final rawQuery = query.trim();
+    if (rawQuery.isEmpty) return;
 
-    final userMsg = {'role': 'user', 'content': query.trim()};
+    // Check if previous assistant message was a clarifying question (e.g., asking for mint mark)
+    String effectiveQuery = rawQuery;
+    if (_messages.isNotEmpty && _messages.last['role'] == 'assistant') {
+      final lastAssistantText = _messages.last['content'] ?? '';
+      if (rawQuery.length <= 4 && (lastAssistantText.contains('mint') || lastAssistantText.contains('grade') || lastAssistantText.contains('year'))) {
+        effectiveQuery = 'Clarification response: "$rawQuery" (in response to: "$lastAssistantText")';
+      }
+    }
+
+    final userMsg = {'role': 'user', 'content': rawQuery};
     setState(() {
       _messages.add(userMsg);
       _isLoading = true;
@@ -209,13 +219,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _controller.clear();
     _scrollToBottom();
 
+    final recentHistory = _messages.length > 6 ? _messages.sublist(_messages.length - 6) : _messages;
+
     try {
       final response = await http.post(
         Uri.parse('$kApiBaseUrl/api/deep_dive'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
-          'query':               query.trim(),
+          'query':               effectiveQuery,
+          'chat_history':        recentHistory,
           'collection_context':  _ctx?.systemPrompt ?? '',
           'user_name':           _displayName,
         }),

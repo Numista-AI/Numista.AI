@@ -20,23 +20,23 @@ class MorganGuides {
     title: 'Adding coins from a receipt',
     emoji: '📄',
     steps: [
-      // Step 1: intro — user is looking at the Add New Coins tab bar
+      // Step 1: launch bulk import scanner
       MorganStep(
         narration:
             "I can read your receipt and add coins automatically!\n"
-            "Pick the 'Upload Files' tab to get started.",
-        hint: 'The tabs are at the top of this screen.',
-        nextLabel: "Ready! →",
+            "Tap the yellow 'Open Bulk Import' button to get started.",
+        hint: "The button is in the center of this screen.",
+        nextLabel: "Open Bulk Import →",
         position: GuidePosition.bottomRight,
-      ),
-      // Step 2: upload — Open Bulk Import button is center-screen
-      MorganStep(
-        narration: "Tap the 'Open Bulk Import' button to choose your receipt file.",
-        hint: "The yellow button is in the center of this screen.",
-        nextLabel: 'I tapped Open Bulk Import →',
-        position: GuidePosition.topRight,
         showArrow: true,
         arrowDirection: ArrowDirection.down,
+      ),
+      // Step 2: pick file & start import in full-screen scanner
+      MorganStep(
+        narration: "Choose your receipt PDF or photo, then tap '⚡ Start Import'!",
+        hint: "You can drag & drop or click Browse Files or Folder.",
+        nextLabel: "I started import →",
+        position: GuidePosition.topRight,
       ),
       // Step 3: processing — loading overlay is visible
       MorganStep(

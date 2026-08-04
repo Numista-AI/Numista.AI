@@ -1573,51 +1573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _exportToCsv(BuildContext context) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance.collection(AuthService.coinsPath).get();
-      if (snapshot.docs.isEmpty) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No coins to export.')));
-        return;
-      }
-      
-      final Set<String> headersSet = {};
-      for (var doc in snapshot.docs) {
-        headersSet.addAll((doc.data()).keys);
-      }
-      final headers = headersSet.toList()..sort();
-      
-      final StringBuffer csv = StringBuffer();
-      csv.writeln(headers.map((h) => '"$h"').join(','));
-      
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final row = headers.map((h) {
-          final val = data[h]?.toString() ?? '';
-          return '"${val.replaceAll("\"", "\"\"")}"';
-        }).join(',');
-        csv.writeln(row);
-      }
-      
-      // Prepend UTF-8 BOM so Excel auto-detects encoding and parses columns correctly
-      final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode(csv.toString())];
-      final filename = "numista_export_${DateTime.now().toIso8601String().split('T').first}.csv";
 
-      final result = await downloadCsvFile(bytes, filename);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Exported ${snapshot.docs.length} coins to $result'),
-          backgroundColor: Colors.green.shade700,
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red));
-      }
-    }
-  }
 
   void _showCreateAccountDialog(BuildContext context) {
     final theme = Theme.of(context);

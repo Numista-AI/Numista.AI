@@ -15,9 +15,9 @@ class AuthService {
   static bool get isBetaTester {
     final user = _auth.currentUser;
     if (user == null) return false;
-    // Every user now and in the next 30 days defaults to a Beta Tester.
-    // Cutoff: July 27, 2026.
-    final limit = DateTime(2026, 7, 27);
+    // Every user defaults to a Beta Tester during testing.
+    // Cutoff: October 1, 2026.
+    final limit = DateTime(2026, 10, 1);
     if (DateTime.now().isBefore(limit)) return true;
     return false;
   }

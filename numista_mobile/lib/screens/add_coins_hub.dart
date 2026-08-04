@@ -17,6 +17,7 @@ import '../models/coin_model.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
 import '../widgets/roll_entry_dialog.dart';
+import '../widgets/morgan_guide_flow.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 
@@ -445,9 +446,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    // Pass the logged-in email as a query param so the
-                    // standalone page can identify the user instantly,
-                    // without relying on Firebase JS SDK session timing.
+                    final guideState = MorganGuideService.current.value;
+                    if (guideState?.guide.id == 'guide_invoice' && guideState?.step == 0) {
+                      MorganGuideService.next();
+                    }
                     final email = AuthService.userEmail;
                     final path  = '/add_coins.html?email=${Uri.encodeComponent(email)}';
                     final uri   = kIsWeb
