@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:numista_mobile/widgets/morgan_guides.dart';
-import 'package:numista_mobile/widgets/morgan_guide_flow.dart';
+import 'package:numista_ai/widgets/morgan_guides.dart';
+import 'package:numista_ai/widgets/morgan_guide_flow.dart';
 
 void main() {
   group('Morgan Guides Proactive Audit', () {
