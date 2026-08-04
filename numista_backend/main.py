@@ -6496,17 +6496,48 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         item_type_val = "supply" if is_supply else "coin"
 
                         prog_val = (it.get("Program/Series") or "").strip()
-                        if not prog_val or "american eagle" in prog_val.lower() or "american silver eagle" in prog_val.lower():
-                            prog_val = "American Silver Eagle"
+                        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val
+                        raw_lower = raw_desc.lower()
+
+                        # Smart Program/Series & Metal Content Normalization
+                        metal_val = (it.get("Metal Content") or "").strip()
+
+                        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
+                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                                prog_val = "American Gold Eagle"
+                            if not metal_val:
+                                metal_val = "Gold"
+                        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
+                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                                prog_val = "American Platinum Eagle"
+                            if not metal_val:
+                                metal_val = "Platinum"
+                        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
+                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                                prog_val = "American Palladium Eagle"
+                            if not metal_val:
+                                metal_val = "Palladium"
+                        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
+                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                                prog_val = "American Silver Eagle"
+                            if not metal_val:
+                                metal_val = "Silver"
+
+                        # General metal fallbacks if still empty:
+                        if not metal_val:
+                            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
+                                metal_val = "Silver"
+                            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
+                                metal_val = "Gold"
+                            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
+                                metal_val = "Cupronickel"
+                            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
+                                metal_val = "Copper"
 
                         mint_mark_val = (it.get("Mint Mark") or "").strip()
                         notes_str = (it.get("Personal Notes") or "") + " " + fname
                         if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
                             mint_mark_val = "W"
-
-                        metal_val = (it.get("Metal Content") or "").strip()
-                        if not metal_val and ("silver" in prog_val.lower() or "silver" in fname.lower() or "eagle" in prog_val.lower() or "26ea" in notes_str.lower()):
-                            metal_val = "Silver"
 
                         doc = {
                             "Program/Series":       prog_val,
