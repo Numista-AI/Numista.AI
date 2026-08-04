@@ -848,7 +848,7 @@ async function viewReceipt(receiptId, e) {
 function showPaperTrail() {
   document.getElementById('paper-trail-panel').scrollIntoView({ behavior:'smooth' });
 }
-function goToReviewQueue() { window.location.href = '/?email=' + encodeURIComponent(getUserEmail()); }
+function goToReviewQueue() { window.location.href = '/?route=Review%20Hub&email=' + encodeURIComponent(getUserEmail()); }
 function resetImport() {
   selectedFiles = []; sessionId = null; clearInterval(pollInterval);
   ['upload-card','progress-panel','summary-panel','paper-trail-panel'].forEach(id => {

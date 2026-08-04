@@ -63,6 +63,11 @@ Future<void> main() async {
       return;
     }
   }
+  // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
+  if (uri.queryParameters.containsKey('route') && uri.queryParameters['route']!.isNotEmpty) {
+    WelcomeScreen.pendingRoute = uri.queryParameters['route'];
+  }
+
   // On Flutter web, Firebase.initializeApp() can silently hang forever if the
   // network is slow or a service worker interferes. We wrap it in a 12-second
   // timeout so runApp() is always called, even in the worst case.
