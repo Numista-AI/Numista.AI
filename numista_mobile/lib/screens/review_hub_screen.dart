@@ -762,25 +762,37 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 padding: const EdgeInsets.all(16),
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
-                  final doc = docs[index];
-                  final data = doc.data();
-                  final id = doc.id;
-                  final isSelected = _selectedIds.contains(id);
-                  final itemType = (data['item_type'] ?? 'coin').toString().toLowerCase();
-                  final isSet = itemType == 'set';
-
-                  // Safe confidence parsing
-                  double confidence = 1.0;
                   try {
-                    final raw = data['confidence_score'];
-                    if (raw != null) confidence = (raw as num).toDouble();
-                  } catch (_) {}
+                    final doc = docs[index];
+                    final data = doc.data();
+                    final id = doc.id;
+                    final isSelected = _selectedIds.contains(id);
+                    final itemType = (data['item_type'] ?? 'coin').toString().toLowerCase();
+                    final isSet = itemType == 'set';
 
-                  if (isSet) {
-                    return _buildSetCard(id, data, isSelected);
+                    // Safe confidence parsing
+                    double confidence = 1.0;
+                    try {
+                      final raw = data['confidence_score'];
+                      if (raw != null) confidence = (raw as num).toDouble();
+                    } catch (_) {}
+
+                    if (isSet) {
+                      return _buildSetCard(id, data, isSelected);
+                    }
+
+                    return _buildCoinCard(id, data, isSelected, confidence, itemType);
+                  } catch (e) {
+                    return Card(
+                      color: Colors.red.shade50,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const Icon(Icons.error_outline, color: Colors.red),
+                        title: const Text('Item Rendering Warning', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                        subtitle: Text(e.toString(), style: const TextStyle(fontSize: 12)),
+                      ),
+                    );
                   }
-
-                  return _buildCoinCard(id, data, isSelected, confidence, itemType);
                 },
               );
             },
@@ -1149,18 +1161,24 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       ),
                     ),
                   const Divider(height: 24),
-                  Wrap(
-                    spacing: 24,
-                    runSpacing: 12,
-                    children: [
-                      _buildMetaItem('Retailer', data['Retailer/Website'] ?? 'N/A', Icons.storefront),
-                      _buildMetaItem('Invoice #', data['Retailer Invoice #'] ?? 'N/A', Icons.receipt),
-                      _buildMetaItem('Cost', data['Purchase Cost'] ?? 'N/A', Icons.attach_money),
-                      _buildMetaItem('Item #', data['Retailer Item No.'] ?? 'N/A', Icons.tag),
-                      _buildMetaItem('QTY', data['Quantity']?.toString() ?? '1', Icons.numbers),
-                      _buildMetaItem('Date', data['Purchase Date'] ?? 'N/A', Icons.calendar_today),
-                    ],
-                  ),
+                  () {
+                    final rawCost = data['Purchase Cost'] ?? data['Cost'];
+                    final costStr = rawCost != null
+                        ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
+                        : 'N/A';
+                    return Wrap(
+                      spacing: 24,
+                      runSpacing: 12,
+                      children: [
+                        _buildMetaItem('Retailer', (data['Retailer/Website'] ?? 'N/A').toString(), Icons.storefront),
+                        _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
+                        _buildMetaItem('Cost', costStr, Icons.attach_money),
+                        _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
+                        _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
+                        _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                      ],
+                    );
+                  }(),
                   const SizedBox(height: 16),
                   Text(
                     'Source Desc: "${data['Original Description from source'] ?? 'N/A'}"',

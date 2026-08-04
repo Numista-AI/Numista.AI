@@ -24,7 +24,10 @@ class WelcomeScreen extends StatelessWidget {
   /// Default: true for every user on every login.
   /// Users can opt out via Morgan settings → "Don't greet me on startup".
   /// This replaces the old "only show on first visit / empty collection" logic.
-  static Future<bool> shouldShow() => MorganGreeter.shouldShow();
+  static Future<bool> shouldShow() async {
+    if (pendingRoute != null) return false;
+    return MorganGreeter.shouldShow();
+  }
 
   static Future<void> markSeen() => MorganGreeter.markSeen();
 
