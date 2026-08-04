@@ -34,3 +34,11 @@ GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 
 # Backward compatibility alias
 PRIMARY_MODEL = GEMINI_FLASH_MODEL
+
+# ==============================================================================
+# EXTERNAL API & PRODUCTION SECRETS (GCP Secret Manager mounted envs)
+# ==============================================================================
+GREYSHEET_API_KEY = os.getenv("GREYSHEET_API_KEY", "")
+GREYSHEET_API_TOKEN = os.getenv("GREYSHEET_API_TOKEN", "")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+
