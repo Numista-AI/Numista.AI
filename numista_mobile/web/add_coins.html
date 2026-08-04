@@ -297,6 +297,73 @@
 <!-- Drop Zone Card -->
 <div class="card" id="upload-card">
   <div class="card-body">
+    
+    <!-- Morgan AI Guide Card -->
+    <div id="morgan-guide-card" style="background: linear-gradient(135deg, #101c2e, #16253b); border: 1px solid rgba(45,212,191,0.35); border-radius: 14px; padding: 20px 22px; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 46px; height: 46px; background: linear-gradient(135deg, #2DD4BF, #D4A843); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 16px rgba(45,212,191,0.4); flex-shrink: 0;">
+            🤖
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;">Morgan AI Assistant</h3>
+              <span style="background: rgba(45,212,191,0.15); border: 1px solid rgba(45,212,191,0.3); color: #2DD4BF; padding: 2px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">✦ Import Guide</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Your personal AI guide for loading coins, invoices, & spreadsheets</p>
+          </div>
+        </div>
+        <button onclick="toggleDealerHelp()" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: #2DD4BF; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(45,212,191,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+          💡 Dealer Search Tips
+        </button>
+      </div>
+
+      <div style="background: rgba(11,18,32,0.6); border: 1px solid rgba(45,212,191,0.2); border-radius: 10px; padding: 14px 18px; margin-bottom: 12px;">
+        <p style="font-size: 0.92rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 12px;">
+          👋 <strong>Hi! I'm Morgan.</strong> Follow these 2 easy steps to upload your coin records or invoices:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Step 1 -->
+          <div style="background: rgba(45,212,191,0.06); border-left: 3.5px solid #2DD4BF; padding: 10px 14px; border-radius: 0 8px 8px 0;">
+            <span style="color: #2DD4BF; font-weight: 700; font-size: 0.88rem;">Step 1 — What to Click:</span>
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 3px; line-height: 1.45;">
+              Click the blue <strong>📁 Browse Files or Folder</strong> button below (or drag and drop your files into the box).
+            </p>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="background: rgba(212,168,67,0.06); border-left: 3.5px solid #D4A843; padding: 10px 14px; border-radius: 0 8px 8px 0;">
+            <span style="color: #D4A843; font-weight: 700; font-size: 0.88rem;">Step 2 — How to Find & Search for Your Invoice File:</span>
+            <ul style="font-size: 0.83rem; color: #94a3b8; margin-top: 4px; margin-left: 18px; line-height: 1.6;">
+              <li><strong style="color:#e2e8f0;">Where files live:</strong> Open your computer's <strong>Downloads</strong> or <strong>Documents</strong> folder in the file selection popup window.</li>
+              <li><strong style="color:#e2e8f0;">Search by Store/Dealer Name:</strong> In the search box at the top-right of your file manager window, type your seller's name (e.g. <code>US Mint</code>, <code>Littleton</code>, <code>APMEX</code>, <code>eBay</code>, <code>GreatCollections</code>, <code>Heritage</code>, or <code>Receipt</code>).</li>
+              <li><strong style="color:#e2e8f0;">File Types Accepted:</strong> PDF Invoices (<code>.pdf</code>), Excel/CSV spreadsheets (<code>.xlsx</code>, <code>.csv</code>), or coin photos/scans (<code>.jpg</code>, <code>.png</code>).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Dealer Quick Help -->
+      <div id="dealer-help-box" style="display: none; background: rgba(15,23,42,0.85); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-top: 10px;">
+        <h4 style="font-size: 0.85rem; font-weight: 700; color: #2DD4BF; margin-bottom: 8px;">🔍 Morgan's Quick Tips for Dealer Invoices:</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.8rem; color: #cbd5e1;">
+          <div style="background: var(--surface2); padding: 10px; border-radius: 8px;">
+            <strong style="color: #f0c040;">🏛️ US Mint Orders:</strong>
+            <p style="color: #94a3b8; margin-top: 3px;">Search <code>USM</code> or <code>US Mint</code> in Downloads. Or log into usmint.gov &rarr; Order History &rarr; Save Order Details as PDF.</p>
+          </div>
+          <div style="background: var(--surface2); padding: 10px; border-radius: 8px;">
+            <strong style="color: #f0c040;">📫 Littleton / Dealer Scans:</strong>
+            <p style="color: #94a3b8; margin-top: 3px;">Search <code>Scan_</code> or <code>Receipt_</code> in your Downloads directory.</p>
+          </div>
+          <div style="background: var(--surface2); padding: 10px; border-radius: 8px;">
+            <strong style="color: #f0c040;">🛍️ APMEX / eBay / Heritage:</strong>
+            <p style="color: #94a3b8; margin-top: 3px;">Save purchase confirmation emails as PDF (Ctrl+P &rarr; Save as PDF), then select that PDF here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="drop-zone" role="region" aria-label="File drop zone">
       <span class="drop-icon">&#128194;</span>
       <div class="drop-title">Drop your files or folder here</div>
@@ -885,6 +952,13 @@ function downloadCsvTemplate() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+function toggleDealerHelp() {
+  const box = document.getElementById('dealer-help-box');
+  if (box) {
+    box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+  }
 }
 
 // Kick off the count fetch on page load
