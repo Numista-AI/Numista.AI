@@ -349,12 +349,15 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
             child: Row(
               children: [
                 // Drag handle — visual cue that the bubble is movable
-                const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.drag_indicator_rounded,
-                    color: Color(0xFF2A4A6B),
-                    size: 16,
+                const Tooltip(
+                  message: 'Drag to move Morgan',
+                  child: Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Icon(
+                      Icons.drag_indicator_rounded,
+                      color: MorganGuidePanel.gold,
+                      size: 18,
+                    ),
                   ),
                 ),
                 _MiniOwl(size: 26),

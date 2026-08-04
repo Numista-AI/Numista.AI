@@ -2479,7 +2479,7 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
     try {
       final userEmail = AuthService.userEmail;
       final receiptId = widget.coin.receiptId;
-      const apiBase = 'https://backend-studio-9101802118-8c9a8.a.run.app';
+      final apiBase = kApiBaseUrl;
       final url = Uri.parse(
         '$apiBase/api/receipts/${Uri.encodeComponent(userEmail)}/$receiptId/view_url',
       );
@@ -2489,7 +2489,10 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final signedUrl = data['signed_url'] as String?;
         if (signedUrl != null && signedUrl.isNotEmpty) {
-          await launchUrl(Uri.parse(signedUrl),
+          final targetUrl = signedUrl.startsWith('http')
+              ? signedUrl
+              : '$apiBase$signedUrl';
+          await launchUrl(Uri.parse(targetUrl),
               mode: LaunchMode.externalApplication);
         } else {
           setState(() => _error = 'No URL returned from server.');
