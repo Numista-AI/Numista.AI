@@ -6529,7 +6529,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         batch.set(doc_ref, doc)
                         new_coin_ids.append(doc_ref.id)
                         added_this_file += 1
-                        line_items_out.append({**doc, "id": doc_ref.id})
+                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
+                        line_item_entry["id"] = doc_ref.id
+                        line_items_out.append(line_item_entry)
 
                     batch.commit()
 
