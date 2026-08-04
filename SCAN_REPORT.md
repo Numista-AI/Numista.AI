@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** ⚠️ **PASS WITH WARNINGS** (System scan completed with 94% test pass rate across unit and E2E test suites. Pytest backend suite: 19 passed, 3 warnings in 299.15s (0:04:59). Playwright E2E: 113/120 passed [1 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-02
+* **Status:** ⚠️ **PASS WITH WARNINGS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 19 passed, 3 warnings in 38.39s. Playwright E2E: 118/120 passed [1 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-08-03
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -40,8 +40,8 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 19 passed, 3 warnings in 299.15s (0:04:59)
-* **Frontend Playwright E2E Suite:** 113/120 passed (1 skipped gracefully)
+* **Backend Pytest Unit Suite:** 19 passed, 3 warnings in 38.39s
+* **Frontend Playwright E2E Suite:** 118/120 passed (1 skipped gracefully)
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
