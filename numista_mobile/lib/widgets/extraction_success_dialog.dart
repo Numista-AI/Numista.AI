@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'morgan_guide_flow.dart';
 
 /// Shown after a PDF/file extraction attempt completes.
 ///
@@ -89,6 +90,10 @@ class ExtractionSuccessDialog extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              final guideState = MorganGuideService.current.value;
+              if (guideState?.guide.id == 'guide_invoice') {
+                MorganGuideService.next();
+              }
               onGoToReview();
             },
             style: ElevatedButton.styleFrom(
