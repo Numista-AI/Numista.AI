@@ -6014,6 +6014,96 @@ def _save_to_gcs(user_email: str, session_id: str, filename: str,
     return f"gs://{IMPORT_BUCKET}/{blob_path}"
 
 
+# ── POST /api/import/upload ───────────────────────────────────────────────────
+
+@app.post("/api/import/upload")
+async def import_upload(
+    file: UploadFile = File(...),
+    user_email: str = Form(...),
+    session_id: str = Form(...),
+):
+    """
+    Direct multipart file upload endpoint for invoice PDFs, coin photos, and spreadsheets.
+    Streams directly to GCS via ADC credentials without signed URL signing constraints.
+    """
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="INVALID_FILE: No file provided")
+    
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="EMPTY_FILE: Uploaded file is zero bytes")
+    
+    if file_size > 32 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="FILE_TOO_LARGE: Maximum file size is 32 MB")
+
+    fname = file.filename
+    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+    allowed_exts = {'pdf','xlsx','xls','csv','ods','jpg','jpeg','png','webp','heic','bmp','tiff','tif'}
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"UNSUPPORTED_TYPE: File extension .{ext} is not supported")
+
+    safe_name = fname.replace(" ", "_")
+    blob_path = f"{user_email}/imports/{session_id}/raw/{safe_name}"
+    
+    try:
+        bucket = gcs_client.bucket(IMPORT_BUCKET)
+        blob = bucket.blob(blob_path)
+        content_type = file.content_type or "application/octet-stream"
+        file.file.seek(0)
+        blob.upload_from_file(file.file, content_type=content_type)
+    except Exception as e:
+        logger.exception(f"Failed uploading file {fname} to GCS for user {user_email}")
+        raise HTTPException(status_code=500, detail=f"GCS_UPLOAD_FAILED: {str(e)}")
+
+    session_ref = db.collection("users").document(user_email)\
+                    .collection("import_sessions").document(session_id)
+    session_snap = session_ref.get()
+    ftype = _classify_file(fname)
+
+    if not session_snap.exists:
+        session_ref.set({
+            "started_at": firestore.SERVER_TIMESTAMP,
+            "status": "uploading",
+            "total_files": 1,
+            "processed_files": 0,
+            "per_file": [{"name": fname, "type": ftype, "status": "uploaded"}],
+            "summary": {
+                "coins_identified": 0,
+                "receipts_parsed": 0,
+                "duplicates_flagged": 0,
+                "total_purchase_value": 0.0,
+                "unlinked_receipts": 0,
+            },
+        })
+    else:
+        data = session_snap.to_dict()
+        per_file = data.get("per_file", [])
+        updated = False
+        for item in per_file:
+            if item.get("name") == fname:
+                item["status"] = "uploaded"
+                updated = True
+                break
+        if not updated:
+            per_file.append({"name": fname, "type": ftype, "status": "uploaded"})
+        session_ref.update({
+            "per_file": per_file,
+            "total_files": len(per_file)
+        })
+
+    gcs_path = f"gs://{IMPORT_BUCKET}/{blob_path}"
+    return {
+        "status": "ok",
+        "session_id": session_id,
+        "filename": fname,
+        "gcs_path": gcs_path,
+        "type": ftype
+    }
+
+
 # ── POST /api/import/start ─────────────────────────────────────────────────────
 
 class ImportStartRequest(BaseModel):
@@ -6049,12 +6139,16 @@ def import_start(req: ImportStartRequest):
         safe_name = f["name"].replace(" ", "_")
         blob_path = f"{req.user_email}/imports/{req.session_id}/raw/{safe_name}"
         blob = bucket.blob(blob_path)
-        url = blob.generate_signed_url(
-            version="v4",
-            expiration=900,
-            method="PUT",
-            content_type=f.get("mime", "application/octet-stream"),
-        )
+        try:
+            url = blob.generate_signed_url(
+                version="v4",
+                expiration=900,
+                method="PUT",
+                content_type=f.get("mime", "application/octet-stream"),
+            )
+        except Exception as e:
+            logger.warning(f"Could not generate signed URL for {f['name']}: {e}. Client should use /api/import/upload.")
+            url = f"/api/import/upload"
         signed_urls.append({"name": f["name"], "upload_url": url, "gcs_path": f"gs://{IMPORT_BUCKET}/{blob_path}"})
 
     return {"status": "ok", "session_id": req.session_id, "files": signed_urls}
@@ -6177,7 +6271,6 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     batch    = db.batch()
                     count    = 0
                     for _, row in df.iterrows():
-                        # Skip template/example rows if user left them in
                         row_values_str = [str(x).strip().lower() for x in row.values if pd.notna(x)]
                         if any(c in row_values_str for c in {"43521234", "80912345", "60123984"}) or \
                            any(any(kw in val for kw in ["example - delete me", "placeholder"]) for val in row_values_str):
@@ -6322,7 +6415,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         """
 
                     invoice_prompt = f"""
-                    You are an expert numismatic document processing AI. Extract structured coin details from this invoice or receipt document.
+                    You are an expert numismatic document processing AI. Extract structured coin and supply details from this invoice or receipt document.
                     {pii_rule}
 
                     Required JSON output structure:
@@ -6330,20 +6423,28 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         "retailer": "Dealer or store name",
                         "invoice_number": "Invoice or order number",
                         "invoice_date": "YYYY-MM-DD",
+                        "subtotal": 0.00,
+                        "shipping_fee": 0.00,
+                        "tax_fee": 0.00,
                         "total_amount": 0.00,
                         "line_items": [
                             {{
-                                "Program/Series": "Coin series (e.g. Morgan Dollar, Lincoln Cent)",
-                                "Year": "Year (e.g. 1921)",
+                                "Program/Series": "Coin series (e.g. Morgan Dollar, Lincoln Cent, American Silver Eagle)",
+                                "Year": "Year (e.g. 1921, 2026)",
                                 "Mint Mark": "Mint mark (e.g. S, D, O, CC, or blank)",
                                 "Denomination": "Denomination (e.g. Dollar, Quarter, Cent)",
                                 "Condition": "Grade or condition if mentioned (e.g. MS-65, VF-20, Ungraded)",
                                 "Cost": 0.00,
+                                "is_supply": false,
                                 "Certification Number": "Cert number if graded",
                                 "Personal Notes": "Any item description or catalog number"
                             }}
                         ]
                     }}
+                    Field Instructions:
+                    - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
+                    - "Cost": Sticker price / unit price of the line item before global fees.
+                    - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
 
@@ -6361,20 +6462,53 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
                     line_items_out = []
 
+                    subtotal_val = float(data.get("subtotal") or 0.0)
+                    shipping_val = float(data.get("shipping_fee") or 0.0)
+                    tax_val      = float(data.get("tax_fee") or 0.0)
+                    grand_total  = float(data.get("total_amount") or 0.0)
+
+                    # Compute aggregate item price if subtotal missing
+                    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) for it in items)
+                    if subtotal_val <= 0.0:
+                        subtotal_val = raw_item_sum
+
+                    total_global_fees = 0.0
+                    if grand_total > subtotal_val:
+                        total_global_fees = grand_total - subtotal_val
+                    elif (shipping_val + tax_val) > 0:
+                        total_global_fees = shipping_val + tax_val
+
                     for it in items:
-                        cost_v = clean_valuation_value(it.get("Cost") or 0.0)
-                        total_val += cost_v
+                        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
+                        
+                        # Proportional Landed Cost Allocation
+                        if raw_item_sum > 0.0 and total_global_fees > 0.0:
+                            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
+                        elif len(items) == 1 and total_global_fees > 0.0:
+                            allocated_fee = round(total_global_fees, 2)
+                        else:
+                            allocated_fee = 0.0
+
+                        landed_cost_basis = round(sticker_price + allocated_fee, 2)
+                        total_val += landed_cost_basis
+
+                        is_supply = bool(it.get("is_supply", False))
+                        item_type_val = "supply" if is_supply else "coin"
+
                         doc = {
                             "Program/Series":       it.get("Program/Series", ""),
                             "Year":                 it.get("Year", ""),
                             "Mint Mark":            it.get("Mint Mark", ""),
                             "Denomination":         it.get("Denomination", ""),
                             "Condition":            it.get("Condition", "Ungraded"),
-                            "Cost":                 cost_v,
-                            "Purchase Cost":        cost_v,
+                            "Cost":                 landed_cost_basis,
+                            "Purchase Cost":        landed_cost_basis,
+                            "Sticker Price":        sticker_price,
+                            "Allocated Fees":       allocated_fee,
                             "Purchase Date":        data.get("invoice_date", ""),
                             "Retailer/Website":     data.get("retailer", ""),
                             "Retailer Invoice #":   data.get("invoice_number", ""),
+                            "Personal Reference #": data.get("invoice_number", ""),
                             "Certification Number": it.get("Certification Number", ""),
                             "Personal Notes":       it.get("Personal Notes", ""),
                             "Country":              "United States",
@@ -6384,10 +6518,13 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             "import_session_id":    session_id,
                             "source_type":          "invoice",
                             "receipt_id":           receipt_id,
+                            "gcs_path":             gcs_path,
                             "created_at":           firestore.SERVER_TIMESTAMP,
-                            "item_type":            "coin",
+                            "item_type":            item_type_val,
                         }
-                        doc["item_type"] = _classify_item_type(doc)
+                        if not is_supply:
+                            doc["item_type"] = _classify_item_type(doc)
+
                         doc_ref = col_ref.document(str(uuid.uuid4()))
                         batch.set(doc_ref, doc)
                         new_coin_ids.append(doc_ref.id)
@@ -6404,7 +6541,10 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         "retailer":            data.get("retailer", ""),
                         "invoice_number":      data.get("invoice_number", ""),
                         "invoice_date":        data.get("invoice_date", ""),
-                        "total_amount":        data.get("total_amount") or total_val,
+                        "subtotal":            subtotal_val,
+                        "shipping_fee":        shipping_val,
+                        "tax_fee":             tax_val,
+                        "total_amount":        grand_total or total_val,
                         "line_items":          line_items_out,
                         "linked_coin_ids":     [],
                         "unlinked_items":      [],
@@ -6418,6 +6558,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     summary["total_purchase_value"] += total_val
                     result_meta = {"coins_added": added_this_file, "receipt_id": receipt_id,
                                    "total_value": total_val}
+
                     per_file[idx]["status"]      = "done"
                     per_file[idx]["coins_added"] = added_this_file
                     per_file[idx]["receipt_id"]  = receipt_id
