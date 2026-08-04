@@ -406,7 +406,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
     }
 
     return Positioned(
-      bottom: 24,
+      bottom: 90,
       right: 24,
       child: Material(
         color: Colors.transparent,

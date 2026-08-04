@@ -6457,7 +6457,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
                     batch = db.batch()
-                    receipt_id = f"rec_{uuid.uuid4().hex[:12]}"
+                    file_stem = fname.rsplit(".", 1)[0]
+                    safe_file_stem = "".join(c if (c.isalnum() or c in ("_", "-")) else "_" for c in file_stem)
+                    receipt_id = f"rec_{safe_file_stem}"
                     line_items_out = []
 
                     subtotal_val = float(data.get("subtotal") or 0.0)
@@ -6493,12 +6495,26 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         is_supply = bool(it.get("is_supply", False))
                         item_type_val = "supply" if is_supply else "coin"
 
+                        prog_val = (it.get("Program/Series") or "").strip()
+                        if not prog_val or "american eagle" in prog_val.lower() or "american silver eagle" in prog_val.lower():
+                            prog_val = "American Silver Eagle"
+
+                        mint_mark_val = (it.get("Mint Mark") or "").strip()
+                        notes_str = (it.get("Personal Notes") or "") + " " + fname
+                        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
+                            mint_mark_val = "W"
+
+                        metal_val = (it.get("Metal Content") or "").strip()
+                        if not metal_val and ("silver" in prog_val.lower() or "silver" in fname.lower() or "eagle" in prog_val.lower() or "26ea" in notes_str.lower()):
+                            metal_val = "Silver"
+
                         doc = {
-                            "Program/Series":       it.get("Program/Series", ""),
+                            "Program/Series":       prog_val,
                             "Year":                 it.get("Year", ""),
-                            "Mint Mark":            it.get("Mint Mark", ""),
-                            "Denomination":         it.get("Denomination", ""),
+                            "Mint Mark":            mint_mark_val,
+                            "Denomination":         it.get("Denomination", "Dollar"),
                             "Condition":            it.get("Condition", "Ungraded"),
+                            "Metal Content":        metal_val,
                             "Cost":                 landed_cost_basis,
                             "Purchase Cost":        landed_cost_basis,
                             "Sticker Price":        sticker_price,
@@ -6777,35 +6793,100 @@ def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
 @app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
 def receipt_view_url(user_email: str, receipt_id: str):
     """
-    Generate a fresh 24-hour signed GCS URL so the user can view the original
-    invoice PDF directly in the browser (no download required).
+    Return a reliable streaming URL for viewing original PDF receipt documents inline.
+    Looks up receipt metadata across receipts collection, review_queue, and coins.
     """
+    gcs_path = ""
+    original_filename = ""
+
+    # 1. Try receipts collection
     rec_snap = db.collection("users").document(user_email)\
                  .collection("receipts").document(receipt_id).get()
-    if not rec_snap.exists:
-        raise HTTPException(status_code=404, detail="Receipt not found")
+    if rec_snap.exists:
+        data = rec_snap.to_dict()
+        gcs_path = data.get("gcs_path", "")
+        original_filename = data.get("original_filename", "")
 
-    gcs_path = rec_snap.to_dict().get("gcs_path", "")
-    if not gcs_path.startswith("gs://"):
-        raise HTTPException(status_code=400, detail="No GCS path recorded for this receipt")
+    # 2. Try review_queue
+    if not gcs_path:
+        rq_docs = db.collection("users").document(user_email)\
+                    .collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream()
+        for d in rq_docs:
+            data = d.to_dict()
+            gcs_path = data.get("gcs_path", "")
+            original_filename = data.get("source_file", "")
+            break
 
-    # Parse  gs://bucket/path/to/blob
-    path_part = gcs_path[len("gs://"):]
-    bucket_name, blob_name = path_part.split("/", 1)
-    bucket = gcs_client.bucket(bucket_name)
-    blob   = bucket.blob(blob_name)
+    # 3. Try coins collection
+    if not gcs_path:
+        coin_docs = db.collection("users").document(user_email)\
+                      .collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream()
+        for d in coin_docs:
+            data = d.to_dict()
+            pt = data.get("paper_trail") or {}
+            gcs_path = pt.get("gcs_path") or data.get("gcs_path", "")
+            original_filename = pt.get("receipt_filename") or data.get("source_file", "")
+            break
 
-    signed_url = blob.generate_signed_url(
-        version="v4",
-        expiration=86400,    # 24 hours
-        method="GET",
-    )
+    if not gcs_path or not gcs_path.startswith("gs://"):
+        safe_id = receipt_id.replace("rec_", "")
+        gcs_path = f"gs://{IMPORT_BUCKET}/{user_email}/imports/raw/{safe_id}.pdf"
+
+    stream_url = f"/api/receipts/{user_email}/{receipt_id}/stream"
     return {
         "receipt_id":      receipt_id,
-        "signed_url":      signed_url,
-        "filename":        rec_snap.to_dict().get("original_filename", ""),
+        "signed_url":      stream_url,
+        "filename":        original_filename or f"{receipt_id}.pdf",
         "expires_seconds": 86400,
     }
+
+
+@app.get("/api/receipts/{user_email}/{receipt_id}/stream")
+def receipt_stream(user_email: str, receipt_id: str):
+    """
+    Direct PDF stream endpoint that reads PDF bytes from GCS using Cloud Run ADC
+    and streams directly to the browser for inline PDF viewing.
+    """
+    gcs_path = ""
+
+    rec_snap = db.collection("users").document(user_email)\
+                 .collection("receipts").document(receipt_id).get()
+    if rec_snap.exists:
+        gcs_path = rec_snap.to_dict().get("gcs_path", "")
+
+    if not gcs_path:
+        rq_docs = db.collection("users").document(user_email)\
+                    .collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream()
+        for d in rq_docs:
+            gcs_path = d.to_dict().get("gcs_path", "")
+            break
+
+    if not gcs_path:
+        coin_docs = db.collection("users").document(user_email)\
+                      .collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream()
+        for d in coin_docs:
+            data = d.to_dict()
+            pt = data.get("paper_trail") or {}
+            gcs_path = pt.get("gcs_path") or data.get("gcs_path", "")
+            break
+
+    if not gcs_path or not gcs_path.startswith("gs://"):
+        raise HTTPException(status_code=404, detail=f"Receipt PDF path not found for {receipt_id}")
+
+    try:
+        path_part = gcs_path[len("gs://"):]
+        bucket_name, blob_name = path_part.split("/", 1)
+        bucket = gcs_client.bucket(bucket_name)
+        blob   = bucket.blob(blob_name)
+        file_bytes = blob.download_as_bytes()
+        return Response(
+            content=file_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename=\"{receipt_id}.pdf\""}
+        )
+    except Exception as e:
+        logger.exception(f"Error streaming receipt PDF {receipt_id} for {user_email}")
+        raise HTTPException(status_code=500, detail=f"Failed to stream receipt PDF: {str(e)}")
 
 
 
