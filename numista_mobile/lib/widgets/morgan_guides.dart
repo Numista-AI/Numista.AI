@@ -24,16 +24,16 @@ class MorganGuides {
       MorganStep(
         narration:
             "I can read your receipt and add coins automatically!\n"
-            "Pick the 'Single Invoice Scan' tab to get started.",
+            "Pick the 'Upload Files' tab to get started.",
         hint: 'The tabs are at the top of this screen.',
         nextLabel: "Ready! →",
         position: GuidePosition.bottomRight,
       ),
-      // Step 2: upload — red Browse PDF button is center-screen
+      // Step 2: upload — Open Bulk Import button is center-screen
       MorganStep(
-        narration: "Tap the red Browse PDF button and choose your receipt file.",
-        hint: "The button is in the center of this screen.",
-        nextLabel: 'I tapped Browse PDF →',
+        narration: "Tap the 'Open Bulk Import' button to choose your receipt file.",
+        hint: "The yellow button is in the center of this screen.",
+        nextLabel: 'I tapped Open Bulk Import →',
         position: GuidePosition.topRight,
         showArrow: true,
         arrowDirection: ArrowDirection.down,

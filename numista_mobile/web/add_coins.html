@@ -332,6 +332,8 @@
       <span id="mode-desc" style="font-size:0.82rem;color:var(--text-dim);"></span>
     </div>
 
+    <button id="start-btn" onclick="startImport()">&#9889; Start Import</button>
+
     <div id="settings-row" style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; text-align: left; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
       <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: var(--text);">
         <input type="checkbox" id="mask-pii-checkbox" checked />
@@ -342,8 +344,6 @@
         <span>⚡ Compress coin images client-side before upload (reduces lag)</span>
       </label>
     </div>
-
-    <button id="start-btn" onclick="startImport()">&#9889; Start Import</button>
   </div>
 </div>
 
@@ -426,10 +426,12 @@
   </div>
 </div>
 
-
-
 <script>
-const API_BASE = 'https://numista-backend-568985927038.us-central1.run.app';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? ''
+  : (window.location.origin.includes('numista.ai') || window.location.origin.includes('web.app')
+      ? 'https://numista-backend-568985927038.us-central1.run.app'
+      : '');
 const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
 function getUserEmail() { return _urlEmail; }
 
@@ -438,15 +440,44 @@ if (!_urlEmail) {
   window.location.href = '/';
 }
 
-const USER_EMAIL = _urlEmail; // alias for legacy code in this file
+const USER_EMAIL = getUserEmail();
+let selectedFiles = [];
+let sessionId = null;
+let pollInterval = null;
 
-let selectedFiles  = [];
-let sessionId      = null;
-let pollInterval   = null;
+function showError(msg) {
+  let errBox = document.getElementById('error-banner');
+  if (!errBox) {
+    errBox = document.createElement('div');
+    errBox.id = 'error-banner';
+    errBox.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;';
+    const progressPanel = document.getElementById('progress-panel');
+    if (progressPanel) {
+      progressPanel.insertBefore(errBox, progressPanel.firstChild);
+    } else {
+      document.body.insertBefore(errBox, document.body.firstChild);
+    }
+  }
+  errBox.innerHTML = '<span>&#9888;&#65039; ' + escHtml(msg) + '</span><button style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold;" onclick="this.parentElement.remove()">✕</button>';
+  errBox.style.display = 'flex';
+}
 
-function classifyFile(name) {
-  const ext = name.split('.').pop().toLowerCase();
-  if (['xlsx','xls','csv','ods'].includes(ext))                         return 'spreadsheet';
+function resetImportUIState() {
+  const uploadCard = document.getElementById('upload-card');
+  if (uploadCard) {
+    uploadCard.style.opacity = '1.0';
+    uploadCard.style.pointerEvents = 'auto';
+  }
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) {
+    startBtn.disabled = false;
+  }
+}
+
+// File classification helpers
+function classifyFile(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['xlsx','xls','csv','ods'].includes(ext))                          return 'spreadsheet';
   if (ext === 'pdf')                                                     return 'invoice';
   if (['jpg','jpeg','png','webp','heic','bmp','tiff','tif'].includes(ext)) return 'image';
   return 'other';
@@ -505,6 +536,7 @@ async function startImport() {
   const uploadCard = document.getElementById('upload-card');
   uploadCard.style.opacity = '0.5';
   uploadCard.style.pointerEvents = 'none';
+  document.getElementById('start-btn').disabled = true;
 
   const progressPanel = document.getElementById('progress-panel');
   progressPanel.classList.add('show');
@@ -513,73 +545,73 @@ async function startImport() {
   const maskPiiEnabled = document.getElementById('mask-pii-checkbox').checked;
 
   let filesToUpload = [...selectedFiles];
-  if (compressImagesEnabled) {
-    document.getElementById('progress-label').textContent = 'Compressing images...';
-    for (let i = 0; i < filesToUpload.length; i++) {
-      let f = filesToUpload[i];
-      if (classifyFile(f.name) === 'image') {
-        try {
-          f = await compressImage(f);
-          filesToUpload[i] = f;
-        } catch(e) {
-          console.warn('Image compression failed for ' + f.name + ', uploading original.', e);
+
+  try {
+    const hasImages = filesToUpload.some(f => classifyFile(f.name) === 'image');
+    if (compressImagesEnabled && hasImages) {
+      document.getElementById('progress-label').textContent = 'Compressing images...';
+      for (let i = 0; i < filesToUpload.length; i++) {
+        let f = filesToUpload[i];
+        if (classifyFile(f.name) === 'image') {
+          try {
+            f = await compressImage(f);
+            filesToUpload[i] = f;
+          } catch(e) {
+            console.warn('Image compression failed for ' + f.name + ', uploading original.', e);
+          }
         }
       }
+    } else {
+      document.getElementById('progress-label').textContent = 'Preparing upload...';
     }
-  }
 
-  buildFileListUI(filesToUpload);
+    buildFileListUI(filesToUpload);
 
-  const manifest = filesToUpload.map(f => ({
-    name: f.name, size: f.size, mime: f.type || 'application/octet-stream'
-  }));
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const f = filesToUpload[i];
+      updateFileRow(i, 'active', 'Uploading...');
+      updateProgress(i, filesToUpload.length, 'Uploading ' + (i+1) + ' of ' + filesToUpload.length + ' files...');
 
-  let signedFiles;
-  try {
-    const r = await fetch(API_BASE + '/api/import/start', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, file_manifest: manifest }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || 'start failed');
-    signedFiles = data.files;
-  } catch(err) {
-    showError('Could not start import: ' + err.message); return;
-  }
+      const formData = new FormData();
+      formData.append('file', f);
+      formData.append('user_email', USER_EMAIL);
+      formData.append('session_id', sessionId);
 
-  const urlMap = {};
-  signedFiles.forEach(sf => { urlMap[sf.name] = sf.upload_url; });
-
-  for (let i = 0; i < filesToUpload.length; i++) {
-    const f = filesToUpload[i];
-    updateFileRow(i, 'active');
-    updateProgress(i, filesToUpload.length);
-    try {
-      const resp = await fetch(urlMap[f.name], {
-        method: 'PUT', body: f,
-        headers: { 'Content-Type': f.type || 'application/octet-stream' }
+      const resp = await fetch(API_BASE + '/api/import/upload', {
+        method: 'POST',
+        body: formData
       });
-      if (!resp.ok) throw new Error('Upload failed');
-      updateFileRow(i, 'uploaded');
-    } catch(e) {
-      updateFileRow(i, 'error', 'Upload failed');
+
+      if (!resp.ok) {
+        let errMsg = 'Upload failed';
+        try {
+          const errData = await resp.json();
+          errMsg = errData.detail || errMsg;
+        } catch(e) {}
+        updateFileRow(i, 'error', 'Upload failed');
+        throw new Error(errMsg);
+      }
+
+      updateFileRow(i, 'uploaded', 'Uploaded');
     }
-  }
-  updateProgress(filesToUpload.length, filesToUpload.length, 'Uploaded — AI processing...');
 
-  startPolling();
+    updateProgress(filesToUpload.length, filesToUpload.length, 'Uploaded — AI processing...');
+    startPolling();
 
-  try {
-    fetch(API_BASE + '/api/import/process', {
+    const procResp = await fetch(API_BASE + '/api/import/process', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, mask_pii: maskPiiEnabled }),
-    }).then(async r => {
-      if (!r.ok) { const d = await r.json(); console.warn('process response status:', r.status, d.detail); }
-    }).catch(err => {
-      console.warn('process fetch error:', err.message);
     });
+
+    if (!procResp.ok) {
+      const procData = await procResp.json();
+      console.warn('Process trigger response:', procResp.status, procData.detail);
+    }
   } catch(err) {
-    showError('Processing error: ' + err.message);
+    console.error('Import failure:', err);
+    showError('Import Error: ' + err.message);
+  } finally {
+    resetImportUIState();
   }
 }
 
@@ -856,7 +888,7 @@ function downloadCsvTemplate() {
 }
 
 // Kick off the count fetch on page load
-initDangerZone();
+if (typeof initDangerZone === 'function') initDangerZone();
 </script>
 </body>
 </html>
