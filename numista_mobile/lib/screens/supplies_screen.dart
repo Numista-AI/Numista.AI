@@ -33,7 +33,6 @@ class SuppliesScreen extends StatelessWidget {
             .collection('users')
             .doc(user.email!)
             .collection('supplies_log')
-            .orderBy('created_at', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -45,7 +44,7 @@ class SuppliesScreen extends StatelessWidget {
                   SizedBox(height: 12),
                   Text(
                     'Could not load supplies.',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B)),
                   ),
                 ],
               ),
@@ -55,7 +54,20 @@ class SuppliesScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final docs = (snapshot.data?.docs.toList() ?? []);
+          docs.sort((a, b) {
+            final aData = a.data();
+            final bData = b.data();
+            final aTime = aData['created_at'];
+            final bTime = bData['created_at'];
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            if (aTime is Timestamp && bTime is Timestamp) {
+              return bTime.compareTo(aTime);
+            }
+            return 0;
+          });
 
           if (docs.isEmpty) {
             return Center(
@@ -79,14 +91,14 @@ class SuppliesScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Color(0xFF1E293B),
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Supply items detected in invoices\nappear here automatically.',
                       style: TextStyle(
-                          color: Color(0xFF94A3B8),
+                          color: Color(0xFF64748B),
                           fontSize: 14,
                           height: 1.5),
                       textAlign: TextAlign.center,

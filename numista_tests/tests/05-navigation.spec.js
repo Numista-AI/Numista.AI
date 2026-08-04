@@ -124,7 +124,7 @@ test.describe('05 - Navigation & State Persistence', () => {
     expect(buf.length).toBeGreaterThan(50000);
   });
 
-  test('T10: Review Hub loads without crash', async ({ page }) => {
+  test('T10: Review Hub loads without crash and displays queue state', async ({ page }) => {
     await enterDemo(page);
     await page.mouse.click(80, 506); // Review Hub
     await page.waitForTimeout(4000);

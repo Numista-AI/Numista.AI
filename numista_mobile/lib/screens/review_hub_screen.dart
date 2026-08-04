@@ -687,27 +687,40 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 .collection('users')
                 .doc(user.email!)
                 .collection('review_queue')
-                .orderBy('created_at', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: const [
-                  Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
-                  SizedBox(height: 12),
-                  Text('Couldn\'t load review queue.',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                  SizedBox(height: 4),
-                  Text('Check your connection and try again.',
-                      style: TextStyle(color: Colors.grey)),
-                ]),
-              );
+                    Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
+                    SizedBox(height: 12),
+                    Text('Couldn\'t load review queue.',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B))),
+                    SizedBox(height: 4),
+                    Text('Check your connection and try again.',
+                        style: TextStyle(color: Color(0xFF64748B))),
+                  ]),
+                );
               }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
               }
 
-              final docs = snapshot.data?.docs ?? [];
+              final docs = (snapshot.data?.docs.toList() ?? []);
+              docs.sort((a, b) {
+                final aData = a.data();
+                final bData = b.data();
+                final aTime = aData['created_at'];
+                final bTime = bData['created_at'];
+                if (aTime == null && bTime == null) return 0;
+                if (aTime == null) return 1;
+                if (bTime == null) return -1;
+                if (aTime is Timestamp && bTime is Timestamp) {
+                  return bTime.compareTo(aTime);
+                }
+                return 0;
+              });
+
               if (docs.isEmpty) {
                 return Center(
                   child: Padding(
@@ -729,13 +742,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white)),
+                                color: Color(0xFF1E293B))),
                         const SizedBox(height: 8),
                         const Text(
                           'No items waiting for review.\nScan an invoice or photograph a coin to add coins here.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: Color(0xFF94A3B8),
+                              color: Color(0xFF64748B),
                               height: 1.5,
                               fontSize: 14),
                         ),
