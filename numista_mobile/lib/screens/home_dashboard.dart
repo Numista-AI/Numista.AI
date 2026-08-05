@@ -1542,10 +1542,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.2',
+    date: '2026-08-05',
+    description: 'Desktop Beta Enhancements & COA Validation Engine',
+    isLatest: true,
+    changes: [
+      'COA Inspector Mintage Ceiling Validation: 3-state verdict chip and serial regex sanitization',
+      'Program Manager Dual Filters: geographical mint mark and finish/strike responsive Wrap chips',
+      'Security-Compliant Wishlist Gift Reservations: top-level public wishlist writes and real-time family activity stream',
+      'Beta Feedback File Attachment: image upload, removal toggle, and open feedback counter badge',
+    ],
+  ),
+  _Release(
     version: 'v4.1',
     date: '2026-07-30',
     description: 'Greysheet Valuation, Bulk Upload & System Resilience',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Greysheet Market Valuation Integration: real-time CDN bid/ask prices, CPG retail attribution, and daily portfolio snapshot sync.',
       'Automated Arbitrage Deal Finder & Wishlist EPN matcher: spot underpriced coins and affiliate matches instantly.',

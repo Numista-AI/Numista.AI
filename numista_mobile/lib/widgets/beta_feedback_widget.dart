@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -259,12 +260,39 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Screenshot Capture Button
+                    // Screenshot Capture & File Attachment Button
                     Row(
                       children: [
                         OutlinedButton.icon(
                           onPressed: () async {
-                            await _captureScreen();
+                            if (_capturedScreenshot == null) {
+                              await _captureScreen();
+                            }
+                            if (_capturedScreenshot == null) {
+                              try {
+                                final result = await FilePicker.pickFiles(
+                                  type: FileType.image,
+                                  withData: true,
+                                );
+                                if (result != null && result.files.isNotEmpty) {
+                                  final bytes = result.files.first.bytes;
+                                  if (bytes != null) {
+                                    if (bytes.length > 8 * 1024 * 1024) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Screenshot file exceeds 8 MB limit.'),
+                                          backgroundColor: Colors.amber,
+                                        ),
+                                      );
+                                    } else {
+                                      _capturedScreenshot = bytes;
+                                    }
+                                  }
+                                }
+                              } catch (e) {
+                                debugPrint('FilePicker error: $e');
+                              }
+                            }
                             setModalState(() {});
                           },
                           icon: Icon(
@@ -293,6 +321,18 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                             ),
                           ),
                         ),
+                        if (_capturedScreenshot != null) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                            tooltip: 'Remove Screenshot',
+                            onPressed: () {
+                              setModalState(() {
+                                _capturedScreenshot = null;
+                              });
+                            },
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 20),
