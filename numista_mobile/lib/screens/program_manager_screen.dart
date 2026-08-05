@@ -31,6 +31,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   // View mode
   CoinProgram? _selectedProgram;
+  String _selectedMintFilter = "ALL";
+  String _selectedFinishFilter = "ALL";
 
   // Set of coins selected to add to collection
   final Set<String> _selectedToAdd = {};
@@ -445,6 +447,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               onPressed: () {
                 setState(() {
                   _selectedProgram = program;
+                  _selectedMintFilter = "ALL";
+                  _selectedFinishFilter = "ALL";
                 });
                 _tryAdvanceMorganProgramSelect();
               },
@@ -810,25 +814,158 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           ),
           
           const SizedBox(height: 32),
-          const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-          const SizedBox(height: 16),
-          
-          // Checklist Build
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              if (_selectedMintFilter != 'ALL' || _selectedFinishFilter != 'ALL')
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _selectedMintFilter = 'ALL';
+                    _selectedFinishFilter = 'ALL';
+                  }),
+                  icon: const Icon(Icons.clear_all, size: 16),
+                  label: const Text('Reset Filters', style: TextStyle(fontSize: 12)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Dual Wrap Filter Controls (Mint Mark & Finish)
           Container(
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E6E9)),
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: program.coins.length,
-              separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE2E6E9)),
-              itemBuilder: (context, index) {
-                final coin = program.coins[index];
-                final coinName = coin.name;
-                final isPending = coinName.contains("Pending");
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Mint Mark (Geographical):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6.0,
+                  runSpacing: 4.0,
+                  children: ['ALL', 'P', 'D', 'S', 'W', 'O', 'CC'].map((mint) {
+                    final isSel = _selectedMintFilter == mint;
+                    return FilterChip(
+                      label: Text(mint == 'ALL' ? 'All Mints' : mint),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF2563EB),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                      onSelected: (val) => setState(() => _selectedMintFilter = mint),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                const Text('Finish / Strike Type:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6.0,
+                  runSpacing: 4.0,
+                  children: [
+                    {'id': 'ALL', 'label': 'All Strikes'},
+                    {'id': 'BUSINESS', 'label': 'Business / Circulating'},
+                    {'id': 'PROOF', 'label': 'Proof & Special'},
+                  ].map((item) {
+                    final isSel = _selectedFinishFilter == item['id'];
+                    return FilterChip(
+                      label: Text(item['label']!),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF10B981),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                      onSelected: (val) => setState(() => _selectedFinishFilter = item['id']!),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Checklist Build
+          Builder(
+            builder: (context) {
+              final filteredCoins = program.coins.where((coin) {
+                final cName = coin.name.toUpperCase();
+                // 1. Mint Mark Filter
+                if (_selectedMintFilter != 'ALL') {
+                  final m = _selectedMintFilter;
+                  if (m == 'P' && !cName.contains('-P') && !cName.contains(' (P)') && (cName.contains('-D') || cName.contains('-S') || cName.contains('-W') || cName.contains('-O') || cName.contains('-CC'))) {
+                    return false;
+                  }
+                  if (m != 'P' && !cName.contains('-$m') && !cName.contains(' ($m)')) {
+                    return false;
+                  }
+                }
+                // 2. Finish Filter
+                if (_selectedFinishFilter == 'BUSINESS') {
+                  if (cName.contains('PROOF') || cName.contains('SPECIAL') || cName.contains('SATIN') || cName.contains('REVERSE')) {
+                    return false;
+                  }
+                } else if (_selectedFinishFilter == 'PROOF') {
+                  if (!cName.contains('PROOF') && !cName.contains('SPECIAL') && !cName.contains('SATIN') && !cName.contains('REVERSE')) {
+                    return false;
+                  }
+                }
+                return true;
+              }).toList();
+
+              if (filteredCoins.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(32),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFE2E6E9)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.filter_alt_off, size: 40, color: Color(0xFF94A3B8)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No coins found matching active filters\n(Mint: $_selectedMintFilter, Finish: $_selectedFinishFilter)',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.5),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => setState(() {
+                          _selectedMintFilter = 'ALL';
+                          _selectedFinishFilter = 'ALL';
+                        }),
+                        child: const Text('Clear Active Filters'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFE2E6E9)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredCoins.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE2E6E9)),
+                  itemBuilder: (context, index) {
+                    final coin = filteredCoins[index];
+                    final coinName = coin.name;
+                    final isPending = coinName.contains("Pending");
                 
                 // Search for match
                 QueryDocumentSnapshot? matchedDoc;
@@ -878,7 +1015,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 }
               },
             ),
-          ),
+          );
+        },
+      ),
           
           if (_selectedToAdd.isNotEmpty) ...[
             const SizedBox(height: 24),

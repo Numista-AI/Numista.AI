@@ -61,7 +61,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     }
   }
 
-  Future<void> _toggleReservation(int index) async {
+  Future<void> _toggleReservation(int index, {String? buyerName}) async {
     final isReserved = _reservedIndices.contains(index);
     setState(() {
       if (isReserved) {
@@ -72,10 +72,17 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance
-          .collection('public_wishlists')
-          .doc(widget.token)
-          .update({'reserved_items': _reservedIndices.toList()});
+      final docRef = FirebaseFirestore.instance.collection('public_wishlists').doc(widget.token);
+      final payload = <String, dynamic>{
+        'reserved_items': _reservedIndices.toList(),
+      };
+      if (!isReserved && buyerName != null && buyerName.isNotEmpty) {
+        payload['reservation_details.${index}'] = {
+          'reserved_by': buyerName,
+          'reserved_at': DateTime.now().toIso8601String(),
+        };
+      }
+      await docRef.update(payload);
     } catch (e) {
       debugPrint('Error toggling reservation: $e');
     }
@@ -132,7 +139,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dctx);
-              _toggleReservation(index);
+              _toggleReservation(index, buyerName: nameController.text.trim());
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),

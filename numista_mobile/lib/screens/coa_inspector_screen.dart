@@ -128,30 +128,48 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              _coaResult!['program_title'] ?? 'Verified COA Card',
+                              _coaResult?['program_title'] as String? ?? 'Verified COA Card',
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                           ),
-                          Chip(
-                            label: Text(
-                              '${((_coaResult!['confidence_score'] ?? 0.95) * 100).toStringAsFixed(0)}% Verified',
-                            ),
-                            backgroundColor: Colors.green.shade200,
-                          ),
+                          _buildVerdictChip(_coaResult?['verdict'] as String?),
                         ],
                       ),
-                      const Divider(height: 24),
-                      _infoRow('Issuer', _coaResult!['issuer']),
-                      _infoRow('Serial Number', '#${_coaResult!['serial_number']}'),
-                      _infoRow('Mintage Limit', _coaResult!['mintage_limit']),
-                      if (_coaResult!['coin_specs'] != null) ...[
-                        _infoRow('Denomination', _coaResult!['coin_specs']['denomination']),
-                        _infoRow('Composition', _coaResult!['coin_specs']['composition']),
-                        _infoRow('Weight', '${_coaResult!['coin_specs']['weight_troy_oz']} troy oz'),
-                        _infoRow('Finish', _coaResult!['coin_specs']['finish']),
+                      if (_coaResult?['mintage_warning'] != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFF59E0B)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _coaResult!['mintage_warning'],
+                                  style: const TextStyle(color: Color(0xFF92400E), fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                      _infoRow('Signature', _coaResult!['signature']),
-                      _infoRow('Cloud Vault Archive', _coaResult!['gcs_path']),
+                      const Divider(height: 24),
+                      _infoRow('Issuer', _coaResult?['issuer'] as String?),
+                      _infoRow('Serial Number', '#${_coaResult?['serial_number'] ?? '—'}'),
+                      _infoRow('Mintage Limit', _coaResult?['mintage_limit'] as String?),
+                      if (_coaResult?['coin_specs'] != null) ...[
+                        _infoRow('Denomination', _coaResult!['coin_specs']['denomination'] as String?),
+                        _infoRow('Composition', _coaResult!['coin_specs']['composition'] as String?),
+                        _infoRow('Weight', '${_coaResult!['coin_specs']['weight_troy_oz']} troy oz'),
+                        _infoRow('Finish', _coaResult!['coin_specs']['finish'] as String?),
+                      ],
+                      _infoRow('Signature', _coaResult?['signature'] as String?),
+                      _infoRow('Cloud Vault Archive', _coaResult?['gcs_path'] as String?),
                     ],
                   ),
                 ),
@@ -174,5 +192,27 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildVerdictChip(String? verdict) {
+    if (verdict == 'VALID') {
+      return Chip(
+        avatar: const Icon(Icons.check_circle, color: Color(0xFF047857), size: 16),
+        label: const Text("✓ Valid Mintage Ceiling", style: TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.bold, fontSize: 11)),
+        backgroundColor: const Color(0xFFD1FAE5),
+      );
+    } else if (verdict == 'EXCEEDS') {
+      return Chip(
+        avatar: const Icon(Icons.warning_amber_rounded, color: Color(0xFFB45309), size: 16),
+        label: const Text("⚠️ Exceeds Mintage Ceiling", style: TextStyle(color: Color(0xFFB45309), fontWeight: FontWeight.bold, fontSize: 11)),
+        backgroundColor: const Color(0xFFFEF3C7),
+      );
+    } else {
+      return Chip(
+        avatar: const Icon(Icons.help_outline, color: Color(0xFF475569), size: 16),
+        label: const Text("⚪ Unable to Verify Mintage", style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.bold, fontSize: 11)),
+        backgroundColor: const Color(0xFFE2E8F0),
+      );
+    }
   }
 }

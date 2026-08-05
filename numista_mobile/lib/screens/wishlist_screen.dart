@@ -212,6 +212,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildGiftActivityBanner(),
+        const SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1100,5 +1102,86 @@ class _WishlistScreenState extends State<WishlistScreen> {
       buffer.writeln('\nTracked with Numista.AI — the smart coin collection app.');
       Share.share(buffer.toString(), subject: 'My Coin Wish List');
     });
+  }
+
+  Widget _buildGiftActivityBanner() {
+    final userEmail = AuthService.userEmail;
+    if (userEmail.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('public_wishlists')
+          .where('owner_email', '==', userEmail)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildBannerCard(0, []);
+        }
+
+        final doc = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+        final reservedIndices = List<int>.from(doc['reserved_items'] ?? []);
+        final detailsMap = Map<String, dynamic>.from(doc['reservation_details'] ?? {});
+        final items = List<Map<String, dynamic>>.from(doc['items'] ?? []);
+
+        final reservedCount = reservedIndices.length;
+        final reservedDetailsList = <Map<String, String>>[];
+
+        for (var idx in reservedIndices) {
+          final title = idx < items.length ? (items[idx]['title'] ?? 'Coin Item') : 'Wishlist Item';
+          final detail = detailsMap[idx.toString()] as Map<String, dynamic>?;
+          final by = detail?['reserved_by'] ?? 'Family Member';
+          reservedDetailsList.add({
+            'title': title,
+            'reserved_by': by,
+          });
+        }
+
+        return _buildBannerCard(reservedCount, reservedDetailsList);
+      },
+    );
+  }
+
+  Widget _buildBannerCard(int reservedCount, List<Map<String, String>> details) {
+    final isReserved = reservedCount > 0;
+    return Container(
+      decoration: BoxDecoration(
+        color: isReserved ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isReserved ? const Color(0xFF10B981) : const Color(0xFF334155),
+        ),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Icon(
+          isReserved ? Icons.card_giftcard : Icons.card_giftcard_outlined,
+          color: isReserved ? const Color(0xFF34D399) : Colors.white54,
+        ),
+        title: Text(
+          isReserved
+              ? "🎁 $reservedCount Wish List Items Reserved by Relatives ✓"
+              : "🎁 0 items currently reserved by family members",
+          style: TextStyle(
+            color: isReserved ? Colors.white : Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          isReserved
+              ? "Tap to view gift items family members marked as bought"
+              : "Share your gift list to let family members reserve items for holidays",
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
+        ),
+        children: details.isEmpty
+            ? []
+            : details.map((d) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 18),
+                  title: Text(d['title']!, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: Text("Reserved by ${d['reserved_by']}", style: const TextStyle(color: Color(0xFF34D399), fontSize: 11)),
+                )).toList(),
+      ),
+    );
   }
 }
