@@ -9894,7 +9894,12 @@ async def api_get_passport_pdf(transfer_id: str):
         if not transfer_doc.exists:
             raise HTTPException(status_code=404, detail="Transfer not found")
         
-        pdf_bytes = generate_passport_pdf(transfer_doc.to_dict())
+        transfer_data = transfer_doc.to_dict() or {}
+        items = transfer_data.get("items", [])
+        if not items:
+            raise HTTPException(status_code=400, detail="Cannot generate passport PDF for a transfer with 0 items.")
+        
+        pdf_bytes = generate_passport_pdf(transfer_data)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",

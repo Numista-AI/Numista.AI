@@ -14,6 +14,17 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _testerEmailController = TextEditingController();
+  String _selectedCategoryFilter = 'ALL';
+  String _selectedStatusFilter = 'ALL';
+
+  final List<String> _categories = [
+    'ALL',
+    'Bug Report',
+    'UI / Layout Suggestion',
+    'Confusing / Hard to Use',
+    'Feature Request',
+    'Praise / What Works Well',
+  ];
 
   @override
   void initState() {
@@ -28,6 +39,107 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
     super.dispose();
   }
 
+  void _openLightboxModal(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              constraints: const BoxConstraints(maxHeight: 700, maxWidth: 900),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Text('Failed to load screenshot image.', style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black54,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _promptResolutionNote(String feedbackId, String currentStatus) {
+    final noteController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Update Status & Log Note', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Change status to: $currentStatus', style: const TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLines: 2,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Optional resolution or triage notes...',
+                hintStyle: const TextStyle(color: Colors.grey),
+                filled: true,
+                fillColor: const Color(0xFF0F172A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final note = noteController.text.trim();
+              await FirebaseFirestore.instance.collection('beta_feedback').doc(feedbackId).update({
+                'status': currentStatus,
+                'resolution_note': note,
+                'updated_at': FieldValue.serverTimestamp(),
+              });
+            },
+            child: const Text('Save Status', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,7 +147,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         title: const Text(
-          'Admin Beta Dashboard',
+          'Admin Beta Feedback Portal',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         bottom: TabBar(
@@ -78,30 +190,43 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
           );
         }
 
-        final docs = snapshot.data!.docs;
+        final allDocs = snapshot.data!.docs;
 
-        // Compute averages
+        // Apply Status and Category Filtering
+        final docs = allDocs.where((doc) {
+          final data = doc.data();
+          final cat = data['category']?.toString() ?? 'General';
+          final st = data['status']?.toString() ?? 'OPEN';
+
+          final catMatch = _selectedCategoryFilter == 'ALL' || cat == _selectedCategoryFilter;
+          final statusMatch = _selectedStatusFilter == 'ALL' || st == _selectedStatusFilter;
+          return catMatch && statusMatch;
+        }).toList();
+
+        // Compute averages across all submissions
         double totalEase = 0;
-        double totalFun = 0;
+        double totalAesthetics = 0;
         double totalUtil = 0;
-        int count = docs.length;
+        int count = allDocs.length;
 
-        for (final doc in docs) {
+        for (final doc in allDocs) {
           final ratings = doc.data()['ratings'] as Map<String, dynamic>? ?? {};
           totalEase += (ratings['ease_of_use'] ?? 5) as int;
-          totalFun += (ratings['fun_value'] ?? 5) as int;
+          totalAesthetics += (ratings['design_aesthetics'] ?? 5) as int;
           totalUtil += (ratings['utility_value'] ?? 5) as int;
         }
 
         final avgEase = count > 0 ? (totalEase / count).toStringAsFixed(1) : '5.0';
-        final avgFun = count > 0 ? (totalFun / count).toStringAsFixed(1) : '5.0';
+        final avgAesthetics = count > 0 ? (totalAesthetics / count).toStringAsFixed(1) : '5.0';
         final avgUtil = count > 0 ? (totalUtil / count).toStringAsFixed(1) : '5.0';
+
+        final openCount = allDocs.where((d) => (d.data()['status'] ?? 'OPEN') == 'OPEN').length;
 
         return Column(
           children: [
             // Analytics Header Card
             Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
@@ -111,152 +236,260 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildMetricStat('Total Feedback', '$count', Colors.blueAccent),
+                  _buildMetricStat('Open Feedback', '$openCount of $count', Colors.blueAccent),
                   _buildMetricStat('Ease of Use', '⭐ $avgEase / 5', Colors.amber),
-                  _buildMetricStat('Fun Value', '⭐ $avgFun / 5', Colors.purpleAccent),
+                  _buildMetricStat('Aesthetics', '⭐ $avgAesthetics / 5', Colors.purpleAccent),
                   _buildMetricStat('Utility', '⭐ $avgUtil / 5', Colors.green),
+                ],
+              ),
+            ),
+
+            // Category & Status Filters Toolbar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+              child: Row(
+                children: [
+                  const Text('Category: ', style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _categories.map((cat) {
+                          final isSelected = _selectedCategoryFilter == cat;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6.0),
+                            child: FilterChip(
+                              selected: isSelected,
+                              label: Text(cat, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.grey)),
+                              selectedColor: Colors.blueAccent,
+                              backgroundColor: const Color(0xFF1E293B),
+                              onSelected: (val) {
+                                setState(() {
+                                  _selectedCategoryFilter = cat;
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
 
             // Feedback Cards Stream List
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data();
-                  final id = docs[index].id;
-                  final route = data['route'] ?? 'Unknown Route';
-                  final email = data['user_email'] ?? 'Anonymous';
-                  final category = data['category'] ?? 'General';
-                  final comment = data['comment'] ?? '';
-                  final status = data['status'] ?? 'OPEN';
-                  final screenshotUrl = data['screenshot_url'] as String?;
-                  final ratings = data['ratings'] as Map<String, dynamic>? ?? {};
-
-                  Color statusColor = Colors.orange;
-                  if (status == 'TRIAGED') statusColor = Colors.blueAccent;
-                  if (status == 'RESOLVED') statusColor = Colors.green;
-
-                  return Card(
-                    color: const Color(0xFF1E293B),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: statusColor.withValues(alpha: 0.3),
+              child: docs.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No submissions match the selected filters.',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data();
+                        final id = docs[index].id;
+                        final route = data['route'] ?? 'Unknown Route';
+                        final email = data['user_email'] ?? 'Anonymous';
+                        final category = data['category'] ?? 'General';
+                        final comment = data['comment'] ?? '';
+                        final status = data['status'] ?? 'OPEN';
+                        final resolutionNote = data['resolution_note'] as String?;
+                        final screenshotUrl = data['screenshot_url'] as String?;
+                        final ratings = data['ratings'] as Map<String, dynamic>? ?? {};
+
+                        Color statusColor = Colors.orange;
+                        if (status == 'TRIAGED') statusColor = Colors.blueAccent;
+                        if (status == 'RESOLVED') statusColor = Colors.green;
+
+                        return Card(
+                          color: const Color(0xFF1E293B),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: statusColor.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Header Row
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        category,
+                                        style: const TextStyle(
+                                          color: Colors.lightBlueAccent,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DropdownButton<String>(
+                                      value: status,
+                                      dropdownColor: const Color(0xFF0F172A),
+                                      underline: const SizedBox.shrink(),
+                                      items: ['OPEN', 'TRIAGED', 'RESOLVED']
+                                          .map((s) => DropdownMenuItem(
+                                                value: s,
+                                                child: Text(
+                                                  s,
+                                                  style: TextStyle(
+                                                    color: s == 'RESOLVED'
+                                                        ? Colors.green
+                                                        : s == 'TRIAGED'
+                                                            ? Colors.blueAccent
+                                                            : Colors.orange,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ))
+                                          .toList(),
+                                      onChanged: (newStatus) {
+                                        if (newStatus != null) {
+                                          _promptResolutionNote(id, newStatus);
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  category,
+                                const SizedBox(height: 8),
+
+                                // Route & Email
+                                Text(
+                                  'User: $email | Route: $route',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Ratings
+                                Text(
+                                  'Ratings: Ease ⭐${ratings['ease_of_use'] ?? 5} | Aesthetics ⭐${ratings['design_aesthetics'] ?? 5} | Utility ⭐${ratings['utility_value'] ?? 5}',
                                   style: const TextStyle(
-                                    color: Colors.lightBlueAccent,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                              DropdownButton<String>(
-                                value: status,
-                                dropdownColor: const Color(0xFF0F172A),
-                                underline: const SizedBox.shrink(),
-                                items: ['OPEN', 'TRIAGED', 'RESOLVED']
-                                    .map((s) => DropdownMenuItem(
-                                          value: s,
-                                          child: Text(
-                                            s,
-                                            style: TextStyle(
-                                              color: s == 'RESOLVED'
-                                                  ? Colors.green
-                                                  : s == 'TRIAGED'
-                                                      ? Colors.blueAccent
-                                                      : Colors.orange,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
+                                const SizedBox(height: 10),
+
+                                // Comment
+                                if (comment.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      comment,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    ),
+                                  ),
+
+                                // Resolution Note if present
+                                if (resolutionNote != null && resolutionNote.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Resolution Note: $resolutionNote',
+                                    style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontStyle: FontStyle.italic),
+                                  ),
+                                ],
+
+                                // Inline Screenshot Thumbnail Preview
+                                if (screenshotUrl != null && screenshotUrl.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () => _openLightboxModal(context, screenshotUrl),
+                                        child: Container(
+                                          width: 160,
+                                          height: 100,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.4)),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                Image.network(
+                                                  screenshotUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const Center(
+                                                    child: Text('Invalid Image', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  bottom: 4,
+                                                  right: 4,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black70,
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: const Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                        ))
-                                    .toList(),
-                                onChanged: (newStatus) {
-                                  if (newStatus != null) {
-                                    BetaFeedbackService.updateFeedbackStatus(
-                                        id, newStatus);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Route & Email
-                          Text(
-                            'User: $email | Route: $route',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Ratings
-                          Text(
-                            'Ratings: Ease ⭐${ratings['ease_of_use'] ?? 5} | Fun ⭐${ratings['fun_value'] ?? 5} | Utility ⭐${ratings['utility_value'] ?? 5}',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Attached Screenshot',
+                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Tap image to enlarge',
+                                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          OutlinedButton.icon(
+                                            onPressed: () async {
+                                              final uri = Uri.parse(screenshotUrl);
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri);
+                                              }
+                                            },
+                                            icon: const Icon(Icons.open_in_new, size: 14, color: Colors.blueAccent),
+                                            label: const Text('Open External', style: TextStyle(fontSize: 11, color: Colors.blueAccent)),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 10),
-
-                          // Comment
-                          if (comment.isNotEmpty)
-                            Text(
-                              comment,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 14),
-                            ),
-
-                          // Screenshot Link
-                          if (screenshotUrl != null && screenshotUrl.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () async {
-                                final uri = Uri.parse(screenshotUrl);
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
-                                }
-                              },
-                              icon: const Icon(Icons.image,
-                                  size: 16, color: Colors.blueAccent),
-                              label: const Text(
-                                'View Screenshot',
-                                style: TextStyle(
-                                    color: Colors.blueAccent, fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         );
@@ -324,8 +557,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                           backgroundColor: Colors.blueAccent,
                         ),
                         icon: const Icon(Icons.person_add, color: Colors.white),
-                        label: const Text('Add Beta Tester',
-                            style: TextStyle(color: Colors.white)),
+                        label: const Text('Add Beta Tester', style: TextStyle(color: Colors.white)),
                         onPressed: () async {
                           final email = _testerEmailController.text.trim();
                           if (email.isNotEmpty) {
@@ -336,9 +568,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                             _testerEmailController.clear();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'Granted Beta Tester status to $email')),
+                                SnackBar(content: Text('Granted Beta Tester status to $email')),
                               );
                             }
                           }
@@ -352,10 +582,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
 
               const Text(
                 'Active Testers List',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
@@ -369,10 +596,8 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
 
                     return ListTile(
                       tileColor: const Color(0xFF1E293B),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      title: Text(email,
-                          style: const TextStyle(color: Colors.white)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      title: Text(email, style: const TextStyle(color: Colors.white)),
                       trailing: Switch(
                         value: isBeta,
                         activeColor: Colors.blueAccent,

@@ -294,6 +294,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Admin: Grade Flags':
         return const AdminGradeFlagsScreen();
       case 'Admin: Beta Dashboard':
+      case 'Beta Feedback Inbox':
         return const AdminFeedbackScreen();
       case 'Customer Service':
         return const CustomerServiceScreen();
@@ -566,11 +567,26 @@ class _BaseLayoutState extends State<BaseLayout> {
 
                         const _SidebarSectionHeader(title: 'AI TRAINING'),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
-                        // Admin-only: Grade Flag Dashboard
+                        // Admin-only: Grade Flag & Beta Feedback Inbox
                         if (email == 'jseaman1204@gmail.com' ||
-                            email.endsWith('@numista.ai'))
+                            email.endsWith('@numista.ai')) ...[
                           _buildNavItem('Admin Grade Flags',
                               icon: Icons.admin_panel_settings_outlined),
+                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseFirestore.instance
+                                .collection('beta_feedback')
+                                .where('status', isEqualTo: 'OPEN')
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              final openCount = snapshot.data?.docs.length ?? 0;
+                              return _buildNavItem(
+                                'Beta Feedback Inbox',
+                                icon: Icons.rate_review_outlined,
+                                badgeCount: openCount,
+                              );
+                            },
+                          ),
+                        ],
 
                         const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
                         _buildNavItem('Error Library', icon: Icons.bug_report_outlined),

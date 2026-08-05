@@ -31,12 +31,47 @@ def generate_qr_code_image(data: str, size: int = 150) -> io.BytesIO:
     buffer.seek(0)
     return buffer
 
+def scrub_item_payload(items: List[Dict[str, Any]], privacy_toggles: Dict[str, bool]) -> List[Dict[str, Any]]:
+    """
+    Sanitizes item records on the server according to sender privacy toggles.
+    Missing toggles default to True (scrubbed) for defense-in-depth safety.
+    """
+    if not privacy_toggles:
+        privacy_toggles = {}
+
+    hide_cost = privacy_toggles.get('hide_cost_basis', True)
+    hide_notes = privacy_toggles.get('hide_private_notes', True)
+    hide_location = privacy_toggles.get('hide_storage_location', True)
+    hide_invoices = privacy_toggles.get('hide_invoices', True)
+
+    sanitized_items = []
+    for itm in items:
+        clean = dict(itm)
+        if hide_cost:
+            for k in ['purchaseCost', 'purchase_cost', 'Purchase Cost', 'purchaseDate', 'purchase_date', 'Purchase Date', 'cost_basis', 'acquisition_value', 'financial_records']:
+                clean.pop(k, None)
+        if hide_notes:
+            for k in ['personalNotes', 'personal_notes', 'Personal Notes I', 'personalRef', 'personal_ref', 'Personal Reference #', 'private_notes']:
+                clean.pop(k, None)
+        if hide_location:
+            for k in ['storageLocation', 'storage_location', 'Storage Location', 'safe_box_number', 'bin_location', 'vault_tags']:
+                clean.pop(k, None)
+        if hide_invoices:
+            for k in ['retailer', 'retailerItemNo', 'retailerInvoiceNo', 'Retailer Invoice #', 'receipt_id', 'receiptGcsPath', 'paper_trail']:
+                clean.pop(k, None)
+        sanitized_items.append(clean)
+    return sanitized_items
+
 def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     """
     Generates a 2-page PDF containing:
     Page 1: 8.5x11" Formal Estate Certificate of Transfer
     Page 2: 3x5" Cut-Out Passcard for Coin Flip / Storage Bin
     """
+    privacy_toggles = transfer_data.get("privacy_toggles", {})
+    raw_items = transfer_data.get("items", [])
+    items = scrub_item_payload(raw_items, privacy_toggles)
+
     pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         pdf_buffer,
