@@ -729,6 +729,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Add New Coins',
             'My Wishlist',
             'Estate Planning',
+            'Attorney Portal',
+            'Lateral Transfer',
             'AI Deepdive',
             'Human AI Trainer Review Board',
             'AI Trainer Board',

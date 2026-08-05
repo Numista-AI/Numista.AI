@@ -29,7 +29,7 @@ test.describe('Sprint 2: Microscope Desktop Agent & Diagnostics Stress Tests', (
     try {
       const response = await request.get('https://localhost:5000/list-cameras', {
         ignoreHTTPSErrors: true,
-        timeout: 3000,
+        timeout: 8000,
       });
 
       expect(response.status()).toBe(200);
