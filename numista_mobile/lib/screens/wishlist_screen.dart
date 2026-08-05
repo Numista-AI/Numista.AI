@@ -1111,7 +1111,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('public_wishlists')
-          .where('owner_email', '==', userEmail)
+          .where('owner_email', isEqualTo: userEmail)
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {

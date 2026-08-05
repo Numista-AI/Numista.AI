@@ -77,7 +77,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
         'reserved_items': _reservedIndices.toList(),
       };
       if (!isReserved && buyerName != null && buyerName.isNotEmpty) {
-        payload['reservation_details.${index}'] = {
+        payload['reservation_details.$index'] = {
           'reserved_by': buyerName,
           'reserved_at': DateTime.now().toIso8601String(),
         };
