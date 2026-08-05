@@ -1002,10 +1002,16 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               ),
               const SizedBox(width: 16),
               TextButton.icon(
-                onPressed: () => setState(() {
-                  _savedOk = false;
-                  _savedFirestoreId = null;
-                }),
+                onPressed: () {
+                  setState(() {
+                    _savedOk = false;
+                    _savedFirestoreId = null;
+                  });
+                  final activeGuide = MorganGuideService.current.value;
+                  if (activeGuide?.guide.id == 'guide_microscope') {
+                    MorganGuideService.goToStep(2);
+                  }
+                },
                 icon: const Icon(Icons.refresh, size: 18, color: _charcoal),
                 label: const Text('Discard & Rescan',
                     style: TextStyle(color: _charcoal)),

@@ -152,6 +152,13 @@ class MorganGuideService {
     current.value = s.copyWith(step: s.step - 1);
   }
 
+  static void goToStep(int targetStep) {
+    final s = current.value;
+    if (s == null) return;
+    final clamped = targetStep.clamp(0, s.guide.steps.length - 1);
+    current.value = s.copyWith(step: clamped);
+  }
+
   static void exit() => current.value = null;
 
   static void toggleCollapsed() {
