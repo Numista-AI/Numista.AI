@@ -444,7 +444,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                                   child: Container(
                                                     padding: const EdgeInsets.all(4),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.black70,
+                                                      color: Colors.black54,
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
                                                     child: const Icon(Icons.zoom_in, color: Colors.white, size: 14),
