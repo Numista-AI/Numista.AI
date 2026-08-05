@@ -405,9 +405,8 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
           const Divider(color: Color(0xFF1E3A5F), height: 1),
           const SizedBox(height: 10),
 
@@ -585,7 +584,8 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
           ),
         ],
       ),
-    );
+    ),
+  );
 
     // ── Attach directional arrow ───────────────────────────────────────────
     Widget content;
