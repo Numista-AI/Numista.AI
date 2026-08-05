@@ -186,6 +186,10 @@ jseaman_unresolved_coins.csv
 **/missing_images_log.csv
 
 
+# SSL certificates & private keys
+*.key
+*.pem
+
 # Scratch search output
 pin_matches.txt
 search_output.txt

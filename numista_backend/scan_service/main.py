@@ -36,6 +36,7 @@ POST /generate_estate_report
 """
 
 import asyncio
+import hashlib
 import logging
 import os
 import json

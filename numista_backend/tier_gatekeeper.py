@@ -17,7 +17,9 @@ PROJECT_ID = "studio-9101802118-8c9a8"
 if not firebase_admin._apps:
     # Resolve the local path for the service account key.
     # On Cloud Run, we fall back to Application Default Credentials (ADC).
-    sa_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json.json")
+    sa_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
+    if not os.path.exists(sa_path):
+        sa_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json.json")
     if os.path.exists(sa_path):
         cred = credentials.Certificate(sa_path)
         firebase_admin.initialize_app(cred, {

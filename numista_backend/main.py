@@ -909,19 +909,58 @@ def read_root():
 
 @app.get("/api/spot_prices")
 def get_live_metal_prices():
+    """
+    Returns live metal spot prices with a 15-minute Firestore TTL cache.
+    Prevents yfinance rate-limiting bottlenecks across container recycles.
+    """
+    now = time.time()
+    cache_ttl = 900  # 15 minutes
+    
+    # 1. Check Firestore cache first
+    try:
+        cache_ref = db.collection("config").document("spot_prices")
+        cache_doc = cache_ref.get()
+        if cache_doc.exists:
+            cache_data = cache_doc.to_dict() or {}
+            last_updated = cache_data.get("updated_at", 0)
+            if (now - last_updated) < cache_ttl and "prices" in cache_data:
+                return cache_data["prices"]
+    except Exception as ce:
+        logger.warning(f"Failed to read spot price cache from Firestore: {ce}")
+
+    # 2. Fetch fresh prices via yfinance
     try:
         gold = yf.Ticker("GC=F").fast_info.last_price
         silver = yf.Ticker("SI=F").fast_info.last_price
         plat = yf.Ticker("PL=F").fast_info.last_price
         pall = yf.Ticker("PA=F").fast_info.last_price
-        return {
+        
+        prices = {
             "Gold": float(gold) if gold else 3100.0,
             "Silver": float(silver) if silver else 35.0,
             "Platinum": float(plat) if plat else 1000.0,
             "Palladium": float(pall) if pall else 1000.0
         }
+        
+        # Save to Firestore cache
+        try:
+            db.collection("config").document("spot_prices").set({
+                "prices": prices,
+                "updated_at": now
+            })
+        except Exception as se:
+            logger.warning(f"Failed to save spot price cache to Firestore: {se}")
+
+        return prices
     except Exception as e:
-        logger.exception("Error fetching metals")
+        logger.exception("Error fetching fresh metal prices from yfinance")
+        # Try to return cached prices even if expired
+        try:
+            cache_doc = db.collection("config").document("spot_prices").get()
+            if cache_doc.exists and "prices" in cache_doc.to_dict():
+                return cache_doc.to_dict()["prices"]
+        except Exception:
+            pass
         return {"Gold": 3100.0, "Silver": 35.0, "Platinum": 1000.0, "Palladium": 1000.0}
 
 
@@ -938,7 +977,7 @@ def get_live_metal_prices():
 # The Numista API key is the same one already used in scripts/fetch_numista_coins.py.
 # Text search is FREE -- no per-request charges.
 
-NUMISTA_API_KEY    = "ExpST6TaGRDXkcEt6QajYJ0Lj76JZ8oqBPPpWhe"
+NUMISTA_API_KEY    = os.environ.get("NUMISTA_API_KEY", "")
 NUMISTA_SEARCH_URL = "https://api.numista.com/v3/types"
 
 # Confidence threshold below which we show the AI-estimate disclaimer
@@ -10205,24 +10244,46 @@ async def api_stripe_checkout(req: StripeCheckoutRequest):
 async def api_stripe_customer_portal(user_email: str):
     """
     Generates a self-serve Stripe Customer Portal session link for plan management.
+    Resolves real Stripe Customer ID from Firestore or creates one dynamically in Stripe.
     """
     try:
+        stripe_customer_id = None
+        user_doc_ref = db.collection("users").document(user_email)
+        user_doc = user_doc_ref.get()
+        if user_doc.exists:
+            stripe_customer_id = (user_doc.to_dict() or {}).get("stripe_customer_id")
+        
+        # If no customer ID in Firestore, search or create in Stripe
+        if not stripe_customer_id and stripe.api_key:
+            existing = stripe.Customer.list(email=user_email, limit=1)
+            if existing.data:
+                stripe_customer_id = existing.data[0].id
+            else:
+                new_cust = stripe.Customer.create(email=user_email)
+                stripe_customer_id = new_cust.id
+            user_doc_ref.set({"stripe_customer_id": stripe_customer_id}, merge=True)
+
+        if not stripe_customer_id:
+            stripe_customer_id = f"cus_mock_{hash(user_email) & 0xffffffff}"
+
         portal_session = stripe.billing_portal.Session.create(
-            customer=f"cus_mock_{hash(user_email) & 0xffffffff}",
+            customer=stripe_customer_id,
             return_url="https://numista.ai/#/settings"
         )
         return {"portal_url": portal_session.url}
     except Exception as e:
+        logger.exception("Failed to generate Stripe Customer Portal session")
         return {"portal_url": "https://billing.stripe.com/p/login/mock_portal", "note": "Stripe test mode fallback"}
 
 @app.post("/api/stripe/webhook")
 async def api_stripe_webhook(request: Request):
     """
-    Handles Stripe webhooks with signature verification and Firestore idempotency checks.
+    Handles Stripe webhooks with mandatory signature verification in production and Firestore idempotency checks.
     """
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
     
     event = None
     if webhook_secret:
@@ -10234,6 +10295,10 @@ async def api_stripe_webhook(request: Request):
             logger.error(f"Stripe webhook signature verification failed: {e}")
             raise HTTPException(status_code=400, detail="Invalid signature")
     else:
+        if is_prod:
+            logger.error("[CRITICAL] Stripe webhook rejected: STRIPE_WEBHOOK_SECRET is not configured in production!")
+            raise HTTPException(status_code=400, detail="Stripe webhook secret is missing")
+        logger.warning("[DEV MODE] STRIPE_WEBHOOK_SECRET not set; parsing unverified JSON payload.")
         try:
             event = json.loads(payload.decode('utf-8'))
         except Exception:
@@ -10250,26 +10315,31 @@ async def api_stripe_webhook(request: Request):
     event_type = event.get("type", "")
     data_obj = event.get("data", {}).get("object", {})
     customer_email = data_obj.get("customer_email") or data_obj.get("email")
+    stripe_customer_id = data_obj.get("customer")
 
     # 2. Process Subscription Events
     if customer_email:
         user_doc_ref = db.collection("users").document(customer_email)
+        update_payload = {
+            "updated_at": time.time()
+        }
+        if stripe_customer_id:
+            update_payload["stripe_customer_id"] = stripe_customer_id
+
         if event_type == "checkout.session.completed":
-            user_doc_ref.set({
-                "subscription": {
-                    "tier": "estate" if data_obj.get("amount_total") == 2900 else "pro",
-                    "status": "active",
-                    "updated_at": datetime.utcnow().isoformat()
-                }
-            }, merge=True)
+            update_payload["subscription"] = {
+                "tier": "estate" if data_obj.get("amount_total") == 2900 else "pro",
+                "status": "active",
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            user_doc_ref.set(update_payload, merge=True)
         elif event_type in ["customer.subscription.deleted", "invoice.payment_failed"]:
-            user_doc_ref.set({
-                "subscription": {
-                    "tier": "free",
-                    "status": "canceled" if event_type == "customer.subscription.deleted" else "past_due",
-                    "updated_at": datetime.utcnow().isoformat()
-                }
-            }, merge=True)
+            update_payload["subscription"] = {
+                "tier": "free",
+                "status": "canceled" if event_type == "customer.subscription.deleted" else "past_due",
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            user_doc_ref.set(update_payload, merge=True)
 
     # 3. Mark Event Processed
     event_ref.set({"processed_at": datetime.utcnow().isoformat(), "type": event_type})
