@@ -14,6 +14,15 @@ _scripts/
 _archive/
 app.py
 
+# Sensitive secrets and keys
+.env
+.env.*
+serviceAccountKey*.json
+ebay_token.txt
+*.log
+scratch/
+error_logs/
+
 # Development/test files
 *.md
 tests/

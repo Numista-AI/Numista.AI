@@ -17,7 +17,9 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 PROJECT_ID       = "studio-9101802118-8c9a8"
-CREDENTIALS_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json.json"
+CREDENTIALS_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json"
+if not os.path.exists(CREDENTIALS_FILE):
+    CREDENTIALS_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json.json"
 TARGET_USERS     = ["eric@numista.ai", "jseaman1204@gmail.com"]
 
 def is_empty(val) -> bool:
