@@ -152,6 +152,13 @@ class MorganGuideService {
     current.value = s.copyWith(step: s.step - 1);
   }
 
+  static void goToStep(int targetStep) {
+    final s = current.value;
+    if (s == null) return;
+    final clamped = targetStep.clamp(0, s.guide.steps.length - 1);
+    current.value = s.copyWith(step: clamped);
+  }
+
   static void exit() => current.value = null;
 
   static void toggleCollapsed() {
@@ -316,37 +323,39 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
     final total  = state.guide.steps.length;
     final isLast = state.step == total - 1;
 
-    // ── Bubble card ───────────────────────────────────────────────────────
-    final bubble = Container(
-      width: 300,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: MorganGuidePanel.bg,
-        borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: MorganGuidePanel.gold.withAlpha(70), width: 1),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withAlpha(120),
-              blurRadius: 16,
-              offset: const Offset(0, 4)),
-          BoxShadow(
-              color: MorganGuidePanel.teal.withAlpha(15), blurRadius: 12),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    final bubble = GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanUpdate: (d) => setState(() {
+        _userHasDragged = true;
+        final size = MediaQuery.of(context).size;
+        final nextDx = (_dragDelta.dx + d.delta.dx).clamp(-size.width * 0.7, size.width * 0.7);
+        final nextDy = (_dragDelta.dy + d.delta.dy).clamp(-size.height * 0.7, size.height * 0.7);
+        _dragDelta = Offset(nextDx, nextDy);
+      }),
+      child: Container(
+        width: 300,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: MorganGuidePanel.bg,
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: MorganGuidePanel.gold.withAlpha(70), width: 1),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withAlpha(120),
+                blurRadius: 16,
+                offset: const Offset(0, 4)),
+            BoxShadow(
+                color: MorganGuidePanel.teal.withAlpha(15), blurRadius: 12),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
 
-          // ── Header: drag handle + avatar + title + dots + collapse ─────
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanUpdate: (d) => setState(() {
-              _userHasDragged = true;
-              _dragDelta += d.delta;
-            }),
-            child: Row(
+            // ── Header: drag handle + avatar + title + dots + collapse ─────
+            Row(
               children: [
                 // Drag handle — visual cue that the bubble is movable
                 const Tooltip(
@@ -403,9 +412,8 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
           const Divider(color: Color(0xFF1E3A5F), height: 1),
           const SizedBox(height: 10),
 
@@ -583,7 +591,8 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
           ),
         ],
       ),
-    );
+    ),
+  );
 
     // ── Attach directional arrow ───────────────────────────────────────────
     Widget content;

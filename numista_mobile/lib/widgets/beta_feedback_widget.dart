@@ -26,7 +26,9 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
   Uint8List? _capturedScreenshot;
   String _selectedCategory = 'UI / Layout Suggestion';
   int _easeOfUse = 5;
-  int _funRating = 5;
+  int _accuracyRating = 5;
+  int _aestheticsRating = 5;
+  int _satisfactionRating = 5;
   int _utilityRating = 5;
   final TextEditingController _commentController = TextEditingController();
 
@@ -57,14 +59,6 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
             setState(() {
               _capturedScreenshot = byteData.buffer.asUint8List();
             });
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Screenshot captured successfully!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
           }
         }
       }
@@ -73,7 +67,12 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
     }
   }
 
-  void _openFeedbackModal(BuildContext context) {
+  Future<void> _openFeedbackModal(BuildContext context) async {
+    // Auto capture current screen state before launching bottom sheet overlay
+    await _captureScreen();
+
+    if (!context.mounted) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -203,7 +202,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Ratings Sliders
+                    // Ratings Sliders (5 Tailored Dimensions)
                     _buildStarRatingRow(
                       label: 'Ease of Use',
                       rating: _easeOfUse,
@@ -211,9 +210,21 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                     ),
                     const SizedBox(height: 8),
                     _buildStarRatingRow(
-                      label: 'Fun & Entertainment',
-                      rating: _funRating,
-                      onChanged: (r) => setModalState(() => _funRating = r),
+                      label: 'AI Accuracy & Speed',
+                      rating: _accuracyRating,
+                      onChanged: (r) => setModalState(() => _accuracyRating = r),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStarRatingRow(
+                      label: 'Design & Visual Aesthetics',
+                      rating: _aestheticsRating,
+                      onChanged: (r) => setModalState(() => _aestheticsRating = r),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStarRatingRow(
+                      label: 'Overall Satisfaction',
+                      rating: _satisfactionRating,
+                      onChanged: (r) => setModalState(() => _satisfactionRating = r),
                     ),
                     const SizedBox(height: 8),
                     _buildStarRatingRow(
@@ -266,7 +277,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                           ),
                           label: Text(
                             _capturedScreenshot != null
-                                ? 'Screenshot Attached'
+                                ? 'Screenshot Attached (${(_capturedScreenshot!.length / 1024).toStringAsFixed(0)} KB)'
                                 : 'Attach Screenshot',
                             style: TextStyle(
                               color: _capturedScreenshot != null
@@ -306,7 +317,9 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                                   pageTitle: widget.pageTitle,
                                   category: _selectedCategory,
                                   easeOfUseRating: _easeOfUse,
-                                  funRating: _funRating,
+                                  accuracyRating: _accuracyRating,
+                                  aestheticsRating: _aestheticsRating,
+                                  satisfactionRating: _satisfactionRating,
                                   utilityRating: _utilityRating,
                                   comment: _commentController.text.trim(),
                                   screenshotBytes: _capturedScreenshot,

@@ -8,7 +8,9 @@ class BetaFeedbackPayload {
   final String pageTitle;
   final String category;
   final int easeOfUseRating;
-  final int funRating;
+  final int accuracyRating;
+  final int aestheticsRating;
+  final int satisfactionRating;
   final int utilityRating;
   final String comment;
   final Uint8List? screenshotBytes;
@@ -19,7 +21,9 @@ class BetaFeedbackPayload {
     required this.pageTitle,
     required this.category,
     required this.easeOfUseRating,
-    required this.funRating,
+    this.accuracyRating = 5,
+    this.aestheticsRating = 5,
+    this.satisfactionRating = 5,
     required this.utilityRating,
     required this.comment,
     this.screenshotBytes,
@@ -58,7 +62,9 @@ class BetaFeedbackService {
         'category': payload.category,
         'ratings': {
           'ease_of_use': payload.easeOfUseRating,
-          'fun_value': payload.funRating,
+          'ai_accuracy_speed': payload.accuracyRating,
+          'design_aesthetics': payload.aestheticsRating,
+          'overall_satisfaction': payload.satisfactionRating,
           'utility_value': payload.utilityRating,
         },
         'comment': payload.comment,
