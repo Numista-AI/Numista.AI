@@ -8,6 +8,15 @@
 
 
 
+
+## v4.2 — 2026-08-05
+**Desktop Beta Enhancements & COA Validation Engine**
+
+- COA Inspector Mintage Ceiling Validation: 3-state verdict chip and serial regex sanitization
+- Program Manager Dual Filters: geographical mint mark and finish/strike responsive Wrap chips
+- Security-Compliant Wishlist Gift Reservations: top-level public wishlist writes and real-time family activity stream
+- Beta Feedback File Attachment: image upload, removal toggle, and open feedback counter badge
+
 ## v4.1 — 2026-07-30
 **Greysheet Valuation, Bulk Upload & System Resilience**
 

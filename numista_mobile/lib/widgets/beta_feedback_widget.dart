@@ -270,7 +270,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                             }
                             if (_capturedScreenshot == null) {
                               try {
-                                final result = await FilePicker.platform.pickFiles(
+                                final result = await FilePicker.pickFiles(
                                   type: FileType.image,
                                   withData: true,
                                 );
