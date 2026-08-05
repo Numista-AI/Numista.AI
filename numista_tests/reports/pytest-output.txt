@@ -6,20 +6,20 @@ plugins: anyio-4.13.0
 [32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
 collected 24 items
 
-tests\test_deal_spotter.py ..[32mINFO   [0m [main] [92a41a1c] GET /api/wishlist/deals/test@numista.ai -> 200 (7ms)
-[32mINFO   [0m [main] [cc1da84c] POST /api/wishlist/deals/check -> 200 (3ms)
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [1bdfd5c7] GET /api/wishlist/deals/test@numista.ai -> 200 (3ms)
+[32mINFO   [0m [main] [9c53edfc] POST /api/wishlist/deals/check -> 200 (1ms)
 .
-tests\test_greysheet.py [32mINFO   [0m [main] [3e9665d9] POST /api/greysheet/resolve -> 200 (2ms)
-.[32mINFO   [0m [main] [0ce5243b] POST /api/greysheet/resolve -> 200 (1ms)
-.[32mINFO   [0m [main] [816fa510] GET /api/greysheet/pricing/429 -> 200 (10ms)
-.[32mINFO   [0m [main] [7f0cba1c] GET /api/greysheet/deals -> 200 (1ms)
-[32mINFO   [0m [main] [d2ffbff5] POST /api/greysheet/deals/refresh -> 200 (1ms)
-.[32mINFO   [0m [main] [e8e15775] POST /api/portfolio/snapshot/daily -> 200 (2ms)
-..[32mINFO   [0m [main] [10392e22] GET /api/greysheet/quota -> 200 (3ms)
+tests\test_greysheet.py [32mINFO   [0m [main] [afab98de] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [a5d5bf52] POST /api/greysheet/resolve -> 200 (1ms)
+.[32mINFO   [0m [main] [0cc31703] GET /api/greysheet/pricing/429 -> 200 (6ms)
+.[32mINFO   [0m [main] [7568b1eb] GET /api/greysheet/deals -> 200 (1ms)
+[32mINFO   [0m [main] [b42c184e] POST /api/greysheet/deals/refresh -> 200 (1ms)
+.[32mINFO   [0m [main] [64f61ef5] POST /api/portfolio/snapshot/daily -> 200 (2ms)
+..[32mINFO   [0m [main] [803873b7] GET /api/greysheet/quota -> 200 (3ms)
 ..
-tests\test_ingestion.py [32mINFO   [0m [main] [21764594] GET /api/ingestion/jobs -> 200 (1ms)
-.[32mINFO   [0m [main] [b7274de6] POST /api/ingestion/batch_async -> 200 (3ms)
-[32mINFO   [0m [main] [334bf1e8] GET /api/ingestion/status/job_f0532130 -> 200 (1ms)
+tests\test_ingestion.py [32mINFO   [0m [main] [ca586c4b] GET /api/ingestion/jobs -> 200 (1ms)
+.[32mINFO   [0m [main] [443c759d] POST /api/ingestion/batch_async -> 200 (2ms)
+[32mINFO   [0m [main] [9525b914] GET /api/ingestion/status/job_d1a7bac5 -> 200 (1ms)
 .
 tests\test_proxy_bandwidth.py .....
 tests\test_transfer.py ..
@@ -39,4 +39,4 @@ tests/test_greysheet.py::test_daily_snapshot_endpoint
     response_snapshot["timestamp"] = datetime.utcnow().isoformat()
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================= 24 passed, 3 warnings in 7.04s ========================
+======================= 24 passed, 3 warnings in 4.39s ========================
