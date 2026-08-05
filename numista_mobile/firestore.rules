@@ -95,6 +95,13 @@ service cloud.firestore {
       allow write: if false; // Only agent (SA) writes
     }
 
+    // ── Beta Feedback (testers can create documents; admin reads via SA) ──────
+    match /beta_feedback/{feedbackId} {
+      allow create: if request.auth != null
+                   || (request.resource.data.keys().hasAll(['ratings', 'comment', 'created_at']));
+      allow read, update, delete: if false;
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

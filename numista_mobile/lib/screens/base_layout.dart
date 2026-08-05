@@ -48,6 +48,7 @@ class BaseLayout extends StatefulWidget {
 }
 
 class _BaseLayoutState extends State<BaseLayout> {
+  final GlobalKey _repaintKey = GlobalKey();
   String _activeRoute = 'Home Dashboard';
   String _myCollectionTab = 'All';
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
@@ -347,18 +348,21 @@ class _BaseLayoutState extends State<BaseLayout> {
       body: SafeArea(
         child: Stack(
           children: [
-            Column(
-              children: [
-                if (GuestSeedService.isBrowseDemoMode)
-                  _DemoBanner(onTryFree: () {
-                    GuestSeedService.deactivateBrowseDemo();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  }),
-                if (AuthService.isGuest) _GuestBanner(),
-                Expanded(child: _buildBody()),
-              ],
+            RepaintBoundary(
+              key: _repaintKey,
+              child: Column(
+                children: [
+                  if (GuestSeedService.isBrowseDemoMode)
+                    _DemoBanner(onTryFree: () {
+                      GuestSeedService.deactivateBrowseDemo();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    }),
+                  if (AuthService.isGuest) _GuestBanner(),
+                  Expanded(child: _buildBody()),
+                ],
+              ),
             ),
             WizardOverlay(
               onCreateAccount: () {
@@ -378,6 +382,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             BetaFeedbackWidget(
               currentRoute: _activeRoute,
               pageTitle: _activeRoute,
+              repaintKey: _repaintKey,
             ),
           ],
         ),

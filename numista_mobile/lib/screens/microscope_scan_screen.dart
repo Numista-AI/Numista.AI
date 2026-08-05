@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/pcgs_service.dart';
 import '../services/reference_library_service.dart';
 import 'desktop_agent_download_screen.dart';
+import '../widgets/morgan_guide_flow.dart';
 
 
 // ─── Design Tokens (matches inventory_gallery.dart) ───────────────────────────
@@ -108,7 +109,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
         if (status.isScanComplete) {
           _pollTimer?.cancel();
           // Trigger reference library fetch on first completion
-          if (!wasComplete) _fetchSimilarCoins(status);
+          if (!wasComplete) {
+            _fetchSimilarCoins(status);
+            final activeGuide = MorganGuideService.current.value;
+            if (activeGuide?.guide.id == 'guide_microscope') {
+              MorganGuideService.next();
+            }
+          }
         }
       }
     });
@@ -902,13 +909,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                 fontWeight: FontWeight.w800),
           ),
           const Divider(height: 24),
-          _buildResultRow('Year', report['year']?.toString() ?? '—'),
-          _buildResultRow('Country', report['country']?.toString() ?? '—'),
-          _buildResultRow('Denomination', report['denomination']?.toString() ?? '—'),
-          _buildResultRow('Mint Mark', report['mint_mark']?.toString() ?? '—'),
-          _buildResultRow('Series', report['program_series']?.toString() ?? '—'),
-          _buildResultRow('Theme', report['theme_subject']?.toString() ?? '—'),
-          _buildResultRow('Grade', report['grade']?.toString() ?? '—'),
+          _buildResultRow('Year', (report['year'] ?? report['Year'] ?? report['date'] ?? report['Date'])?.toString() ?? '—'),
+          _buildResultRow('Country', report['country']?.toString() ?? report['Country']?.toString() ?? '—'),
+          _buildResultRow('Denomination', report['denomination']?.toString() ?? report['Denomination']?.toString() ?? '—'),
+          _buildResultRow('Mint Mark', report['mint_mark']?.toString() ?? report['Mint Mark']?.toString() ?? '—'),
+          _buildResultRow('Series', report['program_series']?.toString() ?? report['Program/Series']?.toString() ?? '—'),
+          _buildResultRow('Theme', report['theme_subject']?.toString() ?? report['Theme/Subject']?.toString() ?? '—'),
+          _buildResultRow('Grade', report['grade']?.toString() ?? report['Condition']?.toString() ?? '—'),
           _buildResultRow('File ID', report['file_slug']?.toString() ?? '—'),
 
           // ── Silver / Metal Intelligence Banner ──────────────────────────
@@ -954,11 +961,24 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           const SizedBox(height: 8),
           TextField(
             controller: _locationCtrl,
+            style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: 'e.g., Safe Box 1, Album C...',
+              hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               filled: true,
-              fillColor: Colors.black.withValues(alpha: 0.03),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: _electricBlue, width: 2),
+              ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
@@ -1007,7 +1027,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
         ? const Color(0xFFB0BEC5).withValues(alpha: 0.6)
         : _charcoal.withValues(alpha: 0.15);
     final accentColor = isSilver ? const Color(0xFF78909C) : _charcoal;
-    final badgeColor  = isSilver ? const Color(0xFF546E7A) : const Color(0xFF9E9E9E);
+    final badgeColor  = const Color(0xFF546E7A);
 
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 4),
@@ -1022,36 +1042,36 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Verdict badge ──────────────────────────────────────────────
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isSilver ? '🥈' : '🔵',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isSilver ? 'SILVER COIN' : 'NOT SILVER',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          letterSpacing: 1.0,
+            // ── Verdict badge (ONLY rendered for Silver coins) ────────────────
+            if (isSilver) ...[
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '🥈',
+                          style: TextStyle(fontSize: 16),
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 6),
+                        Text(
+                          'SILVER COIN',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (isSilver) ...[ 
                   const SizedBox(width: 10),
                   Text(
                     'Worth more than face value!',
@@ -1062,9 +1082,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                     ),
                   ),
                 ],
-              ],
-            ),
-            const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // ── Metal content ──────────────────────────────────────────────
             if (data.metalContent.isNotEmpty && data.metalContent != 'Unknown') ...[
