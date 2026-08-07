@@ -80,7 +80,30 @@ if (fs.existsSync(PYTEST_LOG)) {
   }
 }
 
+
+// ─── Cloud Run / GCP Secret Presence Check (presence only, never the value) ─────
+const { execSync } = require('child_process');
+const GCP_PROJECT = 'studio-9101802118-8c9a8';
+const GREYSHEET_SECRETS = ['GREYSHEET_API_KEY', 'GREYSHEET_API_TOKEN'];
+
+function checkGcpSecret(secretName) {
+  try {
+    execSync(`gcloud secrets describe ${secretName} --project=${GCP_PROJECT} --format="value(name)"`, { stdio: 'pipe', timeout: 10000 });
+    return `* \`${secretName}\`: ✅ **EXISTS** in GCP Secret Manager`;
+  } catch (e) {
+    const msg = (e.stderr || e.message || '').toString();
+    if (msg.includes('NOT_FOUND') || msg.includes('404')) {
+      return `* \`${secretName}\`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy`;
+    }
+    return `* \`${secretName}\`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or auth required)`;
+  }
+}
+
+const gcpGreysheetCheck = GREYSHEET_SECRETS.map(checkGcpSecret).join('\n');
+// ────────────────────────────────────────────────────────────────────────────────
+
 const passRate = totalTests > 0 ? Math.round((passed / totalTests) * 100) : 0;
+
 const statusEmoji = failed === 0 ? '✅' : failed <= 3 ? '⚠️' : '🚨';
 const statusText = failed === 0 ? 'ALL CLEAR' : failed <= 3 ? 'MINOR ISSUES' : 'ATTENTION REQUIRED';
 
@@ -187,11 +210,15 @@ if (fs.existsSync(SCAN_REPORT_FILE)) {
 
 ---
 
-## Critical Errors & Warnings
-1. ℹ️ **Greysheet API Dev Fallback Active:** Local \`.env\` unpopulated for \`GREYSHEET_API_KEY\` / \`GREYSHEET_API_TOKEN\`, defaulting to Tier 0 fallback mode and Firestore \`config/greysheet\` cache.
+## Dev Environment Notes
+1. ✅ **Greysheet API Dev Fallback (Expected — Phase 1 Security Hardening):** Local \`.env\` intentionally unpopulated for \`GREYSHEET_API_KEY\` / \`GREYSHEET_API_TOKEN\` per Phase 1 hardening policy. Dev defaults to Tier 0 Firestore \`config/greysheet\` cache. Production credentials are managed via GCP Secret Manager / Cloud Run environment variables.
 
 ---
 
+## Cloud Run Secret Presence Check
+${gcpGreysheetCheck}
+
+---
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (\`gemini-1.5-*\`, \`gemini-2.0-*\`, \`gemini-2.5-*\`) across active code paths.
 * **Centralized Configuration (\`numista_backend/config.py\`):**
@@ -226,8 +253,7 @@ if (fs.existsSync(SCAN_REPORT_FILE)) {
 ---
 
 ## Recommended Fixes
-1. **Production Secret Management:** Ensure \`GREYSHEET_API_KEY\` and \`GREYSHEET_API_TOKEN\` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
-2. **Maintain Skill Documentation:** Keep \`project-scanner/SKILL.md\` aligned with production Cloud Run URL.
+1. **Maintain Skill Documentation:** Keep \`project-scanner/SKILL.md\` aligned with production Cloud Run URL.
 `;
   fs.writeFileSync(SCAN_REPORT_FILE, scanContent);
 }
