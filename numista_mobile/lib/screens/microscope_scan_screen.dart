@@ -401,7 +401,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               ),
               OutlinedButton.icon(
                 onPressed: () async {
-                  final res = await capturePhotoPlatform(context);
+                  final res = await CameraCaptureService.capturePhoto(context);
                   if (res != null && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
