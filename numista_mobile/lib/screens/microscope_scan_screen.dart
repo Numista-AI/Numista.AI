@@ -8,6 +8,7 @@ import '../services/hardware_service.dart';
 import '../services/auth_service.dart';
 import '../services/pcgs_service.dart';
 import '../services/reference_library_service.dart';
+import '../services/camera_capture_service.dart';
 import 'desktop_agent_download_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
 
@@ -367,36 +368,70 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           ),
           const SizedBox(height: 20),
 
-          // Download button
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const DesktopAgentDownloadScreen(showBack: true),
+          // Action buttons: Download Desktop Agent & WebRTC Browser Camera Fallback
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const DesktopAgentDownloadScreen(showBack: true),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Download Desktop Agent',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
                 ),
-              );
-            },
-            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
-            label: const Text(
-              'Download Desktop Agent',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _electricBlue,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              elevation: 3,
-            ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _electricBlue,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  elevation: 3,
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final res = await CameraCaptureService.capturePhoto(context);
+                  if (res != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: _successGreen,
+                        content: Text('Webcam frame captured successfully!'),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.videocam_outlined, color: _electricBlue, size: 20),
+                label: const Text(
+                  'Use Web Browser Camera (WebRTC)',
+                  style: TextStyle(
+                      color: _electricBlue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: _electricBlue, width: 1.5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Text(
-            'Free • Windows 10/11 • ~30 sec install',
+            'Free • Windows 10/11 • ~30 sec install or instant browser WebRTC scan',
             style: TextStyle(
               color: _charcoal.withValues(alpha: 0.45),
               fontSize: 11,

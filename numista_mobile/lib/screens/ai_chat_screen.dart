@@ -67,13 +67,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
   static const _userBubble = Color(0xFF1E4D4D); // dark teal for user
   static const _aiBubble   = Color(0xFF162033); // surface for Morgan
 
-  // ── Firestore session path ───────────────────────────────────────────────
+  // ── Firestore session path (Keyed strictly by Auth UID) ────────────────────
   CollectionReference? get _sessionsRef {
     final user = FirebaseAuth.instance.currentUser;
-    if (user?.email == null) return null;
+    if (user == null) return null;
+    final uid = user.uid.isNotEmpty ? user.uid : (user.email ?? 'guest_uid');
     return FirebaseFirestore.instance
         .collection('users')
-        .doc(user!.email)
+        .doc(uid)
         .collection('ai_chat_sessions');
   }
 

@@ -338,3 +338,29 @@ class MorganChatContextService {
         userName: userName,
       );
 }
+
+/// Shared active session state holder for Morgan AI chat views.
+class ActiveMorganSession {
+  static String? _currentSessionId;
+  static bool _isStreaming = false;
+
+  static String get activeSessionId {
+    _currentSessionId ??= 'session_${DateTime.now().millisecondsSinceEpoch}';
+    return _currentSessionId!;
+  }
+
+  static set activeSessionId(String id) {
+    if (!_isStreaming) {
+      _currentSessionId = id;
+    }
+  }
+
+  static bool get isStreaming => _isStreaming;
+  static set isStreaming(bool val) => _isStreaming = val;
+
+  static void reset() {
+    if (!_isStreaming) {
+      _currentSessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
+    }
+  }
+}
