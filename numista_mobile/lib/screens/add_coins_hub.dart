@@ -2389,10 +2389,29 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         Row(children: [
           OutlinedButton.icon(
             onPressed: _pcgsImporting ? null : () async {
-              final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv'], withData: true);
-              if (result?.files.first.bytes != null) {
-                final csvText = String.fromCharCodes(result!.files.first.bytes!);
-                _showInteractiveMappingWizard(csvText);
+              final result = await FilePicker.pickFiles(
+                type: FileType.custom,
+                allowedExtensions: ['csv', 'xlsx', 'pdf', 'png', 'jpg', 'jpeg'],
+                withData: true,
+              );
+              if (result != null && result.files.isNotEmpty) {
+                final file = result.files.first;
+                const maxBytes = 20 * 1024 * 1024; // 20MB
+                if (file.size > maxBytes) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('File exceeds 20MB limit. Please upload a smaller file.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
+                  return;
+                }
+                if (file.bytes != null) {
+                  final csvText = String.fromCharCodes(file.bytes!);
+                  _showInteractiveMappingWizard(csvText);
+                }
               }
             },
             icon: const Icon(Icons.upload_file, size: 16),

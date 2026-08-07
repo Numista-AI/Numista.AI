@@ -58,6 +58,9 @@ class _BaseLayoutState extends State<BaseLayout> {
   String? _programManagerInitialId;
   bool _isMorganPopoutOpen = false;
   String? _popoutInitialQuery;
+  bool _isSidebarCollapsed = false;
+  bool _desktopHotkeysEnabled = true;
+  FocusNode? _previousFocusNode;
 
   // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
@@ -138,6 +141,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   void initState() {
     super.initState();
     _loadDefaultTab();
+    _loadDesktopPrefs();
  
     // ── Morgan deep-link: if the user tapped a tile in the greeter,
     // navigate directly to that screen instead of Home Dashboard.
@@ -180,6 +184,27 @@ class _BaseLayoutState extends State<BaseLayout> {
         _myCollectionTab = tab;
       });
     }
+  }
+
+  void _loadDesktopPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final collapsed = prefs.getBool('desktop_sidebar_collapsed') ?? false;
+    final hotkeys = prefs.getBool('desktop_hotkeys_enabled') ?? true;
+    if (mounted) {
+      setState(() {
+        _isSidebarCollapsed = collapsed;
+        _desktopHotkeysEnabled = hotkeys;
+      });
+    }
+  }
+
+  void _toggleSidebar() async {
+    final nextState = !_isSidebarCollapsed;
+    setState(() {
+      _isSidebarCollapsed = nextState;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('desktop_sidebar_collapsed', nextState);
   }
 
   void _navigateTo(String route) {
@@ -313,6 +338,36 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
   }
 
+  Widget _wrapBodyWithMaxWidth(Widget body, String route) {
+    final double maxWidth;
+    switch (route) {
+      case 'Add New Coins':
+        maxWidth = 1100.0;
+        break;
+      case 'My Collection':
+      case 'Currency Collection':
+        maxWidth = 1440.0;
+        break;
+      case 'Estate Planning':
+        maxWidth = 1600.0;
+        break;
+      case 'Home Dashboard':
+      case 'Settings & Backup':
+      case 'Our Team':
+      case 'Customer Service':
+      default:
+        maxWidth = 1280.0;
+        break;
+    }
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: body,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -321,13 +376,37 @@ class _BaseLayoutState extends State<BaseLayout> {
         : (user?.email?.split('@').first ?? 'Collector');
     final email = user?.email ?? '';
 
-    return LayoutBuilder(
+    final rootContent = LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 800;
         return isMobile
             ? _buildMobileLayout(email)
             : _buildDesktopLayout(email, displayName);
       },
+    );
+
+    if (!_desktopHotkeysEnabled) {
+      return rootContent;
+    }
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
+          setState(() => _activeRoute = 'Coin Search');
+        },
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
+          setState(() => _activeRoute = 'Coin Search');
+        },
+        const SingleActivator(LogicalKeyboardKey.keyM, control: true): _showMorganDialog,
+        const SingleActivator(LogicalKeyboardKey.keyM, meta: true): _showMorganDialog,
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (_isMorganPopoutOpen) {
+            setState(() => _isMorganPopoutOpen = false);
+            _previousFocusNode?.requestFocus();
+          }
+        },
+      },
+      child: rootContent,
     );
   }
 
@@ -447,13 +526,16 @@ class _BaseLayoutState extends State<BaseLayout> {
   // ─── Desktop/tablet layout: sidebar ──────────────────────────────────────
   Widget _buildDesktopLayout(String email, String displayName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sidebarWidth = _isSidebarCollapsed ? 72.0 : 240.0;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
           // ─── Sidebar ─────────────────────────────────────────────────────
-          Container(
-            width: 240,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: sidebarWidth,
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC),
               border: Border(
@@ -466,55 +548,93 @@ class _BaseLayoutState extends State<BaseLayout> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
+                // Sidebar header with collapse/expand toggle button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Image.asset('assets/logo_owl.png',
-                      height: 56, fit: BoxFit.contain),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20)),
-                    ),
-                    child: Row(children: [
-                      const CircleAvatar(
-                        radius: 12,
-                        backgroundColor: Color(0xFFF63366),
-                        child: Icon(Icons.person, color: Colors.white, size: 14),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(displayName,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 11)),
-                            Text(email,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.blueAccent, fontSize: 9)),
-                          ],
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: _isSidebarCollapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (!_isSidebarCollapsed)
+                        Image.asset('assets/logo_owl.png',
+                            height: 48, fit: BoxFit.contain)
+                      else
+                        Image.asset('assets/logo_owl.png',
+                            height: 36, fit: BoxFit.contain),
+                      IconButton(
+                        icon: Icon(
+                          _isSidebarCollapsed
+                              ? Icons.chevron_right
+                              : Icons.chevron_left,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          size: 20,
                         ),
+                        tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+                        onPressed: _toggleSidebar,
                       ),
-                    ]),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
+                if (!_isSidebarCollapsed) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20)),
+                      ),
+                      child: Row(children: [
+                        const CircleAvatar(
+                          radius: 12,
+                          backgroundColor: Color(0xFFF63366),
+                          child: Icon(Icons.person, color: Colors.white, size: 14),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(displayName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11)),
+                              Text(email,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.blueAccent, fontSize: 9)),
+                            ],
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ] else ...[
+                  Tooltip(
+                    message: '$displayName\n$email',
+                    child: const Center(
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Color(0xFFF63366),
+                        child: Icon(Icons.person, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 Expanded(
                   child: ValueListenableBuilder<WizardState?>(
                     valueListenable: WizardService.state,
                     builder: (context, ws, _) => ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       children: [
                         _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
                         WizardNavPulse(
@@ -522,14 +642,14 @@ class _BaseLayoutState extends State<BaseLayout> {
                           child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
                         ),
 
-                        const _SidebarSectionHeader(title: 'MY COLLECTION'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'MY COLLECTION'),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
-                          child: _buildNavItem('All', isSubItem: true, subItemKey: 'All'),
+                          child: _buildNavItem('All', icon: Icons.collections_bookmark_outlined, isSubItem: true, subItemKey: 'All'),
                         ),
-                        _buildNavItem('Coins', isSubItem: true, subItemKey: 'Coins'),
-                        _buildNavItem('Currency Collection', isSubItem: true, subItemKey: 'Currency'),
-                        _buildNavItem('World and Specialty', isSubItem: true, subItemKey: 'World & Specialty'),
+                        _buildNavItem('Coins', icon: Icons.monetization_on_outlined, isSubItem: true, subItemKey: 'Coins'),
+                        _buildNavItem('Currency Collection', icon: Icons.money_outlined, isSubItem: true, subItemKey: 'Currency'),
+                        _buildNavItem('World and Specialty', icon: Icons.public_outlined, isSubItem: true, subItemKey: 'World & Specialty'),
                         _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
 
                         const SizedBox(height: 8),
@@ -538,12 +658,12 @@ class _BaseLayoutState extends State<BaseLayout> {
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
 
-                        const _SidebarSectionHeader(title: 'ESTATE & ASSET VAULT'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ESTATE & ASSET VAULT'),
                         _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
                         _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
                         _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
 
-                        const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'Add New Coins',
                           child: _buildNavItem('Add new coins/notes/etc.', icon: Icons.add_circle_outline),
@@ -565,7 +685,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           },
                         ),
 
-                        const _SidebarSectionHeader(title: 'AI TRAINING'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'AI TRAINING'),
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                         // Admin-only: Grade Flag & Beta Feedback Inbox
                         if (email == 'jseaman1204@gmail.com' ||
@@ -588,7 +708,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           ),
                         ],
 
-                        const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
                         _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
                         _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
                         _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
@@ -605,65 +725,89 @@ class _BaseLayoutState extends State<BaseLayout> {
                   ),
                 ),
                 // ── Morgan sidebar button ──────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                  child: _MorganSidebarButton(onTap: _showMorganDialog),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2A1F4E),
-                        foregroundColor: const Color(0xFFFFD700),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        elevation: 0,
+                if (!_isSidebarCollapsed)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                    child: _MorganSidebarButton(onTap: _showMorganDialog),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Tooltip(
+                      message: 'Ask Morgan AI',
+                      child: IconButton(
+                        icon: Image.asset('assets/logo_owl.png', height: 28),
+                        onPressed: _showMorganDialog,
                       ),
-                      icon: const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFFFD700)),
-                      label: const Text(
-                        'Send Beta Feedback',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: () async {
-                        final email = FirebaseAuth.instance.currentUser?.email ?? 'beta tester';
-                        final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
-                        final body = Uri.encodeComponent(
-                          'Beta tester: $email\n'
-                          'Version: $kAppVersion\n\n'
-                          'Feedback / Bug Report:\n\n'
-                          '---\n'
-                          '(Please describe what happened, what you expected, and any steps to reproduce)\n',
-                        );
-                        final uri = Uri.parse('mailto:beta@numista.ai?subject=$subject&body=$body');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri);
-                        }
-                      },
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
-                        side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+
+                if (!_isSidebarCollapsed) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2A1F4E),
+                          foregroundColor: const Color(0xFFFFD700),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFFFD700)),
+                        label: const Text(
+                          'Send Beta Feedback',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () async {
+                          final email = FirebaseAuth.instance.currentUser?.email ?? 'beta tester';
+                          final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
+                          final body = Uri.encodeComponent(
+                            'Beta tester: $email\n'
+                            'Version: $kAppVersion\n\n'
+                            'Feedback / Bug Report:\n\n'
+                            '---\n'
+                            '(Please describe what happened, what you expected, and any steps to reproduce)\n',
+                          );
+                          final uri = Uri.parse('mailto:beta@numista.ai?subject=$subject&body=$body');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          }
+                        },
                       ),
-                      icon: const Icon(Icons.logout, size: 14),
-                      label: Text(
-                        AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
-                        style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                          side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.logout, size: 14),
+                        label: Text(
+                          AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        onPressed: () => _confirmSignOut(context),
                       ),
+                    ),
+                  ),
+                ] else ...[
+                  Tooltip(
+                    message: AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
+                    child: IconButton(
+                      icon: const Icon(Icons.logout, size: 18),
                       onPressed: () => _confirmSignOut(context),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),
@@ -682,7 +826,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         );
                       }),
                     if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
-                    Expanded(child: _buildBody()),
+                    Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
                   ],
                 ),
                 WizardOverlay(
@@ -716,6 +860,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       ),
     );
   }
+
 
 
   // ─── Nav item builder ────────────────────────────────────────────────────
@@ -758,6 +903,65 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Error Library',
             'Glossary Academy',
           }.contains(title == 'Add new coins/notes/etc.' ? 'Add New Coins' : (title == 'Admin Grade Flags' ? 'Admin: Grade Flags' : title));
+
+    final IconData effectiveIcon = icon ?? Icons.circle_outlined;
+
+    if (_isSidebarCollapsed) {
+      return Tooltip(
+        message: title,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: InkWell(
+            onTap: isEnabled
+                ? () {
+                    if (subItemKey != null) {
+                      setState(() {
+                        _activeRoute = 'My Collection';
+                        _myCollectionTab = subItemKey;
+                      });
+                    } else if (title == 'Add new coins/notes/etc.') {
+                      setState(() => _activeRoute = 'Add New Coins');
+                    } else if (title == 'Admin Grade Flags') {
+                      setState(() => _activeRoute = 'Admin: Grade Flags');
+                    } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
+                      setState(() => _activeRoute = 'Coin Search');
+                    } else if (title == 'AI Deepdive') {
+                      if (MediaQuery.of(context).size.width >= 800) {
+                        setState(() {
+                          _isMorganPopoutOpen = !_isMorganPopoutOpen;
+                          if (_isMorganPopoutOpen) {
+                            _popoutInitialQuery = null;
+                          }
+                        });
+                      } else {
+                        setState(() => _activeRoute = title);
+                      }
+                    } else {
+                      setState(() => _activeRoute = title);
+                    }
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? (isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(15))
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                effectiveIcon,
+                size: 20,
+                color: isActive
+                    ? const Color(0xFFF63366)
+                    : (isDark ? Colors.white70 : Colors.black54),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.45,
