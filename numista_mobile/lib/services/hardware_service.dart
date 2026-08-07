@@ -12,8 +12,9 @@ import 'auth_service.dart';
 /// security blocks in HTTPS browsers.
 /// Live status POLLING still uses localhost:5000 Flask.
 class HardwareService {
-  static const String _statusUrl    = 'https://localhost:5000/get-status';
-  static const String _pairUrl      = 'https://localhost:5000/pair';
+  static const String _statusUrl    = 'https://localhost:8443/get-status';
+  static const String _pairUrl      = 'https://localhost:8443/pair';
+  static const String _baseUrl      = 'https://localhost:8443';
 
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
@@ -127,7 +128,7 @@ class HardwareService {
   Future<Uint8List?> fetchFrame() async {
     try {
       final resp = await http
-          .get(Uri.parse('https://localhost:5000/frame'))
+          .get(Uri.parse('$_baseUrl/frame'))
           .timeout(const Duration(milliseconds: 600));
       if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
         return resp.bodyBytes;
@@ -161,7 +162,7 @@ class HardwareService {
   Future<Map<String, dynamic>> listCameras() async {
     try {
       final response = await http
-          .get(Uri.parse('https://localhost:5000/list-cameras'))
+          .get(Uri.parse('$_baseUrl/list-cameras'))
           .timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -177,7 +178,7 @@ class HardwareService {
     try {
       final response = await http
           .post(
-            Uri.parse('https://localhost:5000/set-camera'),
+            Uri.parse('$_baseUrl/set-camera'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'index': index}),
           )

@@ -21,6 +21,8 @@ if _ENV_PATH.exists():
 # Primary workhorse model for multimodal coin identification, receipt OCR,
 # fast structured extraction, and general AI assistant tasks.
 GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")
+DEFAULT_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", GEMINI_FLASH_MODEL)
+FALLBACK_VISION_MODEL = "gemini-3.5-flash"
 
 # High-reasoning model for complex valuation reports, rare variety verification,
 # and deep numismatic analysis fallback.
