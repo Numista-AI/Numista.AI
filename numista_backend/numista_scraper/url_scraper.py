@@ -42,7 +42,30 @@ except ImportError:
 try:
     from rapidfuzz import fuzz, process as rfprocess
 except ImportError:
-    raise ImportError("rapidfuzz is required: pip install rapidfuzz")
+    import difflib
+    class FuzzFallback:
+        @staticmethod
+        def ratio(s1, s2):
+            return difflib.SequenceMatcher(None, str(s1), str(s2)).ratio() * 100
+        token_set_ratio = ratio
+        WRatio = ratio
+
+    class ProcessFallback:
+        @staticmethod
+        def extractOne(query, choices, scorer=None, score_cutoff=0):
+            best_score = -1
+            best_idx = 0
+            for idx, choice in enumerate(choices):
+                score = difflib.SequenceMatcher(None, str(query), str(choice)).ratio() * 100
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+            if best_score >= score_cutoff:
+                return (choices[best_idx], best_score, best_idx)
+            return None
+
+    fuzz = FuzzFallback()
+    rfprocess = ProcessFallback()
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 WIKI_API        = "https://en.wikipedia.org/api/rest_v1"
