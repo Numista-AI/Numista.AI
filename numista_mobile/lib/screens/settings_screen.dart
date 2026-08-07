@@ -286,59 +286,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 32),
           Divider(color: borderColor),
           const SizedBox(height: 32),
- 
-  Widget _buildDesktopHotkeysCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
 
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.keyboard_outlined, color: Color(0xFFF63366), size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Enable Desktop Keyboard Shortcuts',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Use Ctrl+K (Cmd+K) to open Coin Search and Ctrl+M (Cmd+M) to open Morgan AI Chat. Press Esc to exit modals.',
-                  style: TextStyle(fontSize: 13, color: descColor),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: _desktopHotkeysEnabled,
-            activeColor: const Color(0xFFF63366),
-            onChanged: (val) async {
-              setState(() => _desktopHotkeysEnabled = val);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('desktop_hotkeys_enabled', val);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // EPN / Affiliate Section -- only visible to admin (eric@numista.ai)
+          // EPN / Affiliate Section -- only visible to admin (eric@numista.ai)
           if (AuthService.userEmail.toLowerCase() == 'eric@numista.ai') ...[
           Text('eBay Partner Network (EPN)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: sectionHeaderColor)),
           const SizedBox(height: 8),
@@ -526,6 +475,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (mounted) setState(() => _clearCoinCount = (data['coins'] as num).toInt());
       }
     } catch (_) {}
+  }
+
+  Widget _buildDesktopHotkeysCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.keyboard_outlined, color: Color(0xFFF63366), size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enable Desktop Keyboard Shortcuts',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Use Ctrl+K (Cmd+K) to open Coin Search and Ctrl+M (Cmd+M) to open Morgan AI Chat. Press Esc to exit modals.',
+                  style: TextStyle(fontSize: 13, color: descColor),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _desktopHotkeysEnabled,
+            activeThumbColor: const Color(0xFFF63366),
+            onChanged: (val) async {
+              setState(() => _desktopHotkeysEnabled = val);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('desktop_hotkeys_enabled', val);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _clearCollection(String targetEmail) async {
