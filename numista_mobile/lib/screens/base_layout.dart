@@ -392,15 +392,15 @@ class _BaseLayoutState extends State<BaseLayout> {
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
+        SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
           setState(() => _activeRoute = 'Coin Search');
         },
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
+        SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
           setState(() => _activeRoute = 'Coin Search');
         },
-        const SingleActivator(LogicalKeyboardKey.keyM, control: true): _showMorganDialog,
-        const SingleActivator(LogicalKeyboardKey.keyM, meta: true): _showMorganDialog,
-        const SingleActivator(LogicalKeyboardKey.escape): () {
+        SingleActivator(LogicalKeyboardKey.keyM, control: true): _showMorganDialog,
+        SingleActivator(LogicalKeyboardKey.keyM, meta: true): _showMorganDialog,
+        SingleActivator(LogicalKeyboardKey.escape): () {
           if (_isMorganPopoutOpen) {
             setState(() => _isMorganPopoutOpen = false);
             _previousFocusNode?.requestFocus();
