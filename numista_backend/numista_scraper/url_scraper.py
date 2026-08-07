@@ -42,7 +42,30 @@ except ImportError:
 try:
     from rapidfuzz import fuzz, process as rfprocess
 except ImportError:
-    raise ImportError("rapidfuzz is required: pip install rapidfuzz")
+    import difflib
+    class FuzzFallback:
+        @staticmethod
+        def ratio(s1, s2):
+            return difflib.SequenceMatcher(None, str(s1), str(s2)).ratio() * 100
+        token_set_ratio = ratio
+        WRatio = ratio
+
+    class ProcessFallback:
+        @staticmethod
+        def extractOne(query, choices, scorer=None, score_cutoff=0):
+            best_score = -1
+            best_idx = 0
+            for idx, choice in enumerate(choices):
+                score = difflib.SequenceMatcher(None, str(query), str(choice)).ratio() * 100
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+            if best_score >= score_cutoff:
+                return (choices[best_idx], best_score, best_idx)
+            return None
+
+    fuzz = FuzzFallback()
+    rfprocess = ProcessFallback()
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 WIKI_API        = "https://en.wikipedia.org/api/rest_v1"
@@ -768,14 +791,23 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
         except Exception as e:
             print(f"    [Scraper] Error fetching US Mint page: {e}")
     else:
-        # Wikipedia or other HTML
-        headers = {"User-Agent": WIKI_UA}
+        # Wikipedia, Smithsonian, or other generic sites
+        # Try curl_cffi first (impersonate chrome120) to bypass Imperva/Cloudflare bot protection
         try:
-            resp = requests.get(url, headers=headers, timeout=15)
+            resp = curl_requests.get(url, impersonate="chrome120", timeout=15)
             if resp.status_code == 200:
                 html_text = resp.text
         except Exception as e:
-            print(f"    [Scraper] Error fetching page: {e}")
+            print(f"    [Scraper] curl_cffi fetch attempt failed: {e}")
+
+        if not html_text:
+            headers = {"User-Agent": WIKI_UA}
+            try:
+                resp = requests.get(url, headers=headers, timeout=15)
+                if resp.status_code == 200:
+                    html_text = resp.text
+            except Exception as e:
+                print(f"    [Scraper] Error fetching page with requests: {e}")
             
     if not html_text:
         return {"status": "error", "message": f"Failed to fetch page content from {url}"}
@@ -793,9 +825,11 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
         
     print(f"  Extracted page title: '{raw_title}'")
     
-    # Check if page is a multi-item collection gallery (e.g., banknote/coin typeset)
+    # Check if page is a multi-item collection gallery (e.g., Wikipedia banknote/coin typeset, Smithsonian NNC collection)
     from urllib.parse import unquote
     multi_items = []
+    
+    # 2a. Wikipedia multi-item gallery detection
     for a in soup.find_all("a", class_="mw-file-description"):
         title = a.get("title", "")
         img = a.find("img")
@@ -840,6 +874,39 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
                 "filename": filename_decoded,
                 "mintage": mintage_str
             })
+
+    # 2b. Smithsonian NNC Collection multi-item gallery detection
+    if not multi_items:
+        for img in soup.find_all("img"):
+            src = img.get("src", "")
+            alt = img.get("alt", "") or img.get("title", "")
+            if not src or not alt or len(alt) < 6:
+                continue
+            _abs_src = src if "://" in src else ("https:" + src if src.startswith("//") else "https://" + src)
+            _netloc = urlparse(_abs_src).netloc
+            if _netloc == "ids.si.edu" or _netloc.endswith(".ids.si.edu") or "collections" in src:
+                denom_match = re.search(r'(\d+\s+Dollars?|\d+/\d+\s+Disme|\d+\s+Cents?|\$\d+)', alt, re.IGNORECASE)
+                denom = denom_match.group(0) if denom_match else "One Dollar"
+                
+                year_match = re.search(r'\b(17\d{2}|18\d{2}|19\d{2}|20\d{2})\b', alt)
+                item_year = year_match.group(1) if year_match else "1849"
+                
+                full_url = re.sub(r'max=\d+', 'max=2000', src)
+                if full_url.startswith("//"):
+                    full_url = "https:" + full_url
+                elif full_url.startswith("/"):
+                    full_url = "https://americanhistory.si.edu" + full_url
+                    
+                multi_items.append({
+                    "type_id": f"si_{len(multi_items)+1}",
+                    "denomination": denom,
+                    "year": item_year,
+                    "variety_clean": alt,
+                    "title": alt,
+                    "url": full_url,
+                    "filename": f"smithsonian_{item_year}_{len(multi_items)+1}",
+                    "mintage": None
+                })
 
     if len(multi_items) > 1:
         deduped = {item["type_id"]: item for item in multi_items}

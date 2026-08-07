@@ -1471,66 +1471,68 @@ class _DivisionTabState extends State<_DivisionTab> {
                           ),
                         )
                       else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: lotCoins.length,
-                          itemBuilder: (ctx, idx) {
-                            final coin = lotCoins[idx];
-                            final override = _estateData[coin.id];
-                            final isLocked = override?.divisionLocked ?? false;
-                            final fmv = _parseFmv(coin);
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 500),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: lotCoins.length,
+                            itemBuilder: (ctx, idx) {
+                              final coin = lotCoins[idx];
+                              final override = _estateData[coin.id];
+                              final isLocked = override?.divisionLocked ?? false;
+                              final fmv = _parseFmv(coin);
 
-                            final title = '${coin.year}${coin.mintMark.isNotEmpty ? coin.mintMark : ''} ${coin.denomination}';
+                              final title = '${coin.year}${coin.mintMark.isNotEmpty ? coin.mintMark : ''} ${coin.denomination}';
 
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: const BoxDecoration(
-                                border: Border(bottom: BorderSide(color: _kCardBorder, width: 0.5)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          title,
-                                          style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
-                                        ),
-                                        if (coin.condition.isNotEmpty)
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: const BoxDecoration(
+                                  border: Border(bottom: BorderSide(color: _kCardBorder, width: 0.5)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
                                           Text(
-                                            coin.condition,
-                                            style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                                            title,
+                                            style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                                           ),
-                                      ],
+                                          if (coin.condition.isNotEmpty)
+                                            Text(
+                                              coin.condition,
+                                              style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    _dollarFmt.format(fmv),
-                                    style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: Icon(
-                                      isLocked ? Icons.lock : Icons.lock_open_outlined,
-                                      color: isLocked ? _kGold : _kTextSecondary,
-                                      size: 18,
+                                    Text(
+                                      _dollarFmt.format(fmv),
+                                      style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
-                                    onPressed: () async {
-                                      final updated = (override ?? CoinEstateData(coinId: coin.id)).copyWith(
-                                        divisionLocked: !isLocked,
-                                        assignedHeirId: heir.id,
-                                        beneficiaryId: heir.id,
-                                        beneficiaryName: heir.alias,
-                                      );
-                                      await EstateDataService.saveCoinEstateData(widget.uid, updated);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: Icon(
+                                        isLocked ? Icons.lock : Icons.lock_open_outlined,
+                                        color: isLocked ? _kGold : _kTextSecondary,
+                                        size: 18,
+                                      ),
+                                      onPressed: () async {
+                                        final updated = (override ?? CoinEstateData(coinId: coin.id)).copyWith(
+                                          divisionLocked: !isLocked,
+                                          assignedHeirId: heir.id,
+                                          beneficiaryId: heir.id,
+                                          beneficiaryName: heir.alias,
+                                        );
+                                        await EstateDataService.saveCoinEstateData(widget.uid, updated);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                     ],
                   ),
