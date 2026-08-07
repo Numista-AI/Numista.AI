@@ -27,7 +27,7 @@ def inspect_app_routes():
     try:
         from main import app
     except Exception as e:
-        print(f"❌ CRITICAL: Failed to import main.app: {e}")
+        print(f"[CRITICAL] Failed to import main.app: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
