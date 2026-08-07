@@ -1,0 +1,39 @@
+{
+  "version": "1.0-AUG2026",
+  "microscope_setup": {
+    "title": "Jiusion USB Microscope Calibration & Capture",
+    "steps": [
+      {
+        "step": 1,
+        "heading": "Desktop Agent Connection",
+        "description": "Ensure the Numista Hardware Tray Agent ('numista_hardware') is running on your Windows PC and showing a connected status indicator."
+      },
+      {
+        "step": 2,
+        "heading": "Manual Focus Wheel Adjustment",
+        "description": "Slowly rotate the silver focus wheel on your Jiusion USB microscope until the live image sharpness peaks on screen. Auto-capture will automatically trigger when motion stability holds for 1.2 seconds."
+      },
+      {
+        "step": 3,
+        "heading": "External Side-Lighting Tip",
+        "description": "For high-luster coins like Morgan Dollars or American Silver Eagles, position an external light source at a 45-degree angle to eliminate harsh lens reflection and highlight die varieties."
+      }
+    ]
+  },
+  "csv_ingestion_tips": {
+    "title": "Zero-Reformatting Spreadsheet Upload",
+    "tips": [
+      "No header editing required! Upload your Excel (.xlsx) or CSV files directly.",
+      "Informal coin shorthand (e.g. 'wheatie', 'walker', 'ike', 'merc', 'slick', 'DMPL') is automatically mapped to canonical US Mint series and Sheldon grades.",
+      "Custom columns like 'Price Paid' or 'Personal Notes' are mapped automatically into your private vault record."
+    ]
+  },
+  "estate_division_guide": {
+    "title": "Estate Partitioning & Beneficiary Locks",
+    "tips": [
+      "Lock heirloom items to specific beneficiaries before running the lot division solver.",
+      "The Longest Processing Time (LPT) engine balances physical coin values across heirs and calculates exact dollar cash equalization offsets.",
+      "Export legal-grade Numismatic Passport PDFs complete with digital executor signature lines and audit verification QR codes."
+    ]
+  }
+}
