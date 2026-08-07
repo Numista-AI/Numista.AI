@@ -65,6 +65,9 @@ from routes.payment_routes import router as payment_router
 from routes.grade_review_routes import router as grade_review_router
 from routes.import_routes import router as import_router
 from routes.valuation_routes import router as valuation_router
+from routes.scan_routes import router as scan_router
+from routes.ai_routes import router as ai_router
+from routes.collection_routes import router as collection_router
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -73,15 +76,11 @@ app.include_router(payment_router)
 app.include_router(grade_review_router)
 app.include_router(import_router)
 app.include_router(valuation_router)
+app.include_router(scan_router)
+app.include_router(ai_router)
+app.include_router(collection_router)
 
-from scan_service.coa_parser_service import parse_coa_document
-
-@app.post("/api/v1/coa/parse")
-async def api_parse_coa(file: UploadFile = File(...)):
-    """Parse scanned US Mint COA card and extract serial numbers and specs."""
-    content = await file.read()
-    result = parse_coa_document(content, filename=file.filename or "coa_scan.jpg")
-    return result
+# COA parsing endpoint extracted to routes/scan_routes.py
 
 
 
