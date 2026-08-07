@@ -211,3 +211,6 @@ SOURCE_OF_TRUTH.html
 grok_prompt_payload.txt
 grok_sourcing_list.csv
 Numista_AI_*_AUG_*.md
+
+# Gemini Advisor Documents (monthly-rotating reference docs, kept local only)
+Gemini Advisor Documents/
