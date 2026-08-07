@@ -23,6 +23,8 @@ if _ENV_PATH.exists():
 GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")
 DEFAULT_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", GEMINI_FLASH_MODEL)
 FALLBACK_VISION_MODEL = "gemini-3.5-flash"
+DEFAULT_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", GEMINI_FLASH_MODEL)
+FALLBACK_CHAT_MODEL = "gemini-3.5-flash"
 
 # High-reasoning model for complex valuation reports, rare variety verification,
 # and deep numismatic analysis fallback.
