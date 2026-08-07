@@ -1,18 +1,23 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 100% test pass rate across unit and E2E test suites. Pytest backend suite: 24 passed, 3 warnings in 4.39s. Playwright E2E: 120/120 passed [0 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-05
+* **Status:** 🟢 **PASS** (System scan completed with 100% test pass rate across unit and E2E test suites. Pytest backend suite: 32 passed, 3 warnings in 27.23s. Playwright E2E: 4/4 passed [0 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-08-07
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
-## Critical Errors & Warnings
-1. ℹ️ **Greysheet API Dev Fallback Active:** Local `.env` unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN`, defaulting to Tier 0 fallback mode and Firestore `config/greysheet` cache.
+## Dev Environment Notes
+1. ✅ **Greysheet API Dev Fallback (Expected — Phase 1 Security Hardening):** Local `.env` intentionally unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN` per Phase 1 hardening policy. Dev defaults to Tier 0 Firestore `config/greysheet` cache. Production credentials are managed via GCP Secret Manager / Cloud Run environment variables.
 
 ---
 
+## Cloud Run Secret Presence Check
+* `GREYSHEET_API_KEY`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy
+* `GREYSHEET_API_TOKEN`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy
+
+---
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active code paths.
 * **Centralized Configuration (`numista_backend/config.py`):**
@@ -40,12 +45,11 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 24 passed, 3 warnings in 4.39s
-* **Frontend Playwright E2E Suite:** 120/120 passed (0 skipped gracefully)
+* **Backend Pytest Unit Suite:** 32 passed, 3 warnings in 27.23s
+* **Frontend Playwright E2E Suite:** 4/4 passed (0 skipped gracefully)
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
 
 ## Recommended Fixes
-1. **Production Secret Management:** Ensure `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` environment variables are populated in Cloud Run settings prior to Beta deployment on 1 AUG 26.
-2. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
+1. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
