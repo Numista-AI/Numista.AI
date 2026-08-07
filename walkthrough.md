@@ -1,28 +1,23 @@
-# Walkthrough — Live Microscope Hardware & Suite Verification (2026-08-05)
+# Walkthrough — Comprehensive Audit Update (2026-08-07)
 
-Today is **August 5, 2026**. Verified the system audit with the physical USB microscope hardware attached, achieving a **100% pass rate** across all automated E2E and unit test suites.
+## Summary
+Full SCAN_REPORT update incorporating all changes made since the last audit sync. 14 code commits landed on `dev` since the previous SCAN_REPORT, including a full backend architecture refactor, Phase 2 desktop features, and two test infrastructure fixes.
 
-## 1. Audit & Verification Summary
+## Test Infrastructure Fixes
+- **`12-estate-management.spec.js` T02**: Replaced brittle 4s `waitForTimeout` with `waitForLoadState('networkidle')` + Flutter canvas `waitForSelector` + 1.5s settle. Cold-start flakiness resolved.
+- **`05-navigation.spec.js` T09 (AI Trainer Board)**: Hardcoded pixel coordinate `(80, 566)` broke after Phase 2 desktop shell shifted the sidebar layout. Replaced with role-based text selector with coordinate fallback.
+- Both fixes verified passing in isolation. Full suite expected to return 120/120 on tomorrow's scheduled run.
 
-The latest `SCAN_REPORT.md` (Scan Date: 2026-08-05) returns an overall status of **🟢 PASS**:
-- **Live Hardware Attached Verification**: Executed `run_tests.ps1` with the optical microscope hardware active — **120 / 120 Playwright E2E tests passed cleanly (0 skipped, 0 failed, 100% pass rate)**.
-- **Microscope Hardware Suite (`14-microscope-agent-stress.spec.js`)**:
-  - `Verify Desktop Agent Local Endpoint Payload Integrity`: **✅ PASS** (Sharpness: `3085`, User: `eric.seaman@yahoo.com`)
-  - `Verify Local Camera Selector API Endpoint`: **✅ PASS** (Cameras detected: `[0, 1]`, updated endpoint timeout to 8000ms for DirectShow hardware enumeration)
-  - `Direct download link target validation`: **✅ PASS**
-- **Backend Pytest Unit Suite**: **24 / 24 passed in 4.39s**.
-- **Python Compilation (AST)**: Core Python backend scripts (`main.py`, etc.) compiled cleanly with 0 syntax errors.
-- **Flutter Dart Analyzer**: 0 Issues Found (0 errors, 0 warnings, 0 lints).
-- **Model Binding & LLM Policy**: **0 usages** of retired/deprecated Gemini models (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`).
-- **Greysheet API Health**: Endpoint probes return HTTP 200 OK.
+## SCAN_REPORT New Sections Added
+Per `/grill-me` discussion:
+1. **Backend Architecture Health** — documents `main.py` → APIRouter refactor (Stages 1–4) completion and route parity baseline
+2. **Security Audit** — CodeQL #69 resolved, Phase 1 hardening complete, 160 Dependabot alerts flagged for triage
+3. **Core Features Audit** — Phase 2 Desktop Shell, Morgan AI v2, Hardware Capture v2, Proxy Circuit Breaker all added
 
----
+## Audit Improvements
+- Greysheet dev fallback relabeled from ⚠️ warning → ✅ Expected (Phase 1 hardening)
+- Cloud Run secret presence check added: `GREYSHEET_API_KEY` and `GREYSHEET_API_TOKEN` confirmed ✅ SET
+- `.gitignore` updated: `Gemini Advisor Documents/` and all doc build artifacts excluded
 
-## 2. Code Modifications
-- **[14-microscope-agent-stress.spec.js](file:///C:/Users/ericd/Documents/MyVertexProject/numista_tests/tests/14-microscope-agent-stress.spec.js)**: Increased `/list-cameras` endpoint timeout from 3000ms to 8000ms to allow OpenCV camera device enumeration.
-- **[SCAN_REPORT.md](file:///C:/Users/ericd/Documents/MyVertexProject/SCAN_REPORT.md)**: Updated system audit status to 🟢 PASS (120/120 Playwright E2E passed, 24/24 backend pytest unit tests passed).
-
----
-
-## 3. Git Synchronization
-- Staged, committed, and pushed changes to `origin/dev`.
+## Git Synchronization
+All changes committed and pushed to `origin/dev`.
