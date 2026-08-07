@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, Form, File, UploadFile
 import pandas as pd
 from schemas.import_schemas import ImportProcessRequest, ImportStartRequest
-from services.common import GOLDEN_SCHEMA_MAPPING, normalize_colloquial_header, safe_get_str
+from services.common import GOLDEN_SCHEMA_MAPPING, normalize_colloquial_header, safe_get_str, normalize_slang_term
 from routes.deps import db, logger
 
 router = APIRouter(prefix="/api", tags=["Spreadsheet & Document Bulk Ingestion"])
@@ -68,7 +68,18 @@ async def import_spreadsheet(
         for orig_col, target_col in mapping.items():
             val = row[orig_col]
             if pd.notna(val):
-                doc[target_col] = str(val).strip()
+                clean_val = str(val).strip()
+                doc[target_col] = clean_val
+                slang_info = normalize_slang_term(clean_val)
+                if slang_info:
+                    if "series" in slang_info and "Series" not in doc:
+                        doc["Series"] = slang_info["series"]
+                    if "denomination" in slang_info and "Denomination" not in doc:
+                        doc["Denomination"] = slang_info["denomination"]
+                    if "mapped_grade" in slang_info and "Grade" not in doc:
+                        doc["Grade"] = slang_info["mapped_grade"]
+                    if "mapped_mint_mark" in slang_info and "Mint Mark" not in doc:
+                        doc["Mint Mark"] = slang_info["mapped_mint_mark"]
 
         if not doc:
             continue

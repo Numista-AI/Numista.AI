@@ -569,10 +569,14 @@ def match_to_catalog(coin_def: dict, mint: str) -> tuple:
 # ─── Firestore / SQLite Writers ───────────────────────────────────────────────
 
 def _make_doc_id(coin_def: dict, mint: str) -> str:
-    """Generate a canonical doc_id for a new 2026 Semiquincentennial coin."""
+    """Generate a canonical doc_id for a new coin or banknote."""
     slug  = coin_def.get("slug", "unknown")
     year  = coin_def.get("year", "2026")
+    category = coin_def.get("category", "coin")
     mint_lc = mint.lower()
+    
+    if category == "banknote":
+        return f"ref_note_confederate_{slug}_{year}"
     return f"ref_coin_semiquincentennial_{slug}_{year}_{mint_lc}"
 
 
@@ -645,6 +649,44 @@ def commit_coin(coin_def: dict, mint: str, obv_url: str, rev_url: str,
             print(f"    ⚠ SQLite insert error {new_doc_id}: {e}")
 
         return {"action": "CREATE", "doc_id": new_doc_id, "status": "created"}
+    else:  # UPDATE
+        update = {"last_enriched_at": now, "enrichment_source": "url_scraper",
+                  "source_url": source_url}
+        if obv_url:
+            update["image_url_obverse"] = obv_url
+        if rev_url:
+            update["image_url_reverse"] = rev_url
+        
+        existing_data = {}
+        try:
+            snap = db.collection("definitive_reference").document(doc_id).get()
+            existing_data = snap.to_dict() or {}
+        except Exception:
+            pass
+
+        for field, val in [
+            ("obverse_desc",  coin_def.get("obverse_desc")),
+            ("reverse_desc",  coin_def.get("reverse_desc")),
+            ("composition",   coin_def.get("composition")),
+        ]:
+            if val and not existing_data.get(field):
+                update[field] = val
+
+        if dry_run:
+            print(f"    [DRY-RUN] Would UPDATE {doc_id}: {list(update.keys())}")
+            return {"action": "UPDATE", "doc_id": doc_id, "status": "dry_run"}
+
+        try:
+            db.collection("definitive_reference").document(doc_id).update(update)
+            print(f"    [Firestore] ✅ UPDATED {doc_id}")
+        except Exception as e:
+            print(f"    ⚠ Firestore update error {doc_id}: {e}")
+
+        if obv_url or rev_url:
+            update_coin_images_in_databases(doc_id, obv_url or existing_data.get("image_url_obverse", ""),
+                                            rev_url or existing_data.get("image_url_reverse", ""))
+
+        return {"action": "UPDATE", "doc_id": doc_id, "status": "updated"}
 
 
 def resolve_query_to_url(query: str) -> str | None:
@@ -751,10 +793,110 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
         
     print(f"  Extracted page title: '{raw_title}'")
     
+    # Check if page is a multi-item collection gallery (e.g., banknote/coin typeset)
+    from urllib.parse import unquote
+    multi_items = []
+    for a in soup.find_all("a", class_="mw-file-description"):
+        title = a.get("title", "")
+        img = a.find("img")
+        if not img:
+            continue
+        src = img.get("src", "")
+        if "csa-t" in src.lower() or "csa-t" in title.lower() or "banknote" in title.lower():
+            if "/thumb/" in src:
+                cleaned = src.replace("/thumb/", "/")
+                full_url = cleaned.rsplit("/", 1)[0]
+                if full_url.startswith("//"):
+                    full_url = "https:" + full_url
+            else:
+                full_url = "https:" + src if src.startswith("//") else src
+
+            type_match = re.search(r'\(T(\d+)\)', title)
+            type_id = f"T{type_match.group(1)}" if type_match else None
+            
+            denom_match = re.search(r'\$(\d+,?\d*)', title)
+            denom = denom_match.group(0) if denom_match else ("$0.50" if "fifty cents" in title.lower() else "One Dollar")
+            
+            filename_decoded = unquote(full_url.split("/")[-1])
+            year_match = re.search(r'\b(186\d|18\d{2}|19\d{2}|20\d{2})\b', filename_decoded)
+            item_year = year_match.group(1) if year_match else "1861"
+            
+            mintage_match = re.search(r'\((\d+,?\d*)\s+issued\)', title, re.IGNORECASE)
+            mintage_str = mintage_match.group(1) if mintage_match else None
+            
+            variety_clean = title
+            if type_id: variety_clean = re.sub(r'\(\s*T\d+\s*\)', '', variety_clean)
+            variety_clean = re.sub(r'\(\s*\d+,?\d*\s+issued\s*\)', '', variety_clean, flags=re.IGNORECASE)
+            if denom: variety_clean = variety_clean.replace(denom, "")
+            variety_clean = re.sub(r'\s+', ' ', variety_clean).strip()
+            
+            multi_items.append({
+                "type_id": type_id or f"item_{len(multi_items)+1}",
+                "denomination": denom,
+                "year": item_year,
+                "variety_clean": variety_clean,
+                "title": title,
+                "url": full_url,
+                "filename": filename_decoded,
+                "mintage": mintage_str
+            })
+
+    if len(multi_items) > 1:
+        deduped = {item["type_id"]: item for item in multi_items}
+        print(f"📋 Detected collection page with {len(deduped)} items. Processing batch...\n")
+        
+        results = {
+            "source_url": url,
+            "created": [],
+            "updated": [],
+            "missing_images": [],
+            "errors": [],
+            "run_timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        for item_key, b in sorted(deduped.items(), key=lambda x: int(re.sub(r'\D', '', str(x[0])) or 0)):
+            is_banknote = "banknote" in raw_title.lower() or "csa" in b["filename"].lower() or "dollar" in raw_title.lower()
+            cat = "banknote" if is_banknote else "coin"
+            
+            coin_def = {
+                "slug":             f"csa_{b['type_id'].lower()}" if "csa" in b["filename"].lower() else re.sub(r'[^a-z0-9_]', '', b['variety_clean'].lower().replace(" ", "_")),
+                "series":           "Confederate States Banknotes" if cat == "banknote" else "Commemoratives",
+                "denomination":     b["denomination"],
+                "variety":          f"Type {b['type_id']} - {b['variety_clean']}" if str(b['type_id']).startswith("T") else b['variety_clean'],
+                "year":             b["year"],
+                "mints":            ["Richmond"] if cat == "banknote" else ["P"],
+                "category":         cat,
+                "composition":      "Paper" if cat == "banknote" else "Clad",
+                "obverse_desc":     b["variety_clean"],
+                "reverse_desc":     "Plain or blank reverse" if cat == "banknote" else "",
+                "mintage":          {"Richmond": b["mintage"]} if b["mintage"] else None
+            }
+            mint = coin_def["mints"][0]
+            
+            doc_id, confidence, existing_data, action = match_to_catalog(coin_def, mint)
+            target_doc_id = doc_id if action == "UPDATE" else _make_doc_id(coin_def, mint)
+            
+            gcs_imgs = check_gcs_existing(target_doc_id)
+            obv_url = gcs_imgs["obverse"]
+            rev_url = gcs_imgs["reverse"]
+            
+            attribution = ATTRIBUTION_WIKI
+            if not obv_url and b["url"]:
+                obv_url = download_and_upload(b["url"], target_doc_id, "obverse", attribution, dry_run)
+                
+            res = commit_coin(coin_def, mint, obv_url, rev_url, url, action, target_doc_id, dry_run=dry_run)
+            if res["status"] in ("created", "dry_run") and action == "CREATE":
+                results["created"].append(res["doc_id"])
+            elif res["status"] in ("updated", "dry_run") and action == "UPDATE":
+                results["updated"].append(res["doc_id"])
+                
+            time.sleep(0.3)
+            
+        return results
+    
     # Parse metadata from title (fallback to query_meta)
     year = query_meta.get("year")
     if not year:
-        import re
         year_match = re.search(r'\b(20\d{2}|19\d{2})\b', raw_title)
         year = year_match.group(1) if year_match else "2026"
         
@@ -772,7 +914,6 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
     
     # Clean variety name
     variety = raw_title
-    import re
     for stopword in (year, "Coin", "US Mint", "United States Mint", "U.S. Mint", "Official", "Silver", "Gold", "Proof", "Uncirculated"):
         variety = re.sub(rf'\b{stopword}\b', '', variety, flags=re.IGNORECASE)
     variety = re.sub(r'\s+', ' ', variety).strip()

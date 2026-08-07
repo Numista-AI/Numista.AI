@@ -9,6 +9,7 @@ Generates official Numista-branded dual-format PDF documents:
 import io
 import qrcode
 from typing import Dict, Any, List
+from PIL import Image as PILImage
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
@@ -30,6 +31,36 @@ def generate_qr_code_image(data: str, size: int = 150) -> io.BytesIO:
     img.save(buffer, format="PNG")
     buffer.seek(0)
     return buffer
+
+def downsample_image_to_300dpi_thumb(image_bytes: bytes, target_size_px: tuple = (300, 300)) -> io.BytesIO:
+    """
+    Downsamples raw image bytes (e.g. 1920x1080 capture) to 300 DPI 1-inch thumbnail (300x300 px),
+    achieving a ~23x RAM footprint reduction for ReportLab PDF embedding.
+    """
+    buffer = io.BytesIO()
+    try:
+        with PILImage.open(io.BytesIO(image_bytes)) as img:
+            img.thumbnail(target_size_px, PILImage.Resampling.LANCZOS)
+            img.convert('RGB').save(buffer, format='JPEG', quality=85)
+            buffer.seek(0)
+            return buffer
+    except Exception:
+        buffer.seek(0)
+        return buffer
+
+def draw_diagonal_watermark(canvas, doc):
+    """Draws a semi-transparent diagonal watermark across each PDF page."""
+    canvas.saveState()
+    canvas.setFont("Helvetica-Bold", 34)
+    canvas.setFillColor(colors.HexColor('#94A3B8'))
+    try:
+        canvas.setFillAlpha(0.20)
+    except Exception:
+        pass
+    canvas.translate(300, 420)
+    canvas.rotate(35)
+    canvas.drawCentredString(0, 0, "BETA – FOR EVALUATION ONLY")
+    canvas.restoreState()
 
 def scrub_item_payload(items: List[Dict[str, Any]], privacy_toggles: Dict[str, bool]) -> List[Dict[str, Any]]:
     """
@@ -103,6 +134,16 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         textColor=colors.HexColor('#0284C7'),
         alignment=1
     )
+
+    disclaimer_style = ParagraphStyle(
+        'DisclaimerBox',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor('#B45309'),
+        alignment=1
+    )
     
     body_bold = ParagraphStyle(
         'BodyBold',
@@ -128,8 +169,23 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     story.append(Paragraph("NUMISTA.AI • OFFICIAL PASSPORT PROTOCOL", subtitle_style))
     story.append(Spacer(1, 4))
     story.append(Paragraph("ESTATE CERTIFICATE OF LATERAL TRANSFER", title_style))
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0284C7'), spaceBefore=2, spaceAfter=10))
+    story.append(Spacer(1, 4))
+
+    # BETA LEGAL DISCLAIMER BANNER
+    disclaimer_banner = Table(
+        [[Paragraph("<b>BETA EVALUATION DOCUMENT:</b> Generated for software testing purposes only. Does not constitute a certified USPAP appraisal or legal IRS Form 706 valuation.", disclaimer_style)]],
+        colWidths=[7.5 * inch]
+    )
+    disclaimer_banner.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FEF3C7')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#F59E0B')),
+        ('PADDING', (0,0), (-1,-1), 5),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER')
+    ]))
+    story.append(disclaimer_banner)
+    story.append(Spacer(1, 6))
+
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0284C7'), spaceBefore=2, spaceAfter=8))
 
     transfer_id = transfer_data.get("transfer_id", "N/A")
     claim_pin = transfer_data.get("claim_pin", "******")
@@ -168,7 +224,6 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     story.append(Paragraph("TRANSFERRED INVENTORY SPECIFICATIONS", body_bold))
     story.append(Spacer(1, 4))
 
-    items = transfer_data.get("items", [])
     item_rows = [[
         Paragraph("<b>Item Name / Title</b>", body_bold),
         Paragraph("<b>Year / Mint</b>", body_bold),
@@ -259,6 +314,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
 
     story.append(passcard_table)
 
-    doc.build(story)
+    doc.build(story, onFirstPage=draw_diagonal_watermark, onLaterPages=draw_diagonal_watermark)
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
+

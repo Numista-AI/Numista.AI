@@ -1,0 +1,38 @@
+{
+  "device_name": "Jiusion USB Microscope (1000x HD)",
+  "version": "1.0-AUG2026",
+  "camera_index": 0,
+  "native_resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "fallback_resolution": {
+    "width": 1280,
+    "height": 720
+  },
+  "local_server": {
+    "host": "localhost",
+    "port": 8443,
+    "protocol": "https",
+    "cert_file": "localhost.crt",
+    "key_file": "localhost.key"
+  },
+  "auto_capture_engine": {
+    "stability_delay_seconds": 1.2,
+    "motion_diff_threshold": 0.02,
+    "laplacian_variance_thresholds": {
+      "silver_eagle_luster": 120.0,
+      "gold_proof": 150.0,
+      "copper_cent_toned": 85.0,
+      "clad_quarter": 100.0,
+      "minimum_sharpness_cutoff": 60.0
+    },
+    "bounding_box_padding_pct": 5.0,
+    "output_format": "PNG",
+    "jpeg_quality": 95
+  },
+  "gcs_sync": {
+    "target_bucket": "studio-9101802118-8c9a8-uploads",
+    "staging_collection": "staging_area"
+  }
+}

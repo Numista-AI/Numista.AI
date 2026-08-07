@@ -1,0 +1,245 @@
+{
+  "version": "1.1-AUG2026",
+  "description": "Expanded numismatic terminology and colloquial slang mapping dictionary for Numista.AI ingestion pipeline",
+  "denomination_slang": {
+    "wheatie": {
+      "denomination": "1 Cent",
+      "series": "Lincoln Wheat Cent",
+      "canonical_country": "United States"
+    },
+    "wheat penny": {
+      "denomination": "1 Cent",
+      "series": "Lincoln Wheat Cent",
+      "canonical_country": "United States"
+    },
+    "steelie": {
+      "denomination": "1 Cent",
+      "series": "Lincoln Steel Cent",
+      "year": 1943,
+      "canonical_country": "United States"
+    },
+    "indian head": {
+      "denomination": "1 Cent",
+      "series": "Indian Head Cent",
+      "canonical_country": "United States"
+    },
+    "v nickel": {
+      "denomination": "5 Cents",
+      "series": "Liberty Head Nickel",
+      "canonical_country": "United States"
+    },
+    "buffalo": {
+      "denomination": "5 Cents",
+      "series": "Buffalo Nickel",
+      "canonical_country": "United States"
+    },
+    "walker": {
+      "denomination": "50 Cents",
+      "series": "Walking Liberty Half Dollar",
+      "canonical_country": "United States"
+    },
+    "walking liberty": {
+      "denomination": "50 Cents",
+      "series": "Walking Liberty Half Dollar",
+      "canonical_country": "United States"
+    },
+    "franklin": {
+      "denomination": "50 Cents",
+      "series": "Franklin Half Dollar",
+      "canonical_country": "United States"
+    },
+    "morgan": {
+      "denomination": "$1",
+      "series": "Morgan Dollar",
+      "canonical_country": "United States"
+    },
+    "peace": {
+      "denomination": "$1",
+      "series": "Peace Dollar",
+      "canonical_country": "United States"
+    },
+    "ike": {
+      "denomination": "$1",
+      "series": "Eisenhower Dollar",
+      "canonical_country": "United States"
+    },
+    "susan b": {
+      "denomination": "$1",
+      "series": "Susan B. Anthony Dollar",
+      "canonical_country": "United States"
+    },
+    "sba": {
+      "denomination": "$1",
+      "series": "Susan B. Anthony Dollar",
+      "canonical_country": "United States"
+    },
+    "standing liberty": {
+      "denomination": "25 Cents",
+      "series": "Standing Liberty Quarter",
+      "canonical_country": "United States"
+    },
+    "standing lib": {
+      "denomination": "25 Cents",
+      "series": "Standing Liberty Quarter",
+      "canonical_country": "United States"
+    },
+    "barber": {
+      "denomination": "Multiple",
+      "series": "Barber Coinage",
+      "canonical_country": "United States"
+    },
+    "barber dime": {
+      "denomination": "10 Cents",
+      "series": "Barber Dime",
+      "canonical_country": "United States"
+    },
+    "barber quarter": {
+      "denomination": "25 Cents",
+      "series": "Barber Quarter",
+      "canonical_country": "United States"
+    },
+    "barber half": {
+      "denomination": "50 Cents",
+      "series": "Barber Half Dollar",
+      "canonical_country": "United States"
+    },
+    "seated": {
+      "denomination": "Multiple",
+      "series": "Seated Liberty Coinage",
+      "canonical_country": "United States"
+    },
+    "seated liberty": {
+      "denomination": "Multiple",
+      "series": "Seated Liberty Coinage",
+      "canonical_country": "United States"
+    },
+    "trade": {
+      "denomination": "$1",
+      "series": "Trade Dollar",
+      "canonical_country": "United States"
+    },
+    "trade dollar": {
+      "denomination": "$1",
+      "series": "Trade Dollar",
+      "canonical_country": "United States"
+    },
+    "mercury": {
+      "denomination": "10 Cents",
+      "series": "Mercury Dime",
+      "canonical_country": "United States"
+    },
+    "merc": {
+      "denomination": "10 Cents",
+      "series": "Mercury Dime",
+      "canonical_country": "United States"
+    },
+    "saint": {
+      "denomination": "$20",
+      "series": "Saint-Gaudens Double Eagle",
+      "canonical_country": "United States"
+    },
+    "st gaudens": {
+      "denomination": "$20",
+      "series": "Saint-Gaudens Double Eagle",
+      "canonical_country": "United States"
+    },
+    "double eagle": {
+      "denomination": "$20",
+      "series": "Double Eagle",
+      "canonical_country": "United States"
+    },
+    "half eagle": {
+      "denomination": "$5",
+      "series": "Half Eagle",
+      "canonical_country": "United States"
+    },
+    "quarter eagle": {
+      "denomination": "$2.50",
+      "series": "Quarter Eagle",
+      "canonical_country": "United States"
+    },
+    "ase": {
+      "denomination": "$1",
+      "series": "American Silver Eagle",
+      "canonical_country": "United States"
+    },
+    "age": {
+      "denomination": "$50",
+      "series": "American Gold Eagle",
+      "canonical_country": "United States"
+    }
+  },
+  "mint_mark_slang": {
+    "cc": "Carson City",
+    "o": "New Orleans",
+    "s": "San Francisco",
+    "d": "Denver",
+    "p": "Philadelphia"
+  },
+  "grade_slang": {
+    "bu": "MS-63",
+    "bup": "MS-63",
+    "gem": "MS-65",
+    "gem bu": "MS-65",
+    "choice": "MS-64",
+    "choice bu": "MS-64",
+    "raw bu": "MS-63",
+    "prooflike": "MS-63 Prooflike",
+    "pl": "MS-63 Prooflike",
+    "dmpl": "MS-65 Deep Mirror Prooflike",
+    "au": "AU-50",
+    "xf": "XF-40",
+    "vf": "VF-20",
+    "f": "F-12",
+    "vg": "VG-8",
+    "g": "G-4",
+    "ag": "AG-3",
+    "shiny": "Uncirculated",
+    "bright": "Uncirculated",
+    "slick": "About Good-3",
+    "smooth": "Good-4",
+    "heavily worn": "About Good-3",
+    "details": "Problem Coin / Details",
+    "cleaned": "Details - Cleaned",
+    "dipped": "Details - Cleaned / Dipped",
+    "pvc": "Details - PVC Residue",
+    "scratched": "Details - Scratched",
+    "damaged": "Details - Damaged"
+  },
+  "container_slang": {
+    "roll": {
+      "container": "Roll/Tube",
+      "default_quantities": {
+        "1 Cent": 50,
+        "5 Cents": 40,
+        "10 Cents": 50,
+        "25 Cents": 40,
+        "50 Cents": 20,
+        "$1": 20
+      }
+    },
+    "tube": {
+      "container": "Roll/Tube",
+      "default_quantities": {
+        "1 Cent": 50,
+        "5 Cents": 40,
+        "10 Cents": 50,
+        "25 Cents": 40,
+        "50 Cents": 20,
+        "$1": 20
+      }
+    },
+    "monster box": {
+      "container": "Monster Box",
+      "default_quantities": {
+        "$1": 500
+      }
+    },
+    "cull": {
+      "note": "Junk Silver / Melt Category"
+    },
+    "junk silver": {
+      "note": "90% Silver Melt Category"
+    }
+  }
+}

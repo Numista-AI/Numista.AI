@@ -14,8 +14,8 @@
 ---
 
 ## Cloud Run Secret Presence Check
-* `GREYSHEET_API_KEY`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy
-* `GREYSHEET_API_TOKEN`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy
+* `GREYSHEET_API_KEY`: ✅ **SET** in Cloud Run environment variables
+* `GREYSHEET_API_TOKEN`: ✅ **SET** in Cloud Run environment variables
 
 ---
 ## Model Binding & LLM Health

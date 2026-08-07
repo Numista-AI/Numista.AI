@@ -84,23 +84,30 @@ if (fs.existsSync(PYTEST_LOG)) {
 // ─── Cloud Run / GCP Secret Presence Check (presence only, never the value) ─────
 const { execSync } = require('child_process');
 const GCP_PROJECT = 'studio-9101802118-8c9a8';
+const GCP_REGION = 'us-central1';
+const GCP_SERVICE = 'numista-backend';
 const GREYSHEET_SECRETS = ['GREYSHEET_API_KEY', 'GREYSHEET_API_TOKEN'];
 
-function checkGcpSecret(secretName) {
+function checkCloudRunEnvVar(secretName) {
   try {
-    execSync(`gcloud secrets describe ${secretName} --project=${GCP_PROJECT} --format="value(name)"`, { stdio: 'pipe', timeout: 10000 });
-    return `* \`${secretName}\`: ✅ **EXISTS** in GCP Secret Manager`;
-  } catch (e) {
-    const msg = (e.stderr || e.message || '').toString();
-    if (msg.includes('NOT_FOUND') || msg.includes('404')) {
-      return `* \`${secretName}\`: ❌ **NOT FOUND** in GCP Secret Manager — populate before deploy`;
+    const output = execSync(
+      `gcloud run services describe ${GCP_SERVICE} --region=${GCP_REGION} --project=${GCP_PROJECT} --format="value(spec.template.spec.containers[0].env[].name)"`,
+      { stdio: 'pipe', timeout: 15000 }
+    ).toString();
+    const envNames = output.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    if (envNames.includes(secretName)) {
+      return `* \`${secretName}\`: ✅ **SET** in Cloud Run environment variables`;
+    } else {
+      return `* \`${secretName}\`: ❌ **NOT SET** in Cloud Run environment variables — populate before deploy`;
     }
-    return `* \`${secretName}\`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or auth required)`;
+  } catch (e) {
+    return `* \`${secretName}\`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or not authenticated)`;
   }
 }
 
-const gcpGreysheetCheck = GREYSHEET_SECRETS.map(checkGcpSecret).join('\n');
+const gcpGreysheetCheck = GREYSHEET_SECRETS.map(checkCloudRunEnvVar).join('\n');
 // ────────────────────────────────────────────────────────────────────────────────
+
 
 const passRate = totalTests > 0 ? Math.round((passed / totalTests) * 100) : 0;
 

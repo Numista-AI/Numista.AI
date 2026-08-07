@@ -194,3 +194,23 @@ jseaman_unresolved_coins.csv
 pin_matches.txt
 search_output.txt
 search_output_refined.txt
+
+# ============================================================
+# Gemini Advisor doc generation artifacts (root-level)
+# Build scripts, exported HTML docs, and payload files
+# ============================================================
+build_*.py
+*_html.py
+ARCHITECTURE.html
+CHECKLIST_DESIGN_SPEC.html
+DEPLOYMENT_SOP.html
+DEVELOPER_BLUEPRINT.html
+INGESTION_PLAYBOOK.html
+SCHEDULED_JOBS.html
+SOURCE_OF_TRUTH.html
+grok_prompt_payload.txt
+grok_sourcing_list.csv
+Numista_AI_*_AUG_*.md
+
+# Gemini Advisor Documents (monthly-rotating reference docs, kept local only)
+Gemini Advisor Documents/
