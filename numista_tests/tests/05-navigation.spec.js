@@ -118,8 +118,14 @@ test.describe('05 - Navigation & State Persistence', () => {
 
   test('T09: AI Trainer Board loads without crash', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(80, 566); // AI Trainer Board
-    await page.waitForTimeout(4000);
+    // Use text selector first; fall back to coordinate if Flutter renders as pixels
+    const trainerBtn = page.getByRole('button', { name: /trainer|ai trainer/i });
+    if (await trainerBtn.count() > 0) {
+      await trainerBtn.click();
+    } else {
+      await page.mouse.click(80, 566); // fallback coordinate
+    }
+    await page.waitForTimeout(5000);
     const buf = await page.screenshot({ path: 'screenshots/ai-trainer-board.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
   });
