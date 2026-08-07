@@ -1,0 +1,1038 @@
+[
+  {
+    "path": "/",
+    "methods": [
+      "GET"
+    ],
+    "name": "read_root",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/approve",
+    "methods": [
+      "POST"
+    ],
+    "name": "approve_brain_suggestion",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/knowledge",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_brain_knowledge",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/reprocess",
+    "methods": [
+      "POST"
+    ],
+    "name": "reprocess_knowledge",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/suggestions",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_brain_suggestions",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/suggestions/bulk",
+    "methods": [
+      "POST"
+    ],
+    "name": "bulk_approve_suggestions",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/suggestions/rescore",
+    "methods": [
+      "POST"
+    ],
+    "name": "rescore_unscored_suggestions",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/brain/sync_canon",
+    "methods": [
+      "POST"
+    ],
+    "name": "sync_brain_canon_to_gcp",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/grade_flags",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_grade_flags",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/admin/grade_flags/{flag_id}/resolve",
+    "methods": [
+      "POST"
+    ],
+    "name": "resolve_grade_flag",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/analyze/grade-coin",
+    "methods": [
+      "POST"
+    ],
+    "name": "analyze_grade_coin",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/analyze_binder_scan",
+    "methods": [
+      "POST"
+    ],
+    "name": "analyze_binder_scan",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/analyze_checklist",
+    "methods": [
+      "POST"
+    ],
+    "name": "analyze_checklist",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/binder_scans/{user_email}",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_binder_scans",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/binder_scans/{user_email}/{binder_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_binder_detail",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/coin_crop",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_coin_crop",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/coin_search",
+    "methods": [
+      "GET"
+    ],
+    "name": "coin_search",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/collection/clear",
+    "methods": [
+      "POST"
+    ],
+    "name": "collection_clear",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/collection/completion_stats",
+    "methods": [
+      "GET"
+    ],
+    "name": "collection_completion_stats",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/collection/count",
+    "methods": [
+      "GET"
+    ],
+    "name": "collection_count",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/config/greysheet-credentials",
+    "methods": [
+      "POST"
+    ],
+    "name": "update_greysheet_credentials",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/config/release-lock",
+    "methods": [
+      "POST"
+    ],
+    "name": "release_scraper_lock",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/config/usmint-cookies",
+    "methods": [
+      "POST"
+    ],
+    "name": "update_usmint_cookies",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/confirm_binder_scan",
+    "methods": [
+      "POST"
+    ],
+    "name": "confirm_binder_scan",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/cron/audits",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_weekly_audits",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/cron/campaigns",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_active_campaigns",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/cron/reports",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_scraper_reports",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/cron/run-audit",
+    "methods": [
+      "POST"
+    ],
+    "name": "trigger_nightly_audit",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/cron/scrape-gaps",
+    "methods": [
+      "POST"
+    ],
+    "name": "scrape_gaps_cron",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/dedup_sweep",
+    "methods": [
+      "POST"
+    ],
+    "name": "dedup_sweep",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/dedup_sweep/auto_clean",
+    "methods": [
+      "POST"
+    ],
+    "name": "dedup_auto_clean",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/deep_dive",
+    "methods": [
+      "POST"
+    ],
+    "name": "deep_dive",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/dismiss_news",
+    "methods": [
+      "POST"
+    ],
+    "name": "dismiss_news",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/dismissed_news/{user_email}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_dismissed_news",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/ebay/search",
+    "methods": [
+      "GET"
+    ],
+    "name": "search_ebay_deals",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/epn/normalize-search",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_normalize_epn_search",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/estate/generate-appraisal-url",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_generate_estate_appraisal_url",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/estimate_value_general",
+    "methods": [
+      "POST"
+    ],
+    "name": "estimate_value_general",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/estimate_value_text",
+    "methods": [
+      "POST"
+    ],
+    "name": "estimate_value_text",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/export/appraisal-pdf",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_export_appraisal_pdf",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/grade_review/queue",
+    "methods": [
+      "GET"
+    ],
+    "name": "grade_review_queue",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/grade_review/stats",
+    "methods": [
+      "GET"
+    ],
+    "name": "grade_review_stats",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/grade_review/submit",
+    "methods": [
+      "POST"
+    ],
+    "name": "submit_grade_review",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/batch",
+    "methods": [
+      "POST"
+    ],
+    "name": "execute_batch_valuation",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/batch-refresh",
+    "methods": [
+      "POST"
+    ],
+    "name": "batch_refresh_greysheet_prices",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/batch-resolve",
+    "methods": [
+      "POST"
+    ],
+    "name": "batch_resolve_greysheet_coins",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/cac",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_cac_status",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/config",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_greysheet_config",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/deals",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_arbitrage_deals",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/deals/refresh",
+    "methods": [
+      "POST"
+    ],
+    "name": "refresh_arbitrage_deals",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/pricing/{gsid}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_greysheet_pricing_table",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/quota",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_greysheet_quota_status",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/refresh",
+    "methods": [
+      "POST"
+    ],
+    "name": "refresh_greysheet_coin_price",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/greysheet/resolve",
+    "methods": [
+      "POST"
+    ],
+    "name": "resolve_greysheet_coin",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/identify-world-item",
+    "methods": [
+      "POST"
+    ],
+    "name": "identify_world_item",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/identify_coin_photo",
+    "methods": [
+      "POST"
+    ],
+    "name": "identify_coin_photo",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import/littleton_sync",
+    "methods": [
+      "POST"
+    ],
+    "name": "littleton_sync",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import/process",
+    "methods": [
+      "POST"
+    ],
+    "name": "import_process",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import/start",
+    "methods": [
+      "POST"
+    ],
+    "name": "import_start",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import/status/{session_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "import_status",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import/upload",
+    "methods": [
+      "POST"
+    ],
+    "name": "import_upload",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/import_spreadsheet",
+    "methods": [
+      "POST"
+    ],
+    "name": "import_spreadsheet",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/ingestion/batch_async",
+    "methods": [
+      "POST"
+    ],
+    "name": "start_parallel_batch_ingestion",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/ingestion/jobs",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_recent_ingestion_jobs",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/ingestion/status/{job_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_ingestion_job_status",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/mint_news",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_mint_news",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/news/feed",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_numismatic_news",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/nicknames",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_nicknames",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/nicknames/stats",
+    "methods": [
+      "GET"
+    ],
+    "name": "nickname_stats",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/nicknames/submit",
+    "methods": [
+      "POST"
+    ],
+    "name": "submit_nickname",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/nicknames/{doc_id}/vote",
+    "methods": [
+      "POST"
+    ],
+    "name": "vote_nickname",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/normalize_backfill",
+    "methods": [
+      "POST"
+    ],
+    "name": "normalize_backfill",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/pcgs/cert/{cert_no}",
+    "methods": [
+      "GET"
+    ],
+    "name": "pcgs_cert_lookup",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/portfolio/snapshot",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_portfolio_snapshot_history",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/portfolio/snapshot/daily",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_daily_portfolio_snapshot",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/process_invoice",
+    "methods": [
+      "POST"
+    ],
+    "name": "process_invoice",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/provenance/verify/{passport_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_verify_provenance",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/receipts/{user_email}",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_receipts",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/receipts/{user_email}/{receipt_id}/stream",
+    "methods": [
+      "GET"
+    ],
+    "name": "receipt_stream",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/receipts/{user_email}/{receipt_id}/view_url",
+    "methods": [
+      "GET"
+    ],
+    "name": "receipt_view_url",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/db_update_check",
+    "methods": [
+      "GET"
+    ],
+    "name": "reference_db_update_check",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/glossary",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_reference_glossary",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/grade/{grade_code}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_reference_grade",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/search",
+    "methods": [
+      "GET"
+    ],
+    "name": "reference_search",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/search",
+    "methods": [
+      "POST"
+    ],
+    "name": "search_reference",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/reference/stats",
+    "methods": [
+      "GET"
+    ],
+    "name": "reference_stats",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/review/break_up_set",
+    "methods": [
+      "POST"
+    ],
+    "name": "break_up_set",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/review/bulk_update",
+    "methods": [
+      "POST"
+    ],
+    "name": "bulk_update_reviews",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/review/commit",
+    "methods": [
+      "POST"
+    ],
+    "name": "commit_reviews",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/review/keep_set_as_is",
+    "methods": [
+      "POST"
+    ],
+    "name": "keep_set_as_is",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/scraper/scrape-url",
+    "methods": [
+      "POST"
+    ],
+    "name": "scrape_url_endpoint",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/spot_prices",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_live_metal_prices",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/stats/gaps",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_gap_stats",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/stripe/create-checkout-session",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_stripe_checkout",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/stripe/create-customer-portal",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_stripe_customer_portal",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/stripe/webhook",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_stripe_webhook",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/template",
+    "methods": [
+      "GET"
+    ],
+    "name": "download_template",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/transfer/claim",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_claim_transfer",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/transfer/initiate",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_initiate_transfer",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/transfer/passport-pdf/{transfer_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_passport_pdf",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/transfer/recall",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_recall_transfer",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/coa/parse",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_parse_coa",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/family/subaccounts",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_subaccounts",
+    "tags": [
+      "family_subaccounts"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/family/subaccounts",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_subaccount",
+    "tags": [
+      "family_subaccounts"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/family/subaccounts/{child_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "delete_subaccount",
+    "tags": [
+      "family_subaccounts"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/rag/query",
+    "methods": [
+      "POST"
+    ],
+    "name": "rag_query_endpoint",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/variety/detect",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_detect_variety",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/wishlist/create-share",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_create_wishlist_share",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/wishlist/deals/check",
+    "methods": [
+      "POST"
+    ],
+    "name": "check_wishlist_deals",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/wishlist/deals/{user_email}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_user_wishlist_deals",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/docs",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "swagger_ui_html",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/docs/oauth2-redirect",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "swagger_ui_redirect",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/openapi.json",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "openapi",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/redoc",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "redoc_html",
+    "tags": [],
+    "dependencies": []
+  }
+]
