@@ -5114,7 +5114,10 @@ import requests as _requests
 _PCGS_API_BASE = "https://api.pcgs.com/publicapi"
 
 def _get_pcgs_token() -> Optional[str]:
-    """Reads the PCGS bearer token from Firestore config/pcgs -> bearerToken."""
+    """Reads the PCGS bearer token from environment variable PCGS_BEARER_TOKEN or Firestore config/pcgs -> bearerToken."""
+    token = os.environ.get("PCGS_BEARER_TOKEN") or os.environ.get("PCGS_TOKEN")
+    if token:
+        return token.strip()
     try:
         doc = db.collection("config").document("pcgs").get()
         token = doc.to_dict().get("bearerToken") if doc.exists else None
