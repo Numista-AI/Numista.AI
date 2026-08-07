@@ -882,7 +882,9 @@ def _scrape_generic_page(url: str, dry_run: bool, query_meta: dict = None) -> di
             alt = img.get("alt", "") or img.get("title", "")
             if not src or not alt or len(alt) < 6:
                 continue
-            if "ids.si.edu" in src or "collections" in src:
+            _abs_src = src if "://" in src else ("https:" + src if src.startswith("//") else "https://" + src)
+            _netloc = urlparse(_abs_src).netloc
+            if _netloc == "ids.si.edu" or _netloc.endswith(".ids.si.edu") or "collections" in src:
                 denom_match = re.search(r'(\d+\s+Dollars?|\d+/\d+\s+Disme|\d+\s+Cents?|\$\d+)', alt, re.IGNORECASE)
                 denom = denom_match.group(0) if denom_match else "One Dollar"
                 
