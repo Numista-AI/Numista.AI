@@ -9,6 +9,17 @@
 
 
 
+
+## v4.3 — 2026-08-08
+**Phase 2 & 3 Feature Suite & System Resilience**
+
+- Phase 2 Step 3 Vision Ingestion: hardware capture v2, cv2 focus window, WebRTC fallback, frame buffer optimization
+- Phase 2 Step 4 Morgan AI Persistence: session context engine, chat history persistence, pre-filled suggestion chips
+- Phase 2 Step 5 Desktop Bulk Import: deduplication hub, spreadsheet import template, and valuation pipeline
+- Phase 3 Step 1 EPN Wishlist Links: affiliate matcher, public reservation router, and security-compliant gift streams
+- Phase 3 Step 2 Stripe Billing: subscription management and attorney portal signed PDF URLs
+- Lateral Transfer System Resilience: inventory loading fixes, multi-term search, and collection selection
+
 ## v4.2 — 2026-08-05
 **Desktop Beta Enhancements & COA Validation Engine**
 

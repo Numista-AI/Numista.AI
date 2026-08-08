@@ -143,26 +143,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     }).toList();
   }
 
-  bool get _areAllFilteredSelected {
-    final filtered = _filteredCoins;
-    if (filtered.isEmpty) return false;
-    return filtered.every((c) => _selectedCoinIds.contains(c.id));
-  }
 
-  void _toggleSelectAllFiltered(bool? value) {
-    final filtered = _filteredCoins;
-    setState(() {
-      if (value == true) {
-        for (final c in filtered) {
-          _selectedCoinIds.add(c.id);
-        }
-      } else {
-        for (final c in filtered) {
-          _selectedCoinIds.remove(c.id);
-        }
-      }
-    });
-  }
 
   List<CoinModel> get _selectedCoins {
     return _allCoins.where((c) => _selectedCoinIds.contains(c.id)).toList();
