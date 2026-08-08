@@ -1542,10 +1542,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.3',
+    date: '2026-08-08',
+    description: 'Phase 2 & 3 Feature Suite & System Resilience',
+    isLatest: true,
+    changes: [
+      'Phase 2 Step 3 Vision Ingestion: hardware capture v2, cv2 focus window, WebRTC fallback, frame buffer optimization',
+      'Phase 2 Step 4 Morgan AI Persistence: session context engine, chat history persistence, pre-filled suggestion chips',
+      'Phase 2 Step 5 Desktop Bulk Import: deduplication hub, spreadsheet import template, and valuation pipeline',
+      'Phase 3 Step 1 EPN Wishlist Links: affiliate matcher, public reservation router, and security-compliant gift streams',
+      'Phase 3 Step 2 Stripe Billing: subscription management and attorney portal signed PDF URLs',
+      'Lateral Transfer System Resilience: inventory loading fixes, multi-term search, and collection selection',
+    ],
+  ),
+  _Release(
     version: 'v4.2',
     date: '2026-08-05',
     description: 'Desktop Beta Enhancements & COA Validation Engine',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'COA Inspector Mintage Ceiling Validation: 3-state verdict chip and serial regex sanitization',
       'Program Manager Dual Filters: geographical mint mark and finish/strike responsive Wrap chips',
