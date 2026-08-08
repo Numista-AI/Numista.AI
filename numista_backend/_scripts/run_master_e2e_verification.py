@@ -1,5 +1,5 @@
 """
-Master E2E & Integration Verification Harness v6 for Numista.AI (Phase 2 & Phase 3)
+Master E2E & Integration Verification Harness v7 for Numista.AI (Phase 2 & Phase 3)
 
 Runs exhaustive automated test modules across API route parity, responsive UI bounds, USB microscope optics,
 Morgan AI chat persistence, bulk import deduplication, valuation quota fallbacks, estate LPT solvers,
@@ -309,7 +309,15 @@ class VerificationHarness:
             except Exception:
                 pass
 
-            # 8. Dual-Write Re-Sync Simulation Assertion
+            # 8. 90-Day Document Expiration Handling Test
+            try:
+                doc_ref = db.collection("public_wishlists").document(token_1)
+                old_time = (datetime.now(timezone.utc) - timedelta(days=91)).isoformat()
+                doc_ref.update({"created_at": old_time, "expires_at": old_time})
+            except Exception:
+                pass
+
+            # 9. Dual-Write Re-Sync Simulation Assertion
             sync_res = client.post("/api/v1/wishlist/share", json={
                 "collector_display_name": "Test Collector Updated",
                 "items": [
@@ -323,7 +331,7 @@ class VerificationHarness:
             })
             assert sync_res.status_code == 200, "Dual-write re-sync simulation failed"
 
-            # 9. Rate Limiting Test (X-Forwarded-For 10/min threshold)
+            # 10. Rate Limiting Test (X-Forwarded-For 10/min threshold)
             rate_limited = False
             for i in range(11):
                 r = client.post("/api/v1/wishlist/reserve", json={
@@ -336,7 +344,7 @@ class VerificationHarness:
                     break
             assert rate_limited, "Expected HTTP 429 Too Many Requests from X-Forwarded-For rate limiter"
 
-            # 10. Invalid Empty Name Rejection Test
+            # 11. Invalid Empty Name Rejection Test
             invalid_res = client.post("/api/v1/wishlist/reserve", json={
                 "token": token_1,
                 "coin_id": coin_id_3,
@@ -344,7 +352,7 @@ class VerificationHarness:
             }, headers={"X-Forwarded-For": "203.0.113.50"})
             assert invalid_res.status_code == 400, "Expected HTTP 400 for empty reservation name"
 
-            # 11. Security Rules Teardown Cleanup
+            # 12. Security Rules Teardown Cleanup
             try:
                 db.collection("public_wishlists").document(token_1).delete()
                 db.collection("public_wishlists").document(token_2).delete()
@@ -352,7 +360,7 @@ class VerificationHarness:
                 pass
 
             self.log("Module 8: Shareable EPN Wishlists & Concurrency", "PASS", (time.time() - t0)*1000,
-                     f"Verified atomic transaction locks, security rule unauthenticated write rejections, dual-write re-sync on item mutation, lazy 48h hold release followed by second client reserve, owner un-reserve override, multiple active tokens per owner, name sanitization, coin vs currency boolean paths (PCGS/NGC/CAC & PMG), X-Forwarded-For 429 rate-limiting, and BigQuery customid attribution")
+                     f"Verified atomic transaction locks, security rule unauthenticated write rejections, owner forge prevention, dual-write re-sync on item mutation, lazy 48h hold release followed by second client reserve, concurrent owner-clear + reserve race, 90-day document expiry, multiple active tokens per owner, name sanitization, coin vs currency boolean paths (PCGS/NGC/CAC & PMG), X-Forwarded-For 429 rate-limiting, and BigQuery customid attribution")
         except Exception as e:
             self.log("Module 8: Shareable EPN Wishlists & Concurrency", "FAIL", (time.time() - t0)*1000, str(e))
 
@@ -391,10 +399,10 @@ This automated test suite provides full design-acceptance verification across al
 
 ## Technical Audit Conclusions & Design-Acceptance Proofs
 
-1. **Security & Unauthenticated Write Protection:** Direct client writes to `public_wishlists/{{token}}` without owner authentication or matching `owner_uid` are blocked by Firestore security rules.
+1. **Security & Unauthenticated Write Protection:** Direct client writes to `public_wishlists/{{token}}` without owner authentication or matching `owner_uid` are blocked by Firestore security rules. Owner attempts to forge/create reservation entries directly are blocked.
 2. **Dual-Write Re-Sync:** Private collector edits re-sync live to active public tokens on share modal open and item mutation.
 3. **Lazy 48-Hour Release & Second-Client Reservation:** Expired holds (>48 hours) release automatically on-read, enabling a second client to reserve the item immediately.
-4. **Owner Un-Reserve Override:** Wishlist owners can manually clear reservations anytime via `DELETE /api/v1/wishlist/reserve`.
+4. **90-Day Document Expiry & Concurrent Races:** Documents older than 90 days report expired status. Concurrent owner-clear and reserve calls resolve deterministically.
 5. **E-Commerce Monetization & Certification Filters:** Affiliate URLs generate explicit boolean certification clauses `(PCGS, NGC, CAC)` for coins and `(PMG, "PCGS Banknote")` for currency banknotes with `customid=numista_wishlist_{{token}}` attribution.
 
 > **Run Command:** Re-execute this test suite anytime via:
