@@ -1542,10 +1542,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.4',
+    date: '2026-08-08',
+    description: 'Transfer Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Transfer: clean unused helper functions in lateral transfer screen',
+      'Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection',
+      'Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs',
+      'Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing',
+      'Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8',
+      'Harness: complete 100% full design acceptance gate for Phase 3 Step 1',
+      'Harness: finalize Master E2E Verification Harness v6 as full Design-Acceptance Gate for Phase 3 Step 1',
+      'Harness: expand Master E2E Verification Harness v5 with lazy 48h release test, multiple token creation, and complete assertion details',
+    ],
+  ),
+  _Release(
     version: 'v4.3',
     date: '2026-08-08',
     description: 'Phase 2 & 3 Feature Suite & System Resilience',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Phase 2 Step 3 Vision Ingestion: hardware capture v2, cv2 focus window, WebRTC fallback, frame buffer optimization',
       'Phase 2 Step 4 Morgan AI Persistence: session context engine, chat history persistence, pre-filled suggestion chips',

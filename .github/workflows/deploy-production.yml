@@ -50,6 +50,10 @@ jobs:
               print("No dev block found - proceeding with existing index.html.")
           EOF
 
+      # Auto-generate release notes from conventional git commits prior to compilation
+      - name: Auto-generate Release Notes
+        run: python3 auto_generate_release_notes.py --force || true
+
       - name: Build Flutter web (release)
         working-directory: numista_mobile
         run: flutter build web --release --base-href "/"
