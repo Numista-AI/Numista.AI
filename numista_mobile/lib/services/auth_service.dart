@@ -25,7 +25,8 @@ class AuthService {
   static String get userEmail {
     final user = _auth.currentUser;
     if (user?.isAnonymous == true) return 'guest';
-    return user?.email ?? 'unknown@numista.ai';
+    final rawEmail = user?.email ?? 'unknown@numista.ai';
+    return rawEmail.trim().toLowerCase();
   }
 
   static String get displayName {
@@ -42,7 +43,8 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return 'users/unknown/coins';
     if (user.isAnonymous) return 'users/${user.uid}/coins';
-    return 'users/${user.email ?? user.uid}/coins';
+    final identifier = user.email != null ? user.email!.trim().toLowerCase() : user.uid;
+    return 'users/$identifier/coins';
   }
 
   /// Firestore path for this user's paper money / bank note collection.
@@ -50,7 +52,8 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return 'users/unknown/currency';
     if (user.isAnonymous) return 'users/${user.uid}/currency';
-    return 'users/${user.email ?? user.uid}/currency';
+    final identifier = user.email != null ? user.email!.trim().toLowerCase() : user.uid;
+    return 'users/$identifier/currency';
   }
 
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -59,7 +62,7 @@ class AuthService {
   static Future<AuthResult> signIn(String email, String pin) async {
     try {
       await _auth.signInWithEmailAndPassword(
-          email: email.trim(), password: pin.trim());
+          email: email.trim().toLowerCase(), password: pin.trim());
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
@@ -71,7 +74,7 @@ class AuthService {
       String email, String displayName, String pin) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
-          email: email.trim(), password: pin.trim());
+          email: email.trim().toLowerCase(), password: pin.trim());
       // Store a display name so the sidebar shows a real name
       if (displayName.trim().isNotEmpty) {
         await cred.user?.updateDisplayName(displayName.trim());
