@@ -206,24 +206,27 @@ class EpnService {
     bool soldOnly = false,
     double? estimatedValue,
     String? customId,
+    String itemType = 'coin',
   }) {
     String searchTerms = query.trim();
     if (isKeyDateOrHighValue(searchTerms, estimatedValue: estimatedValue)) {
-      searchTerms = '$searchTerms PCGS NGC CAC';
+      if (itemType == 'currency') {
+        searchTerms = "$searchTerms (PMG, 'PCGS Banknote')";
+      } else {
+        searchTerms = "$searchTerms (PCGS, NGC, CAC)";
+      }
     }
 
     final encodedQuery = Uri.encodeComponent(searchTerms);
     final customIdParam = (customId != null && customId.isNotEmpty)
         ? '&customid=${Uri.encodeComponent(customId)}'
-        : '&customid=public_wishlist';
+        : '&customid=numista_wishlist';
 
     return 'https://www.ebay.com/sch/i.html'
         '?_nkw=$encodedQuery'
         '&_sacat=11116'
-        '${soldOnly ? "&LH_Sold=1&LH_Complete=1" : ""}'
-        '&mkevt=1&mkcid=1&mkrid=$_defaultMkrid'
-        '&campid=$_defaultCampId&toolid=10001&siteid=0'
+        '${soldOnly ? '&LH_Sold=1&LH_Complete=1' : ''}'
+        '&mkevt=1&mkcid=1&mkrid=$_defaultMkrid&campid=$_defaultCampId&toolid=10001&siteid=0'
         '$customIdParam';
   }
 }
-

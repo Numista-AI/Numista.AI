@@ -93,10 +93,24 @@ service cloud.firestore {
       allow write: if false; // Only agent (SA) writes
     }
 
-    // ── Public Wishlists (read-only for clients, backend-only write) ─────────
+    // ── Public Wishlists (public read, owner create/update/delete, backend reservation) ─
     match /public_wishlists/{token} {
       allow read: if true;
-      allow write: if false;  // backend service account only (via /api/wishlist/create-share)
+      allow create: if request.auth != null
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && request.resource.data.token == token
+                    && request.resource.data.reserved_items == {};
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.owner_uid
+                    && request.resource.data.owner_uid == resource.data.owner_uid
+                    && request.resource.data.token == resource.data.token
+                    && (
+                      request.resource.data.reserved_items == resource.data.reserved_items
+                      ||
+                      request.resource.data.reserved_items.keys().hasOnly(resource.data.reserved_items.keys())
+                    );
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.owner_uid;
     }
 
     // ── Stripe Webhook Idempotency Events (backend-only read/write) ───────────
