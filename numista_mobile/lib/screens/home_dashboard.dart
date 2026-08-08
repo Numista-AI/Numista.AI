@@ -1542,10 +1542,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.9',
+    date: '2026-08-08',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: update release notes',
+      'Auth: normalize user emails to lowercase across auth and Firestore path getters',
+      'Release: automate release notes generation via git commits and CI build step',
+      'Transfer: clean unused helper functions in lateral transfer screen',
+      'Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection',
+      'Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs',
+      'Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing',
+      'Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8',
+    ],
+  ),
+  _Release(
+    version: 'v4.8',
+    date: '2026-08-08',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: update release notes',
+      'Auth: normalize user emails to lowercase across auth and Firestore path getters',
+      'Release: automate release notes generation via git commits and CI build step',
+      'Transfer: clean unused helper functions in lateral transfer screen',
+      'Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection',
+      'Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs',
+      'Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing',
+      'Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8',
+    ],
+  ),
+  _Release(
     version: 'v4.7',
     date: '2026-08-08',
     description: 'Auth Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Auth: normalize user emails to lowercase across auth and Firestore path getters',
       'Release: automate release notes generation via git commits and CI build step',
