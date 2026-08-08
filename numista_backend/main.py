@@ -68,6 +68,7 @@ from routes.valuation_routes import router as valuation_router
 from routes.scan_routes import router as scan_router
 from routes.ai_routes import router as ai_router
 from routes.collection_routes import router as collection_router
+from routes.affiliate_routes import router as affiliate_router
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -79,6 +80,7 @@ app.include_router(valuation_router)
 app.include_router(scan_router)
 app.include_router(ai_router)
 app.include_router(collection_router)
+app.include_router(affiliate_router)
 
 # COA parsing endpoint extracted to routes/scan_routes.py
 
