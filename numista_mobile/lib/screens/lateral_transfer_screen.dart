@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../models/transfer_model.dart';
+import '../services/auth_service.dart';
+import '../services/guest_seed_service.dart';
 import '../services/lateral_transfer_service.dart';
 
 class LateralTransferScreen extends StatefulWidget {
@@ -57,27 +59,43 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   }
 
   Future<void> _loadInventoryFromFirestore() async {
-    final email = widget.userId.trim();
-    if (email.isEmpty) return;
-
     setState(() {
       _isFetchingInventory = true;
       _fetchError = null;
     });
 
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(email)
-          .collection('coins')
-          .orderBy('timestamp', descending: true)
-          .get();
+      List<CoinModel> coins = [];
 
-      final coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+      if (GuestSeedService.isBrowseDemoMode) {
+        final snap = await GuestSeedService.getDemoCoinsStream().first;
+        coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+      } else {
+        // Query user inventory. First check explicit userId doc, then AuthService.coinsPath
+        final userEmailOrUid = widget.userId.trim().isNotEmpty
+            ? widget.userId.trim()
+            : AuthService.userEmail;
+
+        final path = 'users/$userEmailOrUid/coins';
+        var snap = await FirebaseFirestore.instance.collection(path).get();
+
+        if (snap.docs.isEmpty && path != AuthService.coinsPath) {
+          snap = await FirebaseFirestore.instance.collection(AuthService.coinsPath).get();
+        }
+
+        coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+      }
+
+      // Sort in memory by timestamp descending (if available)
+      coins.sort((a, b) {
+        final tA = a.timestamp ?? DateTime(1970);
+        final tB = b.timestamp ?? DateTime(1970);
+        return tB.compareTo(tA);
+      });
 
       setState(() {
         _allCoins = coins;
-        // Select all items by default for convenience
+        // Select all items by default for user convenience
         _selectedCoinIds = coins.map((c) => c.id).toSet();
         _isFetchingInventory = false;
       });
@@ -90,11 +108,38 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   }
 
   List<CoinModel> get _filteredCoins {
-    if (_searchQuery.trim().isEmpty) return _allCoins;
-    final q = _searchQuery.trim().toLowerCase();
+    final queryText = _searchQuery.trim().toLowerCase();
+    if (queryText.isEmpty) return _allCoins;
+
+    final tokens = queryText.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+
     return _allCoins.where((c) {
-      final title = '${c.year} ${c.programSeries} ${c.denomination} ${c.mintMark} ${c.variety} ${c.certificationNumber}'.toLowerCase();
-      return title.contains(q);
+      final fullSearch = [
+        c.year,
+        c.programSeries,
+        c.denomination,
+        c.mintMark,
+        c.variety,
+        c.themeSubject,
+        c.metalContent,
+        c.country,
+        c.condition,
+        c.gradingService,
+        c.certificationNumber,
+        c.originalDescription,
+        c.personalNotes,
+        c.storageLocation,
+        c.retailer,
+      ].join(' ').toLowerCase();
+
+      return tokens.every((token) {
+        if (fullSearch.contains(token)) return true;
+        if (token.startsWith('\$') && token.length > 1) {
+          final rawNum = token.substring(1);
+          if (fullSearch.contains(rawNum)) return true;
+        }
+        return false;
+      });
     }).toList();
   }
 
@@ -135,10 +180,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       return;
     }
 
+    final userIdToUse = widget.userId.trim().isNotEmpty
+        ? widget.userId.trim()
+        : AuthService.userEmail;
+
     setState(() => _isLoading = true);
     try {
       final transfer = await _transferService.initiateTransfer(
-        userId: widget.userId,
+        userId: userIdToUse,
         itemIds: selected.map((c) => c.id).toList(),
         recipientEmail: _recipientEmailController.text.trim().isNotEmpty
             ? _recipientEmailController.text.trim()
@@ -290,36 +339,85 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         // Item Selector Header & Controls
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              'Select Items to Transfer ($selectedCount of $totalCount)',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            if (filtered.isNotEmpty)
-              Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(
-                    value: _areAllFilteredSelected,
-                    activeColor: const Color(0xFF0284C7),
-                    checkColor: Colors.white,
-                    onChanged: _toggleSelectAllFiltered,
-                  ),
-                  GestureDetector(
-                    onTap: () => _toggleSelectAllFiltered(!_areAllFilteredSelected),
-                    child: const Text(
-                      'Select All Filtered',
-                      style: TextStyle(color: Color(0xFF38BDF8), fontSize: 13, fontWeight: FontWeight.w600),
+                  Text(
+                    'Select Items to Transfer ($selectedCount of $totalCount)',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
                     ),
                   ),
+                  if (totalCount > 0 && selectedCount == totalCount)
+                    const Text(
+                      'Entire collection selected',
+                      style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                 ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Selection Action Bar Buttons
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: totalCount == 0
+                  ? null
+                  : () {
+                      setState(() {
+                        _selectedCoinIds = _allCoins.map((c) => c.id).toSet();
+                      });
+                    },
+              icon: const Icon(Icons.select_all, size: 16, color: Color(0xFF38BDF8)),
+              label: Text(
+                'Select Entire Collection ($totalCount)',
+                style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF0284C7)),
+                backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              ),
+            ),
+            if (_searchQuery.trim().isNotEmpty && filtered.isNotEmpty) ...[
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    for (final c in filtered) {
+                      _selectedCoinIds.add(c.id);
+                    }
+                  });
+                },
+                icon: const Icon(Icons.filter_alt, size: 16, color: Color(0xFF38BDF8)),
+                label: Text(
+                  'Select Filtered (${filtered.length})',
+                  style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF0284C7)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                ),
+              ),
+            ],
+            if (selectedCount > 0)
+              TextButton(
+                onPressed: () => setState(() => _selectedCoinIds.clear()),
+                child: const Text('Deselect All', style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
 
         // Search Bar
         TextField(
@@ -327,7 +425,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           style: const TextStyle(color: Colors.white),
           onChanged: (val) => setState(() => _searchQuery = val),
           decoration: InputDecoration(
-            hintText: 'Search by year, series, denomination, grade...',
+            hintText: 'Search by year, series, denomination, gold/silver, grade...',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             prefixIcon: const Icon(Icons.search, color: Color(0xFF94A3B8)),
             suffixIcon: _searchQuery.isNotEmpty
@@ -404,18 +502,30 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
             ),
           )
         else if (filtered.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24.0),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
             child: Center(
-              child: Text(
-                'No items match your search filter.',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+              child: Column(
+                children: [
+                  const Text(
+                    'No items match your search filter.',
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }),
+                    child: const Text('Clear Search Filter', style: TextStyle(color: Color(0xFF38BDF8))),
+                  ),
+                ],
               ),
             ),
           )
         else
           Container(
-            constraints: const BoxConstraints(maxHeight: 320),
+            constraints: const BoxConstraints(maxHeight: 360),
             decoration: BoxDecoration(
               color: const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(12),
@@ -466,7 +576,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   subtitle: Text(
-                    '${coin.condition} | ${coin.gradingService.isNotEmpty ? coin.gradingService : "Raw"} ${coin.certificationNumber}'.trim(),
+                    '${coin.condition} | ${coin.gradingService.isNotEmpty ? coin.gradingService : "Raw"} ${coin.certificationNumber} ${coin.variety}'.trim(),
                     style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                   ),
                 );

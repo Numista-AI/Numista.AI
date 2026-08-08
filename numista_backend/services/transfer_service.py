@@ -73,12 +73,22 @@ def initiate_transfer(
         # Check coins collection first
         coin_ref = db.collection("users").document(user_a_id).collection("coins").document(item_id)
         coin_snap = coin_ref.get()
-        
+
+        if not coin_snap.exists and user_a_id != user_a_id.lower():
+            alt_user_id = user_a_id.lower()
+            coin_ref = db.collection("users").document(alt_user_id).collection("coins").document(item_id)
+            coin_snap = coin_ref.get()
+
         if not coin_snap.exists:
             # Check banknotes as fallback
             coin_ref = db.collection("users").document(user_a_id).collection("banknotes").document(item_id)
             coin_snap = coin_ref.get()
-            
+
+        if not coin_snap.exists and user_a_id != user_a_id.lower():
+            alt_user_id = user_a_id.lower()
+            coin_ref = db.collection("users").document(alt_user_id).collection("banknotes").document(item_id)
+            coin_snap = coin_ref.get()
+
         if not coin_snap.exists:
             raise ValueError(f"Item {item_id} not found in user's collection")
 
