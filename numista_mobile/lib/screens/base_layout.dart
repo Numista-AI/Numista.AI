@@ -313,7 +313,7 @@ class _BaseLayoutState extends State<BaseLayout> {
         final userUid = user?.uid ?? user?.email ?? '';
         return AttorneyPortalScreen(uid: userUid, token: '');
       case 'Lateral Transfer':
-        final email = FirebaseAuth.instance.currentUser?.email ?? '';
+        final email = AuthService.userEmail;
         return LateralTransferScreen(userId: email, itemsToTransfer: const []);
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
