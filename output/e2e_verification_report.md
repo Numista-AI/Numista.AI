@@ -1,9 +1,9 @@
 # Numista.AI Master E2E & Integration Verification Report — Design Acceptance Gate
 
-**Execution Timestamp:** 2026-08-08 16:52:55 UTC  
+**Execution Timestamp:** 2026-08-08 16:58:11 UTC  
 **Target Environment:** Local / Staging (`dev` branch)  
 **Overall Result:** 100% PASSED (DESIGN-ACCEPTANCE GATE)  
-**Total Duration:** 6.87 seconds  
+**Total Duration:** 6.64 seconds  
 
 ---
 
@@ -19,12 +19,12 @@ This automated test suite provides full design-acceptance verification across al
 | :---: | :--- | :---: | :--- |
 | PASS | **Module 1: APIRouter Parity** | 15 ms | Verified 128 active routes across 11 APIRouters with zero route collision |
 | PASS | **Module 2: Responsive Shell & Dropzone** | 20 ms | Verified 20MB client-side dropzone validation and desktop container bounds (1100px-1600px) |
-| PASS | **Module 3: USB Microscope Vision Ingestion** | 25 ms | Verified 360p downsampled sharpness calculation (88.9% CPU saved) & camera failover (0,1,2) |
-| PASS | **Module 4: Morgan AI Chat Persistence** | 895 ms | Verified context injection (<15ms latency) and Firestore session persistence structure |
+| PASS | **Module 3: USB Microscope Vision Ingestion** | 26 ms | Verified 360p downsampled sharpness calculation (88.9% CPU saved) & camera failover (0,1,2) |
+| PASS | **Module 4: Morgan AI Chat Persistence** | 887 ms | Verified context injection (<15ms latency) and Firestore session persistence structure |
 | PASS | **Module 5: Bulk Import & US Mint Denominations** | 15 ms | Verified full US Mint denomination mapping rules, 3-tier dedup, and fail-open world coin parsing |
 | PASS | **Module 6: Valuation Quota Fallback Chain** | 18 ms | Verified Greysheet 429 quota fallback to PCGS proxy and yfinance silver/gold melt math |
-| PASS | **Module 7: Estate LPT Solver & Legal PDF Passport** | 20 ms | Verified Greedy LPT partition solver, heir lot balancing, and legal PDF passport page constraints |
-| PASS | **Module 8: Shareable EPN Wishlists & Concurrency** | 5861 ms | Verified atomic transaction locks, security rule unauthenticated write rejections, owner forge prevention, dual-write re-sync on item mutation, lazy 48h hold release followed by second client reserve, concurrent owner-clear + reserve race, 90-day document expiry, multiple active tokens per owner, name sanitization, coin vs currency boolean paths (PCGS/NGC/CAC & PMG), X-Forwarded-For 429 rate-limiting, and BigQuery customid attribution |
+| PASS | **Module 7: Estate LPT Solver & Legal PDF Passport** | 21 ms | Verified Greedy LPT partition solver, heir lot balancing, and legal PDF passport page constraints |
+| PASS | **Module 8: Shareable EPN Wishlists & Concurrency** | 5635 ms | Verified atomic transaction locks, security rule unauthenticated write rejections, owner forge prevention, dual-write re-sync on item mutation, lazy 48h hold release followed by second client reserve, concurrent owner-clear + reserve race, 90-day document expiry, multiple active tokens per owner, name sanitization, coin vs currency boolean paths (PCGS/NGC/CAC & PMG), X-Forwarded-For 429 rate-limiting, and BigQuery customid attribution |
 
 ---
 

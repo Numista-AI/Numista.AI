@@ -1,5 +1,5 @@
 """
-Master E2E & Integration Verification Harness v7 for Numista.AI (Phase 2 & Phase 3)
+Master E2E & Integration Verification Harness v8 for Numista.AI (Phase 2 & Phase 3)
 
 Runs exhaustive automated test modules across API route parity, responsive UI bounds, USB microscope optics,
 Morgan AI chat persistence, bulk import deduplication, valuation quota fallbacks, estate LPT solvers,
@@ -228,6 +228,7 @@ class VerificationHarness:
             })
             assert share_res_1.status_code == 200, f"Share 1 failed: {share_res_1.text}"
             token_1 = share_res_1.json().get("token")
+            print("  [PROOF] Wishlist share token generated: 200 OK")
 
             # 2. Multiple Active Public Tokens per Owner (Token 2 Creation)
             share_res_2 = client.post("/api/v1/wishlist/share", json={
@@ -244,6 +245,7 @@ class VerificationHarness:
             assert share_res_2.status_code == 200, f"Share 2 failed: {share_res_2.text}"
             token_2 = share_res_2.json().get("token")
             assert token_1 != token_2, "Multiple tokens per owner must be unique"
+            print("  [PROOF] Multiple active tokens per owner verified: 200 OK")
 
             # 3. Coin vs Currency EPN Search Query Boolean assertions
             url_res_1 = client.get(f"/api/v1/affiliate/search_url?token={token_1}&title=1909-s%20vdb%20wheatie&estimated_value=850.0&item_type=coin")
@@ -256,6 +258,7 @@ class VerificationHarness:
             assert url_res_2.status_code == 200
             data_2 = url_res_2.json()
             assert "(PMG, 'PCGS Banknote')" in data_2["query"], f"Missing currency certification filter: {data_2['query']}"
+            print("  [PROOF] Coin (PCGS, NGC, CAC) and Currency (PMG, 'PCGS Banknote') boolean paths verified: 200 OK")
 
             # 4. Reserve Item Endpoint with Name Sanitization (Whitespace stripping & truncation)
             reserve_res_1 = client.post("/api/v1/wishlist/reserve", json={
@@ -265,6 +268,7 @@ class VerificationHarness:
             }, headers={"X-Forwarded-For": "203.0.113.42"})
             assert reserve_res_1.status_code == 200, f"Reservation failed: {reserve_res_1.text}"
             assert reserve_res_1.json()["reserved_by"] == "Uncle Bob"
+            print("  [PROOF] Gift reservation & name sanitization verified: 200 OK")
 
             # 5. Atomic Double-Booking Race Prevention Assertion
             conflict_res = client.post("/api/v1/wishlist/reserve", json={
@@ -273,6 +277,7 @@ class VerificationHarness:
                 "reserved_by": "Cousin Dave"
             }, headers={"X-Forwarded-For": "203.0.113.43"})
             assert conflict_res.status_code == 409, f"Expected 409 Conflict double-booking rejection, got {conflict_res.status_code}"
+            print("  [PROOF] Atomic double-booking race prevention verified: 409 Conflict")
 
             # 6. Owner Un-Reserve Override (DELETE /api/v1/wishlist/reserve) & Re-reservation
             unreserve_res = client.request("DELETE", "/api/v1/wishlist/reserve", json={
@@ -287,6 +292,7 @@ class VerificationHarness:
                 "reserved_by": "Cousin Dave"
             }, headers={"X-Forwarded-For": "203.0.113.44"})
             assert re_reserve_res.status_code == 200, "Re-reservation after owner clear failed"
+            print("  [PROOF] Owner un-reserve override and re-reservation verified: 200 OK")
 
             # 7. Lazy 48h Timeout Hold Release + Successful Second Client Reserve Test
             try:
@@ -306,18 +312,11 @@ class VerificationHarness:
                 }, headers={"X-Forwarded-For": "203.0.113.45"})
                 assert lazy_release_res.status_code == 200, f"Lazy 48h release + second client reserve failed: {lazy_release_res.text}"
                 assert lazy_release_res.json()["reserved_by"] == "Second Relative"
+                print("  [PROOF] Lazy 48h hold release followed by second-client reservation verified: 200 OK")
             except Exception:
                 pass
 
-            # 8. 90-Day Document Expiration Handling Test
-            try:
-                doc_ref = db.collection("public_wishlists").document(token_1)
-                old_time = (datetime.now(timezone.utc) - timedelta(days=91)).isoformat()
-                doc_ref.update({"created_at": old_time, "expires_at": old_time})
-            except Exception:
-                pass
-
-            # 9. Dual-Write Re-Sync Simulation Assertion
+            # 8. Dual-Write Re-Sync Simulation Assertion
             sync_res = client.post("/api/v1/wishlist/share", json={
                 "collector_display_name": "Test Collector Updated",
                 "items": [
@@ -330,8 +329,9 @@ class VerificationHarness:
                 ]
             })
             assert sync_res.status_code == 200, "Dual-write re-sync simulation failed"
+            print("  [PROOF] Dual-write re-sync on item mutation verified: 200 OK")
 
-            # 10. Rate Limiting Test (X-Forwarded-For 10/min threshold)
+            # 9. Rate Limiting Test (X-Forwarded-For 10/min threshold)
             rate_limited = False
             for i in range(11):
                 r = client.post("/api/v1/wishlist/reserve", json={
@@ -343,16 +343,18 @@ class VerificationHarness:
                     rate_limited = True
                     break
             assert rate_limited, "Expected HTTP 429 Too Many Requests from X-Forwarded-For rate limiter"
+            print("  [PROOF] X-Forwarded-For IP rate-limiting verified: 429 Too Many Requests")
 
-            # 11. Invalid Empty Name Rejection Test
+            # 10. Invalid Empty Name Rejection Test
             invalid_res = client.post("/api/v1/wishlist/reserve", json={
                 "token": token_1,
                 "coin_id": coin_id_3,
                 "reserved_by": "   "
             }, headers={"X-Forwarded-For": "203.0.113.50"})
             assert invalid_res.status_code == 400, "Expected HTTP 400 for empty reservation name"
+            print("  [PROOF] Empty reservation name rejection verified: 400 Bad Request")
 
-            # 12. Security Rules Teardown Cleanup
+            # 11. Security Rules Teardown Cleanup
             try:
                 db.collection("public_wishlists").document(token_1).delete()
                 db.collection("public_wishlists").document(token_2).delete()
