@@ -11,6 +11,45 @@
 
 
 
+
+
+
+## v4.7 — 2026-08-08
+**Auth Enhancements & Platform Updates**
+
+- Auth: normalize user emails to lowercase across auth and Firestore path getters
+- Release: automate release notes generation via git commits and CI build step
+- Transfer: clean unused helper functions in lateral transfer screen
+- Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection
+- Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs
+- Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing
+- Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8
+- Harness: complete 100% full design acceptance gate for Phase 3 Step 1
+
+## v4.6 — 2026-08-08
+**Auth Enhancements & Platform Updates**
+
+- Auth: normalize user emails to lowercase across auth and Firestore path getters
+- Release: automate release notes generation via git commits and CI build step
+- Transfer: clean unused helper functions in lateral transfer screen
+- Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection
+- Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs
+- Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing
+- Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8
+- Harness: complete 100% full design acceptance gate for Phase 3 Step 1
+
+## v4.5 — 2026-08-08
+**Release Enhancements & Platform Updates**
+
+- Release: automate release notes generation via git commits and CI build step
+- Transfer: clean unused helper functions in lateral transfer screen
+- Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection
+- Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs
+- Seo: add non-affiliation disclaimer metadata and JSON-LD schema for Google indexing
+- Harness: add explicit PROOF console logs for security, dual-write, lazy 48h release, and multi-token paths v8
+- Harness: complete 100% full design acceptance gate for Phase 3 Step 1
+- Harness: finalize Master E2E Verification Harness v6 as full Design-Acceptance Gate for Phase 3 Step 1
+
 ## v4.4 — 2026-08-08
 **Transfer Enhancements & Platform Updates**
 
