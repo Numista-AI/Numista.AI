@@ -24,6 +24,13 @@ test.describe('12 - Estate Management System', () => {
   });
 
   test('T02: Estate Management UI renders on Desktop layout', async ({ page }) => {
+    // Wait for Flutter app canvas or any substantive body content to paint
+    // This guards against networkidle resolving during skeleton/auth bootstrap
+    await page.waitForSelector('flt-glass-pane, canvas, body > *:not(script):not(style)', {
+      state: 'visible',
+      timeout: 12000,
+    }).catch(() => {}); // non-fatal — screenshot will capture whatever is rendered
+    await page.waitForTimeout(1500); // brief settle after element appears
     const buf = await page.screenshot({ path: 'screenshots/12-estate-desktop.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
   });
