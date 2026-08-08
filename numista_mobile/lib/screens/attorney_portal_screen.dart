@@ -72,17 +72,23 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
     try {
       final db = FirebaseFirestore.instance;
 
-      // 1. Load report metadata
-      final reportDoc = await db
-          .collection('users')
-          .doc(widget.uid)
-          .collection('estate_reports')
-          .doc(widget.token)
-          .get();
+      // 1. Load report metadata from root collection estate_reports/{token}
+      DocumentSnapshot<Map<String, dynamic>> reportDoc;
+      if (widget.token.isNotEmpty) {
+        reportDoc = await db.collection('estate_reports').doc(widget.token).get();
+      } else {
+        // Fallback for legacy nested path if token missing
+        reportDoc = await db
+            .collection('users')
+            .doc(widget.uid)
+            .collection('estate_reports')
+            .doc(widget.token)
+            .get();
+      }
 
       if (!reportDoc.exists) {
         setState(() {
-          _error = 'This report link is invalid or has expired.';
+          _error = 'This attorney report link is invalid or has expired.';
           _loading = false;
         });
         return;
@@ -90,35 +96,49 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
 
       final report = reportDoc.data()!;
 
-      // 2. Check 30-day expiry
-      final generatedAt = report['generated_at'] as String?;
-      if (generatedAt != null) {
-        final generated = DateTime.tryParse(generatedAt);
-        if (generated != null) {
-          final age = DateTime.now().difference(generated).inDays;
-          if (age > 30) {
-            setState(() {
-              _error =
-                  'This report link has expired (valid for 30 days after generation). '
-                  'Please ask the collection owner to generate a new report.';
-              _loading = false;
-            });
-            return;
-          }
+      // 2. Check token status (active vs revoked)
+      if (report['status'] == 'revoked') {
+        setState(() {
+          _error = 'This attorney report link has been revoked by the collection owner.';
+          _loading = false;
+        });
+        return;
+      }
+
+      // 3. Check expiration
+      final expiresAtStr = report['expires_at'] as String?;
+      if (expiresAtStr != null) {
+        final expiresAt = DateTime.tryParse(expiresAtStr);
+        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt)) {
+          setState(() {
+            _error =
+                'This attorney report link has expired. '
+                'Please request a new link from the collection owner.';
+            _loading = false;
+          });
+          return;
         }
       }
 
-      // 3. Load coin inventory (read-only snapshot as of report date)
-      final coinsSnap = await db
-          .collection('users')
-          .doc(widget.uid)
-          .collection('coins')
-          .orderBy('Name')
-          .get();
+      // 4. Extract frozen snapshot or load inventory
+      List<Map<String, dynamic>> coins = [];
+      final snapshot = report['snapshot'] as Map<String, dynamic>?;
+      final ownerUid = report['owner_uid'] as String? ?? widget.uid;
 
-      final coins = coinsSnap.docs
-          .map((d) => {'id': d.id, ...d.data()})
-          .toList();
+      if (snapshot != null && snapshot.containsKey('coins')) {
+        coins = List<Map<String, dynamic>>.from(snapshot['coins']);
+      } else if (ownerUid.isNotEmpty) {
+        final coinsSnap = await db
+            .collection('users')
+            .doc(ownerUid)
+            .collection('coins')
+            .orderBy('Name')
+            .get();
+
+        coins = coinsSnap.docs
+            .map((d) => {'id': d.id, ...d.data()})
+            .toList();
+      }
 
       setState(() {
         _report = report;
