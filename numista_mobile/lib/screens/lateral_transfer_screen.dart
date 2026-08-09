@@ -654,7 +654,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
                 return CheckboxListTile(
                   value: isSelected,
-                  activeThumbColor: const Color(0xFF0284C7),
+                  activeColor: const Color(0xFF0284C7),
                   checkColor: Colors.white,
                   tileColor: isSelected ? const Color(0xFF0284C7).withValues(alpha: 0.1) : Colors.transparent,
                   onChanged: (val) {
