@@ -1542,10 +1542,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.15',
+    date: '2026-08-09',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: v4.2 SCAN_REPORT - Phase 3 features, 22 CVEs resolved, E2E skip fix, walkthrough updated',
+      'Release: update release notes for v4.14',
+      'Master-e2e: skip localhost:5000 tests in automated audit when local dev server not running',
+      'Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md',
+      'Mobile: remove unused imports in settings_screen and http_auth_client',
+      'Scan: run full system check and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.14',
     date: '2026-08-09',
     description: 'Master-e2e Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Master-e2e: skip localhost:5000 tests in automated audit when local dev server not running',
       'Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md',
