@@ -16,6 +16,56 @@
 
 
 
+
+
+
+
+
+## v4.14 — 2026-08-09
+**Master-e2e Enhancements & Platform Updates**
+
+- Master-e2e: skip localhost:5000 tests in automated audit when local dev server not running
+- Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md
+- Mobile: remove unused imports in settings_screen and http_auth_client
+- Scan: run full system check and generate SCAN_REPORT.md
+
+## v4.13 — 2026-08-09
+**Scan Enhancements & Platform Updates**
+
+- Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md
+- Mobile: remove unused imports in settings_screen and http_auth_client
+- Scan: run full system check and generate SCAN_REPORT.md
+
+## v4.12 — 2026-08-09
+**Mobile Enhancements & Platform Updates**
+
+- Mobile: remove unused imports in settings_screen and http_auth_client
+- Scan: run full system check and generate SCAN_REPORT.md
+
+## v4.11 — 2026-08-09
+**Scan Enhancements & Platform Updates**
+
+- Scan: run full system check and generate SCAN_REPORT.md
+- Release: finalize release notes sync
+- Release: update release notes
+- Auth: normalize user emails to lowercase across auth and Firestore path getters
+- Release: automate release notes generation via git commits and CI build step
+- Transfer: clean unused helper functions in lateral transfer screen
+- Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection
+- Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs
+
+## v4.10 — 2026-08-08
+**Merge(dev->main) Enhancements & Platform Updates**
+
+- Merge(dev->main): email casing normalization
+- Release: finalize release notes sync
+- Release: update release notes
+- Auth: normalize user emails to lowercase across auth and Firestore path getters
+- Release: automate release notes generation via git commits and CI build step
+- Merge(dev->main): clean unused functions
+- Transfer: clean unused helper functions in lateral transfer screen
+- Merge(dev->main): resolve Lateral Transfer inventory loading, multi-term search, and collection selection
+
 ## v4.9 — 2026-08-08
 **Release Enhancements & Platform Updates**
 

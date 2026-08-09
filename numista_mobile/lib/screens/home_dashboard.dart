@@ -1542,10 +1542,75 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.14',
+    date: '2026-08-09',
+    description: 'Master-e2e Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Master-e2e: skip localhost:5000 tests in automated audit when local dev server not running',
+      'Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md',
+      'Mobile: remove unused imports in settings_screen and http_auth_client',
+      'Scan: run full system check and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.13',
+    date: '2026-08-09',
+    description: 'Scan Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Scan: update Playwright E2E final tally (120/122 passed) in SCAN_REPORT.md',
+      'Mobile: remove unused imports in settings_screen and http_auth_client',
+      'Scan: run full system check and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.12',
+    date: '2026-08-09',
+    description: 'Mobile Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Mobile: remove unused imports in settings_screen and http_auth_client',
+      'Scan: run full system check and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.11',
+    date: '2026-08-09',
+    description: 'Scan Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Scan: run full system check and generate SCAN_REPORT.md',
+      'Release: finalize release notes sync',
+      'Release: update release notes',
+      'Auth: normalize user emails to lowercase across auth and Firestore path getters',
+      'Release: automate release notes generation via git commits and CI build step',
+      'Transfer: clean unused helper functions in lateral transfer screen',
+      'Transfer: resolve Lateral Transfer inventory loading, multi-term search, and collection selection',
+      'Billing: complete Phase 3 Step 2 Stripe billing integration and attorney portal signed URLs',
+    ],
+  ),
+  _Release(
+    version: 'v4.10',
+    date: '2026-08-08',
+    description: 'Merge(dev->main) Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Merge(dev->main): email casing normalization',
+      'Release: finalize release notes sync',
+      'Release: update release notes',
+      'Auth: normalize user emails to lowercase across auth and Firestore path getters',
+      'Release: automate release notes generation via git commits and CI build step',
+      'Merge(dev->main): clean unused functions',
+      'Transfer: clean unused helper functions in lateral transfer screen',
+      'Merge(dev->main): resolve Lateral Transfer inventory loading, multi-term search, and collection selection',
+    ],
+  ),
+  _Release(
     version: 'v4.9',
     date: '2026-08-08',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: update release notes',
       'Auth: normalize user emails to lowercase across auth and Firestore path getters',
