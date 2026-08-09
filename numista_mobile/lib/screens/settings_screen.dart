@@ -12,10 +12,6 @@ import '../services/photo_sharing_service.dart';
 import '../services/inspector_service.dart';
 import '../services/valuation_mode_service.dart';
 
-import '../utils/file_saver_stub.dart'
-    if (dart.library.html) '../utils/file_saver_web.dart'
-    if (dart.library.io) '../utils/file_saver_io.dart';
-
 import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
 import '../services/backup_export_service.dart';

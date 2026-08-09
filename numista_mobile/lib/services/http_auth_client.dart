@@ -4,7 +4,6 @@
 // Automatically retrieves and attaches the Firebase ID Token (getIdToken())
 // as a 'Authorization: Bearer <idToken>' header to all backend REST requests.
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
