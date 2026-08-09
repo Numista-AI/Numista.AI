@@ -849,7 +849,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     return SwitchListTile(
       value: value,
       onChanged: onChanged,
-      activeThumbColor: const Color(0xFF38BDF8),
+      activeColor: const Color(0xFF38BDF8),
       activeTrackColor: const Color(0xFF0284C7).withValues(alpha: 0.4),
       inactiveThumbColor: Colors.grey.shade400,
       inactiveTrackColor: const Color(0xFF334155),
