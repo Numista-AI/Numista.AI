@@ -314,7 +314,11 @@ class _BaseLayoutState extends State<BaseLayout> {
         return AttorneyPortalScreen(uid: userUid, token: '');
       case 'Lateral Transfer':
         final email = AuthService.userEmail;
-        return LateralTransferScreen(userId: email, itemsToTransfer: const []);
+        return LateralTransferScreen(userId: email, itemsToTransfer: const [], initialTab: 'send');
+      case 'Claim Transfer':
+      case 'Claim Incoming Transfer':
+        final email = AuthService.userEmail;
+        return LateralTransferScreen(userId: email, itemsToTransfer: const [], initialTab: 'claim');
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
       case 'Admin: Grade Flags':
@@ -659,10 +663,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                           child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
                         ),
 
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ESTATE & ASSET VAULT'),
+                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ASSET VAULT & TRANSFERS'),
                         _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
                         _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
                         _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
+                        _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
 
                         if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
                         WizardNavPulse(

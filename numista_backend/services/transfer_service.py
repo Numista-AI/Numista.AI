@@ -23,22 +23,22 @@ def sanitize_item_payload(item_data: Dict[str, Any], privacy_toggles: Dict[str, 
     sanitized = dict(item_data)
     
     # Financial fields
-    if privacy_toggles.get("hide_cost_basis", True):
+    if privacy_toggles.get("hide_cost_basis", False):
         for field in ["purchase_price", "cost_basis", "price_paid", "purchase_date", "acquired_price"]:
             sanitized.pop(field, None)
             
     # Private notes
-    if privacy_toggles.get("hide_private_notes", True):
+    if privacy_toggles.get("hide_private_notes", False):
         for field in ["private_notes", "notes", "personal_notes", "user_notes"]:
             sanitized.pop(field, None)
             
     # Storage & inventory location
-    if privacy_toggles.get("hide_storage_location", True):
+    if privacy_toggles.get("hide_storage_location", False):
         for field in ["storage_location", "vault_box", "safe_number", "bin_location", "location"]:
             sanitized.pop(field, None)
             
     # Invoice & vendor IDs
-    if privacy_toggles.get("hide_invoices", True):
+    if privacy_toggles.get("hide_invoices", False):
         for field in ["invoice_id", "invoice_num", "receipt_url", "vendor_name", "order_id"]:
             sanitized.pop(field, None)
 
@@ -56,10 +56,10 @@ def initiate_transfer(
     """
     if not privacy_toggles:
         privacy_toggles = {
-            "hide_cost_basis": True,
-            "hide_private_notes": True,
-            "hide_storage_location": True,
-            "hide_invoices": True
+            "hide_cost_basis": False,
+            "hide_private_notes": False,
+            "hide_storage_location": False,
+            "hide_invoices": False
         }
 
     now = _get_utc_now()
