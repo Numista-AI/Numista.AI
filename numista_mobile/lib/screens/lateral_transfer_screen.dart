@@ -10,11 +10,13 @@ import '../services/lateral_transfer_service.dart';
 class LateralTransferScreen extends StatefulWidget {
   final String userId;
   final List<CoinModel> itemsToTransfer;
+  final String initialTab; // 'send' or 'claim'
 
   const LateralTransferScreen({
     Key? key,
     required this.userId,
     required this.itemsToTransfer,
+    this.initialTab = 'send',
   }) : super(key: key);
 
   @override
@@ -25,12 +27,19 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   final LateralTransferService _transferService = LateralTransferService();
   final TextEditingController _recipientEmailController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _claimTransferIdController = TextEditingController();
+  final TextEditingController _claimPinController = TextEditingController();
 
-  bool _hideCostBasis = true;
-  bool _hidePrivateNotes = true;
-  bool _hideStorageLocation = true;
-  bool _hideInvoices = true;
+  String _activeTab = 'send'; // 'send' or 'claim'
+
+  // Default to FALSE so nothing is scrubbed unless sender explicitly checks the toggle
+  bool _hideCostBasis = false;
+  bool _hidePrivateNotes = false;
+  bool _hideStorageLocation = false;
+  bool _hideInvoices = false;
+
   bool _isLoading = false;
+  bool _isClaiming = false;
   bool _isFetchingInventory = false;
   String? _fetchError;
 
@@ -43,6 +52,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   @override
   void initState() {
     super.initState();
+    _activeTab = widget.initialTab;
     if (widget.itemsToTransfer.isNotEmpty) {
       _allCoins = List.from(widget.itemsToTransfer);
       _selectedCoinIds = _allCoins.map((c) => c.id).toSet();
@@ -55,6 +65,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   void dispose() {
     _recipientEmailController.dispose();
     _searchController.dispose();
+    _claimTransferIdController.dispose();
+    _claimPinController.dispose();
     super.dispose();
   }
 
@@ -71,7 +83,6 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         final snap = await GuestSeedService.getDemoCoinsStream().first;
         coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
       } else {
-        // Query user inventory. First check explicit userId doc, then AuthService.coinsPath
         final userEmailOrUid = widget.userId.trim().isNotEmpty
             ? widget.userId.trim()
             : AuthService.userEmail;
@@ -86,7 +97,6 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
       }
 
-      // Sort in memory by timestamp descending (if available)
       coins.sort((a, b) {
         final tA = a.timestamp ?? DateTime(1970);
         final tB = b.timestamp ?? DateTime(1970);
@@ -95,7 +105,6 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
       setState(() {
         _allCoins = coins;
-        // Select all items by default for user convenience
         _selectedCoinIds = coins.map((c) => c.id).toSet();
         _isFetchingInventory = false;
       });
@@ -142,8 +151,6 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       });
     }).toList();
   }
-
-
 
   List<CoinModel> get _selectedCoins {
     return _allCoins.where((c) => _selectedCoinIds.contains(c.id)).toList();
@@ -196,6 +203,58 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     }
   }
 
+  Future<void> _claimTransfer() async {
+    final transferId = _claimTransferIdController.text.trim();
+    final pin = _claimPinController.text.trim();
+
+    if (transferId.isEmpty || pin.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both Transfer ID and 6-Digit Claim PIN.')),
+      );
+      return;
+    }
+
+    final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
+
+    setState(() => _isClaiming = true);
+    try {
+      final res = await _transferService.claimTransfer(
+        userId: userIdToUse,
+        transferId: transferId,
+        claimPin: pin,
+      );
+      setState(() => _isClaiming = false);
+
+      final count = res['result']?['items_claimed_count'] ?? 0;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Transfer Adopted Successfully!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Text('$count item(s) were added to your collection vault with full provenance records.',
+              style: const TextStyle(color: Color(0xFFCBD5E1))),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _claimTransferIdController.clear();
+                _claimPinController.clear();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+              child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() => _isClaiming = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,7 +269,77 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: _createdTransfer != null ? _buildSuccessView() : _buildInitiationForm(),
+        child: Column(
+          children: [
+            // Mode Selector: Send Transfer vs Claim Transfer
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF334155)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _activeTab = 'send'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _activeTab == 'send' ? const Color(0xFF0284C7) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.send_outlined, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Send Transfer',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _activeTab = 'claim'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _activeTab == 'claim' ? const Color(0xFF0284C7) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.download_for_offline_outlined, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Claim / Receive Transfer',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (_activeTab == 'claim')
+              _buildClaimView()
+            else
+              (_createdTransfer != null ? _buildSuccessView() : _buildInitiationForm()),
+          ],
+        ),
       ),
     );
   }
@@ -223,7 +352,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Privacy & Sanitization Card (Dark Theme High-Contrast)
+        // Privacy & Sanitization Card
         Card(
           color: const Color(0xFF1E293B),
           shape: RoundedRectangleBorder(
@@ -251,7 +380,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Select data fields to scrub before item payload is minted for recipient.',
+                  'All invoice and financial details are included by default. Toggle switches on below if you wish to scrub specific data.',
                   style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
                 ),
                 const Divider(height: 24, color: Color(0xFF334155)),
@@ -525,7 +654,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
                 return CheckboxListTile(
                   value: isSelected,
-                  activeColor: const Color(0xFF0284C7),
+                  activeThumbColor: const Color(0xFF0284C7),
                   checkColor: Colors.white,
                   tileColor: isSelected ? const Color(0xFF0284C7).withValues(alpha: 0.1) : Colors.transparent,
                   onChanged: (val) {
@@ -614,6 +743,103 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     );
   }
 
+  Widget _buildClaimView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          color: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF334155)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.move_to_inbox_outlined, color: Color(0xFF0284C7), size: 28),
+                    SizedBox(width: 10),
+                    Text(
+                      'Adopt Transferred Items into Your Vault',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Enter the Transfer ID and 6-digit Claim PIN code from the Passport Certificate to adopt the items directly into your personal collection vault.',
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 14, height: 1.4),
+                ),
+                const Divider(height: 28, color: Color(0xFF334155)),
+
+                const Text('Transfer ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _claimTransferIdController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. 10cb9dbd7a1d45069329a7e3f4db5443',
+                    hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
+                    prefixIcon: const Icon(Icons.key, color: Color(0xFF0284C7)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Text('6-Digit Claim PIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _claimPinController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 3, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    hintText: '704167',
+                    hintStyle: const TextStyle(color: Color(0xFF64748B), letterSpacing: 0, fontSize: 14),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    counterStyle: const TextStyle(color: Color(0xFF64748B)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
+                    prefixIcon: const Icon(Icons.pin, color: Color(0xFF0284C7)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _isClaiming ? null : _claimTransfer,
+                    icon: const Icon(Icons.check_circle, color: Colors.white),
+                    label: _isClaiming
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Verify & Adopt Transferred Items',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                          ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPrivacySwitchTile({
     required String title,
     required String subtitle,
@@ -623,7 +849,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     return SwitchListTile(
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFF38BDF8),
+      activeThumbColor: const Color(0xFF38BDF8),
       activeTrackColor: const Color(0xFF0284C7).withValues(alpha: 0.4),
       inactiveThumbColor: Colors.grey.shade400,
       inactiveTrackColor: const Color(0xFF334155),
@@ -719,7 +945,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
             label: const Text(
-              'Download Passport PDF (8.5x11 & 3x5 Passcard)',
+              'Download Passport PDF & Invoice Record',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),

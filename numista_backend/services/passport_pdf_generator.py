@@ -2,7 +2,7 @@
 Passport PDF Generator — Numista.AI Lateral Transfer ("The Secure Passport Protocol")
 
 Generates official Numista-branded dual-format PDF documents:
-1. 8.5x11" Estate Certificate of Transfer (for legal, tax, and estate binders)
+1. 8.5x11" Official Certificate of Transfer & Invoice Record
 2. 3x5" Binder Passcard (with cut-out borders & QR code for coin flip sleeves & slab boxes)
 """
 
@@ -32,22 +32,6 @@ def generate_qr_code_image(data: str, size: int = 150) -> io.BytesIO:
     buffer.seek(0)
     return buffer
 
-def downsample_image_to_300dpi_thumb(image_bytes: bytes, target_size_px: tuple = (300, 300)) -> io.BytesIO:
-    """
-    Downsamples raw image bytes (e.g. 1920x1080 capture) to 300 DPI 1-inch thumbnail (300x300 px),
-    achieving a ~23x RAM footprint reduction for ReportLab PDF embedding.
-    """
-    buffer = io.BytesIO()
-    try:
-        with PILImage.open(io.BytesIO(image_bytes)) as img:
-            img.thumbnail(target_size_px, PILImage.Resampling.LANCZOS)
-            img.convert('RGB').save(buffer, format='JPEG', quality=85)
-            buffer.seek(0)
-            return buffer
-    except Exception:
-        buffer.seek(0)
-        return buffer
-
 def draw_diagonal_watermark(canvas, doc):
     """Draws a semi-transparent diagonal watermark across each PDF page."""
     canvas.saveState()
@@ -65,15 +49,15 @@ def draw_diagonal_watermark(canvas, doc):
 def scrub_item_payload(items: List[Dict[str, Any]], privacy_toggles: Dict[str, bool]) -> List[Dict[str, Any]]:
     """
     Sanitizes item records on the server according to sender privacy toggles.
-    Missing toggles default to True (scrubbed) for defense-in-depth safety.
+    Default to False (unscrubbed / full invoice data included).
     """
     if not privacy_toggles:
         privacy_toggles = {}
 
-    hide_cost = privacy_toggles.get('hide_cost_basis', True)
-    hide_notes = privacy_toggles.get('hide_private_notes', True)
-    hide_location = privacy_toggles.get('hide_storage_location', True)
-    hide_invoices = privacy_toggles.get('hide_invoices', True)
+    hide_cost = privacy_toggles.get('hide_cost_basis', False)
+    hide_notes = privacy_toggles.get('hide_private_notes', False)
+    hide_location = privacy_toggles.get('hide_storage_location', False)
+    hide_invoices = privacy_toggles.get('hide_invoices', False)
 
     sanitized_items = []
     for itm in items:
@@ -93,10 +77,75 @@ def scrub_item_payload(items: List[Dict[str, Any]], privacy_toggles: Dict[str, b
         sanitized_items.append(clean)
     return sanitized_items
 
+def _get_val(itm: Dict[str, Any], *keys: str) -> str:
+    for k in keys:
+        if k in itm and itm[k] is not None:
+            v = str(itm[k]).strip()
+            if v and v.upper() != "N/A":
+                return v
+    return ""
+
+def format_item_title(itm: Dict[str, Any]) -> str:
+    year = _get_val(itm, "year", "Year")
+    series = _get_val(itm, "programSeries", "Program/Series", "program_series")
+    denom = _get_val(itm, "denomination", "Denomination")
+    variety = _get_val(itm, "variety", "Variety")
+    theme = _get_val(itm, "themeSubject", "Theme/Subject", "theme")
+
+    parts = [p for p in [year, series, denom, variety, theme] if p]
+    if parts:
+        return " ".join(parts)
+    
+    fallback = _get_val(itm, "title", "name", "originalDescription", "original_description")
+    return fallback if fallback else "Numismatic Item"
+
+def format_year_mint(itm: Dict[str, Any]) -> str:
+    year = _get_val(itm, "year", "Year")
+    mint = _get_val(itm, "mintMark", "Mint Mark", "mint_mark")
+    variety = _get_val(itm, "variety", "Variety")
+    parts = [p for p in [year, mint, variety] if p]
+    return " ".join(parts) if parts else "N/A"
+
+def format_grade_cert(itm: Dict[str, Any]) -> str:
+    service = _get_val(itm, "gradingService", "Grading Service", "grading_service")
+    grade = _get_val(itm, "condition", "Condition", "grade")
+    cert = _get_val(itm, "certificationNumber", "Certification Number", "cert_number")
+
+    grade_str = f"{service} {grade}".strip() if (service or grade) else "Raw / Ungraded"
+    if cert:
+        grade_str += f" (#{cert})"
+    return grade_str
+
+def format_financial_details(itm: Dict[str, Any]) -> str:
+    cost = _get_val(itm, "purchaseCost", "purchase_cost", "Purchase Cost", "cost_basis", "price_paid")
+    p_date = _get_val(itm, "purchaseDate", "purchase_date", "Purchase Date")
+    ret = _get_val(itm, "retailer", "Retailer", "vendor_name")
+    inv = _get_val(itm, "retailerInvoiceNo", "retailer_invoice_no", "Retailer Invoice #", "invoice_id")
+    loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
+    notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes")
+
+    details = []
+    if cost:
+        details.append(f"<b>Cost:</b> {cost}")
+    if p_date:
+        details.append(f"<b>Acquired:</b> {p_date}")
+    if ret:
+        details.append(f"<b>Vendor:</b> {ret}")
+    if inv:
+        details.append(f"<b>Inv #:</b> {inv}")
+    if loc:
+        details.append(f"<b>Vault:</b> {loc}")
+    if notes:
+        details.append(f"<b>Notes:</b> {notes}")
+
+    if details:
+        return "<br/>".join(details)
+    return "<font color='#64748B'>Full Specifications Included</font>"
+
 def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     """
     Generates a 2-page PDF containing:
-    Page 1: 8.5x11" Formal Estate Certificate of Transfer
+    Page 1: 8.5x11" Official Certificate of Lateral Transfer & Invoice
     Page 2: 3x5" Cut-Out Passcard for Coin Flip / Storage Bin
     """
     privacy_toggles = transfer_data.get("privacy_toggles", {})
@@ -165,15 +214,15 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
 
     story = []
 
-    # ── PAGE 1: ESTATE CERTIFICATE ──────────────────────────────────────────────
+    # ── PAGE 1: OFFICIAL PASSPORT CERTIFICATE ───────────────────────────────────
     story.append(Paragraph("NUMISTA.AI • OFFICIAL PASSPORT PROTOCOL", subtitle_style))
     story.append(Spacer(1, 4))
-    story.append(Paragraph("ESTATE CERTIFICATE OF LATERAL TRANSFER", title_style))
+    story.append(Paragraph("PASSPORT CERTIFICATE OF LATERAL TRANSFER", title_style))
     story.append(Spacer(1, 4))
 
-    # BETA LEGAL DISCLAIMER BANNER
+    # BETA EVALUATION DISCLAIMER BANNER
     disclaimer_banner = Table(
-        [[Paragraph("<b>BETA EVALUATION DOCUMENT:</b> Generated for software testing purposes only. Does not constitute a certified USPAP appraisal or legal IRS Form 706 valuation.", disclaimer_style)]],
+        [[Paragraph("<b>BETA EVALUATION DOCUMENT:</b> Generated for software testing purposes only. Documents item provenance and lateral property transfer.", disclaimer_style)]],
         colWidths=[7.5 * inch]
     )
     disclaimer_banner.setStyle(TableStyle([
@@ -193,8 +242,8 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     created_at = transfer_data.get("created_at", "")[:10]
     expires_at = transfer_data.get("expires_at", "")[:10]
 
-    # QR Code Generation
-    qr_payload = f"https://numista.ai/claim?transfer_id={transfer_id}&pin={claim_pin}"
+    # QR Code Generation pointing directly to web app claim route
+    qr_payload = f"https://numista-vault.web.app/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
     qr_buf = generate_qr_code_image(qr_payload, size=180)
     qr_img = Image(qr_buf, width=1.4 * inch, height=1.4 * inch)
 
@@ -204,7 +253,11 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
                       f"<b>Originating Owner:</b> {sender_id}<br/>"
                       f"<b>Date Initiated:</b> {created_at}<br/>"
                       f"<b>Token Expiration:</b> {expires_at} (60-Day Limit)<br/>"
-                      f"<b>Claim PIN Code:</b> <font color='#0284C7' size=12><b>{claim_pin}</b></font>", body_normal),
+                      f"<b>Claim PIN Code:</b> <font color='#0284C7' size=13><b>{claim_pin}</b></font><br/><br/>"
+                      f"<font color='#0284C7' size=8><b>WEB / DESKTOP RECEIVE INSTRUCTIONS:</b><br/>"
+                      f"1. Sign into recipient account on <b>numista-vault.web.app</b><br/>"
+                      f"2. Click <b>Claim Transfer</b> (or <b>Lateral Transfer &rarr; Receive</b>)<br/>"
+                      f"3. Enter Transfer ID &amp; PIN <b>{claim_pin}</b> to adopt items into vault.</font>", body_normal),
             qr_img
         ]
     ]
@@ -221,30 +274,51 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     story.append(Spacer(1, 14))
 
     # Items Table
-    story.append(Paragraph("TRANSFERRED INVENTORY SPECIFICATIONS", body_bold))
+    story.append(Paragraph("TRANSFERRED INVENTORY SPECIFICATIONS & INVOICE DETAILS", body_bold))
     story.append(Spacer(1, 4))
 
     item_rows = [[
-        Paragraph("<b>Item Name / Title</b>", body_bold),
+        Paragraph("<b>Item Description</b>", body_bold),
         Paragraph("<b>Year / Mint</b>", body_bold),
-        Paragraph("<b>Grade / Cert</b>", body_bold),
-        Paragraph("<b>Category</b>", body_bold)
+        Paragraph("<b>Grade &amp; Cert</b>", body_bold),
+        Paragraph("<b>Financial &amp; Invoice Details</b>", body_bold)
     ]]
 
+    total_value = 0.0
+    has_prices = False
+
     for itm in items:
-        name = itm.get("title") or itm.get("name") or "Numismatic Item"
-        year_mint = f"{itm.get('year', 'N/A')} {itm.get('mint_mark', '')}".strip()
-        grade = f"{itm.get('grade', 'Raw')} {itm.get('cert_number', '')}".strip()
-        cat = itm.get("category", "Coin")
+        name = format_item_title(itm)
+        year_mint = format_year_mint(itm)
+        grade_cert = format_grade_cert(itm)
+        fin_details = format_financial_details(itm)
+
+        cost_str = _get_val(itm, "purchaseCost", "purchase_cost", "Purchase Cost", "cost_basis", "price_paid")
+        if cost_str:
+            clean_num = cost_str.replace("$", "").replace(",", "").strip()
+            try:
+                val = float(clean_num)
+                total_value += val
+                has_prices = True
+            except ValueError:
+                pass
 
         item_rows.append([
             Paragraph(name, body_normal),
             Paragraph(year_mint, body_normal),
-            Paragraph(grade, body_normal),
-            Paragraph(cat, body_normal)
+            Paragraph(grade_cert, body_normal),
+            Paragraph(fin_details, body_normal)
         ])
 
-    items_table = Table(item_rows, colWidths=[3.2 * inch, 1.4 * inch, 1.4 * inch, 1.5 * inch])
+    if has_prices and total_value > 0:
+        item_rows.append([
+            Paragraph("<b>TOTAL TRANSFER VALUE</b>", body_bold),
+            Paragraph("", body_normal),
+            Paragraph("", body_normal),
+            Paragraph(f"<font color='#0284C7'><b>${total_value:,.2f}</b></font>", body_bold)
+        ])
+
+    items_table = Table(item_rows, colWidths=[2.8 * inch, 1.3 * inch, 1.4 * inch, 2.0 * inch])
     items_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F172A')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
@@ -258,10 +332,9 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
 
     # Legal & Transfer Affirmation Notice
     affirmation_text = (
-        "<b>LEGAL CHAIN OF CUSTODY NOTICE:</b> This passport certificate documents the formal lateral property "
-        "transfer initiated via Numista.AI. By scanning the QR code or utilizing the 6-digit Claim PIN above, "
-        "the recipient accepts full legal custody and ownership of the item(s) listed herein. All sensitive "
-        "acquisition financials and private location metadata have been sanitized per sender specifications."
+        "<b>LEGAL CHAIN OF CUSTODY NOTICE:</b> This official passport certificate documents the formal property "
+        "transfer initiated via Numista.AI. By entering the 6-digit Claim PIN above or scanning the QR code on the web app, "
+        "the recipient accepts full legal custody and ownership of the item(s) listed herein."
     )
     story.append(Paragraph(affirmation_text, body_normal))
     story.append(Spacer(1, 24))
@@ -288,8 +361,8 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     card_qr_img = Image(card_qr_buf, width=1.1 * inch, height=1.1 * inch)
 
     first_item = items[0] if items else {}
-    item_title = first_item.get("title") or first_item.get("name") or "Numismatic Item"
-    item_sub = f"{first_item.get('year', '')} {first_item.get('mint_mark', '')} | {first_item.get('grade', 'Raw')}".strip()
+    item_title = format_item_title(first_item)
+    item_sub = f"{format_year_mint(first_item)} | {format_grade_cert(first_item)}".strip()
 
     passcard_content = [
         [
@@ -317,4 +390,3 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     doc.build(story, onFirstPage=draw_diagonal_watermark, onLaterPages=draw_diagonal_watermark)
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
-
