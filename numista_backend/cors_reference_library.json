@@ -1,0 +1,17 @@
+[
+  {
+    "origin": [
+      "https://numista.ai",
+      "https://numista-vault.web.app",
+      "http://localhost:*",
+      "http://127.0.0.1:*"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Access-Control-Allow-Origin",
+      "Cache-Control"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
