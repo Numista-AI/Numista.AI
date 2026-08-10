@@ -792,7 +792,7 @@ class _NoteDetailDialog extends StatelessWidget {
       final isStar = desc.toLowerCase().contains('star') || desc.contains('*');
       final starToken = isStar ? 'star' : 'norm';
       final varToken = variant.isNotEmpty ? '_$variant' : '';
-      return 'fr_${frNum}${varToken}_${starToken}_$sideSuffix';
+      return 'fr_$frNum${varToken}_${starToken}_$sideSuffix';
     }
 
     final mCsa = RegExp(r't[-._\s]*([0-9]+)', caseSensitive: false).firstMatch(desc);
