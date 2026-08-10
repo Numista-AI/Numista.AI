@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
+import '../services/currency_image_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────────
 ///  CurrencyCollectionScreen
@@ -775,42 +776,142 @@ class _NoteDetailDialog extends StatelessWidget {
     );
   }
 
-  Widget _imageBox(BuildContext ctx, String url, String label, Color color, String denom) =>
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  String? _deriveCatalogKey(Map<String, dynamic> noteData, String side) {
+    final sideSuffix = side.toLowerCase().startsWith('rev') ? 'rev' : 'obv';
+    if (noteData['catalog_key'] != null && noteData['catalog_key'].toString().isNotEmpty) {
+      final k = noteData['catalog_key'].toString().toLowerCase();
+      return k.endsWith('_obv') || k.endsWith('_rev') ? k : '${k}_$sideSuffix';
+    }
+    final desc = (noteData['Description'] ?? '').toString();
+    final type = (noteData['currency_type'] ?? '').toString().toLowerCase();
+
+    final mFr = RegExp(r'fr[-._\s]*([0-9]+)([a-z]?)', caseSensitive: false).firstMatch(desc);
+    if (mFr != null) {
+      final frNum = mFr.group(1);
+      final variant = mFr.group(2)?.toLowerCase() ?? '';
+      final isStar = desc.toLowerCase().contains('star') || desc.contains('*');
+      final starToken = isStar ? 'star' : 'norm';
+      final varToken = variant.isNotEmpty ? '_$variant' : '';
+      return 'fr_$frNum${varToken}_${starToken}_$sideSuffix';
+    }
+
+    final mCsa = RegExp(r't[-._\s]*([0-9]+)', caseSensitive: false).firstMatch(desc);
+    if (mCsa != null || type.contains('csa') || type.contains('confederate')) {
+      final tNum = mCsa != null ? mCsa.group(1) : '64';
+      return 'csa_t${tNum}_$sideSuffix';
+    }
+
+    if (type.contains('fractional') || desc.toLowerCase().contains('fractional')) {
+      return 'frac_fr1230_norm_$sideSuffix';
+    }
+
+    return null;
+  }
+
+  Widget _imageBox(BuildContext ctx, String url, String label, Color color, String denom) {
+    if (url.isNotEmpty) {
+      return _renderImageBoxContent(ctx, url, label, color, denom, null);
+    }
+
+    final catalogKey = _deriveCatalogKey(note, label);
+    if (catalogKey == null) {
+      return Expanded(child: _renderPlaceholder(label, color, denom));
+    }
+
+    return Expanded(
+      child: FutureBuilder<BanknoteImageResult?>(
+        future: CurrencyImageService().getReferenceImage(catalogKey, label),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            final res = snapshot.data!;
+            return _renderImageBoxContent(ctx, res.publicUrl, label, color, denom, res);
+          }
+          return _renderPlaceholder(label, color, denom);
+        },
+      ),
+    );
+  }
+
+  Widget _renderImageBoxContent(
+      BuildContext ctx, String displayUrl, String label, Color color, String denom, BanknoteImageResult? fallbackRes) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
             Text(label,
                 style: TextStyle(
                     color: kSubtext,
                     fontSize: 10,
                     fontWeight: FontWeight.w600)),
-            SizedBox(height: 4),
-            GestureDetector(
-              onTap: url.isNotEmpty ? () => _openZoom(ctx, url) : null,
-              child: Container(
-                height: 90,
+            if (fallbackRes != null) ...[
+              Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color: color.withAlpha(15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: kBorder),
+                  color: Colors.amber.withAlpha(30),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: Colors.amber.withAlpha(90), width: 0.5),
                 ),
-                child: url.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, _, _) =>
-                              _placeholder(color, denom),
-                        ),
-                      )
-                    : _placeholder(color, denom),
+                child: Text(
+                  fallbackRes.badgeText,
+                  style: TextStyle(color: Colors.amber, fontSize: 7, fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
+            ],
           ],
         ),
+        SizedBox(height: 4),
+        GestureDetector(
+          onTap: displayUrl.isNotEmpty ? () => _openZoom(ctx, displayUrl) : null,
+          child: Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: fallbackRes != null ? Colors.amber.withAlpha(100) : kBorder),
+            ),
+            child: displayUrl.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      displayUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (_, _, _) => _placeholder(color, denom),
+                    ),
+                  )
+                : _placeholder(color, denom),
+          ),
+        ),
+        if (fallbackRes != null && fallbackRes.attribution != null) ...[
+          SizedBox(height: 2),
+          Text(
+            'Source: ${fallbackRes.attribution}',
+            style: TextStyle(color: kSubtext, fontSize: 8, fontStyle: FontStyle.italic),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _renderPlaceholder(String label, Color color, String denom) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(color: kSubtext, fontSize: 10, fontWeight: FontWeight.w600)),
+          SizedBox(height: 4),
+          Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: kBorder),
+            ),
+            child: _placeholder(color, denom),
+          ),
+        ],
       );
 
   void _openZoom(BuildContext ctx, String url) {

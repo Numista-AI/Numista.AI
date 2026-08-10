@@ -314,6 +314,28 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFEF4444).withAlpha(90)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 20),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "LEGAL PROVENANCE WATERMARK: CATALOG REFERENCE PHOTO — NOT INDIVIDUAL ASSET PHOTO. Items relying on reference catalog imagery are contractually flagged for court audit compliance.",
+                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w700, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           _buildHeader(r),
           const SizedBox(height: 24),

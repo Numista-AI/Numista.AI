@@ -350,6 +350,27 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     ]))
 
     story.append(items_table)
+
+    # Check for Reference Fallbacks and stamp Legal Provenance Notice
+    has_reference_fallback = any(
+        itm.get("is_reference_fallback") or itm.get("isReferenceFallback") or (itm.get("image_source") and "reference" in str(itm.get("image_source")).lower())
+        for itm in items
+    )
+    if has_reference_fallback:
+        fallback_banner = Table(
+            [[Paragraph("<b>LEGAL PROVENANCE NOTICE:</b> CATALOG REFERENCE PHOTO — NOT INDIVIDUAL ASSET PHOTO. "
+                        "Item records utilizing reference catalog imagery are contractually flagged for probate and legal audit compliance.", disclaimer_style)]],
+            colWidths=[7.5 * inch]
+        )
+        fallback_banner.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FEF2F2')),
+            ('BOX', (0,0), (-1,-1), 1.5, colors.HexColor('#EF4444')),
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER')
+        ]))
+        story.append(Spacer(1, 6))
+        story.append(fallback_banner)
+
     story.append(Spacer(1, 16))
 
     # Legal & Transfer Affirmation Notice
