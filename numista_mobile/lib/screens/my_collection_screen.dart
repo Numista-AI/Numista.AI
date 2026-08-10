@@ -28,6 +28,8 @@ import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/photo_sharing_service.dart';
+import '../services/estate_report_service.dart';
+import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../constants.dart';
@@ -339,26 +341,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.dispose();
   }
 
-  // --- Face value lookup (mirrors Streamlit logic) -------------------------
   static double _faceValue(String denom) {
-    final s = denom.toLowerCase().trim();
-    if (s.contains('penny')   || s.contains('cent')   || s.contains('1c'))  return 0.01;
-    if (s.contains('nickel')  || s.contains('5c'))                           return 0.05;
-    if (s.contains('dime')    || s.contains('10c'))                          return 0.10;
-    if (s.contains('quarter') || s.contains('25c'))                          return 0.25;
-    if (s.contains('half')    || s.contains('50c'))                          return 0.50;
-    if (s.contains('dollar')  || s.contains(r'$1'))                          return 1.00;
-    if (s.contains(r'$2'))   return 2.00;
-    if (s.contains(r'$5'))   return 5.00;
-    if (s.contains(r'$10'))  return 10.00;
-    if (s.contains(r'$20'))  return 20.00;
-    if (s.contains(r'$50'))  return 50.00;
-    if (s.contains(r'$100')) return 100.00;
-    // Numeric fallback: "1" > 1.00, "0.25" > 0.25 (handles plain-number denominations
-    // stored by PCGS import or CSV before display-string normalisation was in place).
-    final n = double.tryParse(s.replaceAll(r'$', '').trim());
-    if (n != null) return n;
-    return 0.00;
+    return MeltValueService.parseFaceValue(denom);
   }
 
   // --- Sort + filter helpers -----------------------------------------------
@@ -756,9 +740,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               const SizedBox(width: 12),
             ],
             ElevatedButton.icon(
-              onPressed: widget.onNavigate != null
-                  ? () => widget.onNavigate!('Estate Planning')
-                  : null,
+              onPressed: () => _showGenerateReportModal(),
               icon: const Icon(Icons.auto_awesome, size: 16),
               label: const Text('Generate AI Report Now'),
               style: ElevatedButton.styleFrom(
@@ -1599,28 +1581,39 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       }
 
       // Melt Value -- live from spot prices when available, else from Firestore
+      final qty = (m['Quantity'] as num?)?.toInt() ?? (m['qty'] as num?)?.toInt() ?? 1;
       final liveMelt = _spotPrices.isNotEmpty
           ? (MeltValueService.compute(
                 metalContent: m[_F.metalContent]?.toString() ?? '',
                 denomination: m[_F.denomination]?.toString() ?? '',
                 spotPrices: _spotPrices,
+                programSeries: m[_F.programSeries]?.toString() ?? '',
+                themeSubject: m[_F.themeSubject]?.toString() ?? '',
+                qty: qty,
+                coinData: m,
               ) ?? 0.0)
           : () {
               final meltRaw = m[_F.meltValue]?.toString() ?? '';
               final match = RegExp(r'\d+\.?\d*').firstMatch(meltRaw.replaceAll(',', ''));
-              return match != null ? (double.tryParse(match.group(0)!) ?? 0.0) : 0.0;
+              return match != null ? ((double.tryParse(match.group(0)!) ?? 0.0) * qty) : 0.0;
             }();
       meltTotal += liveMelt;
 
       // Face Value sum
-      fvTotal += _faceValue(m[_F.denomination]?.toString() ?? '');
+      fvTotal += MeltValueService.parseFaceValue(m[_F.denomination]?.toString() ?? '', qty: qty);
     }
+
+    final isOffline = _spotPrices.isEmpty;
+    final meltText = isOffline
+        ? '⚠️ \$${meltTotal.toStringAsFixed(2)} (offline)'
+        : '🥈 \$${meltTotal.toStringAsFixed(2)}';
+
     return Row(children: [
       _statChip('Showing', '${docs.length} coins'),
       const SizedBox(width: 12),
       _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}', isGold: true),
       const SizedBox(width: 12),
-      _statChip('Melt Value', '🥈 \$${meltTotal.toStringAsFixed(2)}', isGold: true),
+      _statChip('Melt Value', meltText, isGold: true),
       const SizedBox(width: 12),
       _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}', isGold: true),
     ]);
@@ -3324,10 +3317,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
-  // _onAddToWishlist removed — wishlist action now lives in CoinDetailScreen.
-  // _onGenerateReport removed — navigation to Estate Planning is now inline on the button.
-
-  // _onSaveGridChanges removed — button was a stub; Firestore auto-saves every edit live.
+  void _showGenerateReportModal() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _GenerateReportDialog(userEmail: AuthService.userEmail),
+    );
+  }
 
   // --- Coin Vault Gallery state ---------------------------------------------
   bool _vaultShowObverse = true; // true = obverse, false = reverse
@@ -4459,5 +4455,157 @@ class UnifiedCollectionItem {
     this.dateAdded,
     required this.value,
   });
+}
+
+// ── Interactive AI Collection Report Modal ─────────────────────────────────────
+class _GenerateReportDialog extends StatefulWidget {
+  final String userEmail;
+  const _GenerateReportDialog({required this.userEmail});
+
+  @override
+  State<_GenerateReportDialog> createState() => _GenerateReportDialogState();
+}
+
+class _GenerateReportDialogState extends State<_GenerateReportDialog> {
+  bool _isLoading = true;
+  String? _error;
+  EstateReportResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _startGeneration();
+  }
+
+  Future<void> _startGeneration() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final ownerName = widget.userEmail.isNotEmpty ? widget.userEmail.split('@').first : 'Collection Owner';
+      final identity = EphemeralReportIdentity(
+        ownerLegalName: ownerName,
+        reportDate: intl.DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      );
+
+      final result = await EstateReportService.generateReport(
+        uid: widget.userEmail,
+        identity: identity,
+        mode: 'living_inventory',
+        includePhotos: true,
+      ).timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => throw Exception('Report generation timed out. Please try again.'),
+      );
+
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception:', '').trim();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const bgCard = Color(0xFF161B27);
+    const pink   = Color(0xFFF63366);
+
+    return AlertDialog(
+      backgroundColor: bgCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.auto_awesome, color: pink),
+          SizedBox(width: 10),
+          Text('AI Collection & Inventory Report', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_isLoading) ...[
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(color: pink),
+                      SizedBox(height: 16),
+                      Text('Compiling legal-grade PDF report via Cloud Run...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: const Color(0x25F63366), borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: pink),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_error!, style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                  ],
+                ),
+              ),
+            ] else if (_result != null) ...[
+              const Text('Your AI Collection Inventory Report has been compiled successfully!', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await EstateReportService.openPdf(_result!.pdfBytes, 'Numista_AI_Collection_Report.pdf');
+                      },
+                      icon: const Icon(Icons.picture_as_pdf, size: 18),
+                      label: const Text('📄 Open PDF'),
+                      style: ElevatedButton.styleFrom(backgroundColor: pink, foregroundColor: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Copy Attorney Portal Link',
+                    icon: const Icon(Icons.link, color: Colors.white),
+                    onPressed: () async {
+                      await EstateReportService.copyAttorneyLink(widget.userEmail, _result!.reportId);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attorney Portal link copied to clipboard!'), backgroundColor: pink));
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        if (_error != null)
+          TextButton(
+            onPressed: _startGeneration,
+            child: const Text('Retry', style: TextStyle(color: pink)),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close', style: TextStyle(color: Colors.white70)),
+        ),
+      ],
+    );
+  }
 }
 

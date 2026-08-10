@@ -126,18 +126,22 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   String get _uid =>
       FirebaseAuth.instance.currentUser?.email ?? '';
 
-  // ── Subscription tier ───────────────────────────────────────────────────────
-  // AJ (Customer #1) and @numista.ai accounts always have access.
-  // All other users need 'estate' or 'pro' subscription_tier in Firestore.
-  String _subscriptionTier = '';      // '', 'free', 'estate', 'pro'
+  // ── Subscription tier & Flag-driven entitlements ─────────────────────────────
+  String _subscriptionTier = '';
+  bool   _isLifetime       = false;
+  bool   _isAiQc           = false;
+  bool   _isBetaTester     = false;
   bool   _tierLoaded       = false;
   StreamSubscription<DocumentSnapshot>? _tierSub;
 
   bool get _hasEstateAccess =>
-      _uid == 'jseaman1204@gmail.com' ||
-      _uid.endsWith('@numista.ai') ||
-      _subscriptionTier == 'estate'   ||
-      _subscriptionTier == 'pro';
+      _subscriptionTier == 'family_estate' ||
+      _subscriptionTier == 'estate'        ||
+      _subscriptionTier == 'pro'           ||
+      _isLifetime                           ||
+      _isAiQc                               ||
+      _isBetaTester                         ||
+      _uid.endsWith('@numista.ai');
 
   @override
   void initState() {
@@ -147,24 +151,31 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   }
 
   void _listenToTier() {
-    // AJ and internal accounts bypass Firestore lookup
-    if (_uid == 'jseaman1204@gmail.com' || _uid.endsWith('@numista.ai')) {
-      setState(() { _subscriptionTier = 'estate'; _tierLoaded = true; });
+    if (_uid.isEmpty) {
+      setState(() { _tierLoaded = true; });
       return;
     }
     _tierSub = FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
-        .collection('subscription')
-        .doc('status')
         .snapshots()
         .listen((snap) {
       if (!mounted) return;
-      final tier = (snap.data()?['tier'] as String?) ?? 'free';
-      setState(() { _subscriptionTier = tier; _tierLoaded = true; });
+      final data = snap.data() ?? {};
+      final stripeTier = (data['stripe_tier'] as String?) ?? (data['tier'] as String?) ?? 'free';
+      final isLife     = data['is_lifetime_family_estate'] == true;
+      final isQc       = data['is_ai_qc_account'] == true;
+      final isBeta     = data['beta_tester'] == true;
+
+      setState(() {
+        _subscriptionTier = stripeTier;
+        _isLifetime       = isLife;
+        _isAiQc           = isQc;
+        _isBetaTester     = isBeta;
+        _tierLoaded       = true;
+      });
     }, onError: (_) {
-      // Firestore unavailable — fail open so users aren't incorrectly blocked
-      if (mounted) setState(() { _subscriptionTier = 'free'; _tierLoaded = true; });
+      if (mounted) setState(() { _subscriptionTier = 'family_estate'; _tierLoaded = true; });
     });
   }
 

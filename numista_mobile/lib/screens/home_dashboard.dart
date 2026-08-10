@@ -274,31 +274,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
 
   static double _computeFaceValue(String denom) {
-    final s = denom.toLowerCase().trim();
-    // ── Word-based matches (unambiguous) ─────────────────────────────────────
-    if (s.contains('penny')   || s.contains('cent')   || s.contains('1c'))  return 0.01;
-    if (s.contains('nickel')  || s.contains('5c'))                           return 0.05;
-    if (s.contains('dime')    || s.contains('10c'))                          return 0.10;
-    if (s.contains('quarter') || s.contains('25c'))                          return 0.25;
-    if (s.contains('half')    || s.contains('50c'))                          return 0.50;
-    // ── Dollar-sign matches: MUST go largest → smallest to prevent
-    // ── substring collisions (e.g. "$10" contains "$1" → wrong match) ────────
-    if (s.contains(r'$500'))  return 500.00;  // 1oz gold bar / commemorative
-    if (s.contains(r'$100'))  return 100.00;  // high-denomination gold
-    if (s.contains(r'$50'))   return 50.00;   // $50 Buffalo / gold eagle
-    if (s.contains(r'$25'))   return 25.00;   // $25 half-oz gold eagle
-    if (s.contains(r'$20'))   return 20.00;   // Saint-Gaudens / Liberty double eagle
-    if (s.contains(r'$10'))   return 10.00;   // Liberty / Indian Head gold eagle
-    if (s.contains(r'$5'))    return 5.00;    // Half eagle
-    if (s.contains(r'$2.50')) return 2.50;    // Quarter eagle
-    if (s.contains(r'$3'))    return 3.00;    // Three-dollar gold piece
-    if (s.contains(r'$2'))    return 2.00;    // Two-dollar note / $2 gold
-    if (s.contains('dollar')  || s.contains(r'$1')) return 1.00;
-    // ── Numeric fallback: "1" → 1.00, "0.25" → 0.25 ─────────────────────────
-    // Handles plain-number denominations stored by PCGS import or legacy CSV.
-    final n = double.tryParse(s.replaceAll(r'$', '').trim());
-    if (n != null) return n;
-    return 0.00;
+    return MeltValueService.parseFaceValue(denom);
   }
 
   @override
@@ -1542,10 +1518,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.17',
+    date: '2026-08-10',
+    description: 'Hooks Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+      'Audit: generate SCAN_REPORT.md system audit report',
+      'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
+      'Release: sync release notes for system health check',
+    ],
+  ),
+  _Release(
     version: 'v4.16',
     date: '2026-08-09',
     description: 'Merge(dev->main) Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Merge(dev->main): overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
       'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
