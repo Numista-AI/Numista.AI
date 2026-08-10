@@ -1542,10 +1542,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.16',
+    date: '2026-08-09',
+    description: 'Merge(dev->main) Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Merge(dev->main): overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
+      'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
+      'Mobile: remove unused imports, home dashboard improvements + docs: release notes, SCAN_REPORT, E2E test fixes',
+      'Release: sync release notes for system health check',
+      'Audit: v4.2 SCAN_REPORT - Phase 3 features, 22 CVEs resolved, E2E skip fix, walkthrough updated',
+      'Release: update release notes for v4.14',
+    ],
+  ),
+  _Release(
     version: 'v4.15',
     date: '2026-08-09',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: v4.2 SCAN_REPORT - Phase 3 features, 22 CVEs resolved, E2E skip fix, walkthrough updated',
       'Release: update release notes for v4.14',
