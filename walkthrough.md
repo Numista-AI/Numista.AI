@@ -1,46 +1,41 @@
-# Walkthrough — System Audit & Security Remediation (2026-08-08 / 2026-08-09)
+# Walkthrough — Audit Review & Infrastructure Fixes (2026-08-10)
 
 ## Overview
-Two-session update covering the Aug 8 security remediation sprint and Aug 9 morning audit review.
+Morning audit scan revealed a Pytest collection failure and three report generation bugs. All fixed and verified.
 
-## Security Remediation (2026-08-08)
-22 CVEs resolved across 8 pip packages in a single `requirements.txt` update:
+## Issues Found & Resolved
 
-| Package | From | To | CVEs |
-|---|---|---|---|
-| `cryptography` | 46.0.7 | 48.0.1 | 1 |
-| `GitPython` | 3.1.46 | 3.1.50 | 5 (RCE via hooksPath) |
-| `idna` | 3.11 | 3.15 | 1 |
-| `PyJWT` | 2.12.1 | 2.13.0 | 3 |
-| `python-multipart` | 0.0.26 | 0.0.31 | 4 |
-| `starlette` | 1.0.0 | 1.1.0 | 3 |
-| `tornado` | 6.5.5 | 6.5.6 | 3 |
-| `urllib3` | 2.6.3 | 2.7.0 | 2 |
-| `PyPDF2` | 3.0.1 | **removed** | 1 (no patch, superseded by pypdf) |
+### 1. Pytest Collection Failure (CRITICAL)
+**File:** `numista_backend/services/passport_pdf_generator.py`
+**Root cause:** `test_beta_estate_pipeline.py` imported `downsample_image_to_300dpi_thumb` which was referenced in the test but never implemented. This caused Pytest to abort at the collection phase — zero tests ran, the entire suite appeared to fail.
+**Fix:** Implemented the missing function using PIL `thumbnail()` with Lanczos resampling. Returns a `BytesIO` PNG stream ready for ReportLab PDF embedding.
+**Result:** 37/37 Pytest tests passing.
 
-- Confirmed: `GitPython` and `PyPDF2` not imported in production backend code (only in Streamlit internals / `.venv`)
-- Pytest 37/37 passed with zero regressions after upgrades
+### 2. Report Generator: Pytest Log Encoding Bug
+**File:** `numista_tests/generate_report.js`
+**Root cause:** PowerShell's `Tee-Object` writes files as **UTF-16 LE** (BOM: `FF FE`). Node's `readFileSync('utf8')` read each character as garbled (null bytes between every char), so regex matches on `"37 passed"` returned null — the scorecard showed `"See log"` instead of the actual result.
+**Fix:** Detect UTF-16 LE BOM and decode accordingly before running regex.
 
-## E2E Test Infrastructure Fix (2026-08-09)
-**Problem:** `master_ui_e2e.spec.ts` targeted `localhost:5000` (Flutter dev server) causing 2 nightly failures.
+### 3. Report Generator: Skipped Tests Counted as Failures
+**File:** `numista_tests/generate_report.js`
+**Root cause:** `countSuiteTests()` incremented `total` for every test including skipped ones, then compared `total === passed`. Skipped tests were never in `passed`, so `master_ui_e2e.spec.ts` always showed `❌ 2 failed`.
+**Fix:** Skipped tests excluded from `total`/`passed` counts. Suite shows `⏭️ 2 skipped (local server required)`.
 
-**Fix:** Added a `isLocalServerUp()` probe in `beforeEach`. Tests auto-skip with a clear message when no local server is detected. Exit code stays 0, nightly audit is clean.
+### 4. Report Generator: Pytest Scorecard Always Showed ✅ PASS
+**File:** `numista_tests/generate_report.js`
+**Root cause:** Pytest row was hardcoded to `✅ PASS` regardless of log content. Even when Pytest showed `ERRORS`, the scorecard showed green.
+**Fix:** `pytestPassed` boolean now derived from log parsing. Scorecard shows `❌ FAIL` when errors detected.
 
-**Result:** 120/120 active E2E tests pass · 2 skipped (expected, documented).
+### 5. Pre-Push Hook: Broken Windows Store Python Stub
+**File:** `.git/hooks/pre-push`
+**Root cause:** Hook called `python3` which on Windows resolves to `AppData/Local/Python/pythoncore-3.14-64/python.exe` — an orphaned Windows Store Python stub with no actual binary. Emitted `[ERROR] Failed to launch... (0x80070002)` on every push.
+**Fix:** Hook now uses `numista_backend/.venv/Scripts/python.exe` directly. Falls back to bare `python` if venv doesn't exist.
 
-## SCAN_REPORT Updated to v4.2
-- Added Phase 3 Step 1 (EPN Wishlist), Phase 3 Step 2 (Stripe Billing), Phase 2 Step 5 (Bulk Import)
-- Security Audit section updated with full CVE resolution table
-- Cloud Run secret check note clarified (shows SKIPPED in headless cron — expected)
-- Recommended Fixes updated: `dev → main` merge is now the top priority to surface Dependabot fixes
-
-## Overnight Commits of Note
-- `89bdcee` Lateral Transfer fixes (inventory loading, multi-term search)
-- `2bfc85f` Email normalization to lowercase across auth + Firestore
-- `dfa3c55` Stripe billing + attorney portal signed URLs (Phase 3 Step 2)
-- `1db9061` EPN shareable wishlist links + reservation router (Phase 3 Step 1)
-- `be39c6d` Desktop bulk import + deduplication hub (Phase 2 Step 5)
-- `d120e59` Release notes automation via git commits + CI
-
-## Git Synchronization
-All changes committed and pushed to `origin/dev`.
+## Final State
+| Component | Status |
+|---|---|
+| Pytest | ✅ 37/37 |
+| Playwright E2E | ✅ 120/120 active (2 skipped — expected) |
+| Report scorecard accuracy | ✅ All rows now reflect actual state |
+| Pre-push hook noise | ✅ Eliminated |
+| Dependabot on `main` | ⚠️ 128 alerts — cleared after next `dev → main` merge |
