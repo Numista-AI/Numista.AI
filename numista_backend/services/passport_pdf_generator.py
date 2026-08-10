@@ -16,7 +16,29 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+def downsample_image_to_300dpi_thumb(image_bytes: bytes, max_size: tuple = (300, 300)) -> io.BytesIO:
+    """
+    Downsample raw image bytes to a 300 DPI-equivalent thumbnail for PDF embedding.
+
+    Reduces high-resolution coin images to a compact thumbnail to minimize PDF
+    file size while maintaining print quality. Uses Lanczos resampling for sharpness.
+
+    Args:
+        image_bytes: Raw image bytes (PNG, JPEG, etc.)
+        max_size: Maximum (width, height) in pixels. Defaults to (300, 300).
+
+    Returns:
+        BytesIO buffer containing the downsampled PNG image.
+    """
+    img = PILImage.open(io.BytesIO(image_bytes))
+    img.thumbnail(max_size, PILImage.Resampling.LANCZOS)
+    out_buf = io.BytesIO()
+    img.save(out_buf, format='PNG', optimize=True)
+    out_buf.seek(0)
+    return out_buf
+
 def generate_qr_code_image(data: str, size: int = 150) -> io.BytesIO:
+
     """Generates a QR code image stream from string data."""
     qr = qrcode.QRCode(
         version=1,
