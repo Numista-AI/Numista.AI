@@ -1,4 +1,9 @@
 """
+[QUARANTINED & DEPRECATED - DO NOT RUN IN PRODUCTION]
+This script scrapes auction house imagery and writes directly to user-specific Firestore documents.
+It has been quarantined per Banknote Image SOP (August 2026). Refer to SOPs/banknote_image_sop.md
+and docs/Currency_Image_Runbook.md for the standard public reference intake pipeline.
+
 cert_image_scraper.py
 =====================
 Automated image scraper for AJ's graded currency collection.
