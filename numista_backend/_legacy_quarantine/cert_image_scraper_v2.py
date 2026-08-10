@@ -1,4 +1,9 @@
 """
+[QUARANTINED & DEPRECATED - DO NOT RUN IN PRODUCTION]
+This script bypasses auction bot detection and writes directly to user-specific Firestore documents.
+It has been quarantined per Banknote Image SOP (August 2026). Refer to SOPs/banknote_image_sop.md
+and docs/Currency_Image_Runbook.md for the standard public reference intake pipeline.
+
 cert_image_scraper_v2.py
 ========================
 Uses curl_cffi to impersonate Chrome and bypass Heritage Auctions bot detection.

@@ -1,5 +1,11 @@
 """
+[QUARANTINED & DEPRECATED - DO NOT RUN IN PRODUCTION]
+This script broadcasts a single representative $1 obverse image across multiple distinct note types.
+It has been quarantined per Banknote Image SOP (August 2026) to prevent catalog misrepresentation.
+Refer to SOPs/banknote_image_sop.md and docs/Currency_Image_Runbook.md for standard intake.
+
 fix_no_obv_frn.py
+=================
 Uploads the confirmed $1 FRN obverse to all NO_OBV docs in TYPE_016-038 and TYPE_197-206.
 Also tries additional Wikimedia patterns for the $20 1914 FRN (TYPE_055).
 """
