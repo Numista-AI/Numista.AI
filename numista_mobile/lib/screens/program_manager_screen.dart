@@ -47,11 +47,56 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   int _totalReferenceCount = 2834; // default fallback matching SQLite seeded catalog
 
+  // PDF Pre-cache
+  Uint8List? _cachedLogoBytes;
+  Uint8List? _cachedFontBytes;
+  Uint8List? _cachedBoldFontBytes;
+  Map<String, Uint8List>? _cachedMintMarkDiagrams;
+  bool _assetsPreloaded = false;
+
+  // PDF Generation State per Program
+  String? _generatingProgramId;
+
   @override
   void initState() {
     super.initState();
     _loadTotalReferenceCount();
     _loadProgramPreferences();
+    _preloadPdfAssets();
+  }
+
+  Future<void> _preloadPdfAssets() async {
+    if (_assetsPreloaded) return;
+    try {
+      // Logo
+      try {
+        final logoData = await rootBundle.load('assets/logo_owl.png');
+        _cachedLogoBytes = logoData.buffer.asUint8List();
+      } catch (_) {}
+
+      // Fonts
+      try {
+        final fontData = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+        _cachedFontBytes = fontData.buffer.asUint8List();
+        final boldData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+        _cachedBoldFontBytes = boldData.buffer.asUint8List();
+      } catch (_) {}
+
+      // Diagrams
+      const diagramTypes = ['EDGE','OBVERSE_PORTRAIT','OBVERSE_DATE',
+                            'REVERSE_EAGLE','REVERSE_LOWER','REVERSE_UPPER','MIXED','NONE'];
+      final diagrams = <String, Uint8List>{};
+      for (final type in diagramTypes) {
+        try {
+          final data = await rootBundle.load('assets/mint_mark_diagrams/$type.png');
+          diagrams[type] = data.buffer.asUint8List();
+        } catch (_) {}
+      }
+      _cachedMintMarkDiagrams = diagrams;
+      _assetsPreloaded = true;
+    } catch (e) {
+      debugPrint('Error preloading PDF assets: $e');
+    }
   }
 
   Future<void> _loadProgramPreferences() async {
@@ -553,24 +598,20 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               const SizedBox(width: 12),
               // ── Print Checklist Button ─────────────────────────────────
               ElevatedButton.icon(
-                onPressed: () async {
-                  Uint8List? logoBytes;
-                  try {
-                    final data = await rootBundle.load('assets/logo_owl.png');
-                    logoBytes = data.buffer.asUint8List();
-                  } catch (e) {
-                    // ignore
-                  }
-                  final bytes = await ChecklistGeneratorService.generateChecklist(
-                      program,
-                      logoBytes: logoBytes);
-                  await Printing.layoutPdf(
-                    onLayout: (format) => bytes,
-                    name: '${program.name}_Checklist.pdf',
-                  );
-                },
-                icon: const Icon(Icons.print, size: 16),
-                label: const Text('Print Checklist'),
+                onPressed: _generatingProgramId == program.id
+                    ? null
+                    : () => _handlePrintChecklist(program),
+                icon: _generatingProgramId == program.id
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.print, size: 16),
+                label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF63366),
                   foregroundColor: Colors.white,
@@ -600,7 +641,6 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: const Color(0xFFD4A843).withAlpha(60)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1046,6 +1086,92 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handlePrintChecklist(CoinProgram program) async {
+    if (_generatingProgramId != null) return;
+
+    setState(() {
+      _generatingProgramId = program.id;
+    });
+
+    Uint8List? pdfBytes;
+
+    try {
+      if (!_assetsPreloaded) {
+        await _preloadPdfAssets();
+      }
+
+      if (program.coins.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to print: This program contains no coin definitions.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      pdfBytes = await ChecklistGeneratorService.generateChecklist(
+        program,
+        logoBytes: _cachedLogoBytes,
+        mintMarkDiagrams: _cachedMintMarkDiagrams,
+        ttfFontBytes: _cachedFontBytes,
+        ttfBoldFontBytes: _cachedBoldFontBytes,
+      );
+
+      final safeName = program.name
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .replaceAll(RegExp(r'\s+'), '_');
+
+      await Printing.layoutPdf(
+        onLayout: (format) async => pdfBytes!,
+        name: '${safeName}_Checklist.pdf',
+      );
+    } catch (e, stack) {
+      debugPrint('Error during checklist printing: $e\n$stack');
+      if (mounted && pdfBytes != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Print preview was blocked by browser. Click to download PDF file.'),
+            backgroundColor: Colors.blueGrey,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'Download PDF',
+              textColor: Colors.amber,
+              onPressed: () async {
+                try {
+                  final safeName = program.name
+                      .replaceAll(RegExp(r'[^\w\s-]'), '')
+                      .replaceAll(RegExp(r'\s+'), '_');
+                  await Printing.sharePdf(
+                    bytes: pdfBytes!,
+                    filename: '${safeName}_Checklist.pdf',
+                  );
+                } catch (err) {
+                  debugPrint('Error downloading PDF: $err');
+                }
+              },
+            ),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF checklist: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _generatingProgramId = null;
+        });
+      }
+    }
   }
 
   // ── Scan checklist via camera or gallery ──────────────────────────────────

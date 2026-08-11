@@ -15,16 +15,31 @@ class ReferenceService {
         return CoinProgramsData.usPrograms;
       }
 
-      final Map<String, List<CoinProgram>> grouped = {};
+      // Collect all programs from snapshot
+      final List<CoinProgram> allDocs = snapshot.docs
+          .map((doc) => CoinProgram.fromMap(doc.data(), doc.id))
+          .where((p) => p.coins.isNotEmpty) // Filter out 0-coin ghost docs
+          .toList();
 
-      for (var doc in snapshot.docs) {
-        final program = CoinProgram.fromMap(doc.data(), doc.id);
-        final category = program.category;
-
-        if (!grouped.containsKey(category)) {
-          grouped[category] = [];
+      // Deduplicate deterministically by display name: highest coins count, then smallest doc ID
+      final Map<String, CoinProgram> canonicalMap = {};
+      for (final program in allDocs) {
+        final title = program.name.trim().toLowerCase();
+        if (!canonicalMap.containsKey(title)) {
+          canonicalMap[title] = program;
+        } else {
+          final existing = canonicalMap[title]!;
+          if (program.coins.length > existing.coins.length ||
+              (program.coins.length == existing.coins.length && program.id.compareTo(existing.id) < 0)) {
+            canonicalMap[title] = program;
+          }
         }
-        grouped[category]!.add(program);
+      }
+
+      final Map<String, List<CoinProgram>> grouped = {};
+      for (final program in canonicalMap.values) {
+        final category = program.category.isEmpty ? 'Other' : program.category;
+        grouped.putIfAbsent(category, () => []).add(program);
       }
 
       return grouped;

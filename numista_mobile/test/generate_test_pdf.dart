@@ -17,16 +17,18 @@ void main(List<String> args) async {
 
   dynamic targetProgJson;
   for (var p in allPrograms) {
-    if (p['name'].toString().toLowerCase().contains(searchTerm)) {
+    final progName = (p['Name'] ?? p['name'] ?? '').toString();
+    if (progName.toLowerCase().contains(searchTerm)) {
       targetProgJson = p; break;
     }
   }
   if (targetProgJson == null) { stderr.writeln("No program matching '$searchTerm'."); exit(1); }
-  stdout.writeln("Found Program: ${targetProgJson['name']}");
+  final progTitle = (targetProgJson['Name'] ?? targetProgJson['name']).toString();
+  stdout.writeln("Found Program: $progTitle");
 
-  final coinsData = targetProgJson['coins'] as List<dynamic>;
+  final coinsData = (targetProgJson['Coins'] ?? targetProgJson['coins']) as List<dynamic>? ?? [];
   final coinsList = coinsData.map((c) {
-    var rawVarieties = c['varieties'] as List<dynamic>?;
+    var rawVarieties = (c['varieties'] ?? c['Varieties']) as List<dynamic>?;
     List<ChecklistVariety> mappedVarieties = [];
     if (rawVarieties != null && rawVarieties.isNotEmpty) {
       mappedVarieties = rawVarieties.map((v) {
@@ -37,28 +39,34 @@ void main(List<String> args) async {
       mappedVarieties = [ChecklistVariety.fromId('P'), ChecklistVariety.fromId('D')];
     }
     return ProgramCoin(
-      id: c['id']?.toString() ?? c['name'].toString().replaceAll(' ', '_'),
-      name: c['name'].toString(),
-      year: c['year']?.toString(),
+      id: (c['id'] ?? c['name'] ?? '').toString(),
+      name: (c['name'] ?? c['Name'] ?? '').toString(),
+      year: c['year']?.toString() ?? c['Year']?.toString(),
       varieties: mappedVarieties,
     );
   }).toList();
 
   final prog = CoinProgram(
-    id: targetProgJson['id']?.toString() ?? searchTerm,
-    name: targetProgJson['name'],
-    years: targetProgJson['years'] ?? '',
+    id: targetProgJson['Id']?.toString() ?? targetProgJson['id']?.toString() ?? searchTerm,
+    name: progTitle,
+    years: (targetProgJson['Years'] ?? targetProgJson['years'] ?? '').toString(),
     url: '',
-    category: targetProgJson['category'] ?? '',
-    mintMarkLocations: targetProgJson['mint_mark_locations'] ?? '',
-    mintMarkType: targetProgJson['mint_mark_type']?.toString(),
-    mintMarkDescription: targetProgJson['mint_mark_description']?.toString(),
+    category: (targetProgJson['Category'] ?? targetProgJson['category'] ?? '').toString(),
+    mintMarkLocations: (targetProgJson['Mint_mark_locations'] ?? targetProgJson['mint_mark_locations'] ?? '').toString(),
+    mintMarkType: (targetProgJson['Mint_mark_type'] ?? targetProgJson['mint_mark_type'])?.toString(),
+    mintMarkDescription: (targetProgJson['Mint_mark_description'] ?? targetProgJson['mint_mark_description'])?.toString(),
     coins: coinsList,
   );
 
   // ── Load logo ─────────────────────────────────────────────────────────────
   Uint8List? logoBytes;
   try { logoBytes = File('assets/logo_owl.png').readAsBytesSync(); } catch (_) {}
+
+  // ── Load fonts ────────────────────────────────────────────────────────────
+  Uint8List? fontBytes;
+  Uint8List? boldFontBytes;
+  try { fontBytes = File('assets/fonts/Roboto-Regular.ttf').readAsBytesSync(); } catch (_) {}
+  try { boldFontBytes = File('assets/fonts/Roboto-Bold.ttf').readAsBytesSync(); } catch (_) {}
 
   // ── Load all 8 mint mark diagrams ─────────────────────────────────────────
   const diagramTypes = ['EDGE','OBVERSE_PORTRAIT','OBVERSE_DATE',
@@ -70,9 +78,14 @@ void main(List<String> args) async {
   }
   stdout.writeln('Loaded ${mintMarkDiagrams.length}/8 mint mark diagrams.');
 
-  stdout.writeln('Generating PDF...');
+  stdout.writeln('Generating PDF for ${prog.name} (${prog.coins.length} coins)...');
   final bytes = await ChecklistGeneratorService.generateChecklist(
-    prog, logoBytes: logoBytes, mintMarkDiagrams: mintMarkDiagrams);
+    prog,
+    logoBytes: logoBytes,
+    mintMarkDiagrams: mintMarkDiagrams,
+    ttfFontBytes: fontBytes,
+    ttfBoldFontBytes: boldFontBytes,
+  );
 
   final safeName = prog.name
       .toLowerCase()
