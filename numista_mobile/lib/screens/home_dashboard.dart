@@ -1518,10 +1518,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.21',
+    version: 'v4.22',
     date: '2026-08-10',
     description: 'Currency Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Currency: fix string interpolation formatting in currency_collection_screen',
+      'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+    ],
+  ),
+  _Release(
+    version: 'v4.21',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Currency: fix string interpolation formatting in currency_collection_screen',
       'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
