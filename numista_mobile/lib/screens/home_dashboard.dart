@@ -19,7 +19,6 @@ import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
 import '../widgets/beta_welcome_dialog.dart';
-import '../constants.dart';
 import 'ai_chat_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -1521,10 +1520,138 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.40',
+    date: '2026-08-11',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+    ],
+  ),
+  _Release(
+    version: 'v4.39',
+    date: '2026-08-11',
+    description: 'Web Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+    ],
+  ),
+  _Release(
+    version: 'v4.38',
+    date: '2026-08-11',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+    ],
+  ),
+  _Release(
+    version: 'v4.37',
+    date: '2026-08-11',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
+    ],
+  ),
+  _Release(
+    version: 'v4.36',
+    date: '2026-08-11',
+    description: 'Web Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
+      'Build: define missing kAppVersion constant and add constants import to home_dashboard',
+    ],
+  ),
+  _Release(
+    version: 'v4.35',
+    date: '2026-08-11',
+    description: 'Build Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
+      'Build: define missing kAppVersion constant and add constants import to home_dashboard',
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+    ],
+  ),
+  _Release(
+    version: 'v4.34',
+    date: '2026-08-11',
+    description: 'Estate-v3 Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
+      'Build: define missing kAppVersion constant and add constants import to home_dashboard',
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+    ],
+  ),
+  _Release(
+    version: 'v4.33',
+    date: '2026-08-11',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
+      'Build: define missing kAppVersion constant and add constants import to home_dashboard',
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+    ],
+  ),
+  _Release(
     version: 'v4.32',
     date: '2026-08-11',
     description: 'Backend Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
       'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
