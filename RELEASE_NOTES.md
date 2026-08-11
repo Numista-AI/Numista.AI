@@ -33,6 +33,27 @@
 
 
 
+
+
+## v4.28 — 2026-08-11
+**Build Enhancements & Platform Updates**
+
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.27 — 2026-08-11
+**Pdf Enhancements & Platform Updates**
+
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.26 — 2026-08-11
 **Transfer Enhancements & Platform Updates**
 
