@@ -30,6 +30,13 @@
 
 
 
+
+## v4.24 — 2026-08-11
+**Audit Enhancements & Platform Updates**
+
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.23 — 2026-08-11
 **Audit Enhancements & Platform Updates**
 

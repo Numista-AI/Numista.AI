@@ -258,6 +258,8 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
 
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0284C7'), spaceBefore=2, spaceAfter=8))
 
+    from config import APP_PUBLIC_DOMAIN
+
     transfer_id = transfer_data.get("transfer_id", "N/A")
     claim_pin = transfer_data.get("claim_pin", "******")
     sender_id = transfer_data.get("sender_id", "Anonymous Sender")
@@ -265,7 +267,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     expires_at = transfer_data.get("expires_at", "")[:10]
 
     # QR Code Generation pointing directly to web app claim route
-    qr_payload = f"https://numista-vault.web.app/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
+    qr_payload = f"https://{APP_PUBLIC_DOMAIN}/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
     qr_buf = generate_qr_code_image(qr_payload, size=180)
     qr_img = Image(qr_buf, width=1.4 * inch, height=1.4 * inch)
 
@@ -277,7 +279,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
                       f"<b>Token Expiration:</b> {expires_at} (60-Day Limit)<br/>"
                       f"<b>Claim PIN Code:</b> <font color='#0284C7' size=13><b>{claim_pin}</b></font><br/><br/>"
                       f"<font color='#0284C7' size=8><b>WEB / DESKTOP RECEIVE INSTRUCTIONS:</b><br/>"
-                      f"1. Sign into recipient account on <b>numista-vault.web.app</b><br/>"
+                      f"1. Sign into recipient account on <b>{APP_PUBLIC_DOMAIN}</b><br/>"
                       f"2. Click <b>Claim Transfer</b> (or <b>Lateral Transfer &rarr; Receive</b>)<br/>"
                       f"3. Enter Transfer ID &amp; PIN <b>{claim_pin}</b> to adopt items into vault.</font>", body_normal),
             qr_img

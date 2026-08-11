@@ -1,11 +1,13 @@
 """
-Unit tests for Transfer Service & Passport PDF Generator.
+Unit tests for Transfer Service, Passport PDF Generator, and Feature Registry.
 """
 
 import pytest
 from unittest.mock import MagicMock
 from services.transfer_service import sanitize_item_payload, initiate_transfer, claim_transfer, recall_transfer
 from services.passport_pdf_generator import generate_passport_pdf
+from services.feature_registry import registry, register_feature, FeatureDescriptor
+
 
 def test_sanitize_item_payload():
     raw_item = {
@@ -34,6 +36,7 @@ def test_sanitize_item_payload():
     assert sanitized["title"] == "1921 Morgan Silver Dollar"
     assert sanitized["grade"] == "MS-65"
 
+
 def test_generate_passport_pdf():
     mock_transfer_data = {
         "transfer_id": "tf_test_9988",
@@ -58,3 +61,25 @@ def test_generate_passport_pdf():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 500  # Ensure non-trivial PDF content was built
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_feature_registry_registration():
+    @register_feature(
+        name="Test Capability",
+        description="A test feature descriptor",
+        keywords=["test", "capability"],
+        synonyms=["check"],
+        instructions="Run test capability",
+        enabled=True
+    )
+    def dummy_func():
+        pass
+
+    feat = registry.get_feature("Test Capability")
+    assert feat is not None
+    assert feat.name == "Test Capability"
+    assert "test" in feat.keywords
+
+    prompt_context = registry.build_morgan_prompt_context()
+    assert "Lateral Transfer" in prompt_context
+    assert "Test Capability" in prompt_context

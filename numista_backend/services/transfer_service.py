@@ -2,19 +2,24 @@
 Transfer Service — Numista.AI Lateral Transfer ("The Secure Passport Protocol")
 
 Handles item transfer initiation, server-side data sanitization, cryptographic 60-day token validation,
-GCS asset duplication, and atomic claim/recall logic.
+recipient email authorization locking, email notification dispatching with audit logging,
+and atomic claim/recall logic.
 """
 
 import uuid
 import random
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from google.cloud import firestore
 
 COLLECTION_TRANSFERS = "transfers"
+logger = logging.getLogger("numista_backend.transfer_service")
+
 
 def _get_utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 def sanitize_item_payload(item_data: Dict[str, Any], privacy_toggles: Dict[str, bool]) -> Dict[str, Any]:
     """
@@ -24,25 +29,26 @@ def sanitize_item_payload(item_data: Dict[str, Any], privacy_toggles: Dict[str, 
     
     # Financial fields
     if privacy_toggles.get("hide_cost_basis", False):
-        for field in ["purchase_price", "cost_basis", "price_paid", "purchase_date", "acquired_price"]:
+        for field in ["purchase_price", "cost_basis", "price_paid", "purchase_date", "acquired_price", "Purchase Cost"]:
             sanitized.pop(field, None)
             
     # Private notes
     if privacy_toggles.get("hide_private_notes", False):
-        for field in ["private_notes", "notes", "personal_notes", "user_notes"]:
+        for field in ["private_notes", "notes", "personal_notes", "user_notes", "Personal Notes I"]:
             sanitized.pop(field, None)
             
     # Storage & inventory location
     if privacy_toggles.get("hide_storage_location", False):
-        for field in ["storage_location", "vault_box", "safe_number", "bin_location", "location"]:
+        for field in ["storage_location", "vault_box", "safe_number", "bin_location", "location", "Storage Location"]:
             sanitized.pop(field, None)
             
     # Invoice & vendor IDs
     if privacy_toggles.get("hide_invoices", False):
-        for field in ["invoice_id", "invoice_num", "receipt_url", "vendor_name", "order_id"]:
+        for field in ["invoice_id", "invoice_num", "receipt_url", "vendor_name", "order_id", "Retailer Invoice #"]:
             sanitized.pop(field, None)
 
     return sanitized
+
 
 def initiate_transfer(
     db: firestore.Client,
@@ -53,6 +59,8 @@ def initiate_transfer(
 ) -> Dict[str, Any]:
     """
     Initiates a lateral transfer for one or more items.
+    Generates Passport Certificate PDF and dispatches email if recipient_email is provided.
+    Appends audit trail to transfers/{transfer_id}/email_audit in Firestore.
     """
     if not privacy_toggles:
         privacy_toggles = {
@@ -116,18 +124,53 @@ def initiate_transfer(
     transfer_doc = {
         "transfer_id": transfer_id,
         "sender_id": user_a_id,
-        "recipient_email": recipient_email,
+        "recipient_email": recipient_email.strip().lower() if recipient_email else None,
         "claim_pin": claim_pin,
         "items": sanitized_items,
         "item_ids": item_ids,
         "created_at": now.isoformat(),
         "expires_at": expires_at.isoformat(),
         "status": "pending",
-        "privacy_toggles": privacy_toggles
+        "privacy_toggles": privacy_toggles,
+        "email_sent": False
     }
 
-    db.collection(COLLECTION_TRANSFERS).document(transfer_id).set(transfer_doc)
+    transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
+    transfer_ref.set(transfer_doc)
+
+    # Automated Email Dispatch & Audit Trail
+    if recipient_email and recipient_email.strip():
+        clean_recipient = recipient_email.strip().lower()
+        try:
+            from services.passport_pdf_generator import generate_passport_pdf
+            from services.email_service import send_passport_transfer_email
+
+            pdf_bytes = generate_passport_pdf(transfer_doc)
+            email_res = send_passport_transfer_email(
+                recipient_email=clean_recipient,
+                transfer_data=transfer_doc,
+                pdf_bytes=pdf_bytes
+            )
+
+            is_sent = email_res.get("status") == "sent"
+            transfer_ref.update({"email_sent": is_sent})
+            transfer_doc["email_sent"] = is_sent
+
+            # Write immutable email audit entry to Firestore subcollection
+            audit_entry = {
+                "timestamp": now.isoformat(),
+                "recipient_email": clean_recipient,
+                "status": email_res.get("status", "unknown"),
+                "provider": email_res.get("provider", "none"),
+                "message_id": email_res.get("message_id", "")
+            }
+            transfer_ref.collection("email_audit").add(audit_entry)
+
+        except Exception as ee:
+            logger.warning(f"Failed to dispatch transfer email / write audit log: {ee}")
+
     return transfer_doc
+
 
 def claim_transfer(
     db: firestore.Client,
@@ -137,7 +180,8 @@ def claim_transfer(
     selected_item_ids: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Claims a pending transfer, copying items into User B's vault and appending provenance milestones.
+    Claims a pending transfer, copying items into User B's vault with native SERVER_TIMESTAMP and field sanitization.
+    Enforces recipient email authorization locking if recipient_email was specified at initiation.
     """
     transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
     transfer_snap = transfer_ref.get()
@@ -161,6 +205,15 @@ def claim_transfer(
     if transfer_data.get("claim_pin") != claim_pin.strip():
         raise ValueError("Invalid claim PIN code")
 
+    # Recipient Authorization Locking:
+    # If recipient_email was specified at initiation, only an account matching recipient_email can claim.
+    locked_email = transfer_data.get("recipient_email")
+    if locked_email and locked_email.strip():
+        clean_locked = locked_email.strip().lower()
+        clean_user_b = user_b_id.strip().lower()
+        if "@" in clean_user_b and clean_user_b != clean_locked:
+            raise ValueError(f"Transfer is locked exclusively to recipient account '{clean_locked}'. Active user '{clean_user_b}' is not authorized to claim.")
+
     sender_id = transfer_data["sender_id"]
     claimed_items = []
 
@@ -179,17 +232,29 @@ def claim_transfer(
             "transfer_id": transfer_id
         })
 
+        # Sanitize item strings so empty values default cleanly
+        denom = item.get("Denomination") or item.get("denomination") or ""
+        year_str = item.get("Year") or item.get("year") or ""
+        mint_str = item.get("Mint Mark") or item.get("mintMark") or ""
+
         new_coin_doc = {
             **item,
             "id": new_item_id,
+            "Denomination": denom.strip() if denom.strip() else "N/A",
+            "Year": year_str.strip(),
+            "Mint Mark": mint_str.strip(),
             "original_transfer_id": transfer_id,
             "provenanceLedger": provenance,
             "transferStatus": "claimed",
-            "adopted_at": _get_utc_now().isoformat()
+            "adopted_at": _get_utc_now().isoformat(),
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "timestamp": firestore.SERVER_TIMESTAMP
         }
 
         # Write to User B collection
-        db.collection("users").document(user_b_id).collection("coins").document(new_item_id).set(new_coin_doc)
+        clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
+        db.collection("users").document(clean_user_b_id).collection("coins").document(new_item_id).set(new_coin_doc)
         claimed_items.append(new_coin_doc)
 
         # Update User A's coin status to transferred
@@ -197,7 +262,7 @@ def claim_transfer(
         if sender_coin_ref.get().exists:
             sender_coin_ref.update({
                 "transferStatus": "transferred",
-                "transferredTo": user_b_id
+                "transferredTo": clean_user_b_id
             })
 
     transfer_ref.update({
@@ -212,6 +277,7 @@ def claim_transfer(
         "items_claimed_count": len(claimed_items),
         "claimed_items": claimed_items
     }
+
 
 def recall_transfer(
     db: firestore.Client,
@@ -229,7 +295,7 @@ def recall_transfer(
 
     transfer_data = transfer_snap.to_dict()
 
-    if transfer_data.get("sender_id") != user_a_id:
+    if transfer_data.get("sender_id") != user_a_id and transfer_data.get("sender_id").lower() != user_a_id.lower():
         raise ValueError("Only the transfer sender can recall this transaction")
 
     if transfer_data.get("status") != "pending":

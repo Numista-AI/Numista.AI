@@ -454,7 +454,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     final path  = '/add_coins.html?email=${Uri.encodeComponent(email)}';
                     final uri   = kIsWeb
                         ? Uri.base.resolve(path)
-                        : Uri.parse('https://numista-vault.web.app$path');
+                        : Uri.parse('https://$kAppPublicDomain$path');
                     await launchUrl(uri, mode: LaunchMode.platformDefault);
                   },
                   icon: const Icon(Icons.open_in_new, size: 18),

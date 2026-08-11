@@ -17,7 +17,7 @@ const String kApiBaseUrl =
 const String kScanServiceUrl =
     'https://numista-scan-service-568985927038.us-central1.run.app';
 
-// Current application version (aligned with pubspec.yaml)
-const String kAppVersion = 'v4.1';
-const String kAppVersionFull = 'v4.1.0';
+// Primary Public Domain for Numista.AI web & desktop app
+const String kAppPublicDomain = 'numista.ai';
+
 
