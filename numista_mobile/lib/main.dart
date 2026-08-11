@@ -15,6 +15,21 @@ import 'package:google_fonts/google_fonts.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: const Color(0xFF1E2937),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: SelectableText(
+            'UI Error:\n${details.exception}\n\n${details.stack}',
+            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+  };
+
   final uri = Uri.base;
 
   // ── Public Wishlist deep-link detection ──────────────────────────────────
