@@ -94,7 +94,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           snap = await FirebaseFirestore.instance.collection(AuthService.coinsPath).get();
         }
 
-        coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+        coins = snap.docs
+            .map((doc) => CoinModel.fromFirestore(doc))
+            .where((c) => c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed')
+            .toList();
       }
 
       coins.sort((a, b) {

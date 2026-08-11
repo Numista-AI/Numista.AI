@@ -31,6 +31,14 @@
 
 
 
+
+## v4.25 — 2026-08-11
+**Transfer Enhancements & Platform Updates**
+
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.24 — 2026-08-11
 **Audit Enhancements & Platform Updates**
 

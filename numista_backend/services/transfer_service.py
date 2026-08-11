@@ -3,7 +3,7 @@ Transfer Service — Numista.AI Lateral Transfer ("The Secure Passport Protocol"
 
 Handles item transfer initiation, server-side data sanitization, cryptographic 60-day token validation,
 recipient email authorization locking, email notification dispatching with audit logging,
-and atomic claim/recall logic.
+atomic claim/recall logic, and sender coin deletion on successful claim.
 """
 
 import uuid
@@ -59,6 +59,7 @@ def initiate_transfer(
 ) -> Dict[str, Any]:
     """
     Initiates a lateral transfer for one or more items.
+    Immediately locks items to transferStatus = 'pending' on sender's collection.
     Generates Passport Certificate PDF and dispatches email if recipient_email is provided.
     Appends audit trail to transfers/{transfer_id}/email_audit in Firestore.
     """
@@ -102,7 +103,12 @@ def initiate_transfer(
 
         item_data = coin_snap.to_dict()
         item_data["id"] = item_id
-        
+
+        # Disallow initiating transfer on items that are already pending or transferred
+        curr_status = item_data.get("transferStatus", "")
+        if curr_status in ["pending", "transferred", "claimed"]:
+            raise ValueError(f"Item {item_id} is already in state '{curr_status}' and cannot be transferred again.")
+
         # Sanitize item payload
         clean_item = sanitize_item_payload(item_data, privacy_toggles)
         sanitized_items.append(clean_item)
@@ -115,7 +121,7 @@ def initiate_transfer(
             "transfer_status": "pending"
         })
 
-        # Update active item status
+        # Lock active item status to pending
         coin_ref.update({
             "transferStatus": "pending",
             "transferId": transfer_id
@@ -180,8 +186,10 @@ def claim_transfer(
     selected_item_ids: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Claims a pending transfer, copying items into User B's vault with native SERVER_TIMESTAMP and field sanitization.
-    Enforces recipient email authorization locking if recipient_email was specified at initiation.
+    Claims a pending transfer atomically:
+    1. Copies item into User B's active collection.
+    2. Archives copy in User A's transferred_coins subcollection.
+    3. Deletes active document from User A's active coins collection.
     """
     transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
     transfer_snap = transfer_ref.get()
@@ -206,7 +214,6 @@ def claim_transfer(
         raise ValueError("Invalid claim PIN code")
 
     # Recipient Authorization Locking:
-    # If recipient_email was specified at initiation, only an account matching recipient_email can claim.
     locked_email = transfer_data.get("recipient_email")
     if locked_email and locked_email.strip():
         clean_locked = locked_email.strip().lower()
@@ -215,7 +222,10 @@ def claim_transfer(
             raise ValueError(f"Transfer is locked exclusively to recipient account '{clean_locked}'. Active user '{clean_user_b}' is not authorized to claim.")
 
     sender_id = transfer_data["sender_id"]
+    clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
     claimed_items = []
+
+    batch = db.batch()
 
     for item in transfer_data.get("items", []):
         item_id = item.get("id")
@@ -228,7 +238,7 @@ def claim_transfer(
             "event": "Lateral Transfer (Passport Protocol)",
             "date": _get_utc_now().isoformat(),
             "from_user": sender_id,
-            "to_user": user_b_id,
+            "to_user": clean_user_b_id,
             "transfer_id": transfer_id
         })
 
@@ -245,31 +255,40 @@ def claim_transfer(
             "Mint Mark": mint_str.strip(),
             "original_transfer_id": transfer_id,
             "provenanceLedger": provenance,
-            "transferStatus": "claimed",
+            "transferStatus": "active",
             "adopted_at": _get_utc_now().isoformat(),
             "created_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP,
             "timestamp": firestore.SERVER_TIMESTAMP
         }
 
-        # Write to User B collection
-        clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
-        db.collection("users").document(clean_user_b_id).collection("coins").document(new_item_id).set(new_coin_doc)
+        # 1. Write active document to User B collection
+        recipient_coin_ref = db.collection("users").document(clean_user_b_id).collection("coins").document(new_item_id)
+        batch.set(recipient_coin_ref, new_coin_doc)
         claimed_items.append(new_coin_doc)
 
-        # Update User A's coin status to transferred
+        # 2. Archive copy in User A's transferred_coins subcollection
+        sender_archive_ref = db.collection("users").document(sender_id).collection("transferred_coins").document(item_id)
+        batch.set(sender_archive_ref, {
+            **item,
+            "transferStatus": "transferred",
+            "transferredTo": clean_user_b_id,
+            "claimed_at": _get_utc_now().isoformat()
+        }, merge=True)
+
+        # 3. DELETE active coin document from User A's active coins collection
         sender_coin_ref = db.collection("users").document(sender_id).collection("coins").document(item_id)
         if sender_coin_ref.get().exists:
-            sender_coin_ref.update({
-                "transferStatus": "transferred",
-                "transferredTo": clean_user_b_id
-            })
+            batch.delete(sender_coin_ref)
 
-    transfer_ref.update({
+    # Update transfer document status
+    batch.update(transfer_ref, {
         "status": "claimed",
-        "claimed_by": user_b_id,
+        "claimed_by": clean_user_b_id,
         "claimed_at": _get_utc_now().isoformat()
     })
+
+    batch.commit()
 
     return {
         "transfer_id": transfer_id,
@@ -286,6 +305,7 @@ def recall_transfer(
 ) -> Dict[str, Any]:
     """
     Recalls an unclaimed pending transfer by User A.
+    Restores items in User A's active collection to transferStatus = 'none'.
     """
     transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
     transfer_snap = transfer_ref.get()

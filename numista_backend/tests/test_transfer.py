@@ -5,7 +5,7 @@ Unit tests for Transfer Service, Passport PDF Generator, and Feature Registry.
 import pytest
 from unittest.mock import MagicMock
 from services.transfer_service import sanitize_item_payload, initiate_transfer, claim_transfer, recall_transfer
-from services.passport_pdf_generator import generate_passport_pdf
+from services.passport_pdf_generator import generate_passport_pdf, format_financial_details
 from services.feature_registry import registry, register_feature, FeatureDescriptor
 
 
@@ -61,6 +61,25 @@ def test_generate_passport_pdf():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 500  # Ensure non-trivial PDF content was built
     assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_pdf_notes_filtering():
+    # Long generic catalog essay should be omitted from PDF notes
+    essay_item = {
+        "personalNotes": "This coin is the 1999 New Jersey state quarter, representing the third state admitted to the Union. Struck at the Denver Mint...",
+        "storageLocation": "Binder 1"
+    }
+    fin_essay = format_financial_details(essay_item)
+    assert "This coin is the 1999 New Jersey" not in fin_essay
+    assert "Vault:</b> Binder 1" in fin_essay
+
+    # Short user note should be rendered
+    short_user_item = {
+        "personalNotes": "bad condition, reverse scratch",
+        "storageLocation": "Safe Box #2"
+    }
+    fin_user = format_financial_details(short_user_item)
+    assert "Notes:</b> bad condition, reverse scratch" in fin_user
 
 
 def test_feature_registry_registration():

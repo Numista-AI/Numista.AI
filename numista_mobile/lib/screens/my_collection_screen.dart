@@ -491,13 +491,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Option A: individual set-member coins are hidden from the default grid.
     // Only the parent SET card is shown. When actively searching, ALL coins
     // (including set members) are revealed so Morgan/AI never misses them.
-    final List<QueryDocumentSnapshot> visible = _searchQuery.isEmpty
-        ? docs.where((doc) {
-            final m = doc.data() as Map<String, dynamic>;
-            final parentSetId = m['parent_set_id']?.toString() ?? '';
-            return parentSetId.isEmpty;
-          }).toList()
-        : docs;
+    final List<QueryDocumentSnapshot> visible = docs.where((doc) {
+      final m = doc.data() as Map<String, dynamic>;
+      final tStatus = m['transferStatus']?.toString() ?? '';
+      if (tStatus == 'transferred') return false;
+      if (_searchQuery.isNotEmpty) return true;
+      final parentSetId = m['parent_set_id']?.toString() ?? '';
+      return parentSetId.isEmpty;
+    }).toList();
 
     if (_searchQuery.isEmpty) return visible;
     return visible.where((doc) {

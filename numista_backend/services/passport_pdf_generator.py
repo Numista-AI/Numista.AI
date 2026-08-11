@@ -146,6 +146,10 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
     notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes")
 
+    # Exclude generic series background essays from PDF notes
+    if notes and (len(notes) > 120 or notes.strip().startswith("This coin is") or notes.strip().startswith("Struck at the")):
+        notes = ""
+
     details = []
     if cost:
         details.append(f"<b>Cost:</b> {cost}")

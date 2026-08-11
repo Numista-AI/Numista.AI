@@ -1520,10 +1520,21 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.25',
+    date: '2026-08-11',
+    description: 'Transfer Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.24',
     date: '2026-08-11',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: sync SCAN_REPORT.md after full E2E test execution',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
