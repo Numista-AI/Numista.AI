@@ -2131,6 +2131,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               );
             }
 
+            try {
               return TableViewCell(
                 child: InkWell(
                   onTap: onTap,
