@@ -213,6 +213,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true', help='Preview only, no Firestore writes')
     parser.add_argument('--limit',   type=int, default=0,  help='Only process N coins (0=all)')
+    parser.add_argument('--user',    type=str, default=USER_EMAIL, help='User email to process')
+    parser.add_argument('--all-users', action='store_true', help='Process all users in Firestore')
     args = parser.parse_args()
 
     creds, _ = google.auth.default()
@@ -222,16 +224,24 @@ def main():
     bucket = gcs_client.bucket(BUCKET_NAME)
     index  = build_gcs_index(bucket)
 
-    # Fetch all coins missing images
-    print(f"\nFetching {USER_EMAIL} coins...")
-    coins_ref = (fs_client.collection('users')
-                 .document(USER_EMAIL)
-                 .collection('coins'))
-    all_coins = list(coins_ref.stream())
+    target_users = [u.id for u in fs_client.collection('users').stream()] if args.all_users else [args.user]
 
-    missing = [c for c in all_coins if not (c.to_dict().get('image_url_obverse') or '').strip()]
-    print(f"  Total coins:   {len(all_coins)}")
-    print(f"  Missing image: {len(missing)}")
+    all_missing_tuples = []
+    for target_user in target_users:
+        print(f"\nFetching {target_user} coins...")
+        coins_ref = (fs_client.collection('users')
+                     .document(target_user)
+                     .collection('coins'))
+        all_coins = list(coins_ref.stream())
+
+        missing_for_user = [c for c in all_coins if not (c.to_dict().get('image_url_obverse') or c.to_dict().get('imageUrlObverse') or '').strip()]
+        print(f"  Total coins:   {len(all_coins)}")
+        print(f"  Missing image: {len(missing_for_user)}")
+        for coin_doc in missing_for_user:
+            all_missing_tuples.append((coins_ref, coin_doc))
+
+    missing = [t[1] for t in all_missing_tuples]
+    doc_ref_map = {t[1].id: t[0] for t in all_missing_tuples}
 
     if args.limit:
         missing = missing[:args.limit]
@@ -273,7 +283,7 @@ def main():
                     }
                     if rev_url:
                         update['image_url_reverse'] = rev_url
-                    coins_ref.document(coin.id).update(update)
+                    doc_ref_map[coin.id].document(coin.id).update(update)
                     written += 1
                     if written % 100 == 0:
                         print(f"  Written {written}/{matched}...")

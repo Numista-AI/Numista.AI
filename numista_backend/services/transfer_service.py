@@ -294,18 +294,28 @@ def execute_claim_transaction(
         transaction.set(recipient_ref, new_coin_doc)
         claimed_items.append(new_coin_doc)
 
-        # Archive copy in sender's transferred_coins subcollection
-        sender_archive_ref = db.collection("users").document(clean_sender_id).collection("transferred_coins").document(item_id)
+        # Determine proper archive subcollection ('transferred_currency' vs 'transferred_coins')
+        item_type = str(item.get("item_type") or item.get("category") or "").lower()
+        is_paper_money = item_type in ["paper_currency", "banknote", "currency", "paper_money", "note"] or "FR-" in str(item.get("Variety", ""))
+        archive_subcol = "transferred_currency" if is_paper_money else "transferred_coins"
+
+        # Archive copy in sender's transferred_coins/transferred_currency subcollection with legal provenance
+        sender_archive_ref = db.collection("users").document(clean_sender_id).collection(archive_subcol).document(item_id)
         transaction.set(sender_archive_ref, {
             **item,
+            "original_item_id": item_id,
+            "transfer_transaction_id": transfer_ref.id,
+            "sender_email": clean_sender_id,
+            "receiver_email": clean_user_b_id,
+            "transfer_timestamp": now_iso,
+            "historical_valuation_at_transfer": item.get("AI Estimated Value") or item.get("estimated_value") or item.get("Cost") or 0.0,
             "transferStatus": "transferred",
             "transferredTo": clean_user_b_id,
             "claimed_at": now_iso
         }, merge=True)
 
-        # Delete active document from sender's active collection
-        if sender_snap.exists:
-            transaction.delete(sender_ref)
+        # Unconditionally delete active document from sender's active collection
+        transaction.delete(sender_ref)
 
     # Update transfer document status to claimed
     transaction.update(transfer_ref, {
