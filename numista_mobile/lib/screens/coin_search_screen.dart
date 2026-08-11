@@ -1436,7 +1436,8 @@ class _AprHistoryList extends StatelessWidget {
 
       return Column(
         children: history.map((item) {
-          final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+          final pRaw = item['price'];
+          final price = pRaw is num ? pRaw.toDouble() : (double.tryParse(pRaw?.toString() ?? '') ?? 0.0);
           final ah = item['auction_house']?.toString() ?? 'Auction';
           final date = item['date']?.toString() ?? '';
           return Container(

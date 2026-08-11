@@ -150,6 +150,16 @@ class CoinModel {
     return (trimmed, rawMint);
   }
 
+  static double _parseDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    if (val is String) {
+      final s = val.replaceAll(RegExp(r'[^\d.]'), '');
+      return double.tryParse(s) ?? 0.0;
+    }
+    return 0.0;
+  }
+
   factory CoinModel.fromMap(Map<String, dynamic> data, String id) {
     // Split combined Year+Mint before assigning (e.g. "2006D" → year='2006' mint='D')
     final (year, mintMark) = _splitYearMint(
@@ -196,12 +206,12 @@ class CoinModel {
       imageVerificationStatus: data['image_verification_status']?.toString() ?? 'unverified',
       imageVerificationReason: data['image_verification_reason']?.toString() ?? '',
       greysheetGsid: data['greysheetGsid']?.toString() ?? data['greysheet_gsid']?.toString() ?? '',
-      greysheetBid: (data['greysheet_bid'] as num?)?.toDouble() ?? (data['greysheetBid'] as num?)?.toDouble() ?? 0.0,
-      greysheetAsk: (data['greysheet_ask'] as num?)?.toDouble() ?? (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0,
-      cpgRetail: (data['cpg_retail'] as num?)?.toDouble() ?? (data['cpgRetail'] as num?)?.toDouble() ?? 0.0,
-      pcgsValue: (data['pcgs_value'] as num?)?.toDouble() ?? (data['pcgsVal'] as num?)?.toDouble() ?? 0.0,
-      ngcValue: (data['ngc_value'] as num?)?.toDouble() ?? (data['ngcVal'] as num?)?.toDouble() ?? 0.0,
-      blueBookValue: (data['blue_book_value'] as num?)?.toDouble() ?? (data['blueBookVal'] as num?)?.toDouble() ?? 0.0,
+      greysheetBid: _parseDouble(data['greysheet_bid'] ?? data['greysheetBid']),
+      greysheetAsk: _parseDouble(data['greysheet_ask'] ?? data['greysheetAsk']),
+      cpgRetail: _parseDouble(data['cpg_retail'] ?? data['cpgRetail']),
+      pcgsValue: _parseDouble(data['pcgs_value'] ?? data['pcgsVal']),
+      ngcValue: _parseDouble(data['ngc_value'] ?? data['ngcVal']),
+      blueBookValue: _parseDouble(data['blue_book_value'] ?? data['blueBookVal']),
       priceLastUpdated: data['priceLastUpdated'] is Timestamp 
           ? (data['priceLastUpdated'] as Timestamp).toDate() 
           : null,

@@ -369,9 +369,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               // Greysheet fields
-              final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-              final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-              final coinAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+              final coinCpg = _parseCurrency(data['cpgRetail']);
+              final coinBid = _parseCurrency(data['greysheetBid']);
+              final coinAsk = _parseCurrency(data['greysheetAsk']);
 
               final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
               final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
@@ -399,9 +399,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 finalVal = _parseCurrency(data['Cost']);
               }
 
-              final curCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-              final curBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-              final curAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+              final curCpg = _parseCurrency(data['cpgRetail']);
+              final curBid = _parseCurrency(data['greysheetBid']);
+              final curAsk = _parseCurrency(data['greysheetAsk']);
 
               cpgTotal += curCpg > 0 ? curCpg : finalVal;
               bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
@@ -414,8 +414,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             // 3. Process World Items collection
             for (final data in worldItems) {
-              final estVal = (data['estimated_value'] as num?)?.toDouble() ?? 0.0;
-              final purchPrice = (data['purchase_price'] as num?)?.toDouble() ?? 0.0;
+              final estVal = _parseCurrency(data['estimated_value']);
+              final purchPrice = _parseCurrency(data['purchase_price']);
               final finalVal = estVal > 0 ? estVal : purchPrice;
 
               final catStr = (data['item_type'] ?? '').toString().toLowerCase();
@@ -434,16 +434,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 othersVal += finalVal;
               }
 
-              final wCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-              final wBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
-              final wAsk = (data['greysheetAsk'] as num?)?.toDouble() ?? 0.0;
+              final wCpg = _parseCurrency(data['cpgRetail']);
+              final wBid = _parseCurrency(data['greysheetBid']);
+              final wAsk = _parseCurrency(data['greysheetAsk']);
 
               cpgTotal += wCpg > 0 ? wCpg : finalVal;
               bidTotal += wBid > 0 ? wBid : finalVal * 0.80;
               askTotal += wAsk > 0 ? wAsk : finalVal * 0.92;
 
               acquisitionCost += purchPrice;
-              final spotEntry = (data['spot_value_at_entry'] as num?)?.toDouble() ?? 0.0;
+              final spotEntry = _parseCurrency(data['spot_value_at_entry']);
               if (spotEntry > 0) {
                 meltValue += spotEntry;
               }
@@ -697,8 +697,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               final denom  = data['Denomination']?.toString() ?? '';
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
-                              final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-                              final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                              final coinCpg = _parseCurrency(data['cpgRetail']);
+                              final coinBid = _parseCurrency(data['greysheetBid']);
                               final gVal = advanced ? coinCpg : coinBid;
                               final estVal = gVal > 0 
                                   ? fmt.format(gVal)
@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.41',
+    date: '2026-08-11',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: update release notes v4.40',
+      'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+    ],
+  ),
+  _Release(
     version: 'v4.40',
     date: '2026-08-11',
     description: 'Collection Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
       'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
