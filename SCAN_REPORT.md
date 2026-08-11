@@ -1,7 +1,7 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 39 passed, 3 warning. Playwright E2E: 120/122 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Status:** ⚠️ **PASS WITH WARNINGS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 39 passed, 3 warning. Playwright E2E: 119/122 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
 * **Scan Date:** 2026-08-11
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
@@ -14,8 +14,8 @@
 ---
 
 ## Cloud Run Secret Presence Check
-* `GREYSHEET_API_KEY`: ✅ **SET** in Cloud Run environment variables
-* `GREYSHEET_API_TOKEN`: ✅ **SET** in Cloud Run environment variables
+* `GREYSHEET_API_KEY`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or not authenticated)
+* `GREYSHEET_API_TOKEN`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or not authenticated)
 
 ---
 ## Model Binding & LLM Health
@@ -69,7 +69,7 @@
 
 ## Test Logs & Environment Isolation Summary
 * **Backend Pytest Unit Suite:** 39 passed, 3 warning
-* **Frontend Playwright E2E Suite:** 120/122 passed (2 skipped gracefully)
+* **Frontend Playwright E2E Suite:** 119/122 passed (2 skipped gracefully)
 * **Test Infrastructure Fixes (2026-08-07):**
   * `12-estate-management.spec.js` T02: Replaced fixed 4s wait with `waitForLoadState('networkidle')` + Flutter canvas settle
   * `05-navigation.spec.js` T09: Replaced hardcoded pixel coordinate with role-based selector for Phase 2 layout compatibility
