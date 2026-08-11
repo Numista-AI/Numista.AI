@@ -2157,12 +2157,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ),
               );
             }
-          },
-        ),       // TableView.builder
-        ),       // RawScrollbar (top)
-        ),       // RawScrollbar (bottom)
-      ),         // DecoratedBox
-    );           // ClipRRect
+          } catch (e, stack) {
+            debugPrint('Outer table cell build error: $e\n$stack');
+            return TableViewCell(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('—', style: TextStyle(fontSize: 12, color: _subtext)),
+              ),
+            );
+          }
+        },       // TableView.builder
+        ),       // RawScrollbar
+        ),       // DecoratedBox
+      ),         // ClipRRect
+    );
   }
 
   Widget _buildCardGrid(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
