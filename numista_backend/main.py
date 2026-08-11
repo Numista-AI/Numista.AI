@@ -2335,14 +2335,44 @@ def execute_add_coin(
 
 def execute_update_coin(
     user_email: str,
-    coin_id: str,
+    coin_id: str = None,
     storage_location: str = None,
     condition: str = None,
     cost: str = None,
     personal_notes: str = None
 ) -> dict:
     try:
-        doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
+        col_ref = db.collection('users').document(user_email).collection('coins')
+
+        # 10-minute recency resolution if coin_id is omitted by model
+        if not coin_id or str(coin_id).strip() in ["", "None", "undefined"]:
+            from datetime import datetime, timedelta, timezone
+            ten_min_ago = datetime.now(timezone.utc) - timedelta(minutes=10)
+            try:
+                recent_docs = col_ref.where('created_at', '>=', ten_min_ago).stream()
+                recent_list = list(recent_docs)
+            except Exception:
+                recent_list = []
+
+            if len(recent_list) == 1:
+                coin_id = recent_list[0].id
+            elif len(recent_list) > 1:
+                names = [f"{d.to_dict().get('Year', '')} {d.to_dict().get('Denomination', '')}".strip() for d in recent_list[:3]]
+                return {
+                    "action": "update_coin",
+                    "status": "ambiguous",
+                    "message": f"You added multiple items recently ({', '.join(names)}). Which specific coin would you like to update?"
+                }
+            else:
+                # Fallback to most recent document
+                all_recent = list(col_ref.order_by('created_at', direction='DESCENDING').limit(1).stream())
+                if all_recent:
+                    coin_id = all_recent[0].id
+
+        if not coin_id:
+            return {"action": "update_coin", "status": "error", "message": "No target coin found in collection to update."}
+
+        doc_ref = col_ref.document(coin_id)
         updates = {}
         if storage_location: updates["Storage Location"] = storage_location
         if condition: updates["Condition"] = condition
@@ -2392,6 +2422,7 @@ async def deep_dive(request: DeepDiveRequest):
             for doc in docs:
                 d = doc.to_dict()
                 inventory_items.append({
+                    "coin_id":   doc.id,
                     "Year":      d.get("Year", ""),
                     "Denom":     d.get("Denomination", ""),
                     "Mint":      d.get("Mint Mark", ""),
@@ -2406,9 +2437,17 @@ async def deep_dive(request: DeepDiveRequest):
             else:
                 context = json.dumps(inventory_items, default=str)
 
-        # -- 2. Personalisation -------------------------------------------------
+        # -- 2. Personalisation & Conversation History ----------------------------
         name = (request.user_name or "").strip()
         name_line = f"You are speaking with {name}." if name else ""
+
+        history_block = ""
+        if request.chat_history:
+            turns = []
+            for msg in request.chat_history[-8:]:
+                role = "User" if msg.get("role") == "user" else "Morgan"
+                turns.append(f"{role}: {msg.get('content', '')}")
+            history_block = "\n\nRecent Conversation History:\n" + "\n".join(turns) + "\n"
 
         # -- 3. RAG: look up coin knowledge base --------------------------------
         knowledge_block = ""
@@ -2446,10 +2485,10 @@ async def deep_dive(request: DeepDiveRequest):
                 keywords = cleaned_term.split()
                 if keywords:
                     sql = "SELECT doc_id FROM definitive_reference WHERE "
-                    sql += " AND ".join(["(variety LIKE ? OR design_obverse LIKE ? OR series LIKE ?)" for _ in keywords])
+                    sql += " AND ".join(["(variety LIKE ? OR design_obverse LIKE ?)" for _ in keywords])
                     params = []
                     for kw in keywords:
-                        params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+                        params.extend([f"%{kw}%", f"%{kw}%"])
                     cur.execute(sql, params)
                     matches = cur.fetchall()
                     if matches:
@@ -2470,17 +2509,18 @@ You have encyclopedic knowledge of US coinage history, mint marks, designers, er
 {name_line}
 
 Here is the user's current coin collection data:
-{context}{knowledge_block}
+{context}{knowledge_block}{history_block}
 
 User's Input: {request.query}
 
 CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 - YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, and `undo_add_coin`.
 - When the user expresses intent to add a coin or describes a coin they got/want to add (e.g. "add a 2026 P Dime in a cardboard holder"), YOU MUST CALL `add_coin_to_collection`.
+- When the user responds "Yes" or "I'd like to add details now" after adding a coin, call `update_coin_in_collection` to record their provided condition, storage location, or cost!
+- If coin_id is omitted when calling `update_coin_in_collection`, the system will automatically target the coin added in the current session.
 - NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it. You add coins directly!
 - Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection` immediately with smart defaults.
 - AFTER adding a coin with minimal details, warmly confirm the addition AND ask the user if they would like to add more details NOW (like condition, storage location, or purchase price) or complete those LATER.
-- If the user chooses LATER or skips, explain clearly how to edit it later: "No problem! You can edit this item anytime by going to My Collection -> tap on [Coin Name] -> tap Edit Details."
 - Keep responses warm, concise, and helpful (under 30 seconds of spoken length).
 """
 
@@ -2509,13 +2549,13 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
             parameters=genai_types.Schema(
                 type=genai_types.Type.OBJECT,
                 properties={
-                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of the coin"),
+                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of the coin. Optional if updating coin added in current session."),
                     "storage_location": genai_types.Schema(type=genai_types.Type.STRING, description="Updated storage location"),
                     "condition": genai_types.Schema(type=genai_types.Type.STRING, description="Updated condition/grade"),
                     "cost": genai_types.Schema(type=genai_types.Type.STRING, description="Updated purchase cost"),
                     "personal_notes": genai_types.Schema(type=genai_types.Type.STRING, description="Updated personal notes")
                 },
-                required=["coin_id"]
+                required=[]
             )
         )
         fn_undo = genai_types.FunctionDeclaration(

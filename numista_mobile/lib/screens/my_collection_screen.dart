@@ -1940,15 +1940,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           thumbColor: Color(0xFFB0B8C8),
           trackColor: Color(0xFFF0F2F5),
           trackBorderColor: Color(0xFFE0E4EA),
-          child: RawScrollbar(
-            controller: _tvHorizCtrl,
-            thumbVisibility: true,
-            trackVisibility: true,
-            thickness: 8,
-            scrollbarOrientation: ScrollbarOrientation.top,
-            thumbColor: Color(0xFFB0B8C8),
-            trackColor: Color(0xFFF0F2F5),
-            trackBorderColor: Color(0xFFE0E4EA),
           child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),

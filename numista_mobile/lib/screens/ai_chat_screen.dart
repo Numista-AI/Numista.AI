@@ -629,7 +629,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         textStyle: const TextStyle(fontSize: 11),
                       ),
-                      onPressed: () => _send("I'd like to add details now"),
+                      onPressed: () {
+                        final targetId = coinId.isNotEmpty ? " for coin_id:$coinId" : "";
+                        _send("I'd like to add details now$targetId");
+                      },
                       child: const Text('Add Details Now'),
                     ),
                     const SizedBox(width: 6),

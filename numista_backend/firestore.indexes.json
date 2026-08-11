@@ -110,6 +110,36 @@
         }
       ],
       "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "coins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "transferStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "banknotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "transferStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []
