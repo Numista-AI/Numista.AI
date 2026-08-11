@@ -47,6 +47,45 @@
 
 
 
+
+
+
+## v4.43 — 2026-08-11
+**Mobile Enhancements & Platform Updates**
+
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+- Release: update release notes v4.40
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+
+## v4.42 — 2026-08-11
+**Mobile Enhancements & Platform Updates**
+
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+- Release: update release notes v4.40
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+
+## v4.41 — 2026-08-11
+**Release Enhancements & Platform Updates**
+
+- Release: update release notes v4.40
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+
 ## v4.40 — 2026-08-11
 **Collection Enhancements & Platform Updates**
 

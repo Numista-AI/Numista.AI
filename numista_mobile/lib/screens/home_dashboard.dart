@@ -1520,10 +1520,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.43',
+    date: '2026-08-11',
+    description: 'Mobile Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Mobile: add custom ErrorWidget.builder to render readable UI errors',
+      'Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash',
+      'Release: update release notes v4.40',
+      'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+    ],
+  ),
+  _Release(
+    version: 'v4.42',
+    date: '2026-08-11',
+    description: 'Mobile Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash',
+      'Release: update release notes v4.40',
+      'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+    ],
+  ),
+  _Release(
     version: 'v4.41',
     date: '2026-08-11',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: update release notes v4.40',
       'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
