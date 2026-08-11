@@ -50,6 +50,71 @@
 
 
 
+
+
+
+
+
+## v4.48 — 2026-08-11
+**Qa Enhancements & Platform Updates**
+
+- Qa: update Playwright selector in 15-domain-completeness.spec.js
+- Qa: implement legal-grade domain completeness and QC suite v5
+- Programs: add safe memory image decoding, 2026 America250 and Mint Set checklist matching
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+
+## v4.47 — 2026-08-11
+**Qa Enhancements & Platform Updates**
+
+- Qa: implement legal-grade domain completeness and QC suite v5
+- Programs: add safe memory image decoding, 2026 America250 and Mint Set checklist matching
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+
+## v4.46 — 2026-08-11
+**Programs Enhancements & Platform Updates**
+
+- Programs: add safe memory image decoding, 2026 America250 and Mint Set checklist matching
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+- Release: update release notes v4.40
+
+## v4.45 — 2026-08-11
+**Pdf Enhancements & Platform Updates**
+
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+- Release: update release notes v4.40
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+
+## v4.44 — 2026-08-11
+**Images Enhancements & Platform Updates**
+
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+- Mobile: robust numeric parsing for collection pricing and counts to prevent gray screen crash
+- Release: update release notes v4.40
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+
 ## v4.43 — 2026-08-11
 **Mobile Enhancements & Platform Updates**
 
