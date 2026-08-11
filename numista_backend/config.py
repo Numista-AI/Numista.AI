@@ -25,3 +25,10 @@ GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")        
 GEMINI_PRO_MODEL   = os.getenv("GEMINI_PRO_MODEL",   "gemini-3.1-pro-preview")    # High-reasoning tasks
 GEMINI_LITE_MODEL  = os.getenv("GEMINI_LITE_MODEL",  "gemini-3.5-flash-lite")     # Lightweight/fast tasks
 GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")    # Image generation
+
+# Route-level model aliases (used by scan_routes.py and ai_routes.py)
+# These allow per-route overrides via env vars while defaulting to the core models above.
+DEFAULT_VISION_MODEL  = os.getenv("DEFAULT_VISION_MODEL",  GEMINI_FLASH_MODEL)    # Coin image analysis
+FALLBACK_VISION_MODEL = os.getenv("FALLBACK_VISION_MODEL", GEMINI_LITE_MODEL)     # Vision fallback
+DEFAULT_CHAT_MODEL    = os.getenv("DEFAULT_CHAT_MODEL",    GEMINI_FLASH_MODEL)    # Morgan AI chat
+FALLBACK_CHAT_MODEL   = os.getenv("FALLBACK_CHAT_MODEL",   GEMINI_LITE_MODEL)     # Chat fallback
