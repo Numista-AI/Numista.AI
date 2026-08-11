@@ -20,4 +20,5 @@ const String kScanServiceUrl =
 // Primary Public Domain for Numista.AI web & desktop app
 const String kAppPublicDomain = 'numista.ai';
 
-
+// App display version shown in the UI and About dialog
+const String kAppVersion = 'v4.18';

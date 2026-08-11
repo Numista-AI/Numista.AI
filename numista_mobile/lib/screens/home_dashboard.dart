@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/guest_seed_service.dart';
@@ -1520,10 +1521,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.27',
+    date: '2026-08-11',
+    description: 'Pdf Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.26',
     date: '2026-08-11',
     description: 'Transfer Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
       'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
