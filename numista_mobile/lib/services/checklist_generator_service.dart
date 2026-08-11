@@ -49,12 +49,16 @@ class ChecklistGeneratorService {
 
     // ── Build Theme with custom UTF-8 TTF Font if provided ───────────────────
     pw.ThemeData? theme;
-    if (ttfFontBytes != null) {
-      final ttf = pw.Font.ttf(ttfFontBytes.buffer.asByteData());
-      final ttfBold = ttfBoldFontBytes != null
-          ? pw.Font.ttf(ttfBoldFontBytes.buffer.asByteData())
-          : ttf;
-      theme = pw.ThemeData.withFont(base: ttf, bold: ttfBold);
+    if (ttfFontBytes != null && ttfFontBytes.isNotEmpty) {
+      try {
+        final ttf = pw.Font.ttf(ByteData.sublistView(ttfFontBytes));
+        final ttfBold = (ttfBoldFontBytes != null && ttfBoldFontBytes.isNotEmpty)
+            ? pw.Font.ttf(ByteData.sublistView(ttfBoldFontBytes))
+            : ttf;
+        theme = pw.ThemeData.withFont(base: ttf, bold: ttfBold);
+      } catch (e) {
+        // Fallback to default PDF font if font bytes are invalid
+      }
     }
 
     final pdf = pw.Document(

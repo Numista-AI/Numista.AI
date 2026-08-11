@@ -618,6 +618,20 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   elevation: 0,
                 ),
               ),
+              const SizedBox(width: 8),
+              // ── Download PDF Button ────────────────────────────────────
+              OutlinedButton.icon(
+                onPressed: _generatingProgramId == program.id
+                    ? null
+                    : () => _handlePrintChecklist(program, downloadOnly: true),
+                icon: const Icon(Icons.download_rounded, size: 16),
+                label: const Text('Download PDF'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                  side: const BorderSide(color: Color(0xFF2563EB)),
+                  elevation: 0,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -1088,7 +1102,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     );
   }
 
-  Future<void> _handlePrintChecklist(CoinProgram program) async {
+  Future<void> _handlePrintChecklist(CoinProgram program, {bool downloadOnly = false}) async {
     if (_generatingProgramId != null) return;
 
     setState(() {
@@ -1126,37 +1140,36 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           .replaceAll(RegExp(r'[^\w\s-]'), '')
           .replaceAll(RegExp(r'\s+'), '_');
 
-      await Printing.layoutPdf(
-        onLayout: (format) async => pdfBytes!,
-        name: '${safeName}_Checklist.pdf',
-      );
+      if (downloadOnly) {
+        await Printing.sharePdf(
+          bytes: pdfBytes,
+          filename: '${safeName}_Checklist.pdf',
+        );
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes!,
+          name: '${safeName}_Checklist.pdf',
+        );
+      }
     } catch (e, stack) {
       debugPrint('Error during checklist printing: $e\n$stack');
       if (mounted && pdfBytes != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Print preview was blocked by browser. Click to download PDF file.'),
-            backgroundColor: Colors.blueGrey,
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: 'Download PDF',
-              textColor: Colors.amber,
-              onPressed: () async {
-                try {
-                  final safeName = program.name
-                      .replaceAll(RegExp(r'[^\w\s-]'), '')
-                      .replaceAll(RegExp(r'\s+'), '_');
-                  await Printing.sharePdf(
-                    bytes: pdfBytes!,
-                    filename: '${safeName}_Checklist.pdf',
-                  );
-                } catch (err) {
-                  debugPrint('Error downloading PDF: $err');
-                }
-              },
+        try {
+          final safeName = program.name
+              .replaceAll(RegExp(r'[^\w\s-]'), '')
+              .replaceAll(RegExp(r'\s+'), '_');
+          await Printing.sharePdf(
+            bytes: pdfBytes,
+            filename: '${safeName}_Checklist.pdf',
+          );
+        } catch (err) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to print or download PDF: $e'),
+              backgroundColor: Colors.red,
             ),
-          ),
-        );
+          );
+        }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
