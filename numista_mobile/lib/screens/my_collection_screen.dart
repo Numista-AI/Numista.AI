@@ -492,7 +492,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Only the parent SET card is shown. When actively searching, ALL coins
     // (including set members) are revealed so Morgan/AI never misses them.
     final List<QueryDocumentSnapshot> visible = docs.where((doc) {
-      final m = doc.data() as Map<String, dynamic>;
+      final m = (doc.data() as Map<String, dynamic>?) ?? {};
+      if (m.isEmpty) return false;
       final tStatus = m['transferStatus']?.toString() ?? '';
       if (tStatus == 'transferred') return false;
       if (_searchQuery.isNotEmpty) return true;
@@ -502,7 +503,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     if (_searchQuery.isEmpty) return visible;
     return visible.where((doc) {
-      final m = doc.data() as Map<String, dynamic>;
+      final m = (doc.data() as Map<String, dynamic>?) ?? {};
       return [
         _F.year,
         _F.denomination,
@@ -526,7 +527,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (!_showOnlyPopulated) return _columns;
     return _columns.where((col) {
       return docs.any((doc) {
-        final v = (doc.data() as Map)[col.field]?.toString().trim() ?? '';
+        final m = (doc.data() as Map<String, dynamic>?) ?? {};
+        final v = m[col.field]?.toString().trim() ?? '';
         return v.isNotEmpty && v != 'null' && v != 'N/A' && v != '\$0.00';
       });
     }).toList();
@@ -1928,19 +1930,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(8),
         ),
-        // -- Dual RawScrollbars: top bar is always visible; bottom bar added so
-        // users with large collections (5 000+ items) don't have to scroll all
-        // the way back to the top just to pan horizontally.
-        child: RawScrollbar(
-          controller: _tvHorizCtrl,
-          thumbVisibility: true,
-          trackVisibility: true,
-          thickness: 8,
-          scrollbarOrientation: ScrollbarOrientation.bottom,
-          thumbColor: Color(0xFFB0B8C8),
-          trackColor: Color(0xFFF0F2F5),
-          trackBorderColor: Color(0xFFE0E4EA),
-          child: TableView.builder(
+        child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
             verticalDetails: ScrollableDetails.vertical(
@@ -2015,7 +2005,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
             // -- DATA ROW ----------------------------------------------
             final doc = docs[row - 1];
-            final m   = doc.data() as Map<String, dynamic>;
+            final m   = (doc.data() as Map<String, dynamic>?) ?? {};
             final sel = doc.id == _selectedCoinId;
 
             void onTap() => _showCoinInspectorDialog(doc.id, m);
@@ -2167,7 +2157,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             );
           }
         },       // TableView.builder
-        ),       // RawScrollbar
         ),       // DecoratedBox
       ),         // ClipRRect
     );
@@ -2184,7 +2173,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       itemCount: docs.length,
       itemBuilder: (context, index) {
         final doc = docs[index];
-        final m = doc.data() as Map<String, dynamic>;
+        final m = (doc.data() as Map<String, dynamic>?) ?? {};
         
         final year = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
         final mint = m[_F.mintMark]?.toString() ?? '';
