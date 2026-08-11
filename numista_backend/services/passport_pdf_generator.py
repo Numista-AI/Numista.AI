@@ -145,6 +145,7 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     inv = _get_val(itm, "retailerInvoiceNo", "retailer_invoice_no", "Retailer Invoice #", "invoice_id")
     loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
     notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes")
+    est_val = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
 
     # Exclude generic series background essays from PDF notes
     if notes and (len(notes) > 120 or notes.strip().startswith("This coin is") or notes.strip().startswith("Struck at the")):
@@ -153,6 +154,8 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     details = []
     if cost:
         details.append(f"<b>Cost:</b> {cost}")
+    elif est_val:
+        details.append(f"<b>Est Val:</b> {est_val}")
     if p_date:
         details.append(f"<b>Acquired:</b> {p_date}")
     if ret:
@@ -312,8 +315,12 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         Paragraph("<b>Financial &amp; Invoice Details</b>", body_bold)
     ]]
 
-    total_value = 0.0
-    has_prices = False
+    import re
+
+    total_cost = 0.0
+    total_est_val = 0.0
+    has_cost = False
+    has_est_val = False
 
     for itm in items:
         name = format_item_title(itm)
@@ -326,10 +333,18 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             clean_num = cost_str.replace("$", "").replace(",", "").strip()
             try:
                 val = float(clean_num)
-                total_value += val
-                has_prices = True
+                total_cost += val
+                has_cost = True
             except ValueError:
                 pass
+
+        est_str = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
+        if est_str:
+            nums = [float(n.replace(',', '')) for n in re.findall(r'[\d,]+(?:\.\d+)?', est_str) if n]
+            if nums:
+                avg_num = sum(nums) / len(nums)
+                total_est_val += avg_num
+                has_est_val = True
 
         item_rows.append([
             Paragraph(name, body_normal),
@@ -338,12 +353,20 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             Paragraph(fin_details, body_normal)
         ])
 
-    if has_prices and total_value > 0:
+    if has_est_val and total_est_val > 0:
         item_rows.append([
-            Paragraph("<b>TOTAL TRANSFER VALUE</b>", body_bold),
+            Paragraph("<b>ESTIMATED PORTFOLIO MARKET VALUE</b>", body_bold),
             Paragraph("", body_normal),
             Paragraph("", body_normal),
-            Paragraph(f"<font color='#0284C7'><b>${total_value:,.2f}</b></font>", body_bold)
+            Paragraph(f"<font color='#0284C7'><b>${total_est_val:,.2f}</b></font>", body_bold)
+        ])
+
+    if has_cost and total_cost > 0:
+        item_rows.append([
+            Paragraph("<b>TOTAL ACQUISITION COST BASIS</b>", body_bold),
+            Paragraph("", body_normal),
+            Paragraph("", body_normal),
+            Paragraph(f"<font color='#475569'><b>${total_cost:,.2f}</b></font>", body_bold)
         ])
 
     items_table = Table(item_rows, colWidths=[2.8 * inch, 1.3 * inch, 1.4 * inch, 2.0 * inch])
