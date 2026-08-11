@@ -32,15 +32,64 @@ class ChecklistGeneratorService {
   /// Generates a dynamic PDF checklist for [program].
   ///
   /// [mintMarkDiagrams] maps mint_mark_type strings to PNG bytes for 8 templates.
+  /// Generates a dynamic PDF checklist for [program].
+  ///
+  /// [mintMarkDiagrams] maps mint_mark_type strings to PNG bytes for 8 templates.
   static Future<Uint8List> generateChecklist(
     CoinProgram program, {
     Uint8List? logoBytes,
     Uint8List? edgeDiagramBytes,           // legacy compat
     Map<String, Uint8List>? mintMarkDiagrams,
+    Uint8List? ttfFontBytes,
+    Uint8List? ttfBoldFontBytes,
   }) async {
     final now = DateTime.now();
     final printDate = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
     final isActive = _activePrograms.contains(program.name);
+
+    // ── Build Theme with custom UTF-8 TTF Font if provided ───────────────────
+    pw.ThemeData? theme;
+    if (ttfFontBytes != null) {
+      final ttf = pw.Font.ttf(ttfFontBytes.buffer.asByteData());
+      final ttfBold = ttfBoldFontBytes != null
+          ? pw.Font.ttf(ttfBoldFontBytes.buffer.asByteData())
+          : ttf;
+      theme = pw.ThemeData.withFont(base: ttf, bold: ttfBold);
+    }
+
+    final pdf = pw.Document(
+      title: _s('${program.name} Checklist'),
+      author: 'Numista.AI',
+    );
+
+    // ── Defensive Guard: Empty Coins List ────────────────────────────────────
+    if (program.coins.isEmpty) {
+      pdf.addPage(
+        pw.Page(
+          theme: theme,
+          pageFormat: PdfPageFormat.letter,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text('Numista.AI Official Program Checklist',
+                      style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                  pw.SizedBox(height: 12),
+                  pw.Text(_s(program.name.toUpperCase()),
+                      style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 24),
+                  pw.Text('No coin items are currently configured for this program.',
+                      style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+      return pdf.save();
+    }
 
     // ── Resolve diagram ───────────────────────────────────────────────────────
     final mmType = program.mintMarkType ?? '';
@@ -113,13 +162,9 @@ class ChecklistGeneratorService {
       return row;
     }
 
-    final pdf = pw.Document(
-      title: _s('${program.name} Checklist'),
-      author: 'Numista.AI',
-    );
-
     pdf.addPage(
       pw.MultiPage(
+        theme: theme,
         pageFormat: PdfPageFormat.letter,
         margin: const pw.EdgeInsets.fromLTRB(32, 32, 32, 48), // extra bottom for footer
 

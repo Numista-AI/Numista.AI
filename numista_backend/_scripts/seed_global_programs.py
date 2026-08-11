@@ -25,8 +25,19 @@ SKIP = {
     "2026 U.S. Circulating Coins",
 }
 
+# Map program names to canonical doc IDs to prevent duplicate ghost creations
+CANONICAL_DOC_IDS = {
+    "America the Beautiful Quarters (National Parks)": "america_the_beautiful_quarters",
+    "American Innovation $1 Coin Program": "american_innovation_dollars",
+    "D.C. & U.S. Territories Quarters": "dc_territories_quarters",
+    "Lincoln Bicentennial Cents (2009)": "lincoln_bicentennial_cents_2009",
+    "50 State Quarters": "fifty_state_quarters",
+}
+
 def make_doc_id(name):
     """Convert program name to a clean Firestore document ID."""
+    if name in CANONICAL_DOC_IDS:
+        return CANONICAL_DOC_IDS[name]
     clean = re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
     return clean
 
@@ -37,10 +48,13 @@ for p in programs:
     if not name or name in SKIP:
         continue
 
-    doc_id = p.get('Id') or p.get('id') or make_doc_id(name)
+    # Ingestion Guard: Skip 0-coin program definitions to prevent ghost docs
+    coins = p.get('Coins') or p.get('coins', [])
+    if len(coins) == 0:
+        print(f"  SKIP (0 coins): {name}")
+        continue
 
-    # Normalize varieties: ensure each variety is a dict
-    coins = p.get('coins', [])
+    doc_id = p.get('Id') or p.get('id') or make_doc_id(name)
     normalized_coins = []
     for coin in coins:
         varieties = coin.get('varieties', [])
