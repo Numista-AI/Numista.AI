@@ -29,6 +29,16 @@ class ChecklistGeneratorService {
         .replaceAll('\u00A0', ' ');   // non-breaking space
   }
 
+  /// Safely renders memory image bytes, falling back gracefully if image header fails to parse.
+  static pw.Widget _buildSafeMemoryImage(Uint8List? bytes, {double? width, double? height}) {
+    if (bytes == null || bytes.isEmpty) return pw.SizedBox();
+    try {
+      return pw.Image(pw.MemoryImage(bytes), width: width, height: height);
+    } catch (e) {
+      return pw.SizedBox();
+    }
+  }
+
   /// Lightweight vector square checkbox for printable PDF tables.
   static pw.Widget _buildCheckboxSquare() {
     return pw.Center(
@@ -214,7 +224,7 @@ class ChecklistGeneratorService {
                 children: [
                   pw.Row(children: [
                     if (logoBytes != null) ...[
-                      pw.Image(pw.MemoryImage(logoBytes), width: 30, height: 30),
+                      _buildSafeMemoryImage(logoBytes, width: 30, height: 30),
                       pw.SizedBox(width: 8),
                     ],
                     pw.Text('Numista.AI Checklist',
@@ -287,7 +297,7 @@ class ChecklistGeneratorService {
                           // DIAGRAM RIGHT
                           if (diagramBytes != null) ...[
                             pw.SizedBox(width: 14),
-                            pw.Image(pw.MemoryImage(diagramBytes), width: 160, height: 76),
+                            _buildSafeMemoryImage(diagramBytes, width: 160, height: 76),
                           ],
                         ],
                       ),
