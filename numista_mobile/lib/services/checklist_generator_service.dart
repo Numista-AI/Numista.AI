@@ -29,6 +29,30 @@ class ChecklistGeneratorService {
         .replaceAll('\u00A0', ' ');   // non-breaking space
   }
 
+  /// Safely renders memory image bytes, falling back gracefully if image header fails to parse.
+  static pw.Widget _buildSafeMemoryImage(Uint8List? bytes, {double? width, double? height}) {
+    if (bytes == null || bytes.isEmpty) return pw.SizedBox();
+    try {
+      return pw.Image(pw.MemoryImage(bytes), width: width, height: height);
+    } catch (e) {
+      return pw.SizedBox();
+    }
+  }
+
+  /// Lightweight vector square checkbox for printable PDF tables.
+  static pw.Widget _buildCheckboxSquare() {
+    return pw.Center(
+      child: pw.Container(
+        width: 11,
+        height: 11,
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey700, width: 0.8),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(1.5)),
+        ),
+      ),
+    );
+  }
+
   /// Generates a dynamic PDF checklist for [program].
   ///
   /// [mintMarkDiagrams] maps mint_mark_type strings to PNG bytes for 8 templates.
@@ -154,10 +178,7 @@ class ChecklistGeneratorService {
       final coinVarietyIds = coin.varieties.map((v) => v.id).toSet();
       for (var v in vList) {
         if (coinVarietyIds.contains(v)) {
-          row.add(pw.Center(child: pw.SizedBox(width: 15, height: 15,
-              child: pw.Checkbox(
-                name: '${program.id}_${_s(coin.id)}_$v',
-                value: false))));
+          row.add(_buildCheckboxSquare());
         } else {
           row.add('');
         }
@@ -203,7 +224,7 @@ class ChecklistGeneratorService {
                 children: [
                   pw.Row(children: [
                     if (logoBytes != null) ...[
-                      pw.Image(pw.MemoryImage(logoBytes), width: 30, height: 30),
+                      _buildSafeMemoryImage(logoBytes, width: 30, height: 30),
                       pw.SizedBox(width: 8),
                     ],
                     pw.Text('Numista.AI Checklist',
@@ -276,7 +297,7 @@ class ChecklistGeneratorService {
                           // DIAGRAM RIGHT
                           if (diagramBytes != null) ...[
                             pw.SizedBox(width: 14),
-                            pw.Image(pw.MemoryImage(diagramBytes), width: 160, height: 76),
+                            _buildSafeMemoryImage(diagramBytes, width: 160, height: 76),
                           ],
                         ],
                       ),
@@ -330,22 +351,14 @@ class ChecklistGeneratorService {
                     final coinA = pair[0];
                     final row = <dynamic>[
                       coinLabel(coinA),
-                      pw.Center(child: pw.SizedBox(
-                        width: 14, height: 14,
-                        child: pw.Checkbox(
-                          name: '${program.id}_${_s(coinA.id)}_owned',
-                          value: false))),
+                      _buildCheckboxSquare(),
                       '',
                     ];
                     if (pair.length > 1) {
                       final coinB = pair[1];
                       row.addAll([
                         coinLabel(coinB),
-                        pw.Center(child: pw.SizedBox(
-                          width: 14, height: 14,
-                          child: pw.Checkbox(
-                            name: '${program.id}_${_s(coinB.id)}_owned',
-                            value: false))),
+                        _buildCheckboxSquare(),
                         '',
                       ]);
                     } else {

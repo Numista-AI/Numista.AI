@@ -283,9 +283,21 @@ class CoinProgram {
       return dbLower.contains('american women') || dbLower.contains('women\'s quarters') || dbLower.contains('women quarters');
     }
 
-    // 23. U.S. Proof Sets
-    if (progLower == 'u.s. proof sets') {
-      return dbLower.contains('proof set') || dbLower == 'proof';
+    // 23. U.S. Proof Sets & Uncirculated Sets
+    if (progLower.contains('proof set') || progLower.contains('uncirculated set')) {
+      return dbLower.contains('proof set') || dbLower.contains('uncirculated set') || dbLower.contains('mint set');
+    }
+
+    // 24. 2026 America250 / Semiquincentennial / Circulating Coins
+    if (progLower.contains('2026') || progLower.contains('america250') || progLower.contains('semiquincentennial') || progLower.contains('circulating')) {
+      if (dbLower.contains('semiquincentennial') ||
+          dbLower.contains('america250') ||
+          dbLower.contains('250th') ||
+          dbLower.contains('2026') ||
+          dbLower.contains('uncirculated sets') ||
+          dbLower.contains('mint set')) {
+        return true;
+      }
     }
 
     return false;

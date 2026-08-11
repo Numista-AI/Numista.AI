@@ -222,33 +222,64 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   }
 
   bool _isMatch(Map<String, dynamic> coinData, CoinProgram program, String coinName) {
-    // ── Denomination guard ────────────────────────────────────────────────────
-    // Reject the coin immediately if its denomination is wrong for this program.
-    // This prevents, e.g., a Quarter Dollar matching a Presidential Dollar slot,
-    // a Penny matching a Lincoln Dollar slot, or a Half Dollar matching a Kennedy
-    // Dollar slot.
-    final expectedFamily = _expectedDenomFamily(program.name);
-    if (!_denominationMatches(coinData, expectedFamily)) return false;
-
-    // ── Program/Series match ──────────────────────────────────────────────────
+    final denom      = (coinData['Denomination']?.toString() ?? '').toLowerCase();
     final progSeries = (coinData['Program/Series']?.toString() ?? '');
     final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').toLowerCase();
     final cNameLower = coinName.toLowerCase();
+    final year       = coinData['Year']?.toString() ?? '';
 
+    // ── 1. Multi-coin Mint / Uncirculated Set Matching ─────────────────────────
+    if (denom == 'set' || progSeries.toLowerCase().contains('uncirculated set') || progSeries.toLowerCase().contains('proof set')) {
+      final setContents = coinData['SetContents'] as List? ?? coinData['set_coins'] as List? ?? [];
+      final setStr = setContents.join(' ').toLowerCase() + ' ' + themeSub;
+      
+      // If set year matches program years or coin slot
+      if (year.isNotEmpty && (program.years.contains(year) || cNameLower.contains(year) || program.name.contains(year))) {
+        if (setStr.isNotEmpty && (setStr.contains(cNameLower) || cNameLower.contains(themeSub))) {
+          return true;
+        }
+        // General 2026 Mint Set matches 2026 circulating coin program slots
+        if (program.name.contains('2026') || program.name.contains('America250')) {
+          return true;
+        }
+      }
+    }
+
+    // ── 2. Denomination Guard for Single Coins ────────────────────────────────
+    final expectedFamily = _expectedDenomFamily(program.name);
+    if (!_denominationMatches(coinData, expectedFamily)) return false;
+
+    // ── 3. Program/Series match ───────────────────────────────────────────────
     if (program.matchesDbSeries(progSeries)) {
-      // Program matches — now check if this specific coin slot matches
+      // Direct slot name match (e.g. "Peace Dollar" -> "Peace Dollar", "American Silver Eagle" -> "American Silver Eagle")
+      if (cNameLower == progSeries.toLowerCase() ||
+          program.name.toLowerCase().contains(cNameLower) ||
+          cNameLower.contains(program.name.toLowerCase())) {
+        return true;
+      }
+
+      // Theme/Subject match
       if (themeSub.isNotEmpty &&
           (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) {
         return true;
       }
-      final year = coinData['Year']?.toString() ?? '';
-      if (year.isNotEmpty && cNameLower.contains(year)) return true;
+
+      // Year match
+      if (year.isNotEmpty && (cNameLower.contains(year) || program.years.contains(year))) {
+        return true;
+      }
+
+      return true; // Program series matches
     }
 
-    // ── Heuristic fallback (only when program series is also consistent) ──────
-    // Removed the unconstrained "if (themeSub.contains(cNameLower)) return true"
-    // that caused false positives across different programs/denominations.
-    // A theme-only match without a matching program is too broad.
+    // ── 4. Fallback: 2026 America250 & Specific Named Series ──────────────────
+    if ((program.name.contains('2026') || program.name.contains('America250')) && year == '2026') {
+      if (themeSub.contains(cNameLower) || cNameLower.contains(themeSub) ||
+          progSeries.toLowerCase().contains('semiquincentennial') ||
+          progSeries.toLowerCase().contains('america250')) {
+        return true;
+      }
+    }
 
     return false;
   }
