@@ -357,8 +357,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       // Display logic (in _getCellValue) prefers greysheetBid / cpgRetail over
       // the raw AI Estimated Value string.  Sort must use the same hierarchy.
       case _F.aiValue:
-        final cpg = (m['cpgRetail']    as num?)?.toDouble() ?? 0.0;
-        final bid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        final cpg = _parseNumber(m['cpgRetail']);
+        final bid = _parseNumber(m['greysheetBid']);
         // CPG Retail is the collector/market price (default); bid is dealer-wholesale (advanced)
         final gVal = cpg > 0 ? cpg : bid;
         if (gVal > 0) return gVal;
@@ -806,8 +806,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     for (final doc in coinsDocs) {
                       try {
                         final data = doc.data();
-                        final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-                        final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                        final coinCpg = _parseNumber(data['cpgRetail']);
+                        final coinBid = _parseNumber(data['greysheetBid']);
                         final gVal = advanced ? coinCpg : coinBid;
                         if (gVal > 0) {
                           coinsValue += gVal;
@@ -846,8 +846,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       final year = data['Year']?.toString() ?? '';
                       final title = '$year $denom'.trim();
 
-                      final coinCpg = (data['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-                      final coinBid = (data['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+                      final coinCpg = _parseNumber(data['cpgRetail']);
+                      final coinBid = _parseNumber(data['greysheetBid']);
                       final gVal = advanced ? coinCpg : coinBid;
                       final displayValue = gVal > 0 
                           ? gVal 
@@ -1078,9 +1078,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       );
     }
 
-    final pct = (_completionStats['completion_percentage'] as num?)?.toDouble() ?? 0.0;
-    final owned = (_completionStats['owned_count'] as num?)?.toInt() ?? 0;
-    final total = (_completionStats['total_count'] as num?)?.toInt() ?? 0;
+    final pct = _parseNumber(_completionStats['completion_percentage']);
+    final owned = _parseNumber(_completionStats['owned_count']).toInt();
+    final total = _parseNumber(_completionStats['total_count']).toInt();
 
     return Card(
       color: _surface,
@@ -1149,9 +1149,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         
         Widget buildRow(String title, String key, IconData icon, Color color) {
           final data = breakdown[key] as Map<String, dynamic>? ?? {};
-          final bPct = (data['percentage'] as num?)?.toDouble() ?? 0.0;
-          final bOwned = (data['owned'] as num?)?.toInt() ?? 0;
-          final bTotal = (data['total'] as num?)?.toInt() ?? 0;
+          final bPct = _parseNumber(data['percentage']);
+          final bOwned = _parseNumber(data['owned']).toInt();
+          final bTotal = _parseNumber(data['total']).toInt();
           
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1573,8 +1573,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     for (final doc in docs) {
       final m   = doc.data() as Map<String, dynamic>;
       
-      final coinCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-      final coinBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+      final coinCpg = _parseNumber(m['cpgRetail']);
+      final coinBid = _parseNumber(m['greysheetBid']);
       final gVal = advanced ? coinCpg : coinBid;
       if (gVal > 0) {
         valueTotal += gVal;
@@ -1584,7 +1584,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       }
 
       // Melt Value -- live from spot prices when available, else from Firestore
-      final qty = (m['Quantity'] as num?)?.toInt() ?? (m['qty'] as num?)?.toInt() ?? 1;
+      final qtyRaw = _parseNumber(m['Quantity'] ?? m['qty']).toInt();
+      final qty = qtyRaw > 0 ? qtyRaw : 1;
       final liveMelt = _spotPrices.isNotEmpty
           ? (MeltValueService.compute(
                 metalContent: m[_F.metalContent]?.toString() ?? '',
@@ -2186,8 +2187,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
         final displayTitle = '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
         
-        final valCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-        final valBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        final valCpg = _parseNumber(m['cpgRetail']);
+        final valBid = _parseNumber(m['greysheetBid']);
         final finalVal = advanced ? valCpg : valBid;
         
         final fmt = intl.NumberFormat.currency(symbol: '\$');
@@ -2416,8 +2417,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final n = double.tryParse(rawC.replaceAll(RegExp(r'[^\d.]'), ''));
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
-        final coinCpg = (m['cpgRetail'] as num?)?.toDouble() ?? 0.0;
-        final coinBid = (m['greysheetBid'] as num?)?.toDouble() ?? 0.0;
+        final coinCpg = _parseNumber(m['cpgRetail']);
+        final coinBid = _parseNumber(m['greysheetBid']);
         // Default: CPG Retail (collector/market price).  Advanced: Greysheet Bid (dealer wholesale).
         final gVal = advanced ? coinBid : (coinCpg > 0 ? coinCpg : coinBid);
         if (gVal > 0) {
