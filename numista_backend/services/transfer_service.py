@@ -50,6 +50,33 @@ def sanitize_item_payload(item_data: Dict[str, Any], privacy_toggles: Dict[str, 
     return sanitized
 
 
+def resolve_item_collections(item_data: dict, uid: str, db: firestore.Client):
+    """
+    Dynamically resolves the target subcollection reference for an item.
+    Primary canonical name for paper money is 'banknotes', with fallback check for legacy 'currency' subcollection.
+    """
+    clean_uid = uid.strip().lower() if "@" in uid else uid.strip()
+    item_type = str(item_data.get("item_type") or item_data.get("category") or "").lower()
+
+    is_paper_money = item_type in ["paper_currency", "banknote", "currency", "paper_money", "note"] or "FR-" in str(item_data.get("Variety", ""))
+
+    subcollection = "banknotes" if is_paper_money else "coins"
+    ref = db.collection("users").document(clean_uid).collection(subcollection)
+
+    # Fallback lookup for legacy accounts that might hold paper money under 'currency'
+    if is_paper_money and "id" in item_data:
+        item_id = item_data["id"]
+        try:
+            if not ref.document(item_id).get().exists:
+                legacy_ref = db.collection("users").document(clean_uid).collection("currency")
+                if legacy_ref.document(item_id).get().exists:
+                    return legacy_ref
+        except Exception:
+            pass
+
+    return ref
+
+
 def initiate_transfer(
     db: firestore.Client,
     user_a_id: str,
@@ -63,6 +90,8 @@ def initiate_transfer(
     Generates Passport Certificate PDF and dispatches email if recipient_email is provided.
     Appends audit trail to transfers/{transfer_id}/email_audit in Firestore.
     """
+    clean_user_a_id = user_a_id.strip().lower() if "@" in user_a_id else user_a_id.strip()
+
     if not privacy_toggles:
         privacy_toggles = {
             "hide_cost_basis": False,
@@ -80,22 +109,17 @@ def initiate_transfer(
     
     for item_id in item_ids:
         # Check coins collection first
-        coin_ref = db.collection("users").document(user_a_id).collection("coins").document(item_id)
+        coin_ref = db.collection("users").document(clean_user_a_id).collection("coins").document(item_id)
         coin_snap = coin_ref.get()
-
-        if not coin_snap.exists and user_a_id != user_a_id.lower():
-            alt_user_id = user_a_id.lower()
-            coin_ref = db.collection("users").document(alt_user_id).collection("coins").document(item_id)
-            coin_snap = coin_ref.get()
 
         if not coin_snap.exists:
             # Check banknotes as fallback
-            coin_ref = db.collection("users").document(user_a_id).collection("banknotes").document(item_id)
+            coin_ref = db.collection("users").document(clean_user_a_id).collection("banknotes").document(item_id)
             coin_snap = coin_ref.get()
 
-        if not coin_snap.exists and user_a_id != user_a_id.lower():
-            alt_user_id = user_a_id.lower()
-            coin_ref = db.collection("users").document(alt_user_id).collection("banknotes").document(item_id)
+        if not coin_snap.exists:
+            # Check legacy currency as fallback
+            coin_ref = db.collection("users").document(clean_user_a_id).collection("currency").document(item_id)
             coin_snap = coin_ref.get()
 
         if not coin_snap.exists:
@@ -114,14 +138,14 @@ def initiate_transfer(
         sanitized_items.append(clean_item)
 
         # Move copy to transferred_coins archive
-        db.collection("users").document(user_a_id).collection("transferred_coins").document(item_id).set({
+        db.collection("users").document(clean_user_a_id).collection("transferred_coins").document(item_id).set({
             **item_data,
             "archived_at": now.isoformat(),
             "transfer_id": transfer_id,
             "transfer_status": "pending"
         })
 
-        # Lock active item status to pending
+        # Lock active item status to pending immediately
         coin_ref.update({
             "transferStatus": "pending",
             "transferId": transfer_id
@@ -129,9 +153,9 @@ def initiate_transfer(
 
     transfer_doc = {
         "transfer_id": transfer_id,
-        "sender_id": user_a_id,
+        "sender_id": clean_user_a_id,
         "recipient_email": recipient_email.strip().lower() if recipient_email else None,
-        "claim_pin": claim_pin,
+        "claim_pin": claim_pin.strip(),
         "items": sanitized_items,
         "item_ids": item_ids,
         "created_at": now.isoformat(),
@@ -162,7 +186,6 @@ def initiate_transfer(
             transfer_ref.update({"email_sent": is_sent})
             transfer_doc["email_sent"] = is_sent
 
-            # Write immutable email audit entry to Firestore subcollection
             audit_entry = {
                 "timestamp": now.isoformat(),
                 "recipient_email": clean_recipient,
@@ -178,6 +201,127 @@ def initiate_transfer(
     return transfer_doc
 
 
+@firestore.transactional
+def execute_claim_transaction(
+    transaction: firestore.Transaction,
+    db: firestore.Client,
+    transfer_ref: firestore.DocumentReference,
+    clean_user_b_id: str,
+    selected_item_ids: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Atomic Firestore Transaction context for claiming transfers.
+    Enforces strict read-before-write ordering and atomic rollback on error.
+    """
+    # 1. READ OPERATIONS FIRST
+    transfer_snap = transfer_ref.get(transaction=transaction)
+    if not transfer_snap.exists:
+        raise ValueError("Transfer not found")
+
+    transfer_data = transfer_snap.to_dict() or {}
+    if transfer_data.get("status") != "pending":
+        raise ValueError(f"Transfer cannot be claimed (status: {transfer_data.get('status')})")
+
+    expires_at_str = transfer_data.get("expires_at", "")
+    if expires_at_str:
+        expires_at = datetime.fromisoformat(expires_at_str)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if _get_utc_now() > expires_at:
+            transaction.update(transfer_ref, {"status": "expired"})
+            raise ValueError("Transfer token has expired (60-day window limit)")
+
+    sender_id = (transfer_data.get("sender_id") or "").strip()
+    clean_sender_id = sender_id.lower() if "@" in sender_id else sender_id
+
+    items = transfer_data.get("items", [])
+    if not items:
+        raise ValueError("Transfer payload contains no items to claim.")
+
+    # Pre-fetch all sender items inside transaction to satisfy Firestore transactional rules
+    sender_item_snaps = []
+    for item in items:
+        item_id = item.get("id")
+        if selected_item_ids and item_id not in selected_item_ids:
+            continue
+
+        sender_ref = resolve_item_collections(item, clean_sender_id, db).document(item_id)
+        sender_snap = sender_ref.get(transaction=transaction)
+        if not sender_snap.exists and clean_sender_id != sender_id:
+            sender_ref = resolve_item_collections(item, sender_id, db).document(item_id)
+            sender_snap = sender_ref.get(transaction=transaction)
+
+        sender_item_snaps.append((item, sender_ref, sender_snap))
+
+    # 2. WRITE OPERATIONS NEXT
+    claimed_items = []
+    now_iso = _get_utc_now().isoformat()
+
+    for item, sender_ref, sender_snap in sender_item_snaps:
+        item_id = item.get("id")
+        new_item_id = uuid.uuid4().hex
+
+        provenance = list(item.get("provenanceLedger", []))
+        provenance.append({
+            "event": "Lateral Transfer (Passport Protocol)",
+            "date": now_iso,
+            "from_user": clean_sender_id,
+            "to_user": clean_user_b_id,
+            "transfer_id": transfer_ref.id
+        })
+
+        denom = item.get("Denomination") or item.get("denomination") or ""
+        year_str = item.get("Year") or item.get("year") or ""
+        mint_str = item.get("Mint Mark") or item.get("mintMark") or ""
+
+        new_coin_doc = {
+            **item,
+            "id": new_item_id,
+            "Denomination": str(denom).strip() if str(denom).strip() else "N/A",
+            "Year": str(year_str).strip(),
+            "Mint Mark": str(mint_str).strip(),
+            "original_transfer_id": transfer_ref.id,
+            "provenanceLedger": provenance,
+            "transferStatus": "active",
+            "adopted_at": now_iso,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "timestamp": firestore.SERVER_TIMESTAMP
+        }
+
+        # Write active document to recipient's collection
+        recipient_ref = resolve_item_collections(item, clean_user_b_id, db).document(new_item_id)
+        transaction.set(recipient_ref, new_coin_doc)
+        claimed_items.append(new_coin_doc)
+
+        # Archive copy in sender's transferred_coins subcollection
+        sender_archive_ref = db.collection("users").document(clean_sender_id).collection("transferred_coins").document(item_id)
+        transaction.set(sender_archive_ref, {
+            **item,
+            "transferStatus": "transferred",
+            "transferredTo": clean_user_b_id,
+            "claimed_at": now_iso
+        }, merge=True)
+
+        # Delete active document from sender's active collection
+        if sender_snap.exists:
+            transaction.delete(sender_ref)
+
+    # Update transfer document status to claimed
+    transaction.update(transfer_ref, {
+        "status": "claimed",
+        "claimed_by": clean_user_b_id,
+        "claimed_at": now_iso
+    })
+
+    return {
+        "transfer_id": transfer_ref.id,
+        "status": "claimed",
+        "items_claimed_count": len(claimed_items),
+        "claimed_items": claimed_items
+    }
+
+
 def claim_transfer(
     db: firestore.Client,
     user_b_id: str,
@@ -186,116 +330,43 @@ def claim_transfer(
     selected_item_ids: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Claims a pending transfer atomically:
-    1. Copies item into User B's active collection.
-    2. Archives copy in User A's transferred_coins subcollection.
-    3. Deletes active document from User A's active coins collection.
+    Claims a pending transfer atomically using execute_claim_transaction.
     """
-    transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
+    clean_transfer_id = transfer_id.strip()
+    clean_pin = claim_pin.strip()
+    clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
+
+    transfer_ref = db.collection(COLLECTION_TRANSFERS).document(clean_transfer_id)
     transfer_snap = transfer_ref.get()
 
     if not transfer_snap.exists:
         raise ValueError("Transfer not found")
 
-    transfer_data = transfer_snap.to_dict()
+    transfer_data = transfer_snap.to_dict() or {}
 
     if transfer_data.get("status") != "pending":
         raise ValueError(f"Transfer cannot be claimed (status: {transfer_data.get('status')})")
 
-    expires_at = datetime.fromisoformat(transfer_data["expires_at"])
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    if _get_utc_now() > expires_at:
-        transfer_ref.update({"status": "expired"})
-        raise ValueError("Transfer token has expired (60-day window limit)")
-
-    if transfer_data.get("claim_pin") != claim_pin.strip():
+    stored_pin = str(transfer_data.get("claim_pin") or "").strip()
+    if stored_pin != clean_pin:
         raise ValueError("Invalid claim PIN code")
 
-    # Recipient Authorization Locking:
+    # Recipient Authorization Locking
     locked_email = transfer_data.get("recipient_email")
     if locked_email and locked_email.strip():
         clean_locked = locked_email.strip().lower()
-        clean_user_b = user_b_id.strip().lower()
-        if "@" in clean_user_b and clean_user_b != clean_locked:
-            raise ValueError(f"Transfer is locked exclusively to recipient account '{clean_locked}'. Active user '{clean_user_b}' is not authorized to claim.")
+        if "@" in clean_user_b_id and clean_user_b_id != clean_locked:
+            raise ValueError(f"Transfer is locked exclusively to recipient account '{clean_locked}'. Active user '{clean_user_b_id}' is not authorized to claim.")
 
-    sender_id = transfer_data["sender_id"]
-    clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
-    claimed_items = []
-
-    batch = db.batch()
-
-    for item in transfer_data.get("items", []):
-        item_id = item.get("id")
-        if selected_item_ids and item_id not in selected_item_ids:
-            continue
-
-        new_item_id = uuid.uuid4().hex
-        provenance = item.get("provenanceLedger", [])
-        provenance.append({
-            "event": "Lateral Transfer (Passport Protocol)",
-            "date": _get_utc_now().isoformat(),
-            "from_user": sender_id,
-            "to_user": clean_user_b_id,
-            "transfer_id": transfer_id
-        })
-
-        # Sanitize item strings so empty values default cleanly
-        denom = item.get("Denomination") or item.get("denomination") or ""
-        year_str = item.get("Year") or item.get("year") or ""
-        mint_str = item.get("Mint Mark") or item.get("mintMark") or ""
-
-        new_coin_doc = {
-            **item,
-            "id": new_item_id,
-            "Denomination": denom.strip() if denom.strip() else "N/A",
-            "Year": year_str.strip(),
-            "Mint Mark": mint_str.strip(),
-            "original_transfer_id": transfer_id,
-            "provenanceLedger": provenance,
-            "transferStatus": "active",
-            "adopted_at": _get_utc_now().isoformat(),
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "updated_at": firestore.SERVER_TIMESTAMP,
-            "timestamp": firestore.SERVER_TIMESTAMP
-        }
-
-        # 1. Write active document to User B collection
-        recipient_coin_ref = db.collection("users").document(clean_user_b_id).collection("coins").document(new_item_id)
-        batch.set(recipient_coin_ref, new_coin_doc)
-        claimed_items.append(new_coin_doc)
-
-        # 2. Archive copy in User A's transferred_coins subcollection
-        sender_archive_ref = db.collection("users").document(sender_id).collection("transferred_coins").document(item_id)
-        batch.set(sender_archive_ref, {
-            **item,
-            "transferStatus": "transferred",
-            "transferredTo": clean_user_b_id,
-            "claimed_at": _get_utc_now().isoformat()
-        }, merge=True)
-
-        # 3. DELETE active coin document from User A's active coins collection
-        sender_coin_ref = db.collection("users").document(sender_id).collection("coins").document(item_id)
-        if sender_coin_ref.get().exists:
-            batch.delete(sender_coin_ref)
-
-    # Update transfer document status
-    batch.update(transfer_ref, {
-        "status": "claimed",
-        "claimed_by": clean_user_b_id,
-        "claimed_at": _get_utc_now().isoformat()
-    })
-
-    batch.commit()
-
-    return {
-        "transfer_id": transfer_id,
-        "status": "claimed",
-        "items_claimed_count": len(claimed_items),
-        "claimed_items": claimed_items
-    }
+    # Execute inside atomic Firestore transaction
+    transaction = db.transaction()
+    return execute_claim_transaction(
+        transaction=transaction,
+        db=db,
+        transfer_ref=transfer_ref,
+        clean_user_b_id=clean_user_b_id,
+        selected_item_ids=selected_item_ids
+    )
 
 
 def recall_transfer(

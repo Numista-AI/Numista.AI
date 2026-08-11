@@ -1940,15 +1940,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           thumbColor: Color(0xFFB0B8C8),
           trackColor: Color(0xFFF0F2F5),
           trackBorderColor: Color(0xFFE0E4EA),
-          child: RawScrollbar(
-            controller: _tvHorizCtrl,
-            thumbVisibility: true,
-            trackVisibility: true,
-            thickness: 8,
-            scrollbarOrientation: ScrollbarOrientation.top,
-            thumbColor: Color(0xFFB0B8C8),
-            trackColor: Color(0xFFF0F2F5),
-            trackBorderColor: Color(0xFFE0E4EA),
           child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
@@ -2140,6 +2131,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               );
             }
 
+            try {
               return TableViewCell(
                 child: InkWell(
                   onTap: onTap,
@@ -2165,12 +2157,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 ),
               );
             }
-          },
-        ),       // TableView.builder
-        ),       // RawScrollbar (top)
-        ),       // RawScrollbar (bottom)
-      ),         // DecoratedBox
-    );           // ClipRRect
+          } catch (e, stack) {
+            debugPrint('Outer table cell build error: $e\n$stack');
+            return TableViewCell(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('—', style: TextStyle(fontSize: 12, color: _subtext)),
+              ),
+            );
+          }
+        },       // TableView.builder
+        ),       // RawScrollbar
+        ),       // DecoratedBox
+      ),         // ClipRRect
+    );
   }
 
   Widget _buildCardGrid(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {

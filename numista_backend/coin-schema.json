@@ -140,6 +140,10 @@
             "type": "string",
             "description": "Raw description text as originally provided in the source CSV or invoice."
         },
+        "series_description": {
+            "type": "string",
+            "description": "Canonical AI-generated or reference library catalog history/essay. Strictly decoupled from Personal Notes I."
+        },
         "source_file": {
             "type": "string",
             "description": "Source file or import batch identifier for traceability."

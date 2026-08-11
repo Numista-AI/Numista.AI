@@ -144,12 +144,21 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     ret = _get_val(itm, "retailer", "Retailer", "vendor_name")
     inv = _get_val(itm, "retailerInvoiceNo", "retailer_invoice_no", "Retailer Invoice #", "invoice_id")
     loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
-    notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes")
     est_val = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
-
-    # Exclude generic series background essays from PDF notes
-    if notes and (len(notes) > 120 or notes.strip().startswith("This coin is") or notes.strip().startswith("Struck at the")):
-        notes = ""
+    # Personal notes strictly from user input (series_description is ignored)
+    raw_notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes I", "Personal Notes")
+    
+    # Legacy Defense: If a legacy document contains catalog essay text inside personal_notes,
+    # split and exclude the essay portion while preserving genuine short user provenance/vault notes.
+    notes = ""
+    if raw_notes:
+        if (len(raw_notes) > 120 or raw_notes.strip().startswith("This coin is") or raw_notes.strip().startswith("Struck at")) and any(marker in raw_notes for marker in ["This coin is", "Struck at", "Designed by", "mintage of", "composition of"]):
+            # Legacy item with embedded essay: extract user notes if a line break or delimiter is present, otherwise omit essay
+            lines = raw_notes.split("\n")
+            user_lines = [l.strip() for l in lines if l.strip() and not any(m in l for m in ["This coin is", "Struck at", "Designed by", "mintage of", "composition of"])]
+            notes = " ".join(user_lines)[:200].strip()
+        else:
+            notes = raw_notes
 
     details = []
     if cost:
