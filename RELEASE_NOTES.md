@@ -44,6 +44,32 @@
 
 
 
+
+
+## v4.39 — 2026-08-11
+**Web Enhancements & Platform Updates**
+
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+
+## v4.38 — 2026-08-11
+**Release Enhancements & Platform Updates**
+
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+
 ## v4.37 — 2026-08-11
 **Programs Enhancements & Platform Updates**
 

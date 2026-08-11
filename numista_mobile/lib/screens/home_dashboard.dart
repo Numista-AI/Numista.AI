@@ -19,7 +19,6 @@ import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
 import '../widgets/beta_welcome_dialog.dart';
-import '../constants.dart';
 import 'ai_chat_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -1521,10 +1520,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.39',
+    date: '2026-08-11',
+    description: 'Web Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+    ],
+  ),
+  _Release(
+    version: 'v4.38',
+    date: '2026-08-11',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+    ],
+  ),
+  _Release(
     version: 'v4.37',
     date: '2026-08-11',
     description: 'Programs Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
