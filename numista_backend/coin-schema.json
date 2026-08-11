@@ -147,6 +147,32 @@
         "source_file": {
             "type": "string",
             "description": "Source file or import batch identifier for traceability."
+        },
+        "is_mint_set": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if item represents an intact mint/proof set asset."
+        },
+        "set_broken_up": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if set has been split into standalone constituent coins."
+        },
+        "parent_set_id": {
+            "type": ["string", "null"],
+            "default": null,
+            "description": "ID of parent mint set if this is a constituent coin."
+        },
+        "constituent_coin_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "description": "Array of child coin IDs contained within this set."
+        },
+        "canonical_set_sku": {
+            "type": ["string", "null"],
+            "default": null,
+            "description": "Canonical US Mint product SKU or catalog ID (e.g., 'USM-2026-UNC')."
         }
     }
 }
