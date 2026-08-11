@@ -46,6 +46,19 @@
 
 
 
+
+## v4.40 — 2026-08-11
+**Collection Enhancements & Platform Updates**
+
+- Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web
+- Web: harden doc.data() null checks to prevent grey container crash on ghost documents
+- Release: update release notes v4.37
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+
 ## v4.39 — 2026-08-11
 **Web Enhancements & Platform Updates**
 

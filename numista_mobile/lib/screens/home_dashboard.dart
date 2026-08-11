@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.40',
+    date: '2026-08-11',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Collection: remove incompatible RawScrollbar wrapper around TableView.builder resolving solid gray screen crash on web',
+      'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
+      'Release: update release notes v4.37',
+      'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
+      'Web: resolve closing bracket syntax in my_collection_screen',
+      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
+      'Release: update release notes',
+    ],
+  ),
+  _Release(
     version: 'v4.39',
     date: '2026-08-11',
     description: 'Web Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Web: harden doc.data() null checks to prevent grey container crash on ghost documents',
       'Release: update release notes v4.37',
