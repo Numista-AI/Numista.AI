@@ -39,6 +39,71 @@
 
 
 
+
+
+
+
+
+## v4.37 — 2026-08-11
+**Programs Enhancements & Platform Updates**
+
+- Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+
+## v4.36 — 2026-08-11
+**Web Enhancements & Platform Updates**
+
+- Web: resolve closing bracket syntax in my_collection_screen
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+
+## v4.35 — 2026-08-11
+**Build Enhancements & Platform Updates**
+
+- Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+
+## v4.34 — 2026-08-11
+**Estate-v3 Enhancements & Platform Updates**
+
+- Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+
+## v4.33 — 2026-08-11
+**Release Enhancements & Platform Updates**
+
+- Release: update release notes
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+
 ## v4.32 — 2026-08-11
 **Backend Enhancements & Platform Updates**
 
