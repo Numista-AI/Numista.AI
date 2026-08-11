@@ -56,7 +56,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
-SA_KEY     = SCRIPT_DIR / "serviceAccountKey.json.json"
+SA_KEY     = SCRIPT_DIR / "serviceAccountKey.json" if (SCRIPT_DIR / "serviceAccountKey.json").exists() else SCRIPT_DIR / "serviceAccountKey.json.json"
 LOG_OUT    = SCRIPT_DIR.parent / "set_enrichment_log.csv"
 
 # Both reference buckets — unified at index time
