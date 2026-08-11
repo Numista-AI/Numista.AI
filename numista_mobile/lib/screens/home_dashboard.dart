@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/guest_seed_service.dart';
@@ -706,8 +707,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                               // Build a human-readable coin name
                               // Priority: Program/Series > Theme/Subject > Denomination > fallback
-                              final denomFallback = denom.isNotEmpty && denom != 'Multiple'
-                                  ? (denom[0].toUpperCase() + denom.substring(1))
+                              final cleanDenom = denom.trim();
+                              final denomFallback = cleanDenom.isNotEmpty && cleanDenom != 'Multiple'
+                                  ? (cleanDenom[0].toUpperCase() + cleanDenom.substring(1))
                                       .replaceAll(r'$', '')
                                       .trim()
                                   : 'Coin';
@@ -724,14 +726,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               // value is numeric (e.g. "1" → "$1") or already has it.
                               // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
                               String fmtDenom(String d) {
-                                if (d.isEmpty || d == 'Multiple') return '';
-                                if (d.startsWith(r'$')) return d;              // already has $
+                                final cleanD = d.trim();
+                                if (cleanD.isEmpty || cleanD == 'Multiple') return '';
+                                if (cleanD.startsWith(r'$')) return cleanD;              // already has $
                                 final numeric = double.tryParse(
-                                    d.replaceAll(RegExp(r'[^\d.]'), ''));
-                                if (numeric != null && d.contains(RegExp(r'^[\d]'))) {
-                                  return '\$$d';                              // numeric → add $
+                                    cleanD.replaceAll(RegExp(r'[^\d.]'), ''));
+                                if (numeric != null && cleanD.contains(RegExp(r'^[\d]'))) {
+                                  return '\$$cleanD';                              // numeric → add $
                                 }
-                                return d[0].toUpperCase() + d.substring(1);   // word → capitalise
+                                return cleanD[0].toUpperCase() + cleanD.substring(1);   // word → capitalise
                               }
                               final denomLabel = fmtDenom(denom);
                               final condition = data['Condition']?.toString() ?? '';
@@ -1518,10 +1521,179 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.28',
+    date: '2026-08-11',
+    description: 'Build Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Build: define missing kAppVersion constant and add constants import to home_dashboard',
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.27',
+    date: '2026-08-11',
+    description: 'Pdf Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.26',
+    date: '2026-08-11',
+    description: 'Transfer Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup',
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.25',
+    date: '2026-08-11',
+    description: 'Transfer Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix',
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.24',
+    date: '2026-08-11',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: sync SCAN_REPORT.md after full E2E test execution',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.23',
+    date: '2026-08-11',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+      'Currency: fix string interpolation formatting in currency_collection_screen',
+      'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+    ],
+  ),
+  _Release(
+    version: 'v4.22',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Currency: fix string interpolation formatting in currency_collection_screen',
+      'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+    ],
+  ),
+  _Release(
+    version: 'v4.21',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Currency: fix string interpolation formatting in currency_collection_screen',
+      'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+    ],
+  ),
+  _Release(
+    version: 'v4.20',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Currency: complete Phase 3 CurrencyImageService 3-stage fallback cascade, web UI credit badges, and legal PDF watermarking',
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+      'Audit: generate SCAN_REPORT.md system audit report',
+    ],
+  ),
+  _Release(
+    version: 'v4.19',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Currency: complete Phase 2 GCS CORS policy, banknote indexer, and intake engine',
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+      'Audit: generate SCAN_REPORT.md system audit report',
+    ],
+  ),
+  _Release(
+    version: 'v4.18',
+    date: '2026-08-10',
+    description: 'Currency Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Currency: complete Phase 1 SOP, operator runbook, and legacy scraper quarantine',
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+      'Audit: generate SCAN_REPORT.md system audit report',
+    ],
+  ),
+  _Release(
+    version: 'v4.17',
+    date: '2026-08-10',
+    description: 'Valuation Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Valuation: fix face/melt value math, add report modal, upgrade beta testers to family_estate',
+      'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
+      'Audit: resolve 3 report-generation bugs + estate pipeline import error',
+      'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
+      'Audit: generate SCAN_REPORT.md system audit report',
+      'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
+    ],
+  ),
+  _Release(
     version: 'v4.17',
     date: '2026-08-10',
     description: 'Hooks Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Hooks: use venv Python in pre-push hook to avoid Windows Store stub error; update walkthrough',
       'Audit: resolve 3 report-generation bugs + estate pipeline import error',

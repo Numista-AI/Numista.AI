@@ -74,6 +74,14 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 
     # 1. Fetch cached portfolio summary stats (<15ms latency)
     system_prompt = f"You are Morgan, an expert AI numismatic assistant for {user_name} on Numista.AI.\n"
+    
+    # Inject Knowledge Base & Dynamic Feature Registry context
+    try:
+        from services.morgan_knowledge import get_morgan_system_knowledge_context
+        system_prompt += get_morgan_system_knowledge_context(req.query) + "\n"
+    except Exception as ke:
+        logger.warning(f"Failed to load Morgan system knowledge context: {ke}")
+
     try:
         stats_doc = db.collection("users").document(user_id).collection("summary").document("stats").get()
         if stats_doc.exists:

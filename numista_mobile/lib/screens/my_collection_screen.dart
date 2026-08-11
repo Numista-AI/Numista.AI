@@ -491,13 +491,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // Option A: individual set-member coins are hidden from the default grid.
     // Only the parent SET card is shown. When actively searching, ALL coins
     // (including set members) are revealed so Morgan/AI never misses them.
-    final List<QueryDocumentSnapshot> visible = _searchQuery.isEmpty
-        ? docs.where((doc) {
-            final m = doc.data() as Map<String, dynamic>;
-            final parentSetId = m['parent_set_id']?.toString() ?? '';
-            return parentSetId.isEmpty;
-          }).toList()
-        : docs;
+    final List<QueryDocumentSnapshot> visible = docs.where((doc) {
+      final m = doc.data() as Map<String, dynamic>;
+      final tStatus = m['transferStatus']?.toString() ?? '';
+      if (tStatus == 'transferred') return false;
+      if (_searchQuery.isNotEmpty) return true;
+      final parentSetId = m['parent_set_id']?.toString() ?? '';
+      return parentSetId.isEmpty;
+    }).toList();
 
     if (_searchQuery.isEmpty) return visible;
     return visible.where((doc) {
@@ -1995,8 +1996,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
           // -- Cell builder ------------------------------------------------
           cellBuilder: (context, vicinity) {
-            final col = vicinity.column;
-            final row = vicinity.row;
+            try {
+              final col = vicinity.column;
+              final row = vicinity.row;
 
             // -- HEADER ROW (row 0) -------------------------------------
             if (row == 0) {
@@ -2138,22 +2140,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               );
             }
 
-            return TableViewCell(
-              child: InkWell(
-                onTap: onTap,
-                hoverColor: _accent.withAlpha(20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: sel ? _accent : _text),
+              return TableViewCell(
+                child: InkWell(
+                  onTap: onTap,
+                  hoverColor: _accent.withAlpha(20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: sel ? _accent : _text),
+                    ),
                   ),
                 ),
-              ),
-            );
+              );
+            } catch (e, stack) {
+              debugPrint('Collection table cell build error at col ${vicinity.column}, row ${vicinity.row}: $e\n$stack');
+              return TableViewCell(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('—', style: TextStyle(fontSize: 12, color: _subtext)),
+                ),
+              );
+            }
           },
         ),       // TableView.builder
         ),       // RawScrollbar (top)
@@ -2363,6 +2374,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
         // Word-form denomination: normalize to official US Mint terms, then capitalise
         final dRaw = rawD.trim();
+        if (dRaw.isEmpty) return '';
         if (dRaw.toLowerCase() == 'penny' || dRaw.toLowerCase() == 'cent') {
           return 'One Cent'; // Official US Mint term
         }
@@ -2524,9 +2536,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final mint  = data[_F.mintMark]?.toString().trim() ?? '';
     final denom = data[_F.denomination]?.toString() ?? '';
     // Capitalise word-form denomination in the dialog title (penny > Penny)
-    final denomDisplay = denom.isNotEmpty && !denom.startsWith(r'$')
-        ? denom[0].toUpperCase() + denom.substring(1)
-        : denom;
+    final denomTrim = denom.trim();
+    final denomDisplay = denomTrim.isNotEmpty && !denomTrim.startsWith(r'$')
+        ? denomTrim[0].toUpperCase() + denomTrim.substring(1)
+        : denomTrim;
     final title = '$year${mint.isNotEmpty ? '-$mint' : ''} $denomDisplay'.trim();
 
     // Pre-fetch reference image once (no user photo path only).
@@ -3042,7 +3055,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (raw == null || raw.trim().isEmpty) return null;
     final t = raw.trim();
     if (t.startsWith(r'$') || t.startsWith(r'0')) return t; // currency / number: leave as-is
-    return t[0].toUpperCase() + t.substring(1);
+    return t.isNotEmpty ? t[0].toUpperCase() + t.substring(1) : t;
   }
 
   Widget _fieldCell(String label, String value) => SizedBox(

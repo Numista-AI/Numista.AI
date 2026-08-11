@@ -94,7 +94,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           snap = await FirebaseFirestore.instance.collection(AuthService.coinsPath).get();
         }
 
-        coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
+        coins = snap.docs
+            .map((doc) => CoinModel.fromFirestore(doc))
+            .where((c) => c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed')
+            .toList();
       }
 
       coins.sort((a, b) {
@@ -909,6 +912,30 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           textAlign: TextAlign.center,
           style: TextStyle(color: Color(0xFFCBD5E1)),
         ),
+        if (transfer.recipientEmail != null && transfer.recipientEmail!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.mark_email_read_outlined, color: Colors.greenAccent, size: 18),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Passport PDF & PIN emailed to ${transfer.recipientEmail} (Locked to recipient account)',
+                    style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),

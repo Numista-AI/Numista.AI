@@ -145,10 +145,17 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     inv = _get_val(itm, "retailerInvoiceNo", "retailer_invoice_no", "Retailer Invoice #", "invoice_id")
     loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
     notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes")
+    est_val = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
+
+    # Exclude generic series background essays from PDF notes
+    if notes and (len(notes) > 120 or notes.strip().startswith("This coin is") or notes.strip().startswith("Struck at the")):
+        notes = ""
 
     details = []
     if cost:
         details.append(f"<b>Cost:</b> {cost}")
+    elif est_val:
+        details.append(f"<b>Est Val:</b> {est_val}")
     if p_date:
         details.append(f"<b>Acquired:</b> {p_date}")
     if ret:
@@ -258,6 +265,8 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
 
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0284C7'), spaceBefore=2, spaceAfter=8))
 
+    from config import APP_PUBLIC_DOMAIN
+
     transfer_id = transfer_data.get("transfer_id", "N/A")
     claim_pin = transfer_data.get("claim_pin", "******")
     sender_id = transfer_data.get("sender_id", "Anonymous Sender")
@@ -265,7 +274,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     expires_at = transfer_data.get("expires_at", "")[:10]
 
     # QR Code Generation pointing directly to web app claim route
-    qr_payload = f"https://numista-vault.web.app/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
+    qr_payload = f"https://{APP_PUBLIC_DOMAIN}/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
     qr_buf = generate_qr_code_image(qr_payload, size=180)
     qr_img = Image(qr_buf, width=1.4 * inch, height=1.4 * inch)
 
@@ -277,7 +286,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
                       f"<b>Token Expiration:</b> {expires_at} (60-Day Limit)<br/>"
                       f"<b>Claim PIN Code:</b> <font color='#0284C7' size=13><b>{claim_pin}</b></font><br/><br/>"
                       f"<font color='#0284C7' size=8><b>WEB / DESKTOP RECEIVE INSTRUCTIONS:</b><br/>"
-                      f"1. Sign into recipient account on <b>numista-vault.web.app</b><br/>"
+                      f"1. Sign into recipient account on <b>{APP_PUBLIC_DOMAIN}</b><br/>"
                       f"2. Click <b>Claim Transfer</b> (or <b>Lateral Transfer &rarr; Receive</b>)<br/>"
                       f"3. Enter Transfer ID &amp; PIN <b>{claim_pin}</b> to adopt items into vault.</font>", body_normal),
             qr_img
@@ -306,8 +315,12 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         Paragraph("<b>Financial &amp; Invoice Details</b>", body_bold)
     ]]
 
-    total_value = 0.0
-    has_prices = False
+    import re
+
+    total_cost = 0.0
+    total_est_val = 0.0
+    has_cost = False
+    has_est_val = False
 
     for itm in items:
         name = format_item_title(itm)
@@ -320,10 +333,18 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             clean_num = cost_str.replace("$", "").replace(",", "").strip()
             try:
                 val = float(clean_num)
-                total_value += val
-                has_prices = True
+                total_cost += val
+                has_cost = True
             except ValueError:
                 pass
+
+        est_str = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
+        if est_str:
+            nums = [float(n.replace(',', '')) for n in re.findall(r'[\d,]+(?:\.\d+)?', est_str) if n]
+            if nums:
+                avg_num = sum(nums) / len(nums)
+                total_est_val += avg_num
+                has_est_val = True
 
         item_rows.append([
             Paragraph(name, body_normal),
@@ -332,12 +353,20 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             Paragraph(fin_details, body_normal)
         ])
 
-    if has_prices and total_value > 0:
+    if has_est_val and total_est_val > 0:
         item_rows.append([
-            Paragraph("<b>TOTAL TRANSFER VALUE</b>", body_bold),
+            Paragraph("<b>ESTIMATED PORTFOLIO MARKET VALUE</b>", body_bold),
             Paragraph("", body_normal),
             Paragraph("", body_normal),
-            Paragraph(f"<font color='#0284C7'><b>${total_value:,.2f}</b></font>", body_bold)
+            Paragraph(f"<font color='#0284C7'><b>${total_est_val:,.2f}</b></font>", body_bold)
+        ])
+
+    if has_cost and total_cost > 0:
+        item_rows.append([
+            Paragraph("<b>TOTAL ACQUISITION COST BASIS</b>", body_bold),
+            Paragraph("", body_normal),
+            Paragraph("", body_normal),
+            Paragraph(f"<font color='#475569'><b>${total_cost:,.2f}</b></font>", body_bold)
         ])
 
     items_table = Table(item_rows, colWidths=[2.8 * inch, 1.3 * inch, 1.4 * inch, 2.0 * inch])
