@@ -53,7 +53,7 @@ dependencies:
   printing: ^5.14.3
   image_picker: ^1.1.2
   http_parser: ^4.0.2
-  two_dimensional_scrollables: ^0.4.2
+  two_dimensional_scrollables: ^0.5.3
   firebase_ai: ^3.10.0
   flutter_markdown_plus: ^1.0.4
   path_provider: ^2.1.5
