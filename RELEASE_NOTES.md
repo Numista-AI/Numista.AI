@@ -35,6 +35,57 @@
 
 
 
+
+
+
+
+## v4.32 — 2026-08-11
+**Backend Enhancements & Platform Updates**
+
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+
+## v4.31 — 2026-08-11
+**Backend Enhancements & Platform Updates**
+
+- Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+
+## v4.30 — 2026-08-11
+**Backend Enhancements & Platform Updates**
+
+- Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.29 — 2026-08-11
+**Version Enhancements & Platform Updates**
+
+- Version: sync kAppVersion to v4.28 and include auto-generated release notes
+- Build: define missing kAppVersion constant and add constants import to home_dashboard
+- Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate
+- Transfer: V2.2 atomic claim deletion, schema notes separation, query filters, and 1914 gold vault cleanup
+- Transfer: resolve LT beta feedback V2.1 with feature registry, domain config, email audit, and UI crash fix
+- Audit: sync SCAN_REPORT.md after full E2E test execution
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.28 — 2026-08-11
 **Build Enhancements & Platform Updates**
 
