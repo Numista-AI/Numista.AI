@@ -344,10 +344,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.dispose();
   }
 
-  static double _faceValue(String denom) {
-    return MeltValueService.parseFaceValue(denom);
-  }
-
   // --- Sort + filter helpers -----------------------------------------------
   // ---------------------------------------------------------------------------
   // _sortKey — returns a Comparable that represents the column's logical sort
