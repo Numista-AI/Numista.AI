@@ -20,10 +20,6 @@ const _kWindowsInstallerUrl =
     'https://storage.googleapis.com/studio-9101802118-8c9a8-uploads/'
     'downloads/NumistaAgentSetup.exe';
 
-const _kWindowsStandaloneUrl =
-    'https://storage.googleapis.com/studio-9101802118-8c9a8-uploads/'
-    'downloads/numista-agent.exe';
-
 // ─── Screen ──────────────────────────────────────────────────────────────────
 class DesktopAgentDownloadScreen extends StatefulWidget {
   /// If true, shows a "Back" button (used when pushed from MicroscopeScanScreen).

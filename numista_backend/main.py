@@ -2221,12 +2221,15 @@ def execute_add_coin(
     storage_location: str = "",
     condition: str = "",
     cost: str = "",
+    provenance: str = "",
+    raw_utterance: str = "",
     personal_notes: str = "",
     quantity: int = 1
 ) -> dict:
     try:
         import re
         import os
+        from uuid import uuid4
         from datetime import datetime, timezone
         from firebase_admin import firestore
         from services.mint_nomenclature_service import resolve_coin_catalog_metadata
@@ -2273,6 +2276,42 @@ def execute_add_coin(
         except Exception:
             pass
 
+        # Parse cost_basis and acquisition_cost_display
+        cost_basis_num = None
+        cost_display_str = "UKN"
+        prov_desc = provenance or "Initial Ingestion (Conversational Add)"
+
+        if cost:
+            cost_upper = str(cost).strip().upper()
+            if cost_upper in ["$0.00", "0", "0.00", "FREE", "GIFT", "FOUND", "COIN JAR"]:
+                cost_basis_num = 0.0
+                cost_display_str = "$0.00"
+            elif cost_upper in ["UKN", "UNKNOWN", "N/A"]:
+                cost_basis_num = None
+                cost_display_str = "UKN"
+            else:
+                try:
+                    cleaned_val = float(re.sub(r'[^\d.]', '', cost_upper))
+                    cost_basis_num = cleaned_val
+                    cost_display_str = f"${cleaned_val:.2f}"
+                except Exception:
+                    cost_basis_num = None
+                    cost_display_str = "UKN"
+        elif prov_desc and any(k in prov_desc.lower() for k in ["jar", "gift", "found", "inherited", "free"]):
+            cost_basis_num = 0.0
+            cost_display_str = "$0.00"
+
+        # Structured provenance_ledger entry
+        provenance_entry = {
+            "event_id": f"prov_evt_{uuid4().hex[:8]}",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_type": "initial_ingestion",
+            "source_description": prov_desc,
+            "raw_user_utterance": raw_utterance or f"Added via Morgan AI: {prov_desc}",
+            "cost_basis": cost_basis_num,
+            "recorded_by": "Morgan AI Assistant"
+        }
+
         est_value_num = 0.50
         gsid_val = None
         bid_val = None
@@ -2282,7 +2321,6 @@ def execute_add_coin(
         try:
             from services.greysheet_service import GreysheetService
             gs_service = GreysheetService(db=db)
-            # 1000ms max timeout for sub-second chat response
             res_gs = gs_service.resolve_coin_with_timeout(
                 year=str(year),
                 denom=norm_denom,
@@ -2332,7 +2370,11 @@ def execute_add_coin(
             "is_foreign": is_foreign,
             "Condition": condition or "Ungraded / Raw",
             "Storage Location": storage_location or "Cardboard Holder / Binder",
-            "Cost": cost or "$0.00",
+            "Cost": cost_display_str,
+            "cost_basis": cost_basis_num,
+            "acquisition_cost_display": cost_display_str,
+            "Provenance": prov_desc,
+            "provenance_ledger": [provenance_entry],
             "Purchase Date": datetime.now().strftime("%Y-%m-%d"),
             "Personal Notes": personal_notes or "",
             "Quantity": int(quantity or 1),
@@ -2364,10 +2406,54 @@ def execute_add_coin(
             "valuation_source": val_source,
             "storage_location": storage_location or "Cardboard Holder / Binder",
             "condition": condition or "Ungraded / Raw",
-            "cost": cost or "$0.00",
+            "cost": cost_display_str,
+            "cost_basis": cost_basis_num,
+            "provenance": prov_desc,
+            "provenance_ledger": [provenance_entry],
             "is_duplicate": is_dupe,
             "prompt_extra_details": not bool(storage_location and condition and cost and cost != "$0.00")
         }
+    except Exception as e:
+        logger.error(f"Error executing add_coin: {e}")
+        return {"action": "add_coin", "status": "error", "message": str(e)}
+
+
+def batch_add_coins(user_email: str, coins: list) -> dict:
+    """
+    Executes batch addition of multiple coins to user's collection in a single turn.
+    """
+    results = []
+    success_count = 0
+    for coin_item in coins:
+        try:
+            res = execute_add_coin(
+                user_email=user_email,
+                year=str(coin_item.get("year", "")),
+                denomination=str(coin_item.get("denomination", "")),
+                mint_mark=str(coin_item.get("mint_mark", "")),
+                program_series=str(coin_item.get("program_series", "")),
+                theme_subject=str(coin_item.get("theme_subject", "")),
+                variety=str(coin_item.get("variety", "")),
+                storage_location=str(coin_item.get("storage_location", "")),
+                condition=str(coin_item.get("condition", "")),
+                cost=str(coin_item.get("cost", "")),
+                provenance=str(coin_item.get("provenance", "")),
+                raw_utterance=str(coin_item.get("raw_utterance", "")),
+                personal_notes=str(coin_item.get("personal_notes", "")),
+                quantity=int(coin_item.get("quantity", 1))
+            )
+            results.append(res)
+            if res.get("status") == "success":
+                success_count += 1
+        except Exception as e:
+            results.append({"status": "error", "error": str(e)})
+
+    return {
+        "status": "success",
+        "added_count": success_count,
+        "total_requested": len(coins),
+        "results": results
+    }
     except Exception:
         logger.exception("Error executing add_coin")
         return {"action": "add_coin", "status": "error", "message": "Failed to add coin. Please try again."}

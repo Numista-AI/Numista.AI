@@ -647,6 +647,7 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
   }
 
   // ── Sources ───────────────────────────────────────────────────────────────
+  // ── Sources ───────────────────────────────────────────────────────────────
   Widget _buildSources() {
     if (error.sources.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -658,18 +659,44 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
         ),
         const SizedBox(height: 6),
         ...error.sources.map(
-          (s) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('• ', style: TextStyle(color: _kSubtext)),
-                Expanded(
-                  child: Text(s, style: const TextStyle(fontSize: 12, color: _kSubtext)),
+          (s) {
+            String url = 'https://www.error-ref.com/';
+            if (s.toLowerCase().contains('wikipedia')) {
+              url = 'https://en.wikipedia.org/wiki/Mint_made_errors';
+            } else if (s.toLowerCase().contains('pcgs')) {
+              url = 'https://www.pcgs.com/coinfacts';
+            } else if (s.toLowerCase().contains('clipped')) {
+              url = 'https://www.error-ref.com/curved-clip/';
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: InkWell(
+                onTap: () async {
+                  if (await canLaunchUrl(Uri.parse(url))) {
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.link, size: 14, color: _kAccent),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        s,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _kAccent,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -681,25 +708,50 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.photo_camera_outlined,
-            size: 48,
-            color: Colors.white24,
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withAlpha(10),
+              border: Border.all(color: _kAccent.withAlpha(100), width: 2),
+              boxShadow: [
+                BoxShadow(color: _kAccent.withAlpha(30), blurRadius: 16),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                Icons.adjust_rounded,
+                size: 64,
+                color: _kAccent.withAlpha(180),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.amber.withAlpha(30),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.withAlpha(120)),
+            ),
+            child: const Text(
+              'Schematic – Exact specimen photo unavailable',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             error.shortName,
             style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 16,
+              color: Colors.white70,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'High-quality image pending.\nCheck back soon or view on PCGS CoinFacts.',
-            style: TextStyle(color: Colors.white30, fontSize: 12),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

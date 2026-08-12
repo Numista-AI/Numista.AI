@@ -236,6 +236,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   void initState() {
     super.initState();
     _loadDefaultTab();
+    _loadSortPreferences();
     // Create the Firestore stream ONCE -- reusing it in build() ensures
     // StreamBuilder never re-subscribes on setState, so the TextField
     // keeps its focus between keystrokes on Flutter Web.
@@ -251,6 +252,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     _fetchSpotPrices();
     _fetchCompletionStats();
+
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
     _searchCtrl.addListener(() {
@@ -269,6 +271,65 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
       });
     });
+  }
+
+  Future<void> _loadSortPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final colIdx = prefs.getInt('col_sort_index');
+      final asc = prefs.getBool('col_sort_asc');
+      if (mounted && colIdx != null && asc != null) {
+        setState(() {
+          _sortColumnIndex = colIdx;
+          _sortAscending = asc;
+        });
+      }
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          if (data.containsKey('default_sort_field') && data.containsKey('default_sort_asc')) {
+            final f = data['default_sort_field'] as String?;
+            final a = data['default_sort_asc'] as bool?;
+            if (f != null && a != null && mounted) {
+              int foundIdx = -1;
+              for (int i = 0; i < _columns.length; i++) {
+                if (_columns[i].field == f) {
+                  foundIdx = i;
+                  break;
+                }
+              }
+              setState(() {
+                _sortColumnIndex = foundIdx;
+                _sortAscending = a;
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[MyCollection] Error loading sort prefs: $e');
+    }
+  }
+
+  Future<void> _saveSortPreferences(int colIdx, bool asc) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('col_sort_index', colIdx);
+      await prefs.setBool('col_sort_asc', asc);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final fieldName = (colIdx >= 0 && colIdx < _columns.length) ? _columns[colIdx].field : 'created_at';
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'default_sort_field': fieldName,
+          'default_sort_asc': asc,
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('[MyCollection] Error saving sort prefs: $e');
+    }
   }
 
   void _loadDefaultTab() async {

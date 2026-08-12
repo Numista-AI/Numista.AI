@@ -18,8 +18,6 @@ class HardwareService {
   ];
   static String _activeBaseUrl = _baseUrls[0];
 
-  static String get _statusUrl => '$_activeBaseUrl/get-status';
-  static String get _pairUrl => '$_activeBaseUrl/pair';
   static String get _baseUrl => _activeBaseUrl;
 
   static final HardwareService _instance = HardwareService._internal();

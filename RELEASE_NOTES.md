@@ -64,6 +64,57 @@
 
 
 
+
+
+
+
+## v4.61 — 2026-08-12
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+
+## v4.60 — 2026-08-12
+**Agent Enhancements & Platform Updates**
+
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+
+## v4.59 — 2026-08-12
+**Agent Enhancements & Platform Updates**
+
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.58 — 2026-08-12
+**Programs Enhancements & Platform Updates**
+
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.57 — 2026-08-12
 **Ingestion Enhancements & Platform Updates**
 

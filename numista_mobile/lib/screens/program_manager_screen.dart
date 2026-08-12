@@ -594,45 +594,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               Expanded(
                 child: Text(
                   program.name,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
-              // ── Scan Checklist Button ──────────────────────────────────
-              _isScanning
-                  ? const SizedBox(
-                      width: 160,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Color(0xFF2563EB),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Text('Scanning…',
-                              style: TextStyle(
-                                  color: Color(0xFF2563EB),
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    )
-                  : ElevatedButton.icon(
-                      onPressed: () => _startScan(program),
-                      icon: const Icon(Icons.document_scanner, size: 16),
-                      label: const Text('Scan Checklist'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-              const SizedBox(width: 12),
               // ── Print Checklist Button ─────────────────────────────────
               ElevatedButton.icon(
                 onPressed: _generatingProgramId == program.id
@@ -884,7 +848,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -893,7 +857,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         'advancing overall U.S. Currency System of Record completion by ${programOverallAdvancement.toStringAsFixed(2)}%.',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF475569),
+                          color: Colors.white70,
                           height: 1.4,
                         ),
                       ),
@@ -908,7 +872,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
               if (_selectedMintFilter != 'ALL' || _selectedFinishFilter != 'ALL')
                 TextButton.icon(
                   onPressed: () => setState(() {
@@ -926,14 +890,14 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: const Color(0xFF1E293B),
+              border: Border.all(color: const Color(0xFF334155)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Mint Mark (Geographical):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const Text('Mint Mark (Geographical):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6.0,
@@ -945,7 +909,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       selected: isSel,
                       selectedColor: const Color(0xFF2563EB),
                       labelStyle: TextStyle(
-                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        color: isSel ? Colors.white : Colors.white70,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),
@@ -954,7 +918,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 10),
-                const Text('Finish / Strike Type:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const Text('Finish / Strike Type:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6.0,
@@ -970,7 +934,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       selected: isSel,
                       selectedColor: const Color(0xFF10B981),
                       labelStyle: TextStyle(
-                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        color: isSel ? Colors.white : Colors.white70,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),
