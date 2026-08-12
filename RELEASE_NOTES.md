@@ -63,6 +63,17 @@
 
 
 
+
+## v4.57 — 2026-08-12
+**Ingestion Enhancements & Platform Updates**
+
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.56 — 2026-08-12
 **Collection Enhancements & Platform Updates**
 
