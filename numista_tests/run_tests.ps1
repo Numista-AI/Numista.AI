@@ -34,7 +34,7 @@ Log "========================================"
 
 Push-Location $TestDir
 
-# 0. Pre-test Cold-Start Site Warming
+# 0. Pre-test Cold-Start Site Warming & Overnight Master Suite
 Log "Warming up site & backend endpoints (cold-start mitigation)..."
 try {
   $null = Invoke-WebRequest -Uri "https://numista.ai" -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
@@ -42,6 +42,17 @@ try {
   Log "Site warm-up complete."
 } catch {
   Log "Site warm-up completed with fallback."
+}
+
+Log "Executing Master Overnight Domain Completeness Engine (run_overnight_tests.py)..."
+$pythonExe = Join-Path $ProjectDir "numista_backend\.venv\Scripts\python.exe"
+$overnightScript = Join-Path $ProjectDir "run_overnight_tests.py"
+if (Test-Path $pythonExe) {
+  $overnightOutput = & $pythonExe $overnightScript 2>&1
+  Add-Content -Path $LogFile -Value $overnightOutput
+  Log "Master Overnight Engine completed."
+} else {
+  Log "WARNING: Python venv executable not found at $pythonExe"
 }
 
 # 1. Install/update npm dependencies
