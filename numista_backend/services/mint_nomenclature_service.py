@@ -72,6 +72,17 @@ def slugify(text: str) -> str:
     return re.sub(r"[\s_]+", "-", t)
 
 
+def sanitize_denomination_title(denom: str) -> str:
+    """
+    Sanitizes denomination titles, stripping duplicate suffix tokens.
+    Example: 'Quarter Dollar Dollar' -> 'Quarter Dollar'
+    """
+    if not denom:
+        return denom
+    cleaned = re.sub(r'\b(Dollar|Cent|Nickel|Dime)\s+\1\b', r'\1', denom, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
 def normalize_coin_nomenclature(text: str) -> str:
     """
     Translates informal text or denomination to official US Mint nomenclature.
@@ -86,7 +97,7 @@ def normalize_coin_nomenclature(text: str) -> str:
         pattern = rf"\b{informal}\b"
         normalized = re.sub(pattern, official, normalized, flags=re.IGNORECASE)
 
-    return normalized
+    return sanitize_denomination_title(normalized)
 
 
 def resolve_coin_catalog_metadata(
@@ -105,7 +116,7 @@ def resolve_coin_catalog_metadata(
     NO-MATCH CONTRACT: On zero matches, preserves raw user/Morgan input as-is or sets 'Unmapped'.
     Never invents synthesized generic strings like 'f"{year} {denomination}"'.
     """
-    norm_denom = normalize_coin_nomenclature(denomination or "").strip()
+    norm_denom = sanitize_denomination_title(normalize_coin_nomenclature(denomination or "").strip())
     if norm_denom in ["Quarter", "25c", "25 Cents"]:
         norm_denom = "Quarter Dollar"
     elif norm_denom in ["Cent", "Penny", "1c"]:
@@ -115,7 +126,7 @@ def resolve_coin_catalog_metadata(
     raw_theme = (theme_subject or "").strip()
     raw_variety = (variety or "").strip()
 
-    # Default result
+    # Default result (unmapped / fail-closed baseline)
     result = {
         "year": str(year).strip(),
         "mint_mark": (mint_mark or "").strip().upper(),
@@ -141,18 +152,19 @@ def resolve_coin_catalog_metadata(
             cur = conn.cursor()
 
             search_query = f"%{raw_theme or raw_variety or raw_series}%"
-            if search_query == "%%":
-                search_query = f"%{year}%"
+            if search_query != "%%":
+                cur.execute(
+                    "SELECT year, denomination, series, variety, composition "
+                    "FROM definitive_reference WHERE (variety LIKE ? OR series LIKE ? OR note LIKE ?) "
+                    "AND year LIKE ? LIMIT 1",
+                    (search_query, search_query, search_query, f"%{year}%")
+                )
+                row = cur.fetchone()
+            else:
+                row = None
 
-            cur.execute(
-                "SELECT year, denomination, series, variety, composition "
-                "FROM definitive_reference WHERE (variety LIKE ? OR series LIKE ? OR note LIKE ?) "
-                "AND year LIKE ? LIMIT 1",
-                (search_query, search_query, search_query, f"%{year}%")
-            )
-            row = cur.fetchone()
-            if not row:
-                # Fallback search by year and denomination
+            # Only fallback to generic year + denomination if no specific theme/series was requested
+            if not row and not raw_theme and not raw_series:
                 cur.execute(
                     "SELECT year, denomination, series, variety, composition "
                     "FROM definitive_reference WHERE year LIKE ? AND denomination LIKE ? LIMIT 1",
@@ -181,7 +193,6 @@ def resolve_coin_catalog_metadata(
 
                 if raw_theme:
                     result["theme_subject"] = raw_theme
-                    # Resolve state slug if present in map
                     resolved_state = SUBJECT_STATE_MAP.get(raw_theme.lower(), slugify(raw_theme))
                     result["subject_slug"] = resolved_state
                 elif variety_db:
