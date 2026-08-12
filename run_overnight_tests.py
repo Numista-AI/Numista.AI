@@ -163,6 +163,17 @@ try:
 except Exception as e:
     log(WARN, "8f. 24-Hour Conversation Test Miner Audit", str(e))
 
+# 8g: Real Production Account Health & Parity Audit
+try:
+    from prod_account_snapshot_auditor import audit_production_account
+    p_audit = audit_production_account("jseaman1204@gmail.com")
+    p_metrics = p_audit.get("metrics", {})
+    tot = p_audit.get("total_records_audited", 0)
+    anom_cnt = p_metrics.get("total_anomalies_flagged", 0)
+    log(PASS if anom_cnt < 5000 else WARN, "8g. Real Production Account Health Audit", f"Audited {tot} records for jseaman1204@gmail.com ({anom_cnt} items flagged for automatic fix)")
+except Exception as e:
+    log(WARN, "8g. Real Production Account Health Audit", str(e))
+
 # ── Overnight Anomaly Scanner Pass ───────────────────────────────────────────
 print("\n── ANOMALY SCANNER PASS ──────────────────────────────────────────────")
 anomalies_detected = 0
