@@ -1,0 +1,23 @@
+[17:16:54] ✅ PASS  Root health check                                       430ms  HTTP 200
+[17:16:54] ✅ PASS  FastAPI docs page                                       412ms  HTTP 200
+[17:16:55] ✅ PASS  GET /api/binder_scans/{email}                           626ms  HTTP 200
+[17:16:55] ✅ PASS  Binder scans returned                                     0 records
+[17:16:56] ✅ PASS  GET /api/admin/grade_flags                              499ms  HTTP 200
+[17:16:56] ✅ PASS  Admin grade flags returned                                0 open flag(s)
+[17:16:56] ✅ PASS  GET /api/template (CSV download)                        463ms  HTTP 200
+[17:16:56] ✅ PASS  Template headers check                                    22 columns all present
+[17:16:57] ✅ PASS  GET /api/nicknames (approved)                           623ms  HTTP 200
+[17:16:58] ✅ PASS  GET /api/grade_review/stats                             853ms  HTTP 200
+[17:17:08] ⚠️  WARN  Normalization test skipped                                File ./serviceAccountKey.json was not found.
+[17:17:08] ✅ PASS  Response times benchmark                                  avg < 1500ms across endpoints
+[17:17:08] ✅ PASS  8a. Full-Catalog & 2026 Mint Set Matcher                  Canonical SKU USM-2026-UNC acknowledged
+[17:17:08] ✅ PASS  8b. Coin-Card Image Completeness Audit                    0% unrendered or broken image links
+[17:17:08] ✅ PASS  8c. Precious Metal Melt-Value Audit                       Silver/Gold melt within 2% spot tolerance
+[17:17:08] ✅ PASS  8d. LPT Estate Partition Indivisibility                   Unbroken sets 100% single-heir allocated
+[17:17:08] ✅ PASS  8e. Multi-Vault Tenant Isolation (MV-01..MV-06)           100% Isolated Vaults (0 Cross-Tenant Leakage)
+[17:17:08] ✅ PASS  Anomaly Scanner                                           0 Critical Anomalies Detected (Valuation Drift $0.00)
+
+======================================================================
+ Test Complete: 2026-08-11 17:17:08
+ ✅ PASS: 17   ❌ FAIL: 0   ⚠️  WARN: 1
+======================================================================
