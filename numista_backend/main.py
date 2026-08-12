@@ -2215,6 +2215,9 @@ def execute_add_coin(
     year: str,
     denomination: str,
     mint_mark: str = "",
+    program_series: str = "",
+    theme_subject: str = "",
+    variety: str = "",
     storage_location: str = "",
     condition: str = "",
     cost: str = "",
@@ -2224,12 +2227,31 @@ def execute_add_coin(
     try:
         import re
         import os
-        from datetime import datetime
+        from datetime import datetime, timezone
         from firebase_admin import firestore
+        from services.mint_nomenclature_service import resolve_coin_catalog_metadata
 
-        norm_denom = normalize_denomination(denomination)
-        
-        clean_mint = (mint_mark or "").strip().upper()
+        # Catalog-driven resolution
+        cat_meta = resolve_coin_catalog_metadata(
+            year=str(year),
+            denomination=denomination,
+            mint_mark=mint_mark,
+            program_series=program_series,
+            theme_subject=theme_subject,
+            variety=variety
+        )
+
+        norm_denom = cat_meta["denomination"]
+        clean_mint = cat_meta["mint_mark"]
+        series_name = cat_meta["program_series"]
+        theme_subj = cat_meta["theme_subject"]
+        variety_str = cat_meta["variety"]
+        series_slug = cat_meta["series_slug"]
+        subject_slug = cat_meta["subject_slug"]
+        country_str = cat_meta["country"]
+        is_foreign = cat_meta["is_foreign"]
+        val_source = cat_meta["valuation_source"]
+
         if clean_mint in ["NONE", "PLAIN", "NO MARK", "PHILADELPHIA (NO MARK)", "PHILADELPHIA"]:
             try:
                 yr_int = int(re.sub(r'\D', '', str(year)))
@@ -2240,37 +2262,9 @@ def execute_add_coin(
             elif clean_mint in ["NONE", "PLAIN", "NO MARK"]:
                 clean_mint = ""
 
-        # Catalog enrichment
-        series_name = f"{norm_denom}s"
-        theme_subject = ""
+        # Silver / metal check
         metal_content = "Cupronickel"
         is_silver = False
-        est_value = "$0.00"
-        melt_value = "$0.00"
-
-        try:
-            from numista_scraper.config import DB_PATH
-            import sqlite3
-            if os.path.exists(str(DB_PATH)):
-                conn = sqlite3.connect(str(DB_PATH))
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT series, variety, obverse_designer, metal_composition, estimated_value "
-                    "FROM definitive_reference WHERE (variety LIKE ? OR series LIKE ?) LIMIT 1",
-                    (f"%{year}%{norm_denom}%", f"%{norm_denom}%")
-                )
-                row = cur.fetchone()
-                if row:
-                    if row["series"]: series_name = row["series"]
-                    if row["variety"]: theme_subject = row["variety"]
-                    if row["metal_composition"]: metal_content = row["metal_composition"]
-                    if row["estimated_value"]: est_value = row["estimated_value"]
-                conn.close()
-        except Exception as cat_err:
-            logger.warning(f"Catalog enrichment warning: {cat_err}")
-
-        # Check silver by year if unspecified
         try:
             yr_val = int(re.sub(r'\D', '', str(year)))
             if norm_denom in ["Dime", "Quarter Dollar", "Half Dollar", "Dollar"] and yr_val <= 1964:
@@ -2278,6 +2272,38 @@ def execute_add_coin(
                 metal_content = "90% Silver, 10% Copper"
         except Exception:
             pass
+
+        est_value_num = 0.50
+        gsid_val = None
+        bid_val = None
+        ask_val = None
+
+        # Synchronous Greysheet resolution with 1000ms hard timeout
+        try:
+            from services.greysheet_service import GreysheetService
+            gs_service = GreysheetService(db=db)
+            # 1000ms max timeout for sub-second chat response
+            res_gs = gs_service.resolve_coin_with_timeout(
+                year=str(year),
+                denom=norm_denom,
+                series=series_name,
+                subject=theme_subj,
+                mint=clean_mint,
+                timeout_ms=1000
+            )
+            if res_gs and res_gs.get("gsid"):
+                gsid_val = res_gs.get("gsid")
+                bid_val = res_gs.get("bid")
+                ask_val = res_gs.get("ask")
+                cpg_val = res_gs.get("cpg_retail") or ask_val
+                if cpg_val and cpg_val > 0:
+                    est_value_num = float(cpg_val)
+                    val_source = "Greysheet Production API"
+        except Exception as gs_err:
+            logger.warning(f"Greysheet 1000ms timeout/error: {gs_err}")
+            val_source = "Local Catalog Baseline"
+
+        formatted_ai_val = f"${est_value_num:.2f}" if est_value_num else "$0.00"
 
         # Duplicate check in Firestore
         col_ref = db.collection('users').document(user_email).collection('coins')
@@ -2298,7 +2324,12 @@ def execute_add_coin(
             "Mint Mark": clean_mint,
             "Denomination": norm_denom,
             "Program/Series": series_name,
-            "Theme/Subject": theme_subject or f"{year} {norm_denom}",
+            "series_slug": series_slug,
+            "Theme/Subject": theme_subj,
+            "subject_slug": subject_slug,
+            "Variety": variety_str,
+            "country": country_str,
+            "is_foreign": is_foreign,
             "Condition": condition or "Ungraded / Raw",
             "Storage Location": storage_location or "Cardboard Holder / Binder",
             "Cost": cost or "$0.00",
@@ -2307,8 +2338,14 @@ def execute_add_coin(
             "Quantity": int(quantity or 1),
             "Metal Content": metal_content,
             "Is Silver": is_silver,
-            "AI Estimated Value": est_value if est_value != "$0.00" else "$0.50",
-            "Melt Value": melt_value,
+            "AI Estimated Value": formatted_ai_val,
+            "estimated_value": est_value_num,
+            "greysheet_gsid": gsid_val,
+            "greysheet_bid": bid_val,
+            "greysheet_ask": ask_val,
+            "valuation_source": val_source,
+            "valuation_updated_at": datetime.now(timezone.utc).isoformat(),
+            "last_modified_by": "Morgan AI Assistant",
             "Source": "Morgan AI Assistant Chat",
             "created_at": firestore.SERVER_TIMESTAMP,
         }
@@ -2322,6 +2359,9 @@ def execute_add_coin(
             "mint_mark": clean_mint,
             "denomination": norm_denom,
             "series": series_name,
+            "theme_subject": theme_subj,
+            "estimated_value": formatted_ai_val,
+            "valuation_source": val_source,
             "storage_location": storage_location or "Cardboard Holder / Binder",
             "condition": condition or "Ungraded / Raw",
             "cost": cost or "$0.00",
@@ -2534,6 +2574,9 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                     "year": genai_types.Schema(type=genai_types.Type.STRING, description="4-digit year, e.g. '2026'"),
                     "denomination": genai_types.Schema(type=genai_types.Type.STRING, description="Denomination e.g. 'Dime', 'Cent', 'Quarter Dollar', 'Dollar'"),
                     "mint_mark": genai_types.Schema(type=genai_types.Type.STRING, description="Mint mark if specified e.g. 'P', 'D', 'S', 'W', 'CC'"),
+                    "program_series": genai_types.Schema(type=genai_types.Type.STRING, description="Coin program or series e.g. 'America the Beautiful Quarters', '50 State Quarters'"),
+                    "theme_subject": genai_types.Schema(type=genai_types.Type.STRING, description="Theme or subject e.g. 'San Antonio Missions', 'War in the Pacific', 'Maya Angelou'"),
+                    "variety": genai_types.Schema(type=genai_types.Type.STRING, description="Variety or error e.g. 'W Mint Mark', 'DDO', 'RPM'"),
                     "storage_location": genai_types.Schema(type=genai_types.Type.STRING, description="Storage flip, cardboard holder, album, or binder"),
                     "condition": genai_types.Schema(type=genai_types.Type.STRING, description="Condition or grade e.g. 'Ungraded', 'BU', 'MS-65'"),
                     "cost": genai_types.Schema(type=genai_types.Type.STRING, description="Purchase cost e.g. '$0.10'"),

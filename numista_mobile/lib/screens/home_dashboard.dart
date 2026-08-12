@@ -1520,10 +1520,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.55',
+    version: 'v4.56',
     date: '2026-08-12',
     description: 'Collection Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Collection: implement crash-proof top scrollbar track and viewport pan buttons',
+      'Coins: remove unused _faceValue helper',
+      'Coins: enforce unified collection model, country normalization & non-legal tender tab',
+      'Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.55',
+    date: '2026-08-12',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Collection: implement crash-proof top scrollbar track and viewport pan buttons',
     ],

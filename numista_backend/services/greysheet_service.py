@@ -717,3 +717,83 @@ Set gsid to null if no candidate is a good match. Do not output markdown."""
         logger.warning("[Greysheet] Could not resolve a validated GSID.")
         return None
 
+    def resolve_coin_with_timeout(
+        self,
+        year: str,
+        denom: str,
+        series: str = "",
+        subject: str = "",
+        mint: str = "",
+        timeout_ms: int = 1000
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Runs GSID resolution with a hard timeout_ms (default 1000ms).
+        Returns dict with gsid, name, bid, ask, cpg_retail or None on timeout/failure.
+        """
+        import concurrent.futures
+        coin_data = {
+            "Year": str(year),
+            "Denomination": denom,
+            "Program/Series": series,
+            "Theme/Subject": subject,
+            "Mint Mark": mint
+        }
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self.resolve_coin, coin_data)
+            try:
+                result = future.result(timeout=timeout_ms / 1000.0)
+                if result:
+                    gsid, g_name = result
+                    pricing = self.get_pricing(gsid)
+                    bid = 0.0
+                    ask = 0.0
+                    if pricing:
+                        first_p = pricing[0]
+                        bid = float(first_p.get("bid", 0.0) or 0.0)
+                        ask = float(first_p.get("ask", 0.0) or 0.0)
+                    return {
+                        "gsid": gsid,
+                        "name": g_name,
+                        "bid": bid,
+                        "ask": ask,
+                        "cpg_retail": ask or (bid * 1.25 if bid > 0 else 0.0)
+                    }
+            except concurrent.futures.TimeoutError:
+                logger.warning(f"[Greysheet] Resolution timed out after {timeout_ms}ms for {year} {denom} {subject}")
+            except Exception as e:
+                logger.warning(f"[Greysheet] Resolution exception: {e}")
+        return None
+
+    def update_async_greysheet_resolution(self, coin_ref, gsid_data: Dict[str, Any]):
+        """
+        Updates Firestore coin document after async resolution.
+        VALUATION OVERWRITE GUARD: Only updates estimated_value if valuation_source is baseline or unmapped,
+        preserving user-edited or AI-updated values.
+        """
+        try:
+            doc = coin_ref.get()
+            if not doc.exists:
+                return
+            data = doc.to_dict() or {}
+            current_source = data.get("valuation_source", "")
+
+            update_payload = {
+                "greysheet_gsid": gsid_data.get("gsid"),
+                "greysheet_bid": gsid_data.get("bid"),
+                "greysheet_ask": gsid_data.get("ask"),
+                "valuation_updated_at": datetime.now(timezone.utc).isoformat()
+            }
+
+            if current_source in ["Local Catalog Baseline", "Unmapped – Manual Review Required", "Initial Fallback", ""]:
+                cpg_val = gsid_data.get("cpg_retail") or gsid_data.get("ask") or 0.0
+                if cpg_val > 0:
+                    update_payload["estimated_value"] = float(cpg_val)
+                    update_payload["AI Estimated Value"] = f"${cpg_val:.2f}"
+                    update_payload["valuation_source"] = "Greysheet Production API (Async Queue)"
+
+            coin_ref.update(update_payload)
+            logger.info(f"[Greysheet Async Guard] Updated coin {coin_ref.id} with GSID {gsid_data.get('gsid')}")
+        except Exception as e:
+            logger.error(f"[Greysheet Async Guard] Failed to update coin: {e}")
+
+
