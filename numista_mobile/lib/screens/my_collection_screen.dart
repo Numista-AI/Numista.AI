@@ -252,6 +252,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     _fetchSpotPrices();
     _fetchCompletionStats();
+  }
 
   Future<void> _loadSortPreferences() async {
     try {
