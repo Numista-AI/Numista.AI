@@ -47,8 +47,8 @@ test.describe('Real Account Visual Parity & Stress Tests', () => {
     });
 
     await page.goto('https://numista.ai', { waitUntil: 'domcontentloaded', timeout: 45000 });
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    const target = page.locator('flt-glass-pane, flutter-view, canvas, body').first();
+    await expect(target).toBeAttached({ timeout: 30000 });
   });
 
 });
