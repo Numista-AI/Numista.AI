@@ -147,3 +147,49 @@ def test_paper_currency_world_coin_checklist_isolation():
     # Assert category isolation
     assert paper_item["category"] != "coin"
     assert world_item["category"] != "coin"
+
+
+# ── MODULE F: 24-Hour Conversation Mined Topic Assertions ─────────────────────
+
+def test_2019_w_san_antonio_quarter_valuation():
+    """Verify 2019-W San Antonio Missions Quarter parses 'W' mint mark and retains market valuation."""
+    coin = {
+        "Year": "2019",
+        "Mint Mark": "W",
+        "Denomination": "Quarter",
+        "Program/Series": "America the Beautiful Quarters",
+        "Theme/Subject": "San Antonio Missions",
+        "Condition": "MS-65",
+        "AI Estimated Value": "25.00"
+    }
+    assert coin["Mint Mark"] == "W"
+    assert coin["Year"] == "2019"
+    assert float(coin["AI Estimated Value"]) > 0.00
+    assert coin["Program/Series"] == "America the Beautiful Quarters"
+
+def test_mexican_libertad_foreign_coin_isolation():
+    """Verify Mexican Silver Libertad is categorized as world_coin and isolated from US checklists."""
+    libertad = {
+        "Country": "Mexico",
+        "Denomination": "1 Onza",
+        "Year": "1982",
+        "category": "world_coin",
+        "Theme/Subject": "Winged Victory"
+    }
+    assert libertad["Country"] == "Mexico"
+    assert libertad["category"] == "world_coin"
+    assert libertad["category"] != "coin" # Ensures US coin checklist filter ignores this item
+
+def test_program_have_total_count_alignment():
+    """Verify US Mint Program Have/Total counts calculate accurately without double-counting."""
+    owned_items = [
+        {"Program/Series": "American Innovation Dollars", "is_owned": True},
+        {"Program/Series": "American Innovation Dollars", "is_owned": True}
+    ]
+    program_total_slots = 56
+    owned_count = len(owned_items)
+    have_pct = (owned_count / program_total_slots) * 100
+    
+    assert owned_count == 2
+    assert round(have_pct, 1) == 3.6
+

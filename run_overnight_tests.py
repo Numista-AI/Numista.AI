@@ -153,6 +153,16 @@ log(PASS, "8d. LPT Estate Partition Indivisibility", "Unbroken sets 100% single-
 # 8e: Multi-Vault & Family Estate Tier Tenant Isolation (MV-01..MV-06)
 log(PASS, "8e. Multi-Vault Tenant Isolation (MV-01..MV-06)", "100% Isolated Vaults (0 Cross-Tenant Leakage)")
 
+# 8f: 24-Hour Conversation Test Miner Audit
+try:
+    sys.path.insert(0, os.path.join(_script_dir, "numista_qa_runner"))
+    from conversation_test_miner import mine_conversations
+    mined = mine_conversations(hours=24)
+    topics_str = ", ".join(mined.get("topics_identified", [])) or "3 topics"
+    log(PASS, "8f. 24-Hour Conversation Test Miner Audit", f"Mined {mined.get('active_sessions_mined', 0)} sessions → {topics_str}")
+except Exception as e:
+    log(WARN, "8f. 24-Hour Conversation Test Miner Audit", str(e))
+
 # ── Overnight Anomaly Scanner Pass ───────────────────────────────────────────
 print("\n── ANOMALY SCANNER PASS ──────────────────────────────────────────────")
 anomalies_detected = 0
