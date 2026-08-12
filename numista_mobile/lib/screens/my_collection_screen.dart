@@ -252,6 +252,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     _fetchSpotPrices();
     _fetchCompletionStats();
+
+    // Debounced search: 150ms after last keystroke before applying filter.
+    // Short enough to feel instant; long enough to avoid per-character rebuilds.
+    _searchCtrl.addListener(() {
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(Duration(milliseconds: 150), () {
+        if (mounted) {
+          setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
+          // Re-request focus after setState to guard against Flutter Web
+          // losing the active text field during the rebuild cycle.
+          _searchFocus.requestFocus();
+          // If Morgan is on Step 1 of the collection guide (the search-box
+          // tutorial step), advance to Step 2 now that the user has used search.
+          // This makes the guide reactive and prevents it from mysteriously
+          // disappearing due to Flutter web rebuild cycles.
+          _tryAdvanceMorganSearchStep();
+        }
+      });
+    });
   }
 
   Future<void> _loadSortPreferences() async {
@@ -311,25 +330,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (e) {
       debugPrint('[MyCollection] Error saving sort prefs: $e');
     }
-  }
-    // Debounced search: 150ms after last keystroke before applying filter.
-    // Short enough to feel instant; long enough to avoid per-character rebuilds.
-    _searchCtrl.addListener(() {
-      _searchDebounce?.cancel();
-      _searchDebounce = Timer(Duration(milliseconds: 150), () {
-        if (mounted) {
-          setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
-          // Re-request focus after setState to guard against Flutter Web
-          // losing the active text field during the rebuild cycle.
-          _searchFocus.requestFocus();
-          // If Morgan is on Step 1 of the collection guide (the search-box
-          // tutorial step), advance to Step 2 now that the user has used search.
-          // This makes the guide reactive and prevents it from mysteriously
-          // disappearing due to Flutter web rebuild cycles.
-          _tryAdvanceMorganSearchStep();
-        }
-      });
-    });
   }
 
   void _loadDefaultTab() async {
