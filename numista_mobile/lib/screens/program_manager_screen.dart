@@ -221,64 +221,70 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     }
   }
 
-  bool _isMatch(Map<String, dynamic> coinData, CoinProgram program, String coinName) {
+  bool _isMatch(Map<String, dynamic> coinData, CoinProgram program, ProgramCoin coinSlot) {
     final denom      = (coinData['Denomination']?.toString() ?? '').toLowerCase();
-    final progSeries = (coinData['Program/Series']?.toString() ?? '');
-    final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').toLowerCase();
-    final cNameLower = coinName.toLowerCase();
+    final progSeries = (coinData['Program/Series']?.toString() ?? '').trim();
+    final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').trim().toLowerCase();
+    final title      = (coinData['Title']?.toString() ?? coinData['name']?.toString() ?? coinData['official_title']?.toString() ?? '').trim().toLowerCase();
     final year       = coinData['Year']?.toString() ?? '';
+    final cNameLower = coinSlot.name.toLowerCase();
+    final slotYear   = coinSlot.year ?? '';
 
-    // ── 1. Multi-coin Mint / Uncirculated Set Matching ─────────────────────────
+    // ── 1. Check Multi-coin Mint / Uncirculated Set Matching ─────────────────────────
     if (denom == 'set' || progSeries.toLowerCase().contains('uncirculated set') || progSeries.toLowerCase().contains('proof set')) {
       final setContents = coinData['SetContents'] as List? ?? coinData['set_coins'] as List? ?? [];
-      final setStr = setContents.join(' ').toLowerCase() + ' ' + themeSub;
-      
-      // If set year matches program years or coin slot
-      if (year.isNotEmpty && (program.years.contains(year) || cNameLower.contains(year) || program.name.contains(year))) {
-        if (setStr.isNotEmpty && (setStr.contains(cNameLower) || cNameLower.contains(themeSub))) {
-          return true;
-        }
-        // General 2026 Mint Set matches 2026 circulating coin program slots
-        if (program.name.contains('2026') || program.name.contains('America250')) {
-          return true;
-        }
+      final setStr = setContents.join(' ').toLowerCase() + ' ' + themeSub + ' ' + title;
+      if (setStr.trim().isNotEmpty) {
+        if (cNameLower.isNotEmpty && setStr.contains(cNameLower)) return true;
       }
+      return false;
     }
 
     // ── 2. Denomination Guard for Single Coins ────────────────────────────────
     final expectedFamily = _expectedDenomFamily(program.name);
     if (!_denominationMatches(coinData, expectedFamily)) return false;
 
-    // ── 3. Program/Series match ───────────────────────────────────────────────
-    if (program.matchesDbSeries(progSeries)) {
-      // Direct slot name match (e.g. "Peace Dollar" -> "Peace Dollar", "American Silver Eagle" -> "American Silver Eagle")
-      if (cNameLower == progSeries.toLowerCase() ||
-          program.name.toLowerCase().contains(cNameLower) ||
-          cNameLower.contains(program.name.toLowerCase())) {
-        return true;
+    // ── 3. Program/Series Alignment Check ─────────────────────────────────────
+    bool isSeriesMatched = program.matchesDbSeries(progSeries);
+    if (!isSeriesMatched) {
+      if (program.id == '2026_semiquincentennial_currency' &&
+          (progSeries.toLowerCase().contains('2026') || progSeries.toLowerCase().contains('america250') || progSeries.toLowerCase().contains('semiquincentennial'))) {
+        isSeriesMatched = true;
+      } else if (program.id == 'washington_quarters_classic' &&
+          (progSeries.toLowerCase().contains('washington') || progSeries.toLowerCase().contains('quarter'))) {
+        isSeriesMatched = true;
       }
+    }
+    if (!isSeriesMatched) return false;
 
-      // Theme/Subject match
-      if (themeSub.isNotEmpty &&
-          (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) {
-        return true;
+    // ── 4. Multi-design vs Single-design Matching Rules ──────────────────────
+    const multiDesignProgramIds = {
+      'fifty_state_quarters', 'presidential_dollars', 'america_the_beautiful_quarters',
+      'american_women_quarters', 'american_innovation_dollars', '2026_semiquincentennial_currency',
+      '2026_semiquincentennial_collectibles', 'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
+    };
+
+    if (multiDesignProgramIds.contains(program.id) || program.name.contains('50 State') || program.name.contains('Presidential') || program.name.contains('America the Beautiful')) {
+      // Require design match
+      if (cNameLower.isNotEmpty && ((themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) ||
+                                    (title.isNotEmpty && (title.contains(cNameLower) || cNameLower.contains(title))))) {
+        if (slotYear.isEmpty || year.isEmpty || slotYear == year) {
+          return true;
+        }
       }
-
-      // Year match
-      if (year.isNotEmpty && (cNameLower.contains(year) || program.years.contains(year))) {
-        return true;
-      }
-
-      return true; // Program series matches
+      if (cNameLower.contains('lowell') && themeSub.contains('lowell')) return true;
+      if (cNameLower.contains('mayflower') && themeSub.contains('mayflower')) return true;
+      return false;
     }
 
-    // ── 4. Fallback: 2026 America250 & Specific Named Series ──────────────────
-    if ((program.name.contains('2026') || program.name.contains('America250')) && year == '2026') {
-      if (themeSub.contains(cNameLower) || cNameLower.contains(themeSub) ||
-          progSeries.toLowerCase().contains('semiquincentennial') ||
-          progSeries.toLowerCase().contains('america250')) {
-        return true;
-      }
+    // Single-design series (Roosevelt Dimes, Morgan, Peace, SBA, Sacagawea, etc.)
+    if (slotYear.isNotEmpty && year.isNotEmpty) {
+      return slotYear == year;
+    }
+
+    if (cNameLower.isNotEmpty && ((themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) ||
+                                  (title.isNotEmpty && (title.contains(cNameLower) || cNameLower.contains(title))))) {
+      return true;
     }
 
     return false;
@@ -377,7 +383,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         totalCount++;
                         bool isMatched = false;
                         for (var doc in docs) {
-                          if (_isMatch(doc.data() as Map<String, dynamic>, prog, coin.name)) {
+                          if (_isMatch(doc.data() as Map<String, dynamic>, prog, coin)) {
                             isMatched = true;
                             break;
                           }
@@ -553,7 +559,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       totalCount++;
       bool isMatched = false;
       for (var doc in docs) {
-        if (_isMatch(doc.data() as Map<String, dynamic>, program, coin.name)) {
+        if (_isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
           isMatched = true;
           break;
         }
@@ -1055,7 +1061,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 // Search for match
                 QueryDocumentSnapshot? matchedDoc;
                 for (var doc in docs) {
-                  if (_isMatch(doc.data() as Map<String, dynamic>, program, coinName)) {
+                  if (_isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
                     matchedDoc = doc;
                     break;
                   }
