@@ -2721,7 +2721,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           final hasActive = showObv ? hasObv : hasRev;
 
           return Dialog(
-            backgroundColor: Colors.white,
+            backgroundColor: _surface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             insetPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: ConstrainedBox(
@@ -2744,38 +2744,24 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     Text('Coin Inspector -- $title',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
                     Spacer(),
-                    // Google Images search
-                    Tooltip(
-                      message: 'Opens Google Images: searches for this coin',
-                      child: OutlinedButton.icon(
-                        onPressed: () => _onSearchGoogle(data),
-                        icon: Icon(Icons.image_search, size: 15),
-                        label: Text('Google Images'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _text, side: BorderSide(color: _border),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: TextStyle(fontSize: 12),
+                    // Google Images search — only shown when no photo is active
+                    if (!hasActive && refFuture != null) ...[
+                      Tooltip(
+                        message: 'Opens Google Images: searches for this coin',
+                        child: OutlinedButton.icon(
+                          onPressed: () => _onSearchGoogle(data),
+                          icon: Icon(Icons.image_search, size: 15),
+                          label: Text('Google Images'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _text, side: BorderSide(color: _border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            textStyle: TextStyle(fontSize: 12),
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 8),
-                    // eBay search -- opens eBay in browser
-                    Tooltip(
-                      message: 'Search eBay sold listings for this coin',
-                      child: ElevatedButton.icon(
-                        onPressed: () => _onSearchEbay(data),
-                        icon: Icon(Icons.shopping_cart_outlined, size: 15),
-                        label: Text('eBay Search'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _accent, foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
+                      SizedBox(width: 8),
+                    ],
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
                       icon: Icon(Icons.close, size: 20, color: _subtext),
@@ -3042,9 +3028,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           _ebayPrices[_selectedCoinId] ?? 'Check >',
           Color(0xFFE53935),
           Icons.shopping_cart_outlined,
-          onTap: _ebayPrices[_selectedCoinId] != null
-              ? null
-              : () => _onCheckEbay(data),
+          onTap: () => _onSearchEbay(data),
       )),
     ]);
   }
