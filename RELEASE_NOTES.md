@@ -57,6 +57,42 @@
 
 
 
+
+
+
+
+
+## v4.55 — 2026-08-12
+**Collection Enhancements & Platform Updates**
+
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+
+## v4.54 — 2026-08-12
+**Coins Enhancements & Platform Updates**
+
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.53 — 2026-08-12
+**Coins Enhancements & Platform Updates**
+
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.52 — 2026-08-12
+**Qa Enhancements & Platform Updates**
+
+- Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.51 — 2026-08-12
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
 ## v4.50 — 2026-08-12
 **Qa Enhancements & Platform Updates**
 

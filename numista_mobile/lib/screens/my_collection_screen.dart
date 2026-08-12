@@ -1,9 +1,9 @@
 import 'dart:io' show File;
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -794,6 +794,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 // Column visibility toggle (only relevant when table is visible)
                 if (!_isCardView) ...[
                   _columnToggleButton(),
+                  const SizedBox(width: 12),
+                  _buildPanButtonsToolbar(),
                   const SizedBox(width: 12),
                 ],
                 ElevatedButton.icon(
@@ -1906,6 +1908,89 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
+  void _toggleColumnVisibility(bool showOnlyPopulated) {
+    setState(() {
+      _showOnlyPopulated = showOnlyPopulated;
+    });
+    // Event-driven post-frame offset correction when maxScrollExtent shrinks
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_tvHorizCtrl.hasClients &&
+          _tvHorizCtrl.position.hasContentDimensions &&
+          _tvHorizCtrl.offset > _tvHorizCtrl.position.maxScrollExtent) {
+        _tvHorizCtrl.jumpTo(_tvHorizCtrl.position.maxScrollExtent);
+      }
+    });
+  }
+
+  void _panTable(bool scrollRight) {
+    if (!_tvHorizCtrl.hasClients || !_tvHorizCtrl.position.hasContentDimensions) return;
+    final double viewport = _tvHorizCtrl.position.viewportDimension;
+    final double panDelta = viewport * 0.6; // Viewport-relative step size
+    final double maxExtent = _tvHorizCtrl.position.maxScrollExtent;
+    final double currentOffset = _tvHorizCtrl.offset;
+    final double targetOffset = scrollRight
+        ? (currentOffset + panDelta).clamp(0.0, maxExtent)
+        : (currentOffset - panDelta).clamp(0.0, maxExtent);
+
+    _tvHorizCtrl.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Widget _buildPanButtonsToolbar() {
+    return ListenableBuilder(
+      listenable: _tvHorizCtrl,
+      builder: (context, _) {
+        final bool canScroll = _tvHorizCtrl.hasClients &&
+            _tvHorizCtrl.position.hasContentDimensions &&
+            _tvHorizCtrl.position.maxScrollExtent > 0;
+        final bool canScrollLeft = canScroll && _tvHorizCtrl.offset > 0;
+        final bool canScrollRight = canScroll && _tvHorizCtrl.offset < _tvHorizCtrl.position.maxScrollExtent;
+
+        return Focus(
+          autofocus: false,
+          onKeyEvent: (node, event) {
+            if (!canScroll) return KeyEventResult.ignored;
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              _panTable(false);
+              return KeyEventResult.handled;
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+              _panTable(true);
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: _border),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                  tooltip: 'Pan Left (←)',
+                  onPressed: canScrollLeft ? () => _panTable(false) : null,
+                  visualDensity: VisualDensity.compact,
+                ),
+                Container(width: 1, height: 20, color: _border),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                  tooltip: 'Pan Right (→)',
+                  onPressed: canScrollRight ? () => _panTable(true) : null,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // --- Column visibility toggle button -------------------------------------
   Widget _columnToggleButton() {
     return Container(
@@ -1918,7 +2003,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           label: 'Only with data',
           icon: Icons.filter_alt_outlined,
           active: _showOnlyPopulated,
-          onTap: () => setState(() => _showOnlyPopulated = true),
+          onTap: () => _toggleColumnVisibility(true),
           isLeft: true,
         ),
         Container(width: 1, height: 36, color: _border),
@@ -1926,7 +2011,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           label: 'All columns',
           icon: Icons.view_column_outlined,
           active: !_showOnlyPopulated,
-          onTap: () => setState(() => _showOnlyPopulated = false),
+          onTap: () => _toggleColumnVisibility(false),
           isLeft: false,
         ),
       ]),
@@ -1979,15 +2064,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     const double dataH      = 44.0;
     const double colPadding = 8.0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: _surface,
-          border: Border.all(color: _border),
-          borderRadius: BorderRadius.circular(8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _TopScrollbarTrackWidget(
+          controller: _tvHorizCtrl,
+          accentColor: _accent,
+          trackColor: _border.withAlpha(80),
         ),
-        child: TableView.builder(
+        const SizedBox(height: 6),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: _surface,
+                border: Border.all(color: _border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
             verticalDetails: ScrollableDetails.vertical(
@@ -2213,11 +2308,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               ),
             );
           }
-        },       // TableView.builder
-        ),       // DecoratedBox
-      ),         // ClipRRect
-    );
+        },
+      ),         // TableView.builder
+    ),           // DecoratedBox
+  ),             // ClipRRect
+),               // Expanded
+],
+);
   }
+
+
 
   Widget _buildCardGrid(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
     return GridView.builder(
@@ -4664,6 +4764,117 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
           child: const Text('Close', style: TextStyle(color: Colors.white70)),
         ),
       ],
+    );
+  }
+}
+
+// --- Custom Top Scrollbar Track Widget ----------------------------------------
+class _TopScrollbarTrackWidget extends StatefulWidget {
+  final ScrollController controller;
+  final Color accentColor;
+  final Color trackColor;
+
+  const _TopScrollbarTrackWidget({
+    super.key,
+    required this.controller,
+    required this.accentColor,
+    required this.trackColor,
+  });
+
+  @override
+  State<_TopScrollbarTrackWidget> createState() => _TopScrollbarTrackWidgetState();
+}
+
+class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
+  double? _dragStartLocalX;
+  double? _dragStartScrollOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        if (!widget.controller.hasClients ||
+            !widget.controller.position.hasContentDimensions ||
+            widget.controller.position.maxScrollExtent <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        final double maxExtent = widget.controller.position.maxScrollExtent;
+        final double viewport = widget.controller.position.viewportDimension;
+        final double offset = widget.controller.offset.clamp(0.0, maxExtent);
+
+        final double totalContent = maxExtent + viewport;
+        final double thumbRatio = (viewport / totalContent).clamp(0.1, 0.9);
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final double trackWidth = constraints.maxWidth;
+            final double thumbWidth = (trackWidth * thumbRatio).clamp(36.0, trackWidth);
+            final double maxThumbOffset = trackWidth - thumbWidth;
+            final double scrollRatio = maxExtent > 0 ? (offset / maxExtent).clamp(0.0, 1.0) : 0.0;
+            final double thumbLeft = scrollRatio * maxThumbOffset;
+
+            return SizedBox(
+              height: 24, // 24px hit target for easy mouse / touch interaction
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (details) {
+                  _dragStartLocalX = details.localPosition.dx;
+                  _dragStartScrollOffset = widget.controller.offset;
+                },
+                onHorizontalDragUpdate: (details) {
+                  if (maxThumbOffset <= 0 || _dragStartLocalX == null || _dragStartScrollOffset == null) return;
+                  final double deltaX = details.localPosition.dx - _dragStartLocalX!;
+                  final double scrollDelta = (deltaX / maxThumbOffset) * maxExtent;
+                  final double targetOffset = (_dragStartScrollOffset! + scrollDelta).clamp(0.0, maxExtent);
+                  widget.controller.jumpTo(targetOffset);
+                },
+                onHorizontalDragEnd: (_) {
+                  _dragStartLocalX = null;
+                  _dragStartScrollOffset = null;
+                },
+                onTapDown: (details) {
+                  if (maxThumbOffset <= 0) return;
+                  final double clickRatio = (details.localPosition.dx - thumbWidth / 2) / maxThumbOffset;
+                  final double targetOffset = (clickRatio * maxExtent).clamp(0.0, maxExtent);
+                  widget.controller.animateTo(
+                    targetOffset,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                  );
+                },
+                child: Center(
+                  child: Container(
+                    height: 8, // 8px visual track
+                    width: trackWidth,
+                    decoration: BoxDecoration(
+                      color: widget.trackColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: thumbLeft,
+                          width: thumbWidth,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: widget.accentColor,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

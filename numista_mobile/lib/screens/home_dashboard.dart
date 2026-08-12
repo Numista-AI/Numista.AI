@@ -1520,10 +1520,61 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.55',
+    date: '2026-08-12',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Collection: implement crash-proof top scrollbar track and viewport pan buttons',
+    ],
+  ),
+  _Release(
+    version: 'v4.54',
+    date: '2026-08-12',
+    description: 'Coins Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Coins: remove unused _faceValue helper',
+      'Coins: enforce unified collection model, country normalization & non-legal tender tab',
+      'Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.53',
+    date: '2026-08-12',
+    description: 'Coins Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Coins: enforce unified collection model, country normalization & non-legal tender tab',
+      'Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.52',
+    date: '2026-08-12',
+    description: 'Qa Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Qa: integrate run_overnight_tests.py and set Windows Task Scheduler to 6:00 AM daily',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.51',
+    date: '2026-08-12',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.50',
     date: '2026-08-12',
     description: 'Qa Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Qa: update Playwright selector in 15-domain-completeness.spec.js',
       'Qa: implement legal-grade domain completeness and QC suite v5',
