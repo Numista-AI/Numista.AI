@@ -12,9 +12,15 @@ import 'auth_service.dart';
 /// security blocks in HTTPS browsers.
 /// Live status POLLING still uses localhost:5000 Flask.
 class HardwareService {
-  static const String _statusUrl    = 'https://localhost:8443/get-status';
-  static const String _pairUrl      = 'https://localhost:8443/pair';
-  static const String _baseUrl      = 'https://localhost:8443';
+  static const List<String> _baseUrls = [
+    'https://localhost:8443',
+    'https://localhost:5000',
+  ];
+  static String _activeBaseUrl = _baseUrls[0];
+
+  static String get _statusUrl => '$_activeBaseUrl/get-status';
+  static String get _pairUrl => '$_activeBaseUrl/pair';
+  static String get _baseUrl => _activeBaseUrl;
 
   static final HardwareService _instance = HardwareService._internal();
   factory HardwareService() => _instance;
@@ -23,23 +29,25 @@ class HardwareService {
   // ─── Pair Agent ───────────────────────────────────────────────────────────
   /// Posts to /pair on the local hardware server to auto-pair the agent.
   Future<bool> pairAgent(String userEmail) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse(_pairUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': userEmail}),
-          )
-          .timeout(const Duration(seconds: 3));
-      if (response.statusCode == 200) {
-        debugPrint('[HW] ✅ Agent paired successfully');
-        return true;
+    for (final base in _baseUrls) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$base/pair'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'email': userEmail}),
+            )
+            .timeout(const Duration(seconds: 2));
+        if (response.statusCode == 200) {
+          _activeBaseUrl = base;
+          debugPrint('[HW] ✅ Agent paired successfully on $base');
+          return true;
+        }
+      } catch (e) {
+        debugPrint('[HW] /pair failed on $base: $e');
       }
-      return false;
-    } catch (e) {
-      debugPrint('[HW] /pair failed: $e');
-      return false;
     }
+    return false;
   }
 
   // ─── Start Scan ───────────────────────────────────────────────────────────
@@ -95,31 +103,40 @@ class HardwareService {
   /// Polls the local Flask server for real-time capture progress.
   /// Returns null if the agent is not reachable (server offline).
   Future<HardwareStatus?> getStatus() async {
-    try {
-      final response = await http
-          .get(Uri.parse(_statusUrl))
-          .timeout(const Duration(seconds: 3));
+    for (final base in _baseUrls) {
+      try {
+        final response = await http
+            .get(Uri.parse('$base/get-status'))
+            .timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return HardwareStatus.fromJson(json);
+        if (response.statusCode == 200) {
+          _activeBaseUrl = base;
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          return HardwareStatus.fromJson(json);
+        }
+      } catch (_) {
+        // Probe next base URL
       }
-    } catch (_) {
-      // Server not running or unreachable — caller handles null gracefully
     }
     return null;
   }
 
   // ─── Server Health Check ──────────────────────────────────────────────────
   Future<bool> isServerRunning() async {
-    try {
-      final resp = await http
-          .get(Uri.parse(_statusUrl))
-          .timeout(const Duration(seconds: 2));
-      return resp.statusCode == 200;
-    } catch (_) {
-      return false;
+    for (final base in _baseUrls) {
+      try {
+        final resp = await http
+            .get(Uri.parse('$base/get-status'))
+            .timeout(const Duration(seconds: 2));
+        if (resp.statusCode == 200) {
+          _activeBaseUrl = base;
+          return true;
+        }
+      } catch (_) {
+        // Probe next
+      }
     }
+    return false;
   }
 
   // ─── Live Frame ───────────────────────────────────────────────────────────

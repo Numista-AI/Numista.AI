@@ -352,16 +352,15 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
           // Explainer
           const Text(
-            'To use the Microscope Scanner, install the free Desktop Agent on this computer.',
-            style: TextStyle(color: _charcoal, fontSize: 14, height: 1.5),
+            'Using a digital USB microscope? Download the Desktop Agent below to connect it to Numista.AI.',
+            style: TextStyle(color: _charcoal, fontSize: 14, fontWeight: FontWeight.bold, height: 1.5),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'The Desktop Agent runs silently in your system tray and bridges your '  
-            'USB microscope to numista.ai over a local HTTPS connection. '
-            'Install takes about 30 seconds.',
+            'Using phone/webcam or photo file upload? You do not need to download anything.\n'
+            'The Desktop Agent runs silently in your system tray to bridge USB hardware over local HTTPS.',
             style: TextStyle(
-              color: _charcoal.withValues(alpha: 0.6),
+              color: _charcoal.withValues(alpha: 0.7),
               fontSize: 12,
               height: 1.5,
             ),
