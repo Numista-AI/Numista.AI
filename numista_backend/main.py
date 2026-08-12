@@ -4321,6 +4321,24 @@ def _get_pcgs_token() -> Optional[str]:
 # PCGS cert lookup endpoint extracted to routes/pcgs_routes.py
 
 
+US_ALLOW_LIST = {
+    "united states", "usa", "us", "united states of america", "u.s.", "u.s.a.", 
+    "united states mint", "puerto rico", "guam", "u.s. virgin islands", "usvi", 
+    "american samoa", "northern mariana islands", "confederate states", "csa", "us philippines"
+}
+
+def _normalize_country_metadata(raw_country: str) -> tuple:
+    if not raw_country or not str(raw_country).strip():
+        return "", True, True  # country="", is_foreign=True, review_needed=True
+
+    clean = str(raw_country).strip()
+    clean_lower = clean.lower()
+
+    if clean_lower in US_ALLOW_LIST:
+        return "United States", False, False
+
+    return clean, True, False
+
 # +==============================================================================+
 # |  AI PHOTO IDENTIFIER -- POST /api/identify_coin_photo                        |
 # |  Two-pass Gemini coin identification from user-uploaded obverse + reverse    |
@@ -4539,9 +4557,16 @@ async def identify_coin_photo(
     if "presidential" in str(resolved_series).lower():
         resolved_theme = _normalize_presidential_theme(resolved_theme, override_year or final_year)
 
+    raw_c = pass1.get("country", "")
+    norm_c, is_frn, rev_need = _normalize_country_metadata(raw_c)
+
     ai_coin = {
         "Year":           override_year    or final_year,
-        "Country":        pass1.get("country", "USA"),
+        "Country":        norm_c or "United States",
+        "country":        norm_c,
+        "is_foreign":     is_frn,
+        "review_needed":  rev_need,
+        "country_normalized_at": datetime.now(timezone.utc).isoformat(),
         "Denomination":   override_denom   or final_denom,
         "Program/Series": resolved_series,
         "Theme/Subject":  resolved_theme,

@@ -135,6 +135,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // _inspectorSimilarCoinId removed — tracking via _selectedCoinId is sufficient
 
 
+  // --- Coin origin filter state ('All', 'U.S.', 'World') ------------------
+  String _coinOriginFilter = 'All';
+
   // --- Live spot prices (fetched once on mount, same endpoint as dashboard) --
   Map<String, double> _spotPrices = {};
   Map<String, dynamic> _completionStats = {};
@@ -501,8 +504,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       return parentSetId.isEmpty;
     }).toList();
 
-    if (_searchQuery.isEmpty) return visible;
-    return visible.where((doc) {
+    const usAllowList = {
+      'united states', 'usa', 'us', 'united states of america', 'u.s.', 'u.s.a.',
+      'united states mint', 'puerto rico', 'guam', 'u.s. virgin islands', 'usvi',
+      'american samoa', 'northern mariana islands', 'confederate states', 'csa', 'us philippines'
+    };
+
+    final originFiltered = visible.where((doc) {
+      if (_coinOriginFilter == 'All') return true;
+      final m = (doc.data() as Map<String, dynamic>?) ?? {};
+      // Primary boolean check with migration shim fallback for legacy un-patched docs
+      final isForeign = (m['is_foreign'] as bool?) ??
+          (!usAllowList.contains((m['country'] ?? m['Country'] ?? '').toString().toLowerCase().trim()));
+
+      if (_coinOriginFilter == 'World') return isForeign;
+      if (_coinOriginFilter == 'U.S.') return !isForeign;
+      return true;
+    }).toList();
+
+    if (_searchQuery.isEmpty) return originFiltered;
+    return originFiltered.where((doc) {
       final m = (doc.data() as Map<String, dynamic>?) ?? {};
       return [
         _F.year,
@@ -686,6 +707,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         );
       case 'Currency':
         return CurrencyCollectionScreen(showAppBar: false);
+      case 'Non-Legal Tender':
       case 'World & Specialty':
         return _buildWorldItemsTab();
       case 'All':
@@ -706,11 +728,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         _buildStatsRow(docs, advanced: advanced),
         SizedBox(height: 16),
 
-        // Toolbar: view toggle + column visibility toggle + AI Report button
+        // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Card / Table View Toggle
+            // Origin Sub-Filter Chips (All | U.S. | World)
             Container(
               decoration: BoxDecoration(
                 border: Border.all(color: _border),
@@ -720,40 +742,78 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _toggleSegment(
-                    label: 'Table',
-                    icon: Icons.table_chart_outlined,
-                    active: !_isCardView,
-                    onTap: () => setState(() => _isCardView = false),
+                    label: 'All Coins',
+                    icon: Icons.public,
+                    active: _coinOriginFilter == 'All',
+                    onTap: () => setState(() => _coinOriginFilter = 'All'),
                     isLeft: true,
                   ),
                   _toggleSegment(
-                    label: 'Cards',
-                    icon: Icons.grid_view_outlined,
-                    active: _isCardView,
-                    onTap: () => setState(() => _isCardView = true),
+                    label: 'U.S.',
+                    icon: Icons.flag_outlined,
+                    active: _coinOriginFilter == 'U.S.',
+                    onTap: () => setState(() => _coinOriginFilter = 'U.S.'),
+                    isLeft: false,
+                  ),
+                  _toggleSegment(
+                    label: 'World',
+                    icon: Icons.language,
+                    active: _coinOriginFilter == 'World',
+                    onTap: () => setState(() => _coinOriginFilter = 'World'),
                     isLeft: false,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            // Column visibility toggle (only relevant when table is visible)
-            if (!_isCardView) ...[
-              _columnToggleButton(),
-              const SizedBox(width: 12),
-            ],
-            ElevatedButton.icon(
-              onPressed: () => _showGenerateReportModal(),
-              icon: const Icon(Icons.auto_awesome, size: 16),
-              label: const Text('Generate AI Report Now'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF63366),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4)),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-              ),
+
+            Row(
+              children: [
+                // Card / Table View Toggle
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _border),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _toggleSegment(
+                        label: 'Table',
+                        icon: Icons.table_chart_outlined,
+                        active: !_isCardView,
+                        onTap: () => setState(() => _isCardView = false),
+                        isLeft: true,
+                      ),
+                      _toggleSegment(
+                        label: 'Cards',
+                        icon: Icons.grid_view_outlined,
+                        active: _isCardView,
+                        onTap: () => setState(() => _isCardView = true),
+                        isLeft: false,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Column visibility toggle (only relevant when table is visible)
+                if (!_isCardView) ...[
+                  _columnToggleButton(),
+                  const SizedBox(width: 12),
+                ],
+                ElevatedButton.icon(
+                  onPressed: () => _showGenerateReportModal(),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('Generate AI Report Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF63366),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -944,7 +1004,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               Colors.green,
                             ),
                             _buildDashboardCard(
-                              'World & Specialty',
+                              'Non-Legal Tender',
                               'OTHER ITEMS',
                               '$worldCount Items',
                               'Valued at \$${worldValue.toStringAsFixed(2)}',
@@ -4395,7 +4455,7 @@ class MyCollectionSegmentedControl extends StatelessWidget {
     final textColor = isDark ? Colors.white70 : Color(0xFF475569);
     final activeTextColor = isDark ? Colors.white : Color(0xFF0F172A);
 
-    final tabs = ['All', 'Coins', 'Currency', 'World & Specialty'];
+    final tabs = ['All', 'Coins', 'Currency', 'Non-Legal Tender'];
 
     return Container(
       padding: EdgeInsets.all(4),
