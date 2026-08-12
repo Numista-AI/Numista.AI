@@ -129,7 +129,9 @@ class _DesktopAgentDownloadScreenState
       body: SingleChildScrollView(
         child: Column(
           children: [
+            _buildMorganGuidanceBanner(),
             _buildHero(),
+            _buildPrivacyCard(),
             _buildStatusBanner(),
             _buildDiagnosticsCard(),
             _buildSteps(),
@@ -142,11 +144,126 @@ class _DesktopAgentDownloadScreenState
     );
   }
 
+  // ─── MORGAN Guidance Banner ───────────────────────────────────────────────
+  Widget _buildMorganGuidanceBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _gold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _gold.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: _gold,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.smart_toy_rounded, color: Colors.black, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'MORGAN — AI Assistant Guidance',
+                  style: TextStyle(
+                    color: _gold,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(color: _white, fontSize: 13, height: 1.5),
+                    children: [
+                      TextSpan(
+                        text: 'Using a digital USB microscope? ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text:
+                            'Download the Desktop Agent below to capture high-res images directly into Numista.AI.\n',
+                      ),
+                      TextSpan(
+                        text: 'Using phone/webcam or file upload? ',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: _warningAmber),
+                      ),
+                      TextSpan(
+                        text: 'You do ',
+                      ),
+                      TextSpan(
+                        text: 'not',
+                        style: TextStyle(fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                      ),
+                      TextSpan(
+                        text: ' need to download anything.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Privacy Card ─────────────────────────────────────────────────────────
+  Widget _buildPrivacyCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF162032),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _electricBlue.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.shield_rounded, color: _successGreen, size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Privacy & Security Disclosure',
+                  style: TextStyle(
+                    color: _white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'We are dedicated to keeping this website as anonymous and extra secure as possible. '
+                  'We do not process any credit card transactions (a 3rd party, Stripe does), '
+                  'so we will never ask you for your credit card. If someone says they are us and asks for your credit card, '
+                  'DO NOT GIVE IT TO THEM! If someone says they are us and wants to know your address, DO NOT GIVE IT TO THEM!',
+                  style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Hero ──────────────────────────────────────────────────────────────────
   Widget _buildHero() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 32),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -157,35 +274,35 @@ class _DesktopAgentDownloadScreenState
       child: Column(
         children: [
           Container(
-            width: 88,
-            height: 88,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _gold.withValues(alpha: 0.15),
               border: Border.all(color: _gold.withValues(alpha: 0.5), width: 2),
             ),
-            child: const Icon(Icons.lens_rounded, color: _gold, size: 48),
+            child: const Icon(Icons.lens_rounded, color: _gold, size: 36),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Text(
             'Numista.AI Desktop Agent',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: _white,
-              fontSize: 34,
+              fontSize: 28,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             'The local hardware bridge between your USB microscope and numista.ai.\n'
             'Install once in 30 seconds — runs silently in your system tray.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: _muted,
-              fontSize: 15,
-              height: 1.6,
+              fontSize: 14,
+              height: 1.4,
             ),
           ),
         ],
@@ -547,7 +664,7 @@ class _DesktopAgentDownloadScreenState
               onPressed: () => _launchUrl(_kWindowsInstallerUrl),
               icon: const Icon(Icons.download_rounded, size: 24),
               label: const Text(
-                '⊞  Download Setup Installer (.exe)',
+                '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -564,15 +681,32 @@ class _DesktopAgentDownloadScreenState
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Direct Standalone Exe Link
-          OutlinedButton.icon(
-            onPressed: () => _launchUrl(_kWindowsStandaloneUrl),
-            icon: const Icon(Icons.description_outlined, size: 18),
-            label: const Text('Download Standalone Binary (numista-agent.exe)'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _muted,
-              side: BorderSide(color: Colors.white24),
+          const SizedBox(height: 16),
+          // ─── Windows SmartScreen Helper Card ──────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _warningAmber.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.shield_outlined, color: _warningAmber, size: 20),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'If Windows shows "Windows protected your PC":\n'
+                    'Step 1: Click "More info"   ➔   Step 2: Click "Run anyway"',
+                    style: TextStyle(
+                      color: _white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),

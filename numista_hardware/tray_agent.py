@@ -307,29 +307,38 @@ def _start_agent():
     logging.info("[TRAY] Idle preview thread launched.")
 
     import ssl as _ssl
-    if os.path.exists(cert) and os.path.exists(key):
-        ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
-        ctx.load_cert_chain(cert, key)
-        logging.info(f"[TRAY] SSL cert loaded ({cert}) — serving HTTPS on port 5000")
-        try:
-            auto_capture.app.run(
-                host="0.0.0.0", port=5000,
-                debug=False, use_reloader=False,
-                threaded=True,
-                ssl_context=ctx,
-            )
-        except Exception as e:
-            logging.error(f"[TRAY] Flask (HTTPS) error: {e}", exc_info=True)
-    else:
-        logging.warning("[TRAY] Serving HTTP on port 5000")
-        try:
-            auto_capture.app.run(
-                host="0.0.0.0", port=5000,
-                debug=False, use_reloader=False,
-                threaded=True,
-            )
-        except Exception as e:
-            logging.error(f"[TRAY] Flask (HTTP) error: {e}", exc_info=True)
+    ports_to_try = [8443, 5000]
+    bound = False
+    for port in ports_to_try:
+        if os.path.exists(cert) and os.path.exists(key):
+            ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+            ctx.load_cert_chain(cert, key)
+            logging.info(f"[TRAY] SSL cert loaded ({cert}) — serving HTTPS on port {port}")
+            try:
+                auto_capture.app.run(
+                    host="0.0.0.0", port=port,
+                    debug=False, use_reloader=False,
+                    threaded=True,
+                    ssl_context=ctx,
+                )
+                bound = True
+                break
+            except Exception as e:
+                logging.warning(f"[TRAY] Could not bind Flask HTTPS on port {port}: {e}")
+        else:
+            logging.warning(f"[TRAY] Serving HTTP on port {port}")
+            try:
+                auto_capture.app.run(
+                    host="0.0.0.0", port=port,
+                    debug=False, use_reloader=False,
+                    threaded=True,
+                )
+                bound = True
+                break
+            except Exception as e:
+                logging.warning(f"[TRAY] Could not bind Flask HTTP on port {port}: {e}")
+    if not bound:
+        logging.error("[TRAY] Failed to bind Flask server on ports 8443 and 5000.")
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
