@@ -2422,38 +2422,39 @@ def batch_add_coins(user_email: str, coins: list) -> dict:
     """
     Executes batch addition of multiple coins to user's collection in a single turn.
     """
-    results = []
-    success_count = 0
-    for coin_item in coins:
-        try:
-            res = execute_add_coin(
-                user_email=user_email,
-                year=str(coin_item.get("year", "")),
-                denomination=str(coin_item.get("denomination", "")),
-                mint_mark=str(coin_item.get("mint_mark", "")),
-                program_series=str(coin_item.get("program_series", "")),
-                theme_subject=str(coin_item.get("theme_subject", "")),
-                variety=str(coin_item.get("variety", "")),
-                storage_location=str(coin_item.get("storage_location", "")),
-                condition=str(coin_item.get("condition", "")),
-                cost=str(coin_item.get("cost", "")),
-                provenance=str(coin_item.get("provenance", "")),
-                raw_utterance=str(coin_item.get("raw_utterance", "")),
-                personal_notes=str(coin_item.get("personal_notes", "")),
-                quantity=int(coin_item.get("quantity", 1))
-            )
-            results.append(res)
-            if res.get("status") == "success":
-                success_count += 1
-        except Exception as e:
-            results.append({"status": "error", "error": str(e)})
+    try:
+        results = []
+        success_count = 0
+        for coin_item in coins:
+            try:
+                res = execute_add_coin(
+                    user_email=user_email,
+                    year=str(coin_item.get("year", "")),
+                    denomination=str(coin_item.get("denomination", "")),
+                    mint_mark=str(coin_item.get("mint_mark", "")),
+                    program_series=str(coin_item.get("program_series", "")),
+                    theme_subject=str(coin_item.get("theme_subject", "")),
+                    variety=str(coin_item.get("variety", "")),
+                    storage_location=str(coin_item.get("storage_location", "")),
+                    condition=str(coin_item.get("condition", "")),
+                    cost=str(coin_item.get("cost", "")),
+                    provenance=str(coin_item.get("provenance", "")),
+                    raw_utterance=str(coin_item.get("raw_utterance", "")),
+                    personal_notes=str(coin_item.get("personal_notes", "")),
+                    quantity=int(coin_item.get("quantity", 1))
+                )
+                results.append(res)
+                if res.get("status") == "success":
+                    success_count += 1
+            except Exception as e:
+                results.append({"status": "error", "error": str(e)})
 
-    return {
-        "status": "success",
-        "added_count": success_count,
-        "total_requested": len(coins),
-        "results": results
-    }
+        return {
+            "status": "success",
+            "added_count": success_count,
+            "total_requested": len(coins),
+            "results": results
+        }
     except Exception:
         logger.exception("Error executing add_coin")
         return {"action": "add_coin", "status": "error", "message": "Failed to add coin. Please try again."}
