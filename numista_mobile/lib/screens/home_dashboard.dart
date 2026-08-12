@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.61',
+    date: '2026-08-12',
+    description: 'Catalog Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports',
+      'Agent: clean unused variables and getters',
+      'Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy',
+      'Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs',
+      'Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast',
+      'Collection: implement crash-proof top scrollbar track and viewport pan buttons',
+      'Coins: remove unused _faceValue helper',
+      'Coins: enforce unified collection model, country normalization & non-legal tender tab',
+    ],
+  ),
+  _Release(
     version: 'v4.60',
     date: '2026-08-12',
     description: 'Agent Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Agent: clean unused variables and getters',
       'Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy',
