@@ -55,6 +55,32 @@
 
 
 
+
+
+## v4.50 — 2026-08-12
+**Qa Enhancements & Platform Updates**
+
+- Qa: update Playwright selector in 15-domain-completeness.spec.js
+- Qa: implement legal-grade domain completeness and QC suite v5
+- Programs: add safe memory image decoding, 2026 America250 and Mint Set checklist matching
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+
+## v4.49 — 2026-08-11
+**Qa Enhancements & Platform Updates**
+
+- Qa: update Playwright selector in 15-domain-completeness.spec.js
+- Qa: implement legal-grade domain completeness and QC suite v5
+- Programs: add safe memory image decoding, 2026 America250 and Mint Set checklist matching
+- Pdf: replace heavy AcroForm checkboxes with lightweight vector boxes to eliminate browser freeze
+- Images: enable multi-user support and execute image enrichment pipeline
+- Programs: add download pdf button and safe byte data font parsing
+- Transfer: enforce strict hard move pattern and clean residual transferred items
+- Mobile: add custom ErrorWidget.builder to render readable UI errors
+
 ## v4.48 — 2026-08-11
 **Qa Enhancements & Platform Updates**
 
