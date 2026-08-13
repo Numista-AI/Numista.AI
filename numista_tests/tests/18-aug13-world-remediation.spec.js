@@ -4,8 +4,8 @@ const { test, expect } = require('@playwright/test');
 /**
  * 18 - 13 AUG 2026 World & Remediation Spec
  * Account Binding: READ-ONLY against eric.seaman@yahoo.com baseline
- * Validates [World] tab filtering, 2019-W Quarter fields, title formatting, 
- * acquisition cost basis ($0.00), Legislation tab, and Grade tooltip DOM keys.
+ * Validates [World] tab filtering for foreign coins, canonical schema fields for US 2019-W Quarter (America the Beautiful), 
+ * title formatting, acquisition cost basis ($0.00), Legislation tab, and Grade tooltip DOM keys.
  */
 
 test.describe('18 - 13 AUG 2026 World & Remediation E2E Suite', () => {
