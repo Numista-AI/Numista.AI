@@ -1458,7 +1458,7 @@ class _DetailsTab extends StatelessWidget {
       ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
       ('Mint Mark', coin.mintMark),
       ('Denomination', _fmtDenomination(coin.denomination)),
-      ('Program / Series', coin.programSeries.isEmpty ? (coin.isForeign ? 'Standard Circulation' : '') : coin.programSeries),
+      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries),
       ('Theme / Subject', coin.themeSubject),
       ('Variety / Error', coin.variety),
       ('Condition', coin.condition),
