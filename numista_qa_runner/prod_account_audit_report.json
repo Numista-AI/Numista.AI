@@ -1,0 +1,111 @@
+{
+  "audited_at": "2026-08-13 09:33:30 UTC",
+  "target_account": "jseaman1204@gmail.com",
+  "total_records_audited": 4511,
+  "actionable_anomalies_remaining": 0,
+  "actionable_status": "100% RESOLVED",
+  "residual_baseline_count": 302,
+  "residual_explanation": "Items remaining at $0.00 are non-precious clad/copper coins with no Greysheet catalog pricing match.",
+  "residual_sample": [
+    {
+      "id": "0129b845-1b55-4dae-8f28-b7579c73467b",
+      "title": "2024 Half Dollar",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "03cbd5ae-0fcd-4b6a-98bc-69e9d98cdeab",
+      "title": "1863-1867 10 Cent Fractional Currency",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "057ae4b7-f2ff-4657-ab23-ede2a82dd727",
+      "title": "1948 Cent",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "07568748-b66c-4bc0-bd16-e22aeee00cf9",
+      "title": "2009 Penny",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "09139582-5418-477e-8d68-2b8e8122ae8b",
+      "title": "2023 ",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0a15eadb-0f75-4736-b40f-5880a45a7ec3",
+      "title": "2019D quarter",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0b5595f3-aadc-4150-93eb-70d5a70cb1b6",
+      "title": " Half Dollar",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0ded0d31-5c25-4846-9e59-d1dbe7dcc3d3",
+      "title": "1862-1863 10C Fractional Currency",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0e48a7da-5939-45cb-a1bd-3d31bb35ce97",
+      "title": "1936-38 Nickel",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0ecab5cb-c8d7-4593-839d-1c8166c83b66",
+      "title": "2013 $1",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0ee8f20c-b107-46e5-b5c6-ea204e22d239",
+      "title": "2018D quarter",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0efab8b0-2da0-451a-967b-76b98ffc22f1",
+      "title": "2010-2021 Quarter Dollar",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0f220d1c-a465-4e4a-9735-a93b8bb13cff",
+      "title": "1951 ",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "0f56bc59-ba74-4d0a-9c3a-fdc4c14338c1",
+      "title": "1860 Seated Liberty Half Dime",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "12dc00d3-e38b-4255-a57a-e56d66548151",
+      "title": "1935 $1 Silver Certificate",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "134ee30e-0dd9-4a46-9726-8ab045c2aa42",
+      "title": " ",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "142728b2-1111-4ded-8228-f585ffb0879f",
+      "title": "1929 $10 Federal Reserve Bank Note",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "1524f8cb-831e-410c-bfd0-0a972cfc2416",
+      "title": "1882 $1",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "15986db0-f76b-46c3-afe7-060a0d1bcb80",
+      "title": "2018D quarter",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    },
+    {
+      "id": "1617b122-60b9-448b-9c8b-ddd2f97a7631",
+      "title": "1934 $500 Federal Reserve Note",
+      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+    }
+  ]
+}

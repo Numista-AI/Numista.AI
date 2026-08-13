@@ -1,0 +1,314 @@
+{
+  "dry_run_at": "2026-08-13 09:32:48 UTC",
+  "target_account": "jseaman1204@gmail.com",
+  "total_records": 4511,
+  "actionable_repairs_staged": 2587,
+  "spot_matrix": {
+    "silver_per_oz": 31.5,
+    "gold_per_oz": 2650.0,
+    "platinum_per_oz": 980.0,
+    "frozen_at": "2026-08-13 09:32:45 UTC"
+  },
+  "staged_diffs_sample": [
+    {
+      "coin_id": "0002c0f9-9ea5-42d7-8697-a31353ffcb6d",
+      "title": "1954 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 24.36,
+        "estimated_value": 725.0
+      }
+    },
+    {
+      "coin_id": "003b311d-ec8b-45b2-bbb8-08815a6aea56",
+      "title": "1903 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 24.36,
+        "estimated_value": 775.0
+      }
+    },
+    {
+      "coin_id": "00782b45-c57a-4a62-be7f-c3165034b325",
+      "title": "1873 1 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 100.0
+      }
+    },
+    {
+      "coin_id": "008da8c2-349a-4327-a64d-60696e583824",
+      "title": "1867 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 38.0
+      }
+    },
+    {
+      "coin_id": "00a7aafd-c601-4be7-8f37-8388802c3e6e",
+      "title": "2024 Quarter Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 2.2
+      }
+    },
+    {
+      "coin_id": "00b0f765-479a-4c36-ae37-4a1cf94d15ae",
+      "title": "2023 Native American Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 3.0
+      }
+    },
+    {
+      "coin_id": "00f122aa-468d-4e58-8770-b566d27d33d5",
+      "title": "1958 Quarter",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 5.7,
+        "estimated_value": 15.0
+      }
+    },
+    {
+      "coin_id": "0128d3d8-2ab7-4782-b480-553f7e99b9cb",
+      "title": "1981 Susan B. Anthony Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 2.6
+      }
+    },
+    {
+      "coin_id": "0137c277-1ae2-4e4b-a127-f338e39bc1e3",
+      "title": "2022 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 365.0
+      }
+    },
+    {
+      "coin_id": "0162d870-8dfa-4b23-8822-09b0542bd6a6",
+      "title": " Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 40.0
+      }
+    },
+    {
+      "coin_id": "017c1baf-10b1-40bb-9bb5-3837d60d0acc",
+      "title": "1973 Five Cents",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 0.2
+      }
+    },
+    {
+      "coin_id": "0197b4f7-8795-4365-a0bd-98e5c60c4025",
+      "title": "1866 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 24.36,
+        "estimated_value": 155.0
+      }
+    },
+    {
+      "coin_id": "019ddf99-a6e4-4483-9769-aa8d1aa8357b",
+      "title": "1893 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 24.36,
+        "estimated_value": 130.0
+      }
+    },
+    {
+      "coin_id": "01cbe0fe-d000-4f30-9acf-aa818b3512d8",
+      "title": "1959 Quarter",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 5.7,
+        "estimated_value": 15.0
+      }
+    },
+    {
+      "coin_id": "01ce05c2-c3a3-4dd8-ae04-e9a1681a1fbc",
+      "title": "2003 Dime",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 0.2
+      }
+    },
+    {
+      "coin_id": "01de144f-2e8c-4c9d-a4f3-5a7b79019d58",
+      "title": "1946 ",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 7.88,
+        "estimated_value": 7.88
+      }
+    },
+    {
+      "coin_id": "023eccfd-4304-44dc-a511-ed589e7d54ce",
+      "title": "1849 Dime",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 2.28,
+        "estimated_value": 1200.0
+      }
+    },
+    {
+      "coin_id": "024f811e-8bb9-48a8-90ce-bf1699356108",
+      "title": "2023 Washington Quarter",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 2.2
+      }
+    },
+    {
+      "coin_id": "025d67c8-4c84-4db5-baa4-d7a8e7fafc64",
+      "title": "1912 Barber Silver Dimes",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 2.28,
+        "estimated_value": 7.5
+      }
+    },
+    {
+      "coin_id": "02a1632e-df62-4e2f-a236-563c3f1d37a0",
+      "title": "1974 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 9.96,
+        "estimated_value": 25.0
+      }
+    },
+    {
+      "coin_id": "03033f6c-a3e0-4811-bb40-9d663b35fbee",
+      "title": "1958 Dime",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 2.28,
+        "estimated_value": 6.25
+      }
+    },
+    {
+      "coin_id": "03170f77-8d20-4e19-9fec-da42a09008cd",
+      "title": "1954 Five Cents",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 0.4
+      }
+    },
+    {
+      "coin_id": "03368cca-ca64-4136-880f-eb79343fa80e",
+      "title": "1972 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 9.96,
+        "estimated_value": 5.5
+      }
+    },
+    {
+      "coin_id": "034ce35d-3e05-4e5a-89e8-9d0518874f95",
+      "title": "2002 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 24.36,
+        "estimated_value": 24.36
+      }
+    },
+    {
+      "coin_id": "0352e4b5-1c14-4553-97a7-b9b174c9d319",
+      "title": "1942 Five Cents",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 4.4
+      }
+    },
+    {
+      "coin_id": "03b000ab-6b06-4f5f-9065-4d6b0d219088",
+      "title": "1925 Nickel",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 5.5
+      }
+    },
+    {
+      "coin_id": "03c53251-46c7-4128-88b9-f1b6126141a8",
+      "title": "1936 Nickel",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 0.2
+      }
+    },
+    {
+      "coin_id": "040ab6db-378a-4e36-aff7-ee12f6cfc6c2",
+      "title": "1849 Half Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 60.0
+      }
+    },
+    {
+      "coin_id": "040bf1d4-7b35-4869-854c-4ff3e18b97da",
+      "title": "2025 Quarter Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 2.2
+      }
+    },
+    {
+      "coin_id": "044837d5-6886-4fad-b9bd-bb629396fcd2",
+      "title": "2012 Dollar",
+      "changes": {
+        "country": "United States",
+        "is_foreign": false,
+        "melt_value": 0.0,
+        "estimated_value": 3.1
+      }
+    }
+  ]
+}

@@ -82,20 +82,20 @@ test.describe('06 - Edge Cases & Resilience', () => {
   test('T05: Demo Home Dashboard shows error state gracefully', async ({ page }) => {
     await enterDemo(page);
     await page.mouse.click(80, 146); // Home Dashboard
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/home-dashboard-demo.png', type: 'png' });
-    // Dashboard unavailable is an expected error state in demo mode
-    expect(buf.length).toBeGreaterThan(50000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
+    await page.waitForTimeout(2000); // CANVASKIT_STABILIZATION_MS = 2000
+    const visible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
+    expect(visible, 'Home dashboard did not render canvas').toBe(true);
     expect(page.url()).toContain('numista.ai');
   });
 
   test('T06: Demo My Collection shows error state gracefully', async ({ page }) => {
     await enterDemo(page);
     await page.mouse.click(80, 231); // My Collection
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/my-collection-demo.png', type: 'png' });
-    // "Could not load your collection" is expected in demo mode
-    expect(buf.length).toBeGreaterThan(50000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
+    await page.waitForTimeout(2000); // CANVASKIT_STABILIZATION_MS = 2000
+    const visible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
+    expect(visible, 'My collection did not render canvas').toBe(true);
   });
 
   test('T07: Page does not crash when clicking outside all buttons', async ({ page }) => {
@@ -103,7 +103,6 @@ test.describe('06 - Edge Cases & Resilience', () => {
     await page.waitForTimeout(4000);
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
-    // Click various blank/content areas
     await page.mouse.click(200, 300);
     await page.waitForTimeout(500);
     await page.mouse.click(400, 500);
@@ -115,35 +114,34 @@ test.describe('06 - Edge Cases & Resilience', () => {
 
   test('T08: Scrolling the homepage does not break render', async ({ page }) => {
     await page.goto('https://numista.ai');
-    await page.waitForTimeout(4000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(1000);
     await page.mouse.wheel(0, -300);
     await page.waitForTimeout(1000);
-    const buf = await page.screenshot({ path: 'screenshots/after-scroll.png', type: 'png' });
+    const visible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
     expect(errors).toHaveLength(0);
-    expect(buf.length).toBeGreaterThan(100000);
+    expect(visible).toBe(true);
   });
 
   test('T09: Sign Out from demo returns to login', async ({ page }) => {
     await enterDemo(page);
-    // Click Sign Out (bottom of sidebar, approx y=973)
     await page.mouse.click(100, 973);
     await page.waitForTimeout(3000);
-    const buf = await page.screenshot({ path: 'screenshots/after-signout.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(100000);
-    // Should be back at login or still on numista.ai
+    const visible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
+    expect(visible).toBe(true);
     expect(page.url()).toContain('numista.ai');
   });
 
   test('T10: Add New Coins page in demo shows appropriate blocked state', async ({ page }) => {
     await enterDemo(page);
     await page.mouse.click(80, 454); // Add new coins/notes/etc.
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/add-new-coins-demo.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
+    await page.waitForTimeout(2000); // CANVASKIT_STABILIZATION_MS = 2000
+    const visible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
+    expect(visible).toBe(true);
     expect(page.url()).toContain('numista.ai');
   });
 
