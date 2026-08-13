@@ -6,7 +6,7 @@ from google.cloud import firestore
 def purge_qa_account(email="qa_test_user_20260724@numista.ai"):
     print(f"=== PURGING TEST ACCOUNT: {email} ===")
     
-    sa_path = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json.json"
+    sa_path = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json"
     if os.path.exists(sa_path):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = sa_path
         

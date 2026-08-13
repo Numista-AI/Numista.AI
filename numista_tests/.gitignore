@@ -1,4 +1,4 @@
-﻿# Playwright generated outputs - never commit these
+# Playwright generated outputs - never commit these
 node_modules/
 playwright-report/
 test-results/
@@ -16,3 +16,7 @@ screenshots/*.png
 reports/*.md
 reports/runner.log
 reports/test-results.json
+fixtures/.auth_storage_state.json
+scratch/
+.snapshot_*
+
