@@ -87,14 +87,18 @@ def patch_beta_remediation(dry_run=True):
     print(f"[patch_beta_13aug] Starting remediation — {mode_str}", flush=True)
     print(f"========================================================\n", flush=True)
 
-    users = list(db.collection("users").stream())
+    # Use list_documents() to include stub/phantom user docs (like eric.seaman@yahoo.com)
+    user_docs = list(db.collection("users").list_documents())
     total_scanned = 0
     total_patched = 0
 
-    for user_doc in users:
-        uid = user_doc.id
+    for user_ref in user_docs:
+        uid = user_ref.id
         coins_ref = db.collection("users").document(uid).collection("coins")
         coin_docs = list(coins_ref.stream())
+
+        if not coin_docs:
+            continue
 
         print(f"Processing User '{uid}' (coins count: {len(coin_docs)})", flush=True)
 
@@ -103,68 +107,112 @@ def patch_beta_remediation(dry_run=True):
             doc_id = doc.id
             data = doc.to_dict() or {}
             
-            raw_country = str(data.get("country") or data.get("Country") or "").strip()
+            c_val = data.get("country") if data.get("country") is not None else data.get("Country")
+            raw_country = str(c_val or "").strip()
+            if raw_country.lower() in ["none", "null", "n/a"]:
+                raw_country = ""
+
             raw_is_foreign = data.get("is_foreign")
-            raw_denom = str(data.get("denomination") or data.get("Denomination") or "").strip()
-            raw_year = str(data.get("year") or data.get("Year") or "").strip()
-            raw_mint = str(data.get("mint_mark") or data.get("Mint Mark") or "").strip()
-            raw_program = str(data.get("program_series") or data.get("Program/Series") or "").strip()
-            raw_theme = str(data.get("theme_subject") or data.get("Theme/Subject") or "").strip()
-            raw_variety = str(data.get("variety_error") or data.get("Variety/Error") or "").strip()
-            raw_cost = data.get("purchase_cost") or data.get("Purchase Cost")
+
+            d_val = data.get("denomination") if data.get("denomination") is not None else data.get("Denomination")
+            raw_denom = str(d_val or "").strip()
+            if raw_denom.lower() in ["none", "null", "n/a"]:
+                raw_denom = ""
+
+            y_val = data.get("year") if data.get("year") is not None else data.get("Year")
+            raw_year = str(y_val or "").strip()
+
+            m_val = data.get("mint_mark") if data.get("mint_mark") is not None else data.get("Mint Mark")
+            raw_mint = str(m_val or "").strip()
+
+            p_val = data.get("program_series") if data.get("program_series") is not None else data.get("Program/Series")
+            raw_program = str(p_val or "").strip()
+
+            t_val = data.get("theme_subject") if data.get("theme_subject") is not None else data.get("Theme/Subject")
+            raw_theme = str(t_val or "").strip()
+
+            v_val = data.get("variety_error") if data.get("variety_error") is not None else (data.get("Variety/Error") if data.get("Variety/Error") is not None else data.get("Variety"))
+            raw_variety = str(v_val or "").strip()
+
+            raw_cost = data.get("purchase_cost") if data.get("purchase_cost") is not None else (data.get("Purchase Cost") if data.get("Purchase Cost") is not None else data.get("Cost"))
 
             updates = {}
 
             # ── Predicate 1: US Coin Country & is_foreign Normalization ────────
             country_lower = raw_country.lower()
-            is_us_coin = (country_lower in US_ALLOW_LIST) or (raw_country == "" and raw_denom in ["Quarter Dollar", "Quarter", "Dime", "One Cent", "Penny", "Lincoln Cent", "Jefferson Nickel", "Half Dollar"])
+            is_us_denom = raw_denom in [
+                "Quarter Dollar", "Quarter", "Dime", "One Cent", "Cent", "Penny", 
+                "Lincoln Cent", "Jefferson Nickel", "Half Dollar", "Dollar", "Five Dollars (Half Eagle)",
+                "Half Eagle", "Eagle", "Double Eagle", "Silver Eagle", "Gold Eagle"
+            ]
+            is_us_coin = (country_lower in US_ALLOW_LIST) or (raw_country == "" and is_us_denom)
             
             if is_us_coin:
                 if raw_country != "United States":
                     updates["country"] = "United States"
+                    updates["Country"] = "United States"
                 if raw_is_foreign is not False:
                     updates["is_foreign"] = False
 
             # ── Predicate 2: 2019-W San Antonio Quarter Realignment ────────────
             is_san_antonio = (
                 ("san antonio" in raw_theme.lower() or "san antonio" in raw_variety.lower()) or
-                (raw_year == "2019" and raw_mint.upper() == "W" and "Quarter" in raw_denom)
+                (raw_year == "2019" and raw_mint.upper() == "W" and ("Quarter" in raw_denom or "2019 Quarter" in raw_theme))
             )
             if is_san_antonio:
                 if raw_program != "America the Beautiful Quarters":
                     updates["program_series"] = "America the Beautiful Quarters"
+                    updates["Program/Series"] = "America the Beautiful Quarters"
                 if raw_theme != "San Antonio Missions":
                     updates["theme_subject"] = "San Antonio Missions"
+                    updates["Theme/Subject"] = "San Antonio Missions"
                 if raw_variety != "":
                     updates["variety_error"] = ""
+                    updates["Variety/Error"] = ""
+                    updates["Variety"] = ""
                 if raw_mint.upper() != "W":
                     updates["mint_mark"] = "W"
+                    updates["Mint Mark"] = "W"
                 updates["country"] = "United States"
+                updates["Country"] = "United States"
                 updates["is_foreign"] = False
                 updates["obverse_image_url"] = IMAGE_URLS_TO_VALIDATE[0]
                 updates["reverse_image_url"] = IMAGE_URLS_TO_VALIDATE[1]
+                updates["image_url_obverse"] = IMAGE_URLS_TO_VALIDATE[0]
+                updates["image_url_reverse"] = IMAGE_URLS_TO_VALIDATE[1]
 
             # ── Predicate 3: Kuwait 50 Fils Metadata Clean-up ──────────────────
             is_kuwait = (country_lower == "kuwait" or "kuwait" in raw_program.lower() or raw_denom == "50 Fils")
             if is_kuwait:
                 if raw_program != "":
                     updates["program_series"] = ""
+                    updates["Program/Series"] = ""
                 if raw_theme != "":
                     updates["theme_subject"] = ""
+                    updates["Theme/Subject"] = ""
                 if raw_variety.lower() in ["none", "null"]:
                     updates["variety_error"] = ""
+                    updates["Variety/Error"] = ""
+                    updates["Variety"] = ""
                 if raw_is_foreign is not True:
                     updates["is_foreign"] = True
+                raw_ai_val = str(data.get("AI Estimated Value") or data.get("ai_estimated_value") or "").strip()
+                if raw_ai_val == "15.00-25.00":
+                    updates["AI Estimated Value"] = "$15.00 - $25.00"
+                    updates["ai_estimated_value"] = "$15.00 - $25.00"
 
             # ── Predicate 4: Mint Mark Sanitization ("None" -> "") ─────────────
             clean_mint = sanitize_mint_mark(raw_mint)
             if clean_mint != raw_mint:
                 updates["mint_mark"] = clean_mint
+                updates["Mint Mark"] = clean_mint
 
             # ── Predicate 5: Purchase Cost Normalization (preserve $0.00) ──────
             if raw_cost in [0, 0.0, "0", "0.00", "$0", "$0.00"]:
                 if raw_cost != "$0.00":
                     updates["purchase_cost"] = "$0.00"
+                    updates["Purchase Cost"] = "$0.00"
+                    updates["Cost"] = "$0.00"
 
             if updates:
                 total_patched += 1

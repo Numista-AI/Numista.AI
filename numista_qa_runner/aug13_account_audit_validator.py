@@ -40,8 +40,10 @@ def compute_account_sha256(db, email=TARGET_EMAIL):
         canon = {}
         for k in CANONICAL_HASH_FIELDS:
             val = data.get(k)
-            # Normalize numeric floats
-            if isinstance(val, (int, float)):
+            # Normalize types
+            if isinstance(val, bool):
+                canon[k] = val
+            elif isinstance(val, (int, float)):
                 canon[k] = round(float(val), 4)
             else:
                 canon[k] = str(val or "").strip()
@@ -70,7 +72,7 @@ def audit_account_readonly(email=TARGET_EMAIL):
         mint_mark = p.get("mint_mark", "")
         
         # Rule 1: Country vs is_foreign
-        if country and country != "United States" and is_foreign != "True":
+        if country and country != "United States" and is_foreign is not True:
             contract_issues.append({
                 "id": cid,
                 "rule": "FOREIGN_COUNTRY_FLAG_MISMATCH",

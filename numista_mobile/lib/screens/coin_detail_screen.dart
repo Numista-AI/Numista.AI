@@ -1458,7 +1458,7 @@ class _DetailsTab extends StatelessWidget {
       ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
       ('Mint Mark', coin.mintMark),
       ('Denomination', _fmtDenomination(coin.denomination)),
-      ('Program / Series', coin.programSeries),
+      ('Program / Series', coin.programSeries.isEmpty ? (coin.isForeign ? 'Standard Circulation' : '') : coin.programSeries),
       ('Theme / Subject', coin.themeSubject),
       ('Variety / Error', coin.variety),
       ('Condition', coin.condition),
@@ -1607,8 +1607,12 @@ class _FinancialsTab extends StatelessWidget {
     final profitPct   = purchaseAmt > 0 ? (profit / purchaseAmt * 100) : null;
     final canCalcPL   = purchaseAmt > 0 && estAmt > 0;
 
-    final costDisplay = (coin.purchaseCost.isEmpty || coin.purchaseCost == r'$0.00')
-        ? 'UKN' : coin.purchaseCost;
+    final rawCost = coin.purchaseCost.trim();
+    final costDisplay = (rawCost == r'$0.00' || rawCost == '0' || rawCost == '0.00' || rawCost == r'$0')
+        ? r'$0.00'
+        : (rawCost.isEmpty || rawCost.toLowerCase() == 'ukn' || rawCost.toLowerCase() == 'unknown'
+            ? 'UKN'
+            : rawCost);
 
     final plDolStr = canCalcPL
         ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';

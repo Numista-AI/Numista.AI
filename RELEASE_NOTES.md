@@ -77,6 +77,69 @@
 
 
 
+
+
+
+
+
+
+## v4.76 — 2026-08-13
+**Tests Enhancements & Platform Updates**
+
+- Tests: clarify 2019-W Quarter is a US coin (America the Beautiful series) in suite 18 report highlights
+- Qa: replace checkmark emoji with ASCII string for Windows console compatibility
+- Qa: add automated beta test suite v4 with dual-account isolation and zero-drift verification
+- Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.75 — 2026-08-13
+**Qa Enhancements & Platform Updates**
+
+- Qa: replace checkmark emoji with ASCII string for Windows console compatibility
+- Qa: add automated beta test suite v4 with dual-account isolation and zero-drift verification
+- Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.74 — 2026-08-13
+**Qa Enhancements & Platform Updates**
+
+- Qa: add automated beta test suite v4 with dual-account isolation and zero-drift verification
+- Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.73 — 2026-08-13
+**Remediation Enhancements & Platform Updates**
+
+- Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.72 — 2026-08-13
+**Qa Enhancements & Platform Updates**
+
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.71 — 2026-08-13
+**Qa Enhancements & Platform Updates**
+
+- Qa: system-wide semantic test assertions and safe production account repair
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
 ## v4.70 — 2026-08-13
 **Scanner Enhancements & Platform Updates**
 
