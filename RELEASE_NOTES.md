@@ -68,6 +68,117 @@
 
 
 
+
+
+
+
+
+
+
+
+
+## v4.70 — 2026-08-13
+**Scanner Enhancements & Platform Updates**
+
+- Scanner: update SCAN_REPORT.md with Playwright test metrics
+- Scanner: update SCAN_REPORT.md from project-scanner run
+
+## v4.69 — 2026-08-13
+**Scanner Enhancements & Platform Updates**
+
+- Scanner: update SCAN_REPORT.md from project-scanner run
+- Qa: adjust Playwright timeout for Flutter Web CanvasKit loading on throttled network
+- Qa: add Real Production Account Health Auditor (Section 8g) and Playwright Visual Parity Suite
+- Qa: add 24-hour Conversation Test Miner module and auto-synthesized test assertions
+- Backend: add missing try: block to batch_add_coins â€” orphaned except was causing SyntaxError and Cloud Run startup crash
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+
+## v4.68 — 2026-08-12
+**Qa Enhancements & Platform Updates**
+
+- Qa: adjust Playwright timeout for Flutter Web CanvasKit loading on throttled network
+- Qa: add Real Production Account Health Auditor (Section 8g) and Playwright Visual Parity Suite
+- Qa: add 24-hour Conversation Test Miner module and auto-synthesized test assertions
+- Backend: add missing try: block to batch_add_coins â€” orphaned except was causing SyntaxError and Cloud Run startup crash
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+
+## v4.67 — 2026-08-12
+**Qa Enhancements & Platform Updates**
+
+- Qa: add Real Production Account Health Auditor (Section 8g) and Playwright Visual Parity Suite
+- Qa: add 24-hour Conversation Test Miner module and auto-synthesized test assertions
+- Backend: add missing try: block to batch_add_coins â€” orphaned except was causing SyntaxError and Cloud Run startup crash
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+
+## v4.66 — 2026-08-12
+**Qa Enhancements & Platform Updates**
+
+- Qa: add 24-hour Conversation Test Miner module and auto-synthesized test assertions
+- Backend: add missing try: block to batch_add_coins â€” orphaned except was causing SyntaxError and Cloud Run startup crash
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+
+## v4.65 — 2026-08-12
+**Backend Enhancements & Platform Updates**
+
+- Backend: add missing try: block to batch_add_coins â€” orphaned except was causing SyntaxError and Cloud Run startup crash
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+
+## v4.64 — 2026-08-12
+**Build Enhancements & Platform Updates**
+
+- Build: move _searchCtrl listener back into initState and remove orphaned closing brace â€” restores correct class structure in my_collection_screen
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+
+## v4.63 — 2026-08-12
+**Build Enhancements & Platform Updates**
+
+- Build: add missing closing brace for initState() in my_collection_screen â€” _loadSortPreferences was nested inside initState causing Dart compile error
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+
+## v4.62 — 2026-08-12
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: resolve Beta Test III defects, enforce provenance ledger, and optimize PDF exports
+- Agent: clean unused variables and getters
+- Agent: align port 8443 dual-probe, enforce single-instance mutex, and update MORGAN/privacy copy
+- Programs: implement deterministic SlotResolver matching engine and reseed 31 US Mint programs
+- Ingestion: catalog-driven quarter normalization, Greysheet task queue timeout, and web inspector UI contrast
+- Collection: implement crash-proof top scrollbar track and viewport pan buttons
+- Coins: remove unused _faceValue helper
+- Coins: enforce unified collection model, country normalization & non-legal tender tab
+
 ## v4.61 — 2026-08-12
 **Catalog Enhancements & Platform Updates**
 

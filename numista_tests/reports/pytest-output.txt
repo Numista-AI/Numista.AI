@@ -4,30 +4,30 @@ rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
 plugins: anyio-4.13.0
 [32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
-collected 50 items
+collected 53 items
 
-tests\test_auth_security.py [32mINFO   [0m [main] [d1222695] GET / -> 200 (72ms)
-.[33mWARNING[0m [main] [b329a7ba] GET /api/spot_prices -> 200 (10500ms)
-.[32mINFO   [0m [main] [133cb0f5] GET /api/v1/family/subaccounts -> 200 (52ms)
-.[32mINFO   [0m [main] [cf677876] POST /api/stripe/webhook -> 400 (52ms)
+tests\test_auth_security.py [32mINFO   [0m [main] [19f55b30] GET / -> 200 (79ms)
+.[33mWARNING[0m [main] [20d2eafe] GET /api/spot_prices -> 200 (15525ms)
+.[32mINFO   [0m [main] [41447e51] GET /api/v1/family/subaccounts -> 200 (46ms)
+.[32mINFO   [0m [main] [2f30cc78] POST /api/stripe/webhook -> 400 (56ms)
 .
 tests\test_beta_estate_pipeline.py ...
-tests\test_checklist_historical_matcher.py .........
+tests\test_checklist_historical_matcher.py ............
 tests\test_coa_parser.py ....
-tests\test_deal_spotter.py ..[32mINFO   [0m [main] [abb54a80] GET /api/wishlist/deals/test@numista.ai -> 200 (1ms)
-[32mINFO   [0m [main] [828e7ad6] POST /api/wishlist/deals/check -> 200 (3ms)
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [1a3125ca] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
+[32mINFO   [0m [main] [4ebe63cc] POST /api/wishlist/deals/check -> 200 (3ms)
 .
-tests\test_greysheet.py [32mINFO   [0m [main] [20f93fdc] POST /api/greysheet/resolve -> 200 (2ms)
-.[32mINFO   [0m [main] [53008c1e] POST /api/greysheet/resolve -> 200 (1ms)
-.[32mINFO   [0m [main] [58193e97] GET /api/greysheet/pricing/429 -> 200 (9ms)
-.[32mINFO   [0m [main] [68620794] GET /api/greysheet/deals -> 200 (1ms)
-[32mINFO   [0m [main] [32e9db44] POST /api/greysheet/deals/refresh -> 200 (2ms)
-.[32mINFO   [0m [main] [e28324b3] POST /api/portfolio/snapshot/daily -> 200 (4ms)
-..[32mINFO   [0m [main] [cca6b9a2] GET /api/greysheet/quota -> 200 (71ms)
+tests\test_greysheet.py [32mINFO   [0m [main] [33b8f0cc] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [0cf95098] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [46daa547] GET /api/greysheet/pricing/429 -> 200 (13ms)
+.[32mINFO   [0m [main] [23385684] GET /api/greysheet/deals -> 200 (1ms)
+[32mINFO   [0m [main] [73ac4342] POST /api/greysheet/deals/refresh -> 200 (2ms)
+.[32mINFO   [0m [main] [c929209b] POST /api/portfolio/snapshot/daily -> 200 (4ms)
+..[32mINFO   [0m [main] [19fde0d6] GET /api/greysheet/quota -> 200 (4ms)
 ..
-tests\test_ingestion.py [32mINFO   [0m [main] [f7bbd36f] GET /api/ingestion/jobs -> 200 (1ms)
-.[32mINFO   [0m [main] [0420edad] POST /api/ingestion/batch_async -> 200 (3ms)
-[32mINFO   [0m [main] [7e26b426] GET /api/ingestion/status/job_4ffc05bc -> 200 (1ms)
+tests\test_ingestion.py [32mINFO   [0m [main] [80a447e4] GET /api/ingestion/jobs -> 200 (1ms)
+.[32mINFO   [0m [main] [0fde6ed7] POST /api/ingestion/batch_async -> 200 (3ms)
+[32mINFO   [0m [main] [4f9b532e] GET /api/ingestion/status/job_bb3f4077 -> 200 (2ms)
 .
 tests\test_invoice_fixtures.py ..
 tests\test_proxy_bandwidth.py .....
@@ -40,12 +40,12 @@ tests\test_valuations.py ......
     VersionedUnionType = Union[builtin_types.UnionType, _UnionGenericAlias]
 
 tests/test_greysheet.py::test_daily_snapshot_endpoint
-  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8277: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8432: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
 
 tests/test_greysheet.py::test_daily_snapshot_endpoint
-  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8360: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  C:\Users\ericd\Documents\MyVertexProject\numista_backend\main.py:8515: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     response_snapshot["timestamp"] = datetime.utcnow().isoformat()
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================= 50 passed, 3 warnings in 23.62s =======================
+======================= 53 passed, 3 warnings in 31.63s =======================

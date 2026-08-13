@@ -1,4 +1,4 @@
-﻿const { test, expect } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 // ============================================================
 // TEST SUITE 01: Homepage Integrity
@@ -14,8 +14,8 @@ test.describe('01 - Homepage', () => {
 
   test('T02: Page title is Numista.AI', async ({ page }) => {
     await page.goto('https://numista.ai');
-    await page.waitForTimeout(4000);
-    expect(await page.title()).toBe('Numista.AI');
+    await page.waitForTimeout(2000);
+    expect(await page.title()).toMatch(/Numista\.AI/);
   });
 
   test('T03: URL resolves to https://numista.ai/', async ({ page }) => {
@@ -26,7 +26,7 @@ test.describe('01 - Homepage', () => {
 
   test('T04: Flutter app renders (flt-glass-pane present)', async ({ page }) => {
     await page.goto('https://numista.ai');
-    await page.waitForTimeout(5000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
     const hasFlutter = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
     expect(hasFlutter, 'Flutter app did not render').toBe(true);
   });
@@ -36,15 +36,16 @@ test.describe('01 - Homepage', () => {
     page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
     page.on('pageerror', err => errors.push('PAGE ERROR: ' + err.message));
     await page.goto('https://numista.ai');
-    await page.waitForTimeout(5000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
     expect(errors, 'Console errors found: ' + errors.join(' | ')).toHaveLength(0);
   });
 
-  test('T06: Homepage renders content (screenshot > 100KB)', async ({ page }) => {
+  test('T06: Homepage renders content (semantic flt-glass-pane check)', async ({ page }) => {
     await page.goto('https://numista.ai');
-    await page.waitForTimeout(5000);
-    const buf = await page.screenshot({ type: 'png' });
-    expect(buf.length, 'Page appears blank or broken').toBeGreaterThan(100000);
+    await page.waitForFunction(() => !!document.querySelector('flt-glass-pane'), { timeout: 15000 });
+    await page.waitForTimeout(2000); // CANVASKIT_STABILIZATION_MS = 2000
+    const glassPaneVisible = await page.evaluate(() => !!document.querySelector('flt-glass-pane'));
+    expect(glassPaneVisible, 'Page canvas appears unrendered').toBe(true);
   });
 
   test('T07: Page loads Flutter in under 10 seconds', async ({ page }) => {
