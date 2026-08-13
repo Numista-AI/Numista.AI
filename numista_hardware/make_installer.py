@@ -1,8 +1,9 @@
 import os, shutil, subprocess, tempfile
 
-AGENT_EXE = os.path.join("dist", "NumistaAgent.exe")
-CERT_FILE  = "localhost.crt"
-OUT_SETUP  = "NumistaAgentSetup.exe"
+here = os.path.dirname(os.path.abspath(__file__))
+AGENT_EXE = os.path.join(here, "dist", "NumistaAgent.exe")
+CERT_FILE  = os.path.join(here, "localhost.crt")
+OUT_SETUP  = os.path.join(here, "NumistaAgentSetup.exe")
 
 for f in [AGENT_EXE, CERT_FILE]:
     if not os.path.exists(f):

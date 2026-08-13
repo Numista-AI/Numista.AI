@@ -567,13 +567,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       'american samoa', 'northern mariana islands', 'confederate states', 'csa', 'us philippines'
     };
 
+    const usDenoms = {
+      'quarter dollar', 'quarter', 'dime', 'one cent', 'cent', 'penny', 
+      'lincoln cent', 'jefferson nickel', 'half dollar', 'dollar', 
+      'five dollars (half eagle)', 'half eagle', 'eagle', 'double eagle', 
+      'silver eagle', 'gold eagle', 'sacagawea', 'susan b. anthony'
+    };
+
     final originFiltered = visible.where((doc) {
       if (_coinOriginFilter == 'All') return true;
       final m = (doc.data() as Map<String, dynamic>?) ?? {};
       final countryClean = (m['country'] ?? m['Country'] ?? '').toString().toLowerCase().trim();
+      final denomClean = (m['denomination'] ?? m['Denomination'] ?? '').toString().toLowerCase().trim();
       final isUSCountry = usAllowList.contains(countryClean);
-      // Primary boolean check: if country is US allowlist, it is strictly NOT foreign.
-      final isForeign = isUSCountry ? false : ((m['is_foreign'] as bool?) ?? true);
+      final isUSDenom = usDenoms.contains(denomClean) || denomClean.contains('quarter') || denomClean.contains('dime') || denomClean.contains('cent');
+      
+      bool isForeign;
+      if (m['is_foreign'] == false) {
+        isForeign = false;
+      } else if (isUSCountry) {
+        isForeign = false;
+      } else if ((countryClean.isEmpty || countryClean == 'none') && isUSDenom) {
+        isForeign = false;
+      } else {
+        isForeign = (m['is_foreign'] as bool?) ?? true;
+      }
 
       if (_coinOriginFilter == 'World') return isForeign;
       if (_coinOriginFilter == 'U.S.') return !isForeign;
