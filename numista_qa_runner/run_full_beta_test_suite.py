@@ -71,7 +71,7 @@ def run_master_suite():
         print(f"Post: {post_digest} (Count: {post_count})")
         sys.exit(1)
 
-    print("✅ ZERO NET MUTATION CONFIRMED on eric.seaman@yahoo.com!")
+    print("[SUCCESS] ZERO NET MUTATION CONFIRMED on eric.seaman@yahoo.com!")
 
     # Step 5: Emit Executive Markdown Report
     print("\n--- PHASE 5: EMITTING EXECUTIVE SUMMARY REPORT ---")
