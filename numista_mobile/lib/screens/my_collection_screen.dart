@@ -570,9 +570,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final originFiltered = visible.where((doc) {
       if (_coinOriginFilter == 'All') return true;
       final m = (doc.data() as Map<String, dynamic>?) ?? {};
-      // Primary boolean check with migration shim fallback for legacy un-patched docs
-      final isForeign = (m['is_foreign'] as bool?) ??
-          (!usAllowList.contains((m['country'] ?? m['Country'] ?? '').toString().toLowerCase().trim()));
+      final countryClean = (m['country'] ?? m['Country'] ?? '').toString().toLowerCase().trim();
+      final isUSCountry = usAllowList.contains(countryClean);
+      // Primary boolean check: if country is US allowlist, it is strictly NOT foreign.
+      final isForeign = isUSCountry ? false : ((m['is_foreign'] as bool?) ?? true);
 
       if (_coinOriginFilter == 'World') return isForeign;
       if (_coinOriginFilter == 'U.S.') return !isForeign;
@@ -2629,8 +2630,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         return (v.isEmpty || v == 'null' || v == 'Hardware Scan') ? '' : v;
       case _F.cost:
         final rawC = m[_F.cost]?.toString().trim() ?? '';
-        if (rawC.isEmpty || rawC == 'null' ||
-            rawC == '0' || rawC == '0.0') { return ''; }
+        if (rawC == r'$0.00' || rawC == '0' || rawC == '0.0' || rawC == '0.00' || rawC == r'$0') {
+          return r'$0.00';
+        }
+        if (rawC.isEmpty || rawC == 'null' || rawC == 'UKN' || rawC == 'Unknown') { return ''; }
         final n = double.tryParse(rawC.replaceAll(RegExp(r'[^\d.]'), ''));
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
@@ -2641,8 +2644,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }
-        final av = m[_F.aiValue]?.toString() ?? '';
-        return (av == 'Pending' || av == 'null' || av.isEmpty) ? '' : av;
+        final av = m[_F.aiValue]?.toString().trim() ?? '';
+        if (av == 'Pending' || av == 'null' || av.isEmpty) return '';
+        final rangeMatch = RegExp(r'^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)$').firstMatch(av);
+        if (rangeMatch != null) {
+          final v1 = double.tryParse(rangeMatch.group(1)!);
+          final v2 = double.tryParse(rangeMatch.group(2)!);
+          if (v1 != null && v2 != null) {
+            return '\$${v1.toStringAsFixed(2)} - \$${v2.toStringAsFixed(2)}';
+          }
+        }
+        return av.startsWith('\$') ? av : '\$$av';
       default:
         final v = m[col.field]?.toString().trim() ?? '';
         return (v == 'null' || v == 'nan') ? '' : v;
