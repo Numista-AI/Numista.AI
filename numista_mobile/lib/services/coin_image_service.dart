@@ -24,6 +24,8 @@ class CoinImageService {
     'american-innovation',
     'native-american-dollar',
     'commemorative',
+    'uncirculated-sets',
+    'semiquincentennial',
   };
 
   /// Maps subject names (states, presidents, women) to canonical slugs.
@@ -134,8 +136,14 @@ class CoinImageService {
     'tallgrass prairie national preserve': 'kansas',
     // 2021
     'tuskegee airmen national historic site': 'alabama',
+    'tuskegee airmen': 'alabama',
+    'tuskegee': 'alabama',
     'crossing the delaware': 'new-jersey',
     'washington crossing historic park': 'new-jersey',
+    // 2026 Semiquincentennial
+    '250th anniversary uncirculated coin set': '250th-anniversary',
+    '250th anniversary': '250th-anniversary',
+    'mayflower compact & pilgrim couple': 'mayflower-compact',
     // Presidents (presidential dollar subjects)
     'adams': 'adams', 'jefferson': 'jefferson', 'madison': 'madison',
     'monroe': 'monroe', 'jackson': 'jackson', 'van buren': 'van-buren',
@@ -182,36 +190,69 @@ class CoinImageService {
   static const _programMap = <String, String>{
     // Lincoln / cents
     'penny':                   'lincoln-cent',
+    'pennies':                 'lincoln-cent',
     'cent':                    'lincoln-cent',
+    'cents':                   'lincoln-cent',
+    'one cent':                'lincoln-cent',
     'lincoln cent':            'lincoln-cent',
+    'lincoln cents':           'lincoln-cent',
     'lincoln-cent':            'lincoln-cent',
+    'lincoln penny':           'lincoln-cent',
     'wheat cent':              'lincoln-cent',
+    'wheat cents':             'lincoln-cent',
     'wheat penny':             'lincoln-cent',
+    'lincoln cent (memorial reverse)': 'lincoln-cent',
+    'lincoln penny (union shield)':     'lincoln-cent',
     // Nickels
     'nickel':                  'nickel',
+    'nickels':                 'nickel',
     'jefferson nickel':        'jefferson-nickel',
+    'jefferson nickels':       'jefferson-nickel',
     'jefferson-nickel':        'jefferson-nickel',
     'buffalo nickel':          'buffalo-nickel',
+    'buffalo nickels':         'buffalo-nickel',
     'buffalo-nickel':          'buffalo-nickel',
     // Dimes
     'dime':                    'dime',
+    'dimes':                   'dime',
     'mercury dime':            'mercury-dime',
+    'mercury dimes':           'mercury-dime',
     'mercury-dime':            'mercury-dime',
     'roosevelt dime':          'dime',
+    'roosevelt dimes':         'dime',
+    'roosevelt-dimes':         'dime',
     // Quarters
     'quarter':                 'quarter',
+    'quarters':                'quarter',
+    'quarter dollar':          'quarter',
+    'quarter dollar dollar':   'quarter',
     '25c':                     'quarter',
     'state quarter':           '50-state-quarters',
+    'state quarters':          '50-state-quarters',
     '50 state quarters':       '50-state-quarters',
     '50-state-quarters':       '50-state-quarters',
     'america the beautiful':   'america-the-beautiful',
+    'america the beautiful quarters': 'america-the-beautiful',
     'american women quarters': 'american-women-quarters',
     'american innovation':     'american-innovation',
+    'washington quarter':      'quarter',
+    'washington quarters':     'quarter',
+    // Sets & Semiquincentennial
+    'uncirculated sets':       'uncirculated-sets',
+    'uncirculated set':        'uncirculated-sets',
+    'mint set':                'uncirculated-sets',
+    'mint sets':               'uncirculated-sets',
+    'semiquincentennial':      'semiquincentennial',
+    'united states semiquincentennial (250th anniversary)': 'semiquincentennial',
     // Half dollars
     'half dollar':             'kennedy-half-dollar',
+    'half dollars':            'kennedy-half-dollar',
+    '50c':                     'kennedy-half-dollar',
     'kennedy half dollar':     'kennedy-half-dollar',
+    'kennedy half dollars':    'kennedy-half-dollar',
     'kennedy-half-dollar':     'kennedy-half-dollar',
     'franklin half dollar':    'franklin-half-dollar',
+    'franklin half dollars':   'franklin-half-dollar',
     'franklin-half-dollar':    'franklin-half-dollar',
     'walking liberty':         'liberty-walking-half-dollar',
     'liberty walking':         'liberty-walking-half-dollar',
@@ -225,23 +266,29 @@ class CoinImageService {
     'barber-dime':             'barber-dime',
     // Dollars
     'dollar':                  'dollar',
+    'dollars':                 'dollar',
     'morgan silver dollar':    'morgan-dollar',
     'morgan dollar':           'morgan-dollar',
+    'morgan dollars':          'morgan-dollar',
     'morgan-dollar':           'morgan-dollar',
     'peace dollar':            'peace-dollar',
+    'peace dollars':           'peace-dollar',
     'peace-dollar':            'peace-dollar',
     'sacagawea':               'native-american-dollar',
     'native american dollar':  'native-american-dollar',
     'presidential dollar':     'presidential-dollars',
     'presidential dollars':    'presidential-dollars',
+    'presidential \$1 coin program': 'presidential-dollars',
     'eisenhower':              'eisenhower-dollar',
     'eisenhower dollar':       'eisenhower-dollar',
     'eisenhower-dollar':       'eisenhower-dollar',
     'ike dollar':              'eisenhower-dollar',
     'susan b anthony':         'dollar',
     'susan b. anthony':        'dollar',
+    'susan b. anthony dollar': 'dollar',
     // Cents
     'indian head cent':        'indian-head-cent',
+    'indian head cents':       'indian-head-cent',
     'indian head penny':       'indian-head-cent',
     'indian-head-cent':        'indian-head-cent',
     'flying eagle':            'flying-eagle-cent',
@@ -249,7 +296,9 @@ class CoinImageService {
     // American Eagles
     'american eagle silver':   'american-eagle-silver',
     'american silver eagle':   'american-eagle-silver',
+    'american silver eagles':  'american-eagle-silver',
     'silver eagle':            'american-eagle-silver',
+    'silver eagles':           'american-eagle-silver',
     'american eagle gold':     'american-eagle-gold',
     'american gold eagle':     'american-eagle-gold',
     'gold eagle':              'american-eagle-gold',
@@ -261,6 +310,8 @@ class CoinImageService {
     'saint-gaudens':           'saint-gaudens',
     'saint gaudens':           'saint-gaudens',
     'double eagle':            'saint-gaudens',
+    'indian head half eagle':  'saint-gaudens',
+    'five dollars (half eagle)': 'saint-gaudens',
     'bicentennial':            'bicentennial',
     'flowing hair':            'flowing-hair',
     'flowing-hair':            'flowing-hair',
@@ -375,6 +426,14 @@ class CoinImageService {
         }
         bases.add('${year}_$p');
       }
+    }
+
+    // Canonical design fallback (e.g. design_peace-dollar, peace-dollar, design_lincoln-cent-memorial)
+    bases.add('design_$program');
+    bases.add(program);
+    if (simple != null) {
+      bases.add('design_$simple');
+      bases.add(simple);
     }
 
     return bases;
