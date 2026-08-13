@@ -83,6 +83,16 @@ _tests/test_execute_add_coin.py::TestExecuteAddCoin::test_slugify_canonical_keys
 4 passed, 1 warning in 3.37s
 ```
 
+### Playwright E2E Test Suite Results
+```text
+Running 130 tests using 1 worker
+- 120 Passed
+- 1 Failed (01-homepage.spec.js T02 title assertion)
+- 5 Flaky (canvas screenshot size thresholds)
+- 4 Skipped
+Total Duration: 24.5m
+```
+
 ### Environment Isolation Checklist
 - [x] **Test Account:** `ericdcman@gmail.com` hardcoded in Playwright E2E suites.
 - [x] **Scraper Proxy Config:** `NUMISTA_SCRAPE_HTTP_PROXY` / `NUMISTA_SCRAPE_HTTPS_PROXY` read in `config.py`.
