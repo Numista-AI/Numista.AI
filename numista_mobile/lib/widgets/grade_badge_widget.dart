@@ -19,36 +19,86 @@ class GradeBadgeWidget extends StatelessWidget {
     if (gradeCode.isEmpty) return const SizedBox.shrink();
 
     final colors = _getBadgeColors(gradeCode);
-    return GestureDetector(
-      onTap: onTap ?? () => _showGradeDetails(context),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: colors.backgroundColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colors.borderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: colors.textColor.withAlpha(10),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    final tooltipText = _getGradeTooltip(gradeCode);
+    
+    return Tooltip(
+      message: tooltipText,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black38,
+            blurRadius: 6,
+            offset: Offset(0, 3),
           ),
-          child: Text(
-            gradeCode,
-            style: TextStyle(
-              color: colors.textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+        ],
+      ),
+      textStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        height: 1.3,
+      ),
+      child: GestureDetector(
+        onTap: onTap ?? () => _showGradeDetails(context),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: colors.backgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.borderColor, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.textColor.withAlpha(10),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              gradeCode,
+              style: TextStyle(
+                color: colors.textColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  static String _getGradeTooltip(String code) {
+    final clean = code.toUpperCase().trim();
+    if (clean.contains('VF-30') || clean == 'VF30') {
+      return 'VF-30 (Very Fine 30):\nModerate wear on high points with clear details. Main design elements remain sharp.';
+    } else if (clean.startsWith('VF') || clean.contains('VERY FINE')) {
+      return '$code (Very Fine):\nLight to moderate wear on high design points. Overall sharp details.';
+    } else if (clean.startsWith('MS') || clean.startsWith('UNC') || clean.contains('UNCIRCULATED')) {
+      return '$code (Mint State):\nNo wear. Full original mint luster and details intact.';
+    } else if (clean.startsWith('PF') || clean.startsWith('PR') || clean.contains('PROOF')) {
+      return '$code (Proof):\nSpecially minted for collectors with mirror-like fields and frosted design.';
+    } else if (clean.startsWith('AU')) {
+      return '$code (About Uncirculated):\nSlight trace of wear on highest design points; high luster.';
+    } else if (clean.startsWith('XF') || clean.startsWith('EF')) {
+      return '$code (Extremely Fine):\nLight wear on high points; overall sharp design details.';
+    } else if (clean.startsWith('F')) {
+      return '$code (Fine):\nModerate wear throughout; major features remain clear and bold.';
+    } else if (clean.startsWith('VG')) {
+      return '$code (Very Good):\nWell-worn with main design features visible but flattened.';
+    } else if (clean.startsWith('G')) {
+      return '$code (Good):\nHeavily worn; main design outlines visible.';
+    } else if (clean == 'CIRC' || clean.contains('CIRCULATED')) {
+      return '$code (Circulated):\nShows signs of wear from general commercial circulation.';
+    }
+    return '$code — Sheldon Scale Numismatic Condition Grade';
   }
 
   void _showGradeDetails(BuildContext context) {

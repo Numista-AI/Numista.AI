@@ -170,7 +170,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
   void initState() {
     super.initState();
     _coin = widget.coin;
-    _tabCtrl = TabController(length: 6, vsync: this);
+    _tabCtrl = TabController(length: 7, vsync: this);
     _tabCtrl.addListener(() {
       if (_tabCtrl.index == 3 && !_aiLoaded && !_aiLoading) {
         _loadAiInsight();
@@ -720,6 +720,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
               Tab(text: 'Provenance'),
               Tab(text: 'AI Insights'),
               Tab(text: 'History'),
+              Tab(text: 'Legislation'),
               Tab(text: 'Known Errors'),
             ],
           ),
@@ -751,6 +752,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                 },
               ),
               _HistoryTab(coin: _coin),
+              _LegislationTab(coin: _coin),
               _KnownErrorsTab(coin: _coin),
             ],
           ),
@@ -2764,17 +2766,110 @@ class _AiInsightsTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HISTORY TAB — Founding Legislation via Congress.gov API
+// HISTORY TAB — Historical Background & Mintage Significance
 // ─────────────────────────────────────────────────────────────────────────────
-class _HistoryTab extends StatefulWidget {
+class _HistoryTab extends StatelessWidget {
   final CoinModel coin;
   const _HistoryTab({required this.coin});
 
   @override
-  State<_HistoryTab> createState() => _HistoryTabState();
+  Widget build(BuildContext context) {
+    final title = coin.programSeries.isNotEmpty
+        ? coin.programSeries
+        : (coin.themeSubject.isNotEmpty ? coin.themeSubject : coin.denomination);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _kSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kBorder),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history_edu_outlined, color: _kAccent, size: 28),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Historical & Numismatic Background',
+                        style: const TextStyle(
+                          color: _kText,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Contextual history, mintage era, and design origin for $title.',
+                        style: const TextStyle(color: _kSubtext, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _kSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${coin.year} ${coin.mintMark} ${coin.denomination}',
+                  style: const TextStyle(
+                    color: _kAccent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This issue represents an important piece of ${coin.country.isNotEmpty ? coin.country : 'numismatic'} coinage history. '
+                  'Minted in ${coin.year.isNotEmpty ? coin.year : 'its era'}${coin.mintMark.isNotEmpty ? ' at the ${coin.mintMark} Mint facility' : ''}, '
+                  'it was struck in ${coin.metalContent.isNotEmpty ? coin.metalContent : 'standard coinage metal'}. '
+                  '${coin.programSeries.isNotEmpty ? 'Part of the canonical ${coin.programSeries} series.' : ''}',
+                  style: const TextStyle(
+                    color: _kText,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _HistoryTabState extends State<_HistoryTab> {
+// ─────────────────────────────────────────────────────────────────────────────
+// LEGISLATION TAB — Founding Acts & Congressional Legislation via Congress.gov
+// ─────────────────────────────────────────────────────────────────────────────
+class _LegislationTab extends StatefulWidget {
+  final CoinModel coin;
+  const _LegislationTab({required this.coin});
+
+  @override
+  State<_LegislationTab> createState() => _LegislationTabState();
+}
+
+class _LegislationTabState extends State<_LegislationTab> {
   Map<String, dynamic>? _laws;
   bool _loading = true;
 
