@@ -92,7 +92,7 @@ def run_master_suite():
 
 | Suite | Target | Status | Highlights |
 | :--- | :--- | :--- | :--- |
-| **18 - World & Remediation** | `eric.seaman@yahoo.com` | ✅ PASS | World items tab filtering, 2019-W Quarter fields, title formatting, Legislation tab, Grade tooltips. |
+| **18 - World & Remediation** | `eric.seaman@yahoo.com` | ✅ PASS | World items tab filtering, US 2019-W Quarter fields (America the Beautiful), title formatting, Legislation tab, Grade tooltips. |
 | **19 - Programs & SlotResolver** | `eric.seaman@yahoo.com` | ✅ PASS | 33 official US Mint Coin Programs loaded; SlotResolver prevents slot count inflation. |
 | **20 - Morgan AI & Proof Sets** | `ericdcman@gmail.com` | ✅ PASS | Morgan AI proof set ingestion, date-added descending sorting, provenance tracking ($0.00 cost basis). |
 | **21 - UI Scrollbar & Contrast** | `eric.seaman@yahoo.com` | ✅ PASS | Desktop viewport (1920x1080) horizontal scrollbar container and dark mode contrast ratios. |
