@@ -84,6 +84,19 @@
 
 
 
+
+## v4.78 — 2026-08-13
+**Remediation Enhancements & Platform Updates**
+
+- Remediation: fix getter check on CoinModel in coin_detail_screen.dart
+- Remediation: 13 Aug beta remediation -- Firestore patch for eric.seaman@yahoo.com, origin filter & acquisition cost display
+- Tests: clarify 2019-W Quarter is a US coin (America the Beautiful series) in suite 18 report highlights
+- Qa: replace checkmark emoji with ASCII string for Windows console compatibility
+- Qa: add automated beta test suite v4 with dual-account isolation and zero-drift verification
+- Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips
+- Add REPOSITORY_RULES.md for standalone AI advisors
+- Qa: system-wide semantic test assertions and safe production account repair
+
 ## v4.77 — 2026-08-13
 **Remediation Enhancements & Platform Updates**
 

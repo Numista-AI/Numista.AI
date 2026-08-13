@@ -2432,10 +2432,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? fmt.format(finalVal) 
             : (m[_F.aiValue]?.toString() ?? '—');
 
-        final obverseUrl = m[_F.imageObverse]?.toString() ?? '';
-        final reverseUrl = m[_F.imageReverse]?.toString() ?? '';
-        final displayUrl = obverseUrl.isNotEmpty ? obverseUrl : reverseUrl;
-
         return Card(
           color: _surface,
           shape: RoundedRectangleBorder(
@@ -2466,30 +2462,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: displayUrl.isNotEmpty
-                          ? Center(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFC9A227).withAlpha(40),
-                                      blurRadius: 14,
-                                      spreadRadius: 1,
-                                    ),
-                                  ],
-                                ),
-                                child: Image.network(
-                                  displayUrl,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.broken_image_outlined, size: 36),
-                                ),
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(Icons.image_not_supported_outlined, size: 36),
-                            ),
+                      child: _CollectionCardImage(data: m),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -4953,4 +4926,110 @@ class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
     );
   }
 }
+
+/// Robust image component for collection card grid.
+/// Displays personal scan if available, otherwise queries CoinImageService for reference image.
+class _CollectionCardImage extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _CollectionCardImage({required this.data});
+
+  static String _cleanUrl(dynamic val) {
+    if (val == null) return '';
+    final s = val.toString().trim();
+    if (s.isEmpty || s.startsWith('gs://') || !s.startsWith('http')) return '';
+    return s;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final obv = _cleanUrl(data[_F.imageObverse]);
+    final rev = _cleanUrl(data[_F.imageReverse]);
+    final directUrl = obv.isNotEmpty ? obv : rev;
+
+    if (directUrl.isNotEmpty) {
+      return _buildCoinImage(directUrl);
+    }
+
+    final year = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+    final mint = data[_F.mintMark]?.toString().trim() ?? '';
+    final denom = data[_F.denomination]?.toString() ?? '';
+    final series = data[_F.programSeries]?.toString() ?? '';
+    final subject = data[_F.themeSubject]?.toString() ?? '';
+
+    return FutureBuilder<CoinImageResult>(
+      future: CoinImageService.fetchReferenceImages(
+        year: year,
+        mint: mint.isEmpty ? null : mint,
+        denomination: denom.isEmpty ? null : denom,
+        series: series.isEmpty ? null : series,
+        subject: subject.isEmpty ? null : subject,
+      ),
+      builder: (context, snapshot) {
+        final ref = snapshot.data;
+        final refUrl = (ref?.obverseUrl?.isNotEmpty == true)
+            ? ref!.obverseUrl!
+            : (ref?.reverseUrl?.isNotEmpty == true ? ref!.reverseUrl! : '');
+
+        if (refUrl.isNotEmpty) {
+          return _buildCoinImage(refUrl);
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFC9A227),
+              ),
+            ),
+          );
+        }
+
+        return const Center(
+          child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
+        );
+      },
+    );
+  }
+
+  Widget _buildCoinImage(String url) {
+    return Center(
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFC9A227).withAlpha(40),
+              blurRadius: 14,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Center(
+            child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
+          ),
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFC9A227),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
 
