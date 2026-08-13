@@ -16,6 +16,7 @@ import '../services/checklist_generator_service.dart';
 import 'coin_search_screen.dart';
 import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
+import '../utils/slot_resolver.dart';
 
 class ProgramManagerScreen extends StatefulWidget {
   final String? initialProgramId;
@@ -601,7 +602,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               ElevatedButton.icon(
                 onPressed: _generatingProgramId == program.id
                     ? null
-                    : () => _handlePrintChecklist(program),
+                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
                 icon: _generatingProgramId == program.id
                     ? const SizedBox(
                         width: 14,
@@ -624,7 +625,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               OutlinedButton.icon(
                 onPressed: _generatingProgramId == program.id
                     ? null
-                    : () => _handlePrintChecklist(program, downloadOnly: true),
+                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
                 icon: const Icon(Icons.download_rounded, size: 16),
                 label: const Text('Download PDF'),
                 style: OutlinedButton.styleFrom(
@@ -1103,7 +1104,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     );
   }
 
-  Future<void> _handlePrintChecklist(CoinProgram program, {bool downloadOnly = false}) async {
+  Future<void> _handlePrintChecklist(
+    CoinProgram program, {
+    bool downloadOnly = false,
+    bool personalized = false,
+    List<QueryDocumentSnapshot>? docs,
+  }) async {
     if (_generatingProgramId != null) return;
 
     setState(() {
@@ -1129,49 +1135,64 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         return;
       }
 
+      Map<String, SlotMatchResult>? inventoryMap;
+      String? userEmail;
+      String? snapshotId;
+      int distinctOwned = 0;
+      int totalOwned = 0;
+
+      if (personalized) {
+        userEmail = AuthService.currentUser?.email ?? 'Authenticated Collector';
+        final coinList = (docs ?? []).map((d) => d.data() as Map<String, dynamic>).toList();
+        inventoryMap = SlotResolver.resolveProgramInventory(
+          program: program,
+          coins: coinList,
+        );
+        distinctOwned = inventoryMap.values.where((r) => r.isOwned).length;
+        totalOwned = inventoryMap.values.where((r) => r.isOwned).fold<int>(0, (acc, r) => acc + r.quantity);
+
+        final totalProgramSlots = program.coins.fold<int>(0, (acc, c) => acc + (c.varieties.isEmpty ? 1 : c.varieties.length));
+        snapshotId = SlotResolver.generateSnapshotId(
+          collectorEmail: userEmail,
+          programId: program.id,
+          totalSlots: totalProgramSlots,
+          resolvedSlots: inventoryMap,
+          timestampUtc: DateTime.now().toUtc(),
+        );
+      }
+
       pdfBytes = await ChecklistGeneratorService.generateChecklist(
         program,
         logoBytes: _cachedLogoBytes,
         mintMarkDiagrams: _cachedMintMarkDiagrams,
         ttfFontBytes: _cachedFontBytes,
         ttfBoldFontBytes: _cachedBoldFontBytes,
+        resolvedInventory: inventoryMap,
+        collectorEmail: userEmail,
+        snapshotId: snapshotId,
+        distinctOwnedSlots: distinctOwned,
+        totalOwnedItems: totalOwned,
       );
 
       final safeName = program.name
           .replaceAll(RegExp(r'[^\w\s-]'), '')
           .replaceAll(RegExp(r'\s+'), '_');
+      final fileSuffix = personalized ? 'Collection_Progress' : 'Checklist';
 
       if (downloadOnly) {
         await Printing.sharePdf(
           bytes: pdfBytes,
-          filename: '${safeName}_Checklist.pdf',
+          filename: '${safeName}_$fileSuffix.pdf',
         );
       } else {
         await Printing.layoutPdf(
           onLayout: (format) async => pdfBytes!,
-          name: '${safeName}_Checklist.pdf',
+          name: '${safeName}_$fileSuffix.pdf',
         );
       }
     } catch (e, stack) {
       debugPrint('Error during checklist printing: $e\n$stack');
-      if (mounted && pdfBytes != null) {
-        try {
-          final safeName = program.name
-              .replaceAll(RegExp(r'[^\w\s-]'), '')
-              .replaceAll(RegExp(r'\s+'), '_');
-          await Printing.sharePdf(
-            bytes: pdfBytes,
-            filename: '${safeName}_Checklist.pdf',
-          );
-        } catch (err) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to print or download PDF: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else if (mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to generate PDF checklist: $e'),
@@ -1186,6 +1207,128 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         });
       }
     }
+  }
+
+  void _showPrintOptionsDialog(
+    BuildContext context,
+    CoinProgram program,
+    List<QueryDocumentSnapshot> docs, {
+    required bool downloadOnly,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(
+              downloadOnly ? Icons.download_rounded : Icons.print,
+              color: const Color(0xFF38BDF8),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              downloadOnly ? 'Download PDF Checklist' : 'Print Program Checklist',
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              program.name,
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            // Option 1: Personalized Collection Progress
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _handlePrintChecklist(program, downloadOnly: downloadOnly, personalized: true, docs: docs);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  border: Border.all(color: const Color(0xFF2563EB), width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Color(0xFF38BDF8), size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'My Collection Progress',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            'Pre-filled with your checkmarks, verified grades, cert numbers, and completion %',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Option 2: Blank Master Checklist
+            InkWell(
+              onTap: () {
+                Navigator.pop(ctx);
+                _handlePrintChecklist(program, downloadOnly: downloadOnly, personalized: false, docs: docs);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  border: Border.all(color: const Color(0xFF334155)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.checklist_rtl_rounded, color: Color(0xFF94A3B8), size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Blank Master Checklist',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            'Clean blank checklist template for manual handwritten logging or AI scanning',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Scan checklist via camera or gallery ──────────────────────────────────
