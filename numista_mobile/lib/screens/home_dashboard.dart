@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.79',
+    date: '2026-08-13',
+    description: 'Images Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Images: resolve missing collection images with GCS reference fallback and card grid rendering',
+      'Remediation: fix getter check on CoinModel in coin_detail_screen.dart',
+      'Remediation: 13 Aug beta remediation -- Firestore patch for eric.seaman@yahoo.com, origin filter & acquisition cost display',
+      'Tests: clarify 2019-W Quarter is a US coin (America the Beautiful series) in suite 18 report highlights',
+      'Qa: replace checkmark emoji with ASCII string for Windows console compatibility',
+      'Qa: add automated beta test suite v4 with dual-account isolation and zero-drift verification',
+      'Remediation: 13 AUG beta fixes - DB patch, UI tab order, title formatting & grade tooltips',
+      'Add REPOSITORY_RULES.md for standalone AI advisors',
+    ],
+  ),
+  _Release(
     version: 'v4.78',
     date: '2026-08-13',
     description: 'Remediation Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Remediation: fix getter check on CoinModel in coin_detail_screen.dart',
       'Remediation: 13 Aug beta remediation -- Firestore patch for eric.seaman@yahoo.com, origin filter & acquisition cost display',
