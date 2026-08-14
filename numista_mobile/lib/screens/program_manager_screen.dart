@@ -1,14 +1,10 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/coin_programs_data.dart';
 import '../services/reference_service.dart';
 import '../models/program_model.dart';
-import '../services/checklist_scan_service.dart';
-import '../widgets/scan_result_dialog.dart';
 import 'package:uuid/uuid.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -41,10 +37,6 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // Program preferences cache: programId -> goal ("Full Master Set", "Circulation / Business Strikes Only", "Standard Set")
   final Map<String, String> _programGoals = {};
   final Map<String, bool> _programManualComplete = {};
-
-  // Scan state
-  bool _isScanning = false;
-  final ImagePicker _imagePicker = ImagePicker();
 
   int _totalReferenceCount = 2834; // default fallback matching SQLite seeded catalog
 
@@ -1327,129 +1319,6 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
           ),
         ],
-      ),
-    );
-  }
-
-  // ── Scan checklist via camera or gallery ──────────────────────────────────
-  Future<void> _startScan(CoinProgram program) async {
-    final user = AuthService.currentUser;
-    if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Please sign in to use checklist scanning.'),
-              backgroundColor: Colors.red),
-        );
-      }
-      return;
-    }
-
-    // Let user choose: camera or photo library
-    final source = await _showImageSourceSheet();
-    if (source == null) return; // user dismissed
-
-    final picked = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 90,   // good quality, reasonable size
-      maxWidth: 3000,     // don't send gigantic files
-    );
-    if (picked == null) return; // user cancelled
-
-    setState(() => _isScanning = true);
-
-    try {
-      final userId = user.email ?? user.uid;
-      final result = await ChecklistScanService.scanChecklist(
-        imageFile: File(picked.path),
-        programId: program.id,
-        userId: userId,
-      );
-
-      if (!mounted) return;
-
-      if (result.success) {
-        // Show the result dialog; returns true = done, false = scan another
-        final done = await ScanResultDialog.show(
-          context,
-          result: result,
-          programName: program.name,
-        );
-        // If they want to scan another page, re-trigger immediately
-        if (done != true && mounted) {
-          _startScan(program);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Scan failed: ${result.errorMessage}'),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isScanning = false);
-    }
-  }
-
-  /// Bottom sheet to pick camera vs. photo library.
-  Future<ImageSource?> _showImageSourceSheet() async {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Scan Checklist',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A))),
-              const SizedBox(height: 6),
-              Text('Choose your checklist image source',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.camera_alt_rounded,
-                      color: Color(0xFF2563EB)),
-                ),
-                title: const Text('Take a Photo',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Use your camera to photograph the checklist'),
-                onTap: () => Navigator.pop(ctx, ImageSource.camera),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.photo_library_rounded,
-                      color: Color(0xFF10B981)),
-                ),
-                title: const Text('Choose from Library',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Pick an existing photo from your gallery'),
-                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
       ),
     );
   }

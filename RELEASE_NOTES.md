@@ -92,6 +92,44 @@
 
 
 
+
+
+
+## v4.89 — 2026-08-14
+**Qa Enhancements & Platform Updates**
+
+- Qa: resolve analyzer warnings, optimize dialog reactivity, and finalize beta test verification matrix
+- Remediation: backfill canonical theme and reference images for 14 AUG checklist intake
+- Release: bump version to v4.86
+- Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+
+## v4.88 — 2026-08-14
+**Remediation Enhancements & Platform Updates**
+
+- Remediation: backfill canonical theme and reference images for 14 AUG checklist intake
+- Release: bump version to v4.86
+- Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+- Scanner: run project-scanner full system audit and generate SCAN_REPORT.md
+
+## v4.87 — 2026-08-14
+**Release Enhancements & Platform Updates**
+
+- Release: bump version to v4.86
+- Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+- Scanner: run project-scanner full system audit and generate SCAN_REPORT.md
+
 ## v4.86 — 2026-08-14
 **Ingestion Enhancements & Platform Updates**
 
