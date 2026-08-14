@@ -76,7 +76,10 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Frontend Playwright E2E Suite:** Executed with desktop viewport (1920x1080) enforcement.
+* **Frontend Playwright E2E Suite:** 132 passed, 11 failed, 2 skipped (out of 145 tests run with desktop 1920x1080 viewport enforcement).
+  * Passed: 132 tests across core application workflows, navigation, authentication, and asset routes.
+  * Failed: 11 tests in recent spec additions (specs 18-21 for local Flutter renderer web assertions requiring active web server instance).
+  * Skipped: 2 tests gracefully skipped.
 * **Test Isolation:** Enforced. E2E tests target designated sandbox test account (`ericdcman@gmail.com`) and local emulator suites to guarantee zero production data mutation.
 
 ---
