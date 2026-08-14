@@ -2223,14 +2223,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               final isSorted  = _sortColumnIndex == sortIdx;
               return _tvHeaderCell(
                 colDef.header,
-                () => setState(() {
-                  if (_sortColumnIndex == sortIdx) {
-                    _sortAscending = !_sortAscending;
-                  } else {
-                    _sortColumnIndex = sortIdx;
-                    _sortAscending   = true;
-                  }
-                }),
+                () {
+                  setState(() {
+                    if (_sortColumnIndex == sortIdx) {
+                      _sortAscending = !_sortAscending;
+                    } else {
+                      _sortColumnIndex = sortIdx;
+                      _sortAscending   = true;
+                    }
+                  });
+                  _saveSortPreferences(_sortColumnIndex, _sortAscending);
+                },
                 sortAsc: isSorted ? _sortAscending : null,
               );
             }
@@ -3454,32 +3457,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _onCheckEbay(Map<String, dynamic> data) async {
-    final coin = CoinModel.fromMap(data, _selectedCoinId!);
-    setState(() {});
-    
-    try {
-      final results = await EpnService.fetchEbayResults(coin);
-      if (results.isNotEmpty) {
-        final price = results.first['price']['value'];
-        final currency = results.first['price']['currency'];
-        setState(() {
-          _ebayPrices[_selectedCoinId!] = '$currency $price';
-        });
-      } else {
-        setState(() {
-          _ebayPrices[_selectedCoinId!] = 'No Results';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('eBay Check Failed: $e'), backgroundColor: _red));
-      }
-    } finally {
-      if (mounted) setState(() {});
-    }
   }
 
   void _onSearchGoogle(Map<String, dynamic> data) async {
@@ -4789,9 +4766,10 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                     tooltip: 'Copy Attorney Portal Link',
                     icon: const Icon(Icons.link, color: Colors.white),
                     onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       await EstateReportService.copyAttorneyLink(widget.userEmail, _result!.reportId);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attorney Portal link copied to clipboard!'), backgroundColor: pink));
+                        messenger.showSnackBar(const SnackBar(content: Text('Attorney Portal link copied to clipboard!'), backgroundColor: pink));
                       }
                     },
                   ),
@@ -4823,7 +4801,6 @@ class _TopScrollbarTrackWidget extends StatefulWidget {
   final Color trackColor;
 
   const _TopScrollbarTrackWidget({
-    super.key,
     required this.controller,
     required this.accentColor,
     required this.trackColor,

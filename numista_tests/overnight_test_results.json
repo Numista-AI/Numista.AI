@@ -1,0 +1,9 @@
+{
+  "run_id": "qc_20260813_060005",
+  "timestamp_utc": "2026-08-13T10:00:05.601311Z",
+  "overall_status": "FAILED",
+  "sandbox_account": "qa_bot_sandbox@numista.ai",
+  "sections": {},
+  "failures": [],
+  "anomalies": []
+}
