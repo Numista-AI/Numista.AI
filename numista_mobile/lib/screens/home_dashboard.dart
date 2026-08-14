@@ -1520,10 +1520,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.86',
+    date: '2026-08-14',
+    description: 'Ingestion Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX',
+      'Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings',
+      'E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern',
+      'Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate',
+      'Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics',
+      'Scanner: run project-scanner full system audit and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.85',
     date: '2026-08-14',
     description: 'Checklist Ingestion Remediation, Legislation Seeding & Desktop UX',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Backend: implement 2-stage handwritten notes parser and theme slugifier for reference image keys',
       'Backend: add multi-series routing aliases for America the Beautiful, 50 States, DC & Territories, and Women Quarters',
