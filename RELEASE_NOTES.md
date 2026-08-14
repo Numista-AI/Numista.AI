@@ -1,4 +1,4 @@
-﻿# Numista.AI — Release Notes
+# Numista.AI — Release Notes
 
 > **Source of Truth for System Updates & Release Notes**
 > Managed automatically by `add_release_note.py`. Do not hand-edit the version entries.
@@ -88,6 +88,49 @@
 
 
 
+
+
+
+
+## v4.86 — 2026-08-14
+**Ingestion Enhancements & Platform Updates**
+
+- Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+- Scanner: run project-scanner full system audit and generate SCAN_REPORT.md
+
+## v4.85 — 2026-08-14
+**Checklist Ingestion Remediation, Legislation Seeding & Desktop UX**
+
+- Backend: implement 2-stage handwritten notes parser and theme slugifier for reference image keys
+- Backend: add multi-series routing aliases for America the Beautiful, 50 States, DC & Territories, and Women Quarters
+- Legislation: seed authoritative statutory public laws for PL 110-456, PL 105-124, PL 110-161, and PL 116-330
+- Review Hub: add MORGAN guide banner, Add All with 100% AI Confidence action, Paper Trail viewer, and gold card styling
+- Desktop UX: implement 12px high-contrast scrollbars, draggable feedback FAB, and Valuation Pending shimmer badges
+
+## v4.84 — 2026-08-14
+**Frontend Enhancements & Platform Updates**
+
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+- Scanner: run project-scanner full system audit and generate SCAN_REPORT.md
+
+## v4.83 — 2026-08-14
+**E2e Enhancements & Platform Updates**
+
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+- Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics
+- Scanner: run project-scanner full system audit and generate SCAN_REPORT.md
+- Checklist: implement deterministic SlotResolver and System of Record personalized checklist export
+- Audit: implement SoR v4.0.0 34-column missing image sourcing tracker and multi-account audit
+- Release: bump to v4.79 with image fixes
+- Images: resolve missing collection images with GCS reference fallback and card grid rendering
 
 ## v4.82 — 2026-08-13
 **Checklist Enhancements & Platform Updates**

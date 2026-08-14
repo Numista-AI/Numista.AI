@@ -28,6 +28,7 @@ import time
 from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
+from services.checklist_parser import parse_checklist_notes, slugify_theme
 logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
@@ -2795,6 +2796,22 @@ async def commit_reviews(request: CommitReviewsRequest):
                     skipped_count += 1
                     batch_op_count += 1
                 else:
+                    # Legal System of Record Golden Schema defaults
+                    if not data.get('Condition'):
+                        data['Condition'] = 'Unspecified / Raw'
+                    if not data.get('enrichment_status'):
+                        data['enrichment_status'] = 'pending'
+                    c_val = str(data.get('country') or data.get('Country') or 'USA').strip()
+                    data['country'] = c_val
+                    data['Country'] = c_val
+                    data['is_foreign'] = False if c_val.upper() in ('USA', 'UNITED STATES') else True
+
+                    # Storage location preservation
+                    if 'Storage Location' in data and 'storage_location' not in data:
+                        data['storage_location'] = data['Storage Location']
+                    elif 'storage_location' in data and 'Storage Location' not in data:
+                        data['Storage Location'] = data['storage_location']
+
                     new_coin_ref = coins_ref.document(doc_id)
                     batch.set(new_coin_ref, data)
                     batch.delete(queue_ref.document(doc_id))
@@ -3769,43 +3786,64 @@ KNOWN_CHECKLIST_FORMATS = {
 # Keys are lowercase for case-insensitive matching. Extend as new series are
 # added to the Document AI training dataset.
 SERIES_NAME_ROUTING = {
+    # -- Quarters -------------------------------------------------------------
+    "america the beautiful quarters": {"program": "America the Beautiful Quarters", "denomination": "Quarter Dollar"},
+    "america the beautiful":          {"program": "America the Beautiful Quarters", "denomination": "Quarter Dollar"},
+    "atb quarters":                   {"program": "America the Beautiful Quarters", "denomination": "Quarter Dollar"},
+    "atb":                            {"program": "America the Beautiful Quarters", "denomination": "Quarter Dollar"},
+    "national park quarters":         {"program": "America the Beautiful Quarters", "denomination": "Quarter Dollar"},
+    "50 state quarters":              {"program": "50 State Quarters",              "denomination": "Quarter Dollar"},
+    "50 states":                      {"program": "50 State Quarters",              "denomination": "Quarter Dollar"},
+    "state quarters":                 {"program": "50 State Quarters",              "denomination": "Quarter Dollar"},
+    "district of columbia & u.s. territories": {"program": "District of Columbia & U.S. Territories", "denomination": "Quarter Dollar"},
+    "district of columbia and us territories": {"program": "District of Columbia & U.S. Territories", "denomination": "Quarter Dollar"},
+    "dc & territories":               {"program": "District of Columbia & U.S. Territories", "denomination": "Quarter Dollar"},
+    "dc and us territories":          {"program": "District of Columbia & U.S. Territories", "denomination": "Quarter Dollar"},
+    "american women quarters":        {"program": "American Women Quarters",        "denomination": "Quarter Dollar"},
+    "women quarters":                 {"program": "American Women Quarters",        "denomination": "Quarter Dollar"},
+    "washington quarter":             {"program": "Washington Quarters",            "denomination": "Quarter Dollar"},
+    "washington quarters":            {"program": "Washington Quarters",            "denomination": "Quarter Dollar"},
+    "standing liberty quarter":       {"program": "Standing Liberty Quarters",      "denomination": "Quarter Dollar"},
+    "barber quarter":                 {"program": "Barber Quarters",                "denomination": "Quarter Dollar"},
     # -- Silver Dollars -------------------------------------------------------
-    "morgan dollar":               {"program": "Morgan Silver Dollars",        "denomination": "Dollar"},
-    "morgan silver dollar":        {"program": "Morgan Silver Dollars",        "denomination": "Dollar"},
-    "peace dollar":                {"program": "Peace Silver Dollars",         "denomination": "Dollar"},
-    "peace silver dollar":         {"program": "Peace Silver Dollars",         "denomination": "Dollar"},
-    "eisenhower dollar":           {"program": "Eisenhower Dollars",           "denomination": "Dollar"},
-    "susan b. anthony dollar":     {"program": "Susan B. Anthony Dollars",     "denomination": "Dollar"},
-    "sacagawea dollar":            {"program": "Sacagawea Dollars",            "denomination": "Dollar"},
+    "morgan dollar":                  {"program": "Morgan Silver Dollars",          "denomination": "Dollar"},
+    "morgan silver dollar":           {"program": "Morgan Silver Dollars",          "denomination": "Dollar"},
+    "peace dollar":                   {"program": "Peace Silver Dollars",           "denomination": "Dollar"},
+    "peace silver dollar":            {"program": "Peace Silver Dollars",           "denomination": "Dollar"},
+    "eisenhower dollar":              {"program": "Eisenhower Dollars",             "denomination": "Dollar"},
+    "susan b. anthony dollar":        {"program": "Susan B. Anthony Dollars",       "denomination": "Dollar"},
+    "sacagawea dollar":               {"program": "Sacagawea Dollars",              "denomination": "Dollar"},
+    "presidential dollar":            {"program": "Presidential Dollars",           "denomination": "Dollar"},
+    "presidential dollars":           {"program": "Presidential Dollars",           "denomination": "Dollar"},
     # -- Half Dollars ---------------------------------------------------------
-    "liberty walking half dollar": {"program": "Walking Liberty Half Dollars", "denomination": "Half Dollar"},
-    "walking liberty half dollar": {"program": "Walking Liberty Half Dollars", "denomination": "Half Dollar"},
-    "franklin half dollar":        {"program": "Franklin Half Dollars",        "denomination": "Half Dollar"},
-    "kennedy half dollar":         {"program": "Kennedy Half Dollars",         "denomination": "Half Dollar"},
-    "barber half dollar":          {"program": "Barber Half Dollars",          "denomination": "Half Dollar"},
-    "barber halves":               {"program": "Barber Half Dollars",          "denomination": "Half Dollar"},
+    "liberty walking half dollar":    {"program": "Walking Liberty Half Dollars",   "denomination": "Half Dollar"},
+    "walking liberty half dollar":    {"program": "Walking Liberty Half Dollars",   "denomination": "Half Dollar"},
+    "franklin half dollar":           {"program": "Franklin Half Dollars",          "denomination": "Half Dollar"},
+    "kennedy half dollar":            {"program": "Kennedy Half Dollars",           "denomination": "Half Dollar"},
+    "barber half dollar":             {"program": "Barber Half Dollars",            "denomination": "Half Dollar"},
+    "barber halves":                  {"program": "Barber Half Dollars",            "denomination": "Half Dollar"},
     # -- Nickels --------------------------------------------------------------
-    "liberty head nickel":         {"program": "Liberty Head Nickels",         "denomination": "Nickel"},
-    "liberty head nickels":        {"program": "Liberty Head Nickels",         "denomination": "Nickel"},
-    "buffalo nickel":              {"program": "Buffalo Nickels",              "denomination": "Nickel"},
-    "buffalo nickels":             {"program": "Buffalo Nickels",              "denomination": "Nickel"},
-    "jefferson nickel":            {"program": "Jefferson Nickels",            "denomination": "Nickel"},
+    "liberty head nickel":            {"program": "Liberty Head Nickels",           "denomination": "Nickel"},
+    "liberty head nickels":           {"program": "Liberty Head Nickels",           "denomination": "Nickel"},
+    "buffalo nickel":                 {"program": "Buffalo Nickels",                "denomination": "Nickel"},
+    "buffalo nickels":                {"program": "Buffalo Nickels",                "denomination": "Nickel"},
+    "jefferson nickel":               {"program": "Jefferson Nickels",              "denomination": "Nickel"},
     # -- Dimes ----------------------------------------------------------------
-    "barber dime":                 {"program": "Barber Dimes",                 "denomination": "Dime"},
-    "barber dimes":                {"program": "Barber Dimes",                 "denomination": "Dime"},
-    "mercury dime":                {"program": "Mercury Dimes",                "denomination": "Dime"},
-    "winged liberty head dime":    {"program": "Mercury Dimes",                "denomination": "Dime"},
-    "roosevelt dime":              {"program": "Roosevelt Dimes",              "denomination": "Dime"},
-    "roosevelt dimes":             {"program": "Roosevelt Dimes",              "denomination": "Dime"},
+    "barber dime":                    {"program": "Barber Dimes",                   "denomination": "Dime"},
+    "barber dimes":                   {"program": "Barber Dimes",                   "denomination": "Dime"},
+    "mercury dime":                   {"program": "Mercury Dimes",                  "denomination": "Dime"},
+    "winged liberty head dime":       {"program": "Mercury Dimes",                  "denomination": "Dime"},
+    "roosevelt dime":                 {"program": "Roosevelt Dimes",                "denomination": "Dime"},
+    "roosevelt dimes":                {"program": "Roosevelt Dimes",                "denomination": "Dime"},
     # -- Cents ----------------------------------------------------------------
-    "lincoln cent":                {"program": "Lincoln Cents",                "denomination": "Cent"},
-    "lincoln cents":               {"program": "Lincoln Cents",                "denomination": "Cent"},
-    "flying eagle cent":           {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
-    "indian head cent":            {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
+    "lincoln cent":                   {"program": "Lincoln Cents",                  "denomination": "Cent"},
+    "lincoln cents":                  {"program": "Lincoln Cents",                  "denomination": "Cent"},
+    "flying eagle cent":              {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
+    "indian head cent":               {"program": "Flying Eagle & Indian Head Cents", "denomination": "Cent"},
     # -- Proof & Special Sets -------------------------------------------------
-    "u.s. proof sets":             {"program": "U.S. Proof Sets",              "denomination": "Set"},
-    "us proof sets":               {"program": "U.S. Proof Sets",              "denomination": "Set"},
-    "proof sets":                  {"program": "U.S. Proof Sets",              "denomination": "Set"},
+    "u.s. proof sets":                {"program": "U.S. Proof Sets",                "denomination": "Set"},
+    "us proof sets":                  {"program": "U.S. Proof Sets",                "denomination": "Set"},
+    "proof sets":                     {"program": "U.S. Proof Sets",                "denomination": "Set"},
 }
 
 
@@ -3927,6 +3965,7 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
             "grade_review_status": "pending",
         }
 
+        raw_notes = ""
         for prop in entity.properties:
             ptype = prop.type_.lower()
 
@@ -3946,6 +3985,22 @@ def _analyze_checklist_with_document_ai(file_bytes: bytes, content_type: str) ->
                 except Exception:
                     raw = prop.mention_text.strip().lower()
                     slot["present"] = raw in ("true", "yes", "1", "checked", "owned", "filled")
+
+            elif ptype in ("notes", "annotation", "notes_qty", "slot_condition_note", "storage_location"):
+                raw_notes = prop.mention_text.strip()
+                slot["slot_condition_note"] = raw_notes
+
+        if raw_notes:
+            parsed = parse_checklist_notes(raw_notes)
+            slot["storage_location"] = parsed["storage_location"]
+            slot["condition"] = parsed["condition"]
+            slot["quantity"] = parsed["quantity"]
+            if not parsed["is_owned"]:
+                slot["present"] = False
+            slot["personal_notes"] = parsed["personal_notes"]
+            slot["notes_confidence"] = parsed["confidence_score"]
+            if parsed.get("flag"):
+                slot["notes_flag"] = parsed["flag"]
 
         coin_slots.append(slot)
 

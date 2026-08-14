@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../widgets/grade_badge_widget.dart';
 
@@ -68,6 +69,162 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } finally {
       setState(() => _isProcessing = false);
     }
+  }
+
+  // ─── Commit 100% AI Confidence items ──────────────────────────────────────
+  Future<void> _commitHighConfidence(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+    final highConfIds = docs
+        .where((d) {
+          final data = d.data();
+          double conf = 1.0;
+          try {
+            final raw = data['confidence_score'];
+            if (raw != null) conf = (raw as num).toDouble();
+          } catch (_) {}
+          return conf >= 0.999;
+        })
+        .map((d) => d.id)
+        .toList();
+
+    if (highConfIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No items with 100% AI Confidence found in queue.')),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse("$_apiUrl/api/review/commit"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "user_email": user.email,
+          "review_ids": highConfIds,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Successfully committed ${highConfIds.length} items with 100% AI Confidence!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+        setState(() => _selectedIds.removeWhere((id) => highConfIds.contains(id)));
+      } else {
+        throw Exception("Failed to commit items: ${response.body}");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error committing items: $e'),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // ─── View Paper Trail Dialog ─────────────────────────────────────────────
+  Future<void> _showPaperTrailDialog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1D27),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.receipt_long_outlined, color: Color(0xFFFFD700), size: 22),
+            SizedBox(width: 10),
+            Text('Paper Trail — Ingested Documents', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: SizedBox(
+          width: 600,
+          child: FutureBuilder<http.Response>(
+            future: http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}")),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD700))));
+              }
+              List<dynamic> receipts = [];
+              if (snapshot.hasData && snapshot.data!.statusCode == 200) {
+                try {
+                  final body = jsonDecode(snapshot.data!.body);
+                  receipts = body['receipts'] ?? [];
+                } catch (_) {}
+              }
+
+              if (receipts.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.inventory_2_outlined, color: Colors.white38, size: 40),
+                      SizedBox(height: 12),
+                      Text('No uploaded scans or receipts found for this session.', style: TextStyle(color: Colors.white70)),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                itemCount: receipts.length,
+                separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+                itemBuilder: (context, idx) {
+                  final r = receipts[idx] as Map<String, dynamic>;
+                  final name = r['original_filename'] ?? r['receipt_id'] ?? 'Document ${idx + 1}';
+                  final date = r['invoice_date'] ?? 'Recent';
+                  final linked = (r['linked_coin_ids'] as List?)?.length ?? 0;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.picture_as_pdf, color: Color(0xFF60A5FA), size: 28),
+                    title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    trailing: TextButton.icon(
+                      onPressed: () async {
+                        try {
+                          final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
+                          if (res.statusCode == 200) {
+                            final data = jsonDecode(res.body);
+                            final url = data['signed_url'] ?? data['url'];
+                            if (url != null) {
+                              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                            }
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
+                      label: const Text('View Scan', style: TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: Colors.white70)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ─── Bulk update ──────────────────────────────────────────────────────────
@@ -671,9 +828,51 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'View Paper Trail (Scans & Invoices)',
+            icon: const Icon(Icons.receipt_long_outlined, color: Color(0xFF475569)),
+            onPressed: _showPaperTrailDialog,
+          ),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.email!)
+                .collection('review_queue')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final docs = snapshot.data?.docs ?? [];
+              final highConfCount = docs.where((d) {
+                final data = d.data();
+                double conf = 1.0;
+                try {
+                  final raw = data['confidence_score'];
+                  if (raw != null) conf = (raw as num).toDouble();
+                } catch (_) {}
+                return conf >= 0.999;
+              }).length;
+
+              if (highConfCount == 0) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: const Color(0xFFFFD700),
+                    side: const BorderSide(color: Color(0xFFC9A227)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  icon: const Icon(Icons.auto_awesome, size: 16, color: Color(0xFFFFD700)),
+                  label: Text('Add All with 100% AI Confidence ($highConfCount)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  onPressed: () => _commitHighConfidence(docs),
+                ),
+              );
+            },
+          ),
           if (_selectedIds.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 16, left: 8),
               child: Center(
                 child: Text('${_selectedIds.length} Selected', style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold)),
               ),
@@ -760,10 +959,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: docs.length,
+                itemCount: docs.length + 1,
                 itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _buildMorganGuideBanner();
+                  }
                   try {
-                    final doc = docs[index];
+                    final doc = docs[index - 1];
                     final data = doc.data();
                     final id = doc.id;
                     final isSelected = _selectedIds.contains(id);
@@ -1054,10 +1256,64 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
+  Widget _buildMorganGuideBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFC9A227).withAlpha(140)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFC9A227).withAlpha(30),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.psychology_outlined, color: Color(0xFFFFD700), size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'MORGAN Ingestion Guide',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFFD700),
+                    fontSize: 14,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Document processing complete! Please click the Review button on each item to verify the extracted details against your scan. Pay special attention to the AI Confidence meter in the upper right of each card before committing to your collection.',
+                  style: TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Coin Card (standard + paper_currency / medal / stamp / other) ────────
   Widget _buildCoinCard(String id, Map<String, dynamic> data, bool isSelected, double confidence, String itemType) {
     final isFromSet = data['from_set'] == true;
     final typeMeta  = _typeMetaMap[itemType];
+    final condStr = (data['Condition'] ?? '').toString().trim();
+    final hasCondition = condStr.isNotEmpty && condStr != 'Unspecified / Raw';
+    final storageLoc = (data['Storage Location'] ?? data['storage_location'] ?? '').toString().trim();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1095,12 +1351,38 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   Row(
                     children: [
                       Text(
-                        '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B)),
+                        '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}${data['Mint Mark'] != null && data['Mint Mark'].toString().isNotEmpty ? ' (${data['Mint Mark']})' : ''}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFC9A227)),
                       ),
                       const SizedBox(width: 8),
-                      if (data['Condition'] != null && data['Condition'].toString().isNotEmpty)
-                        GradeBadgeWidget(gradeCode: data['Condition'].toString()),
+                      if (hasCondition)
+                        GradeBadgeWidget(gradeCode: condStr)
+                      else
+                        InkWell(
+                          onTap: () => _showCoinEditDialog(id, data),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withAlpha(25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.orange.withAlpha(160)),
+                            ),
+                            child: const Text('Set Condition', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if (storageLoc.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withAlpha(20),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                            ),
+                            child: Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
                       const Spacer(),
                       // item_type badge (only shown for non-coin types)
                       if (typeMeta != null) ...[
@@ -1112,7 +1394,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         confidence < 0.85 ? Colors.orange : Colors.green),
                     ],
                   ),
-                  Text(data['Theme/Subject'] ?? 'No description', style: const TextStyle(color: Color(0xFF64748B))),
+                  const SizedBox(height: 4),
+                  Text(
+                    data['Theme/Subject'] ?? 'No description',
+                    style: const TextStyle(color: Color(0xFF475569), fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
 
                   // "From Set" amber chip
                   if (isFromSet) ...[
@@ -1182,21 +1468,21 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Source Desc: "${data['Original Description from source'] ?? 'N/A'}"',
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
+                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontStyle: FontStyle.italic),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if ((data['source_file'] ?? '').toString().isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.insert_drive_file_outlined, size: 11, color: Color(0xFFF63366)),
+                          const Icon(Icons.insert_drive_file_outlined, size: 13, color: Color(0xFF64748B)),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               'Scan File: ${data['source_file']}',
-                              style: const TextStyle(color: Color(0xFFF63366), fontSize: 11, fontWeight: FontWeight.w500),
+                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w500),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

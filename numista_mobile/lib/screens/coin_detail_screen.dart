@@ -965,12 +965,14 @@ class _HeroHeader extends StatelessWidget {
       if (denom.isNotEmpty) denom,
     ];
     final base = parts.join(' ');
-    // Only show themeSubject if it adds new info (not a variant of programSeries)
+    // Always show themeSubject if present
     final theme = coin.themeSubject.trim();
-    final series = coin.programSeries.trim().toLowerCase();
-    final themeNorm = theme.toLowerCase();
-    final isRedundant = series.isNotEmpty && themeNorm.contains(series.split(' ').first);
-    if (theme.isNotEmpty && !isRedundant) return '$base — $theme';
+    if (theme.isNotEmpty) {
+      if (coin.programSeries.isNotEmpty && !theme.toLowerCase().contains(coin.programSeries.toLowerCase())) {
+        return '$base — $theme';
+      }
+      return '$base — $theme';
+    }
     if (coin.programSeries.isNotEmpty) return '$base — ${coin.programSeries}';
     return base.isEmpty ? 'Coin' : base;
   }
@@ -2900,6 +2902,61 @@ class _LegislationTabState extends State<_LegislationTab> {
     }
   }
 
+  static const Map<String, Map<String, dynamic>> _kDefaultLaws = {
+    '110-456': {
+      'title': 'America’s Beautiful National Parks Quarter Dollar Coin Act of 2008',
+      'name': 'America’s Beautiful National Parks Quarter Dollar Coin Act of 2008',
+      'public_law': '110-456',
+      'bill_number': 'H.R. 6184',
+      'statute_citation': '122 Stat. 5038 (31 U.S.C. § 5112(t))',
+      'enacted': 'December 23, 2008',
+      'congress': '110th Congress (2007–2008)',
+      'chamber': 'House / Senate',
+      'actions_count': 8,
+      'congress_url': 'https://www.congress.gov/bill/110th-congress/house-bill/6184',
+      'description': 'Authorized the United States Mint to issue 56 quarter dollar coins honoring national parks and sites across all 50 states, DC, and 5 US territories from 2010 through 2021.',
+    },
+    '105-124': {
+      'title': '50 States Commemorative Coin Program Act',
+      'name': '50 States Commemorative Coin Program Act',
+      'public_law': '105-124',
+      'bill_number': 'H.R. 2414',
+      'statute_citation': '111 Stat. 2534 (31 U.S.C. § 5112(k))',
+      'enacted': 'December 1, 1997',
+      'congress': '105th Congress (1997–1998)',
+      'chamber': 'House / Senate',
+      'actions_count': 12,
+      'congress_url': 'https://www.congress.gov/bill/105th-congress/house-bill/2414',
+      'description': 'Authorized a 10-year circulating commemorative coin program honoring each of the 50 United States (1999–2008).',
+    },
+    '110-161': {
+      'title': 'District of Columbia and United States Territories Circulating Quarter Dollar Program Act',
+      'name': 'Consolidated Appropriations Act, 2008 (Div. D, Title VI, § 622 — DC & Territories Quarters)',
+      'public_law': '110-161',
+      'bill_number': 'H.R. 2764',
+      'statute_citation': '121 Stat. 2014 (31 U.S.C. § 5112(r))',
+      'enacted': 'December 26, 2007',
+      'congress': '110th Congress (2007–2008)',
+      'chamber': 'House / Senate',
+      'actions_count': 15,
+      'congress_url': 'https://www.congress.gov/bill/110th-congress/house-bill/2764',
+      'description': 'Authorized 6 quarter dollars issued in 2009 honoring the District of Columbia, Puerto Rico, Guam, American Samoa, the U.S. Virgin Islands, and the Northern Mariana Islands.',
+    },
+    '116-330': {
+      'title': 'Circulating Collectible Coin Redesign Act of 2020',
+      'name': 'Circulating Collectible Coin Redesign Act of 2020 (American Women Quarters)',
+      'public_law': '116-330',
+      'bill_number': 'H.R. 1923',
+      'statute_citation': '134 Stat. 5101 (31 U.S.C. § 5112(z))',
+      'enacted': 'January 13, 2021',
+      'congress': '116th Congress (2019–2020)',
+      'chamber': 'House / Senate',
+      'actions_count': 9,
+      'congress_url': 'https://www.congress.gov/bill/116th-congress/house-bill/1923',
+      'description': 'Authorized up to five quarter dollar designs per year from 2022 through 2025 celebrating prominent American women and their contributions to the nation.',
+    },
+  };
+
   /// Maps a coin's programSeries + denomination to a founding law key.
   /// Returns the key string (e.g. '105-124') or null if not matched.
   String? _matchLawKey() {
@@ -2911,7 +2968,15 @@ class _LegislationTabState extends State<_LegislationTab> {
         series.contains('statehood quarter')) {
       return '105-124';
     }
-    if (series.contains('america') && series.contains('beautiful'))    return '110-456';
+    if ((series.contains('america') && series.contains('beautiful')) || series.contains('atb') || series.contains('national park')) {
+      return '110-456';
+    }
+    if (series.contains('territor') || series.contains('district of columbia') || series.contains('dc &') || series.contains('dc and')) {
+      return '110-161';
+    }
+    if (series.contains('women quarter') || series.contains('american women')) {
+      return '116-330';
+    }
     if (series.contains('presidential dollar') || series.contains('president dollar')) {
       return '109-145';
     }
@@ -2947,7 +3012,13 @@ class _LegislationTabState extends State<_LegislationTab> {
     }
 
     final lawKey = _matchLawKey();
-    final law    = (lawKey != null && _laws != null) ? _laws![lawKey] as Map<String, dynamic>? : null;
+    Map<String, dynamic>? law;
+    if (lawKey != null) {
+      if (_laws != null && _laws![lawKey] != null) {
+        law = _laws![lawKey] as Map<String, dynamic>?;
+      }
+      law ??= _kDefaultLaws[lawKey];
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -3010,12 +3081,11 @@ class _LegislationTabState extends State<_LegislationTab> {
                   _HistoryRow(Icons.rule_outlined, 'Legislative Actions',
                       '${law['actions_count']} recorded actions'),
 
-                // Congress.gov link button
-                if ((law['congress_url'] ?? '').isNotEmpty) ...[
+                if ((law['congress_url'] ?? '').toString().isNotEmpty) ...[
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: () => launchUrl(
-                      Uri.parse(law['congress_url']),
+                      Uri.parse(law!['congress_url'].toString()),
                       mode: LaunchMode.externalApplication,
                     ),
                     icon: const Icon(Icons.open_in_new, size: 14),

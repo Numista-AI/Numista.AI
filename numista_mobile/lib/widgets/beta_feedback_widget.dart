@@ -451,6 +451,9 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
     );
   }
 
+  double? _posX;
+  double? _posY;
+
   @override
   Widget build(BuildContext context) {
     // Only render for beta testers or guest mode
@@ -458,25 +461,47 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
       return const SizedBox.shrink();
     }
 
+    final screenSize = MediaQuery.of(context).size;
+    final defaultX = screenSize.width - 150;
+    final defaultY = screenSize.height - 130;
+
+    final curX = (_posX ?? defaultX).clamp(10.0, (screenSize.width - 140).clamp(10.0, double.infinity));
+    final curY = (_posY ?? defaultY).clamp(60.0, (screenSize.height - 80).clamp(60.0, double.infinity));
+
     return Positioned(
-      bottom: 90,
-      right: 24,
-      child: Material(
-        color: Colors.transparent,
-        child: FloatingActionButton.extended(
-          heroTag: 'beta_feedback_fab',
-          backgroundColor: const Color(0xFF2563EB),
-          elevation: 8,
-          icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
-          label: const Text(
-            'Feedback',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+      left: curX,
+      top: curY,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          setState(() {
+            _posX = curX + details.delta.dx;
+            _posY = curY + details.delta.dy;
+          });
+        },
+        onPanEnd: (details) {
+          final midX = screenSize.width / 2;
+          final snapX = (curX < midX) ? 16.0 : (screenSize.width - 144.0);
+          setState(() {
+            _posX = snapX;
+          });
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: FloatingActionButton.extended(
+            heroTag: 'beta_feedback_fab',
+            backgroundColor: const Color(0xFF2563EB),
+            elevation: 8,
+            icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
+            label: const Text(
+              'Feedback',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
+            onPressed: () => _openFeedbackModal(context),
           ),
-          onPressed: () => _openFeedbackModal(context),
         ),
       ),
     );
