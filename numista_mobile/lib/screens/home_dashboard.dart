@@ -1520,10 +1520,52 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.85',
+    date: '2026-08-14',
+    description: 'Checklist Ingestion Remediation, Legislation Seeding & Desktop UX',
+    isLatest: true,
+    changes: [
+      'Backend: implement 2-stage handwritten notes parser and theme slugifier for reference image keys',
+      'Backend: add multi-series routing aliases for America the Beautiful, 50 States, DC & Territories, and Women Quarters',
+      'Legislation: seed authoritative statutory public laws for PL 110-456, PL 105-124, PL 110-161, and PL 116-330',
+      'Review Hub: add MORGAN guide banner, Add All with 100% AI Confidence action, Paper Trail viewer, and gold card styling',
+      'Desktop UX: implement 12px high-contrast scrollbars, draggable feedback FAB, and Valuation Pending shimmer badges',
+    ],
+  ),
+  _Release(
+    version: 'v4.84',
+    date: '2026-08-14',
+    description: 'Frontend Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings',
+      'E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern',
+      'Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate',
+      'Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics',
+      'Scanner: run project-scanner full system audit and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.83',
+    date: '2026-08-14',
+    description: 'E2e Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern',
+      'Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate',
+      'Scanner: update SCAN_REPORT.md with exact Playwright E2E execution metrics',
+      'Scanner: run project-scanner full system audit and generate SCAN_REPORT.md',
+      'Checklist: implement deterministic SlotResolver and System of Record personalized checklist export',
+      'Audit: implement SoR v4.0.0 34-column missing image sourcing tracker and multi-account audit',
+      'Release: bump to v4.79 with image fixes',
+      'Images: resolve missing collection images with GCS reference fallback and card grid rendering',
+    ],
+  ),
+  _Release(
     version: 'v4.82',
     date: '2026-08-13',
     description: 'Checklist Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Checklist: implement deterministic SlotResolver and System of Record personalized checklist export',
       'Audit: implement SoR v4.0.0 34-column missing image sourcing tracker and multi-account audit',

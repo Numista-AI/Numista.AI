@@ -2490,14 +2490,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        valueText,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFC9A227),
+                      if (valueText == '—' || m['enrichment_status'] == 'pending')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC9A227).withAlpha(25),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFC9A227).withAlpha(120)),
+                          ),
+                          child: const Text('Valuation Pending', style: TextStyle(fontSize: 10, color: Color(0xFFC9A227), fontWeight: FontWeight.bold)),
+                        )
+                      else
+                        Text(
+                          valueText,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFC9A227),
+                          ),
                         ),
-                      ),
                       if (condition.isNotEmpty)
                         GradeBadgeWidget(gradeCode: condition),
                     ],

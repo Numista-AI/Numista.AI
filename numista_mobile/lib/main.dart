@@ -185,6 +185,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               foregroundColor: Color(0xFF0F172A),
               elevation: 0,
             ),
+            scrollbarTheme: ScrollbarThemeData(
+              thumbVisibility: WidgetStateProperty.all(true),
+              trackVisibility: WidgetStateProperty.all(true),
+              thickness: WidgetStateProperty.all(12.0),
+              radius: const Radius.circular(6.0),
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.hovered)) {
+                  return const Color(0xFFC9A227);
+                }
+                return const Color(0xFF94A3B8);
+              }),
+              trackColor: WidgetStateProperty.all(const Color(0xFFE2E8F0)),
+            ),
             textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
               bodyColor: const Color(0xFF0F172A),
               displayColor: const Color(0xFF0F172A),
@@ -209,6 +222,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               backgroundColor: Color(0xFF1E2937),
               foregroundColor: Colors.white,
               elevation: 0,
+            ),
+            scrollbarTheme: ScrollbarThemeData(
+              thumbVisibility: WidgetStateProperty.all(true),
+              trackVisibility: WidgetStateProperty.all(true),
+              thickness: WidgetStateProperty.all(12.0),
+              radius: const Radius.circular(6.0),
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.hovered)) {
+                  return const Color(0xFFFFD700);
+                }
+                return const Color(0xFF475569);
+              }),
+              trackColor: WidgetStateProperty.all(const Color(0xFF1E293B)),
             ),
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
               bodyColor: const Color(0xFFE8EAF0),
