@@ -1088,10 +1088,11 @@ class _CoinImagePairState extends State<_CoinImagePair> {
 
     String selectedType = options.first.$1;
 
+    bool isSubmitting = false;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
           title: Row(
             children: const [
               Icon(Icons.warning_amber_rounded, color: _kRed),
@@ -1147,73 +1148,68 @@ class _CoinImagePairState extends State<_CoinImagePair> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
-            StatefulBuilder(
-              builder: (dialogCtx, setDialogState) {
-                bool isSubmitting = false;
-                return ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: _kRed),
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          setDialogState(() {
-                            isSubmitting = true;
-                          });
-                          try {
-                            final comment = commentCtrl.text.trim();
-                            final issueLabel = options.firstWhere((o) => o.$1 == selectedType).$2;
-                            final batch = FirebaseFirestore.instance.batch();
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _kRed),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        isSubmitting = true;
+                      });
+                      try {
+                        final comment = commentCtrl.text.trim();
+                        final issueLabel = options.firstWhere((o) => o.$1 == selectedType).$2;
+                        final batch = FirebaseFirestore.instance.batch();
 
-                            final reportRef = FirebaseFirestore.instance.collection('tester_image_reports').doc();
-                            batch.set(reportRef, {
-                              'report_id': reportRef.id,
-                              'coin_id': widget.coin.id,
-                              'user_email': AuthService.userEmail,
-                              'image_side': side,
-                              'issue_type': selectedType,
-                              'user_comment': comment.isEmpty ? issueLabel : '$issueLabel: $comment',
-                              'timestamp': FieldValue.serverTimestamp(),
-                            });
+                        final reportRef = FirebaseFirestore.instance.collection('tester_image_reports').doc();
+                        batch.set(reportRef, {
+                          'report_id': reportRef.id,
+                          'coin_id': widget.coin.id,
+                          'user_email': AuthService.userEmail,
+                          'image_side': side,
+                          'issue_type': selectedType,
+                          'user_comment': comment.isEmpty ? issueLabel : '$issueLabel: $comment',
+                          'timestamp': FieldValue.serverTimestamp(),
+                        });
 
-                            final coinRef = FirebaseFirestore.instance.doc('${AuthService.coinsPath}/${widget.coin.id}');
-                            batch.set(coinRef, {
-                              'image_verification_status': 'flagged',
-                              'image_verification_reason': 'Tester reported $side image: $issueLabel. $comment',
-                            }, SetOptions(merge: true));
+                        final coinRef = FirebaseFirestore.instance.doc('${AuthService.coinsPath}/${widget.coin.id}');
+                        batch.set(coinRef, {
+                          'image_verification_status': 'flagged',
+                          'image_verification_reason': 'Tester reported $side image: $issueLabel. $comment',
+                        }, SetOptions(merge: true));
 
-                            await batch.commit();
+                        await batch.commit();
 
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Thank you! Image discrepancy logged successfully.'),
-                                  backgroundColor: _kRed,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setDialogState(() {
-                              isSubmitting = false;
-                            });
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to submit flag: $e'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Submit Flag', style: TextStyle(color: Colors.white)),
-                );
-              },
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Thank you! Image discrepancy logged successfully.'),
+                              backgroundColor: _kRed,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to submit flag: $e'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Submit Flag', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
