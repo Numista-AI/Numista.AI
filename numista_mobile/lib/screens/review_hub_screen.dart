@@ -76,19 +76,22 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     final highConfIds = docs
         .where((d) {
           final data = d.data();
+          final status = (data['status'] ?? 'staged').toString().toLowerCase();
+          final reviewNeeded = data['review_needed'] == true;
+          if (status == 'quarantined' || status == 'aborted' || reviewNeeded) return false;
           double conf = 1.0;
           try {
-            final raw = data['confidence_score'];
+            final raw = data['confidence_score'] ?? data['composite_confidence'];
             if (raw != null) conf = (raw as num).toDouble();
           } catch (_) {}
-          return conf >= 0.999;
+          return conf >= 0.95;
         })
         .map((d) => d.id)
         .toList();
 
     if (highConfIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No items with 100% AI Confidence found in queue.')),
+        const SnackBar(content: Text('No verified items with 100% AI Confidence found in queue.')),
       );
       return;
     }
@@ -129,6 +132,140 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // ─── Delete Selected Review Items ─────────────────────────────────────────
+  Future<void> _deleteSelectedItems() async {
+    if (_selectedIds.isEmpty) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final count = _selectedIds.length;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        title: const Text('Delete Selected Items?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to remove $count item(s) from the review queue? This will be recorded in the legal audit log.',
+          style: const TextStyle(color: Color(0xFFCBD5E1)),
+        ),
+        actions: [
+          TextButton(
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final response = await http.post(
+        Uri.parse("$_apiUrl/api/review/delete_items"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "user_email": user.email,
+          "review_ids": _selectedIds.toList(),
+          "reason": "user_deleted_bulk_from_review_hub",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🗑️ Removed $count item(s) from Review Hub'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+        setState(() => _selectedIds.clear());
+      } else {
+        throw Exception("Failed to delete items: ${response.body}");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting items: $e'),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // ─── Delete Single Review Item ───────────────────────────────────────────
+  Future<void> _confirmDeleteSingleItem(String id, Map<String, dynamic> data) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final theme = (data['theme_subject'] ?? data['Theme/Subject'] ?? data['title'] ?? 'this item').toString();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        title: const Text('Delete Item?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Remove "$theme" from the review queue?',
+          style: const TextStyle(color: Color(0xFFCBD5E1)),
+        ),
+        actions: [
+          TextButton(
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse("$_apiUrl/api/review/delete_items"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "user_email": user.email,
+          "review_ids": [id],
+          "reason": "user_deleted_single_from_review_hub",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🗑️ Removed "$theme" from review queue'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+        setState(() => _selectedIds.remove(id));
+      } else {
+        throw Exception("Failed to delete item: ${response.body}");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting item: $e'),
+          backgroundColor: Colors.red[700],
+        ),
+      );
     }
   }
 
@@ -1219,52 +1356,149 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
             const Divider(height: 20),
 
-            // ── Action buttons ─────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
-                      side: const BorderSide(color: Color(0xFF2563EB)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: _isProcessing ? null : () {
-                      final name = data['Original Description from source']
-                          ?? data['Theme/Subject']
-                          ?? data['Denomination']
-                          ?? 'This Set';
-                      _keepSetAsIs(id, name.toString());
-                    },
-                    icon: const Icon(Icons.collections_bookmark_outlined, size: 16),
-                    label: const Text('Keep as Set', style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
+if (_selectedIds.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF63366),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: _isProcessing ? null : () {
-                      final name = data['Original Description from source']
-                          ?? data['Theme/Subject']
-                          ?? data['Denomination']
-                          ?? 'This Set';
-                      _breakUpSet(id, name.toString(), setSize);
-                    },
-                    icon: const Icon(Icons.call_split_rounded, size: 16),
-                    label: const Text('Break Up Set →', style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
+                icon: const Icon(Icons.delete_outline, size: 16),
+                label: Text('Delete Selected (${_selectedIds.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: _deleteSelectedItems,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16, left: 8),
+              child: Center(
+                child: Text('${_selectedIds.length} Selected', style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
-        ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.email!)
+                .collection('review_queue')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
+                    Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
+                    SizedBox(height: 12),
+                    Text('Couldn\'t load review queue.',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B))),
+                    SizedBox(height: 4),
+                    Text('Check your connection and try again.',
+                        style: TextStyle(color: Color(0xFF64748B))),
+                  ]),
+                );
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final docs = snapshot.data?.docs ?? [];
+              final filteredDocs = docs.where((d) {
+                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
+                return status != 'aborted' && status != 'superseded' && status != 'committed';
+              }).toList();
+
+              if (filteredDocs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF10B981)),
+                      const SizedBox(height: 16),
+                      const Text('All caught up!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 8),
+                      const Text('No items pending review.', style: TextStyle(color: Color(0xFF64748B))),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_back),
+                        label: const Text('Back to Vault'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F172A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Group docs by ftype / receipt
+              final receiptGroups = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+              for (final d in filteredDocs) {
+                final data = d.data();
+                final receiptId = data['receipt_id'] ?? data['source_file'] ?? 'General Uploads';
+                receiptGroups.putIfAbsent(receiptId.toString(), () => []).add(d);
+              }
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildMorganGuideBanner(),
+                  ...receiptGroups.entries.map((entry) {
+                    final groupDocs = entry.value;
+                    final firstData = groupDocs.first.data();
+                    final fileName = firstData['source_file'] ?? firstData['document_name'] ?? entry.key;
+                    final sourceDocType = firstData['source_type'] ?? 'Upload Batch';
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                sourceDocType == 'checklist_scan' ? Icons.checklist_rtl : Icons.description_outlined,
+                                size: 18,
+                                color: const Color(0xFFC9A227),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$fileName (${groupDocs.length} items)',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ...groupDocs.map((docSnap) {
+                          final data = docSnap.data();
+                          final id = docSnap.id;
+                          final isSelected = _selectedIds.contains(id);
+                          final confidence = ((data['composite_confidence'] ?? data['confidence_score'] ?? 1.0) as num).toDouble();
+                          final itemType = (data['item_type'] ?? 'coin').toString();
+
+                          return _buildCoinCard(id, data, isSelected, confidence, itemType);
+                        }),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }),
+                ],
+              );
+            },
+          ),
+          if (_isProcessing)
+            Container(
+              color: Colors.black45,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
@@ -1290,7 +1524,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             ),
             child: ClipOval(
               child: Image.asset(
-                'assets/logo_owl.png',
+                'assets/morgan_avatar.png',
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => const Icon(Icons.psychology_outlined, color: Color(0xFFFFD700), size: 24),
               ),
@@ -1415,10 +1649,38 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    data['Theme/Subject'] ?? data['theme_subject'] ?? data['title'] ?? 'Numismatic Item',
-                    style: const TextStyle(color: Color(0xFF475569), fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
+                  () {
+                    final theme = (data['theme_subject'] ?? data['Theme/Subject'] ?? '').toString().trim();
+                    final official = (data['official_us_mint_title'] ?? data['Official US Mint Title'] ?? '').toString().trim();
+                    final displayTitle = (official.isNotEmpty && official != theme)
+                        ? '$theme ("$official")'
+                        : (theme.isNotEmpty ? theme : (data['title'] ?? 'Numismatic Item').toString());
+                    final isQuarantined = data['status'] == 'quarantined' || data['review_needed'] == true;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayTitle,
+                          style: TextStyle(
+                            color: isQuarantined ? Colors.amber[800] : const Color(0xFF475569),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (isQuarantined)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Row(
+                              children: const [
+                                Icon(Icons.warning_amber_rounded, size: 13, color: Colors.amber),
+                                SizedBox(width: 4),
+                                Text('Quarantined: Subject Verification Needed', style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  }(),
 
                   // "From Set" amber chip
                   if (isFromSet) ...[
@@ -1472,11 +1734,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     final costStr = rawCost != null
                         ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
                         : 'N/A';
+                    final isChecklist = data['source_type'] == 'checklist_scan';
+                    final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
+                    final sourceVal = isChecklist ? 'Checklist Scan' : (data['Retailer/Website'] ?? 'N/A').toString();
+
                     return Wrap(
                       spacing: 24,
                       runSpacing: 12,
                       children: [
-                        _buildMetaItem('Retailer', (data['Retailer/Website'] ?? 'N/A').toString(), Icons.storefront),
+                        _buildMetaItem(sourceLabel, sourceVal, isChecklist ? Icons.checklist_rtl : Icons.storefront),
                         _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
                         _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
@@ -1512,13 +1778,24 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 ],
               ),
             ),
-            // ── Edit button ──────────
-            Tooltip(
-              message: 'Edit this coin',
-              child: IconButton(
-                icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
-                onPressed: () => _showCoinEditDialog(id, data),
-              ),
+            // ── Card Action Buttons ──────────
+            Column(
+              children: [
+                Tooltip(
+                  message: 'Edit this coin',
+                  child: IconButton(
+                    icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
+                    onPressed: () => _showCoinEditDialog(id, data),
+                  ),
+                ),
+                Tooltip(
+                  message: 'Delete from review queue',
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                    onPressed: () => _confirmDeleteSingleItem(id, data),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

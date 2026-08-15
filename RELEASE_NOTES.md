@@ -106,6 +106,19 @@
 
 
 
+
+## v4.101 — 2026-08-15
+**Qa Enhancements & Platform Updates**
+
+- Qa: update beta verification matrix and tracker to US Women Quarters 20-coin program
+- Backend: export config variables in config package and add parse_checklist_notes implementation
+- Backend: export all configuration variables from config package and restore parse_checklist_notes function
+- Release: auto-bump v4.97 release notes
+- Ingestion: v7.1 surgical resolution of doc_hash deduplication, resume session flow, canonical audit assertion, and PDF layout budget
+- Release: auto-bump v4.95 release notes
+- Ingestion: v7 checklist parser, document classifier gateway, and review hub SoR provenance engine
+- Release: bump release notes to v4.93
+
 ## v4.100 — 2026-08-15
 **Backend Enhancements & Platform Updates**
 
