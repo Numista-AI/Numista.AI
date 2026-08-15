@@ -97,6 +97,19 @@
 
 
 
+
+## v4.92 — 2026-08-15
+**Qa Enhancements & Platform Updates**
+
+- Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine
+- Lint: resolve all use_build_context_synchronously warnings across 9 files
+- Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"
+- Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits
+- Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan
+- Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results
+- Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics
+- Audit: record flutter analyze zero-error result in SCAN_REPORT.md
+
 ## v4.91 — 2026-08-15
 **Lint Enhancements & Platform Updates**
 
