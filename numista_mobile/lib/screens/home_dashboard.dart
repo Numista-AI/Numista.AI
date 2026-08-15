@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.91',
+    date: '2026-08-15',
+    description: 'Lint Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Lint: resolve all use_build_context_synchronously warnings across 9 files',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
+      'Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results',
+      'Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics',
+      'Audit: record flutter analyze zero-error result in SCAN_REPORT.md',
+      'Audit: update SCAN_REPORT.md from project-scanner run',
+    ],
+  ),
+  _Release(
     version: 'v4.90',
     date: '2026-08-14',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: synchronize v4.89 release notes',
       'Qa: resolve analyzer warnings, optimize dialog reactivity, and finalize beta test verification matrix',
