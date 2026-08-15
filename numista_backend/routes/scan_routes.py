@@ -47,6 +47,12 @@ class CommitSessionRequest(BaseModel):
     condition_override: Optional[str] = None
     storage_location_override: Optional[str] = None
 
+class BulkConditionRequest(BaseModel):
+    uid: str
+    import_session_id: str
+    condition: str
+    scope: Optional[str] = "unspecified_only"  # 'unspecified_only' or 'all'
+
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -314,3 +320,67 @@ async def commit_session(request: CommitSessionRequest):
     except Exception as e:
         logger.exception(f"Failed to commit session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/review/bulk_condition")
+async def bulk_condition(request: BulkConditionRequest):
+    """
+    Applies a bulk condition update across active staged items in a review session
+    and logs an immutable record to users/{uid}/audit_log/{log_id}.
+    """
+    try:
+        staged_docs = list(
+            db.collection("users").document(request.uid)
+            .collection("review_queue")
+            .where("import_session_id", "==", request.import_session_id)
+            .where("status", "in", ACTIVE_IMPORT_STATUSES)
+            .stream()
+        )
+
+        if not staged_docs:
+            return {"status": "no_items", "message": "No active staged items found for session"}
+
+        batch = db.batch()
+        updated_ids = []
+        for doc in staged_docs:
+            data = doc.to_dict()
+            current_cond = data.get("condition") or data.get("Condition") or "Unspecified / Raw"
+            if request.scope == "unspecified_only" and "Unspecified" not in current_cond:
+                continue
+
+            batch.set(doc.reference, {
+                "condition": request.condition,
+                "Condition": request.condition,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            updated_ids.append(doc.id)
+
+        if updated_ids:
+            # Write canonical audit log entry
+            log_id = f"aud_{request.import_session_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+            audit_entry = {
+                "log_id": log_id,
+                "uid": request.uid,
+                "action": "bulk_condition_update",
+                "import_session_id": request.import_session_id,
+                "source": "review_hub",
+                "timestamp": firestore.SERVER_TIMESTAMP,
+                "before": {"condition": "Unspecified / Raw", "scope": request.scope},
+                "after": {"condition": request.condition, "applied_to_count": len(updated_ids)},
+                "affected_coin_ids": updated_ids,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            audit_ref = db.collection("users").document(request.uid).collection("audit_log").document(log_id)
+            batch.set(audit_ref, audit_entry)
+
+        batch.commit()
+        return {
+            "status": "success",
+            "updated_count": len(updated_ids),
+            "condition": request.condition,
+            "affected_coin_ids": updated_ids,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to apply bulk condition: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
