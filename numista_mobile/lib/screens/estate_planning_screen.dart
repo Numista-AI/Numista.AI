@@ -2139,7 +2139,16 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
     super.dispose();
   }
 
+  Future<void> _runSpotCheck() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    setState(() => _isAuditing = true);
+    try {
+      final bene = widget.beneficiaries
+          .cast<EstateBeneficiary?>()
+          .firstWhere((b) => b?.id == _beneficiaryId, orElse: () => null);
+
   Future<void> _save() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
       final bene = widget.beneficiaries
@@ -4252,6 +4261,7 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () async {
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                   await EstateFiduciaryService.createDocumentRegisterEntry(
                     uid: widget.uid,
                     docType: 'custody_transfer',
@@ -4261,7 +4271,7 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                   );
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Text('Custody Agreement issued and recorded in Document Register!'),
                         backgroundColor: Color(0xFF161B27),
@@ -4461,7 +4471,7 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
     if (!mounted) return;
     setState(() => _isAuditing = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text('Spot-check complete! SHA-256 Audit Hash: ${record.auditHash.substring(0, 16)}...'),
         backgroundColor: const Color(0xFF161B27),
@@ -4638,6 +4648,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
   }
 
   Future<void> _snapshotSteppedUpBasis(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final record = await EstateFiduciaryService.createDocumentRegisterEntry(
       uid: widget.uid,
       docType: 'stepped_up_basis',
@@ -4647,7 +4658,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
     );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text('Issued Document Register Record: ${record.docNumber} — Stepped-Up Basis Logged.'),
         backgroundColor: const Color(0xFF161B27),

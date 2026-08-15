@@ -38,6 +38,7 @@ class _TransferInboxScreenState extends State<TransferInboxScreen> {
 
       setState(() => _isLoading = false);
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -56,6 +57,7 @@ class _TransferInboxScreenState extends State<TransferInboxScreen> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
       );

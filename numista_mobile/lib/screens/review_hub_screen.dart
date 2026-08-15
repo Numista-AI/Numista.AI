@@ -195,6 +195,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                     trailing: TextButton.icon(
                       onPressed: () async {
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
                         try {
                           final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
                           if (res.statusCode == 200) {
@@ -205,7 +206,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             }
                           }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                          if (!mounted) return;
+                          scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
                         }
                       },
                       icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
