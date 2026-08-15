@@ -153,3 +153,23 @@ circumstances — not even after asking.
 **Why this rule exists:** On 2026-07-09, Antigravity sessions pushed unauthorized UX redesign
 changes directly to `main`, deploying them to the live site without the owner's review or
 approval. This rule is a direct response to that incident.
+
+---
+
+### Rule 8 — Exit on Commands, Not Adjectives (Generate-and-Select)
+
+Before declaring any code modification, refactor, or feature implementation complete:
+
+1. **Criteria Must Be Commands, Not Adjectives**:
+   Never rely on a subjective assessment (e.g. "code looks clean and complete"). Execute at least one machine-checkable command and confirm exit code 0:
+   - **Frontend / Flutter**: `flutter analyze` or `flutter test <target_test>`
+   - **Backend / Python**: `pytest numista_tests/<target_test>.py`
+   - **E2E / Browser**: `npx playwright test <target_spec>`
+   - **Git Hygiene**: `git status` confirming only target files modified.
+
+2. **Send Failures Back to the Loop**:
+   If a test or command fails, do not silently patch around it or declare partial success. Feed the exact terminal traceback back into the editing loop until the test passes.
+
+3. **Pre-Flight Brief Testing for Overnight `/goal` Runs**:
+   Before launching a multi-hour autonomous `/goal` session, test the task brief against an isolated perspective to detect hidden ambiguities and prevent correlated failures.
+

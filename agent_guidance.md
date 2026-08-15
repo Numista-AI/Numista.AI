@@ -203,3 +203,16 @@ Before ending any coding session:
 **Section to always update:** Section 9 (Deployment Architecture) — includes a "Last verified" date stamp. Change that date every time you touch it.
 
 The file is at: `c:\Users\ericd\Documents\MyVertexProject\ARCHITECTURE.md`
+
+---
+
+## 🔁 GENERATE-AND-SELECT VERIFICATION PROTOCOL (August 2026)
+
+**Always exit on machine commands, not subjective adjectives:**
+1. **Never declare a task done based on visual code scanning alone.** Always run at least one executable check:
+   - Frontend/Flutter: `flutter analyze` or `flutter test`
+   - Backend/Python: `pytest numista_tests/`
+   - UI/Integration: `npx playwright test`
+2. **Send failures back to the loop:** When a command fails, pass the raw error into the next editing step rather than manually patching around it.
+3. **Pre-flight brief test for `/goal` runs:** Test complex prompts with an isolated perspective before triggering multi-hour autonomous sessions.
+
