@@ -1,45 +1,37 @@
-# Walkthrough — E2E Suite Remediation (2026-08-14)
+# Walkthrough — Aug 15 Audit Review & Flutter Lint Remediation
 
 ## Overview
-Morning audit (Aug 14) found 11 E2E failures across 4 newly added suites (18–21). All failures shared the same root cause and were resolved in this session.
+Aug 15 morning audit: ALL CLEAR. Yesterday's suites 18–21 `enterDemo()` fix confirmed working — all 141/145 active tests passing. Session focused on SCAN_REPORT sync and Flutter lint remediation.
 
-## Root Cause
-Suites 18–21 were written with `goto('/')` + a bare `flt-glass-pane` visibility assertion as their entry point. The Flutter glass pane only becomes visible when the app renders into a fully authenticated session. The automated nightly runner has no authenticated session established — it navigates to `/` and gets the public landing page, where `flt-glass-pane` never appears, causing all assertions to time out at 15 seconds.
+## SCAN_REPORT Updated to v4.89
+- Corrected version number (was showing v4.1, now v4.89)
+- Corrected Dependabot count (was showing 160, correct number is 127 / 89 high)
+- Added Flutter analyze results (0 errors, 48 info/lint warnings)
+- Added System of Record v4.0.0 to Core Features section
+- Updated test counts (69 Pytest, 141 E2E)
 
-## Fix Applied to All 4 Suites
-Replaced `goto('/') + flt-glass-pane` gating with the `enterDemo()` helper already used by suites 01–17:
+## Flutter Lint Remediation — `use_build_context_synchronously`
+**13–15 warnings** across 8 files fixed. These are the highest-risk lint category: using a `BuildContext` after an `await` can cause runtime exceptions if the widget is disposed while the async operation is in flight.
 
-```js
-async function enterDemo(page) {
-  await page.goto('https://numista.ai');
-  await page.waitForTimeout(4000);
-  const demoBtn = page.getByRole('button', { name: /browse demo/i });
-  if (await demoBtn.count() > 0) {
-    await demoBtn.click();
-  } else {
-    await page.mouse.click(841, 647); // coordinate fallback
-  }
-  await page.waitForTimeout(4000);
-  await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.waitForTimeout(1000);
-}
-```
+**Fix pattern used:**
+- For `'guarded by unrelated mounted check'` variant: extract context-dependent values (e.g. `final nav = Navigator.of(context)`) **before** the `await`, then use the saved reference after.
+- For plain unguarded variant: add `if (!mounted) return;` immediately before the first context usage after any `await`.
 
-Suite 21 (1920×1080 scrollbar test) uses the 1920×1080 viewport in `enterDemo()` instead of 1280×1000.
-
-## Files Modified
-- `numista_tests/tests/18-aug13-world-remediation.spec.js`
-- `numista_tests/tests/19-aug12-programs-slot-resolver.spec.js`
-- `numista_tests/tests/20-aug12-morgan-ai-proofsets.spec.js`
-- `numista_tests/tests/21-aug12-ui-scrollbar-contrast.spec.js`
-
-## Verified Results
-- 11/11 tests passing (2 min run, single worker)
-- Nightly suite will now show 143/145 active tests passing · 2 skipped (local server)
+**Files fixed:**
+- `numista_mobile/lib/screens/add_coins_hub.dart`
+- `numista_mobile/lib/screens/admin_feedback_screen.dart`
+- `numista_mobile/lib/screens/coa_inspector_screen.dart`
+- `numista_mobile/lib/screens/estate_planning_screen.dart`
+- `numista_mobile/lib/screens/family_settings_screen.dart`
+- `numista_mobile/lib/screens/lateral_transfer_screen.dart`
+- `numista_mobile/lib/screens/review_hub_screen.dart`
+- `numista_mobile/lib/screens/transfer_inbox_screen.dart`
+- `numista_mobile/lib/widgets/beta_feedback_widget.dart`
 
 ## Outstanding Items
 | Item | Priority | Notes |
 |---|---|---|
-| 127 Dependabot alerts | Medium | Deferred to dedicated security session closer to Nov 2026 launch |
+| Flutter deprecated_member_use (5) | Low | `activeColor`, `dataRowHeight`, `value` → deferred |
+| Flutter cosmetic lint (25+) | Low | unnecessary_underscores, use_super_parameters, etc. → deferred |
+| 127 Dependabot alerts | Medium | Deferred to pre-launch security session |
 | Merge `dev → main` | Owner decision | 22 CVE fixes in `dev` not yet on `main` |
-| Suites 18–21 semantic depth | Low | Tests now enter demo, but prod-account-specific assertions (provenance data, slot counts) should be re-evaluated as real prod account test vectors |

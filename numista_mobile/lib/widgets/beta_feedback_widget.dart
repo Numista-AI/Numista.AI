@@ -265,6 +265,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                       children: [
                         OutlinedButton.icon(
                           onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             if (_capturedScreenshot == null) {
                               await _captureScreen();
                             }
@@ -278,7 +279,7 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
                                   final bytes = result.files.first.bytes;
                                   if (bytes != null) {
                                     if (bytes.length > 8 * 1024 * 1024) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      messenger.showSnackBar(
                                         const SnackBar(
                                           content: Text('Screenshot file exceeds 8 MB limit.'),
                                           backgroundColor: Colors.amber,

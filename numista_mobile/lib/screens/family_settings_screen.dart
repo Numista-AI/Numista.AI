@@ -44,6 +44,8 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
   Future<void> _createSubAccount() async {
     if (_aliasController.text.trim().isEmpty) return;
 
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await _service.createSubAccount(
         parentEmail: widget.parentEmail,
@@ -57,10 +59,10 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
       );
       _aliasController.clear();
       _relationshipController.clear();
-      Navigator.of(context).pop();
+      nav.pop();
       _loadSubAccounts();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
       );
     }

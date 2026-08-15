@@ -95,6 +95,32 @@
 
 
 
+
+
+## v4.91 — 2026-08-15
+**Lint Enhancements & Platform Updates**
+
+- Lint: resolve all use_build_context_synchronously warnings across 9 files
+- Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"
+- Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits
+- Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan
+- Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results
+- Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics
+- Audit: record flutter analyze zero-error result in SCAN_REPORT.md
+- Audit: update SCAN_REPORT.md from project-scanner run
+
+## v4.90 — 2026-08-14
+**Release Enhancements & Platform Updates**
+
+- Release: synchronize v4.89 release notes
+- Qa: resolve analyzer warnings, optimize dialog reactivity, and finalize beta test verification matrix
+- Remediation: backfill canonical theme and reference images for 14 AUG checklist intake
+- Release: bump version to v4.86
+- Ingestion: remediate 14 AUG beta test checklist parsing, legislation, and desktop UX
+- Frontend: wire sort preference saving, clean unused ebay method, and resolve analyzer warnings
+- E2e: migrate suites 18-21 from flt-glass-pane gating to enterDemo() pattern
+- Qa: stabilize Playwright timing for suites 18-21 and verify 100% pass rate
+
 ## v4.89 — 2026-08-14
 **Qa Enhancements & Platform Updates**
 
