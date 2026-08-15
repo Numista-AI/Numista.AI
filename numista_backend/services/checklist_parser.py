@@ -79,6 +79,85 @@ def slugify_theme(theme_raw: str) -> str:
     return slug or "unknown"
 
 
+def parse_checklist_notes(raw_notes: str) -> Dict[str, Any]:
+    """
+    Parses row-level annotations/notes from checklists for ownership, quantity,
+    storage location, condition, and flags.
+    """
+    raw_str = (raw_notes or "").strip()
+    if not raw_str:
+        return {
+            "is_owned": True,
+            "quantity": 1,
+            "condition": "Unspecified / Raw",
+            "storage_location": "",
+            "personal_notes": "",
+            "confidence_score": 1.0,
+            "flag": None,
+        }
+
+    lower = raw_str.lower()
+    if lower in ("0", "have 0", "already have 0", "need", "missing", "none") or re.search(r"\b(?:have|has|already have)\s+0\b", lower):
+        return {
+            "is_owned": False,
+            "quantity": 0,
+            "condition": "Unspecified / Raw",
+            "storage_location": "",
+            "personal_notes": raw_str,
+            "confidence_score": 1.0,
+            "flag": "unselected_zero_ownership" if "already have 0" in lower else None,
+        }
+
+    is_owned = True
+    quantity = 1
+    condition = "Unspecified / Raw"
+    storage_loc = ""
+    personal_notes = raw_str
+    flag = None
+
+    qty_match = re.search(r"(?:qty|quantity)[:\s]+(\d+)", raw_str, re.IGNORECASE)
+    if qty_match:
+        quantity = int(qty_match.group(1))
+
+    if re.search(r"\bproof\b", lower):
+        condition = "Proof"
+    elif re.search(r"\b(?:unc|uncirculated)\b", lower):
+        condition = "Uncirculated"
+    elif re.search(r"\b(ms\s*\d{2}|au\s*\d{2}|xf\s*\d{2}|vf\s*\d{2}|f\s*\d{2}|vg\s*\d{2}|g\s*\d{2}|ag\s*\d{2}|fr\s*\d{2}|pr\s*\d{2})\b", lower):
+        cond_match = re.search(r"\b(ms\s*\d{2}|au\s*\d{2}|xf\s*\d{2}|vf\s*\d{2}|f\s*\d{2}|vg\s*\d{2}|g\s*\d{2}|ag\s*\d{2}|fr\s*\d{2}|pr\s*\d{2})\b", raw_str, re.IGNORECASE)
+        if cond_match:
+            condition = cond_match.group(1).upper().replace(" ", "")
+
+    if re.match(r"^atb\s*-\s*([pd])\s*tube", raw_str, re.IGNORECASE):
+        m = re.match(r"^atb\s*-\s*([pd])\s*tube", raw_str, re.IGNORECASE)
+        storage_loc = f"ATB-{m.group(1).upper()} tube"
+    elif "atb-p tube" in lower:
+        storage_loc = "ATB-P tube"
+    elif "atb-d tube" in lower:
+        storage_loc = "ATB-D tube"
+    elif "dansco album" in lower:
+        storage_loc = raw_str
+    elif "proof set box" in lower or ("proof set" in lower and "box" in lower):
+        storage_loc = "Proof Set Box"
+    elif "unc roll" in lower:
+        storage_loc = "UNC Roll"
+    elif re.search(r"(?:safe\s+box\s+\d+|box\s+\d+|album\s+[^\,]+|binder\s+[^\,]+|tube\s+[^\,]+|vault\s+[^\,]+)", raw_str, re.IGNORECASE):
+        loc_match = re.search(r"(safe\s+box\s+\d+|box\s+\d+|album\s+[^\,]+|binder\s+[^\,]+|tube\s+[^\,]+|vault\s+[^\,]+)", raw_str, re.IGNORECASE)
+        if loc_match:
+            storage_loc = loc_match.group(1).strip()
+
+    return {
+        "is_owned": is_owned,
+        "quantity": quantity,
+        "condition": condition,
+        "storage_location": storage_loc,
+        "personal_notes": personal_notes,
+        "confidence_score": 1.0,
+        "flag": flag,
+    }
+
+
+
 def extract_checklist_document(
     file_bytes: bytes,
     mime_type: str,

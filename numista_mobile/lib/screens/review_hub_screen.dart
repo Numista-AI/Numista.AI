@@ -802,7 +802,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     .collection('review_queue')
                     .snapshots(),
                 builder: (context, snapshot) {
-                  final docs = snapshot.data?.docs ?? [];
+                  final rawDocs = snapshot.data?.docs ?? [];
+                  final docs = rawDocs.where((d) {
+                    final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
+                    return status != 'aborted' && status != 'superseded' && status != 'committed';
+                  }).toList();
                   if (docs.isEmpty) return const SizedBox.shrink();
 
                   final allSelected = _selectedIds.length == docs.length && docs.isNotEmpty;
@@ -841,7 +845,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 .collection('review_queue')
                 .snapshots(),
             builder: (context, snapshot) {
-              final docs = snapshot.data?.docs ?? [];
+              final rawDocs = snapshot.data?.docs ?? [];
+              final docs = rawDocs.where((d) {
+                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
+                return status != 'aborted' && status != 'superseded' && status != 'committed';
+              }).toList();
               final highConfCount = docs.where((d) {
                 final data = d.data();
                 double conf = 1.0;

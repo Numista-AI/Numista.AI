@@ -136,9 +136,23 @@ def test_content_hash_deduplication():
 
 # ── Case 4: Audit-Log Canonical Schema Validation ─────────────────────────────
 
-def test_audit_log_schema_validation():
-    """Case 4: Assert committed audit_log document adheres to exact published schema."""
-    audit_entry = {
+def test_audit_log_schema_strict_assertion():
+    """Case 4: Assert committed & bulk-updated audit_log documents strictly conform to 10-field schema."""
+    canonical_fields = {
+        "log_id": str,
+        "uid": str,
+        "action": str,
+        "import_session_id": str,
+        "source": str,
+        "timestamp": (str, object),
+        "before": dict,
+        "after": dict,
+        "affected_coin_ids": list,
+        "created_at": str,
+    }
+
+    # Scenario A: Commit Session Audit Entry
+    commit_entry = {
         "log_id": "aud_sess_123_20260815120000",
         "uid": "user_uid_456",
         "action": "session_commit",
@@ -157,13 +171,29 @@ def test_audit_log_schema_validation():
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    required_keys = {
-        "log_id", "uid", "action", "import_session_id", "source",
-        "timestamp", "before", "after", "affected_coin_ids", "created_at"
+    # Scenario B: Bulk Condition Update Audit Entry
+    bulk_entry = {
+        "log_id": "aud_sess_123_20260815120100",
+        "uid": "user_uid_456",
+        "action": "bulk_condition_update",
+        "import_session_id": "sess_123",
+        "source": "review_hub",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "before": {"condition": "Unspecified / Raw", "scope": "unspecified_only"},
+        "after": {"condition": "Circulated / Raw", "applied_to_count": 15},
+        "affected_coin_ids": ["stg_1", "stg_2"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    assert required_keys.issubset(audit_entry.keys())
-    assert isinstance(audit_entry["affected_coin_ids"], list)
-    assert audit_entry["action"] in ["session_commit", "bulk_condition_update", "session_abort"]
+
+    for entry in [commit_entry, bulk_entry]:
+        # Assert exact 10 canonical keys
+        assert set(canonical_fields.keys()).issubset(entry.keys()), f"Missing canonical keys in {entry['action']}"
+        for field, expected_type in canonical_fields.items():
+            val = entry[field]
+            assert isinstance(val, expected_type), f"Field {field} must be {expected_type}, got {type(val)}"
+        assert entry["action"] in ["session_commit", "bulk_condition_update", "session_abort"]
+        assert all(isinstance(cid, str) for cid in entry["affected_coin_ids"])
+
 
 
 # ── Case 5: Classifier Recovery & Switch Path ─────────────────────────────────

@@ -240,7 +240,7 @@ class ChecklistGeneratorService {
       pw.MultiPage(
         theme: theme,
         pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.fromLTRB(20, 20, 20, 24),
+        margin: const pw.EdgeInsets.fromLTRB(20, 16, 20, 16),
 
         // ── Footer on all pages ───────────────────────────────────────────────
         footer: (pw.Context context) {
@@ -428,7 +428,7 @@ class ChecklistGeneratorService {
                   ],
                   headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5),
                   headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  cellHeight: 20,
+                  cellHeight: 21,
                   cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   columnWidths: {
                     0: const pw.FlexColumnWidth(3),
@@ -491,7 +491,7 @@ class ChecklistGeneratorService {
                   headers: ['Year / Subject', ...varietyLabels, 'Notes / QTY'],
                   headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: hFont),
                   headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  cellHeight: 20,
+                  cellHeight: 21,
                   cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   columnWidths: {
                     0: pw.FixedColumnWidth(yrColW),
