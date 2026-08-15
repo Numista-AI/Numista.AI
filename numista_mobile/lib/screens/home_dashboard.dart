@@ -1520,10 +1520,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.97',
+    date: '2026-08-15',
+    description: 'Ingestion Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Ingestion: v7.1 surgical resolution of doc_hash deduplication, resume session flow, canonical audit assertion, and PDF layout budget',
+      'Release: auto-bump v4.95 release notes',
+      'Ingestion: v7 checklist parser, document classifier gateway, and review hub SoR provenance engine',
+      'Release: bump release notes to v4.93',
+      'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
+      'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
+      'Lint: resolve all use_build_context_synchronously warnings across 9 files',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
+    ],
+  ),
+  _Release(
     version: 'v4.96',
     date: '2026-08-15',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: auto-bump v4.95 release notes',
       'Ingestion: v7 checklist parser, document classifier gateway, and review hub SoR provenance engine',
