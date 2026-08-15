@@ -1,179 +1,316 @@
 """
-Vision AI, Binder Scan, Auto-Capture Ingestion, and COA Parsing Routes
+Vision AI, Binder Scan, Checklist Ingestion, and Review Hub Provenance Routes
+Numista.AI System of Record (Desktop Web 2026 Launch)
 """
 
 import os
 import json
+import uuid
+import hashlib
 import logging
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Depends, Request
 from pydantic import BaseModel, Field
+from google.cloud import firestore
 
 from config import DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL
-from routes.deps import genai_client, genai_types, get_current_user_email
+from config.ingestion_config import (
+    CLASSIFIER_MODEL,
+    EXTRACTION_MODEL,
+    CLASSIFIER_CONFIDENCE_THRESHOLD,
+    ACTIVE_IMPORT_STATUSES,
+)
+from routes.deps import db, genai_client, genai_types
+from services.document_classifier_service import classify_document_bytes
+from services.checklist_parser import extract_checklist_document
 
 logger = logging.getLogger("numista_backend.scan_routes")
 
-router = APIRouter(prefix="/api", tags=["Vision AI & Binder Scans"])
+router = APIRouter(prefix="/api", tags=["Document Ingestion & Review Hub"])
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
 
-class GcsVisionIdentifyRequest(BaseModel):
-    user_email: str
-    gcs_obverse_uri: Optional[str] = None
-    gcs_reverse_uri: Optional[str] = None
-    base64_obverse: Optional[str] = None
-    base64_reverse: Optional[str] = None
-    save_to_collection: bool = False
+# ── Pydantic Request Models ───────────────────────────────────────────────────
 
-class CoaExtractionResponse(BaseModel):
-    cert_number: str = ""
-    grading_service: str = "PCGS"
-    year: Optional[int] = None
-    denomination: str = ""
-    series: str = ""
-    grade_alias: str = ""
-    metal_type: str = "Silver"
-    purity: float = 0.999
-    weight_grams: float = 31.103
-    mintage_limit: Optional[int] = None
-    issue_price: Optional[float] = None
+class AbortSessionRequest(BaseModel):
+    uid: str
+    import_session_id: str
+    target_status: Optional[str] = "aborted"  # 'aborted' or 'superseded'
 
-# ── Helper for Vision Model Call with Resilient Fallback ──────────
+class ResumeSessionRequest(BaseModel):
+    uid: str
+    import_session_id: str
 
-def call_vision_model_with_fallback(contents: List[Any], prompt_text: str) -> dict:
-    """Invokes Gemini 3.6 Flash with automatic fallback to Gemini 3.5 Flash."""
-    if not genai_client:
-        raise HTTPException(status_code=500, detail="Vertex AI Client unavailable")
-
-    models_to_try = [DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL]
-    last_err = None
-
-    for model_id in models_to_try:
-        try:
-            logger.info(f"Invoking vision model: {model_id}")
-            resp = genai_client.models.generate_content(
-                model=model_id,
-                contents=contents + [genai_types.Part.from_text(text=prompt_text)],
-                config=genai_types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.1,
-                ),
-            )
-            raw = resp.text.strip()
-            if raw.startswith("```"):
-                raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-            return json.loads(raw)
-        except Exception as e:
-            logger.warning(f"Vision model {model_id} failed: {e}")
-            last_err = e
-
-    raise HTTPException(status_code=500, detail=f"Vision identification failed on all models: {last_err}")
+class CommitSessionRequest(BaseModel):
+    uid: str
+    import_session_id: str
+    condition_override: Optional[str] = None
+    storage_location_override: Optional[str] = None
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@router.post("/identify_coin_photo")
-async def identify_coin_photo(
-    user_email: str = Form(...),
-    image_a: Optional[UploadFile] = File(None),
-    image_b: Optional[UploadFile] = File(None),
-    gcs_obverse_uri: Optional[str] = Form(None),
-    gcs_reverse_uri: Optional[str] = Form(None),
-    save_to_collection: bool = Form(False),
+@router.post("/upload_document")
+async def upload_document(
+    uid: str = Form(...),
+    user_email: Optional[str] = Form(""),
+    file: UploadFile = File(...),
+    import_session_id: Optional[str] = Form(""),
+    force_reprocess: Optional[bool] = Form(False),
 ):
     """
-    Multimodal coin identification from obverse + reverse photos.
-    Supports direct GCS bucket URIs (gs://...) via zero-copy Part.from_uri() or direct file uploads.
+    Canonical Multi-Modal Document Upload Gateway.
+    Classifies document, enforces SHA-256 deduplication, and routes to specialized
+    Checklist vs. Invoice extractors.
     """
-    parts = []
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty document payload")
 
-    # 1. Build image parts (GCS URI vs File Bytes)
-    if gcs_obverse_uri and gcs_obverse_uri.startswith("gs://"):
-        parts.append(genai_types.Part.from_text(text="[Obverse Image]"))
-        parts.append(genai_types.Part.from_uri(file_uri=gcs_obverse_uri, mime_type="image/jpeg"))
-    elif image_a:
-        bytes_a = await image_a.read()
-        mime_a = image_a.content_type or "image/jpeg"
-        parts.append(genai_types.Part.from_text(text="[Obverse Image]"))
-        parts.append(genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a))
+    filename = file.filename or "uploaded_doc.pdf"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    mime_map = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+    mime_type = file.content_type or mime_map.get(ext, "application/pdf")
+    if mime_type in ("application/octet-stream", "binary/octet-stream", ""):
+        mime_type = "application/pdf" if contents[:4] == b"%PDF" else "image/jpeg"
 
-    if gcs_reverse_uri and gcs_reverse_uri.startswith("gs://"):
-        parts.append(genai_types.Part.from_text(text="[Reverse Image]"))
-        parts.append(genai_types.Part.from_uri(file_uri=gcs_reverse_uri, mime_type="image/jpeg"))
-    elif image_b:
-        bytes_b = await image_b.read()
-        mime_b = image_b.content_type or "image/jpeg"
-        parts.append(genai_types.Part.from_text(text="[Reverse Image]"))
-        parts.append(genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b))
+    doc_hash = hashlib.sha256(contents).hexdigest()
+    session_id = import_session_id or f"sess_{uuid.uuid4().hex[:12]}"
 
-    if not parts:
-        raise HTTPException(status_code=400, detail="Must provide obverse and reverse images (via upload or GCS URIs)")
-
-    prompt = """
-    Identify the coin in the provided obverse/reverse images. Return JSON matching:
-    {
-        "year": 1921,
-        "denomination": "Dollar",
-        "series": "Morgan Silver Dollar",
-        "mint_mark": "S",
-        "grade": "MS-63",
-        "estimated_value": 75.0,
-        "confidence": 0.95,
-        "slang_mapped": true
-    }
-    """
-
-    result = call_vision_model_with_fallback(parts, prompt)
-
-    # Normalize integer year and canonical denomination
-    try:
-        if "year" in result and result["year"]:
-            result["year"] = int(result["year"])
-    except (ValueError, TypeError):
-        pass
-
-    return {
-        "status": "success",
-        "coin": result,
-        "saved": save_to_collection
-    }
-
-
-@router.post("/v1/coa/parse", response_model=CoaExtractionResponse)
-async def api_parse_coa(file: UploadFile = File(...)):
-    """Parse scanned US Mint / PCGS / NGC COA card and extract typed serial numbers and specs."""
-    content = await file.read()
-    filename = file.filename or "coa_scan.jpg"
-    mime_type = file.content_type or "image/jpeg"
-
-    if genai_client:
+    # Step 1: Content Hash Deduplication Check
+    if not force_reprocess:
         try:
-            part_img = genai_types.Part.from_bytes(data=content, mime_type=mime_type)
-            prompt = """
-            Extract metadata from this Certificate of Authenticity (COA) card into JSON:
-            {
-                "cert_number": "12345678",
-                "grading_service": "PCGS",
-                "year": 2026,
-                "denomination": "$1",
-                "series": "American Silver Eagle",
-                "grade_alias": "MS-70",
-                "metal_type": "Silver",
-                "purity": 0.999,
-                "weight_grams": 31.103,
-                "mintage_limit": 50000,
-                "issue_price": 75.00
-            }
-            """
-            data = call_vision_model_with_fallback([part_img], prompt)
-            return CoaExtractionResponse(**data)
-        except Exception as e:
-            logger.warning(f"COA Gemini parsing fallback: {e}")
+            existing_docs = list(
+                db.collection("users").document(uid)
+                .collection("review_queue")
+                .where("doc_hash", "==", doc_hash)
+                .where("status", "in", ACTIVE_IMPORT_STATUSES)
+                .limit(5)
+                .stream()
+            )
+            if existing_docs:
+                existing_session_id = existing_docs[0].to_dict().get("import_session_id", "")
+                logger.info(f"Duplicate document detected (hash={doc_hash[:8]}, session={existing_session_id})")
+                return {
+                    "status": "duplicate_detected",
+                    "doc_hash": doc_hash,
+                    "existing_session_id": existing_session_id,
+                    "existing_items_count": len(existing_docs),
+                    "message": "An active review session already exists for this document."
+                }
+        except Exception as dup_err:
+            logger.warning(f"Deduplication check error: {dup_err}")
 
-    # Return default empty structured schema if parsing fails
-    return CoaExtractionResponse(
-        cert_number="UNKNOWN",
-        grading_service="US Mint",
-        series="Commemorative",
+    # Step 2: Multi-Modal Document Classification
+    classification = classify_document_bytes(
+        file_bytes=contents,
+        mime_type=mime_type,
+        genai_client=genai_client
     )
+
+    doc_type = classification.get("document_type", "checklist")
+    conf = classification.get("confidence", 1.0)
+    requires_conf = classification.get("requires_confirmation", False)
+
+    # Step 3: Route to Checklist Extraction Engine
+    if doc_type == "checklist" or "check" in doc_type:
+        extraction_result = extract_checklist_document(
+            file_bytes=contents,
+            mime_type=mime_type,
+            filename=filename,
+            genai_client=genai_client,
+            uid=uid,
+            import_session_id=session_id
+        )
+
+        items = extraction_result.get("items", [])
+        if not items:
+            logger.warning("Checklist extraction returned 0 items")
+
+        # Stage extracted items in users/{uid}/review_queue
+        batch = db.batch()
+        col_ref = db.collection("users").document(uid).collection("review_queue")
+        
+        staged_items = []
+        for item in items:
+            doc_id = str(uuid.uuid4())
+            item["staging_id"] = doc_id
+            item["uid"] = uid
+            item["user_email"] = user_email
+            if requires_conf:
+                item["status"] = "provisional"
+                item["requires_confirmation"] = True
+
+            doc_ref = col_ref.document(doc_id)
+            batch.set(doc_ref, item)
+            staged_items.append(item)
+
+        batch.commit()
+        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id})")
+
+        return {
+            "status": "success",
+            "document_type": "checklist",
+            "classifier_confidence": conf,
+            "requires_confirmation": requires_conf,
+            "import_session_id": session_id,
+            "doc_hash": doc_hash,
+            "storage_location": extraction_result.get("storage_location", ""),
+            "snapshot_id": extraction_result.get("snapshot_id", ""),
+            "extracted_count": len(staged_items),
+            "data": staged_items,
+        }
+
+    # Step 4: Fallback to General / Invoice Scraper if classified as invoice
+    return {
+        "status": "classified_invoice",
+        "document_type": "invoice",
+        "classifier_confidence": conf,
+        "import_session_id": session_id,
+        "doc_hash": doc_hash,
+        "message": "Document routed to invoice processing pipeline.",
+    }
+
+
+@router.post("/review/resume_session")
+async def resume_session(request: ResumeSessionRequest):
+    """
+    Resumes an existing review session by retrieving already-staged documents.
+    Performs ZERO re-extraction or AI calls.
+    """
+    try:
+        docs = db.collection("users").document(request.uid)\
+                 .collection("review_queue")\
+                 .where("import_session_id", "==", request.import_session_id)\
+                 .where("status", "in", ACTIVE_IMPORT_STATUSES)\
+                 .stream()
+
+        items = [d.to_dict() for d in docs]
+        return {
+            "status": "success",
+            "import_session_id": request.import_session_id,
+            "items_count": len(items),
+            "data": items,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to resume session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/review/abort_session")
+async def abort_session(request: AbortSessionRequest):
+    """
+    Soft-deletes review queue items without physical document deletion.
+    Sets status: 'aborted' or 'superseded' to preserve legal SoR auditability.
+    """
+    try:
+        docs = list(
+            db.collection("users").document(request.uid)
+            .collection("review_queue")
+            .where("import_session_id", "==", request.import_session_id)
+            .stream()
+        )
+
+        batch = db.batch()
+        for doc in docs:
+            batch.set(doc.reference, {
+                "status": request.target_status or "aborted",
+                "aborted_at": firestore.SERVER_TIMESTAMP,
+                "aborted_by": request.uid
+            }, merge=True)
+
+        batch.commit()
+        return {
+            "status": "success",
+            "archived_count": len(docs),
+            "target_status": request.target_status or "aborted"
+        }
+    except Exception as e:
+        logger.exception(f"Failed to abort session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/review/commit_session")
+async def commit_session(request: CommitSessionRequest):
+    """
+    Atomically commits staged review items to canonical users/{uid}/coins collection
+    and writes an immutable audit record to users/{uid}/audit_log/{log_id}.
+    """
+    try:
+        staged_docs = list(
+            db.collection("users").document(request.uid)
+            .collection("review_queue")
+            .where("import_session_id", "==", request.import_session_id)
+            .where("status", "in", ACTIVE_IMPORT_STATUSES)
+            .stream()
+        )
+
+        if not staged_docs:
+            return {"status": "no_items", "message": "No active staged items found for session"}
+
+        coins_col = db.collection("users").document(request.uid).collection("coins")
+        audit_col = db.collection("users").document(request.uid).collection("audit_log")
+        queue_col = db.collection("users").document(request.uid).collection("review_queue")
+
+        batch = db.batch()
+        committed_coin_ids = []
+
+        for doc in staged_docs:
+            data = doc.to_dict()
+            coin_id = str(uuid.uuid4())
+            committed_coin_ids.append(coin_id)
+
+            # Apply any optional bulk overrides
+            if request.condition_override:
+                data["condition"] = request.condition_override
+                data["Condition"] = request.condition_override
+            if request.storage_location_override:
+                data["storage_location"] = request.storage_location_override
+                data["Storage Location"] = request.storage_location_override
+
+            data["id"] = coin_id
+            data["status"] = "committed"
+            data["committed_at"] = firestore.SERVER_TIMESTAMP
+
+            # Atomic write to canonical vault collection
+            coin_ref = coins_col.document(coin_id)
+            batch.set(coin_ref, data, merge=True)
+
+            # Mark staged doc as committed (soft state transition)
+            batch.set(doc.reference, {"status": "committed", "committed_coin_id": coin_id}, merge=True)
+
+        # Write Canonical Audit Log Entry
+        log_id = f"aud_{request.import_session_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        audit_entry = {
+            "log_id": log_id,
+            "uid": request.uid,
+            "action": "session_commit",
+            "import_session_id": request.import_session_id,
+            "source": "review_hub",
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "before": {
+                "staged_count": len(staged_docs),
+                "condition": "Unspecified / Raw",
+            },
+            "after": {
+                "committed_count": len(committed_coin_ids),
+                "condition": request.condition_override or "Unspecified / Raw",
+            },
+            "affected_coin_ids": committed_coin_ids,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        audit_ref = audit_col.document(log_id)
+        batch.set(audit_ref, audit_entry)
+
+        batch.commit()
+        logger.info(f"Committed {len(committed_coin_ids)} coins to vault for user {request.uid}")
+
+        return {
+            "status": "success",
+            "committed_count": len(committed_coin_ids),
+            "audit_log_id": log_id,
+            "coin_ids": committed_coin_ids,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to commit session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

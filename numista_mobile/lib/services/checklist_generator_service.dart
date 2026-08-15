@@ -240,7 +240,7 @@ class ChecklistGeneratorService {
       pw.MultiPage(
         theme: theme,
         pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.fromLTRB(32, 32, 32, 48),
+        margin: const pw.EdgeInsets.fromLTRB(20, 20, 20, 24),
 
         // ── Footer on all pages ───────────────────────────────────────────────
         footer: (pw.Context context) {
@@ -251,24 +251,24 @@ class ChecklistGeneratorService {
                 decoration: const pw.BoxDecoration(
                   border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
                 ),
-                padding: const pw.EdgeInsets.only(top: 3),
+                padding: const pw.EdgeInsets.only(top: 2),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(_s(program.name.toUpperCase()),
-                        style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                        style: const pw.TextStyle(fontSize: 7.0, color: PdfColors.grey600)),
                     pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
-                        style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                        style: const pw.TextStyle(fontSize: 7.0, color: PdfColors.grey600)),
                     pw.Text('Printed UTC: $printDate ${snapshotId != null ? "($snapshotId)" : ""}',
-                        style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                        style: const pw.TextStyle(fontSize: 7.0, color: PdfColors.grey600)),
                   ],
                 ),
               ),
               if (isPersonalized) ...[
-                pw.SizedBox(height: 2),
+                pw.SizedBox(height: 1),
                 pw.Text(
                   legalDisclaimer,
-                  style: const pw.TextStyle(fontSize: 5.5, color: PdfColors.grey500),
+                  style: const pw.TextStyle(fontSize: 5.0, color: PdfColors.grey500),
                 ),
               ],
             ],
@@ -285,12 +285,12 @@ class ChecklistGeneratorService {
                 children: [
                   pw.Row(children: [
                     if (logoBytes != null) ...[
-                      _buildSafeMemoryImage(logoBytes, width: 30, height: 30),
-                      pw.SizedBox(width: 8),
+                      _buildSafeMemoryImage(logoBytes, width: 24, height: 24),
+                      pw.SizedBox(width: 6),
                     ],
                     pw.Text(isPersonalized ? 'Numista.AI Collection Progress' : 'Numista.AI Checklist',
                         style: pw.TextStyle(
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: pw.FontWeight.bold,
                             color: PdfColors.blue800)),
                   ]),
@@ -298,10 +298,10 @@ class ChecklistGeneratorService {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text('Generated UTC: $printDate',
-                          style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey600)),
+                          style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
                       if (isActive)
                         pw.Text('* Active series - verified snapshot',
-                            style: pw.TextStyle(fontSize: 7.5, color: PdfColors.orange700, fontStyle: pw.FontStyle.italic)),
+                            style: pw.TextStyle(fontSize: 7.0, color: PdfColors.orange700, fontStyle: pw.FontStyle.italic)),
                     ],
                   ),
                 ],
@@ -311,45 +311,45 @@ class ChecklistGeneratorService {
             // ── Personalized Progress Header & Warning Badges ─────────────────
             if (isPersonalized) ...[
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 decoration: pw.BoxDecoration(
                   color: PdfColors.blue50,
                   border: pw.Border.all(color: PdfColors.blue200),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
                 ),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
                       'Collector: ${_s(collectorEmail ?? "Authenticated Owner")}',
-                      style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
+                      style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
                     ),
                     pw.Text(
-                      _s('Slots Filled: $distinctOwned / $totalSlots ($pct%) • Total Items: ${totalOwnedItems ?? distinctOwned}'),
-                      style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
+                      _s('Slots: $distinctOwned / $totalSlots ($pct%) • Total: ${totalOwnedItems ?? distinctOwned}'),
+                      style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
                     ),
                     if (snapshotId != null)
                       pw.Text(
                         'ID: $snapshotId',
-                        style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
+                        style: const pw.TextStyle(fontSize: 7.0, color: PdfColors.grey700),
                       ),
                   ],
                 ),
               ),
               if (isPartialSnapshot) ...[
-                pw.SizedBox(height: 3),
+                pw.SizedBox(height: 2),
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: const pw.BoxDecoration(color: PdfColors.amber100),
                   child: pw.Text(
-                    'WARNING: PARTIAL SNAPSHOT - Cloud collection sync incomplete. Offline cache utilized.',
-                    style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900),
+                    'WARNING: PARTIAL SNAPSHOT - Cloud collection sync incomplete.',
+                    style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900),
                   ),
                 ),
               ],
-              pw.SizedBox(height: 6),
-            ] else ...[
               pw.SizedBox(height: 4),
+            ] else ...[
+              pw.SizedBox(height: 2),
             ],
 
             // ── Program title + years ───────────────────────────────────────
@@ -357,25 +357,25 @@ class ChecklistGeneratorService {
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
                 pw.Text(_s(program.name.toUpperCase()),
-                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(width: 8),
+                    style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(width: 6),
                 if (program.years.isNotEmpty)
                   pw.Text('(${_s(program.years)})',
-                      style: const pw.TextStyle(fontSize: 13, color: PdfColors.grey700)),
+                      style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
               ],
             ),
             if (program.category.isNotEmpty && program.category != 'Other')
               pw.Text('Category: ${_s(program.category)}',
-                  style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey)),
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey)),
 
             // ── Mint Mark Box ───────────────────────────────────────────────
             if (program.mintMarkLocations.isNotEmpty || mmDesc.isNotEmpty) ...[
-              pw.SizedBox(height: 6),
+              pw.SizedBox(height: 4),
               pw.Container(
-                padding: const pw.EdgeInsets.all(8),
+                padding: const pw.EdgeInsets.all(5),
                 decoration: pw.BoxDecoration(
                   border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
                   color: PdfColors.grey50,
                 ),
                 child: pw.Column(
@@ -383,19 +383,19 @@ class ChecklistGeneratorService {
                   children: [
                     if (program.mintMarkLocations.isNotEmpty)
                       pw.Text(_s(program.mintMarkLocations),
-                          style: pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic)),
+                          style: pw.TextStyle(fontSize: 8.0, color: PdfColors.grey700, fontStyle: pw.FontStyle.italic)),
                     if (mmDesc.isNotEmpty) ...[
-                      pw.SizedBox(height: 4),
+                      pw.SizedBox(height: 2),
                       pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.center,
                         children: [
                           pw.Expanded(
                             child: pw.Text(mmDesc,
-                                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: labelColor)),
+                                style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: labelColor)),
                           ),
                           if (diagramBytes != null) ...[
-                            pw.SizedBox(width: 14),
-                            _buildSafeMemoryImage(diagramBytes, width: 150, height: 70),
+                            pw.SizedBox(width: 8),
+                            _buildSafeMemoryImage(diagramBytes, width: 110, height: 45),
                           ],
                         ],
                       ),
@@ -405,14 +405,14 @@ class ChecklistGeneratorService {
               ),
             ],
 
-            pw.SizedBox(height: 6),
+            pw.SizedBox(height: 4),
             pw.Text(
               isPersonalized
                   ? "Verified collection progress report. Checkmarks indicate authenticated items; 'Notes / QTY' lists verified grades and slabs."
-                  : "Check off the coins you own. Use the 'Notes / QTY' column to record quantity IF you have more than 1 (e.g. QTY:3) and grade (e.g. MS-65 or VF-30).",
-              style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700),
+                  : "Check off the coins you own. Use the 'Notes / QTY' column to record quantity (e.g. QTY:3) and grade (e.g. MS-65 or VF-30).",
+              style: const pw.TextStyle(fontSize: 8.0, color: PdfColors.grey700),
             ),
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 6),
 
             // ── Coin Table ──────────────────────────────────────────────────
             if (useSimpleLayout) ...[
@@ -426,15 +426,16 @@ class ChecklistGeneratorService {
                     'Year / Subject', 'Owned?', 'Notes / QTY',
                     'Year / Subject', 'Owned?', 'Notes / QTY',
                   ],
-                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5),
+                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5),
                   headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  cellHeight: 24,
+                  cellHeight: 20,
+                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   columnWidths: {
                     0: const pw.FlexColumnWidth(3),
-                    1: const pw.FixedColumnWidth(50),
+                    1: const pw.FixedColumnWidth(40),
                     2: const pw.FlexColumnWidth(1.6),
                     3: const pw.FlexColumnWidth(3),
-                    4: const pw.FixedColumnWidth(50),
+                    4: const pw.FixedColumnWidth(40),
                     5: const pw.FlexColumnWidth(1.6),
                   },
                   cellAlignments: {
@@ -475,61 +476,48 @@ class ChecklistGeneratorService {
               }(),
             ] else
               () {
-                final hFont = vList.length >= 6 ? 7.5 : vList.length >= 4 ? 8.5 : 10.0;
+                final hFont = vList.length >= 6 ? 7.0 : vList.length >= 4 ? 7.5 : 8.5;
                 final maxLabelLen = program.coins.map((c) => coinLabel(c).length).fold<int>(0, max);
-                final yrColW = (maxLabelLen * 5.8).clamp(95.0, 200.0);
+                final yrColW = (maxLabelLen * 5.2).clamp(90.0, 180.0);
 
                 double colWidthFor(String id) {
-                  if (id.length <= 2) return 24.0;
-                  if (vList.length >= 6) return 36.0;
-                  if (vList.length >= 4) return 42.0;
-                  return 48.0;
+                  if (id.length <= 2) return 22.0;
+                  if (vList.length >= 6) return 32.0;
+                  if (vList.length >= 4) return 38.0;
+                  return 44.0;
                 }
 
-                final hasTypes = vList.any((id) => id.contains('-T'));
-
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.TableHelper.fromTextArray(
-                      headers: ['Year / Subject', ...varietyLabels, 'Notes / QTY'],
-                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: hFont),
-                      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                      cellHeight: 25,
-                      columnWidths: {
-                        0: pw.FixedColumnWidth(yrColW),
-                        for (int i = 1; i <= vList.length; i++)
-                          i: pw.FixedColumnWidth(colWidthFor(vList[i - 1])),
-                        vList.length + 1: const pw.FlexColumnWidth(1),
-                      },
-                      cellAlignments: {
-                        0: pw.Alignment.centerLeft,
-                        for (int i = 1; i <= vList.length; i++) i: pw.Alignment.center,
-                        vList.length + 1: pw.Alignment.centerLeft,
-                      },
-                      data: program.coins.asMap().entries
-                          .map((e) => buildMultiRow(e.value, e.key))
-                          .toList(),
-                    ),
-                    if (hasTypes) ...[
-                      pw.SizedBox(height: 4),
-                      pw.Text(
-                        '* 1976 Bicentennial Types: Type 1 = Block lettering "DOLLAR". Type 2 = Slimmer redesigned lettering.',
-                        style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
-                      ),
-                    ],
-                  ],
+                return pw.TableHelper.fromTextArray(
+                  headers: ['Year / Subject', ...varietyLabels, 'Notes / QTY'],
+                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: hFont),
+                  headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  cellHeight: 20,
+                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  columnWidths: {
+                    0: pw.FixedColumnWidth(yrColW),
+                    for (int i = 1; i <= vList.length; i++)
+                      i: pw.FixedColumnWidth(colWidthFor(vList[i - 1])),
+                    vList.length + 1: const pw.FlexColumnWidth(1),
+                  },
+                  cellAlignments: {
+                    0: pw.Alignment.centerLeft,
+                    for (int i = 1; i <= vList.length; i++) i: pw.Alignment.center,
+                    vList.length + 1: pw.Alignment.centerLeft,
+                  },
+                  data: program.coins.asMap().entries
+                      .map((e) => buildMultiRow(e.value, e.key))
+                      .toList(),
                 );
               }(),
 
             // ── Notes Block ─────────────────────────────────────────────────
-            pw.SizedBox(height: 18),
+            pw.SizedBox(height: 10),
             pw.Text('ADDITIONAL NOTES',
-                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
-            pw.SizedBox(height: 4),
-            ...List.generate(6, (_) => pw.Column(
+                style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
+            pw.SizedBox(height: 2),
+            ...List.generate(3, (_) => pw.Column(
               children: [
-                pw.SizedBox(height: 12),
+                pw.SizedBox(height: 8),
                 pw.Container(height: 0.5,
                     decoration: const pw.BoxDecoration(
                         border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5)))),
