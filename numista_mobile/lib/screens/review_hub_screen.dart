@@ -1016,13 +1016,28 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               );
             },
           ),
-          if (_selectedIds.isNotEmpty)
+          if (_selectedIds.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                icon: const Icon(Icons.delete_outline, size: 16),
+                label: Text('Delete Selected (${_selectedIds.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: _deleteSelectedItems,
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 16, left: 8),
               child: Center(
                 child: Text('${_selectedIds.length} Selected', style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold)),
               ),
             ),
+          ],
         ],
       ),
       body: Stack(
@@ -1356,149 +1371,52 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
             const Divider(height: 20),
 
-if (_selectedIds.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+            // ── Action buttons ─────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2563EB),
+                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _isProcessing ? null : () {
+                      final name = data['Original Description from source']
+                          ?? data['Theme/Subject']
+                          ?? data['Denomination']
+                          ?? 'This Set';
+                      _keepSetAsIs(id, name.toString());
+                    },
+                    icon: const Icon(Icons.collections_bookmark_outlined, size: 16),
+                    label: const Text('Keep as Set', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
                 ),
-                icon: const Icon(Icons.delete_outline, size: 16),
-                label: Text('Delete Selected (${_selectedIds.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                onPressed: _deleteSelectedItems,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 16, left: 8),
-              child: Center(
-                child: Text('${_selectedIds.length} Selected', style: const TextStyle(color: Color(0xFFF63366), fontWeight: FontWeight.bold)),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF63366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _isProcessing ? null : () {
+                      final name = data['Original Description from source']
+                          ?? data['Theme/Subject']
+                          ?? data['Denomination']
+                          ?? 'This Set';
+                      _breakUpSet(id, name.toString(), setSize);
+                    },
+                    icon: const Icon(Icons.call_split_rounded, size: 16),
+                    label: const Text('Break Up Set →', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
             ),
           ],
-        ],
-      ),
-      body: Stack(
-        children: [
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.email!)
-                .collection('review_queue')
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
-                    Icon(Icons.cloud_off_rounded, size: 40, color: Colors.red),
-                    SizedBox(height: 12),
-                    Text('Couldn\'t load review queue.',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B))),
-                    SizedBox(height: 4),
-                    Text('Check your connection and try again.',
-                        style: TextStyle(color: Color(0xFF64748B))),
-                  ]),
-                );
-              }
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final docs = snapshot.data?.docs ?? [];
-              final filteredDocs = docs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded' && status != 'committed';
-              }).toList();
-
-              if (filteredDocs.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF10B981)),
-                      const SizedBox(height: 16),
-                      const Text('All caught up!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                      const SizedBox(height: 8),
-                      const Text('No items pending review.', style: TextStyle(color: Color(0xFF64748B))),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Back to Vault'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F172A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // Group docs by ftype / receipt
-              final receiptGroups = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
-              for (final d in filteredDocs) {
-                final data = d.data();
-                final receiptId = data['receipt_id'] ?? data['source_file'] ?? 'General Uploads';
-                receiptGroups.putIfAbsent(receiptId.toString(), () => []).add(d);
-              }
-
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildMorganGuideBanner(),
-                  ...receiptGroups.entries.map((entry) {
-                    final groupDocs = entry.value;
-                    final firstData = groupDocs.first.data();
-                    final fileName = firstData['source_file'] ?? firstData['document_name'] ?? entry.key;
-                    final sourceDocType = firstData['source_type'] ?? 'Upload Batch';
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                sourceDocType == 'checklist_scan' ? Icons.checklist_rtl : Icons.description_outlined,
-                                size: 18,
-                                color: const Color(0xFFC9A227),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$fileName (${groupDocs.length} items)',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...groupDocs.map((docSnap) {
-                          final data = docSnap.data();
-                          final id = docSnap.id;
-                          final isSelected = _selectedIds.contains(id);
-                          final confidence = ((data['composite_confidence'] ?? data['confidence_score'] ?? 1.0) as num).toDouble();
-                          final itemType = (data['item_type'] ?? 'coin').toString();
-
-                          return _buildCoinCard(id, data, isSelected, confidence, itemType);
-                        }),
-                        const SizedBox(height: 16),
-                      ],
-                    );
-                  }),
-                ],
-              );
-            },
-          ),
-          if (_isProcessing)
-            Container(
-              color: Colors.black45,
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
+        ),
       ),
     );
   }
