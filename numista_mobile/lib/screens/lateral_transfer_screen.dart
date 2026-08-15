@@ -197,6 +197,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error initiating transfer: $e'),
@@ -227,6 +228,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         claimPin: pin,
       );
       setState(() => _isClaiming = false);
+      if (!mounted) return;
 
       final count = res['result']?['items_claimed_count'] ?? 0;
 
@@ -252,6 +254,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       );
     } catch (e) {
       setState(() => _isClaiming = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
       );
