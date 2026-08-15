@@ -15,6 +15,26 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
+
+try:
+    font_path = os.path.join(os.path.dirname(__file__), 'assets', 'fonts', 'DejaVuSans.ttf')
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+    else:
+        alt_paths = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\segoeui.ttf",
+        ]
+        for ap in alt_paths:
+            if os.path.exists(ap):
+                pdfmetrics.registerFont(TTFont('DejaVuSans', ap))
+                break
+except Exception:
+    pass
 
 def downsample_image_to_300dpi_thumb(image_bytes: bytes, max_size: tuple = (300, 300)) -> io.BytesIO:
     """

@@ -158,6 +158,67 @@ def parse_checklist_notes(raw_notes: str) -> Dict[str, Any]:
 
 
 
+US_WOMEN_QUARTERS_OFFICIAL_TITLES: Dict[tuple, str] = {
+    (2022, "Maya Angelou"): "Maya Angelou",
+    (2022, "Dr. Sally Ride"): "Dr. Sally Ride",
+    (2022, "Wilma Mankiller"): "Wilma Mankiller",
+    (2022, "Nina Otero-Warren"): "Nina Otero-Warren",
+    (2022, "Anna May Wong"): "Anna May Wong",
+    (2023, "Bessie Coleman"): "Bessie Coleman",
+    (2023, "Edith Kanaka'ole"): "Edith Kanaka'ole",
+    (2023, "Eleanor Roosevelt"): "Eleanor Roosevelt",
+    (2023, "Jovita Idar"): "Jovita Idar",
+    (2023, "Maria Tallchief"): "Maria Tallchief",
+    (2024, "Dr. Pauli Murray"): "Rev. Dr. Pauli Murray",
+    (2024, "Patsy Mink"): "Patsy Takemoto Mink",
+    (2024, "Dr. Mary Edwards Walker"): "Dr. Mary Edwards Walker",
+    (2024, "Celia Cruz"): "Celia Cruz",
+    (2024, "Zitkala-Ša"): "Zitkala-Ša",
+    (2024, "Zitkala-Sa"): "Zitkala-Ša",
+    (2025, "Ida B. Wells"): "Ida B. Wells",
+    (2025, "Juliette Gordon Low"): "Juliette Gordon Low",
+    (2025, "Dr. Vera Rubin"): "Dr. Vera Rubin",
+    (2025, "Stacey Milbern"): "Stacey Park Milbern",
+    (2025, "Althea Gibson"): "Althea Gibson",
+}
+
+
+def get_official_us_mint_title(year: int, theme_subject: str) -> str:
+    """
+    Returns official US Mint catalog title for a known (year, theme_subject) pair.
+    Preserves exact theme_subject if not in dictionary.
+    """
+    if not theme_subject:
+        return ""
+    key = (year, theme_subject.strip())
+    if key in US_WOMEN_QUARTERS_OFFICIAL_TITLES:
+        return US_WOMEN_QUARTERS_OFFICIAL_TITLES[key]
+    norm_theme = theme_subject.strip().replace("Š", "S").replace("š", "s").replace("ʻ", "'").replace("’", "'")
+    for (y, t), official in US_WOMEN_QUARTERS_OFFICIAL_TITLES.items():
+        if y == year and (t == norm_theme or t.replace("Š", "S").replace("ʻ", "'") == norm_theme):
+            return official
+    return theme_subject.strip()
+
+
+def normalize_storage_location(raw_text: str, default_location: str = "") -> str:
+    """
+    Normalizes handwritten notes/header text to clean canonical storage location.
+    Handles 'All Quarters Stored in the U.S. Women's Quarter Book' -> 'US Women Quarters Book'.
+    """
+    if not raw_text:
+        return default_location.strip().rstrip(".")
+    cleaned = raw_text.strip().rstrip(".")
+    lower = cleaned.lower()
+    if "women" in lower and ("quarter" in lower or "book" in lower):
+        return "US Women Quarters Book"
+    if "all quarters stored in" in lower:
+        match = re.search(r"all quarters stored in (?:the )?([^\.\n]+)", cleaned, re.IGNORECASE)
+        if match:
+            loc = match.group(1).strip().rstrip(".")
+            return "US Women Quarters Book" if "women" in loc.lower() else loc
+    return cleaned
+
+
 def extract_checklist_document(
     file_bytes: bytes,
     mime_type: str,
@@ -193,9 +254,12 @@ def extract_checklist_document(
         data = json.loads(cleaned)
         
         raw_coins = data.get("coins", [])
-        extracted_location = data.get("storage_location", "").strip()
+        raw_location = data.get("storage_location", "").strip()
+        page_notes = data.get("page_notes", "").strip()
+        extracted_location = normalize_storage_location(page_notes or raw_location, default_location="US Women Quarters Book")
+        
         snapshot_id = data.get("snapshot_id", "").strip()
-        program_series = data.get("program_series", "US Mint Program").strip()
+        program_series = data.get("program_series", "American Women Quarters").strip()
         handwriting_conf = float(data.get("handwriting_confidence", 0.90))
         
         extracted_items = []
@@ -205,6 +269,7 @@ def extract_checklist_document(
             theme_subject = str(coin.get("theme_subject", "")).strip()
             denom = str(coin.get("denomination", "Quarter")).strip()
             series = str(coin.get("program_series", program_series)).strip()
+            official_title = get_official_us_mint_title(year, theme_subject)
             
             box_clarity = float(coin.get("box_clarity_score", 0.95))
             subject_ocr = float(coin.get("subject_ocr_score", 0.95))
@@ -216,13 +281,16 @@ def extract_checklist_document(
                 HEADER_VALIDATION_WEIGHT * header_val
             )
             
-            item_loc = coin.get("storage_location", extracted_location).strip()
+            coin_loc = coin.get("storage_location", "").strip()
+            item_loc = normalize_storage_location(coin_loc, default_location=extracted_location)
             notes = coin.get("personal_notes", "").strip()
             
             # Format item record matching canonical schema
             title = f"{year} {mint_mark} {denom} - {theme_subject}" if theme_subject else f"{year} {mint_mark} {denom}"
             
-            is_quarantined = handwriting_conf < HANDWRITING_QUARANTINE_THRESHOLD
+            # Fail-closed quarantine gating
+            is_quarantined = (handwriting_conf < HANDWRITING_QUARANTINE_THRESHOLD) or (not theme_subject)
+            review_needed = is_quarantined
             
             source_provenance = {
                 "source_type": "checklist_scan",
@@ -256,6 +324,8 @@ def extract_checklist_document(
                 "program_series": series,
                 "Theme/Subject": theme_subject,
                 "theme_subject": theme_subject,
+                "Official US Mint Title": official_title,
+                "official_us_mint_title": official_title,
                 "title": title,
                 "Condition": coin.get("condition", "Unspecified / Raw"),
                 "condition": coin.get("condition", "Unspecified / Raw"),
@@ -263,6 +333,7 @@ def extract_checklist_document(
                 "cost": 0.0,
                 "Retailer/Website": "N/A (Checklist Scan)",
                 "retailer_website": "N/A (Checklist Scan)",
+                "source_type": "checklist_scan",
                 "Retailer Invoice #": "N/A",
                 "retailer_invoice_num": "N/A",
                 "Storage Location": item_loc,
@@ -270,6 +341,7 @@ def extract_checklist_document(
                 "Personal Notes": notes,
                 "personal_notes": notes,
                 "status": "quarantined" if is_quarantined else "staged",
+                "review_needed": review_needed,
                 "import_session_id": import_session_id,
                 "doc_hash": doc_hash,
                 "source_provenance": source_provenance,

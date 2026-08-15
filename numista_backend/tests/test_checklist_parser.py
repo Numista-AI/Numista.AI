@@ -279,5 +279,74 @@ def test_slugify_theme_and_reference_image_contract():
     assert slugify_theme("Grand Canyon National Park") == "grand_canyon"
 
 
+# ── Case 9: Storage Location OCR Normalization ───────────────────────────────
+
+def test_normalize_storage_location():
+    """Case 9: Test handwritten notes normalization to canonical storage location."""
+    from services.checklist_parser import normalize_storage_location
+    
+    # Test handwritten note from bottom of US Women Quarters sheet
+    raw_note = "All Quarters Stored in the U.S. Women's Quarter Book"
+    assert normalize_storage_location(raw_note) == "US Women Quarters Book"
+    
+    # Test trailing period stripping
+    assert normalize_storage_location("US Women Quarters Book.") == "US Women Quarters Book"
+    assert normalize_storage_location("Safe Box 1.") == "Safe Box 1"
+
+
+# ── Case 10: Official US Mint Title & Diacritic Preservation ──────────────────
+
+def test_official_title_and_diacritic_preservation():
+    """Case 10: Assert exact diacritics survive and official US Mint titles resolve."""
+    from services.checklist_parser import get_official_us_mint_title
+    
+    # Patsy Mink resolves to official full title
+    assert get_official_us_mint_title(2024, "Patsy Mink") == "Patsy Takemoto Mink"
+    
+    # Zitkala-Ša preserves the Š character
+    assert "Š" in get_official_us_mint_title(2024, "Zitkala-Ša")
+    assert get_official_us_mint_title(2024, "Zitkala-Ša") == "Zitkala-Ša"
+    
+    # Edith Kanaka'ole preserves apostrophe
+    assert "'" in get_official_us_mint_title(2023, "Edith Kanaka'ole")
+    assert get_official_us_mint_title(2023, "Edith Kanaka'ole") == "Edith Kanaka'ole"
+
+
+# ── Case 11: Missing Subject Fail-Closed Quarantine ──────────────────────────
+
+def test_missing_subject_fail_closed_quarantine():
+    """Case 11: Assert missing theme_subject forces status: 'quarantined' and review_needed: True."""
+    mock_client = MagicMock()
+    missing_subj_response = {
+        "program_series": "American Women Quarters",
+        "denomination": "Quarter",
+        "storage_location": "US Women Quarters Book",
+        "snapshot_id": "SNAP-20260815-5472C902",
+        "page_notes": "US Women Quarters Book",
+        "handwriting_confidence": 0.95,
+        "coins": [
+            {"year": 2024, "mint_mark": "P", "theme_subject": "", "page_number": 1, "row_index": 1}
+        ]
+    }
+    mock_resp = MagicMock()
+    mock_resp.text = json.dumps(missing_subj_response)
+    mock_client.models.generate_content.return_value = mock_resp
+
+    res = extract_checklist_document(
+        file_bytes=b"%PDF-1.4 mock",
+        mime_type="application/pdf",
+        filename="unresolved_subject.pdf",
+        genai_client=mock_client,
+        uid="uid_1",
+        import_session_id="sess_err"
+    )
+
+    assert res["status"] == "success"
+    item = res["items"][0]
+    assert item["status"] == "quarantined"
+    assert item["review_needed"] is True
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
+

@@ -28,7 +28,8 @@ import time
 from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
-from services.checklist_parser import parse_checklist_notes, slugify_theme
+from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
+from services.document_classifier_service import classify_document_bytes
 logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
@@ -919,6 +920,11 @@ class BulkUpdateRequest(BaseModel):
     user_email: str
     review_ids: list[str]
     updates: dict
+
+class DeleteReviewItemsRequest(BaseModel):
+    user_email: str
+    review_ids: list[str]
+    reason: Optional[str] = "user_deleted_from_review_hub"
 
 @app.get("/")
 def read_root():
@@ -2981,6 +2987,69 @@ async def bulk_update_reviews(request: BulkUpdateRequest):
             batch.commit()
         return {"status": "success", "message": f"Updated {len(request.review_ids)} items"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/review/delete_items")
+async def delete_review_items(request: DeleteReviewItemsRequest):
+    """
+    Soft-deletes items from review queue by setting status: 'aborted'
+    and concurrently records an immutable legal audit log entry in users/{uid}/audit_log
+    inside a single atomic batch transaction.
+    """
+    try:
+        user_ref = db.collection('users').document(request.user_email)
+        queue_ref = user_ref.collection('review_queue')
+        audit_ref = user_ref.collection('audit_log')
+        
+        batch = db.batch()
+        batch_op_count = 0
+        now_ts = firestore.SERVER_TIMESTAMP
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        log_id = f"aud_del_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        audit_doc = {
+            "log_id": log_id,
+            "uid": request.user_email,
+            "action": "review_hub_item_deleted",
+            "import_session_id": "review_hub_action",
+            "source": "review_hub",
+            "timestamp": now_ts,
+            "before": {"staged_count": len(request.review_ids)},
+            "after": {"aborted_count": len(request.review_ids), "status": "aborted"},
+            "affected_coin_ids": request.review_ids,
+            "reason": request.reason or "user_deleted_from_review_hub",
+            "created_at": now_iso,
+        }
+        batch.set(audit_ref.document(log_id), audit_doc)
+        batch_op_count += 1
+        
+        for doc_id in request.review_ids:
+            doc_ref = queue_ref.document(doc_id)
+            batch.update(doc_ref, {
+                "status": "aborted",
+                "aborted_at": now_ts,
+                "aborted_by": request.user_email,
+                "abort_reason": request.reason or "user_deleted_from_review_hub",
+                "updated_at": now_iso,
+            })
+            batch_op_count += 1
+            if batch_op_count >= 490:
+                batch.commit()
+                batch = db.batch()
+                batch_op_count = 0
+                
+        if batch_op_count > 0:
+            batch.commit()
+            
+        return {
+            "status": "success",
+            "message": f"Soft-deleted {len(request.review_ids)} items with audit logging",
+            "log_id": log_id,
+            "deleted_count": len(request.review_ids)
+        }
+    except Exception as e:
+        logger.exception("Failed to soft-delete review items")
         raise HTTPException(status_code=500, detail=str(e))
 
 def _norm_date(raw: str) -> str:
@@ -5733,7 +5802,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     per_file[idx]["error"]  = str(e)
                     logger.exception(f"Bulk import spreadsheet error ({fname})")
 
-            elif ftype == "invoice":
+            elif ftype in ["invoice", "pdf", "image"]:
                 try:
                     ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
                     mime_map_local = {"pdf": "application/pdf", "png": "image/png",
@@ -5741,6 +5810,61 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     mime_type = mime_map_local.get(ext, "application/pdf")
                     if file_bytes[:4] == b"%PDF":
                         mime_type = "application/pdf"
+
+                    # 1. Document Classification & Routing
+                    doc_class = classify_document_bytes(file_bytes, mime_type, genai_client)
+                    if doc_class.get("document_type") == "checklist":
+                        logger.info(f"Classified {fname} as checklist. Routing to extract_checklist_document...")
+                        cl_res = extract_checklist_document(
+                            file_bytes=file_bytes,
+                            mime_type=mime_type,
+                            filename=fname,
+                            genai_client=genai_client,
+                            uid=user_email,
+                            import_session_id=session_id
+                        )
+                        cl_items = cl_res.get("items", [])
+                        added_this_file = 0
+                        col_ref = db.collection("users").document(user_email).collection("review_queue")
+                        batch = db.batch()
+                        file_stem = fname.rsplit(".", 1)[0]
+                        safe_file_stem = "".join(c if (c.isalnum() or c in ("_", "-")) else "_" for c in file_stem)
+                        receipt_id = f"rec_{safe_file_stem}"
+                        line_items_out = []
+
+                        for it in cl_items:
+                            doc = dict(it)
+                            doc["receipt_id"] = receipt_id
+                            doc["gcs_path"] = gcs_path
+                            doc["source_file"] = fname
+                            doc["created_at"] = firestore.SERVER_TIMESTAMP
+                            doc_ref = col_ref.document(str(uuid.uuid4()))
+                            batch.set(doc_ref, doc)
+                            new_coin_ids.append(doc_ref.id)
+                            added_this_file += 1
+                            line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
+                            line_item_entry["id"] = doc_ref.id
+                            line_items_out.append(line_item_entry)
+
+                        if added_this_file > 0:
+                            batch.commit()
+                            rec_doc = {
+                                "receipt_id": receipt_id,
+                                "filename": fname,
+                                "gcs_path": gcs_path,
+                                "document_type": "checklist",
+                                "import_session_id": session_id,
+                                "coins_extracted": added_this_file,
+                                "created_at": firestore.SERVER_TIMESTAMP,
+                            }
+                            db.collection("users").document(user_email).collection("receipts").document(receipt_id).set(rec_doc)
+
+                        summary["coins_identified"] += added_this_file
+                        per_file[idx]["status"] = "done"
+                        per_file[idx]["coins_added"] = added_this_file
+                        per_file[idx]["receipt_id"] = receipt_id
+                        per_file[idx]["document_type"] = "checklist"
+                        continue
 
                     pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
 
@@ -6203,7 +6327,7 @@ def receipt_view_url(user_email: str, receipt_id: str):
         safe_id = receipt_id.replace("rec_", "")
         gcs_path = f"gs://{IMPORT_BUCKET}/{user_email}/imports/raw/{safe_id}.pdf"
 
-    stream_url = f"/api/receipts/{user_email}/{receipt_id}/stream"
+    stream_url = f"https://numista-backend-568985927038.us-central1.run.app/api/receipts/{user_email}/{receipt_id}/stream"
     return {
         "receipt_id":      receipt_id,
         "signed_url":      stream_url,
