@@ -3794,7 +3794,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     Navigator.pop(ctx);
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null || user.email == null) return;
-                    final scaffoldMessenger = ScaffoldMessenger.of(context);
                     int count = 0;
                     for (final r in rawRows) {
                       final itemData = {
@@ -3815,7 +3814,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       count++;
                     }
                     if (mounted) {
-                      scaffoldMessenger.showSnackBar(SnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text('Successfully imported $count coins into your Review Queue!'),
                         backgroundColor: const Color(0xFF10B981),
                       ));

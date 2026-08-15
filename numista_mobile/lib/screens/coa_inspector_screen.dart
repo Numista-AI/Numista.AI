@@ -55,7 +55,6 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
         throw Exception('Server returned ${response.statusCode}');
       }
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('COA Inspection Error: ${e.toString()}'), backgroundColor: Colors.red),
       );

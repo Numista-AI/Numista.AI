@@ -57,11 +57,9 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
       );
       _aliasController.clear();
       _relationshipController.clear();
-      if (!mounted) return;
       Navigator.of(context).pop();
       _loadSubAccounts();
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
       );

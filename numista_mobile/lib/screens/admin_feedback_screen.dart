@@ -561,14 +561,13 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                         onPressed: () async {
                           final email = _testerEmailController.text.trim();
                           if (email.isNotEmpty) {
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
                             await FirebaseFirestore.instance
                                 .collection('users')
                                 .doc(email)
                                 .set({'isBetaTester': true}, SetOptions(merge: true));
                             _testerEmailController.clear();
                             if (mounted) {
-                              scaffoldMessenger.showSnackBar(
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Granted Beta Tester status to $email')),
                               );
                             }
