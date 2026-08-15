@@ -99,6 +99,19 @@
 
 
 
+
+## v4.94 — 2026-08-15
+**Release Enhancements & Platform Updates**
+
+- Release: bump release notes to v4.93
+- Ai: integrate Generate-and-Select verifier services and Antigravity command protocols
+- Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine
+- Lint: resolve all use_build_context_synchronously warnings across 9 files
+- Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"
+- Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits
+- Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan
+- Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results
+
 ## v4.93 — 2026-08-15
 **Ai Enhancements & Platform Updates**
 

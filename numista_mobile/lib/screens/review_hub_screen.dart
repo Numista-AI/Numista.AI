@@ -182,7 +182,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               return ListView.separated(
                 shrinkWrap: true,
                 itemCount: receipts.length,
-                separatorBuilder: (_, __) => const Divider(color: Colors.white10),
+                separatorBuilder: (context, index) => const Divider(color: Colors.white10),
                 itemBuilder: (context, idx) {
                   final r = receipts[idx] as Map<String, dynamic>;
                   final name = r['original_filename'] ?? r['receipt_id'] ?? 'Document ${idx + 1}';
@@ -195,6 +195,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                     trailing: TextButton.icon(
                       onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         try {
                           final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
                           if (res.statusCode == 200) {
@@ -205,8 +206,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             }
                           }
                         } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                          messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
                         }
                       },
                       icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
@@ -906,7 +906,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 return const Center(child: CircularProgressIndicator(color: Color(0xFFD4A843)));
               }
 
-              final docs = (snapshot.data?.docs.toList() ?? []);
+              final rawDocs = (snapshot.data?.docs.toList() ?? []);
+              final docs = rawDocs.where((d) {
+                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
+                return status != 'aborted' && status != 'superseded';
+              }).toList();
               docs.sort((a, b) {
                 final aData = a.data();
                 final bData = b.data();
@@ -1270,12 +1274,19 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: const Color(0xFFC9A227).withAlpha(30),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.psychology_outlined, color: Color(0xFFFFD700), size: 24),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/logo_owl.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.psychology_outlined, color: Color(0xFFFFD700), size: 24),
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1283,7 +1294,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'MORGAN Ingestion Guide',
+                  'Morgan Ingestion Assistant',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFFFD700),
@@ -1293,7 +1304,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Document processing complete! Please click the Review button on each item to verify the extracted details against your scan. Pay special attention to the AI Confidence meter in the upper right of each card before committing to your collection.',
+                  'Hoo! I\'ve scanned your checklist or invoice. Verify the extracted subjects below, set your collection condition, and commit them directly to your vault!',
                   style: TextStyle(
                     color: Color(0xFFCBD5E1),
                     fontSize: 13,
@@ -1397,7 +1408,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    data['Theme/Subject'] ?? 'No description',
+                    data['Theme/Subject'] ?? data['theme_subject'] ?? data['title'] ?? 'Numismatic Item',
                     style: const TextStyle(color: Color(0xFF475569), fontSize: 14, fontWeight: FontWeight.w500),
                   ),
 
