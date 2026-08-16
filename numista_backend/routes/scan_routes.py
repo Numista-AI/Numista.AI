@@ -384,3 +384,64 @@ async def bulk_condition(request: BulkConditionRequest):
         logger.exception(f"Failed to apply bulk condition: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── Review Hub: Delete Items ─────────────────────────────────────────────────
+
+class DeleteReviewItemsRequest(BaseModel):
+    user_email: str = Field(..., description="Owner email — used as Firestore doc ID")
+    review_ids: List[str] = Field(..., min_length=1, description="List of review_queue document IDs to delete")
+    reason: str = Field(default="user_deleted", description="Reason code written to audit log")
+
+
+@router.post("/review/delete_items")
+async def delete_review_items(request: DeleteReviewItemsRequest):
+    """
+    Permanently delete one or more review_queue documents for a user.
+    Each deletion is recorded in the users/{uid}/audit_log collection.
+    Called by Review Hub Delete Selected and Delete Single buttons.
+    """
+    try:
+        uid = request.user_email.lower().strip()
+        user_ref = db.collection("users").document(uid)
+        queue_col = user_ref.collection("review_queue")
+        audit_col = user_ref.collection("audit_log")
+
+        deleted_ids: List[str] = []
+        batch = db.batch()
+
+        for review_id in request.review_ids:
+            doc_ref = queue_col.document(review_id)
+            doc = doc_ref.get()
+            if not doc.exists:
+                logger.warning(f"delete_review_items: doc {review_id} not found for {uid}, skipping")
+                continue
+
+            # Capture data for audit before deleting
+            data = doc.to_dict() or {}
+            batch.delete(doc_ref)
+
+            # Audit log entry
+            log_id = f"DEL-{review_id[:8]}-{uuid.uuid4().hex[:6]}"
+            audit_ref = audit_col.document(log_id)
+            batch.set(audit_ref, {
+                "log_id": log_id,
+                "action": "review_queue_delete",
+                "reason": request.reason,
+                "review_id": review_id,
+                "subject": data.get("theme_subject") or data.get("Theme/Subject") or data.get("title") or "unknown",
+                "source_type": data.get("source_type", "unknown"),
+                "deleted_by": uid,
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+            })
+            deleted_ids.append(review_id)
+
+        batch.commit()
+        logger.info(f"delete_review_items: deleted {len(deleted_ids)} items for {uid} (reason={request.reason})")
+        return {
+            "status": "success",
+            "deleted_count": len(deleted_ids),
+            "deleted_ids": deleted_ids,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to delete review items: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
