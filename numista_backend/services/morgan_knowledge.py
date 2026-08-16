@@ -1,16 +1,21 @@
 """
 Morgan AI Knowledge Base & RAG Index Module
-Combines numismatic knowledge domain with the dynamic Feature Registry.
+Combines numismatic knowledge domain with the dynamic Feature Registry and
+semantic Vector RAG reference retrieval (gemini-embedding-2).
 """
 
+import logging
 from typing import List, Dict, Any
 from services.feature_registry import registry
+
+logger = logging.getLogger("numista_backend.morgan_knowledge")
 
 
 def get_morgan_system_knowledge_context(user_query: str = "") -> str:
     """
     Builds system prompt knowledge context for Morgan AI.
-    Includes dynamic Feature Registry context and explicit rules preventing negative answers.
+    Includes dynamic Feature Registry context, explicit rules preventing negative answers,
+    and semantic vector RAG context from numismatic reference chunks.
     """
     prompt = (
         "CRITICAL INSTRUCTIONS & NEGATIVE ANSWER OVERRIDES:\n"
@@ -23,8 +28,21 @@ def get_morgan_system_knowledge_context(user_query: str = "") -> str:
     )
 
     # Append dynamic features from FeatureRegistry
-    feature_context = registry.build_morgan_prompt_context()
-    if feature_context:
-        prompt += f"\n{feature_context}\n"
+    try:
+        feature_context = registry.build_morgan_prompt_context()
+        if feature_context:
+            prompt += f"\n{feature_context}\n"
+    except Exception as fe:
+        logger.warning(f"Feature registry context load error: {fe}")
+
+    # Append semantic Vector RAG reference chunks if query text is provided
+    if user_query and user_query.strip():
+        try:
+            from services.vector_rag_service import vector_rag_service
+            rag_context = vector_rag_service.build_rag_prompt_context(user_query)
+            if rag_context:
+                prompt += f"\n{rag_context}\n"
+        except Exception as ve:
+            logger.warning(f"Vector RAG context retrieval error: {ve}")
 
     return prompt

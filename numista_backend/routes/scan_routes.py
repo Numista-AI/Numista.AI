@@ -54,6 +54,31 @@ class BulkConditionRequest(BaseModel):
     scope: Optional[str] = "unspecified_only"  # 'unspecified_only' or 'all'
 
 
+# ── Helper Functions ──────────────────────────────────────────────────────────
+
+def enforce_review_queue_fifo_cap(uid: str, max_items: int = 500) -> int:
+    """
+    Enforces a strict 500-item FIFO cap on users/{uid}/review_queue
+    to protect Firestore read/write quotas and Tier Gatekeeper budgets.
+    """
+    if not db or not uid:
+        return 0
+    try:
+        col_ref = db.collection("users").document(uid).collection("review_queue")
+        docs = list(col_ref.order_by("created_at", direction=firestore.Query.ASCENDING).stream())
+        overflow = len(docs) - max_items
+        if overflow > 0:
+            logger.info(f"Review queue overflow for user {uid}: removing {overflow} oldest items (FIFO).")
+            batch = db.batch()
+            for doc in docs[:overflow]:
+                batch.delete(doc.reference)
+            batch.commit()
+            return overflow
+    except Exception as e:
+        logger.warning(f"Failed to enforce review queue FIFO cap: {e}")
+    return 0
+
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.post("/upload_document")
@@ -130,35 +155,42 @@ async def upload_document(
         )
 
         items = extraction_result.get("items", [])
-        if not items:
-            logger.warning("Checklist extraction returned 0 items")
-
         # Stage extracted items in users/{uid}/review_queue
         batch = db.batch()
         col_ref = db.collection("users").document(uid).collection("review_queue")
         
         staged_items = []
+        is_quarantined = conf < 0.85 or requires_conf
         for item in items:
             doc_id = str(uuid.uuid4())
             item["staging_id"] = doc_id
             item["uid"] = uid
             item["user_email"] = user_email
-            if requires_conf:
-                item["status"] = "provisional"
-                item["requires_confirmation"] = True
+            item["confidence_score"] = conf
+            item["created_at"] = datetime.now(timezone.utc).isoformat()
+            if is_quarantined:
+                item["status"] = "quarantined"
+                item["review_needed"] = True
+                item["priority_score"] = round(1.0 - conf, 2)
+            else:
+                item["status"] = "staged"
+                item["review_needed"] = False
+                item["priority_score"] = 0.0
 
             doc_ref = col_ref.document(doc_id)
             batch.set(doc_ref, item)
             staged_items.append(item)
 
         batch.commit()
-        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id})")
+        enforce_review_queue_fifo_cap(uid, max_items=500)
+        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id}, quarantined={is_quarantined})")
 
         return {
             "status": "success",
             "document_type": "checklist",
             "classifier_confidence": conf,
-            "requires_confirmation": requires_conf,
+            "requires_confirmation": is_quarantined,
+            "is_quarantined": is_quarantined,
             "import_session_id": session_id,
             "doc_hash": doc_hash,
             "storage_location": extraction_result.get("storage_location", ""),

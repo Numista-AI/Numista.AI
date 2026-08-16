@@ -7,15 +7,15 @@ Unit tests for Generate-and-Select Verifier Services:
 
 import pytest
 import struct
-from numista_backend.services.catalog_verifier import (
+from services.catalog_verifier import (
     verify_coin_identification,
     parse_sheldon_grade
 )
-from numista_backend.services.ocr_balance_verifier import (
+from services.ocr_balance_verifier import (
     verify_invoice_extraction,
     parse_currency
 )
-from numista_backend.services.image_intake_verifier import (
+from services.image_intake_verifier import (
     verify_image_candidate,
     get_image_dimensions
 )
