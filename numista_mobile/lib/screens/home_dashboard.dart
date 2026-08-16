@@ -1520,10 +1520,37 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.105',
+    date: '2026-08-16',
+    description: 'Ai Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Ai: integrate continuous learning architecture with vector rag, few-shot injection, collector memory, and active learning',
+      'Review-hub: add /api/review/delete_items backend route + fix pytest warnings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+    ],
+  ),
+  _Release(
+    version: 'v4.104',
+    date: '2026-08-16',
+    description: 'Review-hub Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Review-hub: add /api/review/delete_items backend route + fix pytest warnings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+      'Review_hub: complete v8 Review Hub card actions, dual titles, Morgan avatar, and delete flows',
+      'Review_hub: implement audit-logged review item deletion, official US Mint titles, storage normalization, and UI card actions',
+      'Qa: update beta verification matrix and tracker to US Women Quarters 20-coin program',
+      'Backend: export config variables in config package and add parse_checklist_notes implementation',
+      'Backend: export all configuration variables from config package and restore parse_checklist_notes function',
+      'Release: auto-bump v4.97 release notes',
+    ],
+  ),
+  _Release(
     version: 'v4.103',
     date: '2026-08-15',
     description: 'Review_hub Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Review_hub: complete v8 Review Hub card actions, dual titles, Morgan avatar, and delete flows',
       'Review_hub: implement audit-logged review item deletion, official US Mint titles, storage normalization, and UI card actions',
