@@ -108,6 +108,19 @@
 
 
 
+
+## v4.103 — 2026-08-15
+**Review_hub Enhancements & Platform Updates**
+
+- Review_hub: complete v8 Review Hub card actions, dual titles, Morgan avatar, and delete flows
+- Review_hub: implement audit-logged review item deletion, official US Mint titles, storage normalization, and UI card actions
+- Qa: update beta verification matrix and tracker to US Women Quarters 20-coin program
+- Backend: export config variables in config package and add parse_checklist_notes implementation
+- Backend: export all configuration variables from config package and restore parse_checklist_notes function
+- Release: auto-bump v4.97 release notes
+- Ingestion: v7.1 surgical resolution of doc_hash deduplication, resume session flow, canonical audit assertion, and PDF layout budget
+- Release: auto-bump v4.95 release notes
+
 ## v4.102 — 2026-08-15
 **Review_hub Enhancements & Platform Updates**
 
