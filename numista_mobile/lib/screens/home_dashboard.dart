@@ -1520,10 +1520,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.106',
+    date: '2026-08-16',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: bump version to v4.105',
+      'Ai: integrate continuous learning architecture with vector rag, few-shot injection, collector memory, and active learning',
+      'Review-hub: add /api/review/delete_items backend route + fix pytest warnings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+    ],
+  ),
+  _Release(
     version: 'v4.105',
     date: '2026-08-16',
     description: 'Ai Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Ai: integrate continuous learning architecture with vector rag, few-shot injection, collector memory, and active learning',
       'Review-hub: add /api/review/delete_items backend route + fix pytest warnings',
