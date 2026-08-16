@@ -143,6 +143,25 @@ async def submit_grade_review(
         except Exception as log_err:
             logger.warning(f"HITL training log write error: {log_err}")
 
+        try:
+            corr_id = f"hitl_{int(_time.time())}_{coin_id[:8]}"
+            corr_data = {
+                "schema_version": "1.0",
+                "correction_id": corr_id,
+                "task_type": "visual_grade",
+                "coin_id": coin_id,
+                "user_email": user_email,
+                "original_ai_output": {"grade": ai_assigned},
+                "verified_output": {"grade": suggested_grade.strip(), "notes": notes.strip()},
+                "consensus_status": "pending",
+                "consensus_ratio": 1.0,
+                "created_at": _dt.utcnow().isoformat()
+            }
+            if db:
+                db.collection("hitl_training_corrections").document(corr_id).set(corr_data, merge=True)
+        except Exception as dbe:
+            logger.warning(f"Firestore HITL write error: {dbe}")
+
     review_count  = len(reviews)
     dict_reviews  = [r for r in reviews if isinstance(r, dict)]
     corrections   = [r for r in dict_reviews if r.get('action') == 'corrected']

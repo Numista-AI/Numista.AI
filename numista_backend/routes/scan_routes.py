@@ -54,6 +54,31 @@ class BulkConditionRequest(BaseModel):
     scope: Optional[str] = "unspecified_only"  # 'unspecified_only' or 'all'
 
 
+# ── Helper Functions ──────────────────────────────────────────────────────────
+
+def enforce_review_queue_fifo_cap(uid: str, max_items: int = 500) -> int:
+    """
+    Enforces a strict 500-item FIFO cap on users/{uid}/review_queue
+    to protect Firestore read/write quotas and Tier Gatekeeper budgets.
+    """
+    if not db or not uid:
+        return 0
+    try:
+        col_ref = db.collection("users").document(uid).collection("review_queue")
+        docs = list(col_ref.order_by("created_at", direction=firestore.Query.ASCENDING).stream())
+        overflow = len(docs) - max_items
+        if overflow > 0:
+            logger.info(f"Review queue overflow for user {uid}: removing {overflow} oldest items (FIFO).")
+            batch = db.batch()
+            for doc in docs[:overflow]:
+                batch.delete(doc.reference)
+            batch.commit()
+            return overflow
+    except Exception as e:
+        logger.warning(f"Failed to enforce review queue FIFO cap: {e}")
+    return 0
+
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.post("/upload_document")
@@ -130,35 +155,42 @@ async def upload_document(
         )
 
         items = extraction_result.get("items", [])
-        if not items:
-            logger.warning("Checklist extraction returned 0 items")
-
         # Stage extracted items in users/{uid}/review_queue
         batch = db.batch()
         col_ref = db.collection("users").document(uid).collection("review_queue")
         
         staged_items = []
+        is_quarantined = conf < 0.85 or requires_conf
         for item in items:
             doc_id = str(uuid.uuid4())
             item["staging_id"] = doc_id
             item["uid"] = uid
             item["user_email"] = user_email
-            if requires_conf:
-                item["status"] = "provisional"
-                item["requires_confirmation"] = True
+            item["confidence_score"] = conf
+            item["created_at"] = datetime.now(timezone.utc).isoformat()
+            if is_quarantined:
+                item["status"] = "quarantined"
+                item["review_needed"] = True
+                item["priority_score"] = round(1.0 - conf, 2)
+            else:
+                item["status"] = "staged"
+                item["review_needed"] = False
+                item["priority_score"] = 0.0
 
             doc_ref = col_ref.document(doc_id)
             batch.set(doc_ref, item)
             staged_items.append(item)
 
         batch.commit()
-        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id})")
+        enforce_review_queue_fifo_cap(uid, max_items=500)
+        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id}, quarantined={is_quarantined})")
 
         return {
             "status": "success",
             "document_type": "checklist",
             "classifier_confidence": conf,
-            "requires_confirmation": requires_conf,
+            "requires_confirmation": is_quarantined,
+            "is_quarantined": is_quarantined,
             "import_session_id": session_id,
             "doc_hash": doc_hash,
             "storage_location": extraction_result.get("storage_location", ""),
@@ -384,3 +416,64 @@ async def bulk_condition(request: BulkConditionRequest):
         logger.exception(f"Failed to apply bulk condition: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── Review Hub: Delete Items ─────────────────────────────────────────────────
+
+class DeleteReviewItemsRequest(BaseModel):
+    user_email: str = Field(..., description="Owner email — used as Firestore doc ID")
+    review_ids: List[str] = Field(..., min_length=1, description="List of review_queue document IDs to delete")
+    reason: str = Field(default="user_deleted", description="Reason code written to audit log")
+
+
+@router.post("/review/delete_items")
+async def delete_review_items(request: DeleteReviewItemsRequest):
+    """
+    Permanently delete one or more review_queue documents for a user.
+    Each deletion is recorded in the users/{uid}/audit_log collection.
+    Called by Review Hub Delete Selected and Delete Single buttons.
+    """
+    try:
+        uid = request.user_email.lower().strip()
+        user_ref = db.collection("users").document(uid)
+        queue_col = user_ref.collection("review_queue")
+        audit_col = user_ref.collection("audit_log")
+
+        deleted_ids: List[str] = []
+        batch = db.batch()
+
+        for review_id in request.review_ids:
+            doc_ref = queue_col.document(review_id)
+            doc = doc_ref.get()
+            if not doc.exists:
+                logger.warning(f"delete_review_items: doc {review_id} not found for {uid}, skipping")
+                continue
+
+            # Capture data for audit before deleting
+            data = doc.to_dict() or {}
+            batch.delete(doc_ref)
+
+            # Audit log entry
+            log_id = f"DEL-{review_id[:8]}-{uuid.uuid4().hex[:6]}"
+            audit_ref = audit_col.document(log_id)
+            batch.set(audit_ref, {
+                "log_id": log_id,
+                "action": "review_queue_delete",
+                "reason": request.reason,
+                "review_id": review_id,
+                "subject": data.get("theme_subject") or data.get("Theme/Subject") or data.get("title") or "unknown",
+                "source_type": data.get("source_type", "unknown"),
+                "deleted_by": uid,
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+            })
+            deleted_ids.append(review_id)
+
+        batch.commit()
+        logger.info(f"delete_review_items: deleted {len(deleted_ids)} items for {uid} (reason={request.reason})")
+        return {
+            "status": "success",
+            "deleted_count": len(deleted_ids),
+            "deleted_ids": deleted_ids,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to delete review items: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

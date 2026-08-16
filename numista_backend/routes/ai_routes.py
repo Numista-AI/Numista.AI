@@ -1,5 +1,6 @@
 """
-Numismatic AI RAG, Deep Dive Essays, Morgan Chat Session Persistence, and Estate Chat Routes
+Numismatic AI RAG, Deep Dive Essays, Morgan Chat Session Persistence,
+Episodic Collector Memory, and Vector Domain Knowledge Routes
 """
 
 import os
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from config import DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL
 from routes.deps import genai_client, genai_types, db, get_current_user
+from services.collector_profile_service import collector_profile_service
 
 logger = logging.getLogger("numista_backend.ai_routes")
 
@@ -29,6 +31,15 @@ class EssayRequest(BaseModel):
     topic: str
     denomination: Optional[str] = None
     year: Optional[int] = None
+
+class CollectorProfileUpdateRequest(BaseModel):
+    preferred_series: Optional[List[str]] = None
+    target_grade_min: Optional[str] = None
+    target_grade_max: Optional[str] = None
+    preferred_services: Optional[List[str]] = None
+    investment_goal: Optional[str] = None
+    budget_tier: Optional[str] = None
+    opt_in_chat_extraction: Optional[bool] = None
 
 # ── Helper for Vision/Text Model Invocation with Resilient Fallback ───────────
 
@@ -65,23 +76,33 @@ def call_chat_model_with_fallback(system_prompt: str, user_query: str) -> str:
 @router.post("/chat")
 async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_current_user)):
     """
-    Morgan AI Chat completion endpoint with portfolio memory context & Firestore session persistence.
+    Morgan AI Chat completion endpoint with portfolio memory context,
+    episodic collector preferences, vector RAG knowledge, & Firestore session persistence.
     """
     user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
     user_name = user.get("name") or user.get("email") or "Collector"
     session_id = req.session_id or f"session_{int(datetime.now(timezone.utc).timestamp())}"
     msg_id = req.message_id or f"msg_{int(datetime.now(timezone.utc).timestamp())}"
 
-    # 1. Fetch cached portfolio summary stats (<15ms latency)
+    # 1. Base persona
     system_prompt = f"You are Morgan, an expert AI numismatic assistant for {user_name} on Numista.AI.\n"
-    
-    # Inject Knowledge Base & Dynamic Feature Registry context
+
+    # 2. Inject Episodic Collector Memory
+    try:
+        profile_context = collector_profile_service.build_profile_prompt_context(user_id)
+        if profile_context:
+            system_prompt += profile_context + "\n"
+    except Exception as pe:
+        logger.warning(f"Failed to load collector profile context: {pe}")
+
+    # 3. Inject Knowledge Base, Vector RAG, & Dynamic Feature Registry context
     try:
         from services.morgan_knowledge import get_morgan_system_knowledge_context
         system_prompt += get_morgan_system_knowledge_context(req.query) + "\n"
     except Exception as ke:
         logger.warning(f"Failed to load Morgan system knowledge context: {ke}")
 
+    # 4. Inject Portfolio Summary Stats (<15ms latency)
     try:
         stats_doc = db.collection("users").document(user_id).collection("summary").document("stats").get()
         if stats_doc.exists:
@@ -99,10 +120,10 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
     if req.context_override:
         system_prompt += f"\nAdditional Context: {req.context_override}"
 
-    # 2. Invoke Gemini AI completion with fallback
+    # 5. Invoke Gemini AI completion with fallback
     assistant_reply = call_chat_model_with_fallback(system_prompt, req.query)
 
-    # 3. Persist messages to Firestore: users/{userId}/ai_chat_sessions/{sessionId}/messages/{messageId}
+    # 6. Persist messages to Firestore: users/{userId}/ai_chat_sessions/{sessionId}/messages/{messageId}
     try:
         session_ref = db.collection("users").document(user_id).collection("ai_chat_sessions").document(session_id)
         
@@ -141,6 +162,33 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
         "status": "success"
     }
 
+
+# ── Collector Profile Endpoints ───────────────────────────────────────────────
+
+@router.get("/profile")
+async def api_get_collector_profile(user: Dict[str, Any] = Depends(get_current_user)):
+    """Retrieve episodic collector preferences for current authenticated user."""
+    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    profile = collector_profile_service.get_collector_profile(user_id)
+    return {"status": "success", "profile": profile}
+
+
+@router.post("/profile")
+@router.put("/profile")
+async def api_update_collector_profile(
+    req: CollectorProfileUpdateRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Update collector preferences with strict snake_case validation."""
+    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    updates = req.model_dump(exclude_unset=True)
+    res = collector_profile_service.update_collector_profile(user_id, updates)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message", "Profile update failed"))
+    return res
+
+
+# ── Session & Research Endpoints ──────────────────────────────────────────────
 
 @router.get("/sessions")
 async def api_list_sessions(user: Dict[str, Any] = Depends(get_current_user)):
