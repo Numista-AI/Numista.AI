@@ -1520,10 +1520,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.109',
+    date: '2026-08-17',
+    description: 'Web Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge',
+      'Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync',
+      'Audit: sync SCAN_REPORT.md following full Playwright suite run',
+      'Audit: update SCAN_REPORT.md with flutter analyze findings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+    ],
+  ),
+  _Release(
     version: 'v4.108',
     date: '2026-08-17',
     description: 'Continuous Learning UI & Desktop Web Enhancements',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Web: connect collector memory settings card with desktop dialog and snake_case schema validation',
       'Review-hub: unify staging discards with confirmation modal and batch deletion API progress locking',
