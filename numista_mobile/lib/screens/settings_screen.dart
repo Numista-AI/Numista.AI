@@ -15,6 +15,7 @@ import '../services/valuation_mode_service.dart';
 import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
 import '../services/backup_export_service.dart';
+import '../services/collector_profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -163,6 +164,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           // ── Morgan Settings Section ───────────────────────────────────
           _buildMorganCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── Collector Memory & AI Preferences Section ─────────────────
+          _buildCollectorMemoryCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -1570,6 +1577,484 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
+  }
+
+  Widget _buildCollectorMemoryCard(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: CollectorProfileService.getProfile(),
+      builder: (ctx, snap) {
+        final profile = snap.data ?? CollectorProfileService.defaultProfile;
+        final targetMin = (profile['target_grade_min'] ?? '').toString();
+        final targetMax = (profile['target_grade_max'] ?? '').toString();
+        final servicesList = profile['preferred_services'] as List? ?? ['PCGS', 'NGC'];
+        final services = servicesList.map((e) => e.toString()).join(', ');
+        final rawGoal = (profile['investment_goal'] ?? 'numismatic_study').toString();
+        final isOptedIn = profile['opt_in_chat_extraction'] != false;
+
+        String gradeSummary;
+        if (targetMin.isNotEmpty && targetMax.isNotEmpty) {
+          gradeSummary = '$targetMin → $targetMax';
+        } else if (targetMin.isNotEmpty) {
+          gradeSummary = 'Min $targetMin';
+        } else if (targetMax.isNotEmpty) {
+          gradeSummary = 'Max $targetMax';
+        } else {
+          gradeSummary = 'Unset (Full Sheldon 1–70)';
+        }
+
+        String goalSummary;
+        if (rawGoal == 'estate_planning') {
+          goalSummary = 'Estate Planning';
+        } else if (rawGoal == 'commercial_trade') {
+          goalSummary = 'Commercial Trade';
+        } else {
+          goalSummary = 'Numismatic Study';
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF8B5CF6).withAlpha(80),
+              width: 1.5,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFFA78BFA).withAlpha(120),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.psychology_outlined, color: Colors.white, size: 28),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            '🧠 Learned Preferences & AI Memory',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isOptedIn
+                                  ? const Color(0xFF10B981).withAlpha(40)
+                                  : const Color(0xFF64748B).withAlpha(40),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isOptedIn ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            child: Text(
+                              isOptedIn ? 'Active' : 'Paused',
+                              style: TextStyle(
+                                color: isOptedIn ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Target Grades: $gradeSummary  •  Services: ${services.isEmpty ? 'None' : services}  •  Goal: $goalSummary',
+                        style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Continuous in-context learning personalizes Morgan and document scanning to your terminology, grading standards, and collection goals.',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    elevation: 0,
+                  ),
+                  onPressed: () => _showCollectorMemoryDialog(profile),
+                  child: const Text(
+                    'Configure AI Memory',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCollectorMemoryDialog(Map<String, dynamic> initialProfile) async {
+    final gradeOptions = [
+      'Unset',
+      'PO-01', 'FR-02', 'AG-03', 'G-04', 'VG-08', 'F-12', 'VF-20', 'VF-30',
+      'XF-40', 'XF-45', 'AU-50', 'AU-55', 'AU-58',
+      'MS-60', 'MS-61', 'MS-62', 'MS-63', 'MS-64', 'MS-65', 'MS-66', 'MS-67', 'MS-68', 'MS-69', 'MS-70',
+      'PR-65', 'PR-67', 'PR-70'
+    ];
+    final allServices = ['PCGS', 'NGC', 'ANACS', 'CAC', 'ICG'];
+    final goalOptions = [
+      {'value': 'numismatic_study', 'label': 'Numismatic Study'},
+      {'value': 'estate_planning', 'label': 'Estate Planning'},
+      {'value': 'commercial_trade', 'label': 'Commercial Trade'},
+    ];
+
+    String targetMin = (initialProfile['target_grade_min'] ?? '').toString();
+    if (!gradeOptions.contains(targetMin)) targetMin = 'Unset';
+
+    String targetMax = (initialProfile['target_grade_max'] ?? '').toString();
+    if (!gradeOptions.contains(targetMax)) targetMax = 'Unset';
+
+    List<String> selectedServices = List<String>.from(
+      (initialProfile['preferred_services'] as List? ?? ['PCGS', 'NGC']).map((e) => e.toString())
+    );
+
+    String selectedGoal = (initialProfile['investment_goal'] ?? 'numismatic_study').toString();
+    if (!goalOptions.any((g) => g['value'] == selectedGoal)) {
+      selectedGoal = 'numismatic_study';
+    }
+    bool optInExtraction = initialProfile['opt_in_chat_extraction'] != false;
+    bool isSaving = false;
+
+    final updated = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Dialog(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFF334155), width: 1.5),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 600,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withAlpha(40),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.psychology_outlined, color: Color(0xFFA78BFA), size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Learned Preferences & AI Memory',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white54),
+                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx, false),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Customize your personal episodic AI memory. Gemini and Morgan will dynamically factor these preferences into grading reviews, checklist scanning, and estate solvers.',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(color: Color(0xFF334155)),
+                      const SizedBox(height: 16),
+
+                      // Preferred Services Multi-Select
+                      const Text(
+                        'Preferred Grading Services',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: allServices.map((svc) {
+                          final isSelected = selectedServices.contains(svc);
+                          return FilterChip(
+                            label: Text(svc),
+                            selected: isSelected,
+                            selectedColor: const Color(0xFF8B5CF6).withAlpha(60),
+                            backgroundColor: const Color(0xFF1E293B),
+                            checkmarkColor: const Color(0xFFA78BFA),
+                            labelStyle: TextStyle(
+                              color: isSelected ? const Color(0xFFA78BFA) : const Color(0xFFCBD5E1),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            side: BorderSide(
+                              color: isSelected ? const Color(0xFF8B5CF6) : const Color(0xFF475569),
+                            ),
+                            onSelected: (checked) {
+                              setModalState(() {
+                                if (checked) {
+                                  selectedServices.add(svc);
+                                } else {
+                                  selectedServices.remove(svc);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Target Grade Range
+                      const Text(
+                        'Target Grade Range (Minimum & Maximum)',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: targetMin,
+                              dropdownColor: const Color(0xFF1E293B),
+                              decoration: InputDecoration(
+                                labelText: 'Minimum Grade',
+                                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                filled: true,
+                                fillColor: const Color(0xFF1E293B),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Color(0xFF475569)),
+                                ),
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                              items: gradeOptions.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => targetMin = val);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('to', style: TextStyle(color: Colors.white54)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: targetMax,
+                              dropdownColor: const Color(0xFF1E293B),
+                              decoration: InputDecoration(
+                                labelText: 'Maximum Grade',
+                                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                                filled: true,
+                                fillColor: const Color(0xFF1E293B),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(color: Color(0xFF475569)),
+                                ),
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                              items: gradeOptions.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => targetMax = val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Numismatic / Investment Goal
+                      const Text(
+                        'Numismatic / Investment Focus',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedGoal,
+                        dropdownColor: const Color(0xFF1E293B),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFF1E293B),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF475569)),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        items: goalOptions.map((item) {
+                          return DropdownMenuItem<String>(
+                            value: item['value'],
+                            child: Text(item['label']!),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedGoal = val);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Continuous Extraction Toggle
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Continuous In-Context AI Memory',
+                          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Automatically learn from manual field corrections in Review Hub and chat sessions.',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        ),
+                        value: optInExtraction,
+                        activeThumbColor: const Color(0xFF8B5CF6),
+                        onChanged: (val) => setModalState(() => optInExtraction = val),
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(color: Color(0xFF334155)),
+                      const SizedBox(height: 16),
+
+                      // Dialog Action Row
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.restart_alt, color: Color(0xFFEF4444), size: 18),
+                            label: const Text(
+                              'Reset to Defaults',
+                              style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: dialogCtx,
+                                      builder: (alertCtx) => AlertDialog(
+                                        backgroundColor: const Color(0xFF0F172A),
+                                        title: const Text('Reset AI Memory?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                        content: const Text(
+                                          'This will reset your personalized collector memory, preferred services, and grading rules to standard defaults.',
+                                          style: TextStyle(color: Color(0xFFCBD5E1)),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(alertCtx, false),
+                                            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+                                            onPressed: () => Navigator.pop(alertCtx, true),
+                                            child: const Text('Reset', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      setModalState(() => isSaving = true);
+                                      await CollectorProfileService.resetProfile();
+                                      if (dialogCtx.mounted) Navigator.pop(dialogCtx, true);
+                                    }
+                                  },
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx, false),
+                            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8B5CF6),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            ),
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    setModalState(() => isSaving = true);
+                                    final success = await CollectorProfileService.updateProfile({
+                                      'preferred_services': selectedServices,
+                                      'target_grade_min': targetMin == 'Unset' ? '' : targetMin,
+                                      'target_grade_max': targetMax == 'Unset' ? '' : targetMax,
+                                      'investment_goal': selectedGoal,
+                                      'opt_in_chat_extraction': optInExtraction,
+                                    });
+                                    if (dialogCtx.mounted) {
+                                      Navigator.pop(dialogCtx, success);
+                                    }
+                                  },
+                            child: isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Save Preferences', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (updated == true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🧠 AI Memory & Collector Preferences saved successfully!'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+      setState(() {});
+    }
   }
 
   Widget _buildSettingsCard(BuildContext context, {required IconData icon, required String title, required String description, required String actionLabel, required VoidCallback onAction, bool isPrimary = false}) {

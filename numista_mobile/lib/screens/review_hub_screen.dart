@@ -137,7 +137,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
   // ─── Delete Selected Review Items ─────────────────────────────────────────
   Future<void> _deleteSelectedItems() async {
-    if (_selectedIds.isEmpty) return;
+    if (_selectedIds.isEmpty || _isProcessing) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -1187,19 +1187,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.white54),
-                      onPressed: () {
-                        final user = FirebaseAuth.instance.currentUser;
-                        if (user == null) return;
-                        for (var sid in _selectedIds) {
-                          FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(user.email!)
-                              .collection('review_queue')
-                              .doc(sid)
-                              .delete();
-                        }
-                        setState(() => _selectedIds.clear());
-                      },
+                      onPressed: _isProcessing || _selectedIds.isEmpty ? null : _deleteSelectedItems,
                       tooltip: 'Discard',
                     ),
                     const Spacer(),
@@ -1268,6 +1256,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 ),
                 const SizedBox(width: 4),
                 _buildBadge('🗂️ SET', const Color(0xFF2563EB)),
+                _buildMemoryAssistedBadge(data),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1555,6 +1544,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             child: Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
                           ),
                         ),
+                      _buildMemoryAssistedBadge(data),
                       const Spacer(),
                       // item_type badge (only shown for non-coin types)
                       if (typeMeta != null) ...[
@@ -1754,6 +1744,56 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       child: Text(
         text,
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildMemoryAssistedBadge(Map<String, dynamic> data) {
+    final isMemoryAssisted = data['few_shot_enhanced'] == true ||
+        data['ai_memory_applied'] == true ||
+        data['exemplar_id'] != null;
+    if (!isMemoryAssisted) return const SizedBox.shrink();
+
+    final memoryNote = (data['exemplar_note'] ??
+            data['few_shot_context'] ??
+            'Extracted using verified Human-in-the-Loop AI memory rule.')
+        .toString();
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Tooltip(
+        message: memoryNote,
+        constraints: const BoxConstraints(maxWidth: 380),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1B4B),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF8B5CF6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(80),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        textStyle: const TextStyle(color: Color(0xFFE0E7FF), fontSize: 12, height: 1.3),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFF7C3AED).withAlpha(35),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFF8B5CF6).withAlpha(180)),
+          ),
+          child: const Text(
+            '🧠 AI Memory Assisted',
+            style: TextStyle(
+              color: Color(0xFFA78BFA),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ),
     );
   }
