@@ -9,7 +9,7 @@
 ---
 
 ## Critical Errors & Warnings
-* **Critical Errors:** None detected. Zero syntax errors, broken imports, or undefined symbols across Python (`numista_backend`) and Dart (`numista_mobile`) codebases.
+* **Critical Errors:** None detected. Zero syntax errors, broken imports, or undefined symbols across Python (`numista_backend`) and Dart (`numista_mobile`) codebases. `flutter analyze` confirmed 0 errors (33 lint info notices, e.g. `use_super_parameters`, `deprecated_member_use`).
 * **Warnings / Deprecation:** 182 Python `DeprecationWarning` notices reported by `pytest` (e.g. `asyncio.iscoroutinefunction` in FastAPI routing & `datetime.utcnow()` usage scheduled for removal in Python 3.16).
 * **Security Advisories:** 160 open GitHub Dependabot alerts (102 high, 45 moderate, 13 low) flagged on npm/pub dependencies.
 
