@@ -63,7 +63,7 @@
 * **CodeQL Alert #69:** ✅ **RESOLVED.** Incomplete URL substring sanitization for Smithsonian domain check replaced with `urlparse` netloc comparison (`fb1ee0d`).
 * **Phase 1 Security Hardening:** ✅ Complete. Auth interceptors, subaccount persistence, and secret hygiene enforced (`75b054d`).
 * **PCGS Bearer Token:** ✅ Confirmed via `PCGS_BEARER_TOKEN` environment variable (`a1e3959`).
-* **Open Dependabot Alerts:** ⚠️ **160 vulnerabilities** (102 high, 45 moderate, 13 low) flagged on GitHub. These are npm/pub dependency alerts on the default branch — review and triage recommended before November Launch.
+* **Open Dependabot Alerts:** ⚠️ **100 vulnerabilities** (71 high, 28 moderate, 1 low) flagged on GitHub. Active triage in progress — Pillow upgraded 12.2.0→12.3.0 (2026-08-17) resolving 16 HIGH CVEs. Remaining high-priority clusters: GitPython (22), cryptography+pyasn1 (8), Next.js (4). Full remediation targeted before November Launch.
 
 ---
 
