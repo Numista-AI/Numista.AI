@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 97% test pass rate across unit and E2E test suites. Pytest backend suite: 93 passed, 175 warning. Playwright E2E: 141/145 passed [4 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-16
+* **Status:** 🟢 **PASS** (System scan completed with 97% test pass rate across unit and E2E test suites. Pytest backend suite: 101 passed, 2 warning. Playwright E2E: 141/145 passed [4 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-08-17
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -55,7 +55,7 @@
   * Stage 3: Grade review, import, valuation routes (`e62338d`)
   * Stage 4: Core scan, AI, collection routes (`691fc52`)
 * **Route Parity:** `route_snapshot_baseline.json` committed — diff tool active for future regression detection.
-* **Backend Test Coverage:** 93 passed, 175 warning — expanded from 24 → 32 → 37 tests covering refactored APIRouter modules.
+* **Backend Test Coverage:** 101 passed, 2 warning — expanded from 24 → 32 → 37 tests covering refactored APIRouter modules.
 
 ---
 
@@ -63,12 +63,12 @@
 * **CodeQL Alert #69:** ✅ **RESOLVED.** Incomplete URL substring sanitization for Smithsonian domain check replaced with `urlparse` netloc comparison (`fb1ee0d`).
 * **Phase 1 Security Hardening:** ✅ Complete. Auth interceptors, subaccount persistence, and secret hygiene enforced (`75b054d`).
 * **PCGS Bearer Token:** ✅ Confirmed via `PCGS_BEARER_TOKEN` environment variable (`a1e3959`).
-* **Open Dependabot Alerts:** ⚠️ **160 vulnerabilities** (102 high, 45 moderate, 13 low) flagged on GitHub. These are npm/pub dependency alerts on the default branch — review and triage recommended before November Launch.
+* **Open Dependabot Alerts:** ⚠️ **100 vulnerabilities** (71 high, 28 moderate, 1 low) flagged on GitHub. Active triage in progress — Pillow upgraded 12.2.0→12.3.0 (2026-08-17) resolving 16 HIGH CVEs. Remaining high-priority clusters: GitPython (22), cryptography+pyasn1 (8), Next.js (4). Full remediation targeted before November Launch.
 
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 93 passed, 175 warning
+* **Backend Pytest Unit Suite:** 101 passed, 2 warning
 * **Frontend Playwright E2E Suite:** 141/145 passed (4 skipped gracefully)
 * **Test Infrastructure Fixes (2026-08-07):**
   * `12-estate-management.spec.js` T02: Replaced fixed 4s wait with `waitForLoadState('networkidle')` + Flutter canvas settle

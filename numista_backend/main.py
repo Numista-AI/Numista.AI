@@ -9,7 +9,7 @@ import io
 import uuid
 import json
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 from google.cloud import firestore
 from google.cloud import storage as gcs
@@ -3055,7 +3055,7 @@ async def delete_review_items(request: DeleteReviewItemsRequest):
 def _norm_date(raw: str) -> str:
     """Normalize a purchase date string to YYYY-MM-DD for key comparison.
     Handles: YYYY-MM-DD, MM/DD/YY, MM/DD/YYYY, M/D/YY, YYYY/MM/DD."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     raw = str(raw).strip()
     if not raw:
         return ''
@@ -7666,7 +7666,7 @@ def trigger_nightly_audit():
         except Exception as exc:
             results[label] = str(exc)
 
-    return {"status": "completed", "results": results, "triggered_at": datetime.utcnow().isoformat()}
+    return {"status": "completed", "results": results, "triggered_at": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/api/cron/reports")
@@ -8607,8 +8607,8 @@ class DailySnapshotRequest(BaseModel):
 @app.post("/api/portfolio/snapshot/daily")
 async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
     try:
-        from datetime import datetime
-        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        from datetime import datetime, timezone
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         
         # 1. Fetch all coins for the user
         coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
@@ -8691,7 +8691,7 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
         })
         
         response_snapshot = dict(snapshot)
-        response_snapshot["timestamp"] = datetime.utcnow().isoformat()
+        response_snapshot["timestamp"] = datetime.now(timezone.utc).isoformat()
         
         return {
             "status": "success",
@@ -9106,8 +9106,8 @@ async def get_portfolio_snapshot_history(user_id: str):
             
         if not history:
             # Graceful placeholder snapshot if history empty
-            from datetime import datetime
-            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            from datetime import datetime, timezone
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             return [{
                 "date": today_str,
                 "totalValue": 0.0,
@@ -9554,7 +9554,7 @@ async def api_create_wishlist_share(req: WishlistShareRequest):
     """
     try:
         token = f"wishlist_{uuid.uuid4().hex[:12]}"
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         snapshot = {
             "token": token,
             "owner_email": req.user_email,
@@ -9588,7 +9588,7 @@ async def api_generate_estate_appraisal_url(request: Request, user_email: str, s
     """
     try:
         audit_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expires_at = now + pd.Timedelta(days=7)
         
         # Simulated/generated signed appraisal endpoint URL
