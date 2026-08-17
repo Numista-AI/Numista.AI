@@ -1520,10 +1520,37 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.108',
+    date: '2026-08-17',
+    description: 'Continuous Learning UI & Desktop Web Enhancements',
+    isLatest: true,
+    changes: [
+      'Web: connect collector memory settings card with desktop dialog and snake_case schema validation',
+      'Review-hub: unify staging discards with confirmation modal and batch deletion API progress locking',
+      'Review-hub: add AI Memory Assisted badge with multi-line responsive tooltips',
+      'Services: create CollectorProfileService for GET/POST /api/ai/profile communication',
+    ],
+  ),
+  _Release(
+    version: 'v4.107',
+    date: '2026-08-17',
+    description: 'Security+quality Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync',
+      'Audit: sync SCAN_REPORT.md following full Playwright suite run',
+      'Audit: update SCAN_REPORT.md with flutter analyze findings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+      'Release: bump version to v4.105',
+      'Ai: integrate continuous learning architecture with vector rag, few-shot injection, collector memory, and active learning',
+      'Review-hub: add /api/review/delete_items backend route + fix pytest warnings',
+    ],
+  ),
+  _Release(
     version: 'v4.106',
     date: '2026-08-16',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: bump version to v4.105',
       'Ai: integrate continuous learning architecture with vector rag, few-shot injection, collector memory, and active learning',
