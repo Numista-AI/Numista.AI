@@ -118,6 +118,20 @@
 
 
 
+
+
+## v4.115 — 2026-08-18
+**Audit Enhancements & Platform Updates**
+
+- Release notes update v4.113
+- Audit: update system scan report SCAN_REPORT.md via project-scanner skill
+
+## v4.114 — 2026-08-18
+**Audit Enhancements & Platform Updates**
+
+- Release notes update v4.113
+- Audit: update system scan report SCAN_REPORT.md via project-scanner skill
+
 ## v4.113 — 2026-08-18
 **Audit Enhancements & Platform Updates**
 
