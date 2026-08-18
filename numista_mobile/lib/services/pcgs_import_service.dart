@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
+import 'collection_stats_service.dart';
 import '../constants.dart';
 
 /// PCGS Public API import service.
@@ -312,6 +313,12 @@ class PcgsImportService {
         failedCerts.add(cert);
         failed++;
       }
+    }
+
+    if (success > 0) {
+      try {
+        await CollectionStatsService.rebuildAndUpsertStats();
+      } catch (_) {}
     }
 
     return PcgsImportResult(

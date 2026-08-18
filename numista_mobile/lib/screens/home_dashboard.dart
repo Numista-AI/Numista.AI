@@ -1520,10 +1520,38 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.118',
+    date: '2026-08-18',
+    description: 'Beta Test Remediation & System of Record Alignment',
+    isLatest: true,
+    changes: [
+      'Single-source-of-truth collection_stats aggregate stream preserves total inventory totals across table pagination',
+      'Morgan Welcome Screen: eliminated desktop scrollbar canvas track along 540px boundary',
+      'Deterministic AWQ honoree repair: 20 official US Mint honorees mapped to canonical theme_subject',
+      'Conjunctive supply classifier: protected commemorative coins while isolating supplies from coin grid',
+      'Token-aware condition parser: resolved Unspecified / Raw wrapping while preserving Sheldon grades',
+    ],
+  ),
+  _Release(
+    version: 'v4.117',
+    date: '2026-08-18',
+    description: 'Ai Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features',
+      'Release notes update v4.116',
+      'Ai: upgrade primary flash model to gemini-3.7-flash',
+      'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',
+      'Sync release notes pre-push',
+      'Release notes update v4.113',
+      'Audit: update system scan report SCAN_REPORT.md via project-scanner skill',
+    ],
+  ),
+  _Release(
     version: 'v4.116',
     date: '2026-08-18',
     description: 'Ai Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Ai: upgrade primary flash model to gemini-3.7-flash',
       'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',

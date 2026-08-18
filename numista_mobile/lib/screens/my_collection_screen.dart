@@ -79,6 +79,8 @@ class _ColDef {
   const _ColDef(this.field, this.header, this.width);
 }
 
+enum CollectionLimitMode { all, last50, last100 }
+
 class MyCollectionScreen extends StatefulWidget {
   final String? initialTab;
   final Function(String)? onNavigate;
@@ -95,7 +97,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- UI / filter state ---------------------------------------------------
   String _currentTab = 'All';
   String? _selectedCoinId;
-  int     _limit            = 50;
+  CollectionLimitMode _limitMode = CollectionLimitMode.all;
   String  _searchQuery      = '';
   // _showInspector removed — inspector is now always expanded in the dialog
   // Default: sort by date added, newest first (column index -1 = special Added sort)
@@ -390,7 +392,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
     Query<Map<String, dynamic>> q =
         FirebaseFirestore.instance.collection(AuthService.coinsPath);
-    if (_limit > 0) q = q.limit(_limit);
+    if (_limitMode == CollectionLimitMode.last50) {
+      q = q.limit(50);
+    } else if (_limitMode == CollectionLimitMode.last100) {
+      q = q.limit(100);
+    }
     return q.snapshots();
   }
 
@@ -556,6 +562,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       if (m.isEmpty) return false;
       final tStatus = m['transferStatus']?.toString() ?? '';
       if (tStatus == 'transferred') return false;
+      final itemType = m['item_type']?.toString().toLowerCase().trim() ?? '';
+      final isSupply = m['is_supply'] == true || itemType == 'supply';
+      if (isSupply) return false;
       if (_searchQuery.isNotEmpty) return true;
       final parentSetId = m['parent_set_id']?.toString() ?? '';
       return parentSetId.isEmpty;
@@ -638,18 +647,50 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   /// Converts a raw Firestore condition value to a display-friendly label.
-  /// Numeric values map to Sheldon scale abbreviations.
+  /// Handles tokenized strings like "Unspecified / Raw" -> "Raw", while
+  /// preserving Sheldon grades like "Unspecified / MS-63" -> "MS-63".
   static String _conditionLabel(String raw) {
     if (raw.isEmpty || raw == 'null') return '';
-    // Plain text values -- pass through directly
-    final lower = raw.toLowerCase();
-    if (lower.contains('proof'))       return 'Proof';
-    if (lower.contains('uncirculated') || lower == 'unc') return 'Unc.';
-    if (lower.contains('circulated'))  return 'Circ.';
-    if (lower.contains('ungraded'))    return 'Raw';
-    if (lower.contains('ms'))         return raw.toUpperCase();
-    if (lower.contains('pr'))         return raw.toUpperCase();
-    if (lower.contains('pf'))         return raw.toUpperCase();
+
+    if (raw.contains('/')) {
+      final parts = raw.split('/').map((s) => s.trim()).toList();
+      final left = parts[0].toLowerCase();
+      final right = parts.length > 1 ? parts[1].trim() : '';
+
+      if (left.contains('unspecified')) {
+        if (right.isEmpty ||
+            right.toLowerCase() == 'raw' ||
+            right.toLowerCase() == 'ungraded' ||
+            right.toLowerCase() == 'unspecified') {
+          return 'Raw';
+        }
+        return _formatConditionToken(right);
+      }
+      if (right.isEmpty) {
+        return _formatConditionToken(parts[0]);
+      }
+      final formattedRight = _formatConditionToken(right);
+      if (formattedRight.isNotEmpty) return formattedRight;
+      return _formatConditionToken(parts[0]);
+    }
+
+    return _formatConditionToken(raw);
+  }
+
+  static String _formatConditionToken(String raw) {
+    if (raw.isEmpty || raw == 'null') return '';
+    final lower = raw.toLowerCase().trim();
+    if (lower == 'unspecified' || lower == 'ungraded' || lower == 'raw') return 'Raw';
+    if (lower.contains('proof')) return 'Proof';
+    if (lower.contains('uncirculated') || lower == 'unc' || lower == 'unc.') return 'Unc.';
+    if (lower.contains('circulated') || lower == 'circ' || lower == 'circ.') return 'Circ.';
+    if (lower.startsWith('ms-') || lower.startsWith('ms ') || lower.startsWith('ms')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('pr-') || lower.startsWith('pr ') || lower.startsWith('pr')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('pf-') || lower.startsWith('pf ') || lower.startsWith('pf')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('au-') || lower.startsWith('au ') || lower.startsWith('au')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('vf-') || lower.startsWith('vf ') || lower.startsWith('vf')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('xf-') || lower.startsWith('xf ') || lower.startsWith('xf')) return raw.toUpperCase().replaceAll(' ', '-');
+    if (lower.startsWith('ef-') || lower.startsWith('ef ') || lower.startsWith('ef')) return raw.toUpperCase().replaceAll(' ', '-');
 
     // Numeric Sheldon scale codes
     final n = int.tryParse(raw);
@@ -672,7 +713,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (n == 55)  return 'AU-55';
     if (n == 58)  return 'AU-58';
     if (n >= 60 && n <= 70) return 'MS-$n';
-    return 'Grade $n'; // fallback for any other number
+    return 'Grade $n';
   }
 
   // --- Root build ---------------------------------------------------------
@@ -917,181 +958,196 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _buildUnifiedDashboard(String email) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _coinsStream,
-      builder: (context, coinsSnap) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.doc(AuthService.statsDocPath).snapshots(),
+      builder: (context, statsSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: email.isNotEmpty
-              ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
-              : Stream.empty(),
-          builder: (context, currencySnap) {
-            return StreamBuilder<List<WorldItem>>(
-              stream: WorldItemService.worldItemsStream(),
-              builder: (context, worldSnap) {
-                return FutureBuilder<bool>(
-                  future: ValuationModeService.isAdvancedMode(),
-                  builder: (context, modeSnap) {
-                    final advanced = modeSnap.data ?? false;
-                    final coinsDocs = coinsSnap.data?.docs ?? [];
-                    final currencyDocs = currencySnap.data?.docs ?? [];
-                    final worldDocs = worldSnap.data ?? [];
+          stream: _coinsStream,
+          builder: (context, coinsSnap) {
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: email.isNotEmpty
+                  ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
+                  : Stream.empty(),
+              builder: (context, currencySnap) {
+                return StreamBuilder<List<WorldItem>>(
+                  stream: WorldItemService.worldItemsStream(),
+                  builder: (context, worldSnap) {
+                    return FutureBuilder<bool>(
+                      future: ValuationModeService.isAdvancedMode(),
+                      builder: (context, modeSnap) {
+                        final advanced = modeSnap.data ?? false;
+                        final coinsDocs = coinsSnap.data?.docs ?? [];
+                        final currencyDocs = currencySnap.data?.docs ?? [];
+                        final worldDocs = worldSnap.data ?? [];
 
-                    final coinsCount = coinsDocs.length;
-                    final currencyCount = currencyDocs.length;
-                    final worldCount = worldDocs.length;
+                        final statsData = statsSnap.data?.data() ?? {};
+                        final stats = statsData.containsKey('coin_count')
+                            ? statsData
+                            : (statsData['collection_stats'] as Map<String, dynamic>? ?? {});
 
-                    double coinsValue = 0;
-                    for (final doc in coinsDocs) {
-                      try {
-                        final data = doc.data();
-                        final coinCpg = _parseNumber(data['cpgRetail']);
-                        final coinBid = _parseNumber(data['greysheetBid']);
-                        final gVal = advanced ? coinCpg : coinBid;
-                        if (gVal > 0) {
-                          coinsValue += gVal;
-                        } else {
-                          coinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
+                        double fallbackCoinsValue = 0;
+                        for (final doc in coinsDocs) {
+                          try {
+                            final data = doc.data();
+                            if (data['item_type'] == 'supply' || data['is_supply'] == true) continue;
+                            final coinCpg = _parseNumber(data['cpgRetail']);
+                            final coinBid = _parseNumber(data['greysheetBid']);
+                            final gVal = advanced ? coinCpg : coinBid;
+                            if (gVal > 0) {
+                              fallbackCoinsValue += gVal;
+                            } else {
+                              fallbackCoinsValue += _parseAiValue(data[_F.aiValue]?.toString() ?? '');
+                            }
+                          } catch (_) {}
                         }
-                      } catch (_) {}
-                    }
 
-                    double currencyValue = 0;
-                    for (final doc in currencyDocs) {
-                      try {
-                        final data = doc.data();
-                        currencyValue += _parseNumber(data['Cost']);
-                      } catch (_) {}
-                    }
+                        final coinsCount = (stats['coin_count'] as num?)?.toInt() ??
+                            coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
+                        final suppliesCount = (stats['supply_count'] as num?)?.toInt() ??
+                            coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
+                        final coinsValue = (stats['est_value'] as num?)?.toDouble() ?? fallbackCoinsValue;
 
-                    double worldValue = 0;
-                    for (final item in worldDocs) {
-                      worldValue += item.estimatedValue ?? 0.0;
-                    }
-                    
-                    final grandTotalValue = coinsValue + currencyValue + worldValue;
+                        final currencyCount = currencyDocs.length;
+                        final worldCount = worldDocs.length;
+                        final otherItemsCount = worldCount + suppliesCount;
 
-                    // Merge and map for the combined additions feed
-                    final coinItems = coinsDocs.map((doc) {
-                      final data = doc.data();
-                      final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
-                      DateTime? addedDate;
-                      if (addedTs is Timestamp) {
-                        addedDate = addedTs.toDate();
-                      } else if (addedTs is String) {
-                        addedDate = DateTime.tryParse(addedTs);
-                      }
-                      final denom = data['Denomination']?.toString() ?? '';
-                      final year = data['Year']?.toString() ?? '';
-                      final title = '$year $denom'.trim();
+                        double currencyValue = 0;
+                        for (final doc in currencyDocs) {
+                          try {
+                            final data = doc.data();
+                            currencyValue += _parseNumber(data['Cost']);
+                          } catch (_) {}
+                        }
 
-                      final coinCpg = _parseNumber(data['cpgRetail']);
-                      final coinBid = _parseNumber(data['greysheetBid']);
-                      final gVal = advanced ? coinCpg : coinBid;
-                      final displayValue = gVal > 0 
-                          ? gVal 
-                          : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
+                        double worldValue = 0;
+                        for (final item in worldDocs) {
+                          worldValue += item.estimatedValue ?? 0.0;
+                        }
 
-                      return UnifiedCollectionItem(
-                        title: title.isNotEmpty ? title : 'Coin',
-                        category: 'Coin',
-                        emoji: '🪙',
-                        country: data['Country']?.toString() ?? 'US',
-                        dateAdded: addedDate,
-                        value: displayValue,
-                      );
-                    }).toList();
+                        final grandTotalValue = coinsValue + currencyValue + worldValue;
 
-                    final currencyItems = currencyDocs.map((doc) {
-                      final data = doc.data();
-                      final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
-                      DateTime? addedDate;
-                      if (addedTs is Timestamp) {
-                        addedDate = addedTs.toDate();
-                      } else if (addedTs is String) {
-                        addedDate = DateTime.tryParse(addedTs);
-                      }
-                      return UnifiedCollectionItem(
-                        title: data['Description']?.toString() ?? 'Banknote',
-                        category: 'Currency',
-                        emoji: '💵',
-                        country: data['Country']?.toString() ?? 'US',
-                        dateAdded: addedDate,
-                        value: _parseNumber(data['Cost']),
-                      );
-                    }).toList();
+                        // Merge and map for the combined additions feed
+                        final coinItems = coinsDocs.map((doc) {
+                          final data = doc.data();
+                          final addedTs = data['Added'] ?? data['timestamp'] ?? data['created_at'];
+                          DateTime? addedDate;
+                          if (addedTs is Timestamp) {
+                            addedDate = addedTs.toDate();
+                          } else if (addedTs is String) {
+                            addedDate = DateTime.tryParse(addedTs);
+                          }
+                          final denom = data['Denomination']?.toString() ?? '';
+                          final year = data['Year']?.toString() ?? '';
+                          final title = '$year $denom'.trim();
 
-                    final worldItems = worldDocs.map((item) {
-                      return UnifiedCollectionItem(
-                        title: item.name.isNotEmpty ? item.name : 'World Item',
-                        category: 'World & Specialty',
-                        emoji: item.itemCategory.emoji,
-                        country: item.country,
-                        dateAdded: item.createdAt,
-                        value: item.estimatedValue ?? 0.0,
-                      );
-                    }).toList();
+                          final coinCpg = _parseNumber(data['cpgRetail']);
+                          final coinBid = _parseNumber(data['greysheetBid']);
+                          final gVal = advanced ? coinCpg : coinBid;
+                          final displayValue = gVal > 0 
+                              ? gVal 
+                              : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
 
-                    // Combine and sort by date added, newest first
-                    final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
-                    combinedItems.sort((a, b) {
-                      if (a.dateAdded == null && b.dateAdded == null) return 0;
-                      if (a.dateAdded == null) return 1;
-                      if (b.dateAdded == null) return -1;
-                      return b.dateAdded!.compareTo(a.dateAdded!);
-                    });
+                          return UnifiedCollectionItem(
+                            title: title.isNotEmpty ? title : 'Coin',
+                            category: 'Coin',
+                            emoji: '🪙',
+                            country: data['Country']?.toString() ?? 'US',
+                            dateAdded: addedDate,
+                            value: displayValue,
+                          );
+                        }).toList();
 
-                    // Take top 10
-                    final recentAdditions = combinedItems.take(10).toList();
+                        final currencyItems = currencyDocs.map((doc) {
+                          final data = doc.data();
+                          final addedTs = data['Added'] ?? data['created_at'] ?? data['timestamp'];
+                          DateTime? addedDate;
+                          if (addedTs is Timestamp) {
+                            addedDate = addedTs.toDate();
+                          } else if (addedTs is String) {
+                            addedDate = DateTime.tryParse(addedTs);
+                          }
+                          return UnifiedCollectionItem(
+                            title: data['Description']?.toString() ?? 'Banknote',
+                            category: 'Currency',
+                            emoji: '💵',
+                            country: data['Country']?.toString() ?? 'US',
+                            dateAdded: addedDate,
+                            value: _parseNumber(data['Cost']),
+                          );
+                        }).toList();
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Portfolio Stats Grid
-                        GridView(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 280,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 2.0,
-                          ),
+                        final worldItems = worldDocs.map((item) {
+                          return UnifiedCollectionItem(
+                            title: item.name.isNotEmpty ? item.name : 'World Item',
+                            category: 'World & Specialty',
+                            emoji: item.itemCategory.emoji,
+                            country: item.country,
+                            dateAdded: item.createdAt,
+                            value: item.estimatedValue ?? 0.0,
+                          );
+                        }).toList();
+
+                        // Combine and sort by date added, newest first
+                        final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
+                        combinedItems.sort((a, b) {
+                          if (a.dateAdded == null && b.dateAdded == null) return 0;
+                          if (a.dateAdded == null) return 1;
+                          if (b.dateAdded == null) return -1;
+                          return b.dateAdded!.compareTo(a.dateAdded!);
+                        });
+
+                        // Take top 10
+                        final recentAdditions = combinedItems.take(10).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildDashboardCard(
-                              'Total Inventory Value',
-                              'ESTIMATED PORTFOLIO VALUE',
-                              '\$${grandTotalValue.toStringAsFixed(2)}',
-                              'Based on AI, cost, and specialty appraisals',
-                              Icons.account_balance_wallet_rounded,
-                              _accent,
+                            // Portfolio Stats Grid
+                            GridView(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 280,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 2.0,
+                              ),
+                              children: [
+                                _buildDashboardCard(
+                                  'Total Inventory Value',
+                                  'ESTIMATED PORTFOLIO VALUE',
+                                  '\$${grandTotalValue.toStringAsFixed(2)}',
+                                  'Based on AI, cost, and specialty appraisals',
+                                  Icons.account_balance_wallet_rounded,
+                                  _accent,
+                                ),
+                                _buildDashboardCard(
+                                  'Coins',
+                                  'COIN COLLECTION',
+                                  '$coinsCount Items',
+                                  'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                                  Icons.monetization_on_rounded,
+                                  Colors.amber,
+                                ),
+                                _buildDashboardCard(
+                                  'Currency',
+                                  'PAPER BANKNOTES',
+                                  '$currencyCount Items',
+                                  'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                                  Icons.money_rounded,
+                                  Colors.green,
+                                ),
+                                _buildDashboardCard(
+                                  'Non-Legal Tender',
+                                  'OTHER ITEMS',
+                                  '$otherItemsCount Items',
+                                  'Valued at \$${worldValue.toStringAsFixed(2)}',
+                                  Icons.language_rounded,
+                                  Colors.teal,
+                                ),
+                                _buildCompletionCard(),
+                              ],
                             ),
-                            _buildDashboardCard(
-                              'Coins',
-                              'COIN COLLECTION',
-                              '$coinsCount Items',
-                              'Valued at \$${coinsValue.toStringAsFixed(2)}',
-                              Icons.monetization_on_rounded,
-                              Colors.amber,
-                            ),
-                            _buildDashboardCard(
-                              'Currency',
-                              'PAPER BANKNOTES',
-                              '$currencyCount Items',
-                              'Valued at \$${currencyValue.toStringAsFixed(2)}',
-                              Icons.money_rounded,
-                              Colors.green,
-                            ),
-                            _buildDashboardCard(
-                              'Non-Legal Tender',
-                              'OTHER ITEMS',
-                              '$worldCount Items',
-                              'Valued at \$${worldValue.toStringAsFixed(2)}',
-                              Icons.language_rounded,
-                              Colors.teal,
-                            ),
-                            _buildCompletionCard(),
-                          ],
-                        ),
                         SizedBox(height: 32),
 
                         // Recent Additions Title
@@ -1157,7 +1213,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         );
       },
     );
-  }
+  },
+);
+}
 
   Widget _buildDashboardCard(String title, String subtitle, String value, String description, IconData icon, Color color) {
     return Card(
@@ -1616,12 +1674,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Show:', style: TextStyle(color: _text, fontSize: 14)),
           SizedBox(height: 8),
-          _styledDropdown<String>(
-            value: _limit == 0 ? 'All' : (_limit == 100 ? 'Last 100' : 'Last 50'),
-            items: const ['Last 50', 'Last 100', 'All'],
-            label: (v) => v,
+          _styledDropdown<CollectionLimitMode>(
+            value: _limitMode,
+            items: const [CollectionLimitMode.all, CollectionLimitMode.last100, CollectionLimitMode.last50],
+            label: (v) => v == CollectionLimitMode.all
+                ? 'All'
+                : (v == CollectionLimitMode.last100 ? 'Last 100' : 'Last 50'),
             onChanged: (v) => setState(() {
-              _limit = v == 'Last 50' ? 50 : v == 'Last 100' ? 100 : 0;
+              _limitMode = v ?? CollectionLimitMode.all;
               _coinsStream = _buildCoinsStream();
             }),
           ),
@@ -2660,6 +2720,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           }
         }
         return av.startsWith('\$') ? av : '\$$av';
+      case _F.themeSubject:
+        final v = m['theme_subject']?.toString().trim() ??
+                  m[_F.themeSubject]?.toString().trim() ?? '';
+        return (v == 'null' || v == 'nan') ? '' : v;
       default:
         final v = m[col.field]?.toString().trim() ?? '';
         return (v == 'null' || v == 'nan') ? '' : v;

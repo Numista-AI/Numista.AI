@@ -47,13 +47,31 @@ class AuthService {
     return 'users/$identifier/coins';
   }
 
-  /// Firestore path for this user's paper money / bank note collection.
+  /// Firestore path for this user's currency collection.
   static String get currencyPath {
     final user = _auth.currentUser;
     if (user == null) return 'users/unknown/currency';
     if (user.isAnonymous) return 'users/${user.uid}/currency';
     final identifier = user.email != null ? user.email!.trim().toLowerCase() : user.uid;
     return 'users/$identifier/currency';
+  }
+
+  /// Firestore path for this user's collection stats metadata document.
+  static String get statsDocPath {
+    final user = _auth.currentUser;
+    if (user == null) return 'users/unknown/metadata/collection_stats';
+    if (user.isAnonymous) return 'users/${user.uid}/metadata/collection_stats';
+    final identifier = user.email != null ? user.email!.trim().toLowerCase() : user.uid;
+    return 'users/$identifier/metadata/collection_stats';
+  }
+
+  /// Firestore path for this user's root document.
+  static String get userDocPath {
+    final user = _auth.currentUser;
+    if (user == null) return 'users/unknown';
+    if (user.isAnonymous) return 'users/${user.uid}';
+    final identifier = user.email != null ? user.email!.trim().toLowerCase() : user.uid;
+    return 'users/$identifier';
   }
 
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
