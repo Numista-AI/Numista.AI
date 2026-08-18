@@ -26,8 +26,12 @@ class CollectionStatsService {
   }
 
   /// One-shot aggregation rebuild of collection_stats capped at 500 docs.
-  /// Upserts users/{uid}/metadata/collection_stats and merges into users/{uid}.
+  /// Writes exclusively to canonical 4-segment path: users/{uid}/metadata/collection_stats.
   static Future<Map<String, dynamic>> rebuildAndUpsertStats() async {
+    if (AuthService.coinsPath.contains('unknown')) {
+      throw StateError('Cannot rebuild collection_stats for unauthenticated user path.');
+    }
+
     final db = FirebaseFirestore.instance;
     final snap = await db.collection(AuthService.coinsPath).limit(500).get();
 
@@ -36,7 +40,9 @@ class CollectionStatsService {
     int supplyCount = 0;
     double faceValue = 0.0;
     double meltValue = 0.0;
-    double estValue = 0.0;
+    double acquisitionCost = 0.0;
+    double bidTotal = 0.0;
+    double cpgTotal = 0.0;
 
     for (final doc in snap.docs) {
       final d = doc.data();
@@ -47,13 +53,20 @@ class CollectionStatsService {
         supplyCount++;
       } else {
         coinCount++;
-        faceValue += _parseNumber(d['Face Value'] ?? d['face_value']);
+        faceValue += _parseNumber(d['Face Value'] ?? d['face_value'] ?? d['Denomination']);
         meltValue += _parseNumber(d['Melt Value'] ?? d['melt_value']);
+        acquisitionCost += _parseNumber(d['Cost'] ?? d['purchase_price']);
 
         final cpg = _parseNumber(d['cpgRetail']);
         final bid = _parseNumber(d['greysheetBid']);
-        final val = cpg > 0 ? cpg : (bid > 0 ? bid : _parseAiValue((d['AI Estimated Value'] ?? d['ai_value'] ?? '').toString()));
-        estValue += val;
+        final aiVal = _parseAiValue((d['AI Estimated Value'] ?? d['ai_value'] ?? '').toString());
+        final baseVal = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
+
+        final finalCpg = cpg > 0 ? cpg : baseVal;
+        final finalBid = bid > 0 ? bid : (baseVal * 0.80);
+
+        cpgTotal += finalCpg;
+        bidTotal += finalBid;
       }
     }
 
@@ -63,13 +76,15 @@ class CollectionStatsService {
       'supply_count': supplyCount,
       'face_value': double.parse(faceValue.toStringAsFixed(2)),
       'melt_value': double.parse(meltValue.toStringAsFixed(2)),
-      'est_value': double.parse(estValue.toStringAsFixed(2)),
+      'acquisition_cost': double.parse(acquisitionCost.toStringAsFixed(2)),
+      'bid_total': double.parse(bidTotal.toStringAsFixed(2)),
+      'cpg_total': double.parse(cpgTotal.toStringAsFixed(2)),
+      'est_value': double.parse(bidTotal.toStringAsFixed(2)), // Estate mode is canonical default
       'last_updated': DateTime.now().toUtc().toIso8601String(),
     };
 
     try {
       await db.doc(AuthService.statsDocPath).set(stats, SetOptions(merge: true));
-      await db.doc(AuthService.userDocPath).set({'collection_stats': stats}, SetOptions(merge: true));
     } catch (_) {}
 
     return stats;
