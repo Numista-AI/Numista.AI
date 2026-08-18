@@ -121,6 +121,27 @@
 
 
 
+
+## v4.118 — 2026-08-18
+**Beta Test Remediation & System of Record Alignment**
+
+- Single-source-of-truth collection_stats aggregate stream preserves total inventory totals ($1,245.22 / 128 items) across table limit pagination
+- Morgan Welcome Screen: eliminated desktop scrollbar canvas track along 540px boundary
+- Deterministic AWQ honoree repair: all 20 official US Mint honorees mapped to canonical `theme_subject` with punctuation normalization and audit logging
+- Conjunctive supply classifier: protected commemorative coins (Booker T. Washington guard) while filtering supplies from coin grid
+- Token-aware condition parser: resolved "Unspecified / Raw" wrapping while preserving Sheldon grades (e.g. MS-63)
+
+## v4.117 — 2026-08-18
+**Ai Enhancements & Platform Updates**
+
+- Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features
+- Release notes update v4.116
+- Ai: upgrade primary flash model to gemini-3.7-flash
+- Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown
+- Sync release notes pre-push
+- Release notes update v4.113
+- Audit: update system scan report SCAN_REPORT.md via project-scanner skill
+
 ## v4.116 — 2026-08-18
 **Ai Enhancements & Platform Updates**
 

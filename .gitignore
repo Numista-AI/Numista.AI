@@ -1,8 +1,11 @@
 # ============================================================
-# Google Drive temp files (MAJOR source of noise)
+# Google Drive & Office temp files (MAJOR source of noise)
 # ============================================================
 .tmp.drivedownload/
 .tmp.driveupload/
+*.tmp
+~$*
+~WRL*
 
 # ============================================================
 # AI / IDE tool caches

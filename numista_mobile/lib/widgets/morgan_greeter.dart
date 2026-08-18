@@ -237,25 +237,28 @@ class _MorganGreeterState extends State<MorganGreeter>
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
               constraints: BoxConstraints(maxWidth: maxWidth),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 350),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    final isSubMenu = child.key == const ValueKey('sub_menu');
-                    final beginOffset = isSubMenu ? const Offset(0.2, 0.0) : const Offset(-0.2, 0.0);
-                    final slide = Tween<Offset>(begin: beginOffset, end: Offset.zero)
-                        .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: _showingSubMenu
-                      ? _buildSubMenu(context, isDesktop)
-                      : _buildMainMenu(context),
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      final isSubMenu = child.key == const ValueKey('sub_menu');
+                      final beginOffset = isSubMenu ? const Offset(0.2, 0.0) : const Offset(-0.2, 0.0);
+                      final slide = Tween<Offset>(begin: beginOffset, end: Offset.zero)
+                          .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(position: slide, child: child),
+                      );
+                    },
+                    child: _showingSubMenu
+                        ? _buildSubMenu(context, isDesktop)
+                        : _buildMainMenu(context),
+                  ),
                 ),
               ),
             ),
