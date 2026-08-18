@@ -14,7 +14,7 @@ This skill is triggered to perform a comprehensive system check, error audit, pi
 Scan the repository for:
 - Broken imports, syntax errors, and undefined symbols in Python and Dart files.
 - Malfunctioning LLM integration boundaries or missing API keys.
-- Model Binding Integrity: Confirm all Gemini model references use active 2026 production models (`gemini-3.6-flash`, `gemini-3.5-flash`, or `gemini-3.1-pro-preview`). Flag any retired/shutdown model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) per AGENTS.md Rule 6.
+- Model Binding Integrity: Confirm all Gemini model references use active 2026 production models (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, or `gemini-3.1-pro-preview`). Flag any retired/shutdown model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) per AGENTS.md Rule 6.
 
 ### 2. Data Pipeline & Test Isolation Audit
 Verify data schemas and test environment configuration:

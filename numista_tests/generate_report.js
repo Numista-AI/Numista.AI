@@ -257,7 +257,7 @@ ${gcpGreysheetCheck}
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (\`gemini-1.5-*\`, \`gemini-2.0-*\`, \`gemini-2.5-*\`) across active code paths.
 * **Centralized Configuration (\`numista_backend/config.py\`):**
-  * \`GEMINI_FLASH_MODEL\`: \`gemini-3.6-flash\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_FLASH_MODEL\`: \`gemini-3.7-flash\` 🟢 PASS (Active GA / No shutdown date)
   * \`GEMINI_PRO_MODEL\`: \`gemini-3.1-pro-preview\` 🟢 PASS (Active GA / No shutdown date)
   * \`GEMINI_LITE_MODEL\`: \`gemini-3.5-flash-lite\` 🟢 PASS (Active GA / No shutdown date)
   * \`GEMINI_IMAGE_MODEL\`: \`gemini-3.1-flash-image\` 🟢 PASS (Active GA / No shutdown date)
