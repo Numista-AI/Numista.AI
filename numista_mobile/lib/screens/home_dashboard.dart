@@ -1520,10 +1520,38 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.112',
+    date: '2026-08-18',
+    description: 'Backend Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes',
+      'Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge',
+      'Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync',
+      'Audit: sync SCAN_REPORT.md following full Playwright suite run',
+      'Audit: update SCAN_REPORT.md with flutter analyze findings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+    ],
+  ),
+  _Release(
+    version: 'v4.111',
+    date: '2026-08-17',
+    description: 'Backend Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes',
+      'Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge',
+      'Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync',
+      'Audit: sync SCAN_REPORT.md following full Playwright suite run',
+      'Audit: update SCAN_REPORT.md with flutter analyze findings',
+      'Audit: update SCAN_REPORT.md via project-scanner full system audit',
+    ],
+  ),
+  _Release(
     version: 'v4.110',
     date: '2026-08-17',
     description: 'Backend Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes',
       'Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge',

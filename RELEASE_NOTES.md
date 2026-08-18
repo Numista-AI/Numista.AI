@@ -115,6 +115,28 @@
 
 
 
+
+
+## v4.112 — 2026-08-18
+**Backend Enhancements & Platform Updates**
+
+- Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes
+- Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge
+- Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync
+- Audit: sync SCAN_REPORT.md following full Playwright suite run
+- Audit: update SCAN_REPORT.md with flutter analyze findings
+- Audit: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.111 — 2026-08-17
+**Backend Enhancements & Platform Updates**
+
+- Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes
+- Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge
+- Security+quality: Pillow CVE upgrades, datetime.utcnow deprecation, SCAN_REPORT sync
+- Audit: sync SCAN_REPORT.md following full Playwright suite run
+- Audit: update SCAN_REPORT.md with flutter analyze findings
+- Audit: update SCAN_REPORT.md via project-scanner full system audit
+
 ## v4.110 — 2026-08-17
 **Backend Enhancements & Platform Updates**
 
