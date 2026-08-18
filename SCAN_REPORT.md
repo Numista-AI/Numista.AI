@@ -52,7 +52,7 @@
 ## Backend Architecture & Mobile Code Quality
 * **Backend Monolith Deconstruction (Stages 1–4):** ✅ **COMPLETE.** All backend routes migrated from monolithic `main.py` into dedicated `APIRouter` modules (`routes/`).
 * **Route Parity:** `route_snapshot_baseline.json` committed — diff tool active for regression prevention.
-* **Flutter Mobile Code Quality:** `flutter analyze` completed in 19.3s with **0 issues found**.
+* **Flutter Mobile Code Quality:** `flutter analyze` completed with **0 compilation errors** and 32 linter info suggestions (style & deprecation notices).
 
 ---
 
@@ -66,7 +66,7 @@
 
 ## Test Logs & Environment Isolation Summary
 * **Backend Pytest Unit Suite:** 101 passed out of 101 tests (100% pass rate in 18.57s)
-* **Frontend Flutter Analysis:** 0 issues / 0 warnings (ran in 19.3s)
+* **Frontend Flutter Analysis:** 0 errors / 32 linter info suggestions (ran in 365s)
 * **Frontend Playwright E2E Suite:** 143 passed, 2 skipped out of 145 tests (6.6 minutes)
 * **Test Isolation:** Enforced. Automated E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
