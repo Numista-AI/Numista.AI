@@ -21,7 +21,7 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 # Gemini Model Configuration
 # Centralized here so main.py and all routes import from one place.
 # Defaults match the model IDs documented in main.py — Cloud Run env vars take precedence.
-GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")          # Primary workhorse
+GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.7-flash")          # Primary workhorse
 GEMINI_PRO_MODEL   = os.getenv("GEMINI_PRO_MODEL",   "gemini-3.1-pro-preview")    # High-reasoning tasks
 GEMINI_LITE_MODEL  = os.getenv("GEMINI_LITE_MODEL",  "gemini-3.5-flash-lite")     # Lightweight/fast tasks
 GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")    # Image generation

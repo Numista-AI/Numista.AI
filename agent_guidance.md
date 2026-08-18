@@ -66,7 +66,7 @@ C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\
 - `google-genai` (new unified SDK): **v2.8.0** is latest stable
 - `google-generativeai` (legacy SDK): peaked at v0.8.6 â€” do NOT use
 - `vertexai.generative_models` (old Python SDK): **shutting down June 24, 2026** â€” do NOT use
-- Active Gemini models: `gemini-3.6-flash` (primary via `config.py`), `gemini-3.1-pro-preview` (pro tasks)
+- Active Gemini models: `gemini-3.7-flash` (primary via `config.py`), `gemini-3.1-pro-preview` (pro tasks)
 - Backend now uses Python **3.11-slim** base image
 
 ---

@@ -21,8 +21,8 @@ const COIN_DICTIONARY = [
     { "val": 1.00, "formal": "Morgan Silver Dollar", "slang": ["morgan", "silver dollar", "cartwheel", "peace dollar"] }
 ];
 
-// Using process.env.GEMINI_FLASH_MODEL (defaults to gemini-3.6-flash)
-const modelId = process.env.GEMINI_FLASH_MODEL || 'gemini-3.6-flash';
+// Using process.env.GEMINI_FLASH_MODEL (defaults to gemini-3.7-flash)
+const modelId = process.env.GEMINI_FLASH_MODEL || 'gemini-3.7-flash';
 
 async function mapToSchema(entities) {
     // Lazy Initialization
