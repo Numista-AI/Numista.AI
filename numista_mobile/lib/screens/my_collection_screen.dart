@@ -1795,7 +1795,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               style: TextStyle(color: _text, fontSize: 14),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: _surface,
+                focusColor: _surface,
+                hoverColor: _surface,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
                     borderSide: BorderSide(color: _border, width: 1.5)),
@@ -1806,12 +1808,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     borderRadius: BorderRadius.circular(6),
                     borderSide: BorderSide(color: _accent, width: 2.0)),
                 hintText: 'Search by year, series, grade...',
-                hintStyle: TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+                hintStyle: TextStyle(color: _subtext, fontSize: 14),
                 contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFFADB5BD)),
+                prefixIcon: Icon(Icons.search, size: 18, color: _subtext),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, size: 16),
+                        icon: Icon(Icons.clear, size: 16, color: _subtext),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _searchQuery = '');

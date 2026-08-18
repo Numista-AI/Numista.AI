@@ -1215,31 +1215,34 @@ class _CoinImagePairState extends State<_CoinImagePair> {
         ),
       ),
     );
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
     final showFlag = AuthService.isBetaTester;
+    final isSet = widget.coin.isSet;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _CoinImageTile(
           url: _obvUrl,
-          label: 'OBV',
+          label: isSet ? 'SET PHOTO' : 'OBV',
           heroTag: 'coin_obv_${widget.coin.id}',
           isLoading: _loadingRef,
           attribution: _attribution,
+          isSet: isSet,
           onFlag: showFlag ? () => _reportImageError(context, 'obverse') : null,
         ),
-        const SizedBox(width: 8),
-        _CoinImageTile(
-          url: _revUrl,
-          label: 'REV',
-          heroTag: 'coin_rev_${widget.coin.id}',
-          isLoading: _loadingRef,
-          attribution: _attribution,
-          onFlag: showFlag ? () => _reportImageError(context, 'reverse') : null,
-        ),
+        if (!isSet) ...[
+          const SizedBox(width: 8),
+          _CoinImageTile(
+            url: _revUrl,
+            label: 'REV',
+            heroTag: 'coin_rev_${widget.coin.id}',
+            isLoading: _loadingRef,
+            attribution: _attribution,
+            isSet: false,
+            onFlag: showFlag ? () => _reportImageError(context, 'reverse') : null,
+          ),
+        ],
       ],
     );
   }
@@ -1251,6 +1254,7 @@ class _CoinImageTile extends StatelessWidget {
   final String heroTag;
   final bool isLoading;
   final String? attribution;
+  final bool isSet;
   final VoidCallback? onFlag;
   const _CoinImageTile({
     required this.url,
@@ -1258,12 +1262,14 @@ class _CoinImageTile extends StatelessWidget {
     required this.heroTag,
     this.isLoading = false,
     this.attribution,
+    this.isSet = false,
     this.onFlag,
   });
 
   @override
   Widget build(BuildContext context) {
-    const size = 120.0;
+    final width = isSet ? 180.0 : 120.0;
+    const height = 120.0;
     return Stack(
       children: [
         GestureDetector(
@@ -1271,8 +1277,8 @@ class _CoinImageTile extends StatelessWidget {
           child: Hero(
             tag: heroTag,
             child: Container(
-              width: size,
-              height: size,
+              width: width,
+              height: height,
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1120), // Dark background canvas
                 borderRadius: BorderRadius.circular(10),
@@ -1284,7 +1290,7 @@ class _CoinImageTile extends StatelessWidget {
                     ? [
                         BoxShadow(
                           color: const Color(0xFFC9A227).withAlpha(50),
-                          blurRadius: 14, // Subtle 12-16px blur radius glow
+                          blurRadius: 14,
                           spreadRadius: 1,
                         )
                       ]
@@ -1295,13 +1301,7 @@ class _CoinImageTile extends StatelessWidget {
                 child: isLoading && url.isEmpty
                     ? _skeleton()
                     : url.isNotEmpty
-                        ? Image.network(
-                            url,
-                            fit: BoxFit.contain, // BoxFit.contain to prevent clipping rim
-                            errorBuilder: (ctx, err, st) => _placeholder(),
-                            loadingBuilder: (ctx, child, progress) =>
-                              progress == null ? child : _skeleton(),
-                          )
+                        ? _buildImage(url, fit: BoxFit.contain)
                         : _placeholder(),
               ),
             ),
@@ -1328,6 +1328,29 @@ class _CoinImageTile extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildImage(String url, {BoxFit fit = BoxFit.contain}) {
+    if (url.startsWith('data:image')) {
+      try {
+        final comma = url.indexOf(',');
+        final b64 = comma != -1 ? url.substring(comma + 1) : url;
+        return Image.memory(
+          base64Decode(b64),
+          fit: fit,
+          errorBuilder: (ctx, err, st) => _placeholder(),
+        );
+      } catch (_) {
+        return _placeholder();
+      }
+    }
+    return Image.network(
+      url,
+      fit: fit,
+      errorBuilder: (ctx, err, st) => _placeholder(),
+      loadingBuilder: (ctx, child, progress) =>
+          progress == null ? child : _skeleton(),
     );
   }
 
@@ -1364,7 +1387,7 @@ class _CoinImageTile extends StatelessWidget {
                 panEnabled: true,
                 minScale: 0.5,
                 maxScale: 5.0,
-                child: Image.network(url, fit: BoxFit.contain),
+                child: _buildImage(url, fit: BoxFit.contain),
               ),
             ),
           ),

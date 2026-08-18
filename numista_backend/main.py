@@ -30,6 +30,7 @@ from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
 from services.document_classifier_service import classify_document_bytes
+from set_pricing import get_set_valuation
 logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
@@ -4871,10 +4872,10 @@ async def identify_coin_photo(
         coin_doc = {
             **ai_coin,
             "id":                    coin_id,
-            "imageUrlObverse":       obv_b64,
-            "imageUrlReverse":       rev_b64,
-            "imageUrlObverse_gcs":   gcs_obv_uri,
-            "imageUrlReverse_gcs":   gcs_rev_uri,
+            "image_url_obverse":     obv_b64,
+            "image_url_reverse":     rev_b64,
+            "image_url_obverse_gcs": gcs_obv_uri,
+            "image_url_reverse_gcs": gcs_rev_uri,
             "Added":                 firestore.SERVER_TIMESTAMP,
         }
 
@@ -5005,6 +5006,42 @@ async def estimate_value_text(request: TextValuationRequest):
     be visually confirmed without photos.  Sets needs_photo=True so the UI
     can prompt the user to upload images for a more precise estimate.
     """
+    # Check if this is a packaged set (e.g. Proof Set, Mint Set)
+    doc_dict = {
+        "Year": request.year,
+        "Denomination": request.denomination,
+        "Mint Mark": request.mint_mark,
+        "Condition": request.condition,
+        "Program/Series": request.program_series,
+        "Metal Content": request.metal_content,
+        "Country": request.country,
+        "name": f"{request.year} {request.program_series or ''} {request.denomination or ''}".strip(),
+        "is_set": (request.denomination or "").lower() == "set" or "set" in (request.program_series or "").lower() or "proof" in (request.program_series or "").lower()
+    }
+    if doc_dict["is_set"]:
+        set_val = get_set_valuation(doc_dict)
+        if set_val.get("status") == "valued":
+            return {
+                "estimated_value": set_val["estimated_value"],
+                "numeric_median":  set_val["numeric_median"],
+                "low":             set_val["low"],
+                "high":            set_val["high"],
+                "confidence":      set_val.get("confidence", "HIGH"),
+                "basis":           set_val.get("basis", ""),
+                "needs_photo":     False,
+                "source":          "set_catalog",
+                "ai_value_status": "valued",
+            }
+        elif set_val.get("status") == "unvaluable":
+            return {
+                "estimated_value": set_val.get("ai_estimated_value", "Unvaluable - Appraisal needed"),
+                "confidence":      "LOW",
+                "basis":           set_val.get("basis", "uncataloged_custom_set"),
+                "needs_photo":     True,
+                "source":          "set_catalog",
+                "ai_value_status": "unvaluable",
+            }
+
     prompt = TEXT_VALUATION_PROMPT.format(
         year           = request.year           or "Unknown",
         denomination   = request.denomination   or "Unknown",
@@ -5042,6 +5079,7 @@ async def estimate_value_text(request: TextValuationRequest):
             "basis":           basis,
             "needs_photo":     True,   # always -- text estimate cannot confirm grade visually
             "source":          "text_estimator",
+            "ai_value_status": "valued",
         }
     except Exception as e:
         logger.exception("Estimate value text error")

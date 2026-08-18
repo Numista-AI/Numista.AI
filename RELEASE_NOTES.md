@@ -124,6 +124,31 @@
 
 
 
+
+## v4.122 — 2026-08-18
+**Beta Test 3 Remediation: Ingestion, Valuation State Machine, US Mint Catalog & CanvasKit Contrast**
+
+- Ingest Fraser Washington bust obverse reference asset into GCS reference library with 2000x2000 RGB validation
+- Remediate AWQ shared obverse index documents in coin_image_index and user collection docs
+- Implement US Mint Set SKU resolution and pricing engine with 2002/2026 catalog
+- Enforce strict lowercase snake_case schema writers (image_url_obverse, ai_estimated_value)
+- Implement valuation state machine in Flutter batch valuation service (pending -> in_progress -> valued | unvaluable | failed)
+- Fix search TextField contrast and CanvasKit white hover flash in Collection view
+- Add Base64 Data URI decoding and rectangular card layout for Set collections
+- Enforce single-tab web navigation for Bulk Import via webOnlyWindowName: '_self'
+
+## v4.121 — 2026-08-18
+**Remediation Enhancements & Platform Updates**
+
+- Sync auto-generated release notes for v4.120
+- Remediation: synchronize valuation mode parity and gate collection stream on auth state
+- Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification
+- Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features
+- Release notes update v4.116
+- Ai: upgrade primary flash model to gemini-3.7-flash
+- Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown
+- Sync release notes pre-push
+
 ## v4.120 — 2026-08-18
 **Remediation Enhancements & Platform Updates**
 

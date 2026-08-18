@@ -190,10 +190,11 @@ class CoinModel {
       personalNotes: data['Personal Notes I']?.toString() ?? data['personalNotes']?.toString() ?? '',
       personalRef: data['Personal Reference #']?.toString() ?? data['personalRef']?.toString() ?? '',
       originalDescription: data['Original Description from source']?.toString() ?? data['originalDescription']?.toString() ?? '',
-      aiEstimatedValue: data['AI Estimated Value']?.toString() ?? data['aiEstimatedValue']?.toString() ?? 'Pending',
+      aiEstimatedValue: data['ai_estimated_value']?.toString() ?? data['AI Estimated Value']?.toString() ?? 'Pending',
       meltValue: data['Melt Value']?.toString() ?? data['meltValue']?.toString() ?? 'N/A',
-      imageUrlObverse: data['image_url_obverse']?.toString() ?? '',
-      imageUrlReverse: data['image_url_reverse']?.toString() ?? '',
+      // TODO(remove after 2026-09-15 camelCase migration)
+      imageUrlObverse: (data['image_url_obverse'] ?? data['imageUrlObverse'] ?? data['imageUrl'] ?? '').toString(),
+      imageUrlReverse: (data['image_url_reverse'] ?? data['imageUrlReverse'] ?? '').toString(),
       country: data['Country']?.toString() ?? 'USA',
       timestamp: data['timestamp'] is Timestamp ? (data['timestamp'] as Timestamp).toDate() : null,
       source: data['source']?.toString() ?? '',
@@ -216,7 +217,7 @@ class CoinModel {
           ? (data['priceLastUpdated'] as Timestamp).toDate() 
           : null,
       hasCac: (data['cac_premium_flag'] as bool?) ?? (data['hasCac'] as bool?) ?? false,
-      isSet: data['is_set'] as bool? ?? false,
+      isSet: (data['is_set'] == true) || (data['item_type'] == 'set') || (data['Denomination'] == 'Set'),
       setId: data['set_id']?.toString(),
       setContents: data['set_contents'] as List<dynamic>?,
       parentSetId: data['parent_set_id']?.toString(),

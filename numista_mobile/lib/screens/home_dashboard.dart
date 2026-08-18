@@ -328,16 +328,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
             double meltValue       = 0;
             double faceValue       = 0;
 
-            double coinsVal = 0;
-            double currencyVal = 0;
-            double medalsVal = 0;
-            double othersVal = 0;
+            double currencyVal     = 0;
+            double medalsVal       = 0;
+            double othersVal       = 0;
 
             Map<String, double> programValues = {};
 
             // 1. Process Coins collection
             for (final data in coins) {
-              final valStr = data['AI Estimated Value'];
+              final valStr = data['ai_estimated_value'] ?? data['AI Estimated Value'];
               final coinValue = _parseCurrency(valStr);
 
               // Melt Value
@@ -364,8 +363,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 medalsVal += finalVal;
               } else if (isCurrency) {
                 currencyVal += finalVal;
-              } else {
-                coinsVal += finalVal;
               }
 
               // Greysheet fields
@@ -391,7 +388,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             // 2. Process Currency collection
             for (final data in currency) {
-              final rawAi = data['AI Estimated Value'];
+              final rawAi = data['ai_estimated_value'] ?? data['AI Estimated Value'];
               double finalVal = 0.0;
               if (rawAi != null && rawAi != 'None' && rawAi != 'Pending' && rawAi.toString().isNotEmpty) {
                 finalVal = _parseCurrency(rawAi);
@@ -428,9 +425,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 medalsVal += finalVal;
               } else if (catStr == 'banknote') {
                 currencyVal += finalVal;
-              } else if (catStr == 'coin') {
-                coinsVal += finalVal;
-              } else {
+              } else if (catStr != 'coin') {
                 othersVal += finalVal;
               }
 
@@ -1531,10 +1526,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.120',
+    version: 'v4.121',
     date: '2026-08-18',
     description: 'Remediation Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Sync auto-generated release notes for v4.120',
+      'Remediation: synchronize valuation mode parity and gate collection stream on auth state',
+      'Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification',
+      'Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features',
+      'Release notes update v4.116',
+      'Ai: upgrade primary flash model to gemini-3.7-flash',
+      'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',
+      'Sync release notes pre-push',
+    ],
+  ),
+  _Release(
+    version: 'v4.120',
+    date: '2026-08-18',
+    description: 'Remediation Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Remediation: synchronize valuation mode parity and gate collection stream on auth state',
       'Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification',

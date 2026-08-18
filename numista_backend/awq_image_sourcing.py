@@ -125,8 +125,8 @@ WIKIMEDIA_DIRECT_FILENAMES = {
     'anna-may-wong':       'American_Women_Quarter_2022_Anna_May_Wong.jpg',
 }
 
-# Shared AWQ obverse (Washington portrait – same for all AWQ years)
-AWQ_OBVERSE_REF = 'https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference_images/us_mint/2022-american-women-quarters-coin-uncirculated-obverse-philadelphia.jpg'
+# Shared AWQ obverse (Laura Gardin Fraser Washington portrait – verified circular bust)
+AWQ_OBVERSE_REF = 'https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/american_women_quarters/awq_fraser_washington_obverse.jpg'
 
 # ─── Clients ──────────────────────────────────────────────────────────────────
 from google.oauth2 import service_account
