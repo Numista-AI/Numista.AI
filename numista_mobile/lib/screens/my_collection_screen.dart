@@ -111,10 +111,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   final _searchCtrl      = TextEditingController();
   final _searchFocus     = FocusNode();
   Timer? _searchDebounce;
-  // Firestore stream -- created ONCE in initState to prevent StreamBuilder
-  // re-subscription on every setState (which briefly unmounts the TextField
-  // and causes focus loss on Flutter Web).
-  late Stream<QuerySnapshot<Map<String, dynamic>>> _coinsStream;
+  
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _coinsStream;
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _coinsSnapSub;
+  bool _isLoadingCoins = true;
+  String? _coinsError;
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _cachedCoinsDocs = [];
+  Timer? _coinsTimeoutTimer;
   
   // ── Batch valuation progress ────────────────────────────────────────────────
   BatchValuationProgress _valuation = BatchValuationProgress();
@@ -239,10 +243,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.initState();
     _loadDefaultTab();
     _loadSortPreferences();
-    // Create the Firestore stream ONCE -- reusing it in build() ensures
-    // StreamBuilder never re-subscribes on setState, so the TextField
-    // keeps its focus between keystrokes on Flutter Web.
-    _coinsStream = _buildCoinsStream();
+
+    // Listen to Firebase Auth state before binding collection stream
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        _subscribeCoinsStream();
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingCoins = true;
+            _coinsError = null;
+            _cachedCoinsDocs = [];
+          });
+        }
+      }
+    });
 
     // Listen to batch valuation progress for the live badge in _buildFiltersRow
     _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
@@ -390,6 +405,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (GuestSeedService.isBrowseDemoMode) {
       return GuestSeedService.getDemoCoinsStream();
     }
+    if (AuthService.coinsPath.contains('unknown')) {
+      throw StateError('Cannot query unauthenticated coinsPath');
+    }
     Query<Map<String, dynamic>> q =
         FirebaseFirestore.instance.collection(AuthService.coinsPath);
     if (_limitMode == CollectionLimitMode.last50) {
@@ -400,8 +418,74 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return q.snapshots();
   }
 
+  void _subscribeCoinsStream() {
+    _coinsSnapSub?.cancel();
+    _coinsTimeoutTimer?.cancel();
+
+    if (AuthService.coinsPath.contains('unknown')) {
+      if (mounted) {
+        setState(() {
+          _coinsError = 'Unauthenticated access attempt';
+          _isLoadingCoins = false;
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoadingCoins = true;
+        _coinsError = null;
+      });
+    }
+
+    try {
+      final stream = _buildCoinsStream();
+      _coinsStream = stream;
+
+      // 6-second fallback timer if no first event arrives
+      _coinsTimeoutTimer = Timer(const Duration(seconds: 6), () {
+        if (mounted && _isLoadingCoins && _cachedCoinsDocs.isEmpty) {
+          setState(() {
+            _coinsError = 'Connection timed out';
+            _isLoadingCoins = false;
+          });
+        }
+      });
+
+      _coinsSnapSub = stream.listen((snap) {
+        _coinsTimeoutTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _cachedCoinsDocs = snap.docs;
+            _isLoadingCoins = false;
+            _coinsError = null;
+          });
+        }
+      }, onError: (e) {
+        _coinsTimeoutTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _coinsError = e.toString();
+            _isLoadingCoins = false;
+          });
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _coinsError = e.toString();
+          _isLoadingCoins = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _authSub?.cancel();
+    _coinsSnapSub?.cancel();
+    _coinsTimeoutTimer?.cancel();
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _searchFocus.dispose();
@@ -791,35 +875,30 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Widget _buildTabContent(String email) {
     switch (_currentTab) {
       case 'Coins':
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _coinsStream,
-          builder: (context, snap) {
-            if (!snap.hasData && snap.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator(color: _accent));
-            }
-            if (snap.hasError) {
-              return _buildErrorState();
-            }
-            final allDocs = snap.data?.docs ?? [];
-            final docs    = _sorted(_filtered(allDocs));
+        if (_isLoadingCoins && _cachedCoinsDocs.isEmpty && _coinsError == null) {
+          return Center(child: CircularProgressIndicator(color: _accent));
+        }
+        if (_coinsError != null && _cachedCoinsDocs.isEmpty) {
+          return _buildErrorState(onRetry: _subscribeCoinsStream);
+        }
+        final allDocs = _cachedCoinsDocs;
+        final docs    = _sorted(_filtered(allDocs));
 
-            if (_selectedCoinId == null && docs.isNotEmpty) {
-              _selectedCoinId = docs.first.id;
-            }
-            final selDoc = docs.isNotEmpty
-                ? (docs.any((d) => d.id == _selectedCoinId)
-                    ? docs.firstWhere((d) => d.id == _selectedCoinId)
-                    : docs.first)
-                : null;
-            if (selDoc != null) _selectedCoinId = selDoc.id;
+        if (_selectedCoinId == null && docs.isNotEmpty) {
+          _selectedCoinId = docs.first.id;
+        }
+        final selDoc = docs.isNotEmpty
+            ? (docs.any((d) => d.id == _selectedCoinId)
+                ? docs.firstWhere((d) => d.id == _selectedCoinId)
+                : docs.first)
+            : null;
+        if (selDoc != null) _selectedCoinId = selDoc.id;
 
-            return FutureBuilder<bool>(
-              future: ValuationModeService.isAdvancedMode(),
-              builder: (context, modeSnap) {
-                final advanced = modeSnap.data ?? false;
-                return _buildCoinsTab(docs, allDocs, advanced: advanced);
-              },
-            );
+        return FutureBuilder<bool>(
+          future: ValuationModeService.isAdvancedMode(),
+          builder: (context, modeSnap) {
+            final advanced = modeSnap.data ?? false;
+            return _buildCoinsTab(docs, allDocs, advanced: advanced);
           },
         );
       case 'Currency':
@@ -1611,7 +1690,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState({VoidCallback? onRetry}) {
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32),
@@ -1626,10 +1705,22 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ),
             SizedBox(height: 8),
             Text(
-              'Check your internet connection and try refreshing the page.\nIf the problem persists, contact support at beta@numista.ai',
+              'Check your internet connection and try refreshing.\nIf the problem persists, contact support at beta@numista.ai',
               textAlign: TextAlign.center,
               style: TextStyle(color: _subtext, height: 1.5),
             ),
+            if (onRetry != null) ...[
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: Icon(Icons.refresh, size: 16),
+                label: Text('Reload Collection'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _accent,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1682,7 +1773,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 : (v == CollectionLimitMode.last100 ? 'Last 100' : 'Last 50'),
             onChanged: (v) => setState(() {
               _limitMode = v ?? CollectionLimitMode.all;
-              _coinsStream = _buildCoinsStream();
+              _subscribeCoinsStream();
             }),
           ),
         ]),

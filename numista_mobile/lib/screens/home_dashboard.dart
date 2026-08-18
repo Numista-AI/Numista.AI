@@ -451,6 +451,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             }
 
             final portfolioValue = advanced ? cpgTotal : bidTotal;
+            final effectiveCoinsVal = advanced ? cpgTotal : bidTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
             if (totalItems > 0) {
@@ -617,7 +618,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   const SizedBox(height: 24),
 
                   // ── Category Breakdown ─────────────────────────────────────
-                  _buildCategoryBreakdown(coinsVal, currencyVal, medalsVal, othersVal, fmt),
+                  _buildCategoryBreakdown(effectiveCoinsVal, currencyVal, medalsVal, othersVal, fmt),
                   const SizedBox(height: 24),
 
                    // ── Metric cards ──────────────────────────────────────────
@@ -1116,12 +1117,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
         const SizedBox(height: 2),
 
         // ── Main value display ──────────────────────────────────────────────
-        if (hasValue)
+        if (hasValue) ...[
           Text(fmt.format(displayVal),
               style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  color: _accent))
+                  color: _accent)),
+          Text(
+            advanced ? 'CPG Retail Market basis' : 'Wholesale / Greysheet Bid basis',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: _subtext,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ]
         else if (isRunning)
           Text(
             hasProgress ? '${fmt.format(displayVal)} (est.)' : 'Valuing\u2026',
@@ -1520,10 +1531,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.119',
+    date: '2026-08-18',
+    description: 'Remediation Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification',
+      'Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features',
+      'Release notes update v4.116',
+      'Ai: upgrade primary flash model to gemini-3.7-flash',
+      'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',
+      'Sync release notes pre-push',
+      'Release notes update v4.113',
+      'Audit: update system scan report SCAN_REPORT.md via project-scanner skill',
+    ],
+  ),
+  _Release(
     version: 'v4.118',
     date: '2026-08-18',
     description: 'Beta Test Remediation & System of Record Alignment',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Single-source-of-truth collection_stats aggregate stream preserves total inventory totals across table pagination',
       'Morgan Welcome Screen: eliminated desktop scrollbar canvas track along 540px boundary',
