@@ -126,6 +126,32 @@
 
 
 
+
+
+## v4.125 — 2026-08-18
+**Release Enhancements & Platform Updates**
+
+- Release: sync auto-generated release notes for v4.123
+- Remediation: execute beta test 3 v4 runbook with state machine, set catalog, and awq ingestion
+- Sync auto-generated release notes for v4.120
+- Remediation: synchronize valuation mode parity and gate collection stream on auth state
+- Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification
+- Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features
+- Release notes update v4.116
+- Ai: upgrade primary flash model to gemini-3.7-flash
+
+## v4.124 — 2026-08-18
+**Release Enhancements & Platform Updates**
+
+- Release: sync auto-generated release notes for v4.123
+- Remediation: execute beta test 3 v4 runbook with state machine, set catalog, and awq ingestion
+- Sync auto-generated release notes for v4.120
+- Remediation: synchronize valuation mode parity and gate collection stream on auth state
+- Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification
+- Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features
+- Release notes update v4.116
+- Ai: upgrade primary flash model to gemini-3.7-flash
+
 ## v4.123 — 2026-08-18
 **Remediation Enhancements & Platform Updates**
 
