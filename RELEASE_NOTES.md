@@ -120,6 +120,16 @@
 
 
 
+
+## v4.116 — 2026-08-18
+**Ai Enhancements & Platform Updates**
+
+- Ai: upgrade primary flash model to gemini-3.7-flash
+- Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown
+- Sync release notes pre-push
+- Release notes update v4.113
+- Audit: update system scan report SCAN_REPORT.md via project-scanner skill
+
 ## v4.115 — 2026-08-18
 **Audit Enhancements & Platform Updates**
 

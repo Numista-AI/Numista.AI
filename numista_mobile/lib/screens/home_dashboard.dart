@@ -1520,10 +1520,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.116',
+    date: '2026-08-18',
+    description: 'Ai Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Ai: upgrade primary flash model to gemini-3.7-flash',
+      'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',
+      'Sync release notes pre-push',
+      'Release notes update v4.113',
+      'Audit: update system scan report SCAN_REPORT.md via project-scanner skill',
+    ],
+  ),
+  _Release(
     version: 'v4.115',
     date: '2026-08-18',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release notes update v4.113',
       'Audit: update system scan report SCAN_REPORT.md via project-scanner skill',
