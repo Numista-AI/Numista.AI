@@ -158,73 +158,73 @@ class BatchValuationService {
 
     for (final doc in coinsSnap.docs) {
       final data   = doc.data();
-      final val    = data['AI Estimated Value']?.toString() ?? '';
-      final source = data['ai_value_source']?.toString() ?? '';
-      if (source == 'photo_scan' || source == 'text_estimator') continue;
-      if (val.isEmpty || val == 'Pending' || val == 'null') {
-        final year   = data['Year']?.toString()             ?? '';
-        final denom  = data['Denomination']?.toString()     ?? '';
-        final mint   = data['Mint Mark']?.toString()        ?? '';
-        final cond   = data['Condition']?.toString()        ?? '';
-        final series = data['Program/Series']?.toString()   ?? '';
-        final metal  = data['Metal Content']?.toString()    ?? '';
-        final country = data['Country']?.toString()         ?? 'USA';
+      final status = data['ai_value_status']?.toString() ?? '';
+      
+      // Skip only items that have completed valuation
+      if (status == 'valued') continue;
 
-        final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
-        final coinName = [
-          if (year.isNotEmpty) '$year$mintStr',
-          if (denom.isNotEmpty) denom,
-        ].join(' ').trim();
+      final year   = data['Year']?.toString()             ?? '';
+      final denom  = data['Denomination']?.toString()     ?? '';
+      final mint   = data['Mint Mark']?.toString()        ?? '';
+      final cond   = data['Condition']?.toString()        ?? '';
+      final series = data['Program/Series']?.toString()   ?? '';
+      final metal  = data['Metal Content']?.toString()    ?? '';
+      final country = data['Country']?.toString()         ?? 'USA';
+      final isSet  = data['is_set'] == true || denom.toLowerCase() == 'set' || data['item_type'] == 'set';
 
-        tasks.add(_ValuationTask(
-          collection: 'coins',
-          docId: doc.id,
-          itemType: 'coin',
-          name: coinName.isEmpty ? 'Unknown coin' : coinName,
-          year: year,
-          denomination: denom,
-          condition: cond,
-          country: country,
-          details: 'Program: $series, Metal: $metal',
-          extraData: {
-            'mint_mark': mint,
-            'program_series': series,
-            'metal_content': metal,
-          },
-        ));
-      }
+      final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
+      final coinName = [
+        if (year.isNotEmpty) '$year$mintStr',
+        if (series.isNotEmpty && isSet) series else if (denom.isNotEmpty) denom,
+      ].join(' ').trim();
+
+      tasks.add(_ValuationTask(
+        collection: 'coins',
+        docId: doc.id,
+        itemType: isSet ? 'set' : 'coin',
+        name: coinName.isEmpty ? 'Unknown item' : coinName,
+        year: year,
+        denomination: denom,
+        condition: cond,
+        country: country,
+        details: 'Program: $series, Metal: $metal',
+        extraData: {
+          'mint_mark': mint,
+          'program_series': series,
+          'metal_content': metal,
+          'is_set': isSet,
+        },
+      ));
     }
 
     // 2. Fetch unvalued currency/banknotes
     final currencySnap = await currencyRef.get();
     for (final doc in currencySnap.docs) {
       final data = doc.data();
-      final val = data['AI Estimated Value']?.toString() ?? '';
-      final source = data['ai_value_source']?.toString() ?? '';
-      if (source == 'photo_scan' || source == 'text_estimator') continue;
-      if (val.isEmpty || val == 'Pending' || val == 'null' || val == 'None') {
-        final year   = data['Year']?.toString()             ?? '';
-        final denom  = data['Denomination']?.toString()     ?? '';
-        final cond   = data['Condition']?.toString()        ?? '';
-        final country = data['Country']?.toString()         ?? 'USA';
-        final desc   = data['Description']?.toString()       ?? '';
-        final issuer = data['Series/Issuer']?.toString()     ?? '';
-        final notes  = data['Personal Notes']?.toString()    ?? '';
+      final status = data['ai_value_status']?.toString() ?? '';
+      if (status == 'valued') continue;
 
-        final name = desc.isNotEmpty ? desc : '$denom Banknote';
+      final year   = data['Year']?.toString()             ?? '';
+      final denom  = data['Denomination']?.toString()     ?? '';
+      final cond   = data['Condition']?.toString()        ?? '';
+      final country = data['Country']?.toString()         ?? 'USA';
+      final desc   = data['Description']?.toString()       ?? '';
+      final issuer = data['Series/Issuer']?.toString()     ?? '';
+      final notes  = data['Personal Notes']?.toString()    ?? '';
 
-        tasks.add(_ValuationTask(
-          collection: 'currency',
-          docId: doc.id,
-          itemType: 'banknote',
-          name: name,
-          year: year,
-          denomination: denom,
-          condition: cond,
-          country: country,
-          details: 'Issuer/Series: $issuer. Notes: $notes',
-        ));
-      }
+      final name = desc.isNotEmpty ? desc : '$denom Banknote';
+
+      tasks.add(_ValuationTask(
+        collection: 'currency',
+        docId: doc.id,
+        itemType: 'banknote',
+        name: name,
+        year: year,
+        denomination: denom,
+        condition: cond,
+        country: country,
+        details: 'Issuer/Series: $issuer. Notes: $notes',
+      ));
     }
 
     final total = tasks.length;
@@ -258,7 +258,16 @@ class BatchValuationService {
         currentCoinName: task.name,
       ));
 
+      final docRef = FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .doc(task.docId);
+
       try {
+        // Step 1: Transition status to in_progress before issuing network request
+        await docRef.set({
+          'ai_value_status': 'in_progress',
+        }, SetOptions(merge: true));
+
         Map<String, dynamic> result;
         if (task.collection == 'coins') {
           final ed = task.extraData ?? {};
@@ -283,23 +292,38 @@ class BatchValuationService {
           );
         }
 
-        // Write result back to Firestore immediately
-        final docRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(AuthService.userEmail)
-            .collection(task.collection)
-            .doc(task.docId);
-
-        await docRef.update({
-          'AI Estimated Value': result['estimated_value'] ?? 'Pending',
-          'ai_value_source':   'text_estimator',
-          'ai_value_basis':    result['basis'] ?? '',
+        // Step 2: Persist canonical status and values
+        final status = result['ai_value_status']?.toString() ?? 'valued';
+        final payload = <String, dynamic>{
+          'ai_value_status':    status,
+          'ai_estimated_value': result['estimated_value'] ?? 'Pending',
+          'ai_value_source':    result['source'] ?? 'text_estimator',
+          'ai_value_basis':     result['basis'] ?? '',
           'ai_value_confidence': result['confidence'] ?? 'LOW',
-          'ai_needs_photo':    true,
-        });
+          'ai_needs_photo':     result['needs_photo'] ?? true,
+          'ai_value_as_of':     DateTime.now().toUtc().toIso8601String(),
+        };
+
+        if (result['numeric_median'] != null) {
+          payload['estimated_value'] = (result['numeric_median'] as num).toDouble();
+        }
+        if (result['low'] != null) {
+          payload['ai_value_low'] = (result['low'] as num).toDouble();
+        }
+        if (result['high'] != null) {
+          payload['ai_value_high'] = (result['high'] as num).toDouble();
+        }
+
+        await docRef.set(payload, SetOptions(merge: true));
         completed++;
       } catch (e) {
         debugPrint('[BatchValuation] Error on task (${task.collection}/${task.docId}): $e');
+        try {
+          await docRef.set({
+            'ai_value_status': 'failed',
+            'ai_value_error':  e.toString(),
+          }, SetOptions(merge: true));
+        } catch (_) {}
         failed++;
       }
 

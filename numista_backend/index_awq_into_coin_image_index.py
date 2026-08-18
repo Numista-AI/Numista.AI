@@ -115,11 +115,10 @@ AWQ_DESIGNS = [
      ["2025 Susan La Flesche Womens Quarter", "2025 Susan La Flesche quarter"]),
 ]
 
-# Known obverse URL (shared Washington portrait for all AWQ coins)
-# Already indexed as 2022_american-women-quarters_obverse — reuse that URL
+# Known obverse URL (shared Laura Gardin Fraser Washington portrait for all AWQ coins)
 AWQ_OBVERSE_FALLBACK = (
-    "https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/"
-    "reference_images/us_mint/2022-american-women-quarters-coin-uncirculated-obverse-philadelphia.jpg"
+    "https://storage.googleapis.com/numista-reference-library/"
+    "reference_library/bulk_programs/american_women_quarters/awq_fraser_washington_obverse.jpg"
 )
 
 # ── Firebase init ──────────────────────────────────────────────────────────────

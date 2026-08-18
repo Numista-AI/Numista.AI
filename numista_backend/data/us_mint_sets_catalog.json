@@ -1,0 +1,84 @@
+{
+  "catalog_version": "2026-08-18",
+  "description": "Authoritative US Mint Proof and Mint Set Pricing Catalog",
+  "sets": {
+    "2002_proof_set_clad_10": {
+      "year": 2002,
+      "product_type": "proof_set",
+      "metal": "clad",
+      "coin_count": 10,
+      "low": 9.00,
+      "high": 14.00,
+      "median": 11.50,
+      "display_range": "$9.00 - $14.00",
+      "confidence": "HIGH",
+      "basis": "2026 Red Book / CPG 2002 Clad Proof Set (10-coin)",
+      "as_of": "2026-08-18"
+    },
+    "2002_proof_set_silver_10": {
+      "year": 2002,
+      "product_type": "proof_set",
+      "metal": "silver",
+      "coin_count": 10,
+      "low": 65.00,
+      "high": 85.00,
+      "median": 75.00,
+      "display_range": "$65.00 - $85.00",
+      "confidence": "HIGH",
+      "basis": "2026 Red Book / CPG 2002 Silver Proof Set (10-coin)",
+      "as_of": "2026-08-18"
+    },
+    "2002_quarter_proof_set_clad_5": {
+      "year": 2002,
+      "product_type": "quarter_proof_set",
+      "metal": "clad",
+      "coin_count": 5,
+      "low": 5.00,
+      "high": 7.00,
+      "median": 6.00,
+      "display_range": "$5.00 - $7.00",
+      "confidence": "HIGH",
+      "basis": "2026 CPG 2002 50 State Quarters Proof Set (5-coin)",
+      "as_of": "2026-08-18"
+    },
+    "2002_quarter_proof_set_silver_5": {
+      "year": 2002,
+      "product_type": "quarter_proof_set",
+      "metal": "silver",
+      "coin_count": 5,
+      "low": 28.00,
+      "high": 38.00,
+      "median": 33.00,
+      "display_range": "$28.00 - $38.00",
+      "confidence": "HIGH",
+      "basis": "2026 CPG 2002 50 State Quarters Silver Proof Set (5-coin)",
+      "as_of": "2026-08-18"
+    },
+    "2002_mint_set_clad_20": {
+      "year": 2002,
+      "product_type": "mint_set",
+      "metal": "clad",
+      "coin_count": 20,
+      "low": 10.00,
+      "high": 15.00,
+      "median": 12.50,
+      "display_range": "$10.00 - $15.00",
+      "confidence": "HIGH",
+      "basis": "2026 Red Book 2002 Uncirculated Mint Set (20-coin P&D)",
+      "as_of": "2026-08-18"
+    },
+    "2026_mint_set_clad_20": {
+      "year": 2026,
+      "product_type": "mint_set",
+      "metal": "clad",
+      "coin_count": 20,
+      "low": 25.50,
+      "high": 36.40,
+      "median": 31.00,
+      "display_range": "$25.50 - $36.40",
+      "confidence": "MEDIUM",
+      "basis": "Greysheet aggregate sum of 20 uncirculated coins: Bid $25.50 / Ask $31.00 / Retail $36.40.",
+      "as_of": "2026-08-18"
+    }
+  }
+}

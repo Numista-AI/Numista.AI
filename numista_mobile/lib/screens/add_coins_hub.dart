@@ -455,7 +455,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     final uri   = kIsWeb
                         ? Uri.base.resolve(path)
                         : Uri.parse('https://$kAppPublicDomain$path');
-                    await launchUrl(uri, mode: LaunchMode.platformDefault);
+                    if (kIsWeb) {
+                      await launchUrl(uri, webOnlyWindowName: '_self');
+                    } else {
+                      await launchUrl(uri, mode: LaunchMode.platformDefault);
+                    }
                   },
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: const Text('Open Bulk Import →',
