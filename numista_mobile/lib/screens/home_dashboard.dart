@@ -1531,10 +1531,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.119',
+    version: 'v4.120',
     date: '2026-08-18',
     description: 'Remediation Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Remediation: synchronize valuation mode parity and gate collection stream on auth state',
+      'Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification',
+      'Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features',
+      'Release notes update v4.116',
+      'Ai: upgrade primary flash model to gemini-3.7-flash',
+      'Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown',
+      'Sync release notes pre-push',
+      'Release notes update v4.113',
+    ],
+  ),
+  _Release(
+    version: 'v4.119',
+    date: '2026-08-18',
+    description: 'Remediation Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification',
       'Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features',

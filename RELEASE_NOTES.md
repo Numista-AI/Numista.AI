@@ -123,6 +123,19 @@
 
 
 
+
+## v4.120 — 2026-08-18
+**Remediation Enhancements & Platform Updates**
+
+- Remediation: synchronize valuation mode parity and gate collection stream on auth state
+- Remediation: decouple collection totals via collection_stats, resolve scrollbar track, deterministic awq repair, and supply reclassification
+- Add E2E suite 22, Pytest manifest test, and Flutter unit tests for Aug 17 features
+- Release notes update v4.116
+- Ai: upgrade primary flash model to gemini-3.7-flash
+- Audit: update SCAN_REPORT.md with full Flutter analysis linter breakdown
+- Sync release notes pre-push
+- Release notes update v4.113
+
 ## v4.119 — 2026-08-18
 **Remediation Enhancements & Platform Updates**
 
