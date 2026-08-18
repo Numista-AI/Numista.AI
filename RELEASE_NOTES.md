@@ -117,6 +117,12 @@
 
 
 
+
+## v4.113 — 2026-08-18
+**Audit Enhancements & Platform Updates**
+
+- Audit: update system scan report SCAN_REPORT.md via project-scanner skill
+
 ## v4.112 — 2026-08-18
 **Backend Enhancements & Platform Updates**
 

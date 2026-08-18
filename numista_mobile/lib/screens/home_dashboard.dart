@@ -1520,10 +1520,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.113',
+    date: '2026-08-18',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: update system scan report SCAN_REPORT.md via project-scanner skill',
+    ],
+  ),
+  _Release(
     version: 'v4.112',
     date: '2026-08-18',
     description: 'Backend Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Backend: refresh 2026 circulating series manifests, gcs inventory, and firestore image indexes',
       'Web: wire collector memory settings dialog, review hub staging delete, and ai memory badge',
