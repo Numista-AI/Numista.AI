@@ -43,13 +43,23 @@ class _FeedbackDrawerOverlayState extends State<FeedbackDrawerOverlay> {
   bool _bannerVisible = false;
   DateTime? _bannerShownAt;
 
+  // Created once in state — never in build() — to prevent per-rebuild leak.
+  late final FocusNode _keyboardFocusNode;
+
   @override
   void initState() {
     super.initState();
+    _keyboardFocusNode = FocusNode();
     FeedbackTriggerObserver.instance.registerCallbacks(
       onOpenDrawer: _openDrawer,
       onOpenFallback: _openFallback,
     );
+  }
+
+  @override
+  void dispose() {
+    _keyboardFocusNode.dispose();
+    super.dispose();
   }
 
   void _openDrawer(FeedbackTriggerEvent event, CheckResult checkResult) {
@@ -128,7 +138,7 @@ class _FeedbackDrawerOverlayState extends State<FeedbackDrawerOverlay> {
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
-      focusNode: FocusNode(),
+      focusNode: _keyboardFocusNode,
       onKeyEvent: (event) {
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.escape &&
@@ -137,6 +147,10 @@ class _FeedbackDrawerOverlayState extends State<FeedbackDrawerOverlay> {
         }
       },
       child: Stack(
+        // StackFit.expand is required when placed inside MaterialApp.builder:
+        // that context is unconstrained on web, and Positioned.fill children
+        // throw "RenderBox was not laid out" without an explicit tight size.
+        fit: StackFit.expand,
         children: [
           // ① App shell — always first (bottom of stack)
           widget.child,
@@ -158,6 +172,7 @@ class _FeedbackDrawerOverlayState extends State<FeedbackDrawerOverlay> {
                 ),
               ),
             ),
+
 
           // ③ Soft-dismiss banner — above barrier, below drawer
           if (_open && _bannerVisible)
