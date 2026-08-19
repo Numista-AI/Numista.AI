@@ -552,6 +552,8 @@ class _MorganFeedbackDrawerPanelState
             child: TextField(
               controller: _inputController,
               enabled: !busy,
+              maxLines: null, // expands vertically for long messages
+              keyboardType: TextInputType.multiline,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 hintText: busy ? 'MORGAN is thinking…' : 'Type your reply…',
