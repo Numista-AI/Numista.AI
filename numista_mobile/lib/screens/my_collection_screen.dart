@@ -32,6 +32,7 @@ import '../services/estate_report_service.dart';
 import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
+import '../widgets/header_stats_bar.dart';
 import '../constants.dart';
 
 // --- Field name constants -----------------------------------------------------
@@ -202,8 +203,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Color get _accent => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFC9A227) : const Color(0xFF8C7355);
 
   static const _green     = Color(0xFF28A745);
-  static const _greenBg   = Color(0xFFD4EED8);
-  static const _greenText = Color(0xFF155724);
   static const _red       = Color(0xFFDC3545);
 
   // --- Column definitions -------------------------------------------------------
@@ -815,7 +814,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             // Header & Segmented Tab Picker
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 800;
+                final isWide = constraints.maxWidth > 900;
                 final headerText = Text(
                   'My Collection',
                   style: TextStyle(
@@ -834,6 +833,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       headerText,
+                      if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: HeaderStatsBar(
+                            docs: _sorted(_filtered(_cachedCoinsDocs)),
+                            totalCoinsCount: _cachedCoinsDocs.length,
+                            spotPrices: _spotPrices,
+                            valuation: _valuation,
+                            onRunValuation: () => BatchValuationService.instance.start(),
+                            isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                      ],
                       picker,
                     ],
                   );
@@ -841,27 +854,42 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      headerText,
-                      SizedBox(height: 12),
-                      picker,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          headerText,
+                          picker,
+                        ],
+                      ),
+                      if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        HeaderStatsBar(
+                          docs: _sorted(_filtered(_cachedCoinsDocs)),
+                          totalCoinsCount: _cachedCoinsDocs.length,
+                          spotPrices: _spotPrices,
+                          valuation: _valuation,
+                          onRunValuation: () => BatchValuationService.instance.start(),
+                          isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
+                        ),
+                      ],
                     ],
                   );
                 }
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // Beta banner
+            // Beta banner (slimmed to 20px)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
               decoration: BoxDecoration(
                   color: _accent, borderRadius: BorderRadius.circular(4)),
-              child: Text('BETA TESTING', style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 10,
+              child: const Text('BETA TESTING', style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 9,
                   color: Colors.white, letterSpacing: 1.0)),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // Tab View Dispatcher
             _buildTabContent(email),
@@ -917,12 +945,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFiltersRow(allDocs),
-        SizedBox(height: 24),
-        Divider(color: _border),
-        SizedBox(height: 16),
-
-        _buildStatsRow(docs, advanced: advanced),
-        SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
         Row(
@@ -1080,11 +1103,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           } catch (_) {}
                         }
 
-                        final coinsCount = (stats['coin_count'] as num?)?.toInt() ??
-                            coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
-                        final suppliesCount = (stats['supply_count'] as num?)?.toInt() ??
-                            coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
-                        final coinsValue = (stats['est_value'] as num?)?.toDouble() ?? fallbackCoinsValue;
+                        final liveCoinsCount = coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
+                        final liveSuppliesCount = coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
+                        final coinsCount = coinsDocs.isNotEmpty ? liveCoinsCount : ((stats['coin_count'] as num?)?.toInt() ?? 0);
+                        final suppliesCount = coinsDocs.isNotEmpty ? liveSuppliesCount : ((stats['supply_count'] as num?)?.toInt() ?? 0);
+                        final coinsValue = fallbackCoinsValue > 0 ? fallbackCoinsValue : ((stats['est_value'] as num?)?.toDouble() ?? 0.0);
 
                         final currencyCount = currencyDocs.length;
                         final worldCount = worldDocs.length;
@@ -1752,13 +1775,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- Filters row --------------------------------------------------------
   Widget _buildFiltersRow(List<QueryDocumentSnapshot> allDocs) {
-    // Compute how many coins in the current view have a real AI estimated value
-    final estimated = allDocs.where((d) {
-      final v = (d.data() as Map<String, dynamic>)[_F.aiValue]?.toString() ?? '';
-      return v.isNotEmpty && v != 'Pending' && v != 'null';
-    }).length;
-    final total = allDocs.length;
-    final allEstimated = estimated == total && total > 0;
     return Row(children: [
       SizedBox(
         width: 140,
@@ -1824,10 +1840,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      SizedBox(width: 24),
-      Expanded(
-        child: _buildValuationBadge(allEstimated, estimated, total),
-      ),
       SizedBox(width: 12),
       // ── Vertex AI Reference Search button ─────────────────────────────
       if (widget.onNavigate != null)
@@ -1853,292 +1865,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ),
     ]);
-  }
-
-
-  // --- Stats row -----------------------------------------------------------
-  Widget _buildStatsRow(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
-    double valueTotal = 0;
-    double fvTotal = 0;
-    double meltTotal = 0;
-    for (final doc in docs) {
-      final m   = doc.data() as Map<String, dynamic>;
-      
-      final coinCpg = _parseNumber(m['cpgRetail']);
-      final coinBid = _parseNumber(m['greysheetBid']);
-      final gVal = advanced ? coinCpg : coinBid;
-      if (gVal > 0) {
-        valueTotal += gVal;
-      } else {
-        final aiRaw = m[_F.aiValue]?.toString() ?? '';
-        valueTotal += _parseAiValue(aiRaw);
-      }
-
-      // Melt Value -- live from spot prices when available, else from Firestore
-      final qtyRaw = _parseNumber(m['Quantity'] ?? m['qty']).toInt();
-      final qty = qtyRaw > 0 ? qtyRaw : 1;
-      final liveMelt = _spotPrices.isNotEmpty
-          ? (MeltValueService.compute(
-                metalContent: m[_F.metalContent]?.toString() ?? '',
-                denomination: m[_F.denomination]?.toString() ?? '',
-                spotPrices: _spotPrices,
-                programSeries: m[_F.programSeries]?.toString() ?? '',
-                themeSubject: m[_F.themeSubject]?.toString() ?? '',
-                qty: qty,
-                coinData: m,
-              ) ?? 0.0)
-          : () {
-              final meltRaw = m[_F.meltValue]?.toString() ?? '';
-              final match = RegExp(r'\d+\.?\d*').firstMatch(meltRaw.replaceAll(',', ''));
-              return match != null ? ((double.tryParse(match.group(0)!) ?? 0.0) * qty) : 0.0;
-            }();
-      meltTotal += liveMelt;
-
-      // Face Value sum
-      fvTotal += MeltValueService.parseFaceValue(m[_F.denomination]?.toString() ?? '', qty: qty);
-    }
-
-    final isOffline = _spotPrices.isEmpty;
-    final meltText = isOffline
-        ? '⚠️ \$${meltTotal.toStringAsFixed(2)} (offline)'
-        : '🥈 \$${meltTotal.toStringAsFixed(2)}';
-
-    return Row(children: [
-      _statChip('Showing', '${docs.length} coins'),
-      const SizedBox(width: 12),
-      _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}', isGold: true),
-      const SizedBox(width: 12),
-      _statChip('Melt Value', meltText, isGold: true),
-      const SizedBox(width: 12),
-      _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}', isGold: true),
-    ]);
-  }
-
-  // ── Valuation badge / progress banner ──────────────────────────────────────
-  Widget _buildValuationBadge(bool allEstimated, int estimated, int total) {
-    final v = _valuation;
-
-    // ─ All done ──────────────────────────────────────────────────────────────
-    if (allEstimated) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: _greenBg, borderRadius: BorderRadius.circular(4)),
-        child: Row(children: [
-          Icon(Icons.check_box, color: _green, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text('All estimated.',
-                style: TextStyle(color: _greenText, fontSize: 13)),
-          ),
-        ]),
-      );
-    }
-
-    // ─ Running ───────────────────────────────────────────────────────────────
-    if (v.isRunning) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: Color(0xFFECFDF5),
-            border: Border.all(color: Color(0xFF86EFAC)),
-            borderRadius: BorderRadius.circular(4)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              SizedBox(
-                width: 12, height: 12,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Color(0xFF0D9488)),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(v.label,
-                    style: TextStyle(
-                        fontSize: 12, color: _text,
-                        fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              GestureDetector(
-                onTap: BatchValuationService.instance.pause,
-                child: Text('\u25a0 Pause',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFF59E0B),
-                        fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: v.pct, minHeight: 4,
-                backgroundColor: Color(0xFFD1FAE5),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF0D9488)),
-              ),
-            ),
-            if (v.etaLabel.isNotEmpty) ...[
-              SizedBox(height: 4),
-              Text(v.etaLabel,
-                  style: TextStyle(
-                      fontSize: 10, color: Color(0xFF6B7280))),
-            ],
-          ],
-        ),
-      );
-    }
-
-    // ─ Paused with progress ──────────────────────────────────────────────────
-    if (v.isPaused && v.total > 0) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: Color(0xFFFFFBEB),
-            border: Border.all(color: Color(0xFFFDE68A)),
-            borderRadius: BorderRadius.circular(4)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.pause_circle_outline,
-                  size: 14, color: Color(0xFFF59E0B)),
-              SizedBox(width: 6),
-              Expanded(
-                child: Text('Paused — ${v.label}',
-                    style: TextStyle(
-                        fontSize: 12, color: _text,
-                        fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              GestureDetector(
-                onTap: BatchValuationService.instance.resume,
-                child: Text('\u25ba Resume',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF0D9488),
-                        fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            SizedBox(height: 5),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: v.pct, minHeight: 4,
-                backgroundColor: Color(0xFFFEF3C7),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFF59E0B)),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ─ Not started ───────────────────────────────────────────────────────────
-    return Container(
-      margin: EdgeInsets.only(top: 22),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-          color: Color(0xFFFFF3CD),
-          border: Border.all(color: Color(0xFFFDE68A)),
-          borderRadius: BorderRadius.circular(4)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Icon(Icons.info_outline,
-                size: 14, color: Color(0xFF856404)),
-            SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                total == 0
-                    ? 'No coins loaded.'
-                    : '$estimated of $total estimated.',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF664D03),
-                    fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ]),
-          SizedBox(height: 6),
-          Text(
-            'Our AI needs ~2 sec per coin to estimate value from year, grade & mint mark — no photos needed.',
-            style: TextStyle(fontSize: 10, color: Color(0xFF92400E), height: 1.4),
-          ),
-          SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: () => BatchValuationService.instance.start(),
-            icon: Icon(Icons.play_arrow_rounded, size: 14),
-            label: Text('Run AI Valuation'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0D9488),
-              foregroundColor: Colors.white,
-              minimumSize: Size(0, 30),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
-              padding: EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
-              textStyle: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statChip(String label, String value, {bool isGold = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final goldColor = const Color(0xFFC9A227);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      decoration: BoxDecoration(
-        color: _surface,
-        border: Border.merge(
-          Border(left: BorderSide(color: isGold ? goldColor : _border, width: 4)),
-          Border.all(color: _border.withAlpha(isDark ? 30 : 15)),
-        ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: isGold ? goldColor.withAlpha(15) : Colors.black.withAlpha(isDark ? 15 : 5),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-              color: _subtext,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: isGold ? goldColor : _text,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _toggleColumnVisibility(bool showOnlyPopulated) {

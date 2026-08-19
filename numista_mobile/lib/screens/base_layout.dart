@@ -36,9 +36,11 @@ import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
+import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
+import 'coin_detail_screen.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -135,6 +137,48 @@ class _BaseLayoutState extends State<BaseLayout> {
           .toList();
     } catch (_) {
       return [];
+    }
+  }
+
+  void _handleMorganSearchResultTap(String coinId) async {
+    if (coinId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Coin reference is missing.')),
+      );
+      return;
+    }
+
+    final email = AuthService.userEmail;
+    if (email.isEmpty) return;
+
+    try {
+      final docSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .doc(coinId)
+          .get();
+
+      if (!docSnap.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Coin not found in vault inventory.')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        final coinData = docSnap.data() as Map<String, dynamic>;
+        final coin = CoinModel.fromMap(coinData, docSnap.id);
+        CoinDetailScreen.show(context, coin: coin);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening coin: $e')),
+        );
+      }
     }
   }
 
@@ -459,10 +503,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             // Morgan guide panel — floats above screen when a guide is active
             MorganGuidePanel(
               onSearch: _onMorganSearch,
-              onSearchResultTap: (coinId) => setState(() {
-                _activeRoute     = 'My Collection';
-                _myCollectionTab = 'Coins';
-              }),
+              onSearchResultTap: _handleMorganSearchResultTap,
             ),
             BetaFeedbackWidget(
               currentRoute: _activeRoute,
@@ -845,10 +886,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                 // Morgan guide panel — floats above screen when a guide is active
                 MorganGuidePanel(
                   onSearch: _onMorganSearch,
-                  onSearchResultTap: (coinId) => setState(() {
-                    _activeRoute     = 'My Collection';
-                    _myCollectionTab = 'Coins';
-                  }),
+                  onSearchResultTap: _handleMorganSearchResultTap,
                 ),
                 BetaFeedbackWidget(
                   currentRoute: _activeRoute,
