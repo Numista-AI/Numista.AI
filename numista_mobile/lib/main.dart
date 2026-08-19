@@ -9,6 +9,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
+import 'widgets/morgan_feedback_drawer.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -241,6 +242,11 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               displayColor: const Color(0xFFE8EAF0),
             ),
           ),
+          // Wrap every route in the MORGAN feedback drawer overlay.
+          // FeedbackDrawerOverlay owns the Stack (appShell → blur barrier → drawer).
+          builder: (context, child) {
+            return FeedbackDrawerOverlay(child: child ?? const SizedBox.shrink());
+          },
       // --- Auth Gate ---------------------------------------------------------
       // StreamBuilder on authStateChanges: shows LoginScreen until Firebase
       // confirms a signed-in user, then drops into the main app.

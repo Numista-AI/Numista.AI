@@ -181,10 +181,48 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
             notes = raw_notes
 
     details = []
-    if cost:
-        details.append(f"<b>Cost:</b> {cost}")
-    elif est_val:
-        details.append(f"<b>Est Val:</b> {est_val}")
+    # Qty
+    qty_val = _get_val(itm, "Quantity", "qty", "quantity")
+    try:
+        qty = int(qty_val) if (qty_val and int(qty_val) > 0) else 1
+    except (ValueError, TypeError):
+        qty = 1
+    
+    # Cost
+    cost_val = _get_val(itm, "purchaseCost", "purchase_cost", "Purchase Cost", "cost_basis", "price_paid")
+    if cost_val is None or str(cost_val).strip() in ("", "null", "UKN", "unknown"):
+        cost_str = "UKN"
+    else:
+        clean_c = str(cost_val).replace("$", "").replace(",", "").strip()
+        try:
+            val_c = float(clean_c)
+            cost_str = f"${val_c:,.2f}"
+        except ValueError:
+            cost_str = str(cost_val)
+    details.append(f"<b>Qty:</b> {qty} | <b>Cost:</b> {cost_str}")
+
+    # Wholesale (Greysheet Bid)
+    bid_raw = _get_val(itm, "greysheetBid", "greysheet_bid")
+    if bid_raw is not None and str(bid_raw).strip() not in ("", "null"):
+        try:
+            bid_num = float(str(bid_raw).replace("$", "").replace(",", "").strip())
+            details.append(f"<b>Wholesale (Bid):</b> ${bid_num:,.2f}")
+        except ValueError:
+            details.append("<b>Wholesale (Bid):</b> —")
+    else:
+        details.append("<b>Wholesale (Bid):</b> —")
+
+    # Retail (CPG Market)
+    cpg_raw = _get_val(itm, "cpgRetail", "cpg_retail")
+    if cpg_raw is not None and str(cpg_raw).strip() not in ("", "null"):
+        try:
+            cpg_num = float(str(cpg_raw).replace("$", "").replace(",", "").strip())
+            details.append(f"<b>Retail (CPG):</b> ${cpg_num:,.2f}")
+        except ValueError:
+            details.append("<b>Retail (CPG):</b> —")
+    else:
+        details.append("<b>Retail (CPG):</b> —")
+
     if p_date:
         details.append(f"<b>Acquired:</b> {p_date}")
     if ret:
@@ -344,12 +382,12 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         Paragraph("<b>Financial &amp; Invoice Details</b>", body_bold)
     ]]
 
-    import re
-
     total_cost = 0.0
-    total_est_val = 0.0
+    total_wholesale_bid = 0.0
+    total_retail_cpg = 0.0
+    bid_count = 0
+    cpg_count = 0
     has_cost = False
-    has_est_val = False
 
     for itm in items:
         name = format_item_title(itm)
@@ -357,23 +395,39 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         grade_cert = format_grade_cert(itm)
         fin_details = format_financial_details(itm)
 
+        qty_val = _get_val(itm, "Quantity", "qty", "quantity")
+        try:
+            qty = int(qty_val) if (qty_val and int(qty_val) > 0) else 1
+        except (ValueError, TypeError):
+            qty = 1
+
         cost_str = _get_val(itm, "purchaseCost", "purchase_cost", "Purchase Cost", "cost_basis", "price_paid")
-        if cost_str:
-            clean_num = cost_str.replace("$", "").replace(",", "").strip()
+        if cost_str and str(cost_str).strip() not in ("", "null", "UKN", "unknown"):
+            clean_num = str(cost_str).replace("$", "").replace(",", "").strip()
             try:
                 val = float(clean_num)
-                total_cost += val
+                total_cost += val * qty
                 has_cost = True
             except ValueError:
                 pass
 
-        est_str = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
-        if est_str:
-            nums = [float(n.replace(',', '')) for n in re.findall(r'[\d,]+(?:\.\d+)?', est_str) if n]
-            if nums:
-                avg_num = sum(nums) / len(nums)
-                total_est_val += avg_num
-                has_est_val = True
+        bid_raw = _get_val(itm, "greysheetBid", "greysheet_bid")
+        if bid_raw is not None and str(bid_raw).strip() not in ("", "null"):
+            try:
+                b_val = float(str(bid_raw).replace("$", "").replace(",", "").strip())
+                total_wholesale_bid += b_val * qty
+                bid_count += 1
+            except ValueError:
+                pass
+
+        cpg_raw = _get_val(itm, "cpgRetail", "cpg_retail")
+        if cpg_raw is not None and str(cpg_raw).strip() not in ("", "null"):
+            try:
+                c_val = float(str(cpg_raw).replace("$", "").replace(",", "").strip())
+                total_retail_cpg += c_val * qty
+                cpg_count += 1
+            except ValueError:
+                pass
 
         item_rows.append([
             Paragraph(name, body_normal),
@@ -382,12 +436,18 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             Paragraph(fin_details, body_normal)
         ])
 
-    if has_est_val and total_est_val > 0:
+    if total_wholesale_bid > 0 or total_retail_cpg > 0:
         item_rows.append([
-            Paragraph("<b>ESTIMATED PORTFOLIO MARKET VALUE</b>", body_bold),
+            Paragraph("<b>TOTAL WHOLESALE LIQUIDATION (BID)</b>", body_bold),
+            Paragraph(f"{bid_count}/{len(items)} items with Bid", body_normal),
             Paragraph("", body_normal),
+            Paragraph(f"<font color='#0284C7'><b>${total_wholesale_bid:,.2f}</b></font>", body_bold)
+        ])
+        item_rows.append([
+            Paragraph("<b>TOTAL RETAIL REPLACEMENT (CPG)</b>", body_bold),
+            Paragraph(f"{cpg_count}/{len(items)} items with CPG", body_normal),
             Paragraph("", body_normal),
-            Paragraph(f"<font color='#0284C7'><b>${total_est_val:,.2f}</b></font>", body_bold)
+            Paragraph(f"<font color='#16A34A'><b>${total_retail_cpg:,.2f}</b></font>", body_bold)
         ])
 
     if has_cost and total_cost > 0:
@@ -438,7 +498,17 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
         "the recipient accepts full legal custody and ownership of the item(s) listed herein."
     )
     story.append(Paragraph(affirmation_text, body_normal))
-    story.append(Spacer(1, 24))
+    story.append(Spacer(1, 10))
+
+    # Valuation & CDN Greysheet Attribution Disclaimer
+    val_disclaimer_text = (
+        "<font size=7 color='#64748B'><b>VALUATION NOTICE &amp; DISCLAIMER:</b> Numismatic value estimates powered by "
+        "CDN Greysheet® Wholesale Bid &amp; CPG® Retail Price Guides. Bullion values calculated using live spot market feeds. "
+        "CDN does not endorse this collection. This document is generated for lateral transfer and inventory documentation "
+        "purposes only; it is not a certified USPAP appraisal.</font>"
+    )
+    story.append(Paragraph(val_disclaimer_text, body_normal))
+    story.append(Spacer(1, 14))
 
     # Signature Lines
     sig_data = [

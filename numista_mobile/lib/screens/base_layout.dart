@@ -36,9 +36,11 @@ import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
+import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
+import 'coin_detail_screen.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -138,6 +140,48 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
   }
 
+  void _handleMorganSearchResultTap(String coinId) async {
+    if (coinId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Coin reference is missing.')),
+      );
+      return;
+    }
+
+    final email = AuthService.userEmail;
+    if (email.isEmpty) return;
+
+    try {
+      final docSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(email)
+          .collection('coins')
+          .doc(coinId)
+          .get();
+
+      if (!docSnap.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Coin not found in vault inventory.')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        final coinData = docSnap.data() as Map<String, dynamic>;
+        final coin = CoinModel.fromMap(coinData, docSnap.id);
+        CoinDetailScreen.show(context, coin: coin);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening coin: $e')),
+        );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -208,6 +252,18 @@ class _BaseLayoutState extends State<BaseLayout> {
     await prefs.setBool('desktop_sidebar_collapsed', nextState);
   }
 
+  /// Child tab changes must never setState while BaseLayout is building.
+  /// didUpdateWidget on MyCollectionScreen can fire mid-build when
+  /// initialTab changes; deferring keeps the sidebar in sync without
+  /// "setState() or markNeedsBuild() called during build".
+  void _onMyCollectionTabChanged(String tab) {
+    if (_myCollectionTab == tab) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _myCollectionTab == tab) return;
+      setState(() => _myCollectionTab = tab);
+    });
+  }
+
   void _navigateTo(String route) {
     if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
       setState(() {
@@ -273,7 +329,7 @@ class _BaseLayoutState extends State<BaseLayout> {
               });
             }
           },
-          onTabChanged: (tab) => setState(() => _myCollectionTab = tab),
+          onTabChanged: _onMyCollectionTabChanged,
         );
       case 'Microscope Scanner':
         return const MicroscopeScanScreen();
@@ -459,15 +515,11 @@ class _BaseLayoutState extends State<BaseLayout> {
             // Morgan guide panel — floats above screen when a guide is active
             MorganGuidePanel(
               onSearch: _onMorganSearch,
-              onSearchResultTap: (coinId) => setState(() {
-                _activeRoute     = 'My Collection';
-                _myCollectionTab = 'Coins';
-              }),
+              onSearchResultTap: _handleMorganSearchResultTap,
             ),
             BetaFeedbackWidget(
               currentRoute: _activeRoute,
               pageTitle: _activeRoute,
-              repaintKey: _repaintKey,
             ),
           ],
         ),
@@ -845,10 +897,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                 // Morgan guide panel — floats above screen when a guide is active
                 MorganGuidePanel(
                   onSearch: _onMorganSearch,
-                  onSearchResultTap: (coinId) => setState(() {
-                    _activeRoute     = 'My Collection';
-                    _myCollectionTab = 'Coins';
-                  }),
+                  onSearchResultTap: _handleMorganSearchResultTap,
                 ),
                 BetaFeedbackWidget(
                   currentRoute: _activeRoute,

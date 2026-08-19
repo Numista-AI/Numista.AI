@@ -171,7 +171,7 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
   void _showDetail(BuildContext context, Map<String, dynamic> note) {
     showDialog(
       context: context,
-      builder: (ctx) => _NoteDetailDialog(
+      builder: (ctx) => NoteDetailDialog(
         note: note,
         kBg:      _kBg,
         kSurface: _kSurface,
@@ -546,14 +546,15 @@ class _NoteCard extends StatelessWidget {
 }
 
 // ─── Note detail dialog ───────────────────────────────────────────────────────
-class _NoteDetailDialog extends StatelessWidget {
+class NoteDetailDialog extends StatelessWidget {
   final Map<String, dynamic> note;
   final String typeLabel;
   final Color  typeColor;
   final String denomination;
   final Color kBg, kSurface, kBorder, kText, kSubtext, kAccent, kGreen;
 
-  const _NoteDetailDialog({
+  const NoteDetailDialog({
+    super.key,
     required this.note,
     required this.typeLabel,
     required this.typeColor,

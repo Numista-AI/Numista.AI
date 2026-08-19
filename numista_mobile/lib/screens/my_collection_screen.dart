@@ -32,6 +32,7 @@ import '../services/estate_report_service.dart';
 import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
+import '../widgets/header_stats_bar.dart';
 import '../constants.dart';
 
 // --- Field name constants -----------------------------------------------------
@@ -202,8 +203,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Color get _accent => Theme.of(context).brightness == Brightness.dark ? const Color(0xFFC9A227) : const Color(0xFF8C7355);
 
   static const _green     = Color(0xFF28A745);
-  static const _greenBg   = Color(0xFFD4EED8);
-  static const _greenText = Color(0xFF155724);
   static const _red       = Color(0xFFDC3545);
 
   // --- Column definitions -------------------------------------------------------
@@ -352,37 +351,37 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   void _loadDefaultTab() async {
     final prefs = await SharedPreferences.getInstance();
     final savedTab = prefs.getString('my_collection_default_tab');
-    if (mounted) {
-      setState(() {
-        _currentTab = widget.initialTab ?? savedTab ?? 'All';
-      });
-      if (widget.onTabChanged != null) {
-        widget.onTabChanged!(_currentTab);
-      }
+    if (!mounted) return;
+    final tab = widget.initialTab ?? savedTab ?? 'All';
+    if (tab != _currentTab) {
+      setState(() => _currentTab = tab);
     }
+    // Parent may be mid-build (e.g. its own prefs load). Notify after the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTabChanged?.call(tab);
+    });
   }
 
   void _onTabChanged(String tab) async {
+    if (tab == _currentTab) return;
     setState(() {
       _currentTab = tab;
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('my_collection_default_tab', tab);
-    if (widget.onTabChanged != null) {
-      widget.onTabChanged!(tab);
-    }
+    widget.onTabChanged?.call(tab);
   }
 
   @override
   void didUpdateWidget(MyCollectionScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialTab != null && widget.initialTab != oldWidget.initialTab) {
-      setState(() {
-        _currentTab = widget.initialTab!;
-      });
-      if (widget.onTabChanged != null) {
-        widget.onTabChanged!(_currentTab);
-      }
+    // Parent already owns initialTab. Sync locally for the upcoming build.
+    // Do not setState (this runs during the parent's build) and do not
+    // echo onTabChanged back — that was the web crash loop.
+    if (widget.initialTab != null &&
+        widget.initialTab != oldWidget.initialTab &&
+        widget.initialTab != _currentTab) {
+      _currentTab = widget.initialTab!;
     }
   }
 
@@ -815,7 +814,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             // Header & Segmented Tab Picker
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 800;
+                final isWide = constraints.maxWidth > 900;
                 final headerText = Text(
                   'My Collection',
                   style: TextStyle(
@@ -834,6 +833,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       headerText,
+                      if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: HeaderStatsBar(
+                            docs: _sorted(_filtered(_cachedCoinsDocs)),
+                            totalCoinsCount: _cachedCoinsDocs.length,
+                            spotPrices: _spotPrices,
+                            valuation: _valuation,
+                            onRunValuation: () => BatchValuationService.instance.start(),
+                            isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                      ],
                       picker,
                     ],
                   );
@@ -841,27 +854,42 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      headerText,
-                      SizedBox(height: 12),
-                      picker,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          headerText,
+                          picker,
+                        ],
+                      ),
+                      if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        HeaderStatsBar(
+                          docs: _sorted(_filtered(_cachedCoinsDocs)),
+                          totalCoinsCount: _cachedCoinsDocs.length,
+                          spotPrices: _spotPrices,
+                          valuation: _valuation,
+                          onRunValuation: () => BatchValuationService.instance.start(),
+                          isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
+                        ),
+                      ],
                     ],
                   );
                 }
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // Beta banner
+            // Beta banner (slimmed to 20px)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
               decoration: BoxDecoration(
                   color: _accent, borderRadius: BorderRadius.circular(4)),
-              child: Text('BETA TESTING', style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 10,
+              child: const Text('BETA TESTING', style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 9,
                   color: Colors.white, letterSpacing: 1.0)),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // Tab View Dispatcher
             _buildTabContent(email),
@@ -917,12 +945,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFiltersRow(allDocs),
-        SizedBox(height: 24),
-        Divider(color: _border),
-        SizedBox(height: 16),
-
-        _buildStatsRow(docs, advanced: advanced),
-        SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
         Row(
@@ -1080,11 +1103,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           } catch (_) {}
                         }
 
-                        final coinsCount = (stats['coin_count'] as num?)?.toInt() ??
-                            coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
-                        final suppliesCount = (stats['supply_count'] as num?)?.toInt() ??
-                            coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
-                        final coinsValue = (stats['est_value'] as num?)?.toDouble() ?? fallbackCoinsValue;
+                        final liveCoinsCount = coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
+                        final liveSuppliesCount = coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
+                        final coinsCount = coinsDocs.isNotEmpty ? liveCoinsCount : ((stats['coin_count'] as num?)?.toInt() ?? 0);
+                        final suppliesCount = coinsDocs.isNotEmpty ? liveSuppliesCount : ((stats['supply_count'] as num?)?.toInt() ?? 0);
+                        final coinsValue = fallbackCoinsValue > 0 ? fallbackCoinsValue : ((stats['est_value'] as num?)?.toDouble() ?? 0.0);
 
                         final currencyCount = currencyDocs.length;
                         final worldCount = worldDocs.length;
@@ -1152,10 +1175,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             country: data['Country']?.toString() ?? 'US',
                             dateAdded: addedDate,
                             value: _parseNumber(data['Cost']),
+                            // Carry full doc data for cache-first tap navigation.
+                            rawData: {'id': doc.id, ...data},
                           );
                         }).toList();
 
-                        final worldItems = worldDocs.map((item) {
+                        final worldItemsList = worldDocs.map((item) {
                           return UnifiedCollectionItem(
                             title: item.name.isNotEmpty ? item.name : 'World Item',
                             category: 'World & Specialty',
@@ -1163,11 +1188,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             country: item.country,
                             dateAdded: item.createdAt,
                             value: item.estimatedValue ?? 0.0,
+                            // Carry the WorldItem for cache-first tap navigation.
+                            worldItem: item,
                           );
                         }).toList();
 
                         // Combine and sort by date added, newest first
-                        final combinedItems = [...coinItems, ...currencyItems, ...worldItems];
+                        final combinedItems = [...coinItems, ...currencyItems, ...worldItemsList];
                         combinedItems.sort((a, b) {
                           if (a.dateAdded == null && b.dateAdded == null) return 0;
                           if (a.dateAdded == null) return 1;
@@ -1189,7 +1216,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 maxCrossAxisExtent: 280,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: 2.0,
+                                // Fixed height avoids yellow/black overflow
+                                // stripes when 2-col cells get short via aspect ratio.
+                                mainAxisExtent: 132,
                               ),
                               children: [
                                 _buildDashboardCard(
@@ -1260,6 +1289,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             itemCount: recentAdditions.length,
                             itemBuilder: (context, index) {
                               final item = recentAdditions[index];
+                              final isCurrency  = item.category == 'Currency';
+                              final isWorldItem = item.category == 'World & Specialty';
+                              final isTappable  = isCurrency || isWorldItem;
+
                               return Card(
                                 color: _surface,
                                 margin: EdgeInsets.symmetric(vertical: 4),
@@ -1267,16 +1300,38 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                   side: BorderSide(color: _border),
                                 ),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: _bg,
-                                    child: Text(item.emoji, style: TextStyle(fontSize: 18)),
-                                  ),
-                                  title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
-                                  subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
-                                  trailing: Text(
-                                    '\$${item.value.toStringAsFixed(2)}',
-                                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: isTappable
+                                      ? () {
+                                          if (isCurrency) {
+                                            _openCurrencyDetail(context, item);
+                                          } else {
+                                            _openWorldItemDetail(context, item);
+                                          }
+                                        }
+                                      : null,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: _bg,
+                                      child: Text(item.emoji, style: TextStyle(fontSize: 18)),
+                                    ),
+                                    title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
+                                    subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '\$${item.value.toStringAsFixed(2)}',
+                                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                        if (isTappable) ...[
+                                          SizedBox(width: 4),
+                                          Icon(Icons.chevron_right_rounded, color: _subtext, size: 18),
+                                        ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -1311,23 +1366,40 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: color, size: 24),
-                Text(subtitle, style: TextStyle(color: _subtext, fontSize: 11)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    subtitle,
+                    style: TextStyle(color: _subtext, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 10),
-            Text(
-              value,
-              style: TextStyle(
-                color: _text,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: _text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             SizedBox(height: 4),
-            Text(description, style: TextStyle(color: _subtext, fontSize: 10)),
+            Text(
+              description,
+              style: TextStyle(color: _subtext, fontSize: 10),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -1374,10 +1446,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Icon(Icons.check_circle_outline, color: _green, size: 24),
-                  Text('U.S. CURRENCY COMPLETION', style: TextStyle(color: _subtext, fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'U.S. CURRENCY COMPLETION',
+                      style: TextStyle(color: _subtext, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1394,17 +1474,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '($owned / $total varieties)',
-                    style: TextStyle(
-                      color: _subtext,
-                      fontSize: 10,
+                  Expanded(
+                    child: Text(
+                      '($owned / $total varieties)',
+                      style: TextStyle(
+                        color: _subtext,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text('Collection coverage across all legal tender', style: TextStyle(color: _subtext, fontSize: 10)),
+              Text(
+                'Collection coverage across all legal tender',
+                style: TextStyle(color: _subtext, fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -1690,6 +1779,91 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
+  // ── All-view tap-navigation helpers ──────────────────────────────────────────
+
+  /// Opens the currency/banknote detail dialog using data already cached in
+  /// [item.rawData].  No Firestore re-fetch — pure cache-first.
+  void _openCurrencyDetail(BuildContext context, UnifiedCollectionItem item) {
+    final data = item.rawData;
+    if (data == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item detail not available — please switch to the Currency tab.')),
+      );
+      return;
+    }
+
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+    final kBg      = isDark ? const Color(0xFF0E1117) : const Color(0xFFF1F5F9);
+    final kSurface = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final kBorder  = isDark ? const Color(0xFF2D3143) : const Color(0xFFE2E8F0);
+    final kText    = isDark ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
+    final kSubtext = isDark ? const Color(0xFF8B92B4) : const Color(0xFF475569);
+
+    String labelForType(String? raw) {
+      switch ((raw ?? '').toLowerCase()) {
+        case 'federal_reserve_note': return 'Federal Reserve Note';
+        case 'silver_certificate':  return 'Silver Certificate';
+        case 'gold_certificate':    return 'Gold Certificate';
+        case 'legal_tender':        return 'Legal Tender';
+        case 'national_bank_note':  return 'National Bank Note';
+        default:                    return 'Currency';
+      }
+    }
+
+    Color colorForType(String? raw) {
+      switch ((raw ?? '').toLowerCase()) {
+        case 'federal_reserve_note': return const Color(0xFF059669);
+        case 'silver_certificate':  return const Color(0xFF3B82F6);
+        case 'gold_certificate':    return const Color(0xFFFFD700);
+        case 'legal_tender':        return const Color(0xFFEF4444);
+        case 'national_bank_note':  return const Color(0xFF8B5CF6);
+        default:                    return const Color(0xFF6366F1);
+      }
+    }
+
+    String extractDenomination(Map<String, dynamic> note) {
+      final denom = (note['Denomination'] ?? '').toString().trim();
+      if (denom.isNotEmpty && denom != 'null') return denom;
+      final desc = (note['Description'] ?? '').toString();
+      final m = RegExp(r'^\$(\d+(?:\.\d+)?)').firstMatch(desc);
+      return m != null ? '\$${m.group(1)}' : '?';
+    }
+
+    final typeRaw = data['currency_type']?.toString();
+    showDialog(
+      context: context,
+      builder: (ctx) => NoteDetailDialog(
+        note: data,
+        kBg:      kBg,
+        kSurface: kSurface,
+        kBorder:  kBorder,
+        kText:    kText,
+        kSubtext: kSubtext,
+        kAccent:  const Color(0xFF6366F1),
+        kGreen:   const Color(0xFF10B981),
+        typeLabel:    labelForType(typeRaw),
+        typeColor:    colorForType(typeRaw),
+        denomination: extractDenomination(data),
+      ),
+    );
+  }
+
+  /// Opens the World & Specialty detail dialog using [item.worldItem].
+  /// No Firestore re-fetch — pure cache-first.
+  void _openWorldItemDetail(BuildContext context, UnifiedCollectionItem item) {
+    final wi = item.worldItem;
+    if (wi == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item detail not available — please switch to the World & Specialty tab.')),
+      );
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => _WorldItemDetailDialog(item: wi),
+    );
+  }
+
   Widget _buildErrorState({VoidCallback? onRetry}) {
     return Center(
       child: Padding(
@@ -1752,13 +1926,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- Filters row --------------------------------------------------------
   Widget _buildFiltersRow(List<QueryDocumentSnapshot> allDocs) {
-    // Compute how many coins in the current view have a real AI estimated value
-    final estimated = allDocs.where((d) {
-      final v = (d.data() as Map<String, dynamic>)[_F.aiValue]?.toString() ?? '';
-      return v.isNotEmpty && v != 'Pending' && v != 'null';
-    }).length;
-    final total = allDocs.length;
-    final allEstimated = estimated == total && total > 0;
     return Row(children: [
       SizedBox(
         width: 140,
@@ -1824,10 +1991,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      SizedBox(width: 24),
-      Expanded(
-        child: _buildValuationBadge(allEstimated, estimated, total),
-      ),
       SizedBox(width: 12),
       // ── Vertex AI Reference Search button ─────────────────────────────
       if (widget.onNavigate != null)
@@ -1853,292 +2016,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ),
     ]);
-  }
-
-
-  // --- Stats row -----------------------------------------------------------
-  Widget _buildStatsRow(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
-    double valueTotal = 0;
-    double fvTotal = 0;
-    double meltTotal = 0;
-    for (final doc in docs) {
-      final m   = doc.data() as Map<String, dynamic>;
-      
-      final coinCpg = _parseNumber(m['cpgRetail']);
-      final coinBid = _parseNumber(m['greysheetBid']);
-      final gVal = advanced ? coinCpg : coinBid;
-      if (gVal > 0) {
-        valueTotal += gVal;
-      } else {
-        final aiRaw = m[_F.aiValue]?.toString() ?? '';
-        valueTotal += _parseAiValue(aiRaw);
-      }
-
-      // Melt Value -- live from spot prices when available, else from Firestore
-      final qtyRaw = _parseNumber(m['Quantity'] ?? m['qty']).toInt();
-      final qty = qtyRaw > 0 ? qtyRaw : 1;
-      final liveMelt = _spotPrices.isNotEmpty
-          ? (MeltValueService.compute(
-                metalContent: m[_F.metalContent]?.toString() ?? '',
-                denomination: m[_F.denomination]?.toString() ?? '',
-                spotPrices: _spotPrices,
-                programSeries: m[_F.programSeries]?.toString() ?? '',
-                themeSubject: m[_F.themeSubject]?.toString() ?? '',
-                qty: qty,
-                coinData: m,
-              ) ?? 0.0)
-          : () {
-              final meltRaw = m[_F.meltValue]?.toString() ?? '';
-              final match = RegExp(r'\d+\.?\d*').firstMatch(meltRaw.replaceAll(',', ''));
-              return match != null ? ((double.tryParse(match.group(0)!) ?? 0.0) * qty) : 0.0;
-            }();
-      meltTotal += liveMelt;
-
-      // Face Value sum
-      fvTotal += MeltValueService.parseFaceValue(m[_F.denomination]?.toString() ?? '', qty: qty);
-    }
-
-    final isOffline = _spotPrices.isEmpty;
-    final meltText = isOffline
-        ? '⚠️ \$${meltTotal.toStringAsFixed(2)} (offline)'
-        : '🥈 \$${meltTotal.toStringAsFixed(2)}';
-
-    return Row(children: [
-      _statChip('Showing', '${docs.length} coins'),
-      const SizedBox(width: 12),
-      _statChip('Face Value', '\$${fvTotal.toStringAsFixed(2)}', isGold: true),
-      const SizedBox(width: 12),
-      _statChip('Melt Value', meltText, isGold: true),
-      const SizedBox(width: 12),
-      _statChip('Est. Value', '\$${valueTotal.toStringAsFixed(2)}', isGold: true),
-    ]);
-  }
-
-  // ── Valuation badge / progress banner ──────────────────────────────────────
-  Widget _buildValuationBadge(bool allEstimated, int estimated, int total) {
-    final v = _valuation;
-
-    // ─ All done ──────────────────────────────────────────────────────────────
-    if (allEstimated) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: _greenBg, borderRadius: BorderRadius.circular(4)),
-        child: Row(children: [
-          Icon(Icons.check_box, color: _green, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text('All estimated.',
-                style: TextStyle(color: _greenText, fontSize: 13)),
-          ),
-        ]),
-      );
-    }
-
-    // ─ Running ───────────────────────────────────────────────────────────────
-    if (v.isRunning) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: Color(0xFFECFDF5),
-            border: Border.all(color: Color(0xFF86EFAC)),
-            borderRadius: BorderRadius.circular(4)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              SizedBox(
-                width: 12, height: 12,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Color(0xFF0D9488)),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(v.label,
-                    style: TextStyle(
-                        fontSize: 12, color: _text,
-                        fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              GestureDetector(
-                onTap: BatchValuationService.instance.pause,
-                child: Text('\u25a0 Pause',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFF59E0B),
-                        fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: v.pct, minHeight: 4,
-                backgroundColor: Color(0xFFD1FAE5),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF0D9488)),
-              ),
-            ),
-            if (v.etaLabel.isNotEmpty) ...[
-              SizedBox(height: 4),
-              Text(v.etaLabel,
-                  style: TextStyle(
-                      fontSize: 10, color: Color(0xFF6B7280))),
-            ],
-          ],
-        ),
-      );
-    }
-
-    // ─ Paused with progress ──────────────────────────────────────────────────
-    if (v.isPaused && v.total > 0) {
-      return Container(
-        margin: EdgeInsets.only(top: 22),
-        padding: EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: Color(0xFFFFFBEB),
-            border: Border.all(color: Color(0xFFFDE68A)),
-            borderRadius: BorderRadius.circular(4)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.pause_circle_outline,
-                  size: 14, color: Color(0xFFF59E0B)),
-              SizedBox(width: 6),
-              Expanded(
-                child: Text('Paused — ${v.label}',
-                    style: TextStyle(
-                        fontSize: 12, color: _text,
-                        fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              GestureDetector(
-                onTap: BatchValuationService.instance.resume,
-                child: Text('\u25ba Resume',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF0D9488),
-                        fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            SizedBox(height: 5),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: v.pct, minHeight: 4,
-                backgroundColor: Color(0xFFFEF3C7),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFF59E0B)),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ─ Not started ───────────────────────────────────────────────────────────
-    return Container(
-      margin: EdgeInsets.only(top: 22),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-          color: Color(0xFFFFF3CD),
-          border: Border.all(color: Color(0xFFFDE68A)),
-          borderRadius: BorderRadius.circular(4)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Icon(Icons.info_outline,
-                size: 14, color: Color(0xFF856404)),
-            SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                total == 0
-                    ? 'No coins loaded.'
-                    : '$estimated of $total estimated.',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF664D03),
-                    fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ]),
-          SizedBox(height: 6),
-          Text(
-            'Our AI needs ~2 sec per coin to estimate value from year, grade & mint mark — no photos needed.',
-            style: TextStyle(fontSize: 10, color: Color(0xFF92400E), height: 1.4),
-          ),
-          SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: () => BatchValuationService.instance.start(),
-            icon: Icon(Icons.play_arrow_rounded, size: 14),
-            label: Text('Run AI Valuation'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0D9488),
-              foregroundColor: Colors.white,
-              minimumSize: Size(0, 30),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
-              padding: EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
-              textStyle: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statChip(String label, String value, {bool isGold = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final goldColor = const Color(0xFFC9A227);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      decoration: BoxDecoration(
-        color: _surface,
-        border: Border.merge(
-          Border(left: BorderSide(color: isGold ? goldColor : _border, width: 4)),
-          Border.all(color: _border.withAlpha(isDark ? 30 : 15)),
-        ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: isGold ? goldColor.withAlpha(15) : Colors.black.withAlpha(isDark ? 15 : 5),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-              color: _subtext,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: isGold ? goldColor : _text,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _toggleColumnVisibility(bool showOnlyPopulated) {
@@ -4799,6 +4676,14 @@ class UnifiedCollectionItem {
   final DateTime? dateAdded;
   final double value;
 
+  /// Full Firestore document data — populated for Currency items so the
+  /// All-view tap handler can open NoteDetailDialog without re-fetching.
+  final Map<String, dynamic>? rawData;
+
+  /// The saved WorldItem object — populated for World & Specialty items so the
+  /// All-view tap handler can open _WorldItemDetailDialog without re-fetching.
+  final WorldItem? worldItem;
+
   UnifiedCollectionItem({
     required this.title,
     required this.category,
@@ -4806,7 +4691,226 @@ class UnifiedCollectionItem {
     required this.country,
     this.dateAdded,
     required this.value,
+    this.rawData,
+    this.worldItem,
   });
+}
+
+// ── World & Specialty Item Detail Dialog ─────────────────────────────────────
+/// Shown when the user taps a World & Specialty card in the All-view recent
+/// additions feed. Data comes from the [WorldItem] already cached in the live
+/// stream — no extra Firestore read required.
+class _WorldItemDetailDialog extends StatelessWidget {
+  final WorldItem item;
+  const _WorldItemDetailDialog({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+    final kBg      = isDark ? const Color(0xFF0E1117) : const Color(0xFFF1F5F9);
+    final kSurface = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final kBorder  = isDark ? const Color(0xFF2D3143) : const Color(0xFFE2E8F0);
+    final kText    = isDark ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
+    final kSubtext = isDark ? const Color(0xFF8B92B4) : const Color(0xFF475569);
+    const kAccent  = Color(0xFF4C8CDA);
+
+    Widget imageBox(String? url, String label) {
+      return Expanded(
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: kBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: kBorder),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: url != null && url.isNotEmpty
+              ? Image.network(url, fit: BoxFit.cover,
+                  errorBuilder: (ctx, err, st) => Center(
+                    child: Text(item.itemCategory.emoji, style: const TextStyle(fontSize: 32)),
+                  ))
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(item.itemCategory.emoji, style: const TextStyle(fontSize: 32)),
+                      const SizedBox(height: 4),
+                      Text(label, style: TextStyle(color: kSubtext, fontSize: 10)),
+                    ],
+                  ),
+                ),
+        ),
+      );
+    }
+
+    Widget chip(String label, String value) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: kSubtext, fontSize: 9, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(color: kText, fontSize: 12, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(20),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        decoration: BoxDecoration(
+          color: kBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kAccent.withAlpha(30),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: kAccent.withAlpha(80)),
+                    ),
+                    child: Text(
+                      item.itemCategory.displayLabel,
+                      style: const TextStyle(color: kAccent, fontSize: 10, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Icon(Icons.close, color: kSubtext, size: 20),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Body ────────────────────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name.isNotEmpty ? item.name : 'World Item',
+                      style: TextStyle(color: kText, fontSize: 16, fontWeight: FontWeight.w700, height: 1.3),
+                    ),
+                    if (item.era.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(item.era, style: TextStyle(color: kSubtext, fontSize: 13)),
+                    ],
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        imageBox(item.imageObverse, 'Obverse'),
+                        const SizedBox(width: 12),
+                        imageBox(item.imageReverse, 'Reverse'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Text('Details', style: TextStyle(color: kSubtext, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (item.country.isNotEmpty)      chip('Country',      item.country),
+                        if (item.denomination.isNotEmpty) chip('Denomination', item.denomination),
+                        if (item.material.isNotEmpty)     chip('Material',     item.material),
+                        if (item.condition.isNotEmpty)    chip('Condition',    item.condition),
+                        if (item.purchasePrice != null)
+                          chip('Cost', '\$${item.purchasePrice!.toStringAsFixed(2)}'),
+                        if (item.estimatedValue != null)
+                          chip('Est. Value', '\$${item.estimatedValue!.toStringAsFixed(2)}'),
+                        if (item.storageLocation.isNotEmpty)
+                          chip('Location', item.storageLocation),
+                      ],
+                    ),
+
+                    if (item.aiIdentification.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text('AI Identification', style: TextStyle(color: kSubtext, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: kBorder),
+                        ),
+                        child: Text(item.aiIdentification, style: TextStyle(color: kText, fontSize: 13, height: 1.4)),
+                      ),
+                    ],
+
+                    if (item.notes.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text('Notes', style: TextStyle(color: kSubtext, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: kBorder),
+                        ),
+                        child: Text(item.notes, style: TextStyle(color: kText, fontSize: 13, height: 1.4)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Footer ──────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: kAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: kBorder),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Interactive AI Collection Report Modal ─────────────────────────────────────

@@ -29,6 +29,11 @@ service cloud.firestore {
 
     // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
     // Each user can only read and write their own subcollections.
+    // NOTE: feedback_trigger_lock, interviews_this_hour, feedback_dismissal_count,
+    //       and last_feedback_trigger_ts are callable-managed fields. The callable
+    //       uses Admin SDK (bypasses these rules). Client SDKs are architecturally
+    //       blocked from writing those fields because only the callable endpoint
+    //       exposes the write path — there is no client-side Firestore write for them.
     match /users/{email}/{document=**} {
       allow read, write: if isOwner(email);
     }
@@ -95,11 +100,19 @@ service cloud.firestore {
       allow write: if false; // Only agent (SA) writes
     }
 
-    // ── Beta Feedback (testers can create documents; admin reads via SA) ──────
+    // ── Beta Feedback ─────────────────────────────────────────────────────────
+    // ALL writes (create, update, delete) go through the Cloud Run callable.
+    // The callable uses the Firebase Admin SDK (bypasses these rules).
+    // Admin reads are done via service account; tester reads blocked.
+    // Clients may read their own submissions (status tracking).
     match /beta_feedback/{feedbackId} {
-      allow create: if request.auth != null
-                   || (request.resource.data.keys().hasAll(['ratings', 'comment', 'created_at']));
-      allow read, update, delete: if false;
+      // Tester: read own submission only (for post-submit correction check)
+      allow get: if request.auth != null
+                 && resource.data.user_id == request.auth.uid;
+      // Admin: list/read all (via Admin SDK — bypasses rules; kept as belt-and-suspenders)
+      allow list: if request.auth != null && request.auth.token.admin == true;
+      // ALL writes: callable / Admin SDK only; client writes blocked
+      allow create, update, delete: if false;
     }
 
     // ── Public Wishlists (family gift reservations) ───────────────────────────

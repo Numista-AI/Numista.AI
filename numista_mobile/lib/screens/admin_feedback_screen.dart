@@ -127,11 +127,13 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
             onPressed: () async {
               Navigator.of(ctx).pop();
               final note = noteController.text.trim();
-              await FirebaseFirestore.instance.collection('beta_feedback').doc(feedbackId).update({
-                'status': currentStatus,
-                'resolution_note': note,
-                'updated_at': FieldValue.serverTimestamp(),
-              });
+              // Route through ADMIN_RESOLVE callable — server enforces
+              // resolution_note requirement for DATA_INTEGRITY tickets.
+              await BetaFeedbackService.adminResolve(
+                docId: feedbackId,
+                resolutionNote: note,
+                newStatus: currentStatus,
+              );
             },
             child: const Text('Save Status', style: TextStyle(color: Colors.white)),
           ),
@@ -174,8 +176,13 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
   // ─── TAB 1: Feedback Submissions ──────────────────────────────────────────
 
   Widget _buildFeedbackSubmissionsTab() {
+    // Admin reads go directly to Firestore (only writes are callable-gated).
+    final feedbackStream = FirebaseFirestore.instance
+        .collection('beta_feedback')
+        .orderBy('created_at', descending: true)
+        .snapshots();
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: BetaFeedbackService.getFeedbackStream(),
+      stream: feedbackStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

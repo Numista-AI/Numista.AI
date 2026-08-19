@@ -34,6 +34,18 @@ COLLECTION_IDS = [
     "checklist_entries",
     "global_programs",
     "coin_set_index",
+    # MORGAN Feedback System (Phase 1 — added 2026-08-19)
+    # New fields added to beta_feedback by the callable:
+    #   needs_admin_triage (BOOL), issue_type (STRING), severity_estimate (STRING),
+    #   intake_method (STRING), trigger_reason (STRING), redaction_applied (INT64),
+    #   interview_turns (INT64), turn_cap_reached (BOOL), morgan_summary (STRING),
+    #   morgan_summary_confirmed_text (STRING), user_confirmed_summary (BOOL),
+    #   extraction_status (STRING), client_suggested_issue_type (STRING),
+    #   screenshot_consented (BOOL), post_submit_correction (STRING),
+    #   pending_sync (BOOL), full_transcript (REPEATED RECORD)
+    # Loader uses WRITE_TRUNCATE so new fields are automatically included
+    # from the Firestore export without a manual schema migration.
+    "beta_feedback",
 ]
 
 
