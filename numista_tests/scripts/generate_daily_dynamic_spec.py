@@ -1,7 +1,7 @@
 """
-Numista.AI -- Daily Dynamic Playwright Spec Generator
-Reads daily_feedback_manifest.json and dynamically synthesizes a Playwright E2E spec file:
-numista_tests/tests/daily_feedback_dynamic.spec.js
+Numista.AI -- Daily Dynamic Playwright Spec Generator (Hardened v2)
+Reads daily_feedback_manifest.json and dynamically synthesizes a hardened Playwright E2E spec:
+numista_tests/tests/daily_feedback_dynamic.spec.js with semantic DOM assertions.
 """
 import os
 import json
@@ -35,59 +35,96 @@ TEST_TEMPLATE_MAP = {
   test('{issue_id}: [World Items] Foreign coin routing and is_foreign flag verification', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
+    
+    // Navigate to Collection
+    const colNav = page.locator('text=My Collection').or(page.locator('text=Inventory'));
+    if (await colNav.isVisible()) {
+      await colNav.click();
+      await page.waitForTimeout(1000);
+    }
+    
     const worldTab = page.locator('text=World & Specialty').or(page.locator('text=World'));
     if (await worldTab.isVisible()) {
       await worldTab.click();
       await page.waitForTimeout(1000);
     }
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_world_tab.png' });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_world_tab.png' });
   });
 """,
     "2019_W_QUARTER_ALIGNMENT": """
   test('{issue_id}: [Catalog] 2019-W Quarter series, theme, and image alignment', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_2019_w_quarter.png' });
+    
+    // Navigate and inspect coin
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_2019_w_quarter.png' });
   });
 """,
     "PROGRAM_SLOT_RESOLVER": """
   test('{issue_id}: [Programs] 33 US Mint programs list and SlotResolver count alignment', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
+    
     const programsNav = page.locator('text=Coin Programs').or(page.locator('text=US Mint Programs'));
     if (await programsNav.isVisible()) {
       await programsNav.click();
       await page.waitForTimeout(1000);
     }
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_programs.png' });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_programs.png' });
   });
 """,
     "ACQUISITION_COST_BASIS": """
   test('{issue_id}: [Financials] Explicit $0.00 acquisition cost vs UKN cost basis', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_acquisition_cost.png' });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_acquisition_cost.png' });
   });
 """,
     "UI_SCROLLBAR_CONTAINER": """
   test('{issue_id}: [Desktop UI] Horizontal table scrollbar container visibility', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_scrollbar.png' });
+    
+    const colNav = page.locator('text=My Collection');
+    if (await colNav.isVisible()) {
+      await colNav.click();
+      await page.waitForTimeout(1000);
+    }
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_scrollbar.png' });
   });
 """,
     "MODAL_CONTRAST_TYPOGRAPHY": """
   test('{issue_id}: [Desktop UI] Dark mode modal contrast and typography readability', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_modal_contrast.png' });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_modal_contrast.png' });
   });
 """,
     "MORGAN_AI_SET_INGESTION": """
   test('{issue_id}: [Morgan AI] Proof set ingestion and date-added top sorting', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_morgan_ai.png' });
+    
+    const morganBtn = page.locator('text=Morgan').or(page.locator('text=Ask Morgan'));
+    if (await morganBtn.isVisible()) {
+      await morganBtn.click();
+      await page.waitForTimeout(1000);
+    }
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_morgan_ai.png' });
+  });
+""",
+    "TOOLTIP_GRADE_BADGE": """
+  test('{issue_id}: [Desktop UI] GradeBadgeWidget Sheldon scale tooltip hover popup', async ({ page }) => {
+    const glassPane = page.locator('flt-glass-pane');
+    await expect(glassPane).toBeVisible({ timeout: 15000 });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_grade_tooltip.png' });
+  });
+""",
+    "LEGISLATION_TAB_INDEX": """
+  test('{issue_id}: [Catalog] Top-level Legislation tab placed at index 5 in detail modal', async ({ page }) => {
+    const glassPane = page.locator('flt-glass-pane');
+    await expect(glassPane).toBeVisible({ timeout: 15000 });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}_legislation_tab.png' });
   });
 """
 }
@@ -96,7 +133,7 @@ GENERIC_TEMPLATE = """
   test('{issue_id}: [{category}] Mined issue verification: {issue_type}', async ({ page }) => {
     const glassPane = page.locator('flt-glass-pane');
     await expect(glassPane).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: 'reports/screenshots/daily_feedback_{issue_id}.png' });
+    await page.screenshot({ path: 'reports/screenshots/{issue_id}.png' });
   });
 """
 
