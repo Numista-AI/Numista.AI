@@ -252,6 +252,18 @@ class _BaseLayoutState extends State<BaseLayout> {
     await prefs.setBool('desktop_sidebar_collapsed', nextState);
   }
 
+  /// Child tab changes must never setState while BaseLayout is building.
+  /// didUpdateWidget on MyCollectionScreen can fire mid-build when
+  /// initialTab changes; deferring keeps the sidebar in sync without
+  /// "setState() or markNeedsBuild() called during build".
+  void _onMyCollectionTabChanged(String tab) {
+    if (_myCollectionTab == tab) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _myCollectionTab == tab) return;
+      setState(() => _myCollectionTab = tab);
+    });
+  }
+
   void _navigateTo(String route) {
     if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
       setState(() {
@@ -317,7 +329,7 @@ class _BaseLayoutState extends State<BaseLayout> {
               });
             }
           },
-          onTabChanged: (tab) => setState(() => _myCollectionTab = tab),
+          onTabChanged: _onMyCollectionTabChanged,
         );
       case 'Microscope Scanner':
         return const MicroscopeScanScreen();

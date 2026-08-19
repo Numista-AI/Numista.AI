@@ -351,37 +351,37 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   void _loadDefaultTab() async {
     final prefs = await SharedPreferences.getInstance();
     final savedTab = prefs.getString('my_collection_default_tab');
-    if (mounted) {
-      setState(() {
-        _currentTab = widget.initialTab ?? savedTab ?? 'All';
-      });
-      if (widget.onTabChanged != null) {
-        widget.onTabChanged!(_currentTab);
-      }
+    if (!mounted) return;
+    final tab = widget.initialTab ?? savedTab ?? 'All';
+    if (tab != _currentTab) {
+      setState(() => _currentTab = tab);
     }
+    // Parent may be mid-build (e.g. its own prefs load). Notify after the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTabChanged?.call(tab);
+    });
   }
 
   void _onTabChanged(String tab) async {
+    if (tab == _currentTab) return;
     setState(() {
       _currentTab = tab;
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('my_collection_default_tab', tab);
-    if (widget.onTabChanged != null) {
-      widget.onTabChanged!(tab);
-    }
+    widget.onTabChanged?.call(tab);
   }
 
   @override
   void didUpdateWidget(MyCollectionScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialTab != null && widget.initialTab != oldWidget.initialTab) {
-      setState(() {
-        _currentTab = widget.initialTab!;
-      });
-      if (widget.onTabChanged != null) {
-        widget.onTabChanged!(_currentTab);
-      }
+    // Parent already owns initialTab. Sync locally for the upcoming build.
+    // Do not setState (this runs during the parent's build) and do not
+    // echo onTabChanged back — that was the web crash loop.
+    if (widget.initialTab != null &&
+        widget.initialTab != oldWidget.initialTab &&
+        widget.initialTab != _currentTab) {
+      _currentTab = widget.initialTab!;
     }
   }
 
@@ -1216,7 +1216,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 maxCrossAxisExtent: 280,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: 2.0,
+                                // Fixed height avoids yellow/black overflow
+                                // stripes when 2-col cells get short via aspect ratio.
+                                mainAxisExtent: 132,
                               ),
                               children: [
                                 _buildDashboardCard(
@@ -1364,23 +1366,40 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: color, size: 24),
-                Text(subtitle, style: TextStyle(color: _subtext, fontSize: 11)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    subtitle,
+                    style: TextStyle(color: _subtext, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 10),
-            Text(
-              value,
-              style: TextStyle(
-                color: _text,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: _text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             SizedBox(height: 4),
-            Text(description, style: TextStyle(color: _subtext, fontSize: 10)),
+            Text(
+              description,
+              style: TextStyle(color: _subtext, fontSize: 10),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -1427,10 +1446,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Icon(Icons.check_circle_outline, color: _green, size: 24),
-                  Text('U.S. CURRENCY COMPLETION', style: TextStyle(color: _subtext, fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'U.S. CURRENCY COMPLETION',
+                      style: TextStyle(color: _subtext, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1447,17 +1474,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '($owned / $total varieties)',
-                    style: TextStyle(
-                      color: _subtext,
-                      fontSize: 10,
+                  Expanded(
+                    child: Text(
+                      '($owned / $total varieties)',
+                      style: TextStyle(
+                        color: _subtext,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text('Collection coverage across all legal tender', style: TextStyle(color: _subtext, fontSize: 10)),
+              Text(
+                'Collection coverage across all legal tender',
+                style: TextStyle(color: _subtext, fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
