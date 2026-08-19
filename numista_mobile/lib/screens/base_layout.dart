@@ -520,7 +520,6 @@ class _BaseLayoutState extends State<BaseLayout> {
             BetaFeedbackWidget(
               currentRoute: _activeRoute,
               pageTitle: _activeRoute,
-              repaintKey: _repaintKey,
             ),
           ],
         ),
