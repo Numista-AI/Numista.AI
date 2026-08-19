@@ -4,7 +4,6 @@
 // Visible only to beta testers and guest mode users.
 // Tapping the FAB fires FeedbackTriggerObserver with reason: manualFAB —
 // the observer calls CHECK and opens the MORGAN drawer or fallback form.
-// Auto-capture and showModalBottomSheet have been removed.
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -26,8 +25,16 @@ class BetaFeedbackWidget extends StatefulWidget {
 }
 
 class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
-  double? _posX;
-  double? _posY;
+  // Offset from the anchor corner. null = use default position.
+  // We track as (dx from right, dy from bottom) so the default
+  // position is stable regardless of Scaffold body height.
+  double? _offsetRight;
+  double? _offsetBottom;
+
+  static const double _defaultRight = 16;
+  static const double _defaultBottom = 80;
+  static const double _fabWidth = 140;
+  static const double _fabHeight = 48;
 
   void _openFeedbackDrawer() {
     FeedbackTriggerObserver.instance.fire(
@@ -47,51 +54,59 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
       return const SizedBox.shrink();
     }
 
-    final screenSize = MediaQuery.of(context).size;
-    final defaultX = screenSize.width - 150;
-    final defaultY = screenSize.height - 130;
+    // LayoutBuilder gives us the Stack's actual paint size, not the screen size.
+    return LayoutBuilder(builder: (context, constraints) {
+      final w = constraints.maxWidth;
+      final h = constraints.maxHeight;
 
-    final curX = (_posX ?? defaultX)
-        .clamp(10.0, (screenSize.width - 140).clamp(10.0, double.infinity));
-    final curY = (_posY ?? defaultY)
-        .clamp(60.0, (screenSize.height - 80).clamp(60.0, double.infinity));
+      // Current right/bottom offsets (clamped so FAB stays on-screen)
+      final right = (_offsetRight ?? _defaultRight)
+          .clamp(0.0, (w - _fabWidth).clamp(0.0, double.infinity));
+      final bottom = (_offsetBottom ?? _defaultBottom)
+          .clamp(0.0, (h - _fabHeight).clamp(0.0, double.infinity));
 
-    return Positioned(
-      left: curX,
-      top: curY,
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          setState(() {
-            _posX = curX + details.delta.dx;
-            _posY = curY + details.delta.dy;
-          });
-        },
-        onPanEnd: (details) {
-          final midX = screenSize.width / 2;
-          final snapX = (curX < midX) ? 16.0 : (screenSize.width - 144.0);
-          setState(() {
-            _posX = snapX;
-          });
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: FloatingActionButton.extended(
-            heroTag: 'beta_feedback_fab',
-            backgroundColor: const Color(0xFF2563EB),
-            elevation: 8,
-            icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
-            label: const Text(
-              'Feedback',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+      return Positioned(
+        right: right,
+        bottom: bottom,
+        child: GestureDetector(
+          onPanUpdate: (details) {
+            setState(() {
+              // Moving right → decrease right offset; moving left → increase it
+              _offsetRight = (right - details.delta.dx)
+                  .clamp(0.0, (w - _fabWidth).clamp(0.0, double.infinity));
+              _offsetBottom = (bottom - details.delta.dy)
+                  .clamp(0.0, (h - _fabHeight).clamp(0.0, double.infinity));
+            });
+          },
+          onPanEnd: (_) {
+            // Snap to nearest vertical edge
+            final mid = w / 2;
+            final curLeft = w - right - _fabWidth;
+            setState(() {
+              _offsetRight =
+                  curLeft < mid ? (w - _fabWidth - 16) : _defaultRight;
+            });
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: FloatingActionButton.extended(
+              heroTag: 'beta_feedback_fab',
+              backgroundColor: const Color(0xFF2563EB),
+              elevation: 8,
+              icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
+              label: const Text(
+                'Feedback',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
+              onPressed: _openFeedbackDrawer,
             ),
-            onPressed: _openFeedbackDrawer,
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
