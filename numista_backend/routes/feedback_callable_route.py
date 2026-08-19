@@ -190,7 +190,14 @@ async def _handle_check(uid: str, req: CallableRequest) -> Dict[str, Any]:
     if lock:
         locked_until = lock.get("locked_until")
         if locked_until and _to_dt(locked_until) > now:
-            return {"allowed": False, "interview_mode": False, "reason": "already_locked"}
+            # Return the existing lock/doc IDs so the fallback form can still submit
+            return {
+                "allowed": False,
+                "interview_mode": False,
+                "reason": "already_locked",
+                "lock_id": lock.get("lock_id"),
+                "draft_doc_id": lock.get("draft_doc_id"),
+            }
 
     # 2. 24h behavioral throttle (non-FAB triggers only)
     if trigger_reason != "manualFAB":
