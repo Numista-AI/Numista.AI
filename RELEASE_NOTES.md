@@ -131,6 +131,19 @@
 
 
 
+
+## v4.129 — 2026-08-19
+**Feedback Enhancements & Platform Updates**
+
+- Feedback: No Overlay widget error - remove tooltip + replace showDialog with inline panel
+- Feedback: FAB still invisible - remove LayoutBuilder from Positioned
+- Feedback: FeedbackDrawerOverlay web crash - StackFit.expand + FocusNode lifecycle fix
+- Feedback: FAB invisible on web - switch to Stack-relative bottom/right anchor
+- Feedback: MORGAN Feedback System Phase 1 â€” callable architecture, interview drawer, fallback form
+- Web: stop BaseLayout setState during My Collection build
+- All-view: banknote and world-item cards open detail on tap
+- Header-stats-bar: split Valuation chip into three distinct desktop facts
+
 ## v4.128 — 2026-08-19
 **Release Enhancements & Platform Updates**
 

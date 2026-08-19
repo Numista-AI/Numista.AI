@@ -131,17 +131,28 @@ class FeedbackTriggerObserver {
   }
 
   Future<void> _checkAndOpen(FeedbackTriggerEvent event) async {
+    // Guard: overlay not yet registered (shouldn't happen, but prevents silent no-op)
+    if (_onOpenDrawer == null && _onOpenFallback == null) {
+      debugPrint('[FeedbackTrigger] No callbacks registered — overlay not mounted yet?');
+      return;
+    }
+
     CheckResult result;
     try {
       result = await BetaFeedbackService.checkThrottle(event.reason);
     } catch (e) {
-      debugPrint('[FeedbackTrigger] CHECK failed: $e — suppressing.');
+      // CHECK network error — open fallback so user can still file feedback
+      debugPrint('[FeedbackTrigger] CHECK failed: $e — opening fallback.');
+      _onOpenFallback?.call(event, null);
       return;
     }
 
     if (!result.allowed) {
-      // Throttled or locked — silent no-op for behavioral triggers
       debugPrint('[FeedbackTrigger] CHECK denied: ${result.reason}');
+      // For manual FAB taps, open fallback even when throttled/locked
+      if (event.reason == FeedbackTriggerReason.manualFAB) {
+        _onOpenFallback?.call(event, null);
+      }
       return;
     }
 

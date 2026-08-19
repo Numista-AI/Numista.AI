@@ -168,31 +168,38 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
 
-          // Issue type dropdown — safe types only; DATA_INTEGRITY omitted
-          DropdownButtonFormField<String>(
-            value: _selectedType,
-            dropdownColor: const Color(0xFF1E2937),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFF0F172A),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            items: FeedbackConstants.kSafeClientIssueTypes
-                .map((t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(_labelFor(t),
-                          style: const TextStyle(fontSize: 13)),
-                    ))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _selectedType = v);
-            },
+          // Issue type selector — inline chips (no Overlay/dropdown needed)
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: FeedbackConstants.kSafeClientIssueTypes.map((t) {
+              final selected = _selectedType == t;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedType = t),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFF1E4ED8)
+                        : const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected
+                          ? const Color(0xFF1E4ED8)
+                          : const Color(0xFF374151),
+                    ),
+                  ),
+                  child: Text(
+                    _labelFor(t),
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
           const SizedBox(height: 4),
           const Text(

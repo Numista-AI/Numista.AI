@@ -301,11 +301,34 @@ class _MorganFeedbackDrawerPanelState
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // Inline correction — replaces showDialog (which requires Navigator/Overlay
+  // unavailable above MaterialApp.builder).
+  bool _correctionOpen = false;
+  final TextEditingController _correctionController = TextEditingController();
+  void Function(String)? _correctionOnSubmit;
+
   @override
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();
+    _correctionController.dispose();
     super.dispose();
+  }
+
+  void _openCorrection(void Function(String) onSubmit) {
+    setState(() {
+      _correctionOpen = true;
+      _correctionOnSubmit = onSubmit;
+      _correctionController.clear();
+    });
+  }
+
+  void _submitCorrection() {
+    final text = _correctionController.text.trim();
+    if (text.isNotEmpty) {
+      _correctionOnSubmit?.call(text);
+    }
+    setState(() => _correctionOpen = false);
   }
 
   void _scrollToBottom() {
@@ -338,7 +361,67 @@ class _MorganFeedbackDrawerPanelState
         children: [
           _buildHeader(),
           const Divider(height: 1, color: Color(0xFF374151)),
+          // Inline correction panel — replaces showDialog (no Navigator needed)
+          if (_correctionOpen) _buildInlineCorrectionPanel(),
+          if (_correctionOpen)
+            const Divider(height: 1, color: Color(0xFF374151)),
           Expanded(child: _buildBody()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineCorrectionPanel() {
+    return Container(
+      color: const Color(0xFF1E2937),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Add a correction',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _correctionController,
+            maxLines: 3,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'What would you like to correct or add?',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: const Color(0xFF0F172A),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => setState(() => _correctionOpen = false),
+                child: const Text('Cancel',
+                    style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E4ED8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8)),
+                onPressed: _submitCorrection,
+                child: const Text('Submit',
+                    style: TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -393,7 +476,9 @@ class _MorganFeedbackDrawerPanelState
           IconButton(
             icon: const Icon(Icons.close, color: Colors.grey, size: 18),
             onPressed: widget.onClose,
-            tooltip: 'Close',
+            // No tooltip — FeedbackDrawerOverlay lives above MaterialApp's
+            // Navigator, so Tooltip.of(context) cannot find an Overlay and
+            // throws "No Overlay widget" on hover/open.
           ),
         ],
       ),
@@ -467,6 +552,8 @@ class _MorganFeedbackDrawerPanelState
             child: TextField(
               controller: _inputController,
               enabled: !busy,
+              maxLines: null, // expands vertically for long messages
+              keyboardType: TextInputType.multiline,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 hintText: busy ? 'MORGAN is thinking…' : 'Type your reply…',
@@ -542,15 +629,9 @@ class _MorganFeedbackDrawerPanelState
                     borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => _CorrectionDialog(
-                    onSubmit: (note) {
-                      Navigator.of(ctx).pop();
-                      session.requestCorrection(note);
-                    },
-                  ),
-                );
+                _openCorrection((note) {
+                  session.requestCorrection(note);
+                });
               },
               child: const Text("No, let me clarify",
                   style: TextStyle(color: Colors.white70)),
@@ -646,21 +727,15 @@ class _MorganFeedbackDrawerPanelState
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => _CorrectionDialog(
-                    onSubmit: (note) {
-                      Navigator.of(ctx).pop();
-                      final docId = session.submittedDocId;
-                      if (docId != null) {
-                        BetaFeedbackService.submitCorrection(
-                          docId: docId,
-                          correctionText: note,
-                        );
-                      }
-                    },
-                  ),
-                );
+                _openCorrection((note) {
+                  final docId = session.submittedDocId;
+                  if (docId != null) {
+                    BetaFeedbackService.submitCorrection(
+                      docId: docId,
+                      correctionText: note,
+                    );
+                  }
+                });
               },
               icon: const Icon(Icons.edit_note,
                   color: Colors.amberAccent, size: 16),
@@ -750,70 +825,6 @@ class _ChatBubbleWidget extends StatelessWidget {
                     height: 1.45),
               ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _CorrectionDialog
-// ---------------------------------------------------------------------------
-
-class _CorrectionDialog extends StatefulWidget {
-  final void Function(String) onSubmit;
-
-  const _CorrectionDialog({required this.onSubmit});
-
-  @override
-  State<_CorrectionDialog> createState() => _CorrectionDialogState();
-}
-
-class _CorrectionDialogState extends State<_CorrectionDialog> {
-  final _ctrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1E2937),
-      title: const Text('Add a correction',
-          style: TextStyle(color: Colors.white, fontSize: 15)),
-      content: TextField(
-        controller: _ctrl,
-        maxLines: 3,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
-        decoration: InputDecoration(
-          hintText: 'What would you like to correct or add?',
-          hintStyle: const TextStyle(color: Colors.grey),
-          filled: true,
-          fillColor: const Color(0xFF0F172A),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child:
-              const Text('Cancel', style: TextStyle(color: Colors.grey)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E4ED8)),
-          onPressed: () {
-            if (_ctrl.text.trim().isNotEmpty) {
-              widget.onSubmit(_ctrl.text.trim());
-            }
-          },
-          child: const Text('Submit correction',
-              style: TextStyle(color: Colors.white)),
-        ),
-      ],
     );
   }
 }
