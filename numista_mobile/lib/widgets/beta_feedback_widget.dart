@@ -1,9 +1,10 @@
 // lib/widgets/beta_feedback_widget.dart
 //
-// Draggable FAB button for beta feedback.
-// Visible only to beta testers and guest mode users.
-// Tapping the FAB fires FeedbackTriggerObserver with reason: manualFAB —
-// the observer calls CHECK and opens the MORGAN drawer or fallback form.
+// Draggable FAB for beta feedback.
+// Sits inside base_layout.dart's Stack as a Positioned child.
+// Uses right/bottom offsets (relative to Stack edges) — no LayoutBuilder,
+// no MediaQuery size. Positioned is a ParentDataWidget; it must be a
+// direct Stack descendant to work; wrapping it in LayoutBuilder breaks that.
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -25,16 +26,13 @@ class BetaFeedbackWidget extends StatefulWidget {
 }
 
 class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
-  // Offset from the anchor corner. null = use default position.
-  // We track as (dx from right, dy from bottom) so the default
-  // position is stable regardless of Scaffold body height.
-  double? _offsetRight;
-  double? _offsetBottom;
+  // Offsets from the Stack's right and bottom edges.
+  // Null = default position. Positioned handles clamping implicitly.
+  double? _right;
+  double? _bottom;
 
-  static const double _defaultRight = 16;
-  static const double _defaultBottom = 80;
-  static const double _fabWidth = 140;
-  static const double _fabHeight = 48;
+  static const double _defaultRight = 16.0;
+  static const double _defaultBottom = 80.0;
 
   void _openFeedbackDrawer() {
     FeedbackTriggerObserver.instance.fire(
@@ -49,64 +47,47 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Only render for beta testers or guest mode
     if (!AuthService.isBetaTester && !AuthService.isGuest) {
       return const SizedBox.shrink();
     }
 
-    // LayoutBuilder gives us the Stack's actual paint size, not the screen size.
-    return LayoutBuilder(builder: (context, constraints) {
-      final w = constraints.maxWidth;
-      final h = constraints.maxHeight;
-
-      // Current right/bottom offsets (clamped so FAB stays on-screen)
-      final right = (_offsetRight ?? _defaultRight)
-          .clamp(0.0, (w - _fabWidth).clamp(0.0, double.infinity));
-      final bottom = (_offsetBottom ?? _defaultBottom)
-          .clamp(0.0, (h - _fabHeight).clamp(0.0, double.infinity));
-
-      return Positioned(
-        right: right,
-        bottom: bottom,
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            setState(() {
-              // Moving right → decrease right offset; moving left → increase it
-              _offsetRight = (right - details.delta.dx)
-                  .clamp(0.0, (w - _fabWidth).clamp(0.0, double.infinity));
-              _offsetBottom = (bottom - details.delta.dy)
-                  .clamp(0.0, (h - _fabHeight).clamp(0.0, double.infinity));
-            });
-          },
-          onPanEnd: (_) {
-            // Snap to nearest vertical edge
-            final mid = w / 2;
-            final curLeft = w - right - _fabWidth;
-            setState(() {
-              _offsetRight =
-                  curLeft < mid ? (w - _fabWidth - 16) : _defaultRight;
-            });
-          },
-          child: Material(
-            color: Colors.transparent,
-            child: FloatingActionButton.extended(
-              heroTag: 'beta_feedback_fab',
-              backgroundColor: const Color(0xFF2563EB),
-              elevation: 8,
-              icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
-              label: const Text(
-                'Feedback',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
+    // Return Positioned directly — no LayoutBuilder wrapper.
+    // Positioned is a ParentDataWidget<StackParentData>; it must be a
+    // descendant of a Stack to apply positioning. LayoutBuilder would
+    // intercept applyParentData, silently breaking the Stack relationship.
+    return Positioned(
+      right: _right ?? _defaultRight,
+      bottom: _bottom ?? _defaultBottom,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          setState(() {
+            // right decreases when moving right, increases when moving left
+            _right = ((_right ?? _defaultRight) - details.delta.dx)
+                .clamp(0.0, 500.0);
+            // bottom decreases when moving down, increases when moving up
+            _bottom = ((_bottom ?? _defaultBottom) - details.delta.dy)
+                .clamp(0.0, 700.0);
+          });
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: FloatingActionButton.extended(
+            heroTag: 'beta_feedback_fab',
+            backgroundColor: const Color(0xFF2563EB),
+            elevation: 8,
+            icon: const Icon(Icons.rate_review_outlined, color: Colors.white),
+            label: const Text(
+              'Feedback',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
               ),
-              onPressed: _openFeedbackDrawer,
             ),
+            onPressed: _openFeedbackDrawer,
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 }
