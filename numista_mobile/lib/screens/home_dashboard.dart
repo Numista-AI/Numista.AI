@@ -1526,10 +1526,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.129',
+    date: '2026-08-19',
+    description: 'Feedback Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Feedback: No Overlay widget error - remove tooltip + replace showDialog with inline panel',
+      'Feedback: FAB still invisible - remove LayoutBuilder from Positioned',
+      'Feedback: FeedbackDrawerOverlay web crash - StackFit.expand + FocusNode lifecycle fix',
+      'Feedback: FAB invisible on web - switch to Stack-relative bottom/right anchor',
+      'Feedback: MORGAN Feedback System Phase 1 â€” callable architecture, interview drawer, fallback form',
+      'Web: stop BaseLayout setState during My Collection build',
+      'All-view: banknote and world-item cards open detail on tap',
+      'Header-stats-bar: split Valuation chip into three distinct desktop facts',
+    ],
+  ),
+  _Release(
     version: 'v4.128',
     date: '2026-08-19',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: sync v4.125 release notes',
       'Release: sync auto-generated release notes for v4.123',
