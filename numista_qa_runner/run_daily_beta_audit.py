@@ -17,7 +17,7 @@ import argparse
 
 sys.path.append(os.path.dirname(__file__))
 from aug13_account_audit_validator import compute_account_sha256, audit_account_readonly, get_firestore_db
-from daily_feedback_test_miner import mine_daily_feedback
+from daily_feedback_test_miner import mine_daily_feedback, find_recent_folders
 
 PROD_ACCOUNT = "eric.seaman@yahoo.com"
 REPORT_DIR = r"C:\Users\ericd\Documents\MyVertexProject\numista_tests\reports"
@@ -213,7 +213,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Daily Beta Feedback Audit Pipeline")
     parser.add_argument("--folder", type=str, help="Target folder name or path under MY TESTING")
     parser.add_argument("--latest", action="store_true", help="Auto-detect latest date folder")
+    parser.add_argument("--days", type=int, default=1, help="Number of recent daily feedback folders to audit (e.g. --days 2)")
     args = parser.parse_args()
 
-    target = args.folder if args.folder else None
-    run_daily_beta_audit(target)
+    if args.folder:
+        run_daily_beta_audit(args.folder)
+    elif args.days > 1:
+        recent_folders = find_recent_folders(days=args.days)
+        print(f"=== [MULTI-DAY AUDIT] Auditing last {len(recent_folders)} daily feedback folders in sequence ===")
+        for fpath in recent_folders:
+            print(f"\n>>>> Executing Audit for: {os.path.basename(fpath)} <<<<")
+            run_daily_beta_audit(fpath)
+    else:
+        run_daily_beta_audit(None)

@@ -60,6 +60,16 @@ def find_target_folder(date_or_folder=None):
     subdirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     return subdirs[0]
 
+def find_recent_folders(days=2):
+    if not os.path.exists(BASE_FEEDBACK_DIR):
+        return []
+    subdirs = [os.path.join(BASE_FEEDBACK_DIR, d) for d in os.listdir(BASE_FEEDBACK_DIR) 
+               if os.path.isdir(os.path.join(BASE_FEEDBACK_DIR, d)) and not d.startswith(".")]
+    if not subdirs:
+        return []
+    subdirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    return subdirs[:days]
+
 def extract_coin_entities(text):
     """Extracts year, denomination, and mint mark from text snippets."""
     year_match = re.search(r"\b(19\d{2}|20\d{2})\b", text)
