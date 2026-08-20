@@ -1,4 +1,4 @@
-﻿/**
+/**
  * emailTemplate.js — HTML email builder for MORGAN feedback alerts.
  * Styled dark-theme email matching the Numista.AI aesthetic.
  */
@@ -141,9 +141,15 @@ function buildEmailHtml(doc, analysis) {
   </td></tr>` : ''}
 
   <!-- CTA -->
-  <tr><td style="padding:24px 32px" align="center">
-    <a href="https://numista.ai" style="background:#1D4ED8;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
-      Open Admin Feedback Screen →
+  <tr><td style="padding:24px 32px;text-align:center">
+    <a href="https://numista.ai" style="background:#1D4ED8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;margin-bottom:10px">
+      Open Numista.AI →
+    </a>
+    <p style="font-size:12px;color:#94A3B8;margin:4px 0 12px">
+      Then open the sidebar and tap <strong style="color:#E2E8F0">"Beta Feedback Inbox"</strong>
+    </p>
+    <a href="https://console.firebase.google.com/project/studio-9101802118-8c9a8/firestore/databases/-default-/data/~2Fbeta_feedback~2F${doc.feedback_id}" style="background:#0F172A;color:#60A5FA;padding:8px 20px;border-radius:8px;text-decoration:none;font-size:12px;display:inline-block;border:1px solid #1E3A8A">
+      View raw doc in Firestore Console ↗
     </a>
   </td></tr>
 
