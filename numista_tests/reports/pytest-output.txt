@@ -1,39 +1,49 @@
-﻿============================= test session starts =============================
+============================= test session starts =============================
 platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
-plugins: anyio-4.12.1, asyncio-1.4.0
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collected 160 items
+plugins: anyio-4.13.0
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+collected 201 items
 
-numista_backend\tests\test_active_learning_queue.py ..                   [  1%]
-numista_backend\tests\test_auth_security.py ....                         [  3%]
-numista_backend\tests\test_awq_intake_parser.py ........................ [ 18%]
-...............                                                          [ 28%]
-numista_backend\tests\test_beta_estate_pipeline.py ...                   [ 30%]
-numista_backend\tests\test_checklist_historical_matcher.py ............  [ 37%]
-numista_backend\tests\test_checklist_parser.py ...........               [ 44%]
-numista_backend\tests\test_coa_parser.py ....                            [ 46%]
-numista_backend\tests\test_collector_profile.py .                        [ 47%]
-numista_backend\tests\test_deal_spotter.py ...                           [ 49%]
-numista_backend\tests\test_few_shot_service.py ..                        [ 50%]
-numista_backend\tests\test_greysheet.py ........                         [ 55%]
-numista_backend\tests\test_import_worker_integration.py .                [ 56%]
-numista_backend\tests\test_ingestion.py ..                               [ 57%]
-numista_backend\tests\test_invoice_fixtures.py ..                        [ 58%]
-numista_backend\tests\test_missing_images_csv.py ...                     [ 60%]
-numista_backend\tests\test_notes_parser.py .............                 [ 68%]
-numista_backend\tests\test_proxy_bandwidth.py .....                      [ 71%]
-numista_backend\tests\test_series_manifest_sync.py ....................  [ 84%]
-numista_backend\tests\test_transfer.py ....                              [ 86%]
-numista_backend\tests\test_valuations.py ......                          [ 90%]
-numista_backend\tests\test_vector_rag.py ...                             [ 92%]
-numista_backend\tests\test_verifiers.py ............                     [100%]
+numista_backend\tests\test_active_learning_queue.py ..
+numista_backend\tests\test_auth_security.py [32mINFO   [0m [main] [14a7d922] GET / -> 200 (84ms)
+.[32mINFO   [0m [main] [c13261ec] GET /api/spot_prices -> 200 (2733ms)
+.[32mINFO   [0m [main] [2f3de851] GET /api/v1/family/subaccounts -> 200 (7ms)
+.[32mINFO   [0m [main] [e1f4ba54] POST /api/stripe/webhook -> 400 (7ms)
+.
+numista_backend\tests\test_awq_intake_parser.py .......................................
+numista_backend\tests\test_beta_estate_pipeline.py ...
+numista_backend\tests\test_checklist_historical_matcher.py ............
+numista_backend\tests\test_checklist_parser.py ...........
+numista_backend\tests\test_coa_parser.py ....
+numista_backend\tests\test_collector_profile.py .
+numista_backend\tests\test_deal_spotter.py ..[32mINFO   [0m [main] [22521c79] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
+[32mINFO   [0m [main] [4ec7864a] POST /api/wishlist/deals/check -> 200 (3ms)
+.
+numista_backend\tests\test_few_shot_service.py ..
+numista_backend\tests\test_greysheet.py [32mINFO   [0m [main] [5c390701] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [16feeecf] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [41f2c5df] GET /api/greysheet/pricing/429 -> 200 (12ms)
+.[32mINFO   [0m [main] [e36adf1c] GET /api/greysheet/deals -> 200 (1ms)
+[32mINFO   [0m [main] [0e2c15c4] POST /api/greysheet/deals/refresh -> 200 (2ms)
+.[32mINFO   [0m [main] [4bfcf833] POST /api/portfolio/snapshot/daily -> 200 (5ms)
+..[32mINFO   [0m [main] [d0bd1968] GET /api/greysheet/quota -> 200 (4ms)
+..
+numista_backend\tests\test_import_worker_integration.py .
+numista_backend\tests\test_ingestion.py [32mINFO   [0m [main] [9b8e570c] GET /api/ingestion/jobs -> 200 (1ms)
+.[32mINFO   [0m [main] [db633f84] POST /api/ingestion/batch_async -> 200 (3ms)
+[32mINFO   [0m [main] [87493e6a] GET /api/ingestion/status/job_37ace9d1 -> 200 (1ms)
+.
+numista_backend\tests\test_invoice_fixtures.py ..
+numista_backend\tests\test_missing_images_csv.py ...
+numista_backend\tests\test_notes_parser.py .............
+numista_backend\tests\test_proxy_bandwidth.py .....
+numista_backend\tests\test_series_manifest_sync.py ....................
+numista_backend\tests\test_set_pricing_extended.py .........................................
+numista_backend\tests\test_transfer.py ....
+numista_backend\tests\test_valuations.py ......
+numista_backend\tests\test_vector_rag.py ...
+numista_backend\tests\test_verifiers.py ............
 
-============================== warnings summary ===============================
-..\..\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: 180 warnings
-  C:\Users\ericd\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
-    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-===================== 160 passed, 180 warnings in 17.27s ======================
+============================ 201 passed in 19.02s =============================

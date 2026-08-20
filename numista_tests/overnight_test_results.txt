@@ -1,25 +1,25 @@
-[06:00:26] ❌ FAIL  Root health check                                         HTTPSConnectionPool(host='numista-app-568985927038.us-central1.run.app', port=443): Read timed out. (read timeout=20)
-[06:00:27] ✅ PASS  FastAPI docs page                                       1050ms  HTTP 200
-[06:00:28] ✅ PASS  GET /api/binder_scans/{email}                           1261ms  HTTP 200
-[06:00:28] ✅ PASS  Binder scans returned                                     0 records
-[06:00:29] ✅ PASS  GET /api/admin/grade_flags                              1234ms  HTTP 200
-[06:00:29] ✅ PASS  Admin grade flags returned                                0 open flag(s)
-[06:00:30] ✅ PASS  GET /api/template (CSV download)                        1075ms  HTTP 200
-[06:00:30] ✅ PASS  Template headers check                                    22 columns all present
-[06:00:31] ✅ PASS  GET /api/nicknames (approved)                           1092ms  HTTP 200
-[06:00:33] ✅ PASS  GET /api/grade_review/stats                             1348ms  HTTP 200
-[06:10:27] ⚠️  WARN  Normalization test skipped                                File ./serviceAccountKey.json was not found.
-[06:10:27] ✅ PASS  Response times benchmark                                  avg < 1500ms across endpoints
-[06:10:27] ✅ PASS  8a. Full-Catalog & 2026 Mint Set Matcher                  Canonical SKU USM-2026-UNC acknowledged
-[06:10:27] ✅ PASS  8b. Coin-Card Image Completeness Audit                    0% unrendered or broken image links
-[06:10:27] ✅ PASS  8c. Precious Metal Melt-Value Audit                       Silver/Gold melt within 2% spot tolerance
-[06:10:27] ✅ PASS  8d. LPT Estate Partition Indivisibility                   Unbroken sets 100% single-heir allocated
-[06:10:27] ✅ PASS  8e. Multi-Vault Tenant Isolation (MV-01..MV-06)           100% Isolated Vaults (0 Cross-Tenant Leakage)
-[06:10:28] ✅ PASS  8f. 24-Hour Conversation Test Miner Audit                 Mined 9 sessions → 2019_W_WEST_POINT_QUARTER, FOREIGN_WORLD_COIN_INGESTION, CHECKLIST_HAVE_TOTAL_ALIGNMENT, COLLECTION_GRAY_SCREEN_PREVENTION
-[06:10:36] ✅ PASS  8g. Real Production Account Health Audit                  Audited 4511 records for jseaman1204@gmail.com (3406 items flagged for automatic fix)
-[06:10:36] ✅ PASS  Anomaly Scanner                                           0 Critical Anomalies Detected (Valuation Drift $0.00)
+[06:00:23] ✅ PASS  Root health check                                       18447ms  HTTP 200
+[06:00:24] ✅ PASS  FastAPI docs page                                       829ms  HTTP 200
+[06:00:25] ✅ PASS  GET /api/binder_scans/{email}                           1019ms  HTTP 200
+[06:00:25] ✅ PASS  Binder scans returned                                     0 records
+[06:00:26] ✅ PASS  GET /api/admin/grade_flags                              851ms  HTTP 200
+[06:00:26] ✅ PASS  Admin grade flags returned                                0 open flag(s)
+[06:00:26] ✅ PASS  GET /api/template (CSV download)                        864ms  HTTP 200
+[06:00:26] ✅ PASS  Template headers check                                    22 columns all present
+[06:00:27] ✅ PASS  GET /api/nicknames (approved)                           803ms  HTTP 200
+[06:00:28] ✅ PASS  GET /api/grade_review/stats                             1029ms  HTTP 200
+[06:01:04] ⚠️  WARN  Normalization test skipped                                File ./serviceAccountKey.json was not found.
+[06:01:04] ✅ PASS  Response times benchmark                                  avg < 1500ms across endpoints
+[06:01:04] ✅ PASS  8a. Full-Catalog & 2026 Mint Set Matcher                  Canonical SKU USM-2026-UNC acknowledged
+[06:01:04] ✅ PASS  8b. Coin-Card Image Completeness Audit                    0% unrendered or broken image links
+[06:01:04] ✅ PASS  8c. Precious Metal Melt-Value Audit                       Silver/Gold melt within 2% spot tolerance
+[06:01:04] ✅ PASS  8d. LPT Estate Partition Indivisibility                   Unbroken sets 100% single-heir allocated
+[06:01:04] ✅ PASS  8e. Multi-Vault Tenant Isolation (MV-01..MV-06)           100% Isolated Vaults (0 Cross-Tenant Leakage)
+[06:01:05] ✅ PASS  8f. 24-Hour Conversation Test Miner Audit                 Mined 11 sessions → FOREIGN_WORLD_COIN_INGESTION, COLLECTION_GRAY_SCREEN_PREVENTION, CHECKLIST_HAVE_TOTAL_ALIGNMENT
+[06:01:10] ✅ PASS  8g. Real Production Account Health Audit                  Audited 4511 records for jseaman1204@gmail.com (3379 items flagged for automatic fix)
+[06:01:10] ✅ PASS  Anomaly Scanner                                           0 Critical Anomalies Detected (Valuation Drift $0.00)
 
 ======================================================================
- Test Complete: 2026-08-13 06:10:36
- ✅ PASS: 18   ❌ FAIL: 1   ⚠️  WARN: 1
+ Test Complete: 2026-08-20 06:01:10
+ ✅ PASS: 19   ❌ FAIL: 0   ⚠️  WARN: 1
 ======================================================================

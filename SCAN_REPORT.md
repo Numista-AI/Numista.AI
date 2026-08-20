@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** ⚠️ **PASS WITH WARNINGS** (System scan completed with 98% test pass rate across unit and E2E test suites. Pytest backend suite: 160 passed, 180 warning. Playwright E2E: 146/149 passed [2 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-19
+* **Status:** 🟢 **PASS** (System scan completed with 99.5% test pass rate across unit and E2E test suites. Pytest backend suite: 201 passed. Playwright E2E: 146/147 passed [1 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-08-20
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -20,7 +20,7 @@
 ---
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active code paths.
-* **Centralized Configuration (`numista_backend/config.py`):**
+* **Centralized Configuration (`numista_backend/config/__init__.py`):**
   * `GEMINI_FLASH_MODEL`: `gemini-3.7-flash` 🟢 PASS (Active GA / No shutdown date)
   * `GEMINI_PRO_MODEL`: `gemini-3.1-pro-preview` 🟢 PASS (Active GA / No shutdown date)
   * `GEMINI_LITE_MODEL`: `gemini-3.5-flash-lite` 🟢 PASS (Active GA / No shutdown date)
@@ -45,6 +45,7 @@
 * **Morgan AI Session Persistence v2:** Verified. Context engine v2 with session continuity active (`feat: Phase 2 Step 4`).
 * **Hardware Capture v2 & WebRTC Fallback:** Verified. `CameraCaptureService.capturePhoto` API active; WebRTC fallback path confirmed (`feat: Phase 2 Step 3`).
 * **Proxy Bandwidth Circuit Breaker:** Verified. Webshare 2.7GB circuit-breaker shutoff active (`numista_backend/numista_scraper/config.py`).
+* **User Feedback & Fallback Error System:** Verified. Dialog-free inline feedback panel with chip category multi-select & error escalation active.
 
 ---
 
@@ -55,7 +56,7 @@
   * Stage 3: Grade review, import, valuation routes (`e62338d`)
   * Stage 4: Core scan, AI, collection routes (`691fc52`)
 * **Route Parity:** `route_snapshot_baseline.json` committed — diff tool active for future regression detection.
-* **Backend Test Coverage:** 160 passed, 180 warning — expanded from 24 → 32 → 37 tests covering refactored APIRouter modules.
+* **Backend Test Coverage:** 201 passed — expanded from 24 → 32 → 37 → 160 → 201 tests covering refactored APIRouter modules.
 
 ---
 
@@ -68,11 +69,10 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 160 passed, 180 warning
-* **Frontend Playwright E2E Suite:** 146/149 passed (2 skipped gracefully)
-* **Test Infrastructure Fixes (2026-08-07):**
-  * `12-estate-management.spec.js` T02: Replaced fixed 4s wait with `waitForLoadState('networkidle')` + Flutter canvas settle
-  * `05-navigation.spec.js` T09: Replaced hardcoded pixel coordinate with role-based selector for Phase 2 layout compatibility
+* **Backend Pytest Unit Suite:** 201 passed
+* **Frontend Playwright E2E Suite:** 146/147 passed (1 skipped gracefully)
+* **Master Overnight Domain Completeness Engine:** 19 PASS, 0 FAIL, 1 WARN (Service account key omitted locally in dev)
+* **Real Production Account Audit:** 4,511 records audited for `jseaman1204@gmail.com`
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
@@ -81,4 +81,3 @@
 1. **Dependabot Vulnerabilities:** Triage the 160 open GitHub security alerts before November 2026 Launch. Prioritise the 102 high-severity items.
 2. **Navigation Test Hardening:** `05-navigation.spec.js` T01–T12 use hardcoded `(x,y)` pixel coordinates for Flutter sidebar nav. Consider a broader audit to replace remaining coordinates with role/text selectors to prevent future Phase 2+ layout breakage.
 3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
-

@@ -1,111 +1,163 @@
 {
-  "audited_at": "2026-08-13 09:33:30 UTC",
+  "audited_at": "2026-08-20 07:07:50",
   "target_account": "jseaman1204@gmail.com",
   "total_records_audited": 4511,
-  "actionable_anomalies_remaining": 0,
-  "actionable_status": "100% RESOLVED",
-  "residual_baseline_count": 302,
-  "residual_explanation": "Items remaining at $0.00 are non-precious clad/copper coins with no Greysheet catalog pricing match.",
-  "residual_sample": [
+  "metrics": {
+    "missing_images_count": 0,
+    "zero_value_items_count": 1962,
+    "missing_melt_count": 1417,
+    "total_anomalies_flagged": 3379
+  },
+  "anomalies": [
     {
+      "type": "MISSING_MELT_VALUE",
+      "id": "0002c0f9-9ea5-42d7-8697-a31353ffcb6d",
+      "name": "1954 Half Dollar",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
+    },
+    {
+      "type": "MISSING_MELT_VALUE",
+      "id": "003b311d-ec8b-45b2-bbb8-08815a6aea56",
+      "name": "1903 Half Dollar",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
+    },
+    {
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "00782b45-c57a-4a62-be7f-c3165034b325",
+      "name": "1873 1 Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
+    },
+    {
+      "type": "MISSING_MELT_VALUE",
+      "id": "00782b45-c57a-4a62-be7f-c3165034b325",
+      "name": "1873 1 Dollar",
+      "detail": "Precious metal coin (silver) has $0.00 melt value"
+    },
+    {
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "008da8c2-349a-4327-a64d-60696e583824",
+      "name": "1867 Half Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
+    },
+    {
+      "type": "MISSING_MELT_VALUE",
+      "id": "008da8c2-349a-4327-a64d-60696e583824",
+      "name": "1867 Half Dollar",
+      "detail": "Precious metal coin (silver) has $0.00 melt value"
+    },
+    {
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "00b0f765-479a-4c36-ae37-4a1cf94d15ae",
+      "name": "2023 Native American Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
+    },
+    {
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "0128d3d8-2ab7-4782-b480-553f7e99b9cb",
+      "name": "1981 Susan B. Anthony Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
+    },
+    {
+      "type": "ZERO_VALUATION_SURPRISE",
       "id": "0129b845-1b55-4dae-8f28-b7579c73467b",
-      "title": "2024 Half Dollar",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "name": "2024 Half Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
     },
     {
-      "id": "03cbd5ae-0fcd-4b6a-98bc-69e9d98cdeab",
-      "title": "1863-1867 10 Cent Fractional Currency",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "0137c277-1ae2-4e4b-a127-f338e39bc1e3",
+      "name": "2022 Half Dollar",
+      "detail": "Precious metal coin (99.9% silver) has $0.00 melt value"
     },
     {
-      "id": "057ae4b7-f2ff-4657-ab23-ede2a82dd727",
-      "title": "1948 Cent",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "0197b4f7-8795-4365-a0bd-98e5c60c4025",
+      "name": "1866 Half Dollar",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     },
     {
-      "id": "07568748-b66c-4bc0-bd16-e22aeee00cf9",
-      "title": "2009 Penny",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "019ddf99-a6e4-4483-9769-aa8d1aa8357b",
+      "name": "1893 Dollar",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     },
     {
-      "id": "09139582-5418-477e-8d68-2b8e8122ae8b",
-      "title": "2023 ",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "01de144f-2e8c-4c9d-a4f3-5a7b79019d58",
+      "name": "1946 ",
+      "detail": "Standalone collection item carrying $0.00 valuation"
     },
     {
-      "id": "0a15eadb-0f75-4736-b40f-5880a45a7ec3",
-      "title": "2019D quarter",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "01de144f-2e8c-4c9d-a4f3-5a7b79019d58",
+      "name": "1946 ",
+      "detail": "Precious metal coin (mixed (includes 90% silver dime, quarter, half dollar)) has $0.00 melt value"
     },
     {
-      "id": "0b5595f3-aadc-4150-93eb-70d5a70cb1b6",
-      "title": " Half Dollar",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "0228b3c9-7819-4d43-b7ac-a41ee5206345",
+      "name": "1819 Capped Bust Silver Half Dollar",
+      "detail": "Precious metal coin (89.24% silver, 10.76% copper) has $0.00 melt value"
     },
     {
-      "id": "0ded0d31-5c25-4846-9e59-d1dbe7dcc3d3",
-      "title": "1862-1863 10C Fractional Currency",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "023eccfd-4304-44dc-a511-ed589e7d54ce",
+      "name": "1849 Dime",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     },
     {
-      "id": "0e48a7da-5939-45cb-a1bd-3d31bb35ce97",
-      "title": "1936-38 Nickel",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "024f811e-8bb9-48a8-90ce-bf1699356108",
+      "name": "2023 Washington Quarter",
+      "detail": "Standalone collection item carrying $0.00 valuation"
     },
     {
-      "id": "0ecab5cb-c8d7-4593-839d-1c8166c83b66",
-      "title": "2013 $1",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "024f811e-8bb9-48a8-90ce-bf1699356108",
+      "name": "2023 Washington Quarter",
+      "detail": "Precious metal coin (silver) has $0.00 melt value"
     },
     {
-      "id": "0ee8f20c-b107-46e5-b5c6-ea204e22d239",
-      "title": "2018D quarter",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "025d67c8-4c84-4db5-baa4-d7a8e7fafc64",
+      "name": "1912 Barber Silver Dimes",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     },
     {
-      "id": "0efab8b0-2da0-451a-967b-76b98ffc22f1",
-      "title": "2010-2021 Quarter Dollar",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "02a1632e-df62-4e2f-a236-563c3f1d37a0",
+      "name": "1974 Dollar",
+      "detail": "Precious metal coin (40% silver clad) has $0.00 melt value"
     },
     {
-      "id": "0f220d1c-a465-4e4a-9735-a93b8bb13cff",
-      "title": "1951 ",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "02b81895-c48a-4998-8b67-abc6787939f1",
+      "name": "1864 Half Dollar",
+      "detail": "Precious metal coin (silver) has $0.00 melt value"
     },
     {
-      "id": "0f56bc59-ba74-4d0a-9c3a-fdc4c14338c1",
-      "title": "1860 Seated Liberty Half Dime",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "03033f6c-a3e0-4811-bb40-9d663b35fbee",
+      "name": "1958 Dime",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     },
     {
-      "id": "12dc00d3-e38b-4255-a57a-e56d66548151",
-      "title": "1935 $1 Silver Certificate",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "03368cca-ca64-4136-880f-eb79343fa80e",
+      "name": "1972 Dollar",
+      "detail": "Precious metal coin (40% silver clad) has $0.00 melt value"
     },
     {
-      "id": "134ee30e-0dd9-4a46-9726-8ab045c2aa42",
-      "title": " ",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "ZERO_VALUATION_SURPRISE",
+      "id": "034ce35d-3e05-4e5a-89e8-9d0518874f95",
+      "name": "2002 Dollar",
+      "detail": "Standalone collection item carrying $0.00 valuation"
     },
     {
-      "id": "142728b2-1111-4ded-8228-f585ffb0879f",
-      "title": "1929 $10 Federal Reserve Bank Note",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
-    },
-    {
-      "id": "1524f8cb-831e-410c-bfd0-0a972cfc2416",
-      "title": "1882 $1",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
-    },
-    {
-      "id": "15986db0-f76b-46c3-afe7-060a0d1bcb80",
-      "title": "2018D quarter",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
-    },
-    {
-      "id": "1617b122-60b9-448b-9c8b-ddd2f97a7631",
-      "title": "1934 $500 Federal Reserve Note",
-      "reason_code": "NON_PRECIOUS_BASE_METAL_NO_CATALOG_MATCH"
+      "type": "MISSING_MELT_VALUE",
+      "id": "034ce35d-3e05-4e5a-89e8-9d0518874f95",
+      "name": "2002 Dollar",
+      "detail": "Precious metal coin (90% silver) has $0.00 melt value"
     }
   ]
 }
