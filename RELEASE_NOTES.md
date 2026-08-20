@@ -132,6 +132,19 @@
 
 
 
+
+## v4.130 — 2026-08-19
+**Feedback Enhancements & Platform Updates**
+
+- Feedback: fallback form - replace Overlay-dependent dropdown with chips + fix already_locked submit
+- Feedback: chat input single-line clips text - add maxLines null for multiline expand
+- Feedback: FAB tap silent no-op - escalate all failures to fallback form
+- Feedback: No Overlay widget error - remove tooltip + replace showDialog with inline panel
+- Feedback: FAB still invisible - remove LayoutBuilder from Positioned
+- Feedback: FeedbackDrawerOverlay web crash - StackFit.expand + FocusNode lifecycle fix
+- Feedback: FAB invisible on web - switch to Stack-relative bottom/right anchor
+- Feedback: MORGAN Feedback System Phase 1 â€” callable architecture, interview drawer, fallback form
+
 ## v4.129 — 2026-08-19
 **Feedback Enhancements & Platform Updates**
 
