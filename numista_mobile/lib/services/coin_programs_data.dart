@@ -80,11 +80,6 @@ class CoinProgramsData {
         category: "Circulating Coin Programs",
         mintMarkLocations: "OBVERSE_PORTRAIT",
         coins: [
-          ProgramCoin(id: "2026_cent", name: "1776 ~ 2026 Collectible Cent", varieties: [
-            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)"),
-            ChecklistVariety(id: "D-UNC", label: "D (Uncirculated)"),
-            ChecklistVariety(id: "S-PROOF", label: "S (Proof - Clad)")
-          ]),
           ProgramCoin(id: "2026_nickel", name: "1776 ~ 2026 Jefferson Nickel", varieties: [
             ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)"),
             ChecklistVariety(id: "D-UNC", label: "D (Uncirculated)"),
@@ -152,32 +147,32 @@ class CoinProgramsData {
             ChecklistVariety(id: "S-PROOF", label: "S (Proof - Clad)")
           ]),
           ProgramCoin(id: "2026_buffalo_gold", name: "1776 ~ 2026 American Buffalo Gold Coin (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "W-PROOF", label: "W (Proof)"),
-            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)")
+            ChecklistVariety(id: "W-PROOF", label: "W (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_eagle_silver", name: "1776 ~ 2026 American Silver Eagle (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "W-PROOF", label: "W (Proof)"),
-            ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),
-            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)"),
-            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)")
+            ChecklistVariety(id: "W-PROOF", label: "W (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "S-PROOF", label: "S (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)", requiresPrivy: true),
+            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_eagle_gold", name: "1776 ~ 2026 American Gold Eagle (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "W-PROOF", label: "W (Proof)"),
-            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)")
+            ChecklistVariety(id: "W-PROOF", label: "W (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "W-UNC", label: "W (Uncirculated)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_innovation_dollar", name: "2026 American Innovation \$1 Coin (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)"),
-            ChecklistVariety(id: "D-UNC", label: "D (Uncirculated)"),
-            ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),
-            ChecklistVariety(id: "S-REVERSE-PROOF", label: "S (Reverse Proof)")
+            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)", requiresPrivy: true),
+            ChecklistVariety(id: "D-UNC", label: "D (Uncirculated)", requiresPrivy: true),
+            ChecklistVariety(id: "S-PROOF", label: "S (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "S-REVERSE-PROOF", label: "S (Reverse Proof)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_morgan_dollar", name: "2026 Morgan Silver Dollar (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "P-PROOF", label: "P (Proof)"),
-            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)")
+            ChecklistVariety(id: "P-PROOF", label: "P (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_peace_dollar", name: "2026 Peace Silver Dollar (with 250 Privy)", varieties: [
-            ChecklistVariety(id: "P-PROOF", label: "P (Proof)"),
-            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)")
+            ChecklistVariety(id: "P-PROOF", label: "P (Proof)", requiresPrivy: true),
+            ChecklistVariety(id: "P-UNC", label: "P (Uncirculated)", requiresPrivy: true)
           ]),
           ProgramCoin(id: "2026_companion_medal", name: "2026 Semiquincentennial Companion Silver Medal", varieties: [
             ChecklistVariety(id: "P-PROOF", label: "P (Proof)")

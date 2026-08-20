@@ -13,14 +13,16 @@
     },
     "main": "index.js",
     "dependencies": {
+        "@google-cloud/documentai": "^9.5.0",
+        "@google-cloud/secret-manager": "^7.0.0",
+        "@google/genai": "^1.38.0",
+        "body-parser": "^2.2.2",
+        "dotenv": "^17.2.3",
+        "ejs": "^4.0.1",
+        "express": "^5.2.1",
         "firebase-admin": "^13.6.0",
         "firebase-functions": "^6.3.0",
-        "express": "^5.2.1",
-        "ejs": "^4.0.1",
-        "body-parser": "^2.2.2",
-        "@google-cloud/documentai": "^9.5.0",
-        "@google/genai": "^1.38.0",
-        "dotenv": "^17.2.3",
+        "nodemailer": "^9.0.5",
         "xlsx": "^0.18.5"
     },
     "private": true
