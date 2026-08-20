@@ -2,9 +2,6 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs20"
-  },
-  "firestore": {
-    "rules": "../numista_mobile/firestore.rules",
-    "indexes": "../numista_mobile/firestore.indexes.json"
   }
 }
+
