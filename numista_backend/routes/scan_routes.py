@@ -142,6 +142,7 @@ async def upload_document(
     doc_type = classification.get("document_type", "checklist")
     conf = classification.get("confidence", 1.0)
     requires_conf = classification.get("requires_confirmation", False)
+    program_hint = classification.get("detected_program_or_vendor", "")
 
     # Step 3: Route to Checklist Extraction Engine
     if doc_type == "checklist" or "check" in doc_type:
@@ -151,7 +152,8 @@ async def upload_document(
             filename=filename,
             genai_client=genai_client,
             uid=uid,
-            import_session_id=session_id
+            import_session_id=session_id,
+            program_hint=program_hint,
         )
 
         items = extraction_result.get("items", [])

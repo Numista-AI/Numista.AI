@@ -1526,10 +1526,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.132',
+    date: '2026-08-20',
+    description: 'Flutter Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+      'Functions: lazy-load heavy modules + fix .doc() Firestore API',
+      'Functions: add numista_backend/firebase.json for standalone functions deploy',
+      'Feedback: add onFeedbackCreated Cloud Function â€” Gemini analysis + email alert + monthly rollup',
+      'Ui: Phase 1+2 â€” BACK contrast + Review Hub subtitle chain',
+    ],
+  ),
+  _Release(
+    version: 'v4.131',
+    date: '2026-08-20',
+    description: 'Flutter Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+      'Functions: lazy-load heavy modules + fix .doc() Firestore API',
+      'Functions: add numista_backend/firebase.json for standalone functions deploy',
+      'Feedback: add onFeedbackCreated Cloud Function â€” Gemini analysis + email alert + monthly rollup',
+      'Ui: Phase 1+2 â€” BACK contrast + Review Hub subtitle chain',
+    ],
+  ),
+  _Release(
     version: 'v4.129',
     date: '2026-08-19',
     description: 'Feedback Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Feedback: No Overlay widget error - remove tooltip + replace showDialog with inline panel',
       'Feedback: FAB still invisible - remove LayoutBuilder from Positioned',

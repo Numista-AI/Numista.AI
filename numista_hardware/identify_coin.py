@@ -502,8 +502,21 @@ def run_numista_report(img_path_a, img_path_b):
            - American Silver Eagles are 99.9% silver.
            - Set "is_silver" to true or false based on this analysis.
            - Set "metal_content" to the precise composition string (e.g. "90% Silver, 10% Copper" or "Clad (Copper-Nickel)").
-        5. Provide a 'file_slug' (e.g., 2026_American_Liberty_Half_Dollar_D).
-        6. Provide a brief 'report' summarizing the coin's key features and numismatic significance.
+        5. 2026 AMERICA250 / SEMIQUINCENTENNIAL PROGRAM (apply when year == 2026):
+            - CIRCULATING REDESIGNS — set program_series = "United States Semiquincentennial" for:
+              * "Emerging Liberty" dime (denomination "10c")
+              * "Enduring Liberty" half dollar (denomination "50c")
+              * 1776 ~ 2026 Jefferson Nickel (denomination "5c") — it is still a Jefferson nickel with a dual date; do NOT say it is not a Jefferson nickel.
+              * Any of the five America250 quarters: Mayflower Compact, Revolutionary War, Declaration of Independence, U.S. Constitution, Gettysburg Address (denomination "25c")
+            - DO NOT assign Semiquincentennial to cents/pennies — no circulating 2026 cent redesign exists.
+            - NATIVE AMERICAN $1 (Polly Cooper / Oneida Allies at Valley Forge reverse): set program_series = "Native American $1". Do NOT assign Semiquincentennial.
+            - PRIVY BULLION (250th privy mark on existing series) — keep the parent series name:
+              * ASE with 250 privy → "American Silver Eagle" | AGE/Buffalo with 250 privy → "American Gold Eagle" / "American Buffalo"
+              * Morgan/Peace with 250 privy → "Morgan Dollar" / "Peace Dollar"
+              * Innovation $1 with 250 privy → "American Innovation Dollar"
+            - A "250" or "America250" privy mark on the reverse is NOT the same as being a circulating Semiquincentennial redesign.
+        6. Provide a 'file_slug' (e.g., 2026_American_Liberty_Half_Dollar_D).
+        7. Provide a brief 'report' summarizing the coin's key features and numismatic significance.
 
         Return ONLY a valid JSON object with these exact keys:
         {
