@@ -63,6 +63,24 @@ Return a JSON object with this exact structure:
     }
   ]
 }
+9. 2026 America250 / Semiquincentennial (CRITICAL FOR 2026 CHECKLISTS):
+   - CIRCULATING REDESIGNS — assign Program/Series = "United States Semiquincentennial" for these coins when year == 2026:
+     * "Emerging Liberty" or "Emerging Liberty Dime" → denomination = "10c" / "Dime"
+     * "Enduring Liberty" or "Enduring Liberty Half Dollar" → denomination = "50c" / "Half Dollar"
+     * "1776 ~ 2026" or "1776~2026" nickel → denomination = "5c" / "Nickel"
+     * America250 quarters: "Mayflower Compact", "Revolutionary War", "Declaration of Independence",
+       "U.S. Constitution", "Gettysburg Address" → denomination = "25c" / "Quarter"
+   - DO NOT assign Semiquincentennial to pennies / cents — no 2026 cent redesign exists in circulation.
+   - PRIVY BULLION COLLECTIBLES — keep parent series (do NOT assign Semiquincentennial):
+     * American Silver Eagle with 250 privy → Program/Series = "American Silver Eagle"
+     * American Gold Eagle with 250 privy → Program/Series = "American Gold Eagle"
+     * American Buffalo Gold with 250 privy → Program/Series = "American Buffalo"
+     * Morgan Dollar with 250 privy → Program/Series = "Morgan Dollar"
+     * Peace Dollar with 250 privy → Program/Series = "Peace Dollar"
+     * American Innovation $1 with 250 privy → Program/Series = "American Innovation Dollar"
+   - NATIVE AMERICAN $1 (Valley Forge / Polly Cooper / Oneida Allies): assign Program/Series = "Native American $1" — NOT Semiquincentennial.
+   - COMMEMORATIVE PRESIDENTIAL DOLLAR (Donald J. Trump 2026): assign Program/Series = "Commemorative Dollar".
+   - The text "250th Anniversary", "America250", or "semiquincentennial" in a header or title is a strong signal these are 2026 Semiquincentennial circulating coins.
 """
 
 def slugify_theme(theme_raw: str) -> str:
@@ -225,7 +243,8 @@ def extract_checklist_document(
     filename: str,
     genai_client: Any,
     uid: str,
-    import_session_id: str
+    import_session_id: str,
+    program_hint: str = "",
 ) -> Dict[str, Any]:
     """
     Extracts coin checklist items from document bytes using Gemini 3.1 Pro Preview.
@@ -234,16 +253,25 @@ def extract_checklist_document(
     """
     try:
         from google.genai import types as genai_types
-        
+
         doc_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        # Prepend the classifier's detected program/vendor as a hint when available
+        effective_prompt = CHECKLIST_EXTRACTION_SYSTEM_PROMPT
+        if program_hint:
+            effective_prompt = (
+                f"PROGRAM CONTEXT HINT: The classifier identified this document as belonging to the "
+                f'"{program_hint}" program. Use this to inform program_series assignment when ambiguous.\n\n'
+            ) + effective_prompt
+
         prompt_hash = hashlib.sha256(
-            (CHECKLIST_EXTRACTION_SYSTEM_PROMPT + "\n" + CHECKLIST_PROMPT_VERSION).encode("utf-8")
+            (effective_prompt + "\n" + CHECKLIST_PROMPT_VERSION).encode("utf-8")
         ).hexdigest()[:16]
-        
+
         pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
         response = genai_client.models.generate_content(
             model=EXTRACTION_MODEL,
-            contents=[pdf_part, genai_types.Part.from_text(text=CHECKLIST_EXTRACTION_SYSTEM_PROMPT)],
+            contents=[pdf_part, genai_types.Part.from_text(text=effective_prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
             ),
