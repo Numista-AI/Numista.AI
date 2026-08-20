@@ -663,7 +663,120 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                           ]),
                           field('Denomination', 'Denomination', Icons.monetization_on_outlined),
                           field('Country', 'Country', Icons.flag_outlined),
-                          field('Program/Series', 'Program / Series', Icons.collections_bookmark_outlined),
+                          // ── Program/Series picker ───────────────────────
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Autocomplete<_ProgramOption>(
+                              initialValue: TextEditingValue(
+                                text: controllers['Program/Series']!.text,
+                              ),
+                              optionsBuilder: (TextEditingValue tv) {
+                                final q = tv.text.trim();
+                                if (q.isEmpty) {
+                                  // Show first 8 options on focus/empty
+                                  return _kProgramOptions.take(8);
+                                }
+                                return _kProgramOptions.where((o) => o.matches(q));
+                              },
+                              displayStringForOption: (opt) => opt.label,
+                              onSelected: (_ProgramOption selected) {
+                                controllers['Program/Series']!.text = selected.value;
+                              },
+                              fieldViewBuilder: (ctx, fieldCtrl, focusNode, onSubmitted) {
+                                // Sync initialValue → fieldCtrl once
+                                if (fieldCtrl.text.isEmpty &&
+                                    controllers['Program/Series']!.text.isNotEmpty) {
+                                  fieldCtrl.text = controllers['Program/Series']!.text;
+                                }
+                                // Keep the real controller in sync when user types free text
+                                fieldCtrl.addListener(() {
+                                  controllers['Program/Series']!.text = fieldCtrl.text;
+                                });
+                                return TextField(
+                                  controller: fieldCtrl,
+                                  focusNode: focusNode,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(
+                                      Icons.collections_bookmark_outlined,
+                                      color: Colors.white38,
+                                      size: 18,
+                                    ),
+                                    labelText: 'Program / Series',
+                                    labelStyle: const TextStyle(
+                                      color: Colors.white38,
+                                      fontSize: 13,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(color: Colors.white12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: const BorderSide(color: Color(0xFFF63366)),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white.withAlpha(8),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                      horizontal: 12,
+                                    ),
+                                  ),
+                                  onSubmitted: (_) => onSubmitted(),
+                                );
+                              },
+                              optionsViewBuilder: (ctx, onSelected, options) {
+                                return Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Material(
+                                    color: const Color(0xFF252836),
+                                    borderRadius: BorderRadius.circular(10),
+                                    elevation: 4,
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(maxHeight: 240, maxWidth: 540),
+                                      child: ListView.builder(
+                                        padding: EdgeInsets.zero,
+                                        shrinkWrap: true,
+                                        itemCount: options.length,
+                                        itemBuilder: (_, i) {
+                                          final opt = options.elementAt(i);
+                                          return InkWell(
+                                            onTap: () => onSelected(opt),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 10,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    opt.label,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                  if (opt.value != opt.label)
+                                                    Text(
+                                                      opt.value,
+                                                      style: const TextStyle(
+                                                        color: Colors.white38,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                           field('Theme/Subject', 'Theme / Subject', Icons.image_outlined),
                           field('Variety', 'Variety / Error', Icons.warning_amber_outlined),
 
@@ -1814,6 +1927,61 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 }
+
+// ─── Program/Series picker data ───────────────────────────────────────────────
+// label  = displayed in the dropdown list
+// value  = canonical string written to Firestore Program/Series field
+// Circulating 2026 redesigns share the "United States Semiquincentennial" value.
+// Privy bullion (ASE, Morgan, Peace, Buffalo, Gold Eagle) keep parent series.
+
+class _ProgramOption {
+  final String label;
+  final String value;
+  const _ProgramOption(this.label, this.value);
+
+  /// Checks if this option matches a search query (case-insensitive substring).
+  bool matches(String query) {
+    final q = query.toLowerCase();
+    return label.toLowerCase().contains(q) || value.toLowerCase().contains(q);
+  }
+}
+
+// Ordered program list — appears on focus when the text field is empty (first 8 shown).
+// On typing, all matching entries are shown.
+const List<_ProgramOption> _kProgramOptions = [
+  // ── 2026 America250 ───────────────────────────────────────────────────────
+  _ProgramOption('2026 Semiquincentennial (Circulating Redesigns)', 'United States Semiquincentennial'),
+  _ProgramOption('American Silver Eagle (2026 with 250 Privy)', 'American Silver Eagle'),
+  _ProgramOption('Morgan Silver Dollar (2026 with 250 Privy)', 'Morgan Dollar'),
+  _ProgramOption('Peace Silver Dollar (2026 with 250 Privy)', 'Peace Dollar'),
+  _ProgramOption('American Buffalo Gold (2026 with 250 Privy)', 'American Buffalo'),
+  _ProgramOption('American Gold Eagle (2026 with 250 Privy)', 'American Gold Eagle'),
+  _ProgramOption('American Innovation \$1 (2026 with 250 Privy)', 'American Innovation Dollar'),
+  _ProgramOption('Native American \$1 / Sacagawea Dollar', 'Native American \$1'),
+  // ── Other major programs ──────────────────────────────────────────────────
+  _ProgramOption('American Women Quarters', 'American Women Quarters'),
+  _ProgramOption('50 State Quarters', '50 State Quarters'),
+  _ProgramOption('America the Beautiful Quarters', 'America the Beautiful Quarters'),
+  _ProgramOption('National Park Quarters', 'National Park Quarters'),
+  _ProgramOption('Washington Crossing the Delaware Quarter', 'Washington Crossing the Delaware Quarter'),
+  _ProgramOption('Morgan Dollar', 'Morgan Dollar'),
+  _ProgramOption('Peace Dollar', 'Peace Dollar'),
+  _ProgramOption('American Silver Eagle', 'American Silver Eagle'),
+  _ProgramOption('American Gold Eagle', 'American Gold Eagle'),
+  _ProgramOption('American Buffalo', 'American Buffalo'),
+  _ProgramOption('Lincoln Cent / Memorial Cent', 'Lincoln Cent'),
+  _ProgramOption('Jefferson Nickel', 'Jefferson Nickel'),
+  _ProgramOption('Roosevelt Dime', 'Roosevelt Dime'),
+  _ProgramOption('Kennedy Half Dollar', 'Kennedy Half Dollar'),
+  _ProgramOption('Eisenhower Dollar', 'Eisenhower Dollar'),
+  _ProgramOption('Susan B. Anthony Dollar', 'Susan B. Anthony Dollar'),
+  _ProgramOption('Presidential Dollar', 'Presidential Dollar'),
+  _ProgramOption('American Innovation Dollar', 'American Innovation Dollar'),
+  _ProgramOption('Bicentennial (1976)', 'Bicentennial Program'),
+  _ProgramOption('Commemorative Dollar', 'Commemorative Dollar'),
+  _ProgramOption('American Palladium Eagle', 'American Palladium Eagle'),
+  _ProgramOption('American Platinum Eagle', 'American Platinum Eagle'),
+];
 
 // ─── Helper data class ────────────────────────────────────────────────────────
 
