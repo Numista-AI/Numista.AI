@@ -170,7 +170,38 @@ class SlotResolver {
     return 'SNAP-$dateStr-$hash8';
   }
 
+  // ─── Field alias helpers ───────────────────────────────────────────────────
+
+  /// Returns the first non-empty value found under any of [keys], uppercased
+  /// and trimmed. Returns '' if no key has a value.
+  static String _field(Map<String, dynamic> item, List<String> keys) {
+    for (final k in keys) {
+      final v = item[k];
+      if (v != null) {
+        final s = v.toString().trim();
+        if (s.isNotEmpty) return s.toUpperCase();
+      }
+    }
+    return '';
+  }
+
+  static String _metalContent(Map<String, dynamic> item) =>
+      _field(item, ['Metal Content', 'metal_content', 'Composition', 'composition']);
+
+  static String _strikeType(Map<String, dynamic> item) =>
+      _field(item, ['Strike Type', 'strike_type', 'Strike', 'strike']);
+
+  /// Covers Variety AND Theme/Subject so privy detection works across both fields.
+  static String _variety(Map<String, dynamic> item) =>
+      _field(item, ['Variety', 'variety', 'Theme/Subject', 'theme_subject']);
+
+  static String _mintMark(Map<String, dynamic> item) =>
+      _field(item, ['Mint Mark', 'mint_mark', 'Mint', 'mint']);
+
+  // ─── Coin matching ─────────────────────────────────────────────────────────
+
   /// Evaluates an item from Firestore against a program coin slot.
+
   static bool isMatch(Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
     final denom      = (item['Denomination']?.toString() ?? item['denomination']?.toString() ?? '').toLowerCase();
     final progSeries = (item['Program/Series']?.toString() ?? item['program_series']?.toString() ?? '').trim();
@@ -179,6 +210,15 @@ class SlotResolver {
     final year       = (item['Year']?.toString() ?? item['year']?.toString() ?? '').trim();
     final cNameLower = coinSlot.name.toLowerCase().trim();
     final slotYear   = (coinSlot.year ?? '').trim();
+
+    // 0. Country guard — empty passes; explicit non-US rejects
+    final country = _field(item, ['Country', 'country']).toLowerCase();
+    if (country.isNotEmpty &&
+        country != 'united states' && country != 'us' &&
+        country != 'usa' && country != 'u.s.' &&
+        country != 'united states of america') {
+      return false;
+    }
 
     // 1. Check Multi-coin Mint / Proof Set Matching
     if (denom == 'set' || progSeries.toLowerCase().contains('uncirculated set') || progSeries.toLowerCase().contains('proof set')) {
@@ -202,18 +242,8 @@ class SlotResolver {
       if (pNameLower.contains('dime') && !denom.contains('dime') && !denom.contains('10c')) return false;
     }
 
-    // 3. Program/Series Alignment
-    bool seriesMatched = program.matchesDbSeries(progSeries);
-    if (!seriesMatched) {
-      if (program.id.contains('2026') || program.name.contains('2026') || program.name.contains('America250')) {
-        if (progSeries.toLowerCase().contains('2026') ||
-            progSeries.toLowerCase().contains('america250') ||
-            progSeries.toLowerCase().contains('semiquincentennial') ||
-            progSeries.toLowerCase().contains('250th')) {
-          seriesMatched = true;
-        }
-      }
-    }
+    // 3. Program/Series Alignment — rule 24 in matchesDbSeries handles 2026/America250 properly
+    final bool seriesMatched = program.matchesDbSeries(progSeries);
     if (!seriesMatched && progSeries.isNotEmpty) return false;
 
     // 4. Year Alignment Guard (if slot specifies year)
@@ -225,7 +255,7 @@ class SlotResolver {
     if (cNameLower.isNotEmpty) {
       if (themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) return true;
       if (title.isNotEmpty && (title.contains(cNameLower) || cNameLower.contains(title))) return true;
-      
+
       // Clean subject comparisons (remove dates and descriptors)
       final cleanSlotName = cNameLower.replaceAll(RegExp(r'^\d{4}\s*-\s*'), '').trim();
       if (cleanSlotName.isNotEmpty) {
@@ -244,30 +274,68 @@ class SlotResolver {
 
   /// Resolves which specific variety/mint column an item belongs to.
   static bool matchesVariety(Map<String, dynamic> item, ChecklistVariety variety) {
-    final mintMark = (item['Mint Mark']?.toString() ?? item['mint_mark']?.toString() ?? '').trim().toUpperCase();
-    final strikeType = (item['Strike Type']?.toString() ?? item['strike_type']?.toString() ?? '').trim().toUpperCase();
-    final varietyField = (item['Variety']?.toString() ?? item['variety']?.toString() ?? '').trim().toUpperCase();
-    final vId = variety.id.toUpperCase();
+    final mintMark    = _mintMark(item);
+    final strikeType  = _strikeType(item);
+    final varField    = _variety(item);   // Variety + Theme/Subject
+    final metal       = _metalContent(item);
+    final vId         = variety.id.toUpperCase();
 
-    // Specific 2026 Privy Mark rules
+    // ── requiresPrivy gate ───────────────────────────────────────────────────
+    // Fires before any mint-mark logic. Only 250/SEMIQUINCENTENNIAL/AMERICA250
+    // qualify — PRIVY alone or ANNIVERSARY alone do not (too broad).
+    if (variety.requiresPrivy == true) {
+      final title = _field(item, [
+        'official_us_mint_title', 'Official US Mint Title', 'Title', 'title']);
+      final hasPrivy =
+          varField.contains('250')                 ||
+          varField.contains('SEMIQUINCENTENNIAL')   ||
+          varField.contains('AMERICA250')           ||
+          title.contains('250')                    ||
+          title.contains('SEMIQUINCENTENNIAL')      ||
+          title.contains('AMERICA250');
+      if (!hasPrivy) return false;
+      // Privy confirmed — fall through to mint-mark check below.
+    }
+
+    // ── Privy-mark varieties ─────────────────────────────────────────────────
     if (vId.contains('PRIVY-JULY4')) {
       return (mintMark == 'P' || mintMark == 'D' || mintMark.isEmpty) &&
-             (varietyField.contains('JULY 4') || varietyField.contains('PRIVY') || strikeType.contains('PRIVY'));
+             (varField.contains('JULY 4') || varField.contains('JULY4') ||
+              varField.contains('PRIVY') || strikeType.contains('PRIVY'));
     }
 
-    // Proof / Reverse Proof / Special finishes
+    // ── Reverse Proof ────────────────────────────────────────────────────────
     if (vId.contains('REVERSE-PROOF')) {
       return (mintMark == 'S' || mintMark == 'W' || mintMark.isEmpty) &&
-             (strikeType.contains('REVERSE') || varietyField.contains('REVERSE'));
+             (strikeType.contains('REVERSE') || varField.contains('REVERSE'));
     }
-    if (vId.contains('PROOF') || vId.contains('S-SILVER')) {
-      final isSilver = vId.contains('SILVER') || varietyField.contains('SILVER');
-      final isProof = strikeType.contains('PROOF') || varietyField.contains('PROOF') || mintMark == 'S';
-      if (vId.contains('SILVER')) return isProof && isSilver;
+
+    // ── S-SILVER ─────────────────────────────────────────────────────────────
+    // Must be S-mint AND silver content AND NOT an explicit proof strike.
+    // mintMark == 'S' alone does NOT make a coin proof-like.
+    if (vId == 'S-SILVER') {
+      final isSilver = metal.contains('SILVER') || varField.contains('SILVER');
+      final isProof  = strikeType.contains('PROOF') && !strikeType.contains('REVERSE');
+      return mintMark == 'S' && isSilver && !isProof;
+    }
+
+    // ── S-PROOF (clad or generic proof) ──────────────────────────────────────
+    if (vId == 'S-PROOF' || vId == 'S-CLAD') {
+      final isProof = strikeType.contains('PROOF') || varField.contains('PROOF');
+      return mintMark == 'S' && isProof;
+    }
+
+    // ── Generic PROOF / specific mint proofs (W-PROOF, P-PROOF, etc.) ────────
+    if (vId.contains('PROOF')) {
+      final baseMint = vId.split('-').first;
+      final isProof  = strikeType.contains('PROOF') || varField.contains('PROOF');
+      if (baseMint.isNotEmpty && baseMint != 'S') {
+        return mintMark == baseMint && isProof;
+      }
       return isProof;
     }
 
-    // Uncirculated standard mint marks (P, D, W, S, CC, O)
+    // ── Uncirculated standard mint marks (P, D, W, S, CC, O) ────────────────
     final baseMint = vId.split('-').first;
     if (mintMark == baseMint) return true;
     if (baseMint == 'P' && (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA')) return true;

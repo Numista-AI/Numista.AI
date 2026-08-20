@@ -34,6 +34,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // Set of coins selected to add to collection
   final Set<String> _selectedToAdd = {};
 
+  /// Guards the Add Selected Coins button against double-tap / concurrent writes.
+  bool _isSavingCoins = false;
+
   // Program preferences cache: programId -> goal ("Full Master Set", "Circulation / Business Strikes Only", "Standard Set")
   final Map<String, String> _programGoals = {};
   final Map<String, bool> _programManualComplete = {};
@@ -1072,7 +1075,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _addSelectedCoins,
+                onPressed: _isSavingCoins ? null : _addSelectedCoins,
                 icon: const Icon(Icons.add_task),
                 label: Text('Add ${_selectedToAdd.length} Selected Coins to Wishlist / Collection'),
                 style: ElevatedButton.styleFrom(
@@ -1325,12 +1328,14 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   Future<void> _addSelectedCoins() async {
     if (_selectedProgram == null || _selectedToAdd.isEmpty) return;
-    
+    if (_isSavingCoins) return;
+    setState(() => _isSavingCoins = true);
+
     final batch = FirebaseFirestore.instance.batch();
-    
+
     for (String coinName in _selectedToAdd) {
       final docRef = FirebaseFirestore.instance.collection(AuthService.coinsPath).doc(const Uuid().v4());
-      
+
       // Attempt rudimentary parsing of year/denomination based on name
       String parsedYear = "";
       final yearMatch = RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(coinName);
@@ -1340,7 +1345,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         final progYearMatch = RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(_selectedProgram!.years);
         if (progYearMatch != null) parsedYear = progYearMatch.group(0)!;
       }
-      
+
       String parsedDenom = "";
       final lowerName = coinName.toLowerCase();
       if (lowerName.contains("penny") || lowerName.contains("cent")) parsedDenom = "1c";
@@ -1381,6 +1386,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
            SnackBar(content: Text('Error adding coins: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isSavingCoins = false);
     }
   }
 

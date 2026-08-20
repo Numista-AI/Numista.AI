@@ -3,12 +3,16 @@ class ChecklistVariety {
   final String label; // e.g., 'P (Uncirculated)'
   final String? imagePath; // Legacy
   final String? referenceImagePath; // Path in gs://us_mint_coin_images
+  /// If true, item must carry a 250/SEMIQUINCENTENNIAL/AMERICA250 token in
+  /// theme_subject or official_us_mint_title to match this slot.
+  final bool? requiresPrivy;
 
   const ChecklistVariety({
     required this.id,
     required this.label,
     this.imagePath,
     this.referenceImagePath,
+    this.requiresPrivy,
   });
 
   factory ChecklistVariety.fromId(String id) {
@@ -31,6 +35,7 @@ class ChecklistVariety {
       label: map['label'] ?? '',
       imagePath: map['imagePath'],
       referenceImagePath: map['referenceImagePath'],
+      requiresPrivy: map['requiresPrivy'] as bool?,
     );
   }
 
@@ -40,6 +45,7 @@ class ChecklistVariety {
       'label': label,
       if (imagePath != null) 'imagePath': imagePath,
       if (referenceImagePath != null) 'referenceImagePath': referenceImagePath,
+      if (requiresPrivy != null) 'requiresPrivy': requiresPrivy,
     };
   }
 }
@@ -288,15 +294,50 @@ class CoinProgram {
       return dbLower.contains('proof set') || dbLower.contains('uncirculated set') || dbLower.contains('mint set');
     }
 
-    // 24. 2026 America250 / Semiquincentennial / Circulating Coins
-    if (progLower.contains('2026') || progLower.contains('america250') || progLower.contains('semiquincentennial') || progLower.contains('circulating')) {
-      if (dbLower.contains('semiquincentennial') ||
-          dbLower.contains('america250') ||
-          dbLower.contains('250th') ||
-          dbLower.contains('2026') ||
-          dbLower.contains('uncirculated sets') ||
-          dbLower.contains('mint set')) {
-        return true;
+    // 24. 2026 America250 / Semiquincentennial programs (v10 — tightened split)
+    if (progLower.contains('2026') || progLower.contains('america250') ||
+        progLower.contains('semiquincentennial')) {
+
+      // CIRCULATING branch — new-design names + explicit circulating tags
+      // 'semiquincentennial' in dbLower is circulating-only (coins storing that
+      //  series tag are circulating redesigns, not privy bullion).
+      // '250th anniversary' removed — belongs only in hasPrivy on the Collectibles side.
+      // 'valley forge' removed — substring present in Native American $1 Polly Cooper reverse.
+      // Bare '2026' not accepted — too broad.
+      if (progLower.contains('circulating') || progLower.contains('currency')) {
+        if (dbLower.contains('semiquincentennial') || dbLower.contains('america250')) {
+          return true;
+        }
+        const circulatingDesigns = [
+          'emerging liberty',           // dime
+          'enduring liberty',           // half dollar
+          'mayflower compact',
+          'revolutionary war',          // quarter ('valley forge' alias removed)
+          'declaration of independence',
+          'u.s. constitution',
+          'gettysburg address',
+          '1776 ~ 2026',                // nickel (with spaces as per Mint copy)
+          '1776~2026',                  // nickel (compact form)
+        ];
+        return circulatingDesigns.any((n) => dbLower.contains(n));
+      }
+
+      // COLLECTIBLES branch — parent series only
+      // 'semiquincentennial' NOT accepted here: a coin tagged Semiquincentennial
+      // is a circulating redesign; privy bullion keeps its parent series.
+      // 'american eagle' excluded — too broad (Gold Eagle, Platinum Eagle, etc.)
+      if (progLower.contains('collectible') || progLower.contains('numismatic')) {
+        const collectibleSeries = [
+          'silver eagle',
+          'peace dollar',
+          'morgan dollar',
+          'american buffalo',
+          'buffalo gold',
+          'innovation dollar',
+          'companion medal',
+        ];
+        return collectibleSeries.any((n) => dbLower.contains(n));
+        // requiresPrivy gate in matchesVariety is the second required check.
       }
     }
 
