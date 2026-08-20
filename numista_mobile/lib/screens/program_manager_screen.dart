@@ -578,8 +578,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 icon: const Icon(Icons.arrow_back, size: 16),
                 label: const Text('Back'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF31333F),
-                  side: const BorderSide(color: Color(0xFFE2E6E9)),
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                 ),
               ),
