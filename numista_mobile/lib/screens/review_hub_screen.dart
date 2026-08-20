@@ -1558,11 +1558,27 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   ),
                   const SizedBox(height: 4),
                   () {
-                    final theme = (data['theme_subject'] ?? data['Theme/Subject'] ?? '').toString().trim();
-                    final official = (data['official_us_mint_title'] ?? data['Official US Mint Title'] ?? '').toString().trim();
-                    final displayTitle = (official.isNotEmpty && official != theme)
-                        ? '$theme ("$official")'
-                        : (theme.isNotEmpty ? theme : (data['title'] ?? 'Numismatic Item').toString());
+                    final yr       = (data['Year'] ?? '').toString().trim();
+                    final mm       = (data['Mint Mark'] ?? '').toString().trim();
+                    final den      = (data['Denomination'] ?? '').toString().trim();
+                    final ser      = (data['Program/Series'] ?? '').toString().trim();
+                    final offTitle = (data['official_us_mint_title'] ?? data['Official US Mint Title'] ?? '').toString().trim();
+                    final theme    = (data['theme_subject'] ?? data['Theme/Subject'] ?? '').toString().trim();
+                    final mmPart   = mm.isNotEmpty ? '-$mm' : '';
+                    String displayTitle;
+                    if (offTitle.isNotEmpty) {
+                      displayTitle = offTitle;
+                    } else if (theme.isNotEmpty) {
+                      displayTitle = theme;
+                    } else if (ser.isNotEmpty && yr.isNotEmpty) {
+                      displayTitle = '$yr$mmPart $ser';
+                    } else if (ser.isNotEmpty) {
+                      displayTitle = ser;
+                    } else if (yr.isNotEmpty || den.isNotEmpty) {
+                      displayTitle = '$yr$mmPart${den.isNotEmpty ? ' $den' : ''}'.trim();
+                    } else {
+                      displayTitle = 'Numismatic Item';
+                    }
                     final isQuarantined = data['status'] == 'quarantined' || data['review_needed'] == true;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
