@@ -1,27 +1,24 @@
 ﻿/**
  * feedbackIntelligence.js
- * Core logic for the onFeedbackCreated Cloud Function:
- *   1. Gemini analysis of the feedback doc
- *   2. Gmail SMTP alert to eric@numista.ai
- *   3. Monthly feedback_insights rollup in Firestore
+ * Heavy imports are lazy-loaded inside function bodies to avoid
+ * Firebase CLI deployment analysis timeout.
  */
 
-const { GoogleGenAI } = require("@google/genai");
-const nodemailer = require("nodemailer");
-const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
-const { buildEmailHtml } = require("./emailTemplate");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
+const { buildEmailHtml } = require("./emailTemplate");
 
-const PROJECT_ID = "studio-9101802118-8c9a8";
-const ALERT_TO   = "eric@numista.ai";
-const ALERT_FROM = "eric@numista.ai";
+const PROJECT_ID  = "studio-9101802118-8c9a8";
+const ALERT_TO    = "eric@numista.ai";
+const ALERT_FROM  = "eric@numista.ai";
 const SECRET_NAME = `projects/${PROJECT_ID}/secrets/NUMISTA_GMAIL_APP_PASSWORD/versions/latest`;
 
 let _cachedPassword = null;
 
 async function getGmailPassword() {
   if (_cachedPassword) return _cachedPassword;
+  // Lazy-load to avoid startup timeout
+  const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
   const client = new SecretManagerServiceClient();
   const [version] = await client.accessSecretVersion({ name: SECRET_NAME });
   _cachedPassword = version.payload.data.toString("utf8").trim();
@@ -32,7 +29,10 @@ async function getGmailPassword() {
 
 async function analyzeWithGemini(doc) {
   try {
+    // Lazy-load to avoid startup timeout
+    const { GoogleGenAI } = require("@google/genai");
     const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+
     const transcript = (doc.full_transcript || [])
       .map(m => `${m.role === "user" ? "USER" : "MORGAN"}: ${m.message || m.message_redacted || ""}`)
       .join("\n");
@@ -72,7 +72,6 @@ pattern_tags should be 2-5 lowercase keywords (e.g. "overlay", "web-only", "auth
     });
 
     const raw = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    // Strip markdown fences if present
     const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
     return JSON.parse(cleaned);
   } catch (err) {
@@ -92,7 +91,10 @@ pattern_tags should be 2-5 lowercase keywords (e.g. "overlay", "web-only", "auth
 // ── 2. Send Gmail alert ───────────────────────────────────────────────────────
 
 async function sendAlertEmail(doc, analysis) {
+  // Lazy-load nodemailer to avoid startup timeout
+  const nodemailer = require("nodemailer");
   const password = await getGmailPassword();
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: ALERT_FROM, pass: password },
@@ -123,7 +125,7 @@ async function updateInsights(doc, analysis) {
   const db = admin.firestore();
   const now = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const ref = db.collection("feedback_insights").document(period);
+  const ref = db.collection("feedback_insights").doc(period);   // .doc() not .document()
 
   const FieldValue = admin.firestore.FieldValue;
 
@@ -136,13 +138,11 @@ async function updateInsights(doc, analysis) {
     [`by_intake_method.${doc.intake_method || "unknown"}`]: FieldValue.increment(1),
   };
 
-  // Increment pattern tag counters
   for (const tag of (analysis.pattern_tags || [])) {
     const safeTag = tag.replace(/[^a-zA-Z0-9_]/g, "_");
     update[`pattern_tag_frequency.${safeTag}`] = FieldValue.increment(1);
   }
 
-  // Increment affected screen counters
   for (const screen of (analysis.related_screens || [])) {
     const safeScreen = screen.replace(/[^a-zA-Z0-9_]/g, "_");
     update[`affected_screens.${safeScreen}`] = FieldValue.increment(1);
@@ -156,7 +156,7 @@ async function updateInsights(doc, analysis) {
 
 async function enrichFeedbackDoc(docId, analysis) {
   const db = admin.firestore();
-  await db.collection("beta_feedback").document(docId).update({
+  await db.collection("beta_feedback").doc(docId).update({   // .doc() not .document()
     ai_analysis: analysis,
     ai_analysis_ts: admin.firestore.FieldValue.serverTimestamp(),
   });
