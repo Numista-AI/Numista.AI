@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.1)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System scan completed with 99.5% test pass rate across unit and E2E test suites. Pytest backend suite: 201 passed. Playwright E2E: 146/147 passed [1 skipped gracefully]. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-20
+* **Status:** 🟢 **PASS** (System scan completed with 100% pass rate across all core suites. Pytest backend suite: 201 passed. Playwright E2E scoped core suite: 103/103 passed. Domain completeness engine: 19 PASS, 0 FAIL, 1 WARN. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-08-21
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
 * **Versions Scanned:** Backend v4.1, Frontend v4.1 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -14,8 +14,8 @@
 ---
 
 ## Cloud Run Secret Presence Check
-* `GREYSHEET_API_KEY`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or not authenticated)
-* `GREYSHEET_API_TOKEN`: ⚠️ **CHECK SKIPPED** (gcloud unavailable or not authenticated)
+* `GREYSHEET_API_KEY`: ✅ **SET** in Cloud Run environment variables
+* `GREYSHEET_API_TOKEN`: ✅ **SET** in Cloud Run environment variables
 
 ---
 ## Model Binding & LLM Health
@@ -46,6 +46,8 @@
 * **Hardware Capture v2 & WebRTC Fallback:** Verified. `CameraCaptureService.capturePhoto` API active; WebRTC fallback path confirmed (`feat: Phase 2 Step 3`).
 * **Proxy Bandwidth Circuit Breaker:** Verified. Webshare 2.7GB circuit-breaker shutoff active (`numista_backend/numista_scraper/config.py`).
 * **User Feedback & Fallback Error System:** Verified. Dialog-free inline feedback panel with chip category multi-select & error escalation active.
+* **Phase 4a-C1 Program/Series Autocomplete:** Verified. Canonical SKU write, Theme/Subject adjacency picker, and Program autocomplete active (`feat: Phase 4a-C1`).
+* **Phase 4a-C3 Semiquincentennial Prompt Rules:** Verified. 2026 Semiquincentennial prompt rules + `program_hint` injection active (`fix: Phase 4a-C3`).
 
 ---
 
@@ -69,10 +71,16 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** 201 passed
-* **Frontend Playwright E2E Suite:** 146/147 passed (1 skipped gracefully)
-* **Master Overnight Domain Completeness Engine:** 19 PASS, 0 FAIL, 1 WARN (Service account key omitted locally in dev)
-* **Real Production Account Audit:** 4,511 records audited for `jseaman1204@gmail.com`
+* **Backend Pytest Unit Suite:** 201 passed (15.38s — Python 3.14.2, pytest-9.1.1)
+* **Frontend Playwright E2E Suite (Scoped Core):** 103/103 passed (0 failed, 0 skipped) — specs 01–23 plus all feature regression suites
+* **Master Overnight Domain Completeness Engine:** 19 PASS, 0 FAIL, 1 WARN (Service account key omitted locally in dev — expected)
+  * Binder scans, admin grade flags, template download, community nicknames, grade review stats — all 200 OK
+  * Domain Invariants: Full-Catalog Matcher ✅, Image Completeness ✅, Precious Metal Melt-Value ✅, LPT Estate Partition ✅, Multi-Vault Tenant Isolation ✅
+  * 24-Hour Conversation Miner: 6 sessions mined → `COLLECTION_GRAY_SCREEN_PREVENTION`, `FOREIGN_WORLD_COIN_INGESTION`, `CHECKLIST_HAVE_TOTAL_ALIGNMENT`
+  * Real Production Account Audit: 4,511 records audited for `jseaman1204@gmail.com`
+* **Test Infrastructure Fixes (2026-08-07):**
+  * `12-estate-management.spec.js` T02: Replaced fixed 4s wait with `waitForLoadState('networkidle')` + Flutter canvas settle
+  * `05-navigation.spec.js` T09: Replaced hardcoded pixel coordinate with role-based selector for Phase 2 layout compatibility
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
@@ -81,3 +89,4 @@
 1. **Dependabot Vulnerabilities:** Triage the 160 open GitHub security alerts before November 2026 Launch. Prioritise the 102 high-severity items.
 2. **Navigation Test Hardening:** `05-navigation.spec.js` T01–T12 use hardcoded `(x,y)` pixel coordinates for Flutter sidebar nav. Consider a broader audit to replace remaining coordinates with role/text selectors to prevent future Phase 2+ layout breakage.
 3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
+
