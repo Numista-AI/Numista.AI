@@ -1526,10 +1526,36 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.134',
+    date: '2026-08-21',
+    description: 'Scan Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
+    ],
+  ),
+  _Release(
+    version: 'v4.133',
+    date: '2026-08-21',
+    description: 'Infra+tests Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
+      'Infra: Firestore deploy steps use numista_mobile working-dir, not numista_backend',
+      'Infra: add firestore target to numista_backend/firebase.json â€” fix deploy workflow Firestore rules step',
+      'Sync release notes pre-push',
+      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+    ],
+  ),
+  _Release(
     version: 'v4.132',
     date: '2026-08-20',
     description: 'Flutter Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
       'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
