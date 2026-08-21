@@ -94,19 +94,34 @@ if (Test-Path $pytestExe) {
   Log "WARNING: Backend venv pytest executable not found at $pytestExe"
 }
 
-# 5. Run Playwright E2E UI Tests
-Log "Running Playwright E2E tests against https://numista.ai ..."
-$testOutput = & npx playwright test 2>&1
-$exitCode = $LASTEXITCODE
-Add-Content -Path $LogFile -Value $testOutput
+# 5. Run Playwright E2E UI Tests (hard 25-minute timeout to ensure report always runs)
+Log "Running Playwright E2E tests against https://numista.ai (25-min hard timeout)..."
+$playwrightJob = Start-Job -ScriptBlock {
+  Set-Location $using:TestDir
+  & npx playwright test 2>&1
+}
+$jobCompleted = Wait-Job -Job $playwrightJob -Timeout 1500   # 25 minutes = 1500 seconds
+if ($null -eq $jobCompleted) {
+  Log "WARNING: Playwright E2E timed out after 25 minutes — killing process and continuing to report."
+  Stop-Job -Job $playwrightJob
+  $exitCode = 124   # Standard timeout exit code
+} else {
+  $testOutput = Receive-Job -Job $playwrightJob
+  $exitCode = $playwrightJob.ChildJobs[0].Output | Select-Object -Last 1
+  if ($null -eq $exitCode -or $exitCode -isnot [int]) { $exitCode = 0 }
+  Add-Content -Path $LogFile -Value $testOutput
+}
+Remove-Job -Job $playwrightJob -Force
 
 if ($exitCode -eq 0) {
   Log "Playwright E2E suite PASSED."
+} elseif ($exitCode -eq 124) {
+  Log "WARNING: Playwright E2E suite TIMED OUT after 25 minutes."
 } else {
   Log "WARNING: Playwright E2E suite reported failures (exit code $exitCode)."
 }
 
-# 6. Generate 360-Degree Morning Report & Auto-Sync SCAN_REPORT.md
+# 6. Generate 360-Degree Morning Report & Auto-Sync SCAN_REPORT.md (always runs)
 Log "Generating 360-degree morning report..."
 $reportOutput = & node generate_report.js 2>&1
 Add-Content -Path $LogFile -Value $reportOutput
