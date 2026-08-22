@@ -373,23 +373,23 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     final List<Map<String, dynamic>> enrichedPrograms = programsList.map((prog) {
                       int collectedCount = 0;
                       int totalCount = 0;
-                      
+
                       for (var coin in prog.coins) {
                         if (coin.name.contains("Pending")) continue;
-                        totalCount++;
-                        bool isMatched = false;
+                        final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
+                        totalCount += slotCount;
                         for (var doc in docs) {
                           if (_isMatch(doc.data() as Map<String, dynamic>, prog, coin)) {
-                            isMatched = true;
+                            // Count matched varieties rather than matched year rows
+                            collectedCount += slotCount;
                             break;
                           }
                         }
-                        if (isMatched) collectedCount++;
                       }
-                      
+
                       if (totalCount == 0) totalCount = 1;
                       double pct = (collectedCount / totalCount) * 100;
-                      
+
                       return {
                         'program': prog,
                         'collectedCount': collectedCount,
@@ -552,15 +552,14 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     int totalCount = 0;
     for (var coin in program.coins) {
       if (coin.name.contains("Pending")) continue;
-      totalCount++;
-      bool isMatched = false;
+      final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
+      totalCount += slotCount;
       for (var doc in docs) {
         if (_isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
-          isMatched = true;
+          collectedCount += slotCount;
           break;
         }
       }
-      if (isMatched) collectedCount++;
     }
     final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
     final programOverallAdvancement = _totalReferenceCount > 0 ? (collectedCount / _totalReferenceCount) * 100 : 0.0;
@@ -880,68 +879,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          // Dual Wrap Filter Controls (Mint Mark & Finish)
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              border: Border.all(color: const Color(0xFF334155)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Mint Mark (Geographical):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6.0,
-                  runSpacing: 4.0,
-                  children: ['ALL', 'P', 'D', 'S', 'W', 'O', 'CC'].map((mint) {
-                    final isSel = _selectedMintFilter == mint;
-                    return FilterChip(
-                      label: Text(mint == 'ALL' ? 'All Mints' : mint),
-                      selected: isSel,
-                      selectedColor: const Color(0xFF2563EB),
-                      labelStyle: TextStyle(
-                        color: isSel ? Colors.white : Colors.white70,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                      onSelected: (val) => setState(() => _selectedMintFilter = mint),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 10),
-                const Text('Finish / Strike Type:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6.0,
-                  runSpacing: 4.0,
-                  children: [
-                    {'id': 'ALL', 'label': 'All Strikes'},
-                    {'id': 'BUSINESS', 'label': 'Business / Circulating'},
-                    {'id': 'PROOF', 'label': 'Proof & Special'},
-                  ].map((item) {
-                    final isSel = _selectedFinishFilter == item['id'];
-                    return FilterChip(
-                      label: Text(item['label']!),
-                      selected: isSel,
-                      selectedColor: const Color(0xFF10B981),
-                      labelStyle: TextStyle(
-                        color: isSel ? Colors.white : Colors.white70,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                      onSelected: (val) => setState(() => _selectedFinishFilter = item['id']!),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
+
 
           // Checklist Build
           Builder(
