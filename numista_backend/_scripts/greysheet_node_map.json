@@ -1,0 +1,301 @@
+{
+  "flying_eagle_indian_head_cents": {
+    "nodes": [
+      9030,
+      8910,
+      8911
+    ],
+    "labels": [
+      "Flying Eagle MS",
+      "Indian Head MS",
+      "Indian Head PR"
+    ],
+    "note": "9030=Flying Eagle 1856-1858; 8910/11=Indian Head 1859+"
+  },
+  "lincoln_wheat_pennies": {
+    "nodes": [
+      8912,
+      8913,
+      9695
+    ],
+    "labels": [
+      "Wheat MS BN",
+      "Matte PR",
+      "1964 SMS"
+    ],
+    "note": "8912=full Wheat 1909-1958; 8913=early matte proofs"
+  },
+  "lincoln_memorial_cents": {
+    "nodes": [
+      9645,
+      9646
+    ],
+    "labels": [
+      "Bronze MS (1959-1982)",
+      "Bronze PR"
+    ],
+    "note": "PARTIAL: bronze era only. Zinc era (1982-2008) node not yet found."
+  },
+  "lincoln_bicentennial_2009": {
+    "nodes": [
+      9687,
+      9688
+    ],
+    "labels": [
+      "2009 MS RD",
+      "2009-S PR DCAM"
+    ]
+  },
+  "lincoln_shield_cents": {
+    "nodes": [],
+    "labels": [],
+    "note": "Not found. Scan 9700-9900 next session."
+  },
+  "liberty_head_v_nickels": {
+    "nodes": [
+      8920,
+      8921
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "buffalo_nickels": {
+    "nodes": [
+      8922,
+      8923
+    ],
+    "labels": [
+      "MS",
+      "Matte PR"
+    ],
+    "note": "First item is Type 1. Verify Type 2 (1913-1938) in same node."
+  },
+  "jefferson_nickels": {
+    "nodes": [
+      8925,
+      8926,
+      9692
+    ],
+    "labels": [
+      "MS",
+      "PR",
+      "1964 SMS"
+    ],
+    "note": "Verify wartime 35% silver (1942-45) included"
+  },
+  "mercury_dimes": {
+    "nodes": [
+      8937,
+      8938
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "roosevelt_dimes": {
+    "nodes": [
+      8939,
+      8940,
+      9691
+    ],
+    "labels": [
+      "Silver MS (1946-1964)",
+      "Silver PR (1950-1964)",
+      "1964 SMS"
+    ],
+    "note": "PARTIAL: silver era only. Clad era (1965+) node not found."
+  },
+  "barber_dimes": {
+    "nodes": [
+      8935,
+      8936
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "barber_quarters": {
+    "nodes": [
+      8946,
+      8947
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "washington_quarters_classic": {
+    "nodes": [
+      8961,
+      8962,
+      8949,
+      8951,
+      9696
+    ],
+    "labels": [
+      "BU full program",
+      "Proof full program",
+      "Silver MS type",
+      "Silver PR type",
+      "1964 SMS"
+    ]
+  },
+  "fifty_state_quarters": {
+    "nodes": [
+      8950,
+      8952
+    ],
+    "labels": [
+      "Regular Finish MS",
+      "Clad PR"
+    ],
+    "note": "Silver Proof node not found."
+  },
+  "dc_territories_quarters": {
+    "nodes": [
+      9689,
+      9690
+    ],
+    "labels": [
+      "MS",
+      "Clad PR DCAM"
+    ]
+  },
+  "america_the_beautiful_quarters": {
+    "nodes": [
+      9301
+    ],
+    "labels": [
+      "Clad PR DCAM (2010-2021)"
+    ],
+    "note": "Only proof node found. MS node not yet found."
+  },
+  "barber_half_dollars": {
+    "nodes": [
+      8957,
+      8958
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "liberty_walking_half_dollars": {
+    "nodes": [
+      8959,
+      8960
+    ],
+    "labels": [
+      "MS",
+      "PR"
+    ]
+  },
+  "franklin_half_dollars": {
+    "nodes": [],
+    "labels": [],
+    "note": "Not found between 8960-8963. Check node 8953 and 9700-9900."
+  },
+  "kennedy_half_dollars": {
+    "nodes": [
+      8963,
+      9693,
+      8964
+    ],
+    "labels": [
+      "BU full program",
+      "SMS",
+      "Proof full program"
+    ]
+  },
+  "morgan_dollars": {
+    "nodes": [
+      8971,
+      8972
+    ],
+    "labels": [
+      "MS Pre-1921",
+      "PR 1878-1921"
+    ],
+    "note": "Verify 1921 Morgan in 8971"
+  },
+  "peace_dollars": {
+    "nodes": [
+      8973
+    ],
+    "labels": [
+      "MS 1921-1935"
+    ]
+  },
+  "eisenhower_dollars": {
+    "nodes": [
+      8974,
+      8975
+    ],
+    "labels": [
+      "BU Clad",
+      "Proof Clad"
+    ]
+  },
+  "susan_b_anthony_dollars": {
+    "nodes": [
+      8976
+    ],
+    "labels": [
+      "MS 1979-1999"
+    ]
+  },
+  "sacagawea_native_american_dollars": {
+    "nodes": [
+      9299
+    ],
+    "labels": [
+      "MS 2000-2008 [Type]"
+    ],
+    "note": "Native American (2009+) node not yet confirmed — may be same node"
+  },
+  "presidential_dollars": {
+    "nodes": [
+      8977
+    ],
+    "labels": [
+      "MS"
+    ]
+  },
+  "american_innovation_dollars": {
+    "nodes": [
+      9603,
+      9700
+    ],
+    "labels": [
+      "MS",
+      "PR DCAM"
+    ]
+  },
+  "american_silver_eagles": {
+    "nodes": [
+      9011
+    ],
+    "labels": [
+      "MS One Ounce 1986-"
+    ],
+    "note": "Burnished, Proof, Reverse Proof nodes not yet found"
+  },
+  "american_women_quarters": {
+    "nodes": [],
+    "labels": [],
+    "note": "Not found. 2022+ series. Scan 9700-9900 next session."
+  },
+  "u_s_proof_sets": {
+    "nodes": [
+      9020
+    ],
+    "labels": [
+      "1936 5-coin Proof Set"
+    ],
+    "note": "Only 1936 set found. Modern proof set structure unknown — may need different API approach."
+  }
+}
