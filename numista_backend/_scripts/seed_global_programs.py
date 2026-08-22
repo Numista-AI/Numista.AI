@@ -113,7 +113,7 @@ def main():
             'name': raw_name,
             'category': p.get('Category') or p.get('category', 'Other'),
             'years': p.get('Years') or p.get('years', ''),
-            'total_slots': len(normalized_coins),
+            'total_slots': sum(len(c.get('varieties', [])) for c in normalized_coins),
             'mint_mark_locations': p.get('Mint_mark_locations') or p.get('mint_mark_locations', ''),
             'mint_mark_type': p.get('Mint_mark_type') or p.get('mint_mark_type', ''),
             'mint_mark_description': p.get('Mint_mark_description') or p.get('mint_mark_description', ''),
