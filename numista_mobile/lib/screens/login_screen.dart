@@ -431,27 +431,8 @@ class _LoginScreenState extends State<LoginScreen>
         // Google Sign-In
         _googleButton(),
 
-        const SizedBox(height: 12),
 
-        // Free Scan Preview
-        ElevatedButton.icon(
-          onPressed: _loading ? null : () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FreeScanPreviewScreen()),
-            );
-          },
-          icon: const Icon(Icons.camera_alt_outlined, size: 20),
-          label: const Text('Free Scan Preview', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF59E0B), // Amber
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            elevation: 0,
-          ),
-        ),
 
-        const SizedBox(height: 12),
         // Forgot PIN
         Center(
           child: TextButton(
