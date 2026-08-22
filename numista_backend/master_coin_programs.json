@@ -16342,7 +16342,6 @@
     "Mint_mark_locations": "Mint Mark Key: | Philadelphia - P | Denver - D | San Francisco - S |",
     "Coins": [
       {
-        "id": "ike_1971",
         "year": "1971",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16356,16 +16355,15 @@
           },
           {
             "id": "S-SILVER",
-            "label": "S Silver"
+            "label": "S Silver BU"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "ike_1972",
         "year": "1972",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16378,13 +16376,16 @@
             "label": "D"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER",
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "ike_1973",
         "year": "1973",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16397,17 +16398,20 @@
             "label": "D"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-PROOF",
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER",
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "ike_1974",
         "year": "1974",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16420,19 +16424,22 @@
             "label": "D"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-PROOF",
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER",
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "ike_1976",
         "year": "1976",
-        "name": "Bicentennial Dollar (1776-1976)",
+        "name": "Eisenhower Dollar",
         "varieties": [
           {
             "id": "P-T1",
@@ -16451,17 +16458,24 @@
             "label": "D Type 2"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-PROOF-T1",
+            "label": "S Clad Proof T1"
           },
           {
-            "id": "S-PROOF",
+            "id": "S-PROOF-T2",
+            "label": "S Clad Proof T2"
+          },
+          {
+            "id": "S-SILVER",
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
             "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "ike_1977",
         "year": "1977",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16475,12 +16489,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "ike_1978",
         "year": "1978",
         "name": "Eisenhower Dollar",
         "varieties": [
@@ -16494,7 +16507,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       }
@@ -16502,7 +16515,9 @@
     "_source_file": "LC-154-Eisenhower-Dollar-Checklist.pdf",
     "Category": "Dollar",
     "Mint_mark_type": "OBVERSE_PORTRAIT",
-    "Mint_mark_description": "Look on the FRONT (obverse) of the coin. The mint mark is a small letter above the date, to the left of Eisenhower's neckline. NOTE: Philadelphia business-strike coins have NO mint mark. Denver (D) struck all clad business-strike coins. San Francisco (S) issued collector editions only (silver clad and proof)."
+    "Mint_mark_description": "Look on the FRONT (obverse) of the coin. The mint mark is a small letter above the date, to the left of Eisenhower's neckline. NOTE: Philadelphia business-strike coins have NO mint mark. Denver (D) struck all clad business-strike coins. San Francisco (S) issued collector editions only (silver clad and proof).",
+    "id": "eisenhower_dollars",
+    "_program_note": "Eisenhower Dollar 1971-1978. 1971/1972 S-mint: silver BU (blue pack) + silver proof (brown pack), no clad S proof. 1973/1974 S-mint: clad proof + silver BU + silver proof. 1976 clad T1/T2 on P/D/S-proof; silver is T1 only. 1777/1978 clad proof only."
   },
   {
     "Name": "Liberty Walking Half Dollars",
