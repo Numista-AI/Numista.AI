@@ -3157,8 +3157,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         });
       }
     } catch (e) {
+      final isCorsLike = e.toString().toLowerCase().contains('load failed') ||
+          e.toString().toLowerCase().contains('xmlhttprequest');
       setState(() {
-        _camError = 'Network or API error: $e';
+        _camError = isCorsLike
+            ? 'Upload blocked by your browser. For best results, use a desktop browser '
+                '(Chrome or Edge on PC/Mac). Mobile Safari may block photo uploads.'
+            : 'Scan temporarily unavailable — please try again in a moment.';
         _camLoading = false;
       });
     }
