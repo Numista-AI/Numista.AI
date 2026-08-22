@@ -13877,7 +13877,6 @@
     "Mint_mark_locations": "Mint Mark Key: | Philadelphia - P | Denver - D | San Francisco - S |",
     "Coins": [
       {
-        "id": "kennedy_1964",
         "year": "1964",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -13888,11 +13887,14 @@
           {
             "id": "D",
             "label": "D"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1965",
         "year": "1965",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -13901,13 +13903,12 @@
             "label": "No Mint Mark"
           },
           {
-            "id": "D",
-            "label": "D"
+            "id": "SMS",
+            "label": "SMS"
           }
         ]
       },
       {
-        "id": "kennedy_1966",
         "year": "1966",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -13916,13 +13917,12 @@
             "label": "No Mint Mark"
           },
           {
-            "id": "D",
-            "label": "D"
+            "id": "SMS",
+            "label": "SMS"
           }
         ]
       },
       {
-        "id": "kennedy_1967",
         "year": "1967",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -13931,66 +13931,54 @@
             "label": "No Mint Mark"
           },
           {
-            "id": "D",
-            "label": "D"
+            "id": "SMS",
+            "label": "SMS"
           }
         ]
       },
       {
-        "id": "kennedy_1968",
         "year": "1968",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
-            "id": "P",
-            "label": "P (40% Ag)"
-          },
-          {
             "id": "D",
-            "label": "D (40% Ag)"
+            "label": "D"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1969",
         "year": "1969",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
-            "id": "P",
-            "label": "P (40% Ag)"
-          },
-          {
             "id": "D",
-            "label": "D (40% Ag)"
+            "label": "D"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1970",
         "year": "1970",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "D",
-            "label": "D (40% Ag)"
+            "label": "D"
           },
           {
-            "id": "S-PROOF",
-            "label": "S Proof"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1971",
         "year": "1971",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14004,12 +13992,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1972",
         "year": "1972",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14023,12 +14010,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1973",
         "year": "1973",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14042,12 +14028,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1974",
         "year": "1974",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14061,14 +14046,13 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1976",
         "year": "1976",
-        "name": "Bicentennial Coinage",
+        "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
@@ -14080,16 +14064,19 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
             "id": "S-SILVER",
-            "label": "S Silver"
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1977",
         "year": "1977",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14103,12 +14090,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1978",
         "year": "1978",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14122,12 +14108,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1979",
         "year": "1979",
         "name": "Kennedy Half Dollar",
         "varieties": [
@@ -14141,18 +14126,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1980",
         "year": "1980",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14160,18 +14144,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1981",
         "year": "1981",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14179,18 +14162,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1982",
         "year": "1982",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14198,18 +14180,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1983",
         "year": "1983",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14217,18 +14198,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1984",
         "year": "1984",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14236,18 +14216,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1985",
         "year": "1985",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14255,18 +14234,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1986",
         "year": "1986",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14274,18 +14252,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1987",
         "year": "1987",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14293,18 +14270,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1988",
         "year": "1988",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14312,18 +14288,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1989",
         "year": "1989",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14331,18 +14306,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1990",
         "year": "1990",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14350,18 +14324,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1991",
         "year": "1991",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14369,18 +14342,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1992",
         "year": "1992",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14388,18 +14360,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1993",
         "year": "1993",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14407,18 +14382,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1994",
         "year": "1994",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14426,18 +14404,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1995",
         "year": "1995",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14445,18 +14426,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1996",
         "year": "1996",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14464,18 +14448,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1997",
         "year": "1997",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14483,18 +14470,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1998",
         "year": "1998",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14502,18 +14492,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_1999",
         "year": "1999",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14521,18 +14514,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2000",
         "year": "2000",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14540,18 +14536,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2001",
         "year": "2001",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14559,18 +14558,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2002",
         "year": "2002",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14578,22 +14580,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2003",
         "year": "2003",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14601,22 +14602,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2004",
         "year": "2004",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14624,22 +14624,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2005",
         "year": "2005",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14647,22 +14646,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2006",
         "year": "2006",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14670,22 +14668,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2007",
         "year": "2007",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14693,22 +14690,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2008",
         "year": "2008",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14716,22 +14712,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2009",
         "year": "2009",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14739,22 +14734,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2010",
         "year": "2010",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14762,22 +14756,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2011",
         "year": "2011",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14785,22 +14778,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2012",
         "year": "2012",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14808,22 +14800,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2013",
         "year": "2013",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14831,22 +14822,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2014",
         "year": "2014",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14854,22 +14844,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2015",
         "year": "2015",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14877,22 +14866,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2016",
         "year": "2016",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14900,22 +14888,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2017",
         "year": "2017",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14923,22 +14910,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2018",
         "year": "2018",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14946,22 +14932,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2019",
         "year": "2019",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14969,22 +14954,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2020",
         "year": "2020",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -14992,22 +14976,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2021",
         "year": "2021",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -15015,22 +14998,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2022",
         "year": "2022",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -15038,22 +15020,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2023",
         "year": "2023",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -15061,22 +15042,21 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
       {
-        "id": "kennedy_2024",
         "year": "2024",
         "name": "Kennedy Half Dollar",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -15084,11 +15064,33 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
-            "id": "S-SILVER",
-            "label": "S Silver"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
+          }
+        ]
+      },
+      {
+        "year": "2025",
+        "name": "Kennedy Half Dollar",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "No Mint Mark"
+          },
+          {
+            "id": "D",
+            "label": "D"
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       }
@@ -15096,7 +15098,8 @@
     "_source_file": "LC-151-Kennedy-Half-Dollar-Checklist.pdf",
     "Category": "Half Dollar",
     "Mint_mark_type": "OBVERSE_PORTRAIT",
-    "Mint_mark_description": "Look on the FRONT (obverse) of the coin. The mint mark is a small letter to the left of Kennedy's neckline. Note: 1965-1967 Kennedy halves have NO mint mark (all struck at Philadelphia during the transition)."
+    "Mint_mark_description": "Look on the FRONT (obverse) of the coin. The mint mark is a small letter to the left of Kennedy's neckline. Note: 1965-1967 Kennedy halves have NO mint mark (all struck at Philadelphia during the transition).",
+    "id": "kennedy_half_dollars"
   },
   {
     "Name": "Morgan Dollars",
