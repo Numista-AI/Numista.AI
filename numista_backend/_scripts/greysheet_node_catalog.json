@@ -1,0 +1,653 @@
+{
+  "metadata": {
+    "generated": "2026-08-22",
+    "scan_ranges": [
+      "8820-8980",
+      "8980-9500",
+      "9600-9720"
+    ],
+    "total_nodes": 158,
+    "api_base": "https://cpgpublicapiv2.greysheet.com/api",
+    "note": "first_col() of GetCollectibleByNodeRequest. Saved to avoid re-querying."
+  },
+  "nodes": {
+    "8908": {
+      "desc": "Liberty Cap Half Cent 1/2c 1793, Head Facing Left MS BN [Type]",
+      "category": "us_half_cent"
+    },
+    "8909": {
+      "desc": "Flowing Hair Cent 1c 1793, Chain Reverse MS BN [Type]",
+      "category": "us_cent_early"
+    },
+    "8910": {
+      "desc": "Indian Head Cent 1c 1859, Reverse of 1858 MS [Type]",
+      "category": "us_cent_indian_head"
+    },
+    "8911": {
+      "desc": "Indian Head Cent 1c 1859, Reverse of 1858 PR [Type]",
+      "category": "us_cent_indian_head"
+    },
+    "8912": {
+      "desc": "Lincoln Cent 1c Wheat Reverse, 1909-1958 MS BN [Type]",
+      "category": "us_cent_lincoln_wheat"
+    },
+    "8913": {
+      "desc": "Lincoln Cent 1c Matte Finish, 1909-1916 PR BN [Type]",
+      "category": "us_cent_lincoln_wheat"
+    },
+    "8916": {
+      "desc": "3-Cent Nickel 3cN 1865-1889 MS [Type]",
+      "category": "us_nickel_3cent"
+    },
+    "8917": {
+      "desc": "3-Cent Nickel 3cN 1865-1889 PR [Type]",
+      "category": "us_nickel_3cent"
+    },
+    "8918": {
+      "desc": "Shield Nickel 5c Rays, 1866-1867 MS [Type]",
+      "category": "us_nickel_shield"
+    },
+    "8919": {
+      "desc": "Shield Nickel 5c Rays, 1866-1867 PR [Type]",
+      "category": "us_nickel_shield"
+    },
+    "8920": {
+      "desc": "Liberty (V) Nickel 5c No Cents, 1883 MS [Type]",
+      "category": "us_nickel_liberty_v"
+    },
+    "8921": {
+      "desc": "Liberty (V) Nickel 5c No Cents, 1883 PR [Type]",
+      "category": "us_nickel_liberty_v"
+    },
+    "8922": {
+      "desc": "Buffalo Nickel 5c Type 1 Reverse, 1913 MS [Type]",
+      "category": "us_nickel_buffalo"
+    },
+    "8923": {
+      "desc": "Buffalo Nickel 5c Type 1 Reverse, Matte Finish, 1913 PR [Type]",
+      "category": "us_nickel_buffalo"
+    },
+    "8925": {
+      "desc": "Jefferson Nickel 5c Memorial Reverse, 1938-2003 MS [Type]",
+      "category": "us_nickel_jefferson"
+    },
+    "8926": {
+      "desc": "Jefferson Nickel 5c Memorial Reverse, 1938-2003 PR [Type]",
+      "category": "us_nickel_jefferson"
+    },
+    "8935": {
+      "desc": "Barber Dime 10c 1892-1916 MS [Type]",
+      "category": "us_dime_barber"
+    },
+    "8936": {
+      "desc": "Barber Dime 10c 1892-1916 PR [Type]",
+      "category": "us_dime_barber"
+    },
+    "8937": {
+      "desc": "Mercury Dime 10c 1916-1945 MS [Type]",
+      "category": "us_dime_mercury"
+    },
+    "8938": {
+      "desc": "Mercury Dime 10c 1936-1942 PR [Type]",
+      "category": "us_dime_mercury"
+    },
+    "8939": {
+      "desc": "Roosevelt Dime 10c Silver, 1946-1964 MS [Type]",
+      "category": "us_dime_roosevelt"
+    },
+    "8940": {
+      "desc": "Roosevelt Dime 10c Silver, 1950-1964 PR [Type]",
+      "category": "us_dime_roosevelt"
+    },
+    "8946": {
+      "desc": "Barber Quarter 25c 1892-1916 MS [Type]",
+      "category": "us_quarter_barber"
+    },
+    "8947": {
+      "desc": "Barber Quarter 25c 1892-1915 PR [Type]",
+      "category": "us_quarter_barber"
+    },
+    "8948": {
+      "desc": "Standing Liberty Quarter 25c Type 1, 1916-1917 MS [Type]",
+      "category": "us_quarter_standing_liberty"
+    },
+    "8949": {
+      "desc": "Washington Quarter 25c 1932-1964, Silver MS [Type]",
+      "category": "us_quarter_washington_classic"
+    },
+    "8950": {
+      "desc": "50 States Quarter 25c 1999-2008, Regular Finish MS [Type]",
+      "category": "us_quarter_50state"
+    },
+    "8951": {
+      "desc": "Washington Quarter 25c 1936-1942, Silver PR [Type]",
+      "category": "us_quarter_washington_classic"
+    },
+    "8952": {
+      "desc": "50 States Quarter 25c 2005-2009, Clad PR [Type]",
+      "category": "us_quarter_50state"
+    },
+    "8954": {
+      "desc": "Capped Bust Half Dollar 50c Lettered Edge, 1807-1836 MS [Type]",
+      "category": "us_half_capped_bust"
+    },
+    "8955": {
+      "desc": "Seated Liberty Half Dollar 50c No Drapery, 1839 MS [Type]",
+      "category": "us_half_seated_liberty"
+    },
+    "8956": {
+      "desc": "Seated Liberty Half Dollar 50c No Drapery, 1839 PR [Type]",
+      "category": "us_half_seated_liberty"
+    },
+    "8957": {
+      "desc": "Barber Half Dollar 50c 1892-1915 MS [Type]",
+      "category": "us_half_barber"
+    },
+    "8958": {
+      "desc": "Barber Half Dollar 50c 1892-1915 PR [Type]",
+      "category": "us_half_barber"
+    },
+    "8959": {
+      "desc": "Walking Liberty Half Dollar 50c 1916-1947 MS [Type]",
+      "category": "us_half_walking_liberty"
+    },
+    "8960": {
+      "desc": "Walking Liberty Half Dollar 50c 1936-1942 PR [Type]",
+      "category": "us_half_walking_liberty"
+    },
+    "8961": {
+      "desc": "Washington Quarters BU full program node",
+      "category": "us_quarter_washington_classic",
+      "note": "confirmed working from prior session"
+    },
+    "8962": {
+      "desc": "Washington Quarters Proof full program node",
+      "category": "us_quarter_washington_classic",
+      "note": "confirmed working from prior session"
+    },
+    "8963": {
+      "desc": "Kennedy Half Dollar BU (1964-2025) full program node",
+      "category": "us_half_kennedy",
+      "note": "confirmed working"
+    },
+    "8964": {
+      "desc": "Kennedy Half Dollar Proof (1964-2025) full program node",
+      "category": "us_half_kennedy",
+      "note": "confirmed working"
+    },
+    "8965": {
+      "desc": "Draped Bust Dollar $1 Small Eagle, 1795-1798 MS [Type]",
+      "category": "us_dollar_draped_bust"
+    },
+    "8967": {
+      "desc": "Seated Liberty Dollar $1 No Motto Reverse, 1840-1866 MS [Type]",
+      "category": "us_dollar_seated_liberty"
+    },
+    "8968": {
+      "desc": "Seated Liberty Dollar $1 No Motto Reverse, 1840-1866 PR [Type]",
+      "category": "us_dollar_seated_liberty"
+    },
+    "8969": {
+      "desc": "Trade Dollar Trade$ 1873-1878 MS [Type]",
+      "category": "us_dollar_trade"
+    },
+    "8970": {
+      "desc": "Trade Dollar Trade$ 1873-1885 PR [Type]",
+      "category": "us_dollar_trade"
+    },
+    "8971": {
+      "desc": "Morgan $1 Pre-1921 MS [Type]",
+      "category": "us_dollar_morgan"
+    },
+    "8972": {
+      "desc": "Morgan Dollar $1 1878-1921 PR [Type]",
+      "category": "us_dollar_morgan"
+    },
+    "8973": {
+      "desc": "Peace Dollar $1 1921-1935 MS [Type]",
+      "category": "us_dollar_peace"
+    },
+    "8974": {
+      "desc": "Eisenhower Dollar BU Clad full program node",
+      "category": "us_dollar_eisenhower",
+      "note": "confirmed working"
+    },
+    "8975": {
+      "desc": "Eisenhower Dollar Proof Clad full program node",
+      "category": "us_dollar_eisenhower",
+      "note": "confirmed working"
+    },
+    "8976": {
+      "desc": "Susan B. Anthony SBA $1 1979-1999 MS [Type]",
+      "category": "us_dollar_sba"
+    },
+    "8977": {
+      "desc": "Presidential Dollar $1 MS [Type]",
+      "category": "us_dollar_presidential"
+    },
+    "8978": {
+      "desc": "Liberty Gold Dollar G$1 Type 1, 1849-1854 MS [Type]",
+      "category": "us_gold_dollar"
+    },
+    "8980": {
+      "desc": "Classic Head Quarter Eagle $2 1/2 1834-1839 MS [Type]",
+      "category": "us_gold_quarter_eagle"
+    },
+    "8981": {
+      "desc": "Liberty Gold Quarter Eagle $2 1/2 1840-1907 MS [Type]",
+      "category": "us_gold_quarter_eagle"
+    },
+    "8982": {
+      "desc": "Liberty Gold Quarter Eagle $2 1/2 1840-1907 PR [Type]",
+      "category": "us_gold_quarter_eagle"
+    },
+    "8983": {
+      "desc": "Indian Gold Quarter Eagle $2 1/2 1908-1929 MS [Type]",
+      "category": "us_gold_quarter_eagle"
+    },
+    "8985": {
+      "desc": "Three Dollar Gold Princess $3 1854-1889 MS [Type]",
+      "category": "us_gold_three_dollar"
+    },
+    "8987": {
+      "desc": "Four Dollar Gold Stella $4 Flowing Hair, 1879-1880 PR [Type]",
+      "category": "us_gold_stella"
+    },
+    "8989": {
+      "desc": "Liberty Gold Half Eagle $5 Motto, 1866-1908 MS [Type]",
+      "category": "us_gold_half_eagle"
+    },
+    "8991": {
+      "desc": "Indian Gold Half Eagle $5 1908-1929 MS [Type]",
+      "category": "us_gold_half_eagle"
+    },
+    "8994": {
+      "desc": "Liberty Gold Eagle $10 Motto, 1866-1907 MS [Type]",
+      "category": "us_gold_eagle"
+    },
+    "8996": {
+      "desc": "Indian Gold Eagle $10 Wire Rim, 1907 MS [Type]",
+      "category": "us_gold_eagle"
+    },
+    "8998": {
+      "desc": "Liberty Gold Double Eagle $20 Type 3, With Motto, 1877-1907 MS [Type]",
+      "category": "us_gold_double_eagle"
+    },
+    "9000": {
+      "desc": "Saint Gaudens Gold Double Eagle $20 High Relief, 1907 MS [Type]",
+      "category": "us_gold_double_eagle"
+    },
+    "9005": {
+      "desc": "1982-D S50c Washington 250th Anniversary, Silver MS",
+      "category": "us_commemorative"
+    },
+    "9006": {
+      "desc": "Modern Commemorative S$1 90% Silver, 1983-2018 MS [Type]",
+      "category": "us_commemorative"
+    },
+    "9007": {
+      "desc": "Gold Commemorative G$5 MS [Type]",
+      "category": "us_commemorative"
+    },
+    "9008": {
+      "desc": "1984-W G$10 Los Angeles Olympiad Coliseum MS",
+      "category": "us_commemorative"
+    },
+    "9009": {
+      "desc": "First Spouse Gold G$10 2007-Present MS [Type]",
+      "category": "us_commemorative_first_spouse"
+    },
+    "9010": {
+      "desc": "American Gold Eagle (AGE) Set 4 Coins, 1986- PR DCAM [Type]",
+      "category": "us_bullion_age"
+    },
+    "9011": {
+      "desc": "American Silver Eagle (ASE) S$1 One Ounce, 1986- MS [Type]",
+      "category": "us_bullion_ase"
+    },
+    "9012": {
+      "desc": "American Gold Eagle (AGE) G$5 1/10 Ounce, 1986- MS [Type]",
+      "category": "us_bullion_age"
+    },
+    "9013": {
+      "desc": "American Gold Eagle (AGE) G$10 1/4 Ounce, 1986- MS [Type]",
+      "category": "us_bullion_age"
+    },
+    "9014": {
+      "desc": "American Gold Eagle (AGE) G$25 1/2 Ounce, 1986- MS [Type]",
+      "category": "us_bullion_age"
+    },
+    "9015": {
+      "desc": "American Gold Eagle (AGE) G$50 One Ounce, 1986- MS [Type]",
+      "category": "us_bullion_age"
+    },
+    "9016": {
+      "desc": "American Platinum Eagle (APE) P$10 1/10 Ounce, 1997-2008 MS [Type]",
+      "category": "us_bullion_ape"
+    },
+    "9017": {
+      "desc": "American Platinum Eagle (APE) P$25 1/4 Ounce, 1997-2008 MS [Type]",
+      "category": "us_bullion_ape"
+    },
+    "9018": {
+      "desc": "American Platinum Eagle (APE) P$50 1/2 Ounce, 1997-2008 MS [Type]",
+      "category": "us_bullion_ape"
+    },
+    "9019": {
+      "desc": "American Platinum Eagle (APE) P$100 One Ounce, 1997-2023 MS [Type]",
+      "category": "us_bullion_ape"
+    },
+    "9022": {
+      "desc": "2009-P G$20 Ultra High Relief MS",
+      "category": "us_gold_ultra_high_relief"
+    },
+    "9030": {
+      "desc": "Flying Eagle Cent 1c 1856-1858 MS [Type]",
+      "category": "us_cent_flying_eagle"
+    },
+    "9032": {
+      "desc": "1858 1c Province of Canada, Broken Vine MS BN",
+      "category": "ca_cent"
+    },
+    "9036": {
+      "desc": "Victoria 25c 1870-1901 MS [Type]",
+      "category": "ca_quarter"
+    },
+    "9037": {
+      "desc": "Victoria 50c 1870-1901 MS [Type]",
+      "category": "ca_half_dollar"
+    },
+    "9038": {
+      "desc": "George V S$1 1935-1936 MS [Type]",
+      "category": "ca_dollar"
+    },
+    "9040": {
+      "desc": "Palladium 1 Ounce Pd$50 Maple Leaf, 2005- MS [Type]",
+      "category": "ca_bullion"
+    },
+    "9041": {
+      "desc": "Silver Maple Leaf S$5 One Ounce, 1988- MS [Type]",
+      "category": "ca_bullion"
+    },
+    "9106": {
+      "desc": "1839 1/4 Far MS BN",
+      "category": "gb_farthing"
+    },
+    "9112": {
+      "desc": "1562 3D Milled MS",
+      "category": "gb_threepence"
+    },
+    "9116": {
+      "desc": "1663 1S MS",
+      "category": "gb_shilling"
+    },
+    "9120": {
+      "desc": "1821 Crown Secundo MS",
+      "category": "gb_crown"
+    },
+    "9121": {
+      "desc": "Great Britain Trade$ MS [Type]",
+      "category": "gb_trade_dollar"
+    },
+    "9122": {
+      "desc": "Gold 1/4 Sov 2009- PR DCAM [Type]",
+      "category": "gb_gold_sovereign"
+    },
+    "9123": {
+      "desc": "George III Sov 1817-1820, Gold MS [Type]",
+      "category": "gb_gold_sovereign"
+    },
+    "9163": {
+      "desc": "1831-A 50c MS",
+      "category": "fr_50centimes"
+    },
+    "9166": {
+      "desc": "1808-B 5 Fr MS",
+      "category": "fr_5francs"
+    },
+    "9169": {
+      "desc": "Napoleon III 50 Fr Gold MS [Type]",
+      "category": "fr_gold"
+    },
+    "9210": {
+      "desc": "1862 $1 Seal Type 2, No Monogram (Fr. 16)",
+      "category": "us_paper_legal_tender"
+    },
+    "9211": {
+      "desc": "1928 $1 (Fr. 1500)",
+      "category": "us_paper_silver_certificate"
+    },
+    "9212": {
+      "desc": "1886 $1 (Fr. 215)",
+      "category": "us_paper_silver_certificate"
+    },
+    "9213": {
+      "desc": "1928 $1 (Fr. 1600)",
+      "category": "us_paper_silver_certificate"
+    },
+    "9216": {
+      "desc": "Original $1 1st Charter Period, Seal With Rays (Fr. 380382TYPE) [Type]",
+      "category": "us_paper_national_bank"
+    },
+    "9219": {
+      "desc": "1963 $1 (Fr. 1900TYPE) [Type]",
+      "category": "us_paper_federal_reserve"
+    },
+    "9221": {
+      "desc": "1929 $5 (Fr. 1850TYPE) [Type]",
+      "category": "us_paper_national_bank"
+    },
+    "9222": {
+      "desc": "1935A $1 Hawaiian (Fr. 2300)",
+      "category": "us_paper_emergency"
+    },
+    "9254": {
+      "desc": "Gold Buffalo One Ounce G$50 2006- MS [Type]",
+      "category": "us_bullion_gold_buffalo"
+    },
+    "9259": {
+      "desc": "May 10, 1775 $1 Continental Currency (Fr. CC1)",
+      "category": "us_paper_continental"
+    },
+    "9260": {
+      "desc": "Jul 12, 1709 2s Connecticut (Fr. CT1a)",
+      "category": "us_paper_colonial"
+    },
+    "9261": {
+      "desc": "1729 1s Delaware (Fr. DE1)",
+      "category": "us_paper_colonial"
+    },
+    "9264": {
+      "desc": "Dec 10, 1690 5s Massachussetts (Fr. MA1)",
+      "category": "us_paper_colonial"
+    },
+    "9283": {
+      "desc": "MPC Series 691 $1 (Fr. M945)",
+      "category": "us_paper_mpc"
+    },
+    "9299": {
+      "desc": "Sacagawea Dollar $1 2000-2008 MS [Type]",
+      "category": "us_dollar_sacagawea"
+    },
+    "9301": {
+      "desc": "America the Beautiful Quarter 25c 2010-2021, Clad PR DCAM [Type]",
+      "category": "us_quarter_atb"
+    },
+    "9314": {
+      "desc": "1861 $1,000 Montgomery (Fr. T1)",
+      "category": "us_confederate"
+    },
+    "9315": {
+      "desc": "1861 $500 Handwritten Date",
+      "category": "us_confederate"
+    },
+    "9318": {
+      "desc": "Iran 1919 note",
+      "category": "world_banknote_middle_east"
+    },
+    "9326": {
+      "desc": "World banknote 1974",
+      "category": "world_banknote"
+    },
+    "9340": {
+      "desc": "World banknote 1916",
+      "category": "world_banknote_europe"
+    },
+    "9343": {
+      "desc": "Bulgaria 1885 note",
+      "category": "world_banknote_europe"
+    },
+    "9344": {
+      "desc": "Yugoslavia 1941 note",
+      "category": "world_banknote_europe"
+    },
+    "9358": {
+      "desc": "Ireland 1928 note",
+      "category": "world_banknote_europe"
+    },
+    "9360": {
+      "desc": "Italy 1938 note",
+      "category": "world_banknote_europe"
+    },
+    "9361": {
+      "desc": "Italy 1874 note",
+      "category": "world_banknote_europe"
+    },
+    "9364": {
+      "desc": "Macedonia 1992 note",
+      "category": "world_banknote_europe"
+    },
+    "9371": {
+      "desc": "Romania 1877 note",
+      "category": "world_banknote_europe"
+    },
+    "9372": {
+      "desc": "Russia 1992 note",
+      "category": "world_banknote_europe"
+    },
+    "9376": {
+      "desc": "Slovenia 1944 note",
+      "category": "world_banknote_europe"
+    },
+    "9380": {
+      "desc": "Yugoslavia 1929 note",
+      "category": "world_banknote_europe"
+    },
+    "9381": {
+      "desc": "France 1944 note",
+      "category": "world_banknote_europe"
+    },
+    "9383": {
+      "desc": "Tunisia 1846 note",
+      "category": "world_banknote_africa"
+    },
+    "9386": {
+      "desc": "Mali 1960 note",
+      "category": "world_banknote_africa"
+    },
+    "9394": {
+      "desc": "Ghana 1958 note",
+      "category": "world_banknote_africa"
+    },
+    "9395": {
+      "desc": "Tanzania 1966 note",
+      "category": "world_banknote_africa"
+    },
+    "9399": {
+      "desc": "Kenya 1966 note",
+      "category": "world_banknote_africa"
+    },
+    "9412": {
+      "desc": "Zimbabwe 1980 note",
+      "category": "world_banknote_africa"
+    },
+    "9416": {
+      "desc": "Congo (Belgian) 1914 note",
+      "category": "world_banknote_africa"
+    },
+    "9435": {
+      "desc": "Eritrea 1997 note",
+      "category": "world_banknote_africa"
+    },
+    "9470": {
+      "desc": "Argentina 1884 note",
+      "category": "world_banknote_latin_america"
+    },
+    "9471": {
+      "desc": "Costa Rica 1902 note",
+      "category": "world_banknote_latin_america"
+    },
+    "9480": {
+      "desc": "Netherlands 1957 note",
+      "category": "world_banknote_europe"
+    },
+    "9492": {
+      "desc": "Bhutan 1974 note",
+      "category": "world_banknote_asia"
+    },
+    "9493": {
+      "desc": "Brunei 1967 note",
+      "category": "world_banknote_asia"
+    },
+    "9496": {
+      "desc": "French Indochina 1891 note",
+      "category": "world_banknote_asia"
+    },
+    "9499": {
+      "desc": "Indonesia 1945 note",
+      "category": "world_banknote_asia"
+    },
+    "9603": {
+      "desc": "American Innovation $1 MS [Type]",
+      "category": "us_dollar_american_innovation"
+    },
+    "9645": {
+      "desc": "Lincoln Cent 1c Memorial Reverse, Bronze, 1959-1982 MS BN [Type]",
+      "category": "us_cent_lincoln_memorial"
+    },
+    "9646": {
+      "desc": "Lincoln Cent 1c Memorial Reverse, Bronze, 1959-1982 PR RD [Type]",
+      "category": "us_cent_lincoln_memorial"
+    },
+    "9687": {
+      "desc": "Lincoln Cent 1c Birth Bicentennial, 2009 MS RD [Type]",
+      "category": "us_cent_lincoln_bicentennial"
+    },
+    "9688": {
+      "desc": "Lincoln Cent 1c Birth & Early Childhood, 2009-S PR RD DCAM [Type]",
+      "category": "us_cent_lincoln_bicentennial"
+    },
+    "9689": {
+      "desc": "D.C. & U.S. Territories Quarter 25c 2009, Regular Finish MS [Type]",
+      "category": "us_quarter_dc_territories"
+    },
+    "9690": {
+      "desc": "D.C. & U.S. Territories Quarter 25c 2009, Clad PR DCAM [Type]",
+      "category": "us_quarter_dc_territories"
+    },
+    "9691": {
+      "desc": "1964 10c Special Mint Set SMS",
+      "category": "us_dime_roosevelt"
+    },
+    "9692": {
+      "desc": "1964 5c Special Mint Set SMS",
+      "category": "us_nickel_jefferson"
+    },
+    "9693": {
+      "desc": "1964 50c Special Mint Set SMS",
+      "category": "us_half_kennedy"
+    },
+    "9695": {
+      "desc": "1964 1c Special Mint Set SMS RB",
+      "category": "us_cent_sms"
+    },
+    "9696": {
+      "desc": "1964 25c Special Mint Set SMS",
+      "category": "us_quarter_washington_classic"
+    },
+    "9700": {
+      "desc": "American Innovation $1 PR DCAM [Type]",
+      "category": "us_dollar_american_innovation"
+    }
+  }
+}
