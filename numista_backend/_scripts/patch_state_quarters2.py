@@ -98,7 +98,11 @@ for prog in master:
             elif 1968 <= yr <= 1998:
                 coin["varieties"] = [{"id":"P","label":"P"},{"id":"D","label":"D"},{"id":"S-PROOF","label":"S Proof"}]
             elif yr == 2021:
-                coin["varieties"] = [{"id":"P","label":"P"},{"id":"D","label":"D"},{"id":"S-PROOF","label":"S Proof"},{"id":"W","label":"W"}]
+                # 2021 Crossing the Delaware (PL 110-456) is NOT a Classic series member.
+                # See implementation_planv6.md. master_coin_programs.json is canonical;
+                # do NOT re-run this script against the already-corrected file.
+                print("WARNING: Skipping year 2021 in Washington Classic patch — "
+                      "not a Classic coin (PL 110-456). Do not reinsert.")
         print(f"Enriched Washington Quarters (Classic) with era-correct varieties")
 
 with open(master_path, "w", encoding="utf-8") as f:
