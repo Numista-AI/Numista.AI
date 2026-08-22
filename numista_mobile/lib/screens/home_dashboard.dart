@@ -1526,10 +1526,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.139',
+    date: '2026-08-22',
+    description: 'Scanner Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Scanner: update SCAN_REPORT.md via project-scanner full system audit',
+      'Catalog: three easy program corrections',
+      'Checklist: Washington Classic Quarters 0/210 SNAP fix',
+      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
+    ],
+  ),
+  _Release(
     version: 'v4.138',
     date: '2026-08-21',
     description: 'Catalog Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Catalog: three easy program corrections',
       'Checklist: Washington Classic Quarters 0/210 SNAP fix',
