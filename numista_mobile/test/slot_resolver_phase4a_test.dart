@@ -48,6 +48,7 @@ Map<String, dynamic> _item({
   String? variety,
   String? title,
   String? officialTitle,
+  String? grade,   // Condition/grade field — used for PR/PF/SP grade-based detection
 }) =>
     {
       if (denomination != null) 'Denomination': denomination,
@@ -61,6 +62,7 @@ Map<String, dynamic> _item({
       if (variety != null) 'Variety': variety,
       if (title != null) 'Title': title,
       if (officialTitle != null) 'official_us_mint_title': officialTitle,
+      if (grade != null) 'Condition': grade,   // Slot resolver reads 'Condition'/'grade'/'Grade'
     };
 
 void main() {
@@ -183,7 +185,10 @@ void main() {
     });
   });
 
-  group('SlotResolver — matchesVariety: S-SILVER', () {
+  group('SlotResolver — matchesVariety: S-SILVER (BU silver only, 1976-S)', () {
+    // S-SILVER = S-mint + silver + NOT proof (1976-S bicentennial BU silver only).
+    // Proof silver routes to S-SILVER-PROOF instead.
+    // Note: isProof is true if strikeType OR varField contains 'PROOF', or grade matches PR/PF.
     final variety = _variety('S-SILVER');
 
     test('S-mint + silver metal + no proof → matches S-SILVER', () {
@@ -191,18 +196,26 @@ void main() {
       expect(SlotResolver.matchesVariety(item, variety), isTrue);
     });
 
-    test('S-mint + silver in variety field + no proof → matches S-SILVER', () {
-      final item = _item(mintMark: 'S', variety: 'Silver Proof Set');
-      // variety contains SILVER but also effectively has no explicit proof strike type
-      // With strikeType absent, isProof = false, so matches
-      // But variety contains SILVER → isSilver = true
-      // Actually: isProof checks strikeType only, variety "Silver Proof Set" ≠ Strike Type
-      // Result depends on implementation — let's test what the code does
+    test('S-mint + silver in variety (no proof token) → matches S-SILVER', () {
+      // Variety = 'Silver BU' — has SILVER but NOT PROOF → isSilver=true, isProof=false → S-SILVER
+      final item = _item(mintMark: 'S', variety: 'Silver BU');
       expect(SlotResolver.matchesVariety(item, variety), isTrue);
     });
 
-    test('S-mint + silver + proof strike → does NOT match S-SILVER', () {
+    test('S-mint + silver + proof strike → does NOT match S-SILVER (goes to S-SILVER-PROOF)', () {
       final item = _item(mintMark: 'S', metal: '90% Silver', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-mint + silver + PROOF in variety field → does NOT match S-SILVER', () {
+      // 'Silver Proof Set' in variety → isProof=true (varField contains PROOF) → not S-SILVER
+      final item = _item(mintMark: 'S', variety: 'Silver Proof Set');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-mint + silver + PR69 grade → does NOT match S-SILVER (grade-based proof detection)', () {
+      // isProof regex: \\b(PR|PF)[- ]?\\d — matches PR69 in Condition field
+      final item = _item(mintMark: 'S', metal: '90% Silver', grade: 'PR69');
       expect(SlotResolver.matchesVariety(item, variety), isFalse);
     });
 
@@ -215,14 +228,122 @@ void main() {
       final item = _item(mintMark: 'S', metal: 'Copper-Nickel Clad');
       expect(SlotResolver.matchesVariety(item, variety), isFalse);
     });
+  });
 
-    test('Reverse proof S-mint silver does NOT match S-SILVER (reverse proof is not proof)', () {
-      // S-SILVER: isProof = strikeType.contains('PROOF') && !strikeType.contains('REVERSE')
-      // Reverse Proof → isProof = false → should match S-SILVER? Depends on intent.
-      // Test that the reverse-proof gate fires first (variety REVERSE-PROOF takes priority)
+  group('SlotResolver — matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof)', () {
+    // S-SILVER-PROOF = S-mint + silver + IS proof.
+    // Renamed from S-SILVER for all 50 State Quarter slots (catalog correction Aug 21).
+    // All State Quarter silver versions were struck as 90% silver PROOF coins only.
+    final variety = _variety('S-SILVER-PROOF');
+
+    test('S-mint + silver + proof strike → matches S-SILVER-PROOF', () {
+      final item = _item(mintMark: 'S', metal: '90% Silver', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-mint + silver + PR69 grade → matches S-SILVER-PROOF (grade-based proof detection)', () {
+      final item = _item(mintMark: 'S', metal: '90% Silver', grade: 'PR69');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-mint + silver + PF70 grade → matches S-SILVER-PROOF', () {
+      final item = _item(mintMark: 'S', metal: '90% Silver', grade: 'PF-70');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-mint + Silver Proof Set in variety → matches S-SILVER-PROOF', () {
+      // variety contains both SILVER and PROOF → isSilver=true, isProof=true
+      final item = _item(mintMark: 'S', variety: 'Silver Proof Set');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-mint + silver + NO proof → does NOT match S-SILVER-PROOF (goes to S-SILVER)', () {
+      final item = _item(mintMark: 'S', metal: '90% Silver');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-mint + clad + proof → does NOT match S-SILVER-PROOF (no silver)', () {
+      final item = _item(mintMark: 'S', metal: 'Copper-Nickel Clad', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('D-mint + silver + proof → does NOT match S-SILVER-PROOF (wrong mint)', () {
+      final item = _item(mintMark: 'D', metal: '90% Silver', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('Reverse proof S-mint silver also matches S-SILVER-PROOF (isProof=true from PROOF in strikeType)', () {
+      // 'Reverse Proof'.toUpperCase() = 'REVERSE PROOF' which contains 'PROOF' → isProof=true
+      // isSilver=true → S-SILVER-PROOF branch returns mintMark=='S' && isSilver && isProof → true.
+      // The REVERSE-PROOF branch only fires when variety ID is 'REVERSE-PROOF', not here.
+      // Each variety slot is evaluated independently — the REVERSE-PROOF slot handles it in its call.
       final revProofVariety = _variety('REVERSE-PROOF');
       final item = _item(mintMark: 'S', metal: '90% Silver', strikeType: 'Reverse Proof');
-      expect(SlotResolver.matchesVariety(item, revProofVariety), isTrue);
+      expect(SlotResolver.matchesVariety(item, revProofVariety), isTrue);   // matches REVERSE-PROOF slot
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);            // also matches S-SILVER-PROOF slot
+    });
+  });
+
+  group('SlotResolver — matchesVariety: No Mint Mark (NMM, pre-1980 classic series)', () {
+    // Pre-1980 Philadelphia strikes have no mint mark.
+    // The catalog correction on Aug 21 relabelled 527 P-slots to 'No Mint Mark'.
+    // The resolver handles this via: baseMint == 'P' && mintMark.isEmpty → true.
+    // Variety ID in the catalog is now 'NMM'; resolver split by '-' gives baseMint='NMM'.
+    // However, the real baseMint logic handles empty mintMark as Philadelphia.
+    // Test all expected pass/fail paths for an empty-mintMark Lincoln cent.
+
+    test('Empty mint mark matches P-UNC variety (Philadelphia no mint mark)', () {
+      // Pre-1909 and pre-1980 Philadelphia coins have empty Mint Mark.
+      // baseMint='P', mintMark='', !isProof, !isSMS → true
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: '');  // No mint mark
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('Empty mint mark does NOT match D-UNC variety', () {
+      final variety = _variety('D-UNC');
+      final item = _item(mintMark: '');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('NONE mint mark is treated as Philadelphia (matches P-UNC)', () {
+      // Firestore may store 'NONE' for no-mint-mark coins
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: 'NONE');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('Philadelphia spelled out matches P-UNC', () {
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: 'Philadelphia');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('Empty mint mark coin with Proof strike does NOT match P-UNC (goes to PROOF)', () {
+      // isProof=true → !isProof gate fails → P-UNC returns false
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: '', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('Empty mint mark coin with PR65 grade does NOT match P-UNC (grade-based proof)', () {
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: '', grade: 'PR65');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('1965-67 SMS coin does NOT match P-UNC (routes to SMS slot)', () {
+      // isSMS=true → !isSMS gate fails → P-UNC returns false
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: '', strikeType: 'SMS');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('1965-67 SMS coin with SP67 grade does NOT match P-UNC', () {
+      // isSMS detected via grade regex \\bSP[- ]?\\d{2}
+      final variety = _variety('P-UNC');
+      final item = _item(mintMark: '', grade: 'SP-67');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
     });
   });
 

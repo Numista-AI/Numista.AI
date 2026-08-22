@@ -361,7 +361,12 @@ class SlotResolver {
 
     // ── S-PROOF (S-mint clad proof only) ─────────────────────────────────────
     // !isSilver prevents 1976-S or 1992-S silver proofs from owning the clad slot.
-    if (vId == 'S-PROOF' || vId == 'S-CLAD') {
+    // startsWith('S-PROOF-') catches typed variants (S-PROOF-T1, S-PROOF-T2) so
+    // they stay inside this !isSilver gate instead of falling through to the
+    // generic contains('PROOF') branch (which returns isProof for ANY S-mint proof).
+    // T1/T2 share this branch with no type discriminator — identical parity to the
+    // existing P-T1/P-T2 and D-T1/D-T2 slots, which also double-match on mint mark.
+    if (vId == 'S-PROOF' || vId == 'S-CLAD' || vId.startsWith('S-PROOF-')) {
       return mintMark == 'S' && isProof && !isSilver;
     }
 
