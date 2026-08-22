@@ -12325,7 +12325,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12343,15 +12343,11 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
-          },
-          {
-            "id": "S",
-            "label": "S"
           }
         ]
       },
@@ -12361,7 +12357,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12379,7 +12375,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12388,6 +12384,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12397,7 +12397,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12406,6 +12406,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12415,15 +12419,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
-          },
-          {
-            "id": "D",
-            "label": "D"
+            "label": "No Mint Mark"
           },
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12433,7 +12437,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12442,6 +12446,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12451,7 +12459,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12460,6 +12468,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12469,7 +12481,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12478,6 +12490,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12487,7 +12503,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12496,6 +12512,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12505,7 +12525,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12523,7 +12543,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12541,7 +12561,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12559,7 +12579,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12577,7 +12597,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12595,7 +12615,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12613,15 +12633,11 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
-          },
-          {
-            "id": "S",
-            "label": "S"
           }
         ]
       },
@@ -12631,7 +12647,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12640,6 +12656,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12649,7 +12669,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12658,6 +12678,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12667,7 +12691,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12676,6 +12700,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12685,7 +12713,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12694,6 +12722,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12703,7 +12735,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12712,6 +12744,10 @@
           {
             "id": "S",
             "label": "S"
+          },
+          {
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12721,15 +12757,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12739,15 +12775,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12757,15 +12793,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12775,15 +12811,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12793,15 +12829,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12811,15 +12847,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12829,15 +12865,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12847,15 +12883,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12865,15 +12901,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12883,15 +12919,15 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
             "label": "D"
           },
           {
-            "id": "S",
-            "label": "S"
+            "id": "PROOF",
+            "label": "Proof"
           }
         ]
       },
@@ -12899,6 +12935,10 @@
         "year": "1965",
         "name": "Washington Quarter",
         "varieties": [
+          {
+            "id": "P",
+            "label": "No Mint Mark"
+          },
           {
             "id": "SMS",
             "label": "SMS"
@@ -12910,6 +12950,10 @@
         "name": "Washington Quarter",
         "varieties": [
           {
+            "id": "P",
+            "label": "No Mint Mark"
+          },
+          {
             "id": "SMS",
             "label": "SMS"
           }
@@ -12919,6 +12963,10 @@
         "year": "1967",
         "name": "Washington Quarter",
         "varieties": [
+          {
+            "id": "P",
+            "label": "No Mint Mark"
+          },
           {
             "id": "SMS",
             "label": "SMS"
@@ -12931,7 +12979,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12939,7 +12987,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -12949,7 +12997,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12957,7 +13005,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -12967,7 +13015,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12975,7 +13023,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -12985,7 +13033,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -12993,7 +13041,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13003,7 +13051,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13011,7 +13059,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13021,7 +13069,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13029,7 +13077,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13039,7 +13087,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13047,17 +13095,17 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
       {
         "year": "1976",
-        "name": "Bicentennial Coinage",
+        "name": "Washington Quarter",
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13065,11 +13113,15 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           },
           {
             "id": "S-SILVER",
-            "label": "S Silver"
+            "label": "S Silver BU"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13079,7 +13131,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13087,7 +13139,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13097,7 +13149,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13105,7 +13157,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13115,7 +13167,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "P"
+            "label": "No Mint Mark"
           },
           {
             "id": "D",
@@ -13123,7 +13175,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13141,7 +13193,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13159,7 +13211,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13177,7 +13229,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13195,7 +13247,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13213,7 +13265,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13231,7 +13283,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13249,7 +13301,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13267,7 +13319,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13285,7 +13337,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13303,7 +13355,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13321,7 +13373,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13339,7 +13391,7 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -13357,7 +13409,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13375,7 +13431,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13393,7 +13453,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13411,7 +13475,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13429,7 +13497,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13447,7 +13519,11 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
+            "label": "S Clad Proof"
+          },
+          {
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       },
@@ -13465,36 +13541,20 @@
           },
           {
             "id": "S-PROOF",
-            "label": "S Proof"
-          }
-        ]
-      },
-      {
-        "year": "2021",
-        "name": "General George Washington Crossing the Delaware",
-        "varieties": [
-          {
-            "id": "P",
-            "label": "P"
+            "label": "S Clad Proof"
           },
           {
-            "id": "D",
-            "label": "D"
-          },
-          {
-            "id": "S-PROOF",
-            "label": "S Proof"
-          },
-          {
-            "id": "W",
-            "label": "W"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof"
           }
         ]
       }
     ],
     "_source_file": "LC-148-Washington-Quarter-Checklist.pdf",
     "Mint_mark_type": "MIXED",
-    "Mint_mark_description": "MIXED ERA: On Washington Quarters struck before 1968, the mint mark is on the REVERSE (back) to the right of the eagle's tail. On quarters from 1968 onward, the mint mark moved to the OBVERSE (front), to the right of Washington's ponytail above the date."
+    "Mint_mark_description": "MIXED ERA: On Washington Quarters struck before 1968, the mint mark is on the REVERSE (back) to the right of the eagle's tail. On quarters from 1968 onward, the mint mark moved to the OBVERSE (front), to the right of Washington's ponytail above the date.",
+    "id": "washington_quarters_classic",
+    "_program_note": "Classic Washington Quarter. Eagle reverse only. Ends 1998. 2021 is a standalone statutory transition coin (PL 110-456) — do NOT reinsert via patch scripts."
   },
   {
     "Name": "Franklin Half Dollars",

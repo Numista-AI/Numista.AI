@@ -207,7 +207,8 @@ class SlotResolver {
     final progSeries = (item['Program/Series']?.toString() ?? item['program_series']?.toString() ?? '').trim();
     final themeSub   = (item['Theme/Subject']?.toString() ?? item['theme_subject']?.toString() ?? '').trim().toLowerCase();
     final title      = (item['Title']?.toString() ?? item['name']?.toString() ?? item['official_title']?.toString() ?? '').trim().toLowerCase();
-    final year       = (item['Year']?.toString() ?? item['year']?.toString() ?? '').trim();
+    final year       = (item['Year']?.toString() ?? item['year']?.toString() ??
+                        item['date']?.toString() ?? '').trim();
     final cNameLower = coinSlot.name.toLowerCase().trim();
     final slotYear   = (coinSlot.year ?? '').trim();
 
@@ -246,9 +247,25 @@ class SlotResolver {
     final bool seriesMatched = program.matchesDbSeries(progSeries);
     if (!seriesMatched && progSeries.isNotEmpty) return false;
 
-    // 4. Year Alignment Guard (if slot specifies year)
-    if (slotYear.isNotEmpty && year.isNotEmpty && slotYear != year) {
-      return false;
+    // 4. Year Alignment Guard — hard equality when slot has a year.
+    // Empty item year is NOT a wildcard: it fails any dated slot.
+    // Dual-date rule: '1776-1976' maps only to the 1976 Bicentennial row.
+    if (slotYear.isNotEmpty) {
+      final normalizedYear = (year == '1776-1976') ? '1976' : year;
+      if (normalizedYear.isEmpty || normalizedYear != slotYear) {
+        return false;
+      }
+    }
+
+    // 3a. Classic Washington year-range guard (second barrier after Fix A).
+    // 'washington_quarters_classic' = slugify("Washington Quarters (Classic)").
+    // int.tryParse('1776-1976') returns null → itemYear=0 → guard skips safely;
+    // dual-date is handled above in the normalizedYear rewrite instead.
+    if (program.id == 'washington_quarters_classic') {
+      final itemYear = int.tryParse(year) ?? 0;
+      if (itemYear != 0 && (itemYear < 1932 || itemYear > 1998)) {
+        return false;
+      }
     }
 
     // 5. Subject / Design Match
@@ -274,15 +291,35 @@ class SlotResolver {
 
   /// Resolves which specific variety/mint column an item belongs to.
   static bool matchesVariety(Map<String, dynamic> item, ChecklistVariety variety) {
-    final mintMark    = _mintMark(item);
-    final strikeType  = _strikeType(item);
-    final varField    = _variety(item);   // Variety + Theme/Subject
-    final metal       = _metalContent(item);
-    final vId         = variety.id.toUpperCase();
+    final mintMark   = _mintMark(item);
+    final strikeType = _strikeType(item);
+    final varField   = _variety(item);
+    final metal      = _metalContent(item);
+    final vId        = variety.id.toUpperCase();
+    final grade      = _field(item, ['Condition', 'grade', 'Grade']);
+
+    // ── Shared predicates — computed once, used by every branch ─────────────
+    // isProof: strike_type/variety contains PROOF, OR grade is PCGS/NGC Proof
+    //   designation (PR65, PF-67, PF 67). Word boundary \b so 'PCGS PR69' matches.
+    //   Note: does NOT gate on !REVERSE here (Classic has no reverse proofs).
+    //   Do not copy this helper to programs with Reverse Proof slots without
+    //   restoring the !REVERSE guard.
+    final isProof = strikeType.contains('PROOF') ||
+                    varField.contains('PROOF')   ||
+                    RegExp(r'\b(PR|PF)[- ]?\d', caseSensitive: false).hasMatch(grade);
+
+    // isSilver: metal_content or variety/theme says SILVER.
+    final isSilver = metal.contains('SILVER') || varField.contains('SILVER');
+
+    // isSMS: strike_type or variety says SMS, OR grade is PCGS/NGC Specimen.
+    //   SP65, SP-67, SP 67 — word boundary \b so 'NGC SP-67' matches.
+    //   Bare 'SP' or 'Special' alone does NOT qualify.
+    //   Default for unmarked 1965-67 coin with no SMS signal → NMM (P branch).
+    final isSMS = strikeType.contains('SMS') ||
+                  varField.contains('SMS')   ||
+                  RegExp(r'\bSP[- ]?\d{2}', caseSensitive: false).hasMatch(grade);
 
     // ── requiresPrivy gate ───────────────────────────────────────────────────
-    // Fires before any mint-mark logic. Only 250/SEMIQUINCENTENNIAL/AMERICA250
-    // qualify — PRIVY alone or ANNIVERSARY alone do not (too broad).
     if (variety.requiresPrivy == true) {
       final title = _field(item, [
         'official_us_mint_title', 'Official US Mint Title', 'Title', 'title']);
@@ -294,7 +331,6 @@ class SlotResolver {
           title.contains('SEMIQUINCENTENNIAL')      ||
           title.contains('AMERICA250');
       if (!hasPrivy) return false;
-      // Privy confirmed — fall through to mint-mark check below.
     }
 
     // ── Privy-mark varieties ─────────────────────────────────────────────────
@@ -310,38 +346,67 @@ class SlotResolver {
              (strikeType.contains('REVERSE') || varField.contains('REVERSE'));
     }
 
-    // ── S-SILVER ─────────────────────────────────────────────────────────────
-    // Must be S-mint AND silver content AND NOT an explicit proof strike.
-    // mintMark == 'S' alone does NOT make a coin proof-like.
+    // ── S-SILVER (1976-S 40% silver BU only — NOT proof) ─────────────────────
+    // !isProof ensures 1976-S silver proof goes to S-SILVER-PROOF instead.
     if (vId == 'S-SILVER') {
-      final isSilver = metal.contains('SILVER') || varField.contains('SILVER');
-      final isProof  = strikeType.contains('PROOF') && !strikeType.contains('REVERSE');
       return mintMark == 'S' && isSilver && !isProof;
     }
 
-    // ── S-PROOF (clad or generic proof) ──────────────────────────────────────
+    // ── S-SILVER-PROOF (1976-S 40% silver proof; 1992-1998 S 90% silver proof) ─
+    // isProof accepts PR/PF grade prefix, so a 1992-S PR69 slab with empty
+    // strike_type correctly matches here instead of landing in S-SILVER (BU).
+    if (vId == 'S-SILVER-PROOF') {
+      return mintMark == 'S' && isSilver && isProof;
+    }
+
+    // ── S-PROOF (S-mint clad proof only) ─────────────────────────────────────
+    // !isSilver prevents 1976-S or 1992-S silver proofs from owning the clad slot.
     if (vId == 'S-PROOF' || vId == 'S-CLAD') {
-      final isProof = strikeType.contains('PROOF') || varField.contains('PROOF');
-      return mintMark == 'S' && isProof;
+      return mintMark == 'S' && isProof && !isSilver;
+    }
+
+    // ── Philadelphia Proof (1936-1942, 1950-1964) — id: 'PROOF' ──────────────
+    // Struck at Philadelphia with no mint mark.
+    // isProof accepts strike_type, variety, OR PR/PF grade (e.g. PR65, PF-67).
+    // !isSMS: an SMS coin (SP67) must not land here.
+    // isPhillyOrUnmarked: S-mint proofs stay in S-PROOF / S-SILVER-PROOF.
+    if (vId == 'PROOF') {
+      final isPhillyOrUnmarked = mintMark.isEmpty || mintMark == 'NONE' ||
+                                  mintMark == 'P'  || mintMark == 'PHILADELPHIA';
+      return isProof && isPhillyOrUnmarked && !isSMS;
     }
 
     // ── Generic PROOF / specific mint proofs (W-PROOF, P-PROOF, etc.) ────────
     if (vId.contains('PROOF')) {
       final baseMint = vId.split('-').first;
-      final isProof  = strikeType.contains('PROOF') || varField.contains('PROOF');
       if (baseMint.isNotEmpty && baseMint != 'S') {
         return mintMark == baseMint && isProof;
       }
       return isProof;
     }
 
+    // ── SMS (Special Mint Set) — 1965, 1966, 1967 ────────────────────────────
+    // Uses shared isSMS predicate (widened to SP[- ]?\d{2}).
+    // matchesVariety() is called once per variety slot independently.
+    // The P/NMM branch below gates on !isSMS to prevent double-stamp.
+    if (vId == 'SMS') {
+      return isSMS;
+    }
+
     // ── Uncirculated standard mint marks (P, D, W, S, CC, O) ────────────────
+    // !isProof: proof coins land in PROOF / S-PROOF / S-SILVER-PROOF, not here.
+    // !isSMS: SMS coins land in SMS, not NMM. matchesVariety() is per-slot;
+    //   branch ordering within one call does NOT prevent double-stamp across two
+    //   independent calls — the explicit !isSMS gate is the only safe guard.
     final baseMint = vId.split('-').first;
-    if (mintMark == baseMint) return true;
-    if (baseMint == 'P' && (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA')) return true;
+    if (mintMark == baseMint && !isProof && !isSMS) return true;
+    if (baseMint == 'P' &&
+        (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA') &&
+        !isProof && !isSMS) { return true; }
 
     return false;
   }
+
 
   /// Resolves the entire program inventory across coins, currency, and world_items subcollections.
   static Map<String, SlotMatchResult> resolveProgramInventory({

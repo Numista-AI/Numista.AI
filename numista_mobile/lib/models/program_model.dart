@@ -188,8 +188,16 @@ class CoinProgram {
       return dbLower.contains('state quarters') || dbLower.contains('state and territory quarters');
     }
 
-    // 6. Washington Quarters (Classic)
+    // 6. Washington Quarters (Classic) — 1932-1998 eagle reverse only.
+    // String exclusions are a secondary guard. Year equality (isMatch Fix A) is the SoR lock.
     if (progLower == 'washington quarters (classic)') {
+      if (dbLower.contains('state quarter') || dbLower.contains('state quarters')) return false;
+      if (dbLower.contains('50 state')) return false;
+      if (dbLower.contains('america the beautiful') || dbLower.contains('national park')) return false;
+      if (dbLower.contains('american women') || dbLower.contains("women's quarter")) return false;
+      if (dbLower.contains('crossing the delaware') ||
+          dbLower.contains('general george washington crossing')) { return false; }
+      if (dbLower.contains('territories quarter') || dbLower.contains('d.c.')) return false;
       return dbLower.contains('washington') && dbLower.contains('quarter');
     }
 
