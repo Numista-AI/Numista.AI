@@ -4,9 +4,15 @@
     "scan_ranges": [
       "8820-8980",
       "8980-9500",
-      "9600-9720"
+      "9600-9720",
+      "9700-9900",
+      "8950-8970",
+      "9640-9700",
+      "8940-8960",
+      "9300-9450",
+      "9500-9600"
     ],
-    "total_nodes": 158,
+    "total_nodes": 679,
     "api_base": "https://cpgpublicapiv2.greysheet.com/api",
     "note": "first_col() of GetCollectibleByNodeRequest. Saved to avoid re-querying."
   },
@@ -648,6 +654,2090 @@
     "9700": {
       "desc": "American Innovation $1 PR DCAM [Type]",
       "category": "us_dollar_american_innovation"
+    },
+    "9703": {
+      "desc": "1997 3Y 1/2oz Silver, World Wildlife Fund MS",
+      "category": "us_unknown_new"
+    },
+    "9707": {
+      "desc": "George VI 25c Caribou PL [Type]",
+      "category": "us_unknown_new"
+    },
+    "9708": {
+      "desc": "1858 10c Province of Canada, Small Date, Reeded Edge SP",
+      "category": "us_unknown_new"
+    },
+    "9718": {
+      "desc": "Edward VII Sov Gold, 1908-1910 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9719": {
+      "desc": "Gold Maple Leaf G$50 One Ounce, 1979- MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9720": {
+      "desc": "George V 1c 1920-1936 MS BN [Type]",
+      "category": "us_unknown_new"
+    },
+    "9721": {
+      "desc": "Platinum Maple Leaf P$50 One Ounce, 1988-Present MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9724": {
+      "desc": "2008-Z G150Y 1/3oz Gold, Olympics - Soccer PR DCAM",
+      "category": "us_unknown_new"
+    },
+    "9726": {
+      "desc": "1922 5c SP",
+      "category": "us_unknown_new"
+    },
+    "9727": {
+      "desc": "1858 S5c Province of Canada, Small Date, Plain Edge SP",
+      "category": "us_unknown_new"
+    },
+    "9728": {
+      "desc": "1986 5Y Silver, Panda, World Wildlife Fund PR DCAM",
+      "category": "us_unknown_new"
+    },
+    "9729": {
+      "desc": "Panda 1/2oz Gold G200Y 2001-2015 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9730": {
+      "desc": "Panda 1/4oz Gold G25Y 1982-2000 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9731": {
+      "desc": "Panda 1/2oz Gold G50Y 1982-2000 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9732": {
+      "desc": "Panda 1/20oz Gold G20Y 2001-2015 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9733": {
+      "desc": "Panda 1/2oz Silver S5Y 1982-1998 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9734": {
+      "desc": "Panda S50Y 5oz Silver, 1982-2015 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9735": {
+      "desc": "Panda 12oz Silver S100Y 1982-1997 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9736": {
+      "desc": "Panda 1 Kilo Silver S200Y 1998- PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9737": {
+      "desc": "1858 1c Province of Canada SP BN",
+      "category": "us_unknown_new"
+    },
+    "9738": {
+      "desc": "1921 1c SP BN",
+      "category": "us_unknown_new"
+    },
+    "9739": {
+      "desc": "Gold Maple Leaf G$20 Half Ounce, 1986- MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9740": {
+      "desc": "Gold Maple Leaf G$10 Quarter Ounce, 1982- MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9741": {
+      "desc": "Gold Maple Leaf G$5 One-Tenth Ounce, 1982- MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9742": {
+      "desc": "Panda 1/20oz Gold G5Y 1986-1994 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9743": {
+      "desc": "Panda 1/10oz Gold G10Y 1986-1997 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9744": {
+      "desc": "Panda 1/4oz Gold G25Y 1982-1994 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9745": {
+      "desc": "Panda G50Y 1/2oz Gold, 1986-1994 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9746": {
+      "desc": "Panda 1oz Gold G500Y 2001- MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9747": {
+      "desc": "Panda 12oz Gold G1000Y 1984-1995 PR DCAM [Type]",
+      "category": "us_unknown_new"
+    },
+    "9766": {
+      "desc": "1929 $5 Type 2 (Fr. 1800-2)",
+      "category": "us_unknown_new"
+    },
+    "9767": {
+      "desc": "1882 $5 2nd Charter Period, 1st Issue, Brown Back (Fr. 466478TYPE) [Type]",
+      "category": "us_unknown_new"
+    },
+    "9768": {
+      "desc": "1902 $5 3rd Charter Period, 1st Issue, Red Seal (Fr. 587589TYPE) [Type]",
+      "category": "us_unknown_new"
+    },
+    "9769": {
+      "desc": "Aerated Bread Co, New York 1c EP1 (Fr. EP1)",
+      "category": "us_unknown_new"
+    },
+    "9770": {
+      "desc": "Gault, J. 2c EP31 (Fr. EP31)",
+      "category": "us_unknown_new"
+    },
+    "9771": {
+      "desc": "Ayers Cathartic Pills 3c EP32, Short Arrows (Fr. EP32)",
+      "category": "us_unknown_new"
+    },
+    "9772": {
+      "desc": "Aerated Bread Co., N.Y. 5c EP59a (Fr. EP59a)",
+      "category": "us_unknown_new"
+    },
+    "9773": {
+      "desc": "Feuchtwanger back, Strip of 3-Cent Stamps 9c EP95a (Fr. EP95a)",
+      "category": "us_unknown_new"
+    },
+    "9774": {
+      "desc": "Ayers Cathartic Pills 10c EP96, Short Arrows (Fr. EP96)",
+      "category": "us_unknown_new"
+    },
+    "9775": {
+      "desc": "Ayers Cathartic Pills 12c EP135, Short Arrows (Fr. EP135)",
+      "category": "us_unknown_new"
+    },
+    "9776": {
+      "desc": "Ayers Cathartic Pills 24c EP159b (Fr. EP159b)",
+      "category": "us_unknown_new"
+    },
+    "9777": {
+      "desc": "Ayers Cathartic Pills 30c EP172b, Long Arrows (Fr. EP172b)",
+      "category": "us_unknown_new"
+    },
+    "9778": {
+      "desc": "Take Ayers Pills 90c EP183a (Fr. EP183a)",
+      "category": "us_unknown_new"
+    },
+    "9779": {
+      "desc": "1853 50c BG-301 MS",
+      "category": "us_unknown_new"
+    },
+    "9780": {
+      "desc": "(No Date) $1 BG-501, Humbert Eagle MS",
+      "category": "us_unknown_new"
+    },
+    "9781": {
+      "desc": "1903 1/2c U.S. Philippines MS BN",
+      "category": "us_unknown_new"
+    },
+    "9782": {
+      "desc": "1903 5c U.S. Philippines MS",
+      "category": "us_unknown_new"
+    },
+    "9783": {
+      "desc": "U.S. Philippines 10c 1903-1904 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9784": {
+      "desc": "U.S. Philippines 20c 1903-1905 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9785": {
+      "desc": "U.S. Philippines 50c 1903-1905 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9786": {
+      "desc": "U.S. Philippines Peso 1903-1906 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9787": {
+      "desc": "1866 P1c Copper, J-455 PR BN",
+      "category": "us_unknown_new"
+    },
+    "9788": {
+      "desc": "Continental $1 1776 MS [Type]",
+      "category": "us_unknown_new"
+    },
+    "9789": {
+      "desc": "(1616) 2P Sommer Islands, Large Star MS",
+      "category": "us_unknown_new"
+    },
+    "9790": {
+      "desc": "(1652) 3P New England MS",
+      "category": "us_unknown_new"
+    },
+    "9791": {
+      "desc": "1670s Farth St Patrick, New Jersey MS BN",
+      "category": "us_unknown_new"
+    },
+    "9792": {
+      "desc": "(No Date) 2P Rosa Americana, Motto in Ribbon MS BN",
+      "category": "us_unknown_new"
+    },
+    "9793": {
+      "desc": "1786 Copper New Jersey, Date Below MS BN",
+      "category": "us_unknown_new"
+    },
+    "9794": {
+      "desc": "1783 Copper Nova Constellatio, Pointed Rays, Small U.S. MS BN",
+      "category": "us_unknown_new"
+    },
+    "9795": {
+      "desc": "1785 Copper Connecticut, Bust Left MS BN",
+      "category": "us_unknown_new"
+    },
+    "9796": {
+      "desc": "1786 Copper New York, VIRTUTE, Large Head MS BN",
+      "category": "us_unknown_new"
+    },
+    "9797": {
+      "desc": "1785 Copper Vermont, IMMUNE COLUMBIA MS BN",
+      "category": "us_unknown_new"
+    },
+    "9798": {
+      "desc": "1783 Copper Washington, Triumpho MS BN",
+      "category": "us_unknown_new"
+    },
+    "9799": {
+      "desc": "1747 1/2P Machins Mills MS BN",
+      "category": "us_unknown_new"
+    },
+    "9800": {
+      "desc": "1787 Fugio 1c MS BN [Type]",
+      "category": "us_unknown_new"
+    },
+    "9801": {
+      "desc": "1742 LIMA Doubloon Brasher, LIMA MS",
+      "category": "us_unknown_new"
+    },
+    "9802": {
+      "desc": "1737 Copper Higley, 3 Hammers, CONNECTICVT MS BN",
+      "category": "us_unknown_new"
+    },
+    "9803": {
+      "desc": "Kentucky Token Plain Edge MS BN",
+      "category": "us_unknown_new"
+    },
+    "9804": {
+      "desc": "1773 1/2 P Virginia, Period After GEORGIVS MS BN",
+      "category": "us_unknown_new"
+    },
+    "9805": {
+      "desc": "(1778-1779) Medal Rhode Island, Wreath Below Ship, Pewter MS",
+      "category": "us_unknown_new"
+    },
+    "9806": {
+      "desc": "1783 3p Chalmers MS",
+      "category": "us_unknown_new"
+    },
+    "9807": {
+      "desc": "(1659) 1P Maryland, Lord Baltimore MS BN",
+      "category": "us_unknown_new"
+    },
+    "9808": {
+      "desc": "(1694) 1/2 P Elephant, LONDON, Thick Planchet MS BN",
+      "category": "us_unknown_new"
+    },
+    "8966": {
+      "desc": "Gobrecht Dollar $1 Type of 1836, No Stars Obverse, Stars Reverse PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9649": {
+      "desc": "Capped Bust Quarter 25c Large Planchet, 1815-1828 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9650": {
+      "desc": "1928 $5 (Fr. 1950TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9651": {
+      "desc": "1928 $10 (Fr. 2000TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9652": {
+      "desc": "1928 $20 (Fr. 2050TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9653": {
+      "desc": "1928 $50 (Fr. FR2100TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9654": {
+      "desc": "1928 $100 (Fr. 2150TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9655": {
+      "desc": "1928 $500 (Fr. FR2200TYPE) [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9656": {
+      "desc": "1928 $1,000 Boston (Fr. 2210A)",
+      "category": "us_targeted_scan"
+    },
+    "9657": {
+      "desc": "1928 $5,000 Boston (Fr. 2220A)",
+      "category": "us_targeted_scan"
+    },
+    "9658": {
+      "desc": "1928 $10,000 Boston (Fr. 2230A)",
+      "category": "us_targeted_scan"
+    },
+    "9659": {
+      "desc": "Flowing Hair Half Dollar 50c 1794-1795 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9660": {
+      "desc": "Draped Bust Half Dollar 50c Small Eagle, 1796-1797 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9661": {
+      "desc": "Flowing Hair Dollar $1 1794-1795 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9662": {
+      "desc": "Draped Bust Dime 10c Small Eagle, 1796-1797 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9663": {
+      "desc": "Half Disme H10c 1792 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9664": {
+      "desc": "Flowing Hair Half Dime H10c 1794-1795 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9665": {
+      "desc": "Draped Bust Half Dime H10c Small Eagle, 1796-1797 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9666": {
+      "desc": "Draped Bust Quarter Eagle $2 1/2 No Stars Obverse, 1796 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9667": {
+      "desc": "Capped Bust Quarter Eagle $2 1/2 1808 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9668": {
+      "desc": "1821 $2 1/2 PR",
+      "category": "us_targeted_scan"
+    },
+    "9669": {
+      "desc": "Draped Bust Half Eagle $5 Small Eagle, 1795-1798 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9670": {
+      "desc": "Capped Bust Half Eagle $5 Head Facing Left, 1807-1812 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9671": {
+      "desc": "1820 $5 PR",
+      "category": "us_targeted_scan"
+    },
+    "9672": {
+      "desc": "Draped Bust Half Cent 1/2c 1800-1808 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9673": {
+      "desc": "Classic Head Half Cent 1/2c 1809-1836 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9674": {
+      "desc": "Braided Hair Half Cent 1/2c 1849-1857 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9675": {
+      "desc": "Draped Bust Cent 1c 1796-1807 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9676": {
+      "desc": "Classic Head Cent 1c 1808-1814 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9677": {
+      "desc": "Coronet Head Cent 1c 1816-1839 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9678": {
+      "desc": "Braided Hair Cent 1c 1839-1857 MS BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9679": {
+      "desc": "1896 P1c Nickel, J-1767 PR",
+      "category": "us_targeted_scan"
+    },
+    "9680": {
+      "desc": "1874 P1c Copper, J-1346 PR BN",
+      "category": "us_targeted_scan"
+    },
+    "9681": {
+      "desc": "1997 S10Y 1oz Silver , Lunar, Ox MS",
+      "category": "us_targeted_scan"
+    },
+    "9682": {
+      "desc": "1988 100Y 1oz Platinum, Dragon PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9683": {
+      "desc": "1981 250Y Rooster PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9684": {
+      "desc": "George V 5c 1922-1936 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9694": {
+      "desc": "1965 1c- 50c Special Mint Set, 5 Coins SP",
+      "category": "us_targeted_scan"
+    },
+    "8941": {
+      "desc": "Twenty-Cent Piece 20c Seated Liberty, 1875-1876 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "8942": {
+      "desc": "Twenty-Cent Piece 20c Seated Liberty, 1875-1878 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "8943": {
+      "desc": "Draped Bust Quarter 25c Small Eagle, 1796 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "8944": {
+      "desc": "Seated Liberty Quarter 25c No Drapery, 1838-1840 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "8945": {
+      "desc": "Seated Liberty Quarter 25c No Drapery, 1838-39 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9300": {
+      "desc": "1987 S10Cr 10oz Silver, US Constitution Bicentennial PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9303": {
+      "desc": "1837 Token Half Cent of Copper, HT-73 MS",
+      "category": "us_targeted_scan"
+    },
+    "9304": {
+      "desc": "1908 SC$1 Elder Dollar, 40 Cents, Silver, HK-800 MS",
+      "category": "us_targeted_scan"
+    },
+    "9306": {
+      "desc": "1864 $10 (Fr. 190)",
+      "category": "us_targeted_scan"
+    },
+    "9307": {
+      "desc": " 5c Jefferson Postage Stamp Obverse (Fr. 1228)",
+      "category": "us_targeted_scan"
+    },
+    "9308": {
+      "desc": " 5c Head of George Washington in Bronze Oval Frame (Fr. 1232)",
+      "category": "us_targeted_scan"
+    },
+    "9309": {
+      "desc": " 3c Head of George Washington (Fr. 1226)",
+      "category": "us_targeted_scan"
+    },
+    "9310": {
+      "desc": " 10c Bust of Liberty (Fr. 1257)",
+      "category": "us_targeted_scan"
+    },
+    "9311": {
+      "desc": " 10c Head of William Meredith (Fr. 1264)",
+      "category": "us_targeted_scan"
+    },
+    "9312": {
+      "desc": "1861 2-Oct $2 ",
+      "category": "us_targeted_scan"
+    },
+    "9317": {
+      "desc": "Capped Bust Quarter 25c Large Planchet, 1818-1828 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9319": {
+      "desc": " 1\u00b0 de Enero de 1823 Sig 1: Medina/Batres/Mangino ",
+      "category": "us_targeted_scan"
+    },
+    "9320": {
+      "desc": " Abril 1\u00b0 de 1877 Sig unknown Series A s/n 000,001 - 005,000 ",
+      "category": "us_targeted_scan"
+    },
+    "9322": {
+      "desc": " Handwritten date (__ de __ de 18__) Handwritten sig Series unknown 20,000 notes Intro: 1859 Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9327": {
+      "desc": " 1 JANUARI 1986. Sig. 1: Driessen/Mansur. 600,000 notes. ",
+      "category": "us_targeted_scan"
+    },
+    "9328": {
+      "desc": " 1918 Sig 1: Anderson Prefix A/1, A/2 Intro: 15 03 1920 ",
+      "category": "us_targeted_scan"
+    },
+    "9329": {
+      "desc": " 1915 - 1917 Sig unknown ",
+      "category": "us_targeted_scan"
+    },
+    "9330": {
+      "desc": " No date Handwritten sig Prefix U Intro: 1894 ",
+      "category": "us_targeted_scan"
+    },
+    "9331": {
+      "desc": " 1971 Sig 1: Johnson Prefix A/1, A/2 Intro: 01 05 1972 ",
+      "category": "us_targeted_scan"
+    },
+    "9334": {
+      "desc": " 1919 Handwritten sig (Acting Colonial Secretary, P W D Armbrister; Acting Receiver General, Edward Raymond Pashley; Commissioner of Currency, G Weech) Prefix C ",
+      "category": "us_targeted_scan"
+    },
+    "9335": {
+      "desc": "Capped Bust Half Dime H10c 1829-1837 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9337": {
+      "desc": "1870 $5 San Francisco (Fr. 1136)",
+      "category": "us_targeted_scan"
+    },
+    "9338": {
+      "desc": " No date Sig 1a: Alberti/Gambino Series A Intro: 1926 ",
+      "category": "us_targeted_scan"
+    },
+    "9339": {
+      "desc": " 19 DESEMBRE 1936. No sig. 10,000 notes. Intro: 19.12.1936 ",
+      "category": "us_targeted_scan"
+    },
+    "9341": {
+      "desc": " 1 October 1826 Handwritten sig ",
+      "category": "us_targeted_scan"
+    },
+    "9342": {
+      "desc": " 1 III 1990 Intro: 1992 Handstamp w/o number below eagle & wreath ",
+      "category": "us_targeted_scan"
+    },
+    "9345": {
+      "desc": "1961 1961 Wmk: Star inside linden leaf pattern Wet printing Prefix B01 - B40, C, and D Intro: 08 02 1993 ",
+      "category": "us_targeted_scan"
+    },
+    "9346": {
+      "desc": "2.1.1915 2 J\u00e4nner 1915 Austria-Hungary sig 23/24 Series 1001 - 1215 Intro: 03 03 1919 Imperforate stamp ",
+      "category": "us_targeted_scan"
+    },
+    "9347": {
+      "desc": " __ 18__ (1812 - 1818) Sig 1: Sackl\u00e9n Wmk: None Intro: 00 08 1812 ",
+      "category": "us_targeted_scan"
+    },
+    "9348": {
+      "desc": " onze Niv\u00f4se an sept (11 Niv\u00f4se year 7 = 31 12 1798) Sig front: 2 unknown administrators/Martin Garat Sig back: Devaines/Delafontaine Series A - M 100 notes unredeemed (B901a/b) ",
+      "category": "us_targeted_scan"
+    },
+    "9349": {
+      "desc": " Handwritten 14th October 1914 Sig 1: Price/Fry 8 notes known: s/n 00001, 00125, 00183, 00193, 00223, 00660, 00793, and 01130 ",
+      "category": "us_targeted_scan"
+    },
+    "9350": {
+      "desc": " 11 JULI 1874 Sig 1 Series I - XV Lit A - M 7-digit s/n ",
+      "category": "us_targeted_scan"
+    },
+    "9351": {
+      "desc": " 30 Januar 1937 Prefix A - Z Intro: 24 06 1948 ",
+      "category": "us_targeted_scan"
+    },
+    "9352": {
+      "desc": " 1948 No sig No s/n Intro: 20 06 1948 ",
+      "category": "us_targeted_scan"
+    },
+    "9353": {
+      "desc": " Handwritten date (1725 - 1793) Handwritten sig ",
+      "category": "us_targeted_scan"
+    },
+    "9355": {
+      "desc": " 1803 Handwritten sig 1: Frisch/Martini/Wexelsen ",
+      "category": "us_targeted_scan"
+    },
+    "9356": {
+      "desc": " 1926 M\u00c1RCIUS 1 Sig 1 Series A007 - A155 ",
+      "category": "us_targeted_scan"
+    },
+    "9357": {
+      "desc": " 15 APRIL 1928 Sig 1: \u00c1rnason/Sigur\u00f0sson Intro: 08 07 1929 ",
+      "category": "us_targeted_scan"
+    },
+    "9359": {
+      "desc": " No date Sig 1: Garvey Prefix none, A Intro: 03 07 1961 ",
+      "category": "us_targeted_scan"
+    },
+    "9362": {
+      "desc": " No date Sig 1: Ereaut Prefix JN Intro: 31 05 1941 ",
+      "category": "us_targeted_scan"
+    },
+    "9363": {
+      "desc": " 01 09 1856 Unissued ",
+      "category": "us_targeted_scan"
+    },
+    "9365": {
+      "desc": " August 13, 1914 Series AA Intro: 20 08 1914 ",
+      "category": "us_targeted_scan"
+    },
+    "9366": {
+      "desc": " 1992 No sig Series A - E Intro: 22 07 1992 ",
+      "category": "us_targeted_scan"
+    },
+    "9367": {
+      "desc": " 20 MARS 1920 Sig 1: le Bourdon/Nogh\u00e8s No s/n 90,000 notes Intro: 28 04 1920 ",
+      "category": "us_targeted_scan"
+    },
+    "9368": {
+      "desc": " 6 May 1929 Sig 1: Craig Prefix B/10 ",
+      "category": "us_targeted_scan"
+    },
+    "9373": {
+      "desc": " 5 Aprile 1976 Sig 1: Unknown ",
+      "category": "us_targeted_scan"
+    },
+    "9374": {
+      "desc": " Handwritten date Handwritten sig 0 known ",
+      "category": "us_targeted_scan"
+    },
+    "9375": {
+      "desc": " 10 ledna 1931 Prefix format X Intro: 06 06 1939 ",
+      "category": "us_targeted_scan"
+    },
+    "9377": {
+      "desc": " 1o de Marzo de 1783 Sig Juan Bautista Rossi 8,000 notes ",
+      "category": "us_targeted_scan"
+    },
+    "9379": {
+      "desc": " 10 Aug 1914 Sig 1 1,250,000 notes Intro: 14 08 1914 ",
+      "category": "us_targeted_scan"
+    },
+    "9382": {
+      "desc": " 1st January, 1899 Sig 1: Palmer 400,000 notes (B101a/b) Prefix A/1 ",
+      "category": "us_targeted_scan"
+    },
+    "9384": {
+      "desc": "1919 Octobre 1919 No sig ; no s/n Series F Unissued ",
+      "category": "us_targeted_scan"
+    },
+    "9385": {
+      "desc": " No date Sig 1: Panouillot/Gautier Series A 1 - E 1 Intro: 1971 ",
+      "category": "us_targeted_scan"
+    },
+    "9387": {
+      "desc": " \u0661\u0669\u0665\u0665 (06 07 1955) Sig 1: Tewfik/Azhari No ovpt; no perf; all-zero s/n ",
+      "category": "us_targeted_scan"
+    },
+    "9388": {
+      "desc": " No date No sig No s/n Intro: 15 09 1943 ",
+      "category": "us_targeted_scan"
+    },
+    "9389": {
+      "desc": " 1962 Sig 1: Mohamed/Addawe Series A001 - A010 Intro: 15 12 1962 ",
+      "category": "us_targeted_scan"
+    },
+    "9390": {
+      "desc": " 2005 Sig 1: Haid Prefix A - G ",
+      "category": "us_targeted_scan"
+    },
+    "9391": {
+      "desc": "1874 1874 Handwritten sig ",
+      "category": "us_targeted_scan"
+    },
+    "9392": {
+      "desc": " No date Sig 1: de Loynes/Monday Prefix A - C Intro: 05 10 1964 ",
+      "category": "us_targeted_scan"
+    },
+    "9393": {
+      "desc": " No date Sig 1: Moncel/Julienne Intro: 1959 ",
+      "category": "us_targeted_scan"
+    },
+    "9396": {
+      "desc": "15.9.1960 15\u202209\u202260 Prefix A - C Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9397": {
+      "desc": " 15 09 60 Unconfirmed Intro: 00 02 1964 ",
+      "category": "us_targeted_scan"
+    },
+    "9398": {
+      "desc": " 30 November 1921 - 31 January 1922 Sig 1: Clegg Prefix E/1 - E/3 ",
+      "category": "us_targeted_scan"
+    },
+    "9400": {
+      "desc": " December, 1918 Sig 1: MacGregor ",
+      "category": "us_targeted_scan"
+    },
+    "9401": {
+      "desc": " 2 OCTOBRE 1958 Sig 1: Beavogui/Drame Series E Intro: 01 03 1960 ",
+      "category": "us_targeted_scan"
+    },
+    "9402": {
+      "desc": " 12 DE OCTUBRE DE 1969 Sig 1: Ndongo/Unknown/Bojeta ",
+      "category": "us_targeted_scan"
+    },
+    "9404": {
+      "desc": " (19)81 Sig 1: Sekhonyana/Molemohi Printer: (Bradbury, Wilkinson & Company) Prefix A/81 - C/81 ",
+      "category": "us_targeted_scan"
+    },
+    "9405": {
+      "desc": " No date Sig 1: Mubiru/Elangot Prefix A/1 - A/32 Intro: 15 08 1966 ",
+      "category": "us_targeted_scan"
+    },
+    "9407": {
+      "desc": " No date Sig 1: Blowers Prefix AA - AJ Intro: 23 07 1945 ",
+      "category": "us_targeted_scan"
+    },
+    "9408": {
+      "desc": " 3=12=92 - 13=2=93 (old dates) Sig : LE CAISSIER PRINCIPAL, Victor d\u2019Anfreville; LE SECRETAIRE GENERAL, Jean-Baptiste Billote; LE CONTROLEUR GENERAL, Armand Delmotte Intro: 1926 ",
+      "category": "us_targeted_scan"
+    },
+    "9409": {
+      "desc": "27.10.1970 27 de Outubro de 1970 Sig A35/G9 Prefix A, B Intro: 09 10 1978 ",
+      "category": "us_targeted_scan"
+    },
+    "9411": {
+      "desc": " 52TH DATE, 1963 Sig A B Smith Unissued Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9413": {
+      "desc": " 30 \u2022 6 \u2022 1973 Sig 1: N\u2019Bagui ",
+      "category": "us_targeted_scan"
+    },
+    "9414": {
+      "desc": " 15-11-1961 Sig 1: Mbamu Prefix A - D ",
+      "category": "us_targeted_scan"
+    },
+    "9415": {
+      "desc": " No date Sig 1: Panouillot/Gautier Series A 1 - G 1 Intro: 1971 ",
+      "category": "us_targeted_scan"
+    },
+    "9417": {
+      "desc": " No date No sig No s/n Intro: 1944 Red on whitish paper (illustrated) ",
+      "category": "us_targeted_scan"
+    },
+    "9418": {
+      "desc": " No date Sig 1: Stephens/Maylsela Prefix A - M Intro: 06 09 1974 ",
+      "category": "us_targeted_scan"
+    },
+    "9419": {
+      "desc": " No date Unissued (circa 1990) Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9420": {
+      "desc": " No date Sig 1: Panouillot/Gautier Code: A Series S 10 - U 10 Intro: 1963 ",
+      "category": "us_targeted_scan"
+    },
+    "9421": {
+      "desc": " No date. Sig. 1: Panouillot/Gautier. Series A.1 - G.1. Intro: 1971. ",
+      "category": "us_targeted_scan"
+    },
+    "9423": {
+      "desc": "10.9.1955 10TH SEPTEMBER, 1955 Sig 37: Jeffreys/Grafftey-Smith Prefix A/172 - A/175 ",
+      "category": "us_targeted_scan"
+    },
+    "9424": {
+      "desc": " 05 06 1852 - 04 10 1870 Handwritten sig Series A - Z, A2 - T3 68,200 notes; 131 unredeemed; 4 known (all varieties) Algiers (without ovpt) ",
+      "category": "us_targeted_scan"
+    },
+    "9425": {
+      "desc": " 7 F\u00c9VRIER 1896 Sig 1: Pochez/Eetvelde Series A Intro: 10 04 1896 ",
+      "category": "us_targeted_scan"
+    },
+    "9426": {
+      "desc": " No date Sig 1: Masire/Hermans Prefix A/1 - A/19 Intro: 23 08 1976 ",
+      "category": "us_targeted_scan"
+    },
+    "9427": {
+      "desc": " 20-11-64 Unconfirmed Intro: 1966 ",
+      "category": "us_targeted_scan"
+    },
+    "9428": {
+      "desc": " No date Sig 3: Joudiou/Emane Printer: (Banque de France) Series A 1 - P 7 Intro: 1974 ",
+      "category": "us_targeted_scan"
+    },
+    "9429": {
+      "desc": " 15 02 62 Prefix CM ",
+      "category": "us_targeted_scan"
+    },
+    "9430": {
+      "desc": " No date Sig 2: Joudiou/Ntang Series B 1 - Z 2 Intro: 1974 ",
+      "category": "us_targeted_scan"
+    },
+    "9431": {
+      "desc": " No date No sig Intaglio Series A 1 - D 2 Intro: 1979 ",
+      "category": "us_targeted_scan"
+    },
+    "9432": {
+      "desc": " 27th MAY 1917 Sig 1: Wahba Unissued Purple and yellow front, green and blue back ",
+      "category": "us_targeted_scan"
+    },
+    "9433": {
+      "desc": " No date Sig 1: Panouillot/Gautier Code: A Series C 26 Intro: 1961 ",
+      "category": "us_targeted_scan"
+    },
+    "9434": {
+      "desc": " 7 DE JULIO DE 1975 Sig 1: Ndongo/Bojeta Series E/1 - E/12 ",
+      "category": "us_targeted_scan"
+    },
+    "9436": {
+      "desc": " 1er Juin 1933 Sig 1: Collier Prefix F/1 ",
+      "category": "us_targeted_scan"
+    },
+    "9437": {
+      "desc": " 28 Mai 1918 Sig 2: Rostand/Nouvion Series 175 ",
+      "category": "us_targeted_scan"
+    },
+    "9438": {
+      "desc": " No date Sig 2: Joudiou/Emane Printer: (Banque de France) Intaglio Series T 2 - O 3 Intro: 1974 ",
+      "category": "us_targeted_scan"
+    },
+    "9439": {
+      "desc": " No date Sig 1: Tun/Monday Prefix A, B Intro: 1971 ",
+      "category": "us_targeted_scan"
+    },
+    "9441": {
+      "desc": " 11 F\u00c9VRIER 1917 Sig 1: Droz/Poiret Wmk: Bee and C pattern 4 5-mm tall s/n Series A 1 - A 60 ",
+      "category": "us_targeted_scan"
+    },
+    "9443": {
+      "desc": " (19)79 Sig 1: Sekhonyana/Molemohi Prefix R/79 - S/79 Intro: 00 01 1980 ",
+      "category": "us_targeted_scan"
+    },
+    "9444": {
+      "desc": " 10-3-38 200,000 notes Intro: 1943 ",
+      "category": "us_targeted_scan"
+    },
+    "9445": {
+      "desc": " 29 mars 1917 Sig : Robert-Paul de Guise and Jean-Baptiste Vuillod Unissued ",
+      "category": "us_targeted_scan"
+    },
+    "9446": {
+      "desc": " 1964 Sig 1: Perrin Prefix A - D ",
+      "category": "us_targeted_scan"
+    },
+    "9447": {
+      "desc": " No date Sig 2: Dussine/Sangare Series A 1 - T 16 Intro: 1972 ",
+      "category": "us_targeted_scan"
+    },
+    "9448": {
+      "desc": "2.7.1917 02 07 1917 - 09 07 1917 Sig 2 Series 3 - 8 Intro: 1918 ",
+      "category": "us_targeted_scan"
+    },
+    "9450": {
+      "desc": " No date Sig 1: Karlsson Prefix A - F Intro: 15 09 1993 ",
+      "category": "us_targeted_scan"
+    },
+    "9500": {
+      "desc": " No date Sig 1: Alamar/Lindenblatt Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9501": {
+      "desc": " \u6176\u61c9\u620a\u8fb0 (1868) No sig Intro: 25 05 1868 ",
+      "category": "us_targeted_scan"
+    },
+    "9502": {
+      "desc": " 1993 No sig Wmk: Diamond pattern s/n upper left Intro: 15 11 1993 ",
+      "category": "us_targeted_scan"
+    },
+    "9503": {
+      "desc": " No date No sig Chinese character series and s/n Intro: 1893 Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9504": {
+      "desc": " No date No sig Intro: 10 05 1993 Wmk: Eagle pattern Prefix denominator CH, DA, IK, NR, OH, and TS ",
+      "category": "us_targeted_scan"
+    },
+    "9505": {
+      "desc": " No date Intro: 1945 ",
+      "category": "us_targeted_scan"
+    },
+    "9506": {
+      "desc": " No date Sig 1: Ismail Ali Prefix A/1 - D/3 Intro: 12 06 1967 ",
+      "category": "us_targeted_scan"
+    },
+    "9507": {
+      "desc": " \u0661\u0669\u0664\u0667 - \u0661\u0663\u0666\u0667 (1947/AH1367) Sig 1 Prefix A Intro: 05 09 1948 ",
+      "category": "us_targeted_scan"
+    },
+    "9508": {
+      "desc": " 1921 (in Mongolian) Sig Dava Unissued ",
+      "category": "us_targeted_scan"
+    },
+    "9509": {
+      "desc": " No date Sig 1: Janak Raj Pandit Prefix \u0915 Intro: 17 09 1945 ",
+      "category": "us_targeted_scan"
+    },
+    "9510": {
+      "desc": " 1947 No sig Buff paper Wmk: Star pattern ",
+      "category": "us_targeted_scan"
+    },
+    "9511": {
+      "desc": "1940 1940 India Sig 1: Jones Prefix Q, R, S Intro: 01 04 1948 ",
+      "category": "us_targeted_scan"
+    },
+    "9512": {
+      "desc": " No date Sig 1: ToRobert/Morauta Intro: 19 04 1975 ",
+      "category": "us_targeted_scan"
+    },
+    "9513": {
+      "desc": "10 pesos fuertes (B101a)",
+      "category": "us_targeted_scan"
+    },
+    "9514": {
+      "desc": " No date Sig 1: San Prefix A/1 - B/11 Intro: 12 06 1967 ",
+      "category": "us_targeted_scan"
+    },
+    "9515": {
+      "desc": " No date No sig No s/n Series 1 - 5 Intro: 15 09 1949 ",
+      "category": "us_targeted_scan"
+    },
+    "9516": {
+      "desc": " No date Sig 1: D\u00f5ng/Qu\u00ff Series 1-A - 56-A Intro: 15 10 1955 ",
+      "category": "us_targeted_scan"
+    },
+    "9517": {
+      "desc": "1987 1987-01-01 Sig 1: de Mel/Rasaputram Prefix F/1 - F/60 ",
+      "category": "us_targeted_scan"
+    },
+    "9518": {
+      "desc": "1.9.1906 1st September 1906 Sig 4: Brockman/Anthonisz/Saunders Prefix A/1 - A/11 ",
+      "category": "us_targeted_scan"
+    },
+    "9519": {
+      "desc": " \u5149\u7dd2__\u5e74__\u6708__\u65e5 No sig Unconfirmed ",
+      "category": "us_targeted_scan"
+    },
+    "9520": {
+      "desc": " No date Sig 16 Prefix C/1 - D/50 Thai digits in right s/n; variable weight font Intro: 07 03 1940 ",
+      "category": "us_targeted_scan"
+    },
+    "9521": {
+      "desc": " No date Sig 1: Orazov Prefix AA - AF Intro: 27 10 1993 ",
+      "category": "us_targeted_scan"
+    },
+    "9522": {
+      "desc": " 1992 No sig Prefix AA, AB, AE, AH, AK, AM Intro: 15 11 1993 ",
+      "category": "us_targeted_scan"
+    },
+    "9523": {
+      "desc": " No date No sig Intro: 1964 ",
+      "category": "us_targeted_scan"
+    },
+    "9524": {
+      "desc": "1934 1c Roll 50 Coins, Uncirculated MS",
+      "category": "us_targeted_scan"
+    },
+    "9525": {
+      "desc": "1934 5c Roll 40 Coins MS",
+      "category": "us_targeted_scan"
+    },
+    "9526": {
+      "desc": "1934 10c Roll 50 Coins MS",
+      "category": "us_targeted_scan"
+    },
+    "9527": {
+      "desc": "1934 25c Roll 40 Coins MS",
+      "category": "us_targeted_scan"
+    },
+    "9528": {
+      "desc": "1934 50c Roll 20 Coins MS",
+      "category": "us_targeted_scan"
+    },
+    "9529": {
+      "desc": "Braided Hair Half Cent 1/2c 1840-1857 PR BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9530": {
+      "desc": "Braided Hair Cent 1c 1839-1857 PR BN [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9531": {
+      "desc": "Flying Eagle Cent 1c 1856-1858 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9532": {
+      "desc": "Capped Bust Dime 10c Large Planchet, 1820-1827 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9533": {
+      "desc": "1818 50c PR",
+      "category": "us_targeted_scan"
+    },
+    "9534": {
+      "desc": "Draped Bust Dollar $1 Heraldic Eagle, 1801-1804 PR [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9535": {
+      "desc": "Panda 1oz Gold G100Y 1982-2000 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9536": {
+      "desc": "1981 30Y 1/2oz Silver, Rooster PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9540": {
+      "desc": "American Silver Eagle (ASE) S$1 One Ounce, 1986- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9541": {
+      "desc": "American Gold Eagle (AGE) G$5 1/10 Ounce, 1986- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9542": {
+      "desc": "American Gold Eagle (AGE) G$10 1/4 Ounce, 1986- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9543": {
+      "desc": "American Gold Eagle (AGE) G$25 1/2 Ounce, 1986- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9544": {
+      "desc": "American Gold Eagle (AGE) G$50 One Ounce, 1986- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9545": {
+      "desc": "Gold Buffalo One Ounce G$50 2006\u2013Present PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9546": {
+      "desc": "American Platinum Eagle (APE) P$100 One Ounce, 1997-2025 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9547": {
+      "desc": "American Platinum Eagle (APE) P$50 1/2 Ounce, 1997-2008 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9548": {
+      "desc": "American Platinum Eagle (APE) P$25 1/4 Ounce, 1997-2008 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9549": {
+      "desc": "American Platinum Eagle (APE) P$10 1/10 Ounce, 1997-2008 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9550": {
+      "desc": " 15c Wide Margins Specimen (Fr. 1273-5sp)",
+      "category": "us_targeted_scan"
+    },
+    "9551": {
+      "desc": "1947 1c- 50c Uncirculated Set, 28 Coins MS",
+      "category": "us_targeted_scan"
+    },
+    "9552": {
+      "desc": "First Spouse Gold G$10 2007\u2013Present PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9553": {
+      "desc": "US Coinage Bag 90% Silver, Circulated MS",
+      "category": "us_targeted_scan"
+    },
+    "9554": {
+      "desc": "Modern Commemorative S$1 90% Silver, 1983-2018 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9555": {
+      "desc": "Presidential Dollar $1 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9556": {
+      "desc": "Sacagawea Dollars Set $1 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9559": {
+      "desc": "Gold Commemorative G$5 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9560": {
+      "desc": "1921 $1 Peace, Satin Finish PR",
+      "category": "us_targeted_scan"
+    },
+    "9563": {
+      "desc": "2016-W G10c Centennial Series SP",
+      "category": "us_targeted_scan"
+    },
+    "9565": {
+      "desc": "1995-W Set 10th Anniversary American Eagle, 5 coins PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9566": {
+      "desc": "Susan B. Anthony SBA $1 1979-1999 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9567": {
+      "desc": "America the Beautiful Quarter 25c 2010-2021, Regular Finish MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9568": {
+      "desc": "American Palladium Eagle $25 One Ounce, 2017- MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9570": {
+      "desc": "1982-S S50c Washington 250th Anniversary of Birth, Silver PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9578": {
+      "desc": "1893 25c Isabella PR",
+      "category": "us_targeted_scan"
+    },
+    "9579": {
+      "desc": "1804 $10 Plain 4, BD-2 PR",
+      "category": "us_targeted_scan"
+    },
+    "9594": {
+      "desc": "Panda 1oz Silver S10Y 1989- MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9595": {
+      "desc": "Panda 1oz Gold G100Y 1986-1996 PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9596": {
+      "desc": "Panda 1oz Silver S10Y 1983- PR DCAM [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9597": {
+      "desc": "1993 P5Y 1/20oz Platinum, Panda PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9598": {
+      "desc": "American the Beautiful (ATB) 5oz Silver S25c 2010\u20132021 MS [Type]",
+      "category": "us_targeted_scan"
+    },
+    "9599": {
+      "desc": "1994 10Y Unicorn PR DCAM",
+      "category": "us_targeted_scan"
+    },
+    "9108": {
+      "desc": "1673 1/2D MS BN",
+      "category": "tree_walk"
+    },
+    "9107": {
+      "desc": "1828 1/2 Far MS BN",
+      "category": "tree_walk"
+    },
+    "9111": {
+      "desc": "1834 1 1/2 D MS",
+      "category": "tree_walk"
+    },
+    "16276": {
+      "desc": "1669 1/2 G MS",
+      "category": "tree_walk"
+    },
+    "15344": {
+      "desc": "Gold 1/2 Sov 2000- MS [Type]",
+      "category": "tree_walk"
+    },
+    "16277": {
+      "desc": "1817 1/2 Sov PR",
+      "category": "tree_walk"
+    },
+    "8929": {
+      "desc": "Capped Bust Half Dime H10c 1829-1837 MS [Type]",
+      "category": "tree_walk"
+    },
+    "8930": {
+      "desc": "Seated Liberty Half Dime H10c No Stars, 1837-1838 MS [Type]",
+      "category": "tree_walk"
+    },
+    "8931": {
+      "desc": "Seated Liberty Half Dime H10c No Stars, 1837 PR [Type]",
+      "category": "tree_walk"
+    },
+    "16275": {
+      "desc": "1718 1/4 G MS",
+      "category": "quarter_cent_walk"
+    },
+    "15343": {
+      "desc": "Gold 1/4 Sov 2009- MS [Type]",
+      "category": "quarter_cent_walk"
+    },
+    "14966": {
+      "desc": "Coronet Head Cent 1c 1816-1839 PR BN [Type]",
+      "category": "quarter_cent_walk"
+    },
+    "9162": {
+      "desc": "1845-B 25c MS",
+      "category": "quarter_cent_walk"
+    },
+    "15850": {
+      "desc": "(1980/5740) 1/2 Sh Bern MS",
+      "category": "targeted_probe"
+    },
+    "15851": {
+      "desc": "(1960/5720) 10 Ag Tel Aviv Mint MS",
+      "category": "targeted_probe"
+    },
+    "15852": {
+      "desc": "(1967/5727) 10L MS",
+      "category": "targeted_probe"
+    },
+    "15853": {
+      "desc": "(1980/5740) 10 New Ag Winnipeg Mint MS",
+      "category": "targeted_probe"
+    },
+    "15854": {
+      "desc": "1986 10 New Sh MS",
+      "category": "targeted_probe"
+    },
+    "15855": {
+      "desc": "(1949/5709) 10 Pr Struck at Imperial Chemical Industries (UK) PR",
+      "category": "targeted_probe"
+    },
+    "15856": {
+      "desc": "(1981/5741) 10 Sh PR",
+      "category": "targeted_probe"
+    },
+    "15857": {
+      "desc": "(1967/5727) 100L PR",
+      "category": "targeted_probe"
+    },
+    "15858": {
+      "desc": "(1949/5709) 100 Pr Heaton's and King Norton MS",
+      "category": "targeted_probe"
+    },
+    "15859": {
+      "desc": "(1984/5744) 100 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15860": {
+      "desc": "(1978/5738) 1000L PR",
+      "category": "targeted_probe"
+    },
+    "15861": {
+      "desc": "(1986/5746) 2 New Sh PR",
+      "category": "targeted_probe"
+    },
+    "15862": {
+      "desc": "(1981/5741) 2 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15863": {
+      "desc": "(1960/5720) 20L MS",
+      "category": "targeted_probe"
+    },
+    "15864": {
+      "desc": "(1997/5757) 20 New Sh MS",
+      "category": "targeted_probe"
+    },
+    "15865": {
+      "desc": "(1973/5733) 200L PR",
+      "category": "targeted_probe"
+    },
+    "15866": {
+      "desc": "(1960/5720) 25 Ag Tel Aviv and Bern Mints MS",
+      "category": "targeted_probe"
+    },
+    "15867": {
+      "desc": "(1974/5734) 25L MS",
+      "category": "targeted_probe"
+    },
+    "15868": {
+      "desc": "(1948/5708) 25 Mi Uniface Die Trial PR",
+      "category": "targeted_probe"
+    },
+    "15869": {
+      "desc": "(1949/5709) 25 Pr SP",
+      "category": "targeted_probe"
+    },
+    "15870": {
+      "desc": "(1981/5741) 25 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15871": {
+      "desc": "(1949/5709) 250 Pr MS",
+      "category": "targeted_probe"
+    },
+    "15872": {
+      "desc": "(1996/5756) 30 New Sh PR",
+      "category": "targeted_probe"
+    },
+    "15873": {
+      "desc": "(1960/5720) 5 Ag Tel Aviv Mint MS",
+      "category": "targeted_probe"
+    },
+    "15874": {
+      "desc": "(1958/5718) 5L 10th Anniversary Independence MS",
+      "category": "targeted_probe"
+    },
+    "15875": {
+      "desc": "(1980/5740) 5 New Ag Winnipeg Mint MS",
+      "category": "targeted_probe"
+    },
+    "15876": {
+      "desc": "(1987/5747) 5 New Sh PR",
+      "category": "targeted_probe"
+    },
+    "15877": {
+      "desc": "(1949/5709) 5 Pr PR",
+      "category": "targeted_probe"
+    },
+    "15878": {
+      "desc": "(1982/5742) 5 Sh PR",
+      "category": "targeted_probe"
+    },
+    "15879": {
+      "desc": "(1963/5723) 50L Without \u05de MS",
+      "category": "targeted_probe"
+    },
+    "15880": {
+      "desc": "(1949/5709) 50 Pr Kings Norton PR",
+      "category": "targeted_probe"
+    },
+    "15881": {
+      "desc": "(1984/5744) 50 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15882": {
+      "desc": "(1974/5734) 500L PR",
+      "category": "targeted_probe"
+    },
+    "15883": {
+      "desc": "(1949/5709) 500 Pr MS",
+      "category": "targeted_probe"
+    },
+    "15884": {
+      "desc": "(1981/5741) 500 Sh PR",
+      "category": "targeted_probe"
+    },
+    "15885": {
+      "desc": "1775 \u00a320 South Carolina (Fr. SC97.1)",
+      "category": "targeted_probe"
+    },
+    "15886": {
+      "desc": "1924 P1/2S Pattern PR",
+      "category": "targeted_probe"
+    },
+    "15887": {
+      "desc": "1924 1S MS",
+      "category": "targeted_probe"
+    },
+    "15888": {
+      "desc": "1928 2S Schubert MS",
+      "category": "targeted_probe"
+    },
+    "15889": {
+      "desc": "1934 S5 Sch MS",
+      "category": "targeted_probe"
+    },
+    "15890": {
+      "desc": "1957 10 Sch MS",
+      "category": "targeted_probe"
+    },
+    "15891": {
+      "desc": "1980 20 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15892": {
+      "desc": "1926 25 Sh PR",
+      "category": "targeted_probe"
+    },
+    "15893": {
+      "desc": "1959 50 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15894": {
+      "desc": "1926 100 Sh PR",
+      "category": "targeted_probe"
+    },
+    "15895": {
+      "desc": "1980 500 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15896": {
+      "desc": "1976 1000 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15897": {
+      "desc": "(2026)-W G10c Gold Mercury, 250th Anniversary Privy SP",
+      "category": "targeted_probe"
+    },
+    "15898": {
+      "desc": "(2026) Medal 1oz Silver, Mercury MS",
+      "category": "targeted_probe"
+    },
+    "15899": {
+      "desc": "1824-Mo JM 8R MS",
+      "category": "targeted_probe"
+    },
+    "15900": {
+      "desc": "1870 20 Ye \u5e74\u4e09\u6cbb\u660e, Meiji MS",
+      "category": "targeted_probe"
+    },
+    "15901": {
+      "desc": "Native American Dollar $1 MS [Type]",
+      "category": "targeted_probe"
+    },
+    "15902": {
+      "desc": "Native American $1 2009- PR DCAM [Type]",
+      "category": "targeted_probe"
+    },
+    "15903": {
+      "desc": "2010 G\u00a325 1/4oz Gold, London 2012 Diana PR DCAM",
+      "category": "targeted_probe"
+    },
+    "15904": {
+      "desc": "Kookaburra Series S$2 2oz Silver, 1992- MS [Type]",
+      "category": "targeted_probe"
+    },
+    "15905": {
+      "desc": "2025 G\u00a3200 2oz Gold, The Two Georges PR DCAM",
+      "category": "targeted_probe"
+    },
+    "15906": {
+      "desc": "2025 G\u00a3500 5oz Gold, The Two Georges PR DCAM",
+      "category": "targeted_probe"
+    },
+    "15907": {
+      "desc": "1915 20c MS",
+      "category": "targeted_probe"
+    },
+    "15908": {
+      "desc": "1872-1877 25c Host date 1869 - 1877 MS",
+      "category": "targeted_probe"
+    },
+    "15909": {
+      "desc": "1872-1877 50c Host date 1869 - 1877 MS",
+      "category": "targeted_probe"
+    },
+    "15910": {
+      "desc": "1977 100P PR",
+      "category": "targeted_probe"
+    },
+    "15911": {
+      "desc": "1918 1c Bogot\u00e1 mint MS",
+      "category": "targeted_probe"
+    },
+    "15912": {
+      "desc": "1847 De MS",
+      "category": "targeted_probe"
+    },
+    "15913": {
+      "desc": "1619 1E MS",
+      "category": "targeted_probe"
+    },
+    "15914": {
+      "desc": "1825 1P MS",
+      "category": "targeted_probe"
+    },
+    "15915": {
+      "desc": "1651 Real MS",
+      "category": "targeted_probe"
+    },
+    "15916": {
+      "desc": "1890 2c Proof PR",
+      "category": "targeted_probe"
+    },
+    "15917": {
+      "desc": "1854 2 De MS",
+      "category": "targeted_probe"
+    },
+    "15918": {
+      "desc": "1619 2E MS",
+      "category": "targeted_probe"
+    },
+    "15919": {
+      "desc": "1838 2P MS",
+      "category": "targeted_probe"
+    },
+    "15920": {
+      "desc": "1622 2R MS",
+      "category": "targeted_probe"
+    },
+    "15921": {
+      "desc": "1740 4E Hern\u00e1ndez#744 MS",
+      "category": "targeted_probe"
+    },
+    "15922": {
+      "desc": "1736 8E MS",
+      "category": "targeted_probe"
+    },
+    "15923": {
+      "desc": "1915 1c MS",
+      "category": "targeted_probe"
+    },
+    "15924": {
+      "desc": "1915 2c PR",
+      "category": "targeted_probe"
+    },
+    "15925": {
+      "desc": "1915 5c MS",
+      "category": "targeted_probe"
+    },
+    "15926": {
+      "desc": "1915 10c (fr) Atelier de Philadelphie, USA MS",
+      "category": "targeted_probe"
+    },
+    "15927": {
+      "desc": "1915 40c MS",
+      "category": "targeted_probe"
+    },
+    "15928": {
+      "desc": "1872-1877 1P Host date 1866 - 1867 MS",
+      "category": "targeted_probe"
+    },
+    "15929": {
+      "desc": "1990 3P JMA# 98 MS",
+      "category": "targeted_probe"
+    },
+    "15930": {
+      "desc": "1915 5P JMA# 104 MS",
+      "category": "targeted_probe"
+    },
+    "15931": {
+      "desc": "1915 10P JMA# 106 MS",
+      "category": "targeted_probe"
+    },
+    "15932": {
+      "desc": "1915 20P JMA# 108 MS",
+      "category": "targeted_probe"
+    },
+    "15933": {
+      "desc": "1988 25P JMA# AAEE321 PR",
+      "category": "targeted_probe"
+    },
+    "15934": {
+      "desc": "1991 30P PR",
+      "category": "targeted_probe"
+    },
+    "15935": {
+      "desc": "1988 50P PR",
+      "category": "targeted_probe"
+    },
+    "15936": {
+      "desc": "1993 200P JMA# AAEE547 PR",
+      "category": "targeted_probe"
+    },
+    "15937": {
+      "desc": "1990 500P PR",
+      "category": "targeted_probe"
+    },
+    "15938": {
+      "desc": "(1841-1772) 2R CM date 1841 MS",
+      "category": "targeted_probe"
+    },
+    "15939": {
+      "desc": "(1841-1808) 4R CM date 1841 MS",
+      "category": "targeted_probe"
+    },
+    "15940": {
+      "desc": "1741 8R Rare MS",
+      "category": "targeted_probe"
+    },
+    "15941": {
+      "desc": "1870 1/2 Peso PR",
+      "category": "targeted_probe"
+    },
+    "15942": {
+      "desc": "1915 2P JMA# 96 MS",
+      "category": "targeted_probe"
+    },
+    "15943": {
+      "desc": "1915 4P JMA# 102 MS",
+      "category": "targeted_probe"
+    },
+    "15944": {
+      "desc": "1622 4R MS",
+      "category": "targeted_probe"
+    },
+    "15945": {
+      "desc": "1621 8R MS",
+      "category": "targeted_probe"
+    },
+    "15946": {
+      "desc": "1902-1910 1/10P PR",
+      "category": "targeted_probe"
+    },
+    "15947": {
+      "desc": "1913 1 Sh MS",
+      "category": "targeted_probe"
+    },
+    "15948": {
+      "desc": "1913 2S MS",
+      "category": "targeted_probe"
+    },
+    "15949": {
+      "desc": "1913 3P MS",
+      "category": "targeted_probe"
+    },
+    "15950": {
+      "desc": "1913 6P MS",
+      "category": "targeted_probe"
+    },
+    "15951": {
+      "desc": "1911 1/2P MS",
+      "category": "targeted_probe"
+    },
+    "15952": {
+      "desc": "1874 1 1/4c MS",
+      "category": "targeted_probe"
+    },
+    "15953": {
+      "desc": "1868 1/2P MS",
+      "category": "targeted_probe"
+    },
+    "15954": {
+      "desc": "1853 10P MS",
+      "category": "targeted_probe"
+    },
+    "15955": {
+      "desc": "1837 16P MS",
+      "category": "targeted_probe"
+    },
+    "15956": {
+      "desc": "1968 100P MS",
+      "category": "targeted_probe"
+    },
+    "15957": {
+      "desc": "1973 1000P PR",
+      "category": "targeted_probe"
+    },
+    "15958": {
+      "desc": "1968 1,500P MS",
+      "category": "targeted_probe"
+    },
+    "15959": {
+      "desc": "1991 10,000P PR",
+      "category": "targeted_probe"
+    },
+    "15960": {
+      "desc": "1978 15,000P MS",
+      "category": "targeted_probe"
+    },
+    "15961": {
+      "desc": "1991 100,000P PR",
+      "category": "targeted_probe"
+    },
+    "15962": {
+      "desc": "1796 1/4R MS",
+      "category": "targeted_probe"
+    },
+    "15963": {
+      "desc": "1760 1/2R Probably unique MS",
+      "category": "targeted_probe"
+    },
+    "15964": {
+      "desc": "1847 10R MS",
+      "category": "targeted_probe"
+    },
+    "15965": {
+      "desc": "1860 1/4 De MS",
+      "category": "targeted_probe"
+    },
+    "15966": {
+      "desc": "1847 1/2 De MS",
+      "category": "targeted_probe"
+    },
+    "15967": {
+      "desc": "1872 2 1/2c MS",
+      "category": "targeted_probe"
+    },
+    "15968": {
+      "desc": "1872 5c MS",
+      "category": "targeted_probe"
+    },
+    "15969": {
+      "desc": "1872 10c MS",
+      "category": "targeted_probe"
+    },
+    "15970": {
+      "desc": "1874 20c MS",
+      "category": "targeted_probe"
+    },
+    "15971": {
+      "desc": "1979 25c MS",
+      "category": "targeted_probe"
+    },
+    "15972": {
+      "desc": "1872 50c MS",
+      "category": "targeted_probe"
+    },
+    "15973": {
+      "desc": "1913 2 1/2P MS",
+      "category": "targeted_probe"
+    },
+    "15974": {
+      "desc": "1849 5P MS",
+      "category": "targeted_probe"
+    },
+    "15975": {
+      "desc": "1859 20P MS",
+      "category": "targeted_probe"
+    },
+    "15976": {
+      "desc": "1986 50P MS",
+      "category": "targeted_probe"
+    },
+    "15977": {
+      "desc": "1968 200P MS",
+      "category": "targeted_probe"
+    },
+    "15978": {
+      "desc": "1968 300P MS",
+      "category": "targeted_probe"
+    },
+    "15979": {
+      "desc": "1968 500P MS",
+      "category": "targeted_probe"
+    },
+    "15980": {
+      "desc": "1973 2,000P PR",
+      "category": "targeted_probe"
+    },
+    "15981": {
+      "desc": "1998 5,000P MS",
+      "category": "targeted_probe"
+    },
+    "15982": {
+      "desc": "1980 30,000P PR",
+      "category": "targeted_probe"
+    },
+    "15983": {
+      "desc": "1986 40000 Pe MS",
+      "category": "targeted_probe"
+    },
+    "15984": {
+      "desc": "1991 50 000 Pe MS",
+      "category": "targeted_probe"
+    },
+    "15985": {
+      "desc": "1868 5 De MS",
+      "category": "targeted_probe"
+    },
+    "15986": {
+      "desc": "(1879-1296) 1 Fa MS",
+      "category": "targeted_probe"
+    },
+    "15987": {
+      "desc": "(1896-1313) 1 Ab MS",
+      "category": "targeted_probe"
+    },
+    "15988": {
+      "desc": "(1920-1299) 1 Am \u0661\u0663\u0660\u06f4 MS",
+      "category": "targeted_probe"
+    },
+    "15989": {
+      "desc": "(1754-116) 1 As \u0668 MS",
+      "category": "targeted_probe"
+    },
+    "15990": {
+      "desc": "(1785-1199) 1 Da \u0661\u0662 on edge MS",
+      "category": "targeted_probe"
+    },
+    "15991": {
+      "desc": "(1928-1347) 1 Ha MS",
+      "category": "targeted_probe"
+    },
+    "15992": {
+      "desc": "1773-1793 1 Mo MS",
+      "category": "targeted_probe"
+    },
+    "15993": {
+      "desc": "(1892-1309) 1 Pa MS",
+      "category": "targeted_probe"
+    },
+    "15994": {
+      "desc": "(1931-1349) 1 Pu \u0661\u0663\u06f4\u06f9 MS",
+      "category": "targeted_probe"
+    },
+    "15995": {
+      "desc": "(1844-1260) 1 Qa Ru Ahmedshahi Mint MS",
+      "category": "targeted_probe"
+    },
+    "15996": {
+      "desc": "(1880-1297) 1 Qi MS",
+      "category": "targeted_probe"
+    },
+    "15997": {
+      "desc": "(1754-1167) 1 Ru 116x//7 MS",
+      "category": "targeted_probe"
+    },
+    "15998": {
+      "desc": "1898-1898 1 Sa MS",
+      "category": "targeted_probe"
+    },
+    "15999": {
+      "desc": "(1892-1309) 1 Sh MS",
+      "category": "targeted_probe"
+    },
+    "16000": {
+      "desc": "(1810-1225) 1 Ti MS",
+      "category": "targeted_probe"
+    },
+    "16001": {
+      "desc": "(1877-1294) 1 To MS",
+      "category": "targeted_probe"
+    },
+    "16003": {
+      "desc": "Koala Series P$5 1/20oz Platinum, 1989- PR DCAM [Type]",
+      "category": "targeted_probe"
+    },
+    "16004": {
+      "desc": "2017 S10S 1/10oz Silver, Elephant MS",
+      "category": "targeted_probe"
+    },
+    "16005": {
+      "desc": "1935A $1 North Africa (Fr. 2306)",
+      "category": "targeted_probe"
+    },
+    "16006": {
+      "desc": "1823 1/2R MS",
+      "category": "targeted_probe"
+    },
+    "16007": {
+      "desc": "1823 1R T. 23 G. date. MS",
+      "category": "targeted_probe"
+    },
+    "16008": {
+      "desc": "1808 2R Truxillo MS",
+      "category": "targeted_probe"
+    },
+    "16009": {
+      "desc": "1881 1/2c KM-45 MS",
+      "category": "targeted_probe"
+    },
+    "16010": {
+      "desc": "1878 1c KM-40, Y-9 MS",
+      "category": "targeted_probe"
+    },
+    "16011": {
+      "desc": "1879 5c MS",
+      "category": "targeted_probe"
+    },
+    "16012": {
+      "desc": "1878 10c MS",
+      "category": "targeted_probe"
+    },
+    "16013": {
+      "desc": "(1879-1880) 25c MS",
+      "category": "targeted_probe"
+    },
+    "16014": {
+      "desc": "1879 50c MS",
+      "category": "targeted_probe"
+    },
+    "16015": {
+      "desc": "1862 Peso MS",
+      "category": "targeted_probe"
+    },
+    "16016": {
+      "desc": "1862 2P MS",
+      "category": "targeted_probe"
+    },
+    "16017": {
+      "desc": "1862 4P MS",
+      "category": "targeted_probe"
+    },
+    "16018": {
+      "desc": "1862 8P MS",
+      "category": "targeted_probe"
+    },
+    "16019": {
+      "desc": "1883 G10P MS",
+      "category": "targeted_probe"
+    },
+    "16020": {
+      "desc": "1888 G20P MS",
+      "category": "targeted_probe"
+    },
+    "16021": {
+      "desc": "1931 1 Le Silver MS",
+      "category": "targeted_probe"
+    },
+    "16022": {
+      "desc": "1869 1/8R MS",
+      "category": "targeted_probe"
+    },
+    "16023": {
+      "desc": "1869 1/4R MS",
+      "category": "targeted_probe"
+    },
+    "16024": {
+      "desc": "1889 2c MS",
+      "category": "targeted_probe"
+    },
+    "16025": {
+      "desc": "1931 20c MS",
+      "category": "targeted_probe"
+    },
+    "16026": {
+      "desc": "1883 G5P MS",
+      "category": "targeted_probe"
+    },
+    "16027": {
+      "desc": "1823 4R MS",
+      "category": "targeted_probe"
+    },
+    "16028": {
+      "desc": "1856 8R MS",
+      "category": "targeted_probe"
+    },
+    "16029": {
+      "desc": "2005 10 Le Silver PR",
+      "category": "targeted_probe"
+    },
+    "16030": {
+      "desc": "1992 100 Le Silver PR",
+      "category": "targeted_probe"
+    },
+    "16031": {
+      "desc": "1992 200 Le Gold PR",
+      "category": "targeted_probe"
+    },
+    "16033": {
+      "desc": "The Big Five S5 Rand 1oz Silver, 2019- MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16034": {
+      "desc": "1991 G3Y 1g Gold, Panda, 10th Anniversary MS",
+      "category": "targeted_probe"
+    },
+    "16035": {
+      "desc": "Panda 1/10oz Gold G50Y 2001-2015 MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16036": {
+      "desc": "Panda 5oz Gold G500Y 1987-1996 PR DCAM [Type]",
+      "category": "targeted_probe"
+    },
+    "16037": {
+      "desc": "SemiQ America 250 25c 1776~2026 MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16038": {
+      "desc": "SemiQ America 250 Quarter 25c 1776~2026, Clad PR DCAM [Type]",
+      "category": "targeted_probe"
+    },
+    "16040": {
+      "desc": "Silver Commemorative S$1 One Ounce, 2008- PR [Type]",
+      "category": "targeted_probe"
+    },
+    "16041": {
+      "desc": "1656 Broad (20S) MS",
+      "category": "targeted_probe"
+    },
+    "16042": {
+      "desc": "Britannia S20P 1/10oz Silver, 1997- MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16043": {
+      "desc": "Britannia S50P 1/4oz Silver, 1997- MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16044": {
+      "desc": "Britannia S\u00a31 1/2oz Silver MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16045": {
+      "desc": "1971-S $1 Eisenhower, J-2151 SP",
+      "category": "targeted_probe"
+    },
+    "16046": {
+      "desc": "Silver One Ounce S$2 MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16047": {
+      "desc": "Britannia S\u00a3500 1 Kilo Silver MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16048": {
+      "desc": "Platinum Britannia P\u00a3100 One Ounce, 2018- MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16049": {
+      "desc": "Platinum Britannia P\u00a3100 One Ounce, 2007- PR [Type]",
+      "category": "targeted_probe"
+    },
+    "16050": {
+      "desc": "South Africa Gold 1/4 KR 1/4 Ounce, 1980-Present MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16051": {
+      "desc": "South Africa Gold 1/2 KR 1/2 Ounce, 1980-Present MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16052": {
+      "desc": "South Africa Gold 1/20 KR 1/20 Ounce, 1980-Present MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16053": {
+      "desc": "South Africa Gold 1/10 KR 1/10 Ounce, 1980-Present MS [Type]",
+      "category": "targeted_probe"
+    },
+    "16054": {
+      "desc": "1894-A Pfg MS BN",
+      "category": "targeted_probe"
+    },
+    "16055": {
+      "desc": "1894-A 1/2 Mk MS",
+      "category": "targeted_probe"
+    },
+    "16056": {
+      "desc": "1895-A 10M MS",
+      "category": "targeted_probe"
+    },
+    "16057": {
+      "desc": "2018-P Medal 1oz Silver, World War I Centennial, Navy PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16058": {
+      "desc": "2025-M S\u20ac10 Silver, Bald Eagle, Colorized PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16059": {
+      "desc": "2026 Medal Berlin World Money Fair, Silver PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16061": {
+      "desc": "1888-A 2 Mk Friedrich MS",
+      "category": "targeted_probe"
+    },
+    "16065": {
+      "desc": "Gold Bullion S\u00a31000 Kilo Gold, 2012- PR DCAM [Type]",
+      "category": "targeted_probe"
+    },
+    "16066": {
+      "desc": "2026-P Medal 1/2oz Silver, Freedom Ringing, Liberty Bell PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16067": {
+      "desc": "1974 50 Fr MS",
+      "category": "targeted_probe"
+    },
+    "16069": {
+      "desc": "2021 S\u00a310 5oz. Silver, White Greyhound of Richmond PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16070": {
+      "desc": "2010 G\u00a3100 1oz Gold, Neptune PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16071": {
+      "desc": "1776~2026-P 10c Emerging Liberty MS",
+      "category": "targeted_probe"
+    },
+    "16072": {
+      "desc": "1776~2026-S 10c Emerging Liberty, Clad PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16073": {
+      "desc": "1776~2026-P 50c Enduring Liberty MS",
+      "category": "targeted_probe"
+    },
+    "16074": {
+      "desc": "1776~2026-S 50c Enduring Liberty, Clad PR DCAM",
+      "category": "targeted_probe"
+    },
+    "16075": {
+      "desc": "South Africa Rand 1oz Silver, 2022- PR DCAM [Type]",
+      "category": "targeted_probe"
     }
   }
 }

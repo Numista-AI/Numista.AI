@@ -1,0 +1,195 @@
+{
+  "timestamp": "2026-08-22T14:35:47.159266+00:00",
+  "mode": "EXECUTE",
+  "total_parsed_programs": 31,
+  "total_quarantined": 0,
+  "unit_test_passed": true,
+  "programs": [
+    {
+      "doc_id": "flying_eagle_indian_head_cents",
+      "name": "Flying Eagle & Indian Head Cents",
+      "category": "Cent",
+      "slots_count": 59
+    },
+    {
+      "doc_id": "lincoln_cents",
+      "name": "Lincoln Cents",
+      "category": "Cent",
+      "slots_count": 353
+    },
+    {
+      "doc_id": "lincoln_wheat_pennies",
+      "name": "Lincoln Wheat Pennies",
+      "category": "Cent",
+      "slots_count": 141
+    },
+    {
+      "doc_id": "lincoln_memorial_cents",
+      "name": "Lincoln Memorial Cents",
+      "category": "Cent",
+      "slots_count": 149
+    },
+    {
+      "doc_id": "lincoln_bicentennial_2009",
+      "name": "Lincoln Bicentennial Cents (2009)",
+      "category": "Cent",
+      "slots_count": 12
+    },
+    {
+      "doc_id": "lincoln_shield_cents",
+      "name": "Lincoln Shield Cents",
+      "category": "Cent",
+      "slots_count": 51
+    },
+    {
+      "doc_id": "liberty_head_v_nickels",
+      "name": "Liberty Head (V) Nickels",
+      "category": "Nickel",
+      "slots_count": 33
+    },
+    {
+      "doc_id": "buffalo_nickels",
+      "name": "Buffalo Nickels",
+      "category": "Nickel",
+      "slots_count": 64
+    },
+    {
+      "doc_id": "jefferson_nickels",
+      "name": "Jefferson Nickels",
+      "category": "Nickel",
+      "slots_count": 264
+    },
+    {
+      "doc_id": "mercury_dimes",
+      "name": "Mercury Dimes",
+      "category": "Dime",
+      "slots_count": 80
+    },
+    {
+      "doc_id": "roosevelt_dimes",
+      "name": "Roosevelt Dimes",
+      "category": "Dime",
+      "slots_count": 234
+    },
+    {
+      "doc_id": "washington_quarters_classic",
+      "name": "Washington Quarters (Classic)",
+      "category": "Other",
+      "slots_count": 210
+    },
+    {
+      "doc_id": "franklin_half_dollars",
+      "name": "Franklin Half Dollars",
+      "category": "Half Dollar",
+      "slots_count": 49
+    },
+    {
+      "doc_id": "kennedy_half_dollars",
+      "name": "Kennedy Half Dollars",
+      "category": "Half Dollar",
+      "slots_count": 213
+    },
+    {
+      "doc_id": "morgan_dollars",
+      "name": "Morgan Dollars",
+      "category": "Dollar",
+      "slots_count": 103
+    },
+    {
+      "doc_id": "peace_dollars",
+      "name": "Peace Dollars",
+      "category": "Dollar",
+      "slots_count": 28
+    },
+    {
+      "doc_id": "eisenhower_dollars",
+      "name": "Eisenhower Dollars",
+      "category": "Dollar",
+      "slots_count": 32
+    },
+    {
+      "doc_id": "liberty_walking_half_dollars",
+      "name": "Liberty Walking Half Dollars",
+      "category": "Half Dollar",
+      "slots_count": 65
+    },
+    {
+      "doc_id": "america_the_beautiful_quarters",
+      "name": "America the Beautiful Quarters (National Parks)",
+      "category": "Quarter",
+      "slots_count": 224
+    },
+    {
+      "doc_id": "american_silver_eagles",
+      "name": "American Silver Eagles",
+      "category": "Bullion",
+      "slots_count": 106
+    },
+    {
+      "doc_id": "barber_quarters",
+      "name": "Barber Quarters",
+      "category": "Quarter",
+      "slots_count": 74
+    },
+    {
+      "doc_id": "u_s_proof_sets",
+      "name": "U.S. Proof Sets",
+      "category": "Proof Sets",
+      "slots_count": 104
+    },
+    {
+      "doc_id": "sacagawea_native_american_dollars",
+      "name": "Sacagawea & Native American Dollars",
+      "category": "Dollar",
+      "slots_count": 94
+    },
+    {
+      "doc_id": "presidential_dollars",
+      "name": "Presidential Dollars",
+      "category": "Dollar",
+      "slots_count": 120
+    },
+    {
+      "doc_id": "american_innovation_dollars",
+      "name": "American Innovation $1 Coin Program",
+      "category": "Other",
+      "slots_count": 228
+    },
+    {
+      "doc_id": "barber_dimes",
+      "name": "Barber Dimes",
+      "category": "Dime",
+      "slots_count": 75
+    },
+    {
+      "doc_id": "barber_half_dollars",
+      "name": "Barber Half Dollars",
+      "category": "Half Dollar",
+      "slots_count": 73
+    },
+    {
+      "doc_id": "american_women_quarters",
+      "name": "American Women Quarters",
+      "category": "Quarter",
+      "slots_count": 80
+    },
+    {
+      "doc_id": "susan_b_anthony_dollars",
+      "name": "Susan B. Anthony Dollars",
+      "category": "Dollar",
+      "slots_count": 18
+    },
+    {
+      "doc_id": "fifty_state_quarters",
+      "name": "50 State Quarters",
+      "category": "Quarter",
+      "slots_count": 200
+    },
+    {
+      "doc_id": "dc_territories_quarters",
+      "name": "D.C. & U.S. Territories Quarters",
+      "category": "Quarter",
+      "slots_count": 18
+    }
+  ]
+}

@@ -49,7 +49,7 @@
   "lincoln_shield_cents": {
     "nodes": [],
     "labels": [],
-    "note": "Not found. Scan 9700-9900 next session."
+    "note": "NOT FOUND after scanning 8820-10100 AND 15850-16075. 800+ nodes scanned total. 2010+ series. Adjacent Lincoln nodes: Wheat (8912/8913), Memorial Bronze (9645/9646), Bicentennial (9687/9688). Shield cents may be in 16076-16200 range or folded into Lincoln Memorial node (9645). Next: scan 16076-16200 and probe if 9645 contains 2010+ items."
   },
   "liberty_head_v_nickels": {
     "nodes": [
@@ -106,7 +106,7 @@
       "Silver PR (1950-1964)",
       "1964 SMS"
     ],
-    "note": "PARTIAL: silver era only. Clad era (1965+) node not found."
+    "note": "PARTIAL: Silver era (1946-1964) in 8939/8940, SMS in 9691. Clad era (1965+) NOT FOUND in 8820-9900. Next: walk GetNodeChildrenRequest on parent of 8939 to find clad sibling node."
   },
   "barber_dimes": {
     "nodes": [
@@ -130,19 +130,16 @@
   },
   "washington_quarters_classic": {
     "nodes": [
-      8961,
-      8962,
       8949,
       8951,
       9696
     ],
     "labels": [
-      "BU full program",
-      "Proof full program",
-      "Silver MS type",
-      "Silver PR type",
+      "Washington Quarter 25c 1932-1964 Silver MS (305 items)",
+      "Washington Quarter 25c 1936-1942 Silver PR (230 items)",
       "1964 SMS"
-    ]
+    ],
+    "note": "CONFIRMED 22 AUG 2026 via direct probe. Greysheet organizes Washington Quarters by TYPE not full run. 8949=Silver MS type (1932-1964, 305 items), 8951=Silver PR type (1936-1942, 230 items), 9696=SMS. FINDING: No separate BU node for clad era (1965-1998). Clad Washingtons may not be separately listed by GS or may be inside 8949. Also newly confirmed: 8948=Standing Liberty Quarter MS, 8943=Draped Bust Quarter MS, 8944/8945=Seated Liberty Quarter MS/PR. These are separate type programs not in our 31-program list."
   },
   "fifty_state_quarters": {
     "nodes": [
@@ -167,12 +164,16 @@
   },
   "america_the_beautiful_quarters": {
     "nodes": [
-      9301
+      9567,
+      9301,
+      9598
     ],
     "labels": [
-      "Clad PR DCAM (2010-2021)"
+      "Regular Finish MS (2010-2021)",
+      "Clad PR DCAM (2010-2021)",
+      "5oz Silver S25c MS (2010-2021)"
     ],
-    "note": "Only proof node found. MS node not yet found."
+    "note": "9567 confirmed 22 AUG 2026: ATB Quarter MS [Type]. 9598 confirmed: ATB 5oz Silver MS [Type]. Scan complete for MS+PR."
   },
   "barber_half_dollars": {
     "nodes": [
@@ -195,9 +196,15 @@
     ]
   },
   "franklin_half_dollars": {
-    "nodes": [],
-    "labels": [],
-    "note": "Not found between 8960-8963. Check node 8953 and 9700-9900."
+    "nodes": [
+      8961,
+      8962
+    ],
+    "labels": [
+      "MS 1948-1963",
+      "PR 1950-1963"
+    ],
+    "note": "CONFIRMED 22 AUG 2026 via parent walk of node 8196 (Half Dollars parent). 8961=Franklin Halves MS [182 items], 8962=Franklin Halves PR [90 items]."
   },
   "kennedy_half_dollars": {
     "nodes": [
@@ -242,28 +249,40 @@
   },
   "susan_b_anthony_dollars": {
     "nodes": [
-      8976
+      8976,
+      9566
     ],
     "labels": [
-      "MS 1979-1999"
-    ]
+      "MS 1979-1999",
+      "PR DCAM 1979-1999"
+    ],
+    "note": "9566 confirmed 22 AUG 2026: SBA Dollar PR DCAM [Type]"
   },
   "sacagawea_native_american_dollars": {
     "nodes": [
-      9299
+      9299,
+      9556,
+      15901,
+      15902
     ],
     "labels": [
-      "MS 2000-2008 [Type]"
+      "Sacagawea Dollar MS 2000-2008 [Type]",
+      "Sacagawea/NA Dollar PR DCAM [Set Type]",
+      "Native American Dollar MS 2009- [Type]",
+      "Native American Dollar PR DCAM 2009- [Type]"
     ],
-    "note": "Native American (2009+) node not yet confirmed — may be same node"
+    "note": "UPDATED 22 AUG 2026: 9299=Sacagawea MS, 9556=PR set, 15901=Native American $1 MS 2009- (55 items), 15902=Native American $1 PR DCAM 2009- (20 items). Native American series confirmed as SEPARATE node from Sacagawea 2000-2008."
   },
   "presidential_dollars": {
     "nodes": [
-      8977
+      8977,
+      9555
     ],
     "labels": [
-      "MS"
-    ]
+      "MS",
+      "PR DCAM"
+    ],
+    "note": "9555 confirmed 22 AUG 2026: Presidential Dollar PR DCAM [Type]"
   },
   "american_innovation_dollars": {
     "nodes": [
@@ -277,25 +296,72 @@
   },
   "american_silver_eagles": {
     "nodes": [
-      9011
+      9011,
+      9540
     ],
     "labels": [
-      "MS One Ounce 1986-"
+      "MS One Ounce 1986-",
+      "PR DCAM One Ounce 1986-"
     ],
-    "note": "Burnished, Proof, Reverse Proof nodes not yet found"
+    "note": "9540 confirmed 22 AUG 2026: ASE PR DCAM [Type]. Burnished (W) and Reverse Proof nodes not yet found."
   },
   "american_women_quarters": {
     "nodes": [],
     "labels": [],
-    "note": "Not found. 2022+ series. Scan 9700-9900 next session."
+    "note": "NOT FOUND after scanning 8820-10100 (600+ nodes) AND 15850-16075 (200 nodes). 2022+ series. Total 800+ nodes scanned. The SemiQ 2026 quarter was at 16037/16038. AWQ (2022-2025) may be in 16039-16070 range (gap in our scan) or unlisted in GS CPG. Next: scan 16039-16036 (gap) and 16076-16200. Also possible: Greysheet has not created CPG entries for individual AWQ dates yet."
   },
   "u_s_proof_sets": {
     "nodes": [
-      9020
+      9020,
+      9551
     ],
     "labels": [
-      "1936 5-coin Proof Set"
+      "1936 5-coin Proof Set (earliest)",
+      "1947-present Uncirculated Sets"
     ],
-    "note": "Only 1936 set found. Modern proof set structure unknown — may need different API approach."
+    "note": "9551 confirmed 22 AUG 2026: 1947 1c-50c Uncirculated Set MS. Annual PROOF set node still unclear - may need parent walk of 9020."
+  },
+  "_semiq_2026_half_dollars_NOTE": {
+    "nodes": [
+      16073,
+      16074
+    ],
+    "labels": [
+      "SemiQ America 250 Halves 2026 MS",
+      "SemiQ America 250 Halves 2026 PR"
+    ],
+    "note": "FOUND 22 AUG 2026 via parent 8196 tree walk. NOT a current program in master_coin_programs.json. See Q2 in implementation plan. Owner decision needed on whether to add as new program."
+  },
+  "_standing_liberty_quarters_NOTE": {
+    "nodes": [
+      8948
+    ],
+    "labels": [
+      "Standing Liberty Quarter MS (1916-1930)"
+    ],
+    "note": "FOUND 22 AUG 2026. 106 items. Not in current 31-program catalog. May be worth adding as program in future."
+  },
+  "_semiq_2026_all_programs_NOTE": {
+    "nodes": [
+      16037,
+      16038,
+      16073,
+      16074,
+      16071,
+      16072,
+      15897,
+      15898
+    ],
+    "labels": [
+      "SemiQ Quarter MS (16037)",
+      "SemiQ Quarter Clad PR (16038)",
+      "SemiQ Half Dollar MS (16073)",
+      "SemiQ Half Dollar Clad PR (16074)",
+      "SemiQ Dime MS (16071)",
+      "SemiQ Dime Clad PR (16072)",
+      "SemiQ Gold Mercury 10c SP (15897)",
+      "SemiQ 1oz Silver Medal MS (15898)"
+    ],
+    "note": "ALL confirmed 22 AUG 2026 via 15850-16075 scan. 16037=SemiQ 25c MS [Type] (17 items), 16038=SemiQ 25c Clad PR DCAM (12 items), 16073=SemiQ 50c MS (3 items), 16074=SemiQ 50c Clad PR (2 items), 16071=SemiQ 10c Emerging Liberty MS (2 items), 16072=SemiQ 10c Emerging Liberty Clad PR (2 items), 15897=Gold Mercury 1/10oz SP (5 items), 15898=1oz Silver Medal MS (5 items). See Q2 in implementation plan. Owner decision needed on how many separate programs to add."
   }
 }
