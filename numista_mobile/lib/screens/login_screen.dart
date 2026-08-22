@@ -861,8 +861,16 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
         });
       }
     } catch (e) {
+      // "ClientException: Load failed" is the Flutter Web error for a browser-blocked
+      // request (typically a CORS preflight rejection on mobile Safari / iOS).
+      // Never surface raw Dart exception objects to the user.
+      final isCorsLike = e.toString().toLowerCase().contains('load failed') ||
+          e.toString().toLowerCase().contains('xmlhttprequest');
       setState(() {
-        _error = 'Network or API error: $e';
+        _error = isCorsLike
+            ? 'Upload blocked by your browser. For best results, use a desktop browser '
+                '(Chrome or Edge on PC/Mac). Mobile Safari may block photo uploads.'
+            : 'Scan temporarily unavailable — please try again in a moment.';
         _loading = false;
       });
     }

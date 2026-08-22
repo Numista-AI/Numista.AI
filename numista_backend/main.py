@@ -4680,6 +4680,22 @@ Return ONLY valid JSON:
 """
 
 
+@app.options("/api/identify_coin_photo")
+async def identify_coin_photo_preflight():
+    """
+    Explicit CORS preflight handler for the multipart photo upload endpoint.
+
+    Mobile Safari (and some Chromium builds on iOS) send an OPTIONS request
+    before every multipart/form-data POST.  FastAPI's CORSMiddleware handles
+    this for most routes automatically, but multipart endpoints with File(...)
+    parameters have been observed to return 405 in some Cloud Run revisions,
+    which causes the browser to abort the subsequent POST with
+    "ClientException: Load failed".  An explicit handler guarantees a 200.
+    """
+    from fastapi.responses import Response as FastAPIResponse
+    return FastAPIResponse(status_code=200)
+
+
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
     user_email:    str        = Form(...),
