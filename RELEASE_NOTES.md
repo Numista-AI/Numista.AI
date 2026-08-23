@@ -151,6 +151,32 @@
 
 
 
+
+
+## v4.150 — 2026-08-22
+**Login Enhancements & Platform Updates**
+
+- Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+
+## v4.149 — 2026-08-22
+**Scan Enhancements & Platform Updates**
+
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+
 ## v4.148 — 2026-08-22
 **Scan Enhancements & Platform Updates**
 
