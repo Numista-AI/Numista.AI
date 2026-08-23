@@ -163,6 +163,19 @@
 
 
 
+
+## v4.161 — 2026-08-23
+**Release Enhancements & Platform Updates**
+
+- Release: sync release notes v4.160
+- Release: sync release notes v4.159
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+
 ## v4.160 — 2026-08-23
 **Release Enhancements & Platform Updates**
 
