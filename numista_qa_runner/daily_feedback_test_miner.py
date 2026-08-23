@@ -16,7 +16,7 @@ try:
 except ImportError:
     docx = None
 
-BASE_FEEDBACK_DIR = r"C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING"
+BASE_FEEDBACK_DIR = r"C:\Users\ericd\Documents\MyVertexProject\Beta Testing Feedback"
 FIXTURES_DIR = r"C:\Users\ericd\Documents\MyVertexProject\numista_tests\fixtures"
 MANIFEST_PATH = os.path.join(FIXTURES_DIR, "daily_feedback_manifest.json")
 
