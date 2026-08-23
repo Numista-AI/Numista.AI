@@ -142,6 +142,140 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+## v4.151 — 2026-08-23
+**Audit Enhancements & Platform Updates**
+
+- Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks
+- Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+
+## v4.150 — 2026-08-22
+**Login Enhancements & Platform Updates**
+
+- Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+
+## v4.149 — 2026-08-22
+**Scan Enhancements & Platform Updates**
+
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+
+## v4.148 — 2026-08-22
+**Scan Enhancements & Platform Updates**
+
+- Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+
+## v4.147 — 2026-08-22
+**Audit Enhancements & Platform Updates**
+
+- Audit: add greysheet node catalog and program node map
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.146 — 2026-08-22
+**Program-manager Enhancements & Platform Updates**
+
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.145 — 2026-08-22
+**Program-manager Enhancements & Platform Updates**
+
+- Program-manager: correct slot counts and remove filter bar
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.144 — 2026-08-22
+**Seeder Enhancements & Platform Updates**
+
+- Seeder: total_slots counts variety slots not year rows
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.143 — 2026-08-22
+**Kennedy Enhancements & Platform Updates**
+
+- Kennedy: 213-slot catalog rebuild per v3 plan
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.142 — 2026-08-22
+**Eisenhower Enhancements & Platform Updates**
+
+- Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.141 — 2026-08-22
+**Tests+infra Enhancements & Platform Updates**
+
+- Tests+infra: catalog-align slot resolver tests, Playwright Start-Process timeout fix
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
+## v4.140 — 2026-08-22
+**Release Enhancements & Platform Updates**
+
+- Release: sync v4.139 release notes and dashboard version
+- Scanner: update SCAN_REPORT.md via project-scanner full system audit
+
 ## v4.139 — 2026-08-22
 **Scanner Enhancements & Platform Updates**
 
