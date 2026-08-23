@@ -10,6 +10,7 @@ import 'screens/attorney_portal_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
+import 'services/guest_seed_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -292,6 +293,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
 
           // Signed in -> show welcome screen on first launch, then main app
           if (snapshot.hasData && snapshot.data != null) {
+            // INVARIANT: a real Firebase user must never see demo data.
+            // Step 1: clear + log (runs in ALL build modes including production).
+            if (GuestSeedService.isBrowseDemoMode) {
+              GuestSeedService.deactivateBrowseDemo();
+              debugPrint(
+                  '[AUTH] Demo mode cleared for real user ${snapshot.data!.uid}');
+            }
+            // Step 2: assert postcondition (debug/profile only; stripped in release).
+            // Fires AFTER clearance — if this assert triggers, deactivateBrowseDemo()
+            // has a logic defect, not just a stale flag.
+            assert(!GuestSeedService.isBrowseDemoMode,
+                'INTEGRITY: Browse Demo still active after deactivateBrowseDemo(). '
+                'User: ${snapshot.data!.uid}. deactivateBrowseDemo() has a logic defect.');
             // If user already dismissed the welcome screen this session,
             // go straight to the main app without re-checking SharedPrefs.
             if (_welcomeDone) {

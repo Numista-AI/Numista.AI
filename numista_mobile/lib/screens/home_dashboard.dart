@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
@@ -80,25 +81,41 @@ class _HomeDashboardState extends State<HomeDashboard> {
       }
     }
 
-    final coinsStream = GuestSeedService.isBrowseDemoMode
-        ? GuestSeedService.getDemoCoinsStream()
-        : FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots();
+    // Auth-primary stream selection.
+    // A real non-anonymous Firebase user always reads from Firestore,
+    // regardless of the in-memory demo flag. The demo branch is only
+    // reached when there is no authenticated user (Browse Demo path, State B).
+    // Anonymous users (State C): _browseDemoActive is always false on their
+    // path because activateBrowseDemo() is only called from _browseDemo(),
+    // which bypasses Firebase auth entirely. They fall through to Firestore.
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+
+    final coinsStream = isRealUser
+        ? FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots()
+        : GuestSeedService.isBrowseDemoMode
+            ? GuestSeedService.getDemoCoinsStream()
+            : FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots();
     subCoins = coinsStream.listen((snap) {
       coins = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       emit();
     }, onError: (e) => controller.addError(e));
 
-    final currencyStream = GuestSeedService.isBrowseDemoMode
-        ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
-        : FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots();
+    final currencyStream = isRealUser
+        ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
+        : GuestSeedService.isBrowseDemoMode
+            ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
+            : FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots();
     subCurrency = currencyStream.listen((snap) {
       currency = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       emit();
     }, onError: (e) => controller.addError(e));
 
-    final worldItemsStream = GuestSeedService.isBrowseDemoMode
-        ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
-        : FirebaseFirestore.instance.collection(AuthService.coinsPath.replaceAll('/coins', '/world_items')).snapshots();
+    final worldItemsStream = isRealUser
+        ? FirebaseFirestore.instance.collection(AuthService.coinsPath.replaceAll('/coins', '/world_items')).snapshots()
+        : GuestSeedService.isBrowseDemoMode
+            ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
+            : FirebaseFirestore.instance.collection(AuthService.coinsPath.replaceAll('/coins', '/world_items')).snapshots();
     subWorldItems = worldItemsStream.listen((snap) {
       worldItems = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       emit();
@@ -1526,10 +1543,90 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.169',
+    date: '2026-08-23',
+    description: 'Ui Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer',
+      'Feedback: correct ServiceUnavailable exception name for installed SDK version',
+      'Feedback: resolve composite index error and correct transcript field names',
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+      'Checklist: flatten program checklist to variety-level slots',
+    ],
+  ),
+  _Release(
+    version: 'v4.168',
+    date: '2026-08-23',
+    description: 'Feedback Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Feedback: correct ServiceUnavailable exception name for installed SDK version',
+      'Feedback: resolve composite index error and correct transcript field names',
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+      'Checklist: flatten program checklist to variety-level slots',
+      'Release: sync release notes v4.163',
+    ],
+  ),
+  _Release(
+    version: 'v4.167',
+    date: '2026-08-23',
+    description: 'Feedback Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Feedback: resolve composite index error and correct transcript field names',
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+      'Checklist: flatten program checklist to variety-level slots',
+      'Release: sync release notes v4.163',
+      'Release: sync release notes v4.162',
+    ],
+  ),
+  _Release(
+    version: 'v4.166',
+    date: '2026-08-23',
+    description: 'Feedback Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+      'Checklist: flatten program checklist to variety-level slots',
+      'Release: sync release notes v4.163',
+      'Release: sync release notes v4.162',
+      'Release: sync release notes v4.161',
+    ],
+  ),
+  _Release(
+    version: 'v4.165',
+    date: '2026-08-23',
+    description: 'Program_model Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+      'Checklist: flatten program checklist to variety-level slots',
+      'Release: sync release notes v4.163',
+      'Release: sync release notes v4.162',
+      'Release: sync release notes v4.161',
+      'Release: sync release notes v4.160',
+      'Release: sync release notes v4.159',
+    ],
+  ),
+  _Release(
     version: 'v4.164',
     date: '2026-08-23',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: sync release notes v4.163',
       'Release: sync release notes v4.162',
