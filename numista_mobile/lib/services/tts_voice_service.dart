@@ -10,7 +10,7 @@ class TtsVoiceService {
   static bool _isPlaying = false;
   static String? _currentlySpeakingText;
   static double _speechRate = 0.48; // Measured natural tone (0.48 = ~150 wpm)
-  static double _pitch = 1.0;
+  static final double _pitch = 1.0;
   static bool _autoPlay = false;
 
   static bool get isPlaying => _isPlaying;

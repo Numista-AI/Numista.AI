@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CoaInspectorScreen extends StatefulWidget {
-  const CoaInspectorScreen({Key? key}) : super(key: key);
+  const CoaInspectorScreen({super.key});
 
   @override
   State<CoaInspectorScreen> createState() => _CoaInspectorScreenState();

@@ -6,10 +6,10 @@ class FamilySettingsScreen extends StatefulWidget {
   final String userTier;
 
   const FamilySettingsScreen({
-    Key? key,
+    super.key,
     required this.parentEmail,
     this.userTier = 'Pro',
-  }) : super(key: key);
+  });
 
   @override
   State<FamilySettingsScreen> createState() => _FamilySettingsScreenState();
@@ -24,7 +24,7 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
   final TextEditingController _aliasController = TextEditingController();
   final TextEditingController _relationshipController = TextEditingController();
   String _permissionLevel = 'VIEW_ONLY';
-  double _bequestShare = 25.0;
+  final double _bequestShare = 25.0;
 
   @override
   void initState() {

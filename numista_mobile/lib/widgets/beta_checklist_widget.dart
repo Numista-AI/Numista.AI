@@ -205,7 +205,7 @@ class BetaChecklistModal extends StatelessWidget {
                     height: mediaQuery.size.height * 0.55,
                     child: ListView.separated(
                       itemCount: BetaChecklistService.allTasks.length,
-                      separatorBuilder: (_, __) => const Divider(
+                      separatorBuilder: (_, i) => const Divider(
                           color: Colors.white12, height: 1),
                       itemBuilder: (context, index) {
                         final task = BetaChecklistService.allTasks[index];

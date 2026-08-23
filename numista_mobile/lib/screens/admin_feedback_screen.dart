@@ -15,7 +15,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
   late TabController _tabController;
   final TextEditingController _testerEmailController = TextEditingController();
   String _selectedCategoryFilter = 'ALL';
-  String _selectedStatusFilter = 'ALL';
+  final String _selectedStatusFilter = 'ALL';
 
   final List<String> _categories = [
     'ALL',
@@ -64,7 +64,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                     if (progress == null) return child;
                     return const Center(child: CircularProgressIndicator());
                   },
-                  errorBuilder: (_, __, ___) => const Center(
+                  errorBuilder: (ctx, err, _) => const Center(
                     child: Padding(
                       padding: EdgeInsets.all(32.0),
                       child: Text('Failed to load screenshot image.', style: TextStyle(color: Colors.redAccent)),
@@ -441,7 +441,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                                 Image.network(
                                                   screenshotUrl,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => const Center(
+                                                  errorBuilder: (ctx, err, _) => const Center(
                                                     child: Text('Invalid Image', style: TextStyle(color: Colors.grey, fontSize: 11)),
                                                   ),
                                                 ),
@@ -608,7 +608,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                       title: Text(email, style: const TextStyle(color: Colors.white)),
                       trailing: Switch(
                         value: isBeta,
-                        activeColor: Colors.blueAccent,
+                        activeThumbColor: Colors.blueAccent,
                         onChanged: (val) async {
                           await FirebaseFirestore.instance
                               .collection('users')

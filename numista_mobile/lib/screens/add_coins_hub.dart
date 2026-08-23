@@ -3759,7 +3759,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
                             headingRowHeight: 36,
-                            dataRowHeight: 42,
+                            dataRowMinHeight: 42,
+                            dataRowMaxHeight: 42,
                             columns: const [
                               DataColumn(label: Text('Year', style: TextStyle(fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Mint', style: TextStyle(fontWeight: FontWeight.bold))),
