@@ -1526,10 +1526,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.151',
+    date: '2026-08-23',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+      'Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)',
+      'Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo',
+      'Audit: add greysheet node catalog and program node map',
+      'Program-manager: correct slot counts and remove filter bar',
+      'Seeder: total_slots counts variety slots not year rows',
+      'Kennedy: 213-slot catalog rebuild per v3 plan',
+      'Eisenhower: 32-slot catalog rebuild + S-PROOF-T1/T2 matcher fix',
+    ],
+  ),
+  _Release(
     version: 'v4.150',
     date: '2026-08-22',
     description: 'Login Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)',
       'Scan: friendly error on mobile CORS failure + explicit OPTIONS preflight for identify_coin_photo',
