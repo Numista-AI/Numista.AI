@@ -74,6 +74,8 @@ from routes.collection_routes import router as collection_router
 from routes.affiliate_routes import router as affiliate_router
 from routes.estate_routes import router as estate_router
 from routes.feedback_callable_route import router as feedback_router
+from routes.greysheet_error_routes import router as greysheet_error_router
+from routes.greysheet_admin_routes import router as greysheet_admin_router
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -88,6 +90,8 @@ app.include_router(collection_router)
 app.include_router(affiliate_router)
 app.include_router(estate_router)
 app.include_router(feedback_router)
+app.include_router(greysheet_error_router)
+app.include_router(greysheet_admin_router)
 
 # COA parsing endpoint extracted to routes/scan_routes.py
 

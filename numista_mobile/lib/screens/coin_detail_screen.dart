@@ -18,12 +18,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../services/http_auth_client.dart';
 import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
@@ -3328,6 +3330,52 @@ Widget _emptyState(String message) => Center(
 // opened. Shows a scrollable list of matching errors with a link to the full
 // Error Library detail screen.
 
+// ─── Known Errors tab data models ─────────────────────────────────────────────
+
+/// A single row returned by GET /api/greysheet/known-errors (no price).
+class _GsEntry {
+  final int gsid;
+  final String name;
+  final String classificationSource; // "allowlist" | "keyword_candidate"
+  final bool isConfirmed;
+  final String? categoryHint;
+  const _GsEntry({
+    required this.gsid,
+    required this.name,
+    required this.classificationSource,
+    required this.isConfirmed,
+    this.categoryHint,
+  });
+  factory _GsEntry.fromJson(Map<String, dynamic> j) => _GsEntry(
+        gsid: (j['gsid'] as num).toInt(),
+        name: j['name'] as String? ?? '',
+        classificationSource: j['classification_source'] as String? ?? 'keyword_candidate',
+        isConfirmed: j['is_confirmed'] as bool? ?? false,
+        categoryHint: j['category_hint'] as String?,
+      );
+}
+
+/// Result of the merge algorithm.
+sealed class _ErrorRow {}
+
+class _AugmentedRow extends _ErrorRow {
+  final MintError library;
+  final _GsEntry gs;
+  _AugmentedRow(this.library, this.gs);
+}
+
+class _GreysheetOnlyRow extends _ErrorRow {
+  final _GsEntry gs;
+  _GreysheetOnlyRow(this.gs);
+}
+
+class _LibraryOnlyRow extends _ErrorRow {
+  final MintError library;
+  _LibraryOnlyRow(this.library);
+}
+
+// ─── Known Errors tab widget ───────────────────────────────────────────────────
+
 class _KnownErrorsTab extends StatefulWidget {
   final CoinModel coin;
   const _KnownErrorsTab({required this.coin});
@@ -3343,52 +3391,183 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
 
   bool _loaded = false;
   bool _loading = false;
-  List<MintError> _errors = [];
+
+  /// Merged result list (library-only, greysheet-only, augmented).
+  List<_ErrorRow> _rows = [];
+
+  /// Admin flag: true when Firebase custom claim 'admin' == true.
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _loadErrors();
+    _loadAll();
   }
 
-  Future<void> _loadErrors() async {
+  // ---------------------------------------------------------------------------
+  // Admin claim check
+  // ---------------------------------------------------------------------------
+  Future<bool> _checkAdminClaim() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final result = await user.getIdTokenResult();
+      return result.claims?['admin'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parallel fetch
+  // ---------------------------------------------------------------------------
+  Future<void> _loadAll() async {
     if (_loading) return;
     setState(() {
       _loading = true;
       _loaded = false;
     });
+
+    // Fire admin check + both data fetches in parallel.
+    final denom = widget.coin.denomination.toLowerCase();
+    final year  = int.tryParse(widget.coin.year) ?? 0;
+
+    final results = await Future.wait([
+      _checkAdminClaim(),
+      _fetchLibraryErrors(denom, year),
+      _fetchGreysheetErrors(denom, year),
+    ]);
+
+    final isAdmin   = results[0] as bool;
+    final libErrors = results[1] as List<MintError>;
+    final gsEntries = results[2] as List<_GsEntry>;
+
+    if (!mounted) return;
+    setState(() {
+      _isAdmin = isAdmin;
+      _rows    = _merge(libErrors, gsEntries);
+      _loaded  = true;
+      _loading = false;
+    });
+  }
+
+  Future<List<MintError>> _fetchLibraryErrors(String denom, int year) async {
     try {
-      final denom = widget.coin.denomination.toLowerCase();
-      final year = int.tryParse(widget.coin.year) ?? 0;
-      final results = await MintErrorService.getErrorsForCoin(
+      return await MintErrorService.getErrorsForCoin(
         denomination: denom,
         year: year,
-      ).timeout(
-        const Duration(seconds: 6),
-        onTimeout: () {
-          // Timeout gracefully
-          return [];
-        },
-      );
-      if (mounted) {
-        setState(() {
-          _errors = results;
-          _loaded = true;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      // Log error silently or delegate to logger
-      if (mounted) {
-        setState(() {
-          _errors = [];
-          _loaded = true;
-          _loading = false;
-        });
-      }
+      ).timeout(const Duration(seconds: 8), onTimeout: () => []);
+    } catch (_) {
+      return [];
     }
   }
 
+  Future<List<_GsEntry>> _fetchGreysheetErrors(String denom, int year) async {
+    try {
+      final response = await HttpAuthClient.get(
+        Uri.parse(
+          '$kApiBaseUrl/api/greysheet/known-errors'
+          '?denomination_norm=${Uri.encodeComponent(denom)}&year=$year',
+        ),
+        timeout: const Duration(seconds: 8),
+      );
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>? ?? [];
+        return list
+            .whereType<Map<String, dynamic>>()
+            .map(_GsEntry.fromJson)
+            .toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Merge algorithm (§4 of Implementation Plan v3)
+  // ---------------------------------------------------------------------------
+  List<_ErrorRow> _merge(List<MintError> library, List<_GsEntry> gsEntries) {
+    // Build GSID → library lookup (only docs where greysheetGsid is set).
+    // MintError model currently has no greysheetGsid field — library-only rows
+    // are displayed unchanged; augmentation requires admin to set the field first.
+    // When the field is added to MintError, this lookup will populate automatically.
+    final libByGsid = <int, MintError>{};
+    for (final err in library) {
+      // ignore: deprecated_member_use — greysheetGsid optional field, may not exist yet
+      final gsid = _mintErrorGsid(err);
+      if (gsid != null) libByGsid[gsid] = err;
+    }
+
+    final gsByGsid = <int, _GsEntry>{
+      for (final e in gsEntries) e.gsid: e,
+    };
+
+    final rows = <_ErrorRow>[];
+    final usedGsids = <int>{};
+
+    // Step 2: augmented + greysheet-only rows
+    for (final gs in gsEntries) {
+      if (libByGsid.containsKey(gs.gsid)) {
+        rows.add(_AugmentedRow(libByGsid[gs.gsid]!, gs));
+      } else {
+        rows.add(_GreysheetOnlyRow(gs));
+      }
+      usedGsids.add(gs.gsid);
+    }
+
+    // Step 3: library-only rows (no GSID or GSID not in Greysheet results)
+    for (final err in library) {
+      final gsid = _mintErrorGsid(err);
+      if (gsid == null || !gsByGsid.containsKey(gsid)) {
+        rows.add(_LibraryOnlyRow(err));
+      }
+    }
+
+    // Step 4: sort — confirmed first, then by est value desc, then name asc
+    rows.sort((a, b) {
+      final aConf  = _rowIsConfirmed(a);
+      final bConf  = _rowIsConfirmed(b);
+      if (aConf != bConf) return bConf ? 1 : -1;
+      final aVal   = _rowEstValue(a);
+      final bVal   = _rowEstValue(b);
+      if (aVal != bVal) return bVal.compareTo(aVal);
+      return _rowName(a).compareTo(_rowName(b));
+    });
+
+    return rows;
+  }
+
+  // Helper: extract greysheet_gsid from MintError (field not yet in model —
+  // safe fallback returns null until model is extended).
+  int? _mintErrorGsid(MintError err) {
+    try {
+      // ignore: undefined_getter — graceful fallback when field not yet added
+      final dynamic gsid = (err as dynamic).greysheetGsid;
+      if (gsid is int) return gsid;
+    } catch (_) {}
+    return null;
+  }
+
+  bool _rowIsConfirmed(_ErrorRow row) => switch (row) {
+        _AugmentedRow(:final gs)     => gs.isConfirmed,
+        _GreysheetOnlyRow(:final gs) => gs.isConfirmed,
+        _LibraryOnlyRow()            => true,
+      };
+
+  double _rowEstValue(_ErrorRow row) => switch (row) {
+        _AugmentedRow(:final library)  => library.estValueHigh.toDouble(),
+        _GreysheetOnlyRow()            => 0.0,
+        _LibraryOnlyRow(:final library) => library.estValueHigh.toDouble(),
+      };
+
+  String _rowName(_ErrorRow row) => switch (row) {
+        _AugmentedRow(:final library)    => library.name,
+        _GreysheetOnlyRow(:final gs)     => gs.name,
+        _LibraryOnlyRow(:final library)  => library.name,
+      };
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -3397,13 +3576,24 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_loaded && _errors.isEmpty) {
+    if (_loaded && _rows.isEmpty) {
       return _emptyState(
         'No known errors on record for this coin.\n\n'
         'Check the Error Library for general error types\n'
         'or search by denomination.',
       );
     }
+
+    final libCount = _rows.whereType<_LibraryOnlyRow>().length
+        + _rows.whereType<_AugmentedRow>().length;
+    final gsCount  = _rows.whereType<_GreysheetOnlyRow>().length
+        + _rows.whereType<_AugmentedRow>().length;
+    final candidateCount = _isAdmin
+        ? _rows
+              .whereType<_GreysheetOnlyRow>()
+              .where((r) => !r.gs.isConfirmed)
+              .length
+        : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3416,14 +3606,32 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
               const Icon(Icons.error_outline, size: 16, color: _kBrand),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '${_errors.length} known error${_errors.length == 1 ? '' : 's'} for '
-                  '${widget.coin.year} ${widget.coin.denomination}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _kText,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_rows.length} error${_rows.length == 1 ? '' : 's'} for '
+                      '${widget.coin.year} ${widget.coin.denomination}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _kText,
+                      ),
+                    ),
+                    if (gsCount > 0 || libCount > 0)
+                      Text(
+                        [
+                          if (gsCount > 0) '$gsCount from Greysheet',
+                          if (libCount > 0) '$libCount from library',
+                        ].join(' · '),
+                        style: const TextStyle(fontSize: 11, color: _kSubtext),
+                      ),
+                    if (_isAdmin && candidateCount > 0)
+                      Text(
+                        '$candidateCount unconfirmed candidate${candidateCount == 1 ? '' : 's'}',
+                        style: const TextStyle(fontSize: 11, color: _kAccent),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -3433,82 +3641,381 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(12),
-            itemCount: _errors.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final err = _errors[i];
-              return GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MintErrorDetailScreen(error: err),
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _kSurface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _kBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      // Category color bar
-                      Container(
-                        width: 4,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: _errorCategoryColor(err.category),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              err.name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _kText,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                _ErrorBadge(err.category, _errorCategoryColor(err.category)),
-                                const SizedBox(width: 6),
-                                _ErrorBadge(err.rarity, _errorRarityColor(err.rarity)),
-                                const Spacer(),
-                                Text(
-                                  err.valueRange,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _kGold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, size: 18, color: _kSubtext),
-                    ],
-                  ),
-                ),
-              );
-            },
+            itemCount: _rows.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, i) => _buildRow(context, _rows[i]),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildRow(BuildContext context, _ErrorRow row) {
+    switch (row) {
+      case _LibraryOnlyRow(:final library):
+        return _buildLibraryCard(context, library,
+            sourceTags: const ['Library']);
+
+      case _AugmentedRow(:final library, :final gs):
+        return _buildLibraryCard(context, library,
+            sourceTags: const ['Library', 'Greysheet'],
+            gs: gs);
+
+      case _GreysheetOnlyRow(:final gs):
+        return _GreysheetErrorCard(
+          gs: gs,
+          isAdmin: _isAdmin,
+          coin: widget.coin,
+        );
+    }
+  }
+
+  /// Library card — navigates to MintErrorDetailScreen on tap (unchanged behaviour).
+  Widget _buildLibraryCard(
+    BuildContext context,
+    MintError err, {
+    required List<String> sourceTags,
+    _GsEntry? gs,
+  }) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MintErrorDetailScreen(error: err),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _errorCategoryColor(err.category),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    err.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _kText,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      _ErrorBadge(err.category, _errorCategoryColor(err.category)),
+                      const SizedBox(width: 6),
+                      _ErrorBadge(err.rarity, _errorRarityColor(err.rarity)),
+                      const SizedBox(width: 6),
+                      for (final tag in sourceTags) ...[
+                        _ErrorBadge(tag, _kSubtext),
+                        const SizedBox(width: 4),
+                      ],
+                      const Spacer(),
+                      Text(
+                        err.valueRange,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _kGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, size: 18, color: _kSubtext),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+// ─── Greysheet-only expandable card ───────────────────────────────────────────
+
+class _GreysheetErrorCard extends StatefulWidget {
+  final _GsEntry gs;
+  final bool isAdmin;
+  final CoinModel coin;
+  const _GreysheetErrorCard({
+    required this.gs,
+    required this.isAdmin,
+    required this.coin,
+  });
+
+  @override
+  State<_GreysheetErrorCard> createState() => _GreysheetErrorCardState();
+}
+
+class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
+  bool _expanded = false;
+  bool _pricingLoading = false;
+  bool _pricingLoaded = false;
+  double? _bidLow;
+  double? _askHigh;
+  int _gradeCount = 0;
+  bool _budgetExhausted = false;
+
+  static const String _attribution = 'CPG® Data';
+
+  Future<void> _loadPrice() async {
+    if (_pricingLoading || _pricingLoaded) return;
+    setState(() => _pricingLoading = true);
+    try {
+      final response = await HttpAuthClient.get(
+        Uri.parse('$kApiBaseUrl/api/greysheet/known-errors/${widget.gs.gsid}/price'),
+        timeout: const Duration(seconds: 10),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final available = data['available'] as bool? ?? false;
+        setState(() {
+          _pricingLoaded = true;
+          _pricingLoading = false;
+          _budgetExhausted = !available;
+          _bidLow     = available ? (data['bid_low']  as num?)?.toDouble() : null;
+          _askHigh    = available ? (data['ask_high'] as num?)?.toDouble() : null;
+          _gradeCount = available ? (data['grade_count'] as num? ?? 0).toInt() : 0;
+        });
+      } else {
+        setState(() { _pricingLoaded = true; _pricingLoading = false; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _pricingLoaded = true; _pricingLoading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCandidate = !widget.gs.isConfirmed;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _expanded = !_expanded);
+        if (_expanded && !_pricingLoaded) _loadPrice();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isCandidate ? _kAccent.withAlpha(80) : _kBorder,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Row header ───────────────────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _kSubtext,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.gs.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _kText,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          _ErrorBadge('Greysheet', _kSubtext),
+                          const SizedBox(width: 6),
+                          if (widget.gs.categoryHint != null) ...[
+                            _ErrorBadge(
+                              widget.gs.categoryHint!,
+                              _errorCategoryColor(widget.gs.categoryHint!),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          if (widget.isAdmin && isCandidate)
+                            _ErrorBadge('Candidate', _kAccent),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.chevron_right,
+                  size: 18,
+                  color: _kSubtext,
+                ),
+              ],
+            ),
+
+            // ── Expanded panel ───────────────────────────────────────────────
+            if (_expanded) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: _kBorder),
+              const SizedBox(height: 10),
+              if (_pricingLoading)
+                const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else if (_budgetExhausted)
+                Tooltip(
+                  message: 'Price data unavailable (monthly limit reached).',
+                  child: Row(
+                    children: [
+                      const Text('—', style: TextStyle(color: _kSubtext, fontSize: 13)),
+                      const SizedBox(width: 6),
+                      const Text(_attribution,
+                          style: TextStyle(fontSize: 10, color: _kSubtext)),
+                    ],
+                  ),
+                )
+              else if (_pricingLoaded && (_bidLow != null || _askHigh != null))
+                Row(
+                  children: [
+                    Text(
+                      _formatPriceRange(_bidLow, _askHigh, _gradeCount),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _kGold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      _attribution,
+                      style: TextStyle(fontSize: 10, color: _kSubtext),
+                    ),
+                  ],
+                )
+              else if (_pricingLoaded)
+                Row(
+                  children: const [
+                    Text('—', style: TextStyle(color: _kSubtext, fontSize: 13)),
+                    SizedBox(width: 6),
+                    Text(_attribution, style: TextStyle(fontSize: 10, color: _kSubtext)),
+                  ],
+                ),
+
+              // Admin: Confirm Error button
+              if (widget.isAdmin && isCandidate) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _ConfirmErrorButton(gs: widget.gs),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatPriceRange(double? bid, double? ask, int grades) {
+    final lo = bid != null ? '\$${bid.toStringAsFixed(0)}' : '?';
+    final hi = ask != null ? '\$${ask.toStringAsFixed(0)}' : '?';
+    final suffix = grades > 1 ? '  (all grades)' : '';
+    return '$lo–$hi$suffix';
+  }
+}
+
+// ─── Admin confirm error button ────────────────────────────────────────────────
+
+class _ConfirmErrorButton extends StatefulWidget {
+  final _GsEntry gs;
+  const _ConfirmErrorButton({required this.gs});
+
+  @override
+  State<_ConfirmErrorButton> createState() => _ConfirmErrorButtonState();
+}
+
+class _ConfirmErrorButtonState extends State<_ConfirmErrorButton> {
+  bool _confirming = false;
+  bool _done = false;
+
+  Future<void> _confirm() async {
+    if (_confirming || _done) return;
+    setState(() => _confirming = true);
+    try {
+      final response = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/greysheet/admin/allowlist/promote'),
+        body: jsonEncode({
+          'gsid': widget.gs.gsid,
+          'error_type_code': widget.gs.categoryHint ?? 'unknown',
+          'category': widget.gs.categoryHint ?? 'Unknown',
+        }),
+        timeout: const Duration(seconds: 10),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        setState(() { _done = true; _confirming = false; });
+      } else {
+        setState(() => _confirming = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_done) {
+      return const Text('✓ Confirmed',
+          style: TextStyle(fontSize: 11, color: _kGreen));
+    }
+    return TextButton(
+      onPressed: _confirming ? null : _confirm,
+      style: TextButton.styleFrom(
+        foregroundColor: _kAccent,
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      ),
+      child: _confirming
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kAccent),
+            )
+          : const Text('Confirm Error'),
+    );
+  }
+}
+
 
 // ─── Mini badge for Known Errors tab ─────────────────────────────────────────
 class _ErrorBadge extends StatelessWidget {
