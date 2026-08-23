@@ -134,26 +134,47 @@ def init_firebase():
 # ---------------------------------------------------------------------------
 
 def fetch_open_items(db, date_str=None, limit=50):
-    """Return list of (doc_id, doc_data) for OPEN beta_feedback docs."""
+    """Return list of (doc_id, doc_data) for OPEN beta_feedback docs.
+
+    Uses a single-field query (status == 'OPEN') to avoid requiring a
+    composite Firestore index. Sorting and date filtering are done in Python.
+    """
     try:
-        from google.cloud import firestore
         col = db.collection("beta_feedback")
-        query = col.where("status", "==", "OPEN").order_by(
-            "created_at", direction=firestore.Query.DESCENDING
-        ).limit(limit)
+        # Single-field filter only — no composite index required
+        docs = [(d.id, d.to_dict() or {}) for d in
+                col.where("status", "==", "OPEN").stream()]
+
+        # Date filter in Python
         if date_str:
             day_start = datetime.strptime(date_str, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             )
             day_end = day_start + timedelta(days=1)
-            query = col.where("status", "==", "OPEN") \
-                       .where("created_at", ">=", day_start) \
-                       .where("created_at", "<", day_end) \
-                       .order_by("created_at", direction=firestore.Query.DESCENDING) \
-                       .limit(limit)
-        return [(d.id, d.to_dict()) for d in query.stream()]
+            def _in_range(data):
+                ts = data.get("created_at")
+                if ts is None:
+                    return False
+                if hasattr(ts, "tzinfo") and ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                return day_start <= ts < day_end
+            docs = [(doc_id, data) for doc_id, data in docs if _in_range(data)]
+
+        # Sort by created_at descending in Python
+        def _sort_key(item):
+            ts = item[1].get("created_at")
+            if ts is None:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            if hasattr(ts, "tzinfo") and ts.tzinfo is None:
+                return ts.replace(tzinfo=timezone.utc)
+            return ts
+
+        docs.sort(key=_sort_key, reverse=True)
+        return docs[:limit]
+
     except Exception as e:
-        _fatal("Firestore query failed: " + type(e).__name__ + ": " + str(e)[:120])
+        _fatal("Firestore query failed: " + type(e).__name__ + ": " + str(e)[:200])
+
 
 
 # ---------------------------------------------------------------------------
@@ -201,9 +222,9 @@ def _first_user_message(transcript):
     for entry in transcript:
         if not isinstance(entry, dict):
             continue
-        role = entry.get("role", "")
-        text = (entry.get("text") or entry.get("content") or "").strip()
-        if role in ("user", "human") and text:
+        # Actual schema: {"ts": "...", "message": "..."}
+        text = (entry.get("message") or entry.get("text") or entry.get("content") or "").strip()
+        if text:
             return text[:MSG_LIMIT] + ("..." if len(text) > MSG_LIMIT else "")
     return "N/A"
 
@@ -215,16 +236,19 @@ def _render_transcript(transcript, verbose=False):
     for entry in transcript:
         if not isinstance(entry, dict):
             continue
-        role = entry.get("role", "?")
-        text = (entry.get("text") or entry.get("content") or "").strip()
+        # Actual schema: {"ts": "...", "message": "..."}
+        role = entry.get("role", "user")
+        text = (entry.get("message") or entry.get("text") or entry.get("content") or "").strip()
+        ts = entry.get("ts", "")
         if text:
-            lines.append("  [" + role + "] " + text)
+            lines.append("  [" + role + ((" @" + str(ts)[:16]) if ts else "") + "] " + text)
     full = "\n".join(lines)
     if not full:
         return "N/A"
     if not verbose and len(full) > TRANSCRIPT_LIMIT:
         return full[:TRANSCRIPT_LIMIT] + "\n  ...(truncated - full doc: see Full ID below)"
     return full
+
 
 
 # ---------------------------------------------------------------------------
