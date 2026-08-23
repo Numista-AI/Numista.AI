@@ -411,6 +411,66 @@ void main() {
     });
   });
 
+  group('SlotResolver — matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants)', () {
+    // S-PROOF-T1 and S-PROOF-T2 were added in the Aug 22 Eisenhower catalog rebuild.
+    // The resolver handles them via: vId.startsWith('S-PROOF-') => mintMark=='S' && isProof && !isSilver
+    // This mirrors P-T1/P-T2 and D-T1/D-T2 which also double-match on mint mark.
+    // Both T1 and T2 match ANY S-mint clad proof — the type discriminator is visual-only.
+
+    test('S-PROOF-T1: S-mint + clad proof → matches (startsWith S-PROOF-)', () {
+      final variety = _variety('S-PROOF-T1');
+      final item = _item(mintMark: 'S', strikeType: 'Proof', metal: 'Copper-Nickel Clad');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-PROOF-T2: S-mint + clad proof → matches (startsWith S-PROOF-)', () {
+      final variety = _variety('S-PROOF-T2');
+      final item = _item(mintMark: 'S', strikeType: 'Proof', metal: 'Copper-Nickel Clad');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-PROOF-T1: S-mint + silver proof → does NOT match (silver routes to S-SILVER-PROOF)', () {
+      // !isSilver gate: silver S-mint proofs must not own a clad-typed slot
+      final variety = _variety('S-PROOF-T1');
+      final item = _item(mintMark: 'S', strikeType: 'Proof', metal: '40% Silver');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-PROOF-T2: S-mint + silver proof → does NOT match', () {
+      final variety = _variety('S-PROOF-T2');
+      final item = _item(mintMark: 'S', strikeType: 'Proof', metal: '40% Silver');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-PROOF-T1: D-mint + proof → does NOT match (wrong mint)', () {
+      final variety = _variety('S-PROOF-T1');
+      final item = _item(mintMark: 'D', strikeType: 'Proof');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-PROOF-T1: S-mint + BU (no proof) → does NOT match', () {
+      final variety = _variety('S-PROOF-T1');
+      final item = _item(mintMark: 'S', strikeType: 'Business Strike');
+      expect(SlotResolver.matchesVariety(item, variety), isFalse);
+    });
+
+    test('S-PROOF-T1: PR68 grade on S-mint clad → matches (grade-based proof detection)', () {
+      // isProof fires from grade regex \\b(PR|PF)[- ]?\\d
+      final variety = _variety('S-PROOF-T1');
+      final item = _item(mintMark: 'S', grade: 'PR-68', metal: 'Copper-Nickel Clad');
+      expect(SlotResolver.matchesVariety(item, variety), isTrue);
+    });
+
+    test('S-PROOF-T1 and S-PROOF-T2 both match the same S-mint clad proof item (double-slot design)', () {
+      // By design: T1 and T2 both match — the collector manually assigns the reverse type visually.
+      final t1 = _variety('S-PROOF-T1');
+      final t2 = _variety('S-PROOF-T2');
+      final item = _item(mintMark: 'S', strikeType: 'Proof', metal: 'Copper-Nickel Clad');
+      expect(SlotResolver.matchesVariety(item, t1), isTrue);
+      expect(SlotResolver.matchesVariety(item, t2), isTrue);
+    });
+  });
+
   group('SlotResolver — matchesVariety: Reverse Proof', () {
     final variety = _variety('REVERSE-PROOF');
 
