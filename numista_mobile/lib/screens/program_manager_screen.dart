@@ -954,96 +954,178 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: filteredCoins.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE2E6E9)),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1, color: Color(0xFFE2E6E9)),
                   itemBuilder: (context, index) {
                     final coin = filteredCoins[index];
-
-                    // ── Flatten: one row per variety slot ────────────────────
-                    // If a year-row has no varieties, treat the row itself as one slot.
                     final varieties = coin.varieties.isNotEmpty
                         ? coin.varieties
                         : [ChecklistVariety(id: '', label: coin.name)];
 
-                    return Column(
-                      children: varieties.map((variety) {
-                        // Unique key: "YEAR||VARIETY_ID||SERIES_NAME"
-                        final coinName = '${coin.year ?? ''}||${variety.id}||${coin.name}';
-
-                        // Display label: "1964 No Mint Mark", "1964 D Proof", etc.
-                        final displayLabel = [
-                          if ((coin.year ?? '').isNotEmpty) coin.year!,
-                          variety.label.isNotEmpty ? variety.label : coin.name,
-                        ].join(' ');
-
-                        final isPending = coin.name.contains('Pending') ||
-                            variety.label.contains('Pending');
-
-                        // Check for ownership match at variety level
-                        QueryDocumentSnapshot? matchedDoc;
-                        for (var doc in docs) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          if (_isMatch(data, program, coin)) {
-                            // For variety-level match, also check variety/mint alignment
-                            final docMint = (data['Mint Mark'] ?? '').toString().toUpperCase();
-                            final vId = variety.id.toUpperCase();
-                            // Mint marks: single letters route by letter; P/no-mark match empty
-                            final mintMatch = vId == 'P' || vId == ''
-                                ? docMint.isEmpty || docMint == 'P'
-                                : docMint == vId || vId.startsWith(docMint);
-                            if (mintMatch) {
-                              matchedDoc = doc;
-                              break;
-                            }
-                          }
-                        }
-
-                        if (matchedDoc != null) {
-                          final data = matchedDoc.data() as Map<String, dynamic>;
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                            leading: const Icon(Icons.check_circle, color: Color(0xFF10B981)),
-                            title: Text(displayLabel,
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                            subtitle: Text(
-                              'Grade: ${data['Condition'] ?? 'Ungraded'}',
-                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Year label — fixed width so variety chips align across rows
+                          SizedBox(
+                            width: 44,
+                            child: Text(
+                              coin.year ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A),
+                              ),
                             ),
-                          );
-                        } else if (isPending) {
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                            leading: const Icon(Icons.calendar_today, color: Color(0xFFF59E0B)),
-                            title: Text(displayLabel,
-                                style: const TextStyle(fontStyle: FontStyle.italic, color: Color(0xFFD97706))),
-                          );
-                        } else {
-                          final isSelectedToAdd = _selectedToAdd.contains(coinName);
-                          return CheckboxListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            activeColor: const Color(0xFF3B82F6),
-                            value: isSelectedToAdd,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _selectedToAdd.add(coinName);
-                                } else {
-                                  _selectedToAdd.remove(coinName);
+                          ),
+                          const SizedBox(width: 8),
+                          // Variety chips — wrap to next line if too many
+                          Expanded(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: varieties.map((variety) {
+                                final coinName =
+                                    '${coin.year ?? ''}||${variety.id}||${coin.name}';
+                                // Abbreviate long labels for compact display
+                                final chipLabel = variety.label == 'No Mint Mark'
+                                    ? 'NMM'
+                                    : variety.label.isEmpty
+                                        ? coin.name
+                                        : variety.label;
+                                final isPending =
+                                    coin.name.contains('Pending') ||
+                                    variety.label.contains('Pending');
+
+                                // Variety-level ownership check
+                                QueryDocumentSnapshot? matchedDoc;
+                                for (var doc in docs) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  if (_isMatch(data, program, coin)) {
+                                    final docMint = (data['Mint Mark'] ?? '')
+                                        .toString()
+                                        .toUpperCase();
+                                    final vId = variety.id.toUpperCase();
+                                    final mintOk = vId == 'P' || vId == ''
+                                        ? docMint.isEmpty || docMint == 'P'
+                                        : docMint == vId ||
+                                            vId.startsWith(docMint);
+                                    if (mintOk) {
+                                      matchedDoc = doc;
+                                      break;
+                                    }
+                                  }
                                 }
-                              });
-                              _tryAdvanceMorganCoinsChecked();
-                            },
-                            title: Text(displayLabel,
-                                style: const TextStyle(color: Color(0xFF475569))),
-                          );
-                        }
-                      }).toList(),
+
+                                if (matchedDoc != null) {
+                                  // ── Owned ──────────────────────────────
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFD1FAE5),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.check,
+                                            size: 11,
+                                            color: Color(0xFF10B981)),
+                                        const SizedBox(width: 3),
+                                        Text(chipLabel,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF065F46),
+                                              fontWeight: FontWeight.w500,
+                                            )),
+                                      ],
+                                    ),
+                                  );
+                                } else if (isPending) {
+                                  // ── Pending / Unreleased ───────────────
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF3C7),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(chipLabel,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFFD97706),
+                                          fontStyle: FontStyle.italic,
+                                        )),
+                                  );
+                                } else {
+                                  // ── Missing — selectable ───────────────
+                                  final isSelected =
+                                      _selectedToAdd.contains(coinName);
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        if (isSelected) {
+                                          _selectedToAdd.remove(coinName);
+                                        } else {
+                                          _selectedToAdd.add(coinName);
+                                        }
+                                      });
+                                      _tryAdvanceMorganCoinsChecked();
+                                    },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: Checkbox(
+                                            value: isSelected,
+                                            onChanged: (bool? value) {
+                                              setState(() {
+                                                if (value == true) {
+                                                  _selectedToAdd.add(coinName);
+                                                } else {
+                                                  _selectedToAdd
+                                                      .remove(coinName);
+                                                }
+                                              });
+                                              _tryAdvanceMorganCoinsChecked();
+                                            },
+                                            activeColor:
+                                                const Color(0xFF3B82F6),
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(chipLabel,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF475569),
+                                            )),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
               );
             },
           ),
+
 
           
           if (_selectedToAdd.isNotEmpty) ...[
