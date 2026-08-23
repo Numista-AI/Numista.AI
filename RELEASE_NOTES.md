@@ -157,6 +157,17 @@
 
 
 
+
+## v4.155 — 2026-08-23
+**Model Enhancements & Platform Updates**
+
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+- Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup
+- Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable
+- Release: bump release version to v4.151
+- Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks
+
 ## v4.154 — 2026-08-23
 **Checklist Enhancements & Platform Updates**
 
