@@ -6,11 +6,11 @@ class SecondaryDisplayLayout extends StatelessWidget {
   final Widget aiChatWidget;
 
   const SecondaryDisplayLayout({
-    Key? key,
+    super.key,
     required this.collectionGrid,
     required this.liveSpotTicker,
     required this.aiChatWidget,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

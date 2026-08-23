@@ -232,7 +232,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     // ── 1. Check Multi-coin Mint / Uncirculated Set Matching ─────────────────────────
     if (denom == 'set' || progSeries.toLowerCase().contains('uncirculated set') || progSeries.toLowerCase().contains('proof set')) {
       final setContents = coinData['SetContents'] as List? ?? coinData['set_coins'] as List? ?? [];
-      final setStr = setContents.join(' ').toLowerCase() + ' ' + themeSub + ' ' + title;
+      final setStr = '${setContents.join(" ")} $themeSub $title';
       if (setStr.trim().isNotEmpty) {
         if (cNameLower.isNotEmpty && setStr.contains(cNameLower)) return true;
       }
@@ -771,7 +771,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   children: [
                     Switch(
                       value: _programManualComplete[program.id] ?? false,
-                      activeColor: const Color(0xFF10B981),
+                      activeThumbColor: const Color(0xFF10B981),
                       onChanged: (val) {
                         _saveProgramPreference(program.id, isManuallyCompleted: val);
                       },

@@ -160,6 +160,84 @@
 
 
 
+
+
+
+
+
+
+## v4.163 — 2026-08-23
+**Release Enhancements & Platform Updates**
+
+- Release: sync release notes v4.162
+- Release: sync release notes v4.161
+- Release: sync release notes v4.160
+- Release: sync release notes v4.159
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+
+## v4.162 — 2026-08-23
+**Release Enhancements & Platform Updates**
+
+- Release: sync release notes v4.161
+- Release: sync release notes v4.160
+- Release: sync release notes v4.159
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+
+## v4.161 — 2026-08-23
+**Release Enhancements & Platform Updates**
+
+- Release: sync release notes v4.160
+- Release: sync release notes v4.159
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+
+## v4.160 — 2026-08-23
+**Release Enhancements & Platform Updates**
+
+- Release: sync release notes v4.159
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+- Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup
+
+## v4.159 — 2026-08-23
+**Lint Enhancements & Platform Updates**
+
+- Lint: resolve all flutter analyze warnings to 0 issues
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+- Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup
+- Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable
+
+## v4.158 — 2026-08-23
+**Known-errors Enhancements & Platform Updates**
+
+- Sync unstaged UI and test changes pre-deploy
+- Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate
+- Sync release notes pre-push
+- Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests
+- Model: upgrade feedbackIntelligence.js to gemini-3.7-flash
+- Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup
+- Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable
+- Release: bump release version to v4.151
+
 ## v4.157 — 2026-08-23
 **Known-errors Enhancements & Platform Updates**
 

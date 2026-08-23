@@ -13,14 +13,14 @@ class LateralTransferScreen extends StatefulWidget {
   final String initialTab; // 'send' or 'claim'
 
   const LateralTransferScreen({
-    Key? key,
+    super.key,
     required this.userId,
     required this.itemsToTransfer,
     this.initialTab = 'send',
-  }) : super(key: key);
+  });
 
   @override
-  _LateralTransferScreenState createState() => _LateralTransferScreenState();
+  State<LateralTransferScreen> createState() => _LateralTransferScreenState();
 }
 
 class _LateralTransferScreenState extends State<LateralTransferScreen> {
@@ -680,7 +680,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                             width: 40,
                             height: 40,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (ctx, err, _) => const Icon(
                               Icons.monetization_on,
                               color: Color(0xFF0284C7),
                             ),
@@ -855,7 +855,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     return SwitchListTile(
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFF38BDF8),
+      activeThumbColor: const Color(0xFF38BDF8),
       activeTrackColor: const Color(0xFF0284C7).withValues(alpha: 0.4),
       inactiveThumbColor: Colors.grey.shade400,
       inactiveTrackColor: const Color(0xFF334155),

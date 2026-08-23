@@ -356,6 +356,7 @@ class ActiveMorganSession {
     }
   }
 
+  // ignore: unnecessary_getters_setters
   static bool get isStreaming => _isStreaming;
   static set isStreaming(bool val) => _isStreaming = val;
 

@@ -4,10 +4,10 @@ import '../services/lateral_transfer_service.dart';
 class TransferInboxScreen extends StatefulWidget {
   final String userId;
 
-  const TransferInboxScreen({Key? key, required this.userId}) : super(key: key);
+  const TransferInboxScreen({super.key, required this.userId});
 
   @override
-  _TransferInboxScreenState createState() => _TransferInboxScreenState();
+  State<TransferInboxScreen> createState() => _TransferInboxScreenState();
 }
 
 class _TransferInboxScreenState extends State<TransferInboxScreen> {
