@@ -87,6 +87,10 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _error = 'Your PIN must be exactly 6 digits.');
       return;
     }
+    // Clear Browse Demo before real sign-in. This is the third clearance
+    // point (after home_dashboard and main.dart); fires before the
+    // StreamBuilder receives the auth-state-changed event.
+    GuestSeedService.deactivateBrowseDemo();
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.signIn(email, pin);
     if (mounted) setState(() { _loading = false; _error = result.error; });
@@ -115,6 +119,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _googleSignIn() async {
+    GuestSeedService.deactivateBrowseDemo(); // same clearance as _signIn
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.signInWithGoogle();
     if (mounted) setState(() { _loading = false; _error = result.error; });

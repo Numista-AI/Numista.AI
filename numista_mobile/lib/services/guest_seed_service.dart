@@ -33,6 +33,14 @@ class GuestSeedService {
     _demoCoinCache = [];
   }
 
+  /// FOR TESTS ONLY. Sets _browseDemoActive without requiring rootBundle
+  /// (Flutter asset loading). Not for production use.
+  @visibleForTesting
+  static void setDemoActiveForTest(bool value) {
+    _browseDemoActive = value;
+    if (!value) _demoCoinCache = [];
+  }
+
   /// Returns the in-memory demo coin list (Browse Demo mode only).
   static List<Map<String, dynamic>> get demoCoinCache => _demoCoinCache;
 
