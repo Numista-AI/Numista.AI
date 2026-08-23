@@ -1526,10 +1526,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.159',
+    date: '2026-08-23',
+    description: 'Lint Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Lint: resolve all flutter analyze warnings to 0 issues',
+      'Sync unstaged UI and test changes pre-deploy',
+      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Sync release notes pre-push',
+      'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
+      'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
+      'Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup',
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+    ],
+  ),
+  _Release(
     version: 'v4.158',
     date: '2026-08-23',
     description: 'Known-errors Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Sync unstaged UI and test changes pre-deploy',
       'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
