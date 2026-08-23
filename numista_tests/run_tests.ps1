@@ -94,40 +94,43 @@ if (Test-Path $pytestExe) {
   Log "WARNING: Backend venv pytest executable not found at $pytestExe"
 }
 
-# 5. Run Playwright E2E UI Tests (hard 25-minute timeout to ensure report always runs)
+# 5. Run Playwright E2E UI Tests (hard 25-minute timeout so report always runs)
 Log "Running Playwright E2E tests against https://numista.ai (25-min hard timeout)..."
 $playwrightLog = Join-Path $TestDir "reports\playwright-run.log"
-$npxPath = (Get-Command npx -ErrorAction SilentlyContinue).Source
-if (-not $npxPath) { $npxPath = 'npx' }
 
-# Start Playwright as a detached process with output redirected to a temp log
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $npxPath
-$psi.Arguments = 'playwright test'
-$psi.WorkingDirectory = $TestDir
-$psi.UseShellExecute = $false
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
-$psi.CreateNoWindow = $true
+# Use cmd.exe so npx resolves correctly regardless of whether it is a .ps1 or .cmd wrapper.
+# The job prints the exit code as the last line so we can extract it reliably.
+$playwrightJob = Start-Job -ScriptBlock {
+  param($dir)
+  Set-Location $dir
+  $out = & cmd.exe /c "npx playwright test" 2>&1
+  $ec  = $LASTEXITCODE
+  $out
+  "##EXITCODE=$ec##"
+} -ArgumentList $TestDir
 
-$proc = [System.Diagnostics.Process]::Start($psi)
-$stdoutTask = $proc.StandardOutput.ReadToEndAsync()
-$stderrTask  = $proc.StandardError.ReadToEndAsync()
-
-$finished = $proc.WaitForExit(1500000)  # 1,500,000 ms = 25 minutes
-if (-not $finished) {
-  Log "WARNING: Playwright E2E timed out after 25 minutes — killing process and continuing to report."
-  & taskkill /F /T /PID $proc.Id 2>$null | Out-Null
-  $proc.WaitForExit(5000) | Out-Null
+$jobDone = Wait-Job -Job $playwrightJob -Timeout 1500   # 1500 sec = 25 min
+if ($null -eq $jobDone) {
+  Log "WARNING: Playwright E2E timed out after 25 minutes -- killing and continuing to report."
+  Stop-Job  -Job $playwrightJob
+  Remove-Job -Job $playwrightJob -Force
   $exitCode = 124
 } else {
-  $exitCode = $proc.ExitCode
-}
+  $rawOutput = Receive-Job -Job $playwrightJob
+  Remove-Job -Job $playwrightJob -Force
 
-# Collect output (already buffered by async reads)
-$playwrightOutput = $stdoutTask.Result + $stderrTask.Result
-Add-Content -Path $LogFile -Value $playwrightOutput
-Add-Content -Path $playwrightLog -Value $playwrightOutput
+  # Extract exit code embedded as last line "##EXITCODE=N##"
+  $ecLine = ($rawOutput | Select-String "##EXITCODE=(\d+)##" | Select-Object -Last 1)
+  if ($ecLine) {
+    $exitCode = [int]$ecLine.Matches[0].Groups[1].Value
+    $testOutput = ($rawOutput | Where-Object { $_ -notmatch "##EXITCODE=" }) -join "`n"
+  } else {
+    $exitCode = 0
+    $testOutput = $rawOutput -join "`n"
+  }
+  Add-Content -Path $LogFile    -Value $testOutput
+  Add-Content -Path $playwrightLog -Value $testOutput
+}
 
 if ($exitCode -eq 0) {
   Log "Playwright E2E suite PASSED."

@@ -1526,10 +1526,41 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.154',
+    date: '2026-08-23',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.153',
+    date: '2026-08-23',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.152',
+    date: '2026-08-23',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
     version: 'v4.151',
     date: '2026-08-23',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
       'Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)',
