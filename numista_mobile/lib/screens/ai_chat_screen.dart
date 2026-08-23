@@ -251,6 +251,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       final aiMsg = {
         'role': 'assistant',
         'content': replyText,
+        // ignore: use_null_aware_elements
         if (actionPayloadJson != null) 'action_payload': actionPayloadJson,
       };
       setState(() {

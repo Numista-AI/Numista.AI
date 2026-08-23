@@ -11,6 +11,7 @@
 //   - matchesDbSeries Rule 24 aliases (Lincoln Cents, 50 State Quarters, etc.)
 //
 // All tests are pure Dart — no Firebase, no network, no platform channels.
+// ignore_for_file: use_null_aware_elements
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/models/program_model.dart';
