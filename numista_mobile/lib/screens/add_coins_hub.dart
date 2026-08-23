@@ -1336,10 +1336,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      style: const TextStyle(color: Color(0xFF1E293B)),
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
         hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
         filled: true,
         fillColor: const Color(0xFFF8FAFC),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/coin_normalizer_service.dart';
 import '../services/epn_service.dart';
@@ -38,6 +36,8 @@ import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
 import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
+import '../services/feedback_trigger_observer.dart';
+import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
 import 'coin_detail_screen.dart';
@@ -818,20 +818,15 @@ class _BaseLayoutState extends State<BaseLayout> {
                           'Send Beta Feedback',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                         ),
-                        onPressed: () async {
-                          final email = FirebaseAuth.instance.currentUser?.email ?? 'beta tester';
-                          final subject = Uri.encodeComponent('Numista.AI Beta Feedback');
-                          final body = Uri.encodeComponent(
-                            'Beta tester: $email\n'
-                            'Version: $kAppVersion\n\n'
-                            'Feedback / Bug Report:\n\n'
-                            '---\n'
-                            '(Please describe what happened, what you expected, and any steps to reproduce)\n',
+                        onPressed: () {
+                          FeedbackTriggerObserver.instance.fire(
+                            FeedbackTriggerEvent(
+                              reason: FeedbackTriggerReason.manualFAB,
+                              route: _activeRoute,
+                              pageTitle: _activeRoute,
+                              userName: AuthService.displayName,
+                            ),
                           );
-                          final uri = Uri.parse('mailto:beta@numista.ai?subject=$subject&body=$body');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri);
-                          }
                         },
                       ),
                     ),
