@@ -6476,6 +6476,168 @@ def collection_count(user_email: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Checklist write callable ──────────────────────────────────────────────────
+
+class ChecklistSlot(BaseModel):
+    """One slot selected in the Program Manager checklist."""
+    coin_name:   str            # Display name / Theme/Subject
+    year:        str            # e.g. "1964"
+    mint_mark:   str = ""       # e.g. "D", "S", "" for P/no mark
+    denomination: str = ""      # e.g. "50c"
+    variety_id:  str = ""       # e.g. "P", "D", "S-PROOF" — aspirational for v1
+
+class ChecklistAddRequest(BaseModel):
+    idempotency_key: str        # UUID generated once per button press on the client
+    program_id:      str        # snake_case program identifier e.g. "kennedy_half_dollars"
+    program_name:    str        # Display name e.g. "Kennedy Half Dollars"
+    user_email:      str
+    slots:           List[ChecklistSlot]
+
+class ChecklistAddResponse(BaseModel):
+    ok:                bool
+    coins_written:     int
+    duplicate_warning: bool     # True if any slot matched an existing coin's program_id+year+mint_mark
+    idempotent_hit:    bool     # True if this key was already processed within TTL
+
+@app.post("/api/checklist/add_coins", response_model=ChecklistAddResponse)
+def checklist_add_coins(req: ChecklistAddRequest):
+    """
+    Server-mediated checklist write with idempotency and duplicate detection.
+
+    Idempotency:
+      - `idempotency_key` is a UUID generated once per 'Add Selected Coins' click.
+      - First call within a 60-second TTL: writes coin documents and stores the key.
+      - Subsequent calls with the same key within TTL: returns the cached result,
+        no additional documents written.
+
+    Duplicate detection (soft — does NOT block write):
+      - Before writing, queries users/{uid}/coins for any document where
+        program_id == req.program_id AND year == slot.year AND mint_mark == slot.mint_mark.
+      - Returns duplicate_warning: true if any match found.
+      - Multiple copies of the same slot (different grades, varieties) are LEGAL.
+        The banner is dismissible; the write always proceeds.
+
+    Coin documents:
+      - Written to users/{user_email}/coins/{uuid} with UUID doc IDs.
+      - program_id is written as a mandatory snake_case field on every new document.
+      - slot_id is NOT written in Phase 4 v1 (aspirational for future plan).
+
+    NEVER writes to master_coin_programs.json or any catalog collection.
+    """
+    _KEY_TTL_SECONDS = 60
+    idem_ref = db.collection('_idempotency').document(req.idempotency_key)
+
+    # ── 1. Idempotency check ──────────────────────────────────────────────────
+    try:
+        idem_snap = idem_ref.get()
+        if idem_snap.exists:
+            data = idem_snap.to_dict() or {}
+            stored_at = data.get('stored_at')
+            if stored_at:
+                age = (datetime.now(timezone.utc) - stored_at).total_seconds()
+                if age < _KEY_TTL_SECONDS:
+                    logger.info(
+                        "checklist/add_coins: idempotent hit",
+                        extra={"key": req.idempotency_key, "age_s": age}
+                    )
+                    return ChecklistAddResponse(
+                        ok=True,
+                        coins_written=data.get('coins_written', 0),
+                        duplicate_warning=data.get('duplicate_warning', False),
+                        idempotent_hit=True,
+                    )
+    except Exception as e:
+        logger.warning(f"checklist/add_coins: idempotency read error (proceeding): {e}")
+
+    # ── 2. Duplicate-details check (soft) ────────────────────────────────────
+    # Checks program_id + year + mint_mark. Grade and variety are NOT checked —
+    # a second copy in a different grade is a legitimate separate coin.
+    # slot_id is excluded from the check in v1 because it is not yet persisted.
+    duplicate_warning = False
+    try:
+        coins_ref = db.collection('users').document(req.user_email).collection('coins')
+        for slot in req.slots:
+            q = (
+                coins_ref
+                .where('program_id', '==', req.program_id)
+                .where('Year', '==', slot.year)
+                .where('Mint Mark', '==', slot.mint_mark)
+                .limit(1)
+            )
+            existing = q.get()
+            if existing:
+                duplicate_warning = True
+                break
+    except Exception as e:
+        logger.warning(f"checklist/add_coins: duplicate check error (proceeding): {e}")
+
+    # ── 3. Write coin documents ───────────────────────────────────────────────
+    coins_ref = db.collection('users').document(req.user_email).collection('coins')
+    batch = db.batch()
+    coins_written = 0
+
+    for slot in req.slots:
+        doc_ref = coins_ref.document(str(uuid.uuid4()))
+        batch.set(doc_ref, {
+            # Identity fields — program_id is mandatory on all new checklist writes
+            'program_id':     req.program_id,          # snake_case, exact
+            'Program/Series': req.program_name,         # display name for legacy compatibility
+
+            # Slot fields
+            'Theme/Subject':  slot.coin_name,
+            'Year':           slot.year,
+            'Mint Mark':      slot.mint_mark,
+            'Denomination':   slot.denomination,
+
+            # Default state fields
+            'Condition':              'Ungraded',
+            'AI Estimated Value':     'Pending',
+            'Cost':                   '$0.00',
+            'deep_dive_status':       'PENDING',
+            'inventoryStatus':        'UNCHECKED',
+            'is_foreign':             False,
+
+            'timestamp': firestore.SERVER_TIMESTAMP,
+        })
+        coins_written += 1
+
+    try:
+        batch.commit()
+    except Exception as e:
+        logger.exception("checklist/add_coins: batch commit failed", extra={"user_email": req.user_email})
+        raise HTTPException(status_code=500, detail=f"Failed to write coins: {e}")
+
+    # ── 4. Store idempotency key ──────────────────────────────────────────────
+    try:
+        idem_ref.set({
+            'stored_at':       datetime.now(timezone.utc),
+            'user_email':      req.user_email,
+            'program_id':      req.program_id,
+            'coins_written':   coins_written,
+            'duplicate_warning': duplicate_warning,
+        })
+    except Exception as e:
+        logger.warning(f"checklist/add_coins: idempotency store error (non-fatal): {e}")
+
+    logger.info(
+        "checklist/add_coins: success",
+        extra={
+            "user_email": req.user_email,
+            "program_id": req.program_id,
+            "coins_written": coins_written,
+            "duplicate_warning": duplicate_warning,
+        }
+    )
+    return ChecklistAddResponse(
+        ok=True,
+        coins_written=coins_written,
+        duplicate_warning=duplicate_warning,
+        idempotent_hit=False,
+    )
+
+
+
+
 @app.post("/api/collection/clear")
 def collection_clear(req: ClearCollectionRequest):
     """
