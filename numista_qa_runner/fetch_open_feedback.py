@@ -310,7 +310,7 @@ def triage_document(db, doc_id):
     try:
         from firebase_admin import firestore as fs_module
         from google.cloud import firestore
-        from google.api_core.exceptions import PermissionDenied, Unavailable
+        from google.api_core.exceptions import PermissionDenied, ServiceUnavailable
     except ImportError as e:
         _fatal("Import error: " + str(e))
 
@@ -341,7 +341,7 @@ def triage_document(db, doc_id):
         result, detail = _run(transaction)
     except PermissionDenied:
         _fatal("Permission denied. Check service account roles for beta_feedback.")
-    except Unavailable:
+    except ServiceUnavailable:
         _fatal("Firestore unreachable. Check network and project configuration.")
     except Exception as e:
         _fatal("Unexpected failure: " + type(e).__name__ + ". No write made.")
