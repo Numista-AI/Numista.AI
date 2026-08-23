@@ -957,60 +957,94 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE2E6E9)),
                   itemBuilder: (context, index) {
                     final coin = filteredCoins[index];
-                    final coinName = coin.name;
-                    final isPending = coinName.contains("Pending");
-                
-                // Search for match
-                QueryDocumentSnapshot? matchedDoc;
-                for (var doc in docs) {
-                  if (_isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
-                    matchedDoc = doc;
-                    break;
-                  }
-                }
-                
-                if (matchedDoc != null) {
-                  // Found
-                  final data = matchedDoc.data() as Map<String, dynamic>;
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    leading: const Icon(Icons.check_circle, color: Color(0xFF10B981)),
-                    title: Text(coinName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                    subtitle: Text('Found match: ${data["Year"] ?? ""} ${data["Denomination"] ?? ""} - Grade: ${data["Condition"] ?? "Ungraded"}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                  );
-                } else if (isPending) {
-                  // Unreleased
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    leading: const Icon(Icons.calendar_today, color: Color(0xFFF59E0B)),
-                    title: Text(coinName, style: const TextStyle(fontStyle: FontStyle.italic, color: Color(0xFFD97706))),
-                  );
-                } else {
-                  // Missing - allow adding to collection
-                  final isSelectedToAdd = _selectedToAdd.contains(coinName);
-                  return CheckboxListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: const Color(0xFF3B82F6),
-                    value: isSelectedToAdd,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        if (value == true) {
-                          _selectedToAdd.add(coinName);
-                        } else {
-                          _selectedToAdd.remove(coinName);
+
+                    // ── Flatten: one row per variety slot ────────────────────
+                    // If a year-row has no varieties, treat the row itself as one slot.
+                    final varieties = coin.varieties.isNotEmpty
+                        ? coin.varieties
+                        : [ChecklistVariety(id: '', label: coin.name)];
+
+                    return Column(
+                      children: varieties.map((variety) {
+                        // Unique key: "YEAR||VARIETY_ID||SERIES_NAME"
+                        final coinName = '${coin.year ?? ''}||${variety.id}||${coin.name}';
+
+                        // Display label: "1964 No Mint Mark", "1964 D Proof", etc.
+                        final displayLabel = [
+                          if ((coin.year ?? '').isNotEmpty) coin.year!,
+                          variety.label.isNotEmpty ? variety.label : coin.name,
+                        ].join(' ');
+
+                        final isPending = coin.name.contains('Pending') ||
+                            variety.label.contains('Pending');
+
+                        // Check for ownership match at variety level
+                        QueryDocumentSnapshot? matchedDoc;
+                        for (var doc in docs) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          if (_isMatch(data, program, coin)) {
+                            // For variety-level match, also check variety/mint alignment
+                            final docMint = (data['Mint Mark'] ?? '').toString().toUpperCase();
+                            final vId = variety.id.toUpperCase();
+                            // Mint marks: single letters route by letter; P/no-mark match empty
+                            final mintMatch = vId == 'P' || vId == ''
+                                ? docMint.isEmpty || docMint == 'P'
+                                : docMint == vId || vId.startsWith(docMint);
+                            if (mintMatch) {
+                              matchedDoc = doc;
+                              break;
+                            }
+                          }
                         }
-                      });
-                      _tryAdvanceMorganCoinsChecked();
-                    },
-                    title: Text(coinName, style: const TextStyle(color: Color(0xFF475569))),
-                  );
-                }
-              },
-            ),
-          );
-        },
-      ),
+
+                        if (matchedDoc != null) {
+                          final data = matchedDoc.data() as Map<String, dynamic>;
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                            leading: const Icon(Icons.check_circle, color: Color(0xFF10B981)),
+                            title: Text(displayLabel,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                            subtitle: Text(
+                              'Grade: ${data['Condition'] ?? 'Ungraded'}',
+                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                            ),
+                          );
+                        } else if (isPending) {
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                            leading: const Icon(Icons.calendar_today, color: Color(0xFFF59E0B)),
+                            title: Text(displayLabel,
+                                style: const TextStyle(fontStyle: FontStyle.italic, color: Color(0xFFD97706))),
+                          );
+                        } else {
+                          final isSelectedToAdd = _selectedToAdd.contains(coinName);
+                          return CheckboxListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: const Color(0xFF3B82F6),
+                            value: isSelectedToAdd,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedToAdd.add(coinName);
+                                } else {
+                                  _selectedToAdd.remove(coinName);
+                                }
+                              });
+                              _tryAdvanceMorganCoinsChecked();
+                            },
+                            title: Text(displayLabel,
+                                style: const TextStyle(color: Color(0xFF475569))),
+                          );
+                        }
+                      }).toList(),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+
           
           if (_selectedToAdd.isNotEmpty) ...[
             const SizedBox(height: 24),
@@ -1277,42 +1311,45 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     // within 60 s returns the cached result without writing extra documents.
     final idempotencyKey = const Uuid().v4();
 
-    // Build slot payloads — re-use the same year / denomination parsing the
-    // original code used, so the callable receives typed fields.
+    // Build slot payloads from the pipe-delimited key: "YEAR||VARIETY_ID||SERIES_NAME"
     final List<Map<String, String>> slots = [];
     for (final coinName in _selectedToAdd) {
-      String parsedYear = '';
-      final yearMatch = RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(coinName);
-      if (yearMatch != null) {
-        parsedYear = yearMatch.group(0)!;
-      } else {
-        final progYearMatch =
-            RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(_selectedProgram!.years);
-        if (progYearMatch != null) parsedYear = progYearMatch.group(0)!;
-      }
+      final parts = coinName.split('||');
+      final parsedYear    = parts.isNotEmpty ? parts[0] : '';
+      final varietyId     = parts.length > 1 ? parts[1] : '';
+      final seriesName    = parts.length > 2 ? parts[2] : coinName;
 
+      // Derive denomination from series name (same logic as before, now on seriesName)
       String parsedDenom = '';
-      final lowerName = coinName.toLowerCase();
+      final lowerName = seriesName.toLowerCase();
       if (lowerName.contains('penny') || lowerName.contains('cent')) parsedDenom = '1c';
       if (lowerName.contains('nickel')) parsedDenom = '5c';
-      if (lowerName.contains('dime')) parsedDenom = '10c';
+      if (lowerName.contains('dime'))   parsedDenom = '10c';
       if (lowerName.contains('quarter')) parsedDenom = '25c';
-      if (lowerName.contains('half')) parsedDenom = '50c';
+      if (lowerName.contains('half'))    parsedDenom = '50c';
       if (lowerName.contains('dollar') || lowerName.contains(r'$1')) parsedDenom = r'$1';
 
-      // Extract mint mark from coinName if present (e.g. "1964-D 50c" → "D")
+      // Derive mint mark from variety_id.
+      // Single-letter IDs (D, S, W, O, CC) are mint marks.
+      // Compound IDs starting with a mint letter (S-PROOF, S-SILVER-PROOF, D-T1) → first segment.
+      // P and empty string → no mint mark on the coin face.
       String parsedMint = '';
-      final mintMatch = RegExp(r'\b(?:17|18|19|20)\d{2}-([A-Z]{1,2})\b').firstMatch(coinName);
-      if (mintMatch != null) parsedMint = mintMatch.group(1)!;
+      if (varietyId.isNotEmpty && varietyId != 'P') {
+        final firstSegment = varietyId.split('-').first;
+        if (RegExp(r'^[A-Z]{1,2}$').hasMatch(firstSegment) && firstSegment != 'P') {
+          parsedMint = firstSegment;
+        }
+      }
 
       slots.add({
-        'coin_name':    coinName,
+        'coin_name':    seriesName,
         'year':         parsedYear,
         'mint_mark':    parsedMint,
         'denomination': parsedDenom,
-        'variety_id':   '',
+        'variety_id':   varietyId,
       });
     }
+
 
     try {
       const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';

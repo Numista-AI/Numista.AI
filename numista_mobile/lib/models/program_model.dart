@@ -69,11 +69,12 @@ class ProgramCoin {
     return ProgramCoin(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
-      varieties: (map['varieties'] as List? ?? [])
+      varieties: List.from(map['varieties'] as List? ?? [])
           .map((v) {
             // Handle both Map format {'id':..,'label':..} and legacy String format 'P'
-            if (v is Map<String, dynamic>) {
-              return ChecklistVariety.fromMap(v);
+            // Use `is Map` (not Map<String,dynamic>) — Firestore web SDK returns Map<String,Object?>
+            if (v is Map) {
+              return ChecklistVariety.fromMap(Map<String, dynamic>.from(v));
             } else if (v is String) {
               return ChecklistVariety.fromId(v);
             }
@@ -132,8 +133,8 @@ class CoinProgram {
       mintMarkLocations: map['mint_mark_locations'] ?? '',
       mintMarkType: map['mint_mark_type'],
       mintMarkDescription: map['mint_mark_description'],
-      coins: (map['coins'] as List? ?? [])
-          .map((c) => ProgramCoin.fromMap(c as Map<String, dynamic>))
+      coins: List.from(map['coins'] as List? ?? [])
+          .map((c) => ProgramCoin.fromMap(Map<String, dynamic>.from(c as Map)))
           .toList(),
     );
   }
