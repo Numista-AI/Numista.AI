@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/coin_programs_data.dart';
@@ -13,6 +15,7 @@ import 'coin_search_screen.dart';
 import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../utils/slot_resolver.dart';
+
 
 class ProgramManagerScreen extends StatefulWidget {
   final String? initialProgramId;
@@ -1270,65 +1273,121 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     if (_isSavingCoins) return;
     setState(() => _isSavingCoins = true);
 
-    final batch = FirebaseFirestore.instance.batch();
+    // One idempotency key per button press. A second call with the same key
+    // within 60 s returns the cached result without writing extra documents.
+    final idempotencyKey = const Uuid().v4();
 
-    for (String coinName in _selectedToAdd) {
-      final docRef = FirebaseFirestore.instance.collection(AuthService.coinsPath).doc(const Uuid().v4());
-
-      // Attempt rudimentary parsing of year/denomination based on name
-      String parsedYear = "";
+    // Build slot payloads — re-use the same year / denomination parsing the
+    // original code used, so the callable receives typed fields.
+    final List<Map<String, String>> slots = [];
+    for (final coinName in _selectedToAdd) {
+      String parsedYear = '';
       final yearMatch = RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(coinName);
       if (yearMatch != null) {
         parsedYear = yearMatch.group(0)!;
       } else {
-        final progYearMatch = RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(_selectedProgram!.years);
+        final progYearMatch =
+            RegExp(r'\b(17|18|19|20)\d{2}\b').firstMatch(_selectedProgram!.years);
         if (progYearMatch != null) parsedYear = progYearMatch.group(0)!;
       }
 
-      String parsedDenom = "";
+      String parsedDenom = '';
       final lowerName = coinName.toLowerCase();
-      if (lowerName.contains("penny") || lowerName.contains("cent")) parsedDenom = "1c";
-      if (lowerName.contains("nickel")) parsedDenom = "5c";
-      if (lowerName.contains("dime")) parsedDenom = "10c";
-      if (lowerName.contains("quarter")) parsedDenom = "25c";
-      if (lowerName.contains("half")) parsedDenom = "50c";
-      if (lowerName.contains("dollar") || lowerName.contains("\$1")) parsedDenom = "\$1";
+      if (lowerName.contains('penny') || lowerName.contains('cent')) parsedDenom = '1c';
+      if (lowerName.contains('nickel')) parsedDenom = '5c';
+      if (lowerName.contains('dime')) parsedDenom = '10c';
+      if (lowerName.contains('quarter')) parsedDenom = '25c';
+      if (lowerName.contains('half')) parsedDenom = '50c';
+      if (lowerName.contains('dollar') || lowerName.contains(r'$1')) parsedDenom = r'$1';
 
-      batch.set(docRef, {
-        'Program/Series': _selectedProgram!.name,
-        'Theme/Subject': coinName,
-        'Year': parsedYear,
-        'Denomination': parsedDenom,
-        'Condition': 'Ungraded',
-        'AI Estimated Value': 'Pending',
-        'Cost': '\$0.00',
-        'deep_dive_status': 'PENDING',
-        'inventoryStatus': 'UNCHECKED',
-        'timestamp': FieldValue.serverTimestamp(),
+      // Extract mint mark from coinName if present (e.g. "1964-D 50c" → "D")
+      String parsedMint = '';
+      final mintMatch = RegExp(r'\b(?:17|18|19|20)\d{2}-([A-Z]{1,2})\b').firstMatch(coinName);
+      if (mintMatch != null) parsedMint = mintMatch.group(1)!;
+
+      slots.add({
+        'coin_name':    coinName,
+        'year':         parsedYear,
+        'mint_mark':    parsedMint,
+        'denomination': parsedDenom,
+        'variety_id':   '',
       });
     }
 
     try {
-      await batch.commit();
-      if (mounted) {
+      const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/checklist/add_coins'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'idempotency_key': idempotencyKey,
+          'program_id':      _selectedProgram!.id,
+          'program_name':    _selectedProgram!.name,
+          'user_email':      AuthService.userEmail,
+          'slots':           slots,
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final duplicateWarning = body['duplicate_warning'] as bool? ?? false;
+        final coinsWritten    = body['coins_written'] as int? ?? 0;
+
+        // Show dismissible duplicate-details banner if server detected a match.
+        // Grade and variety are NOT checked — this fires only on
+        // program_id + year + mint_mark. The write always completes.
+        if (duplicateWarning && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'One or more of these coins may already be in your collection '
+                '(same year & mint). The coins were added — tap to dismiss.',
+              ),
+              backgroundColor: const Color(0xFFF59E0B),
+              duration: const Duration(seconds: 6),
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: () =>
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+              ),
+            ),
+          );
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully added ${_selectedToAdd.length} coins!'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text('Successfully added $coinsWritten coin${coinsWritten == 1 ? '' : 's'}!'),
+            backgroundColor: Colors.green,
+          ),
         );
         _tryAdvanceMorganCoinsCommitted();
-        setState(() {
-          _selectedToAdd.clear();
-        });
+        setState(() { _selectedToAdd.clear(); });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding coins (${response.statusCode}): ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Error adding coins: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Network error adding coins: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _isSavingCoins = false);
     }
   }
+
+
 
   void _tryAdvanceMorganProgramSelect() {
     final gs = MorganGuideService.current.value;

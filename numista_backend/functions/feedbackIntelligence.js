@@ -1,4 +1,4 @@
-﻿/**
+/**
  * feedbackIntelligence.js
  * Heavy imports are lazy-loaded inside function bodies to avoid
  * Firebase CLI deployment analysis timeout.
@@ -67,7 +67,7 @@ estimated_effort must be exactly one of: small, medium, large
 pattern_tags should be 2-5 lowercase keywords (e.g. "overlay", "web-only", "auth", "navigation", "performance")`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-3.7-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 

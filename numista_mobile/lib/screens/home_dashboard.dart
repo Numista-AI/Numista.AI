@@ -1526,10 +1526,87 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.157',
+    date: '2026-08-23',
+    description: 'Known-errors Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Sync release notes pre-push',
+      'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
+      'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
+      'Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup',
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.156',
+    date: '2026-08-23',
+    description: 'Known-errors Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Sync release notes pre-push',
+      'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
+      'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
+      'Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup',
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.155',
+    date: '2026-08-23',
+    description: 'Model Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
+      'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
+      'Release: auto-bump v4.154 release notes and run_tests.ps1 cleanup',
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.154',
+    date: '2026-08-23',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Checklist: Phase 1 audit script + Phase 4 server-mediated add_coins callable',
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.153',
+    date: '2026-08-23',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
+    version: 'v4.152',
+    date: '2026-08-23',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release version to v4.151',
+      'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
+    ],
+  ),
+  _Release(
     version: 'v4.151',
     date: '2026-08-23',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: generate 2026-08-23 SCAN_REPORT.md and sync morning QC benchmarks',
       'Login: remove Free Scan Preview button (desktop-only launch, not ready for mobile)',

@@ -39,9 +39,32 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Greysheet cache (Cloud Run service account only — no client access) ──────
+    // Pre-computed error collectible lists and pricing per denomination/year/GSID.
+    // Clients receive this data via the Cloud Run HTTP route only, never directly.
+    match /greysheet_cache/{doc} {
+      allow read, write: if false; // Cloud Run service account only
+    }
+
+    // ── Greysheet error config (admin read only — no client writes) ───────────
+    // greysheet_error_keywords: versioned keyword set + attribution_label field.
+    // greysheet_error_gsid_allowlist: human-curated GSID → error_type mapping.
+    // Both are read by Cloud Run only on the request path; admin reads in console.
+    match /config/greysheet_error_keywords {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false; // Cloud Run service account only
+    }
+
+    match /config/greysheet_error_gsid_allowlist {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow write: if false; // Cloud Run service account only
+    }
+
     // ── Config (PCGS token, NewsAPI key, etc.) ────────────────────────────────
     // Read access needed by the Flutter client to fetch the platform PCGS token.
     // Write access restricted to admin (backend service account bypasses rules).
+    // NOTE: greysheet_error_keywords and greysheet_error_gsid_allowlist are
+    //       matched by the more-specific rules above and are NOT readable here.
     match /config/{document=**} {
       allow read: if isAuthenticated();
       allow write: if false;  // backend service account only

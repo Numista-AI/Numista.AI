@@ -332,7 +332,9 @@ class BetaFeedbackService {
       'mode': 'ADMIN_RESOLVE',
       'doc_id': docId,
       'resolution_note': resolutionNote,
+      // ignore: use_null_aware_elements
       if (newIssueType != null) 'new_issue_type': newIssueType,
+      // ignore: use_null_aware_elements
       if (newStatus != null) 'new_status': newStatus,
     });
   }

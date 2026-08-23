@@ -203,6 +203,25 @@ class SlotResolver {
   /// Evaluates an item from Firestore against a program coin slot.
 
   static bool isMatch(Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
+    // ── 0a. program_id fast path ────────────────────────────────────────────
+    // Coins added via POST /api/checklist/add_coins carry a mandatory
+    // snake_case `program_id` field written by the server. When present, use it
+    // as the single source of truth and skip all string heuristics below.
+    // Legacy coins (added before Phase 4) have no `program_id` field and fall
+    // through to the existing matching logic unchanged.
+    final storedProgramId = item['program_id']?.toString();
+    if (storedProgramId != null && storedProgramId.isNotEmpty) {
+      // Year guard still applies even on fast-path — we must still match the
+      // correct slot row within the program.
+      final slotYear = (coinSlot.year ?? '').trim();
+      if (slotYear.isNotEmpty) {
+        final itemYear = (item['Year']?.toString() ?? item['year']?.toString() ?? '').trim();
+        final normalizedYear = (itemYear == '1776-1976') ? '1976' : itemYear;
+        if (normalizedYear.isEmpty || normalizedYear != slotYear) return false;
+      }
+      return storedProgramId == program.id;
+    }
+
     final denom      = (item['Denomination']?.toString() ?? item['denomination']?.toString() ?? '').toLowerCase();
     final progSeries = (item['Program/Series']?.toString() ?? item['program_series']?.toString() ?? '').trim();
     final themeSub   = (item['Theme/Subject']?.toString() ?? item['theme_subject']?.toString() ?? '').trim().toLowerCase();
@@ -288,6 +307,7 @@ class SlotResolver {
 
     return false;
   }
+
 
   /// Resolves which specific variety/mint column an item belongs to.
   static bool matchesVariety(Map<String, dynamic> item, ChecklistVariety variety) {

@@ -88,7 +88,7 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _permissionLevel,
+                initialValue: _permissionLevel,
                 decoration: const InputDecoration(labelText: 'Permission Level'),
                 items: const [
                   DropdownMenuItem(value: 'VIEW_ONLY', child: Text('View Only (Read-Only Access)')),
