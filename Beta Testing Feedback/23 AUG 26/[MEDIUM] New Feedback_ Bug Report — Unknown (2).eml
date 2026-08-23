@@ -1,0 +1,210 @@
+Return-Path: <eric@numista.ai>
+Received: from [127.0.0.1] ([2600:1900:0:2d06::2c00])
+        by smtp.gmail.com with ESMTPSA id 5614622812f47-4b32c8c8744sm1433345b6e.18.2026.08.23.09.22.19
+        for <eric@numista.ai>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sun, 23 Aug 2026 09:22:19 -0700 (PDT)
+From: Numista Feedback Bot <eric@numista.ai>
+To: eric@numista.ai
+Subject: =?UTF-8?Q?=5BMEDIUM=5D_New_Feedback=3A_Bug_Report_?=
+ =?UTF-8?Q?=E2=80=94_Unknown?=
+Message-ID: <e99c67b6-4535-ce64-e19b-8393d82ee5a9@numista.ai>
+Content-Transfer-Encoding: quoted-printable
+Date: Sun, 23 Aug 2026 16:22:19 +0000
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<html>
+<head><meta charset=3D"UTF-8"><meta =
+name=3D"viewport" content=3D"width=3Ddevice-width,initial-scale=3D1"></head=
+>
+<body style=3D"margin:0;padding:0;background:#0F172A;font-family:'Segoe =
+UI',Arial,sans-serif;color:#E2E8F0">
+<table width=3D"100%" =
+cellpadding=3D"0" cellspacing=3D"0" style=3D"background:#0F172A;padding:24p=
+x 0">
+<tr><td align=3D"center">
+<table width=3D"600" cellpadding=3D"0" =
+cellspacing=3D"0" style=3D"background:#1E293B;border-radius:12px;overflow:h=
+idden;border:1px solid #334155">
+
+  <!-- Header -->
+  <tr><td style=3D"background:linear-gradient(135deg,#1E3A8A,=
+#1E293B);padding:24px 32px">
+    <table width=3D"100%"><tr>
+      <td><span style=3D"font-size:22px;font-weight:700;color:#fff">=
+=F0=9F=93=8A Numista.AI</span><br>
+          <span style=3D"font-size:13px;=
+color:#94A3B8">Beta Feedback Alert</span></td>
+      <td align=3D"right">
+        <span style=3D"background:#F59E0B;color:#fff;padding:6px =
+16px;border-radius:20px;font-size:14px;font-weight:700">
+          =F0=9F=9F=A1 MEDIUM
+        </span>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Core info row -->
+  <tr><td style=3D"padding:20px 32px=
+ 0">
+    <table width=3D"100%" style=3D"border-collapse:collapse">
+      <tr>
+        <td style=3D"padding:8px 12px;background:#0F172A;border-=
+radius:8px;width:48%">
+          <div style=3D"font-size:11px;color:#64748B=
+;text-transform:uppercase;letter-spacing:1px">Issue Type</div>
+          <div style=3D"font-size:15px;font-weight:600;color:#F1F5F9;margin=
+-top:4px">Bug Report</div>
+        </td>
+        <td =
+style=3D"width:4%"></td>
+        <td style=3D"padding:8px =
+12px;background:#0F172A;border-radius:8px;width:48%">
+          <div style=3D"font-size:11px;color:#64748B;text-transform:upperca=
+se;letter-spacing:1px">Intake Method</div>
+          <div =
+style=3D"font-size:15px;font-weight:600;color:#F1F5F9;margin-top:4px">=
+=F0=9F=93=9D Fallback Form</div>
+        </td>
+      </tr>
+      <tr><td colspan=3D"3" style=3D"height:8px"></td></tr>
+      <tr>
+        <td style=3D"padding:8px 12px;background:#0F172A;border-radius:8px"=
+>
+          <div style=3D"font-size:11px;color:#64748B;text-transform:upper=
+case;letter-spacing:1px">Page</div>
+          <div style=3D"font-size:14px;=
+color:#F1F5F9;margin-top:4px">Unknown <span style=3D"color:#64748B;font-siz=
+e:12px">(/)</span></div>
+        </td>
+        <td style=3D"width:4%"></td>
+        <td style=3D"padding:8px 12px;background:#0F172A;border-radius:8px"=
+>
+          <div style=3D"font-size:11px;color:#64748B;text-transform:upper=
+case;letter-spacing:1px">User</div>
+          <div style=3D"font-size:14px;=
+color:#F1F5F9;margin-top:4px">HQ6o1EwlDKO5WLLKj7bhm3SvRUW2</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- MORGAN Summary -->
+  <tr><td style=3D"padding:20px 32px 0">
+    <div style=3D"font-size:12px;color:#64748B;text-transform:uppercase;let=
+ter-spacing:1px;margin-bottom:8px">MORGAN's Summary</div>
+    <div style=3D"background:#0F172A;border-left:3px solid =
+#3B82F6;padding:12px 16px;border-radius:0 8px 8px 0;font-size:14px;color:#C=
+BD5E1;line-height:1.6">
+      <em style=3D"color:#64748B">No summary =
+available</em>
+    </div>
+  </td></tr>
+
+  <!-- AI Guidance box -->
+  <tr><td style=3D"padding:20px 32px 0">
+    <div style=3D"background:#1A27=
+44;border:1px solid #2D4A8A;border-radius:10px;padding:16px 20px">
+      <div style=3D"font-size:13px;font-weight:700;color:#60A5FA;margin-bot=
+tom:12px">=F0=9F=A4=96 AI Triage Guidance</div>
+      <table width=3D"100%"=
+ style=3D"border-collapse:collapse">
+        <tr><td style=3D"padding:0 0 =
+10px">
+          <div style=3D"font-size:11px;color:#6B7280;text-transform:=
+uppercase;letter-spacing:0.8px">Root Cause Hypothesis</div>
+          <div style=3D"font-size:13px;color:#E2E8F0;margin-top:3px">Analys=
+is unavailable</div>
+        </td></tr>
+        <tr><td style=3D"padding:0 =
+0 10px;border-top:1px solid #1E3A8A">
+          <div =
+style=3D"font-size:11px;color:#6B7280;text-transform:uppercase;letter-spaci=
+ng:0.8px;margin-top:10px">Suggested Fix Area</div>
+          <div =
+style=3D"font-size:13px;color:#93C5FD;margin-top:3px;font-family:monospace"=
+>=E2=80=94</div>
+        </td></tr>
+        <tr><td style=3D"padding:0 0 =
+10px;border-top:1px solid #1E3A8A">
+          <div style=3D"font-size:11px;=
+color:#6B7280;text-transform:uppercase;letter-spacing:0.=
+8px;margin-top:10px">Priority Rationale</div>
+          <div =
+style=3D"font-size:13px;color:#E2E8F0;margin-top:3px">Manual review =
+required</div>
+        </td></tr>
+        <tr><td style=3D"border-top:1px =
+solid #1E3A8A;padding-top:10px">
+          <span style=3D"font-size:11px;co=
+lor:#6B7280;text-transform:uppercase;letter-spacing:0.8px">Effort: </span>
+          <span style=3D"color:#F59E0B;font-weight:700;font-size:13px">MEDI=
+UM</span>
+          &nbsp;&nbsp;
+         =20
+        </td></tr>
+      </table>
+    </div>
+  </td></tr>
+
+  <!-- Screenshot -->
+  <tr><td style=3D"padding:16px 32px 0">
+    <div style=3D"font-size:12px;c=
+olor:#64748B;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px"=
+>Screenshot</div>
+    <p style=3D"color:#6B7280;margin:8px =
+0;font-size:13px">No screenshot attached</p>
+  </td></tr>
+
+  <!-- Transcript preview -->
+ =20
+  <tr><td style=3D"padding:16px 32px 0">
+    <div style=3D"font-size:12px;color:#64748B;text-transform:uppercase;let=
+ter-spacing:1px;margin-bottom:6px">Interview Transcript (preview)</div>
+    <table width=3D"100%" style=3D"border-radius:8px;overflow:hidden;border=
+:1px solid #1E293B"><tr><td style=3D"background:#1E293B;padding:8px =
+12px;border-bottom:1px solid #1E293B;font-size:13px;color:#E2E8F0"><strong =
+style=3D"color:#60A5FA">=F0=9F=91=A4 User:</strong> view binder short cut =
+does not work</td></tr></table>
+  </td></tr>
+
+  <!-- CTA -->
+  <tr><td style=3D"padding:24px 32px;text-align:center">
+    <a href=3D"https://numista.ai" style=3D"background:#1D4ED8;color:#fff;p=
+adding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;fon=
+t-size:14px;display:inline-block;margin-bottom:10px">
+      Open Numista.AI =E2=86=92
+    </a>
+    <p style=3D"font-size:12px;col=
+or:#94A3B8;margin:4px 0 12px">
+      Then open the sidebar and tap <strong =
+style=3D"color:#E2E8F0">"Beta Feedback Inbox"</strong>
+    </p>
+    <a href=3D"https://console.firebase.google.com/project/studio-910180211=
+8-8c9a8/firestore/databases/-default-/data/~2Fbeta_feedback~2F253599ed53844=
+7dcc05ac0e2c17a86350181fb4d" style=3D"background:#0F172A;color:#60A5FA;padd=
+ing:8px 20px;border-radius:8px;text-decoration:none;font-size:12px;display:=
+inline-block;border:1px solid #1E3A8A">
+      View raw doc in Firestore =
+Console =E2=86=97
+    </a>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style=3D"padding:16px 32px 24px;border-top:1px solid #1E293B">
+    <p style=3D"font-size:11px;color:#64748B;margin:0">
+      Feedback ID: <code style=3D"color:#94A3B8">253599ed538447dcc05ac0e2c1=
+7a86350181fb4d</code> &nbsp;=C2=B7&nbsp;
+      App Version: 4.1.0-beta =
+&nbsp;=C2=B7&nbsp;
+      Turns: 1
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

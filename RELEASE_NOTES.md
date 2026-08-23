@@ -167,6 +167,84 @@
 
 
 
+
+
+
+
+
+
+## v4.170 — 2026-08-23
+**Home-dashboard Enhancements & Platform Updates**
+
+- Home-dashboard: auth-primary stream selection fixes demo-mode leak
+- Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer
+- Feedback: correct ServiceUnavailable exception name for installed SDK version
+- Feedback: resolve composite index error and correct transcript field names
+- Feedback: add Antigravity feedback reader, triage script, and workflow protocol
+- Checklist: compact year-row layout â€” one row per year, varieties inline
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+
+## v4.169 — 2026-08-23
+**Ui Enhancements & Platform Updates**
+
+- Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer
+- Feedback: correct ServiceUnavailable exception name for installed SDK version
+- Feedback: resolve composite index error and correct transcript field names
+- Feedback: add Antigravity feedback reader, triage script, and workflow protocol
+- Checklist: compact year-row layout â€” one row per year, varieties inline
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+- Checklist: flatten program checklist to variety-level slots
+
+## v4.168 — 2026-08-23
+**Feedback Enhancements & Platform Updates**
+
+- Feedback: correct ServiceUnavailable exception name for installed SDK version
+- Feedback: resolve composite index error and correct transcript field names
+- Feedback: add Antigravity feedback reader, triage script, and workflow protocol
+- Checklist: compact year-row layout â€” one row per year, varieties inline
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+- Checklist: flatten program checklist to variety-level slots
+- Release: sync release notes v4.163
+
+## v4.167 — 2026-08-23
+**Feedback Enhancements & Platform Updates**
+
+- Feedback: resolve composite index error and correct transcript field names
+- Feedback: add Antigravity feedback reader, triage script, and workflow protocol
+- Checklist: compact year-row layout â€” one row per year, varieties inline
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+- Checklist: flatten program checklist to variety-level slots
+- Release: sync release notes v4.163
+- Release: sync release notes v4.162
+
+## v4.166 — 2026-08-23
+**Feedback Enhancements & Platform Updates**
+
+- Feedback: add Antigravity feedback reader, triage script, and workflow protocol
+- Checklist: compact year-row layout â€” one row per year, varieties inline
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+- Checklist: flatten program checklist to variety-level slots
+- Release: sync release notes v4.163
+- Release: sync release notes v4.162
+- Release: sync release notes v4.161
+
+## v4.165 — 2026-08-23
+**Program_model Enhancements & Platform Updates**
+
+- Program_model: use List.from + Map.from to safely cast Firestore web SDK types
+- Release: auto-bump version notes for checklist variety-level fix
+- Checklist: flatten program checklist to variety-level slots
+- Release: sync release notes v4.163
+- Release: sync release notes v4.162
+- Release: sync release notes v4.161
+- Release: sync release notes v4.160
+- Release: sync release notes v4.159
+
 ## v4.164 — 2026-08-23
 **Release Enhancements & Platform Updates**
 

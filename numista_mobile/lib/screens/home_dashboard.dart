@@ -1543,10 +1543,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.170',
+    date: '2026-08-23',
+    description: 'Home-dashboard Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Home-dashboard: auth-primary stream selection fixes demo-mode leak',
+      'Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer',
+      'Feedback: correct ServiceUnavailable exception name for installed SDK version',
+      'Feedback: resolve composite index error and correct transcript field names',
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
+      'Release: auto-bump version notes for checklist variety-level fix',
+    ],
+  ),
+  _Release(
     version: 'v4.169',
     date: '2026-08-23',
     description: 'Ui Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer',
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
