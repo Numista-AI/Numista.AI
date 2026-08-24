@@ -1,0 +1,59 @@
+{
+  "_comment": "Numista QC Suite Manifest — read by run_qc.ps1 and all Python layer scripts.",
+  "_instructions": "Set qa_project_id and qc_uid after provisioning the QA Firebase project. Never set qa_project_id to studio-9101802118-8c9a8 (production).",
+
+  "qa_project_id": "REPLACE_WITH_QA_PROJECT_ID",
+  "qc_uid": "REPLACE_WITH_QA_USER_UID",
+  "qa_isolation_mode": "interim_sealed_account",
+
+  "forbidden_accounts": [
+    "ericdcman@gmail.com",
+    "eric.seaman@yahoo.com",
+    "jseaman1204@gmail.com"
+  ],
+
+  "production_project_id": "studio-9101802118-8c9a8",
+
+  "allowed_health_probe_endpoints": [
+    "https://numista.ai/",
+    "https://numista-backend-568985927038.us-central1.run.app/api/spot_prices",
+    "https://numista-backend-568985927038.us-central1.run.app/health"
+  ],
+
+  "theme_settle_ms": 500,
+
+  "coin_title_assertion_path_log": null,
+
+  "canonical_title_field": null,
+  "_canonical_title_field_note": "Set this to 'series' or 'program_series' after reading a live Firestore document and confirming the actual field name. Until set, coin_data_audit.py uses a quad-check (title, theme_subject, series, program_series).",
+
+  "protected_files": [
+    "passport_pdf_generator.py",
+    "numista_bq_loader_job",
+    "tier_gatekeeper.py"
+  ],
+
+  "isolation_sunset_date": null,
+  "_isolation_sunset_note": "Set by run_qc.ps1 on first run if qa_isolation_mode is interim_sealed_account. Format: YYYY-MM-DD. Suite aborts if today >= this date.",
+
+  "schema": {
+    "coins_collection": "users/{uid}/coins/{coin_id}",
+    "currency_collection": "users/{uid}/currency/{currency_id}",
+    "world_items_collection": "users/{uid}/world_items/{item_id}",
+    "required_snake_case_fields": [
+      "coin_id", "title", "country", "denomination", "year",
+      "mint_mark", "series", "variety", "grade", "grading_service",
+      "cert_number", "purchase_price", "estimated_value",
+      "greysheet_value", "melt_value", "obverse_image_url",
+      "reverse_image_url", "is_silver", "is_gold", "is_foreign",
+      "review_status", "created_at", "updated_at"
+    ]
+  },
+
+  "storage_buckets": [
+    "gs://numista-uploads-studio-9101802118-8c9a8",
+    "gs://numista-reference-library",
+    "gs://us_mint_coin_images",
+    "gs://studio-9101802118-8c9a8-uploads"
+  ]
+}
