@@ -404,12 +404,19 @@ test.describe('CAT-E: Legislation Tab and Programs', () => {
       await page.mouse.click(400, 400);
       await page.waitForTimeout(500);
     }
-    // Click first coin row — coin rows have "Coin ·" subtitle text in the list
-    const coinRow = page.locator('text=Coin ·').first();
-    if (await coinRow.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await coinRow.click();
-      await page.waitForTimeout(1500);
-    }
+    // Click first coin detail row using dispatchEvent — Playwright's .click() is blocked by
+    // flutter-view pointer interception. dispatchEvent fires directly on the DOM node.
+    // Use evaluate to find a non-root flt-semantics that directly contains a coin subtitle.
+    await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll('flt-semantics'));
+      const coinNode = nodes.find(n =>
+        n.id !== 'flt-semantic-node-0' &&
+        Array.from(n.childNodes).some(c => c.nodeType === 3 /* TEXT_NODE */) &&
+        n.textContent && n.textContent.includes('Coin ·') && n.textContent.includes('United States')
+      );
+      if (coinNode) coinNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    });
+    await page.waitForTimeout(1500);
     await page.waitForFunction(
       () => { const p = document.querySelector('flt-glass-pane'); return p && getComputedStyle(p).visibility === 'visible'; },
       { timeout: 20000 }
@@ -450,12 +457,17 @@ test.describe('CAT-F: Financials and Morgan Drawer', () => {
       await page.mouse.click(400, 400);
       await page.waitForTimeout(500);
     }
-    // Click first coin row — coin rows have "Coin ·" subtitle text in the list
-    const coinRow015 = page.locator('text=Coin ·').first();
-    if (await coinRow015.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await coinRow015.click();
-      await page.waitForTimeout(1500);
-    }
+    // Click first coin detail row using dispatchEvent (bypasses flutter-view pointer interception)
+    await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll('flt-semantics'));
+      const coinNode = nodes.find(n =>
+        n.id !== 'flt-semantic-node-0' &&
+        Array.from(n.childNodes).some(c => c.nodeType === 3 /* TEXT_NODE */) &&
+        n.textContent && n.textContent.includes('Coin ·') && n.textContent.includes('United States')
+      );
+      if (coinNode) coinNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    });
+    await page.waitForTimeout(1500);
     await page.waitForFunction(
       () => { const p = document.querySelector('flt-glass-pane'); return p && getComputedStyle(p).visibility === 'visible'; },
       { timeout: 20000 }
