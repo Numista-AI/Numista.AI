@@ -1408,7 +1408,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+        labelStyle: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 13), // Phase 2C
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
         filled: true,
