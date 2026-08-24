@@ -583,8 +583,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 icon: const Icon(Icons.arrow_back, size: 16),
                 label: const Text('Back'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white54),
+                  foregroundColor: const Color(0xFF0F172A),
+                  side: const BorderSide(color: Color(0xFFCBD5E1)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                 ),
               ),
@@ -592,7 +592,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               Expanded(
                 child: Text(
                   program.name,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                 ),
               ),
               // ── Print Checklist Button ─────────────────────────────────
@@ -846,7 +846,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -855,7 +855,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         'advancing overall U.S. Currency System of Record completion by ${programOverallAdvancement.toStringAsFixed(2)}%.',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: Color(0xFF64748B),
                           height: 1.4,
                         ),
                       ),
@@ -870,7 +870,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              const Text('Program Checklist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
               if (_selectedMintFilter != 'ALL' || _selectedFinishFilter != 'ALL')
                 TextButton.icon(
                   onPressed: () => setState(() {
