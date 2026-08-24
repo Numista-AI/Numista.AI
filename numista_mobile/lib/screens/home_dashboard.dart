@@ -1543,10 +1543,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.174',
+    date: '2026-08-24',
+    description: 'Scanner Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Scanner: full system audit 2026-08-24 - 215 pytest PASS, 157 E2E PASS, domain engine 19 PASS',
+      'Qa: optimize daily audit runner with parallel workers and fast timeouts',
+      'Home-dashboard: auth-primary stream selection fixes demo-mode leak',
+      'Ui: fix white-on-white text in dark mode forms + reroute Send Beta Feedback to Morgan drawer',
+      'Feedback: correct ServiceUnavailable exception name for installed SDK version',
+      'Feedback: resolve composite index error and correct transcript field names',
+      'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
+      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+    ],
+  ),
+  _Release(
     version: 'v4.173',
     date: '2026-08-23',
     description: 'Qa Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Qa: optimize daily audit runner with parallel workers and fast timeouts',
       'Home-dashboard: auth-primary stream selection fixes demo-mode leak',
