@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
@@ -16,6 +18,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Enable Flutter accessibility semantics on web so that Playwright
+  // text= / aria-label locators can find flt-semantics nodes.
+  // SemanticsBinding.instance is a no-op on non-web platforms.
+  if (kIsWeb) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
