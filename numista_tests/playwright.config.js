@@ -1,4 +1,6 @@
 const { defineConfig, devices } = require('@playwright/test');
+// Phase 3C: load .env for TEST_USER_EMAIL / TEST_USER_PASSWORD
+require('dotenv').config();
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -21,10 +23,17 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
+    // Phase 3C: auth setup runs first, saves fixtures/auth-state.json
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.js/,
+    },
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        // Reuse saved auth session for all tests
+        storageState: 'fixtures/auth-state.json',
         launchOptions: {
           args: [
             '--use-gl=angle',
@@ -33,6 +42,7 @@ module.exports = defineConfig({
           ],
         },
       },
+      dependencies: ['setup'],
     },
   ],
   outputDir: 'screenshots',

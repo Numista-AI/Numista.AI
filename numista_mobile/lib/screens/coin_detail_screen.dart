@@ -1628,14 +1628,17 @@ class _FinancialsTab extends StatelessWidget {
     final estAmt      = greysheetVal > 0 ? greysheetVal : _parseAiValue(coin.aiEstimatedValue);
     final profit      = estAmt - purchaseAmt;
     final profitPct   = purchaseAmt > 0 ? (profit / purchaseAmt * 100) : null;
-    final canCalcPL   = purchaseAmt > 0 && estAmt > 0;
 
+    // Q3-Option-B + Q5-Option-1: empty/zero = face value ($0.00); UKN = above-face-unknown
     final rawCost = coin.purchaseCost.trim();
-    final costDisplay = (rawCost == r'$0.00' || rawCost == '0' || rawCost == '0.00' || rawCost == r'$0')
+    final costDisplay = (rawCost.isEmpty || rawCost == r'$0.00' || rawCost == '0' || rawCost == '0.00' || rawCost == r'$0')
         ? r'$0.00'
-        : (rawCost.isEmpty || rawCost.toLowerCase() == 'ukn' || rawCost.toLowerCase() == 'unknown'
+        : (rawCost.toLowerCase() == 'ukn' || rawCost.toLowerCase() == 'unknown'
             ? 'UKN'
             : rawCost);
+
+    // Q5-Option-1: face value ($0.00) calculates P&L; UKN suppresses it
+    final canCalcPL = (costDisplay != 'UKN') && estAmt > 0;
 
     final plDolStr = canCalcPL
         ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';
