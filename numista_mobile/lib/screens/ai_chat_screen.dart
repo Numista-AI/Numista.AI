@@ -29,6 +29,7 @@ class AiChatScreen extends StatefulWidget {
   final VoidCallback? onMinimize;
   final ValueChanged<DragUpdateDetails>? onDragUpdate;
   final VoidCallback? onDragEnd;
+  final VoidCallback? onNavigateToCollection;
 
   const AiChatScreen({
     super.key,
@@ -39,6 +40,7 @@ class AiChatScreen extends StatefulWidget {
     this.onMinimize,
     this.onDragUpdate,
     this.onDragEnd,
+    this.onNavigateToCollection,
   });
 
   @override
@@ -647,7 +649,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
                           const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                     onPressed: () {
-                      if (Navigator.canPop(context)) Navigator.pop(context);
+                      if (widget.onNavigateToCollection != null) {
+                        widget.onNavigateToCollection!();
+                      } else if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      }
                     },
                     icon: const Icon(Icons.collections_bookmark, size: 14),
                     label: const Text('View Binder'),

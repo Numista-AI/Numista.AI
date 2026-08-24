@@ -1,0 +1,91 @@
+Actual Feedback
+
+Folder dedicated to this task: "C:\Users\ericd\Documents\MyVertexProject\Beta Testing Feedback\23 AUG 26\Actual Feedback"
+V1 Feedback
+GEMINI:
+1. Decision Matrix
+2. Domain Audit
+Coins System of Record (SoR): Low risk as long as foreign sovereign coins remain under users/{uid}/coins using is_foreign boolean flags. In-place metadata patches maintain immutable UUIDs and document IDs without deletions.
+Estate PDFs (passport_pdf_generator.py): High risk if paper currency (currency) or exonumia (world_items) contaminate coin collections or if missing valuations return $0.00. The tiered fallback (Greysheet CPG → Bullion Melt → Purchase Cost) ensures deterministic numeric values for estate division math.
+BigQuery ETL (numista_bq_loader_job): Moderate risk if field names deviate from strict snake_case or if numeric values are stored as strings. Field normalization ensures schema compatibility across analytics pipelines.
+API Quotas & Performance: Greysheet API consumption is protected by GreysheetQuotaService hard caps (50,000 requests) and automatic fallbacks to frozen spot metal matrices.
+3. Contradictions
+Sentence 1: "All DB writes utilize doc_ref.set(data, merge=True)."
+Sentence 2: "Use SetOptions (merge=True) for all Firestore backfill writes."
+4. Must-Fix (max 5)
+Restrict Universal Merge Flag: Update patch_beta_13aug_metadata.py and write pipelines so SetOptions(merge=True) is used exclusively when patching existing coin documents. New record creations must be written whole without forced merge options.
+Segregate Estate Math Collections: Ensure currency (paper money) and world_items (exonumia, medals, tokens) are isolated from users/{uid}/coins. Verify that passport_pdf_generator.py filters strictly on coin documents when compiling lot division schedules.
+Enforce snake_case Field Conventions: Validate that all patched metadata fields (is_foreign, program_series, theme_subject, variety_error, mint_mark, obverse_image_url, reverse_image_url) use strict snake_case to protect numista_bq_loader_job.
+Normalize Auth Email Paths: Enforce lowercase string normalization on user email paths in Firestore getters (users/{email_lowercase}/coins) to prevent orphaned document paths across sign-in routes.
+5. Keep As-Is
+In-place Firestore patching with zero document deletions or UUID/document-ID mutations.
+Unified users/{uid}/coins collection path for both US and world sovereign coins.
+Tiered valuation fallback hierarchy (Greysheet CPG → Bullion Melt → Purchase Cost).
+Frozen spot metal price matrix (frozen_spot_matrix.json) for audit execution stability.
+Demo clearance hook (GuestSeedService.deactivateBrowseDemo()) on real auth state transitions[cite: 2, 3].
+Desktop Web targeting ([https://numista.ai](https://numista.ai), GCP studio-9101802118-8c9a8) with mobile OS builds deferred to 2027.
+6. Handshake
+Target Files:
+numista_backend/python_scripts/patch_beta_13aug_metadata.py
+numista_qa_runner/prod_account_audit_repair.py
+numista_backend/services/passport_pdf_generator.py
+numista_bq_loader_job
+numista_backend/tier_gatekeeper.py
+numista_mobile/lib/main.dart[cite: 2, 3]
+numista_mobile/lib/services/guest_seed_service.dart[cite: 2, 3]
+numista_mobile/lib/screens/login_screen.dart[cite: 2, 3]
+numista_mobile/lib/screens/my_collection_screen.dart
+numista_mobile/lib/screens/coin_detail_screen.dart
+Schema Fields (users/{uid}/coins/{coin_id}):
+coin_id, title, country, denomination, year, mint_mark, grade, estimated_value, greysheet_value, melt_value, is_foreign, is_silver, is_gold, weight_grams, purity, program_series, theme_subject, variety_error, obverse_image_url, reverse_image_url, updated_at.
+Bucket Paths:
+gs://numista-uploads-studio-9101802118-8c9a8/
+gs://numista-reference-library
+gs://us_mint_coin_images
+MINOR: execute only after listed tweaks
+GROK:
+**Must-Fix Before Next Version**
+1. **Data-source selection remains flag-primary (not closed).** `home_dashboard.dart` (and any other stream chooser) still decides between demo JSON and Firestore solely on the client static flag. For a legal-grade System of Record this is unacceptable. The next plan must show the decision rewritten so that a non-null, non-anonymous Firebase user **always** forces the real Firestore stream and clears the flag; the flag may only be consulted when there is no real user. Clearing the flag is necessary but not sufficient.
+2. **State machine for Browse Demo / real user / anonymous guest is undefined.** The plan clears the flag on both `_signIn` and `_signInAsGuest`. GuestSeedService appears designed to support anonymous/guest seeding. Next plan must contain an explicit matrix (or short state machine) of allowed combinations and the exact behaviour for each. Ambiguity here will re-introduce the same class of leak.
+3. **No hard invariant or observability.** Add a debug assert / production log (or both) that fires if demo mode is still true while a real user is present. Without this the invariant is invisible and will silently regress.
+4. **Verification is manual-only.** Require at least one unit test for `clearDemoOnSignIn` / `deactivateBrowseDemo` (idempotent, clears cache) and a concrete note on how the StreamBuilder path will be exercised (widget test or documented integration step). Manual scenarios alone are insufficient for a System-of-Record change.
+5. **SPA / navigation lifetime of the static flag is underspecified.** Confirm (and document in the plan) behaviour under Flutter web hot-reload, browser back/forward, and any service-worker or isolate boundary. The current description assumes “in-memory = safe”; that must be proven for the exact navigation path that produced the bug.
+**Agree / Accept**
+- Root-cause diagnosis is excellent and backed by live Firestore evidence. The four real dollar coins exist; the 17 Washington Quarters are pure demo JSON. That evidence must stay in every future version.
+- Zero contact with `users/{uid}/coins` (or any write path) is correctly preserved and non-negotiable.
+- Defence-in-depth clearance points (StreamBuilder + login methods + named helper) are the right shape.
+- The three-file scope and “What Is Not Changing” list are clean and focused.
+- Primary manual verification scenario exactly reproduces the reported symptom.
+**Push-back / Modify**
+- Treating the flag as something that merely needs to be “cleared” is the architectural mistake. The real-user path must be **immune** to the flag. That is a material change to the decision logic, not an incremental clear.
+- Clearing on guest sign-in may be product-wrong. Do not keep that behaviour without an explicit decision recorded in the plan.
+- The plan still leaves the collection source of truth client-side. That violates the standing rule against client-trusted source of truth for this system.
+**Edge Cases, Error Modes & Operational Risks**
+- Two-tab race: statics are per-isolate, so independent. Acceptable, but document it.
+- Offline + signed-in: after clear, Firestore offline cache correctly supplies real data. No issue if the auth-primary gate is added.
+- Client debugger / console can re-set the static flag after sign-in and force demo data over a real collection. For estate-planning display this is a real integrity risk; the auth-primary gate + assert closes it.
+- No write-path, no PII exposure, no Gemini involvement, no identity spoofing beyond the existing Firebase Auth surface. Those remain clean.
+- If `StreamBuilder` emits multiple times the current deactivate is idempotent; keep that property.
+**Acceptance Criteria for Next Version**
+- Explicit BEFORE/AFTER snippet for the data-source decision (home_dashboard or equivalent) showing auth-primary logic.
+- State matrix for (real user / anonymous / unauthenticated) × demo-flag.
+- At least one automated test described for the flag lifecycle.
+- Confirmation that demo JSON never mixes into or writes to a real user’s collection.
+- Line-number accuracy against the current main branch for all three files.
+**To Antigravity (leftover “minor” items)**
+Surface the exact current line numbers and surrounding 5–8 lines for the StreamBuilder in `main.dart` and the stream selection at `home_dashboard.dart:83` so the next plan can quote precise BEFORE/AFTER. Confirm that `deactivateBrowseDemo` / `clearDemoOnSignIn` fully nulls `_demoCoinCache` and any attached listeners, and whether the demo banner is automatically dismissed or left for the next UI cycle. Also note whether `GuestSeedService.isBrowseDemoMode` is a pure getter or has side effects; that detail belongs in the next version.
+**Human summary**
+MAJOR updates still required. The core decision logic that chooses which collection a signed-in user sees is still a fragile client-side static flag. That must become auth-authoritative before any execution is approved. Once the five Must-Fix items above are present with concrete code and the state matrix, the change set is small enough to execute. Do not ship the current plan.
+V2 FEEDBACK:
+GEMINI:
+GROK:
+--- TABLE 0 ---
+Plan Item | Decision | Rationale
+Direct Firestore DB patching via patch_beta_13aug_metadata.py and prod_account_audit_repair.py | Adopt | Preserves System of Record (SoR) integrity for legal PDF generation (passport_pdf_generator.py) and BigQuery ETL (numista_bq_loader_job).
+Applying doc_ref.set(data, merge=True) on every single write operation | Modify | SetOptions(merge=True) must be restricted to in-place metadata patches on existing documents, while new records must be written whole.
+Unifying sovereign world coins under users/{uid}/coins with is_foreign: true | Adopt | Enforces a single canonical coins SoR across all sovereign legal tender worldwide without fragmenting foreign coins.
+Production account audit repair using frozen spot matrix (frozen_spot_matrix.json) | Adopt | Eliminates spot valuation drift between dry-run audit logs and live Firestore merge executions.
+Replacing byte-count DOM assertions with semantic flt-glass-pane readiness in Playwright tests | Adopt | Resolves fragile canvas rendering test failures without mutating production data.
+Deactivating demo mode on real sign-in via GuestSeedService.deactivateBrowseDemo()[cite: 2, 3] | Adopt | Clears active demo flags upon real authentication without altering underlying Firestore coin records.
+Extracting _LegislationTab to index 5 in TabBarView | Adopt | Restores the correct top-level Desktop Web UI layout between History and Known Errors.
+Storing program_series="" for non-commemorative world coins | Adopt | Maintains Firestore schema purity while dynamically rendering "Standard Circulation" in the UI.
