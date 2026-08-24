@@ -357,7 +357,10 @@ class _BaseLayoutState extends State<BaseLayout> {
         // of AI Deepdive (from sidebar) start with an empty chat.
         final q = _aiInitialQuery;
         _aiInitialQuery = null;
-        return AiChatScreen(initialQuery: q);
+        return AiChatScreen(
+          initialQuery: q,
+          onNavigateToCollection: () => _navigateTo('My Collection'),
+        );
       case 'Review Hub':
         return const ReviewHubScreen();
       case 'My Wishlist':
