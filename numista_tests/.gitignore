@@ -17,6 +17,13 @@ reports/*.md
 reports/runner.log
 reports/test-results.json
 fixtures/.auth_storage_state.json
+fixtures/auth-state.json
 scratch/
 .snapshot_*
 
+# Phase 3C — test credentials and saved auth session (never commit)
+.env
+auth.probe.json
+
+
+fixtures/auth-token.json

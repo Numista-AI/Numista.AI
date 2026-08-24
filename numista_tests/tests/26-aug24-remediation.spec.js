@@ -26,12 +26,50 @@
  */
 
 const { test, expect } = require('@playwright/test');
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+
+// Phase 3C: Per-test Firebase auth
+// Firebase stores auth in IndexedDB which Playwright storageState cannot capture.
+// Confirmed approach (auth.probe4.js 2026-08-24): sign in via JS after page load,
+// reload so Flutter boots authenticated, then wait for flt-glass-pane visibility.
+async function signInAndWait(page) {
+  const email    = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
+  // Wait for Firebase to initialize
+  await page.waitForFunction(
+    () => (window.firebase_core?.getApps?.() ?? []).length > 0,
+    { timeout: 20000 }
+  );
+  // Sign in
+  const r = await page.evaluate(async ({ em, pw }) => {
+    try {
+      const auth = window.firebase_auth.getAuth();
+      await window.firebase_auth.setPersistence(auth, window.firebase_auth.browserLocalPersistence);
+      await window.firebase_auth.signInWithEmailAndPassword(auth, em, pw);
+      return { ok: true };
+    } catch(e) { return { ok: false, error: e.message }; }
+  }, { em: email, pw: password });
+  if (!r.ok) throw new Error('Auth failed: ' + r.error);
+  // Reload so Flutter picks up the session
+  await page.reload();
+  // Wait for Flutter canvas (visibility:visible, confirmed by probe)
+  await page.waitForFunction(
+    () => {
+      const pane = document.querySelector('flt-glass-pane');
+      return pane && window.getComputedStyle(pane).visibility === 'visible';
+    },
+    { timeout: 20000 }
+  );
+  await page.waitForTimeout(2000);
+}
 
 // Shared helpers
 
-async function waitForFlutter(page, timeoutMs = 15000) {
-  await expect(page.locator('flt-glass-pane')).toBeVisible({ timeout: timeoutMs });
-  await page.waitForTimeout(1500);
+async function waitForFlutter(page, timeoutMs = 30000) {
+  // Sign in via Firebase JS API, then reload so Flutter boots authenticated.
+  // Every test calls waitForFlutter right after page.goto('/'), so this is
+  // the single auth entry point for the whole spec.
+  await signInAndWait(page);
 }
 
 async function navigateTo(page, label) {
@@ -48,6 +86,8 @@ try {
 } catch (_) {
   checkA11y = null;
 }
+
+// No beforeEach needed -- waitForFlutter handles sign-in after page.goto('/')
 
 // CAT-A: Morgan AI Set Ingestion
 
