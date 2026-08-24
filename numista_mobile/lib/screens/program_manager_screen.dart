@@ -980,6 +980,22 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          // Design / state name — shown when meaningful (non-empty and not just the year)
+                          if (coin.name.isNotEmpty && coin.name != (coin.year ?? ''))
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 180),
+                              child: Text(
+                                coin.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          if (coin.name.isNotEmpty && coin.name != (coin.year ?? ''))
+                            const SizedBox(width: 10),
                           // Variety chips — wrap to next line if too many
                           Expanded(
                             child: Wrap(
