@@ -974,6 +974,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   bool   _mintSetSaving      = false;
   String _mintSetMsg         = '';
   bool   _mintSetDone        = false;
+  bool   _isProofSet         = false;   // true = Silver Proof Set template selected
+  // Idempotency: generated once on first tap, reused on retry, null on form reset
+  String? _pendingIdempotencyKey;
 
   // Template: 2026 US Mint Uncirculated Coin Set
   static const _kUncSet2026Name     = '2026 US Mint Uncirculated Coin Set';
@@ -992,6 +995,27 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     ('25 Cents',  'Semiquincentennial Quarter',    'U.S. Constitution',                        'Cupro-Nickel'),
     ('25 Cents',  'Semiquincentennial Quarter',    'Gettysburg Address',                       'Cupro-Nickel'),
     ('1 Dollar',  'Native American Dollar',        'Polly Cooper / Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
+  ];
+
+  // Template: 2026 US Mint Silver Proof Set — Q2-LOCK 2026-08-24
+  // Source: US Mint product page + June 2026 press release. 10 coins, all S-mint.
+  // 7 of 10 are 99.9% silver; Cent, Nickel, and Native American $1 are base metal.
+  // DO NOT modify without a new written answer from Eric.
+  static const _kProofSet2026Name     = '2026 US Mint Silver Proof Set';
+  static const _kProofSet2026Retailer = 'US Mint';
+  static const _kProofMint            = 'S'; // Silver Proof Set = San Francisco Mint only
+  static const _kProofCoins = [
+    // (denomination, programSeries, themeSubject, metalContent)
+    ('1 Cent',    'Lincoln Cent',               '1776~2026 Bicentennial',                       'Copper-Plated Zinc'),
+    ('5 Cents',   'Jefferson Nickel',           '1776~2026 Bicentennial',                       'Cupro-Nickel'),
+    ('10 Cents',  'Emerging Liberty Dime',      'Emerging Liberty',                             '99.9% Silver'),
+    ('25 Cents',  'Semiquincentennial Quarter', 'Mayflower Compact',                            '99.9% Silver'),
+    ('25 Cents',  'Semiquincentennial Quarter', 'Revolutionary War',                            '99.9% Silver'),
+    ('25 Cents',  'Semiquincentennial Quarter', 'Declaration of Independence',                  '99.9% Silver'),
+    ('25 Cents',  'Semiquincentennial Quarter', 'U.S. Constitution',                            '99.9% Silver'),
+    ('25 Cents',  'Semiquincentennial Quarter', 'Gettysburg Address',                           '99.9% Silver'),
+    ('50 Cents',  'Enduring Liberty Half Dollar','Statue of Liberty',                           '99.9% Silver'),
+    ('1 Dollar',  'Native American Dollar',     'Polly Cooper - Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
   ];
 
   Widget _buildMintSetTab() {
@@ -1064,7 +1088,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 onTap: () {
                   _mintSetNameCtrl.text     = _kUncSet2026Name;
                   _mintSetRetailerCtrl.text = _kUncSet2026Retailer;
-                  setState(() {});
+                  _pendingIdempotencyKey    = null; // new template = new set = new key
+                  setState(() => _isProofSet = false);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(14),
@@ -1095,6 +1120,49 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     )),
                     if (_mintSetNameCtrl.text == _kUncSet2026Name)
                       const Icon(Icons.check_circle, color: Color(0xFF3B82F6), size: 22),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Silver Proof Set template card (Q2-LOCK 2026-08-24)
+              GestureDetector(
+                onTap: () {
+                  _mintSetNameCtrl.text     = _kProofSet2026Name;
+                  _mintSetRetailerCtrl.text = _kProofSet2026Retailer;
+                  _pendingIdempotencyKey    = null;
+                  setState(() => _isProofSet = true);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _mintSetNameCtrl.text == _kProofSet2026Name
+                        ? const Color(0xFFF5F3FF)
+                        : const Color(0xFFF8FAFC),
+                    border: Border.all(
+                      color: _mintSetNameCtrl.text == _kProofSet2026Name
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFFE2E8F0),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(children: [
+                    const Text('S', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold,
+                        color: Color(0xFF7C3AED))),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('2026 US Mint Silver Proof Set',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B))),
+                        const Text('10 coins - San Francisco (S) - 7 of 10 are 99.9% silver',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      ],
+                    )),
+                    if (_mintSetNameCtrl.text == _kProofSet2026Name)
+                      const Icon(Icons.check_circle, color: Color(0xFF7C3AED), size: 22),
                   ]),
                 ),
               ),
@@ -1362,12 +1430,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       return;
     }
 
+    // Idempotency key: generated once per set attempt, reused on retry.
+    // Null on form reset or template switch. Not yet server-enforced.
+    _pendingIdempotencyKey ??= DateTime.now().millisecondsSinceEpoch.toString();
+
     setState(() { _mintSetSaving = true; _mintSetMsg = ''; _mintSetDone = false; });
 
     try {
       final db    = FirebaseFirestore.instance;
       final col   = db.collection(AuthService.coinsPath);
       final batch = db.batch();
+
+      // Resolve template: Silver Proof Set (S-mint only) vs Uncirculated (P+D)
+      final bool isProof        = _isProofSet && name == _kProofSet2026Name;
+      final coins               = isProof ? _kProofCoins : _kCoins;
+      final mints               = isProof ? [_kProofMint] : _kMints;
+      final defaultRetailer     = isProof ? _kProofSet2026Retailer : _kUncSet2026Retailer;
 
       // ── 1. Create the parent SET document ──────────────────────────
       final setRef = col.doc();
@@ -1377,17 +1455,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       batch.set(setRef, {
         'is_set'               : true,
         'in_original_packaging': true,
+        'set_type'             : isProof ? 'proof' : 'uncirculated',
         'Program/Series'       : name,
         'Denomination'         : 'Set',
         'Year'                 : '2026',
-        'Mint Mark'            : '',
+        'Mint Mark'            : isProof ? _kProofMint : '',
         'Purchase Cost'        : cost.isEmpty ? '' : cost,
         'Purchase Date'        : date,
-        'Retailer/Website'     : retailer.isEmpty ? _kUncSet2026Retailer : retailer,
-        'Condition'            : 'MS',
+        'Retailer/Website'     : retailer.isEmpty ? defaultRetailer : retailer,
+        'Condition'            : isProof ? 'PF' : 'MS',
         'Country'              : 'USA',
-        'sub_sets'             : _kMints.map((m) =>
-            m == 'P' ? 'Philadelphia Mint' : 'Denver Mint').toList(),
+        'is_foreign'           : false,
+        'sub_sets'             : mints.map((m) {
+          if (m == 'P') return 'Philadelphia Mint';
+          if (m == 'D') return 'Denver Mint';
+          return 'San Francisco Mint';
+        }).toList(),
         'set_contents'         : [],         // back-filled below after IDs are known
         'image_url_obverse'    : '',
         'image_url_reverse'    : '',
@@ -1396,9 +1479,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       });
 
       // ── 2. Create individual coin documents ────────────────────────
-      for (final mint in _kMints) {
-        final mintLabel = mint == 'P' ? 'Philadelphia Mint' : 'Denver Mint';
-        for (final coin in _kCoins) {
+      for (final mint in mints) {
+        final mintLabel = mint == 'P'
+            ? 'Philadelphia Mint'
+            : mint == 'D'
+                ? 'Denver Mint'
+                : 'San Francisco Mint';
+        for (final coin in coins) {
           final ref = col.doc();
           coinDocIds.add(ref.id);
           batch.set(ref, {
@@ -1413,15 +1500,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'Program/Series'       : coin.$2,
             'Theme/Subject'        : coin.$3,
             'Metal Content'        : coin.$4,
-            'Condition'            : 'MS',
+            'Condition'            : isProof ? 'PF' : 'MS',
             'Country'              : 'USA',
-            'Purchase Cost'        : '', // cost tracked at set level
+            'is_foreign'           : false,
+            'Purchase Cost'        : '',  // cost tracked at set level
             'Purchase Date'        : date,
-            'Retailer/Website'     : retailer.isEmpty ? _kUncSet2026Retailer : retailer,
+            'Retailer/Website'     : retailer.isEmpty ? defaultRetailer : retailer,
             'image_url_obverse'    : '',
             'image_url_reverse'    : '',
             'image_verification_status': 'unverified',
-            'is_reviewed'          : true,   // skip Review Hub — set coins are confirmed
+            'is_reviewed'          : true,  // skip Review Hub -- set coins are confirmed
             'timestamp'            : FieldValue.serverTimestamp(),
           });
         }
@@ -1433,15 +1521,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       await batch.commit();
 
       setState(() {
-        _mintSetDone    = true;
-        _mintSetSaving  = false;
-        _mintSetMsg     =
-            '✅ Set created! 1 parent set + ${coinDocIds.length} coins added to My Collection.';
+        _mintSetDone           = true;
+        _mintSetSaving         = false;
+        _mintSetMsg            =
+            'Set created! 1 parent set + ${coinDocIds.length} coins added to My Collection.';
+        _pendingIdempotencyKey = null; // clear on success; keep on failure for retry
       });
     } catch (e) {
+      // Friendly message -- do not expose raw error
+      // _pendingIdempotencyKey intentionally NOT cleared so retry reuses same key
       setState(() {
         _mintSetSaving = false;
-        _mintSetMsg    = 'Error: $e';
+        _mintSetMsg    = 'Could not save set - please check your connection and try again.';
         _mintSetDone   = false;
       });
     }

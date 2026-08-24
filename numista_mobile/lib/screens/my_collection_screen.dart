@@ -1,4 +1,4 @@
-import 'dart:io' show File;
+﻿import 'dart:io' show File;
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
@@ -682,7 +682,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       } else if ((countryClean.isEmpty || countryClean == 'none') && isUSDenom) {
         isForeign = false;
       } else {
-        isForeign = (m['is_foreign'] as bool?) ?? true;
+        isForeign = (m['is_foreign'] as bool?) ?? false;  // FIXED: missing is_foreign defaults to US, not foreign
       }
 
       if (_coinOriginFilter == 'World') return isForeign;

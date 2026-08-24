@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/ai_chat_screen.dart';
@@ -152,7 +152,7 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
                   behavior: HitTestBehavior.translucent,
                   onPanUpdate: (details) {
                     setState(() {
-                      _width = (_width + details.delta.dx).clamp(320.0, screenSize.width * 0.9);
+                      _width = (_width + details.delta.dx).clamp(320.0, 480.0); // Q5-LOCK: max 480 px
                       _height = (_height + details.delta.dy).clamp(380.0, screenSize.height * 0.9);
                     });
                   },
