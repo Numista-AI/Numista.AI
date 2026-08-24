@@ -163,6 +163,6 @@ switch ($Layer.ToLower()) {
 if ($suitePass) {
     Write-Log "SUITE_RESULT: PASS"
 } else {
-    Write-Log "SUITE_RESULT: FAIL — check SESSION_LOG.md for details"
+    Write-Log "SUITE_RESULT: FAIL - check SESSION_LOG.md for details"
     exit 1
 }

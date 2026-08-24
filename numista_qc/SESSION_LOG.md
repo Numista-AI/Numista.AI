@@ -1,0 +1,3 @@
+[2026-08-24 18:09:28] QA project: numista-qc
+[2026-08-24 18:09:28] Credential email: qc-runner@numista-qc.iam.gserviceaccount.com (not forbidden)
+[2026-08-24 18:09:28] Running seed_qc_fixtures.py --check...

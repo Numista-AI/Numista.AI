@@ -15,7 +15,7 @@ module.exports = defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'https://numista.ai',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://numista.ai',
     headless: true,
     viewport: { width: 1920, height: 1080 },
     screenshot: 'on',

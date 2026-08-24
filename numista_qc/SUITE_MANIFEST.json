@@ -2,9 +2,9 @@
   "_comment": "Numista QC Suite Manifest — read by run_qc.ps1 and all Python layer scripts.",
   "_instructions": "Set qa_project_id and qc_uid after provisioning the QA Firebase project. Never set qa_project_id to studio-9101802118-8c9a8 (production).",
 
-  "qa_project_id": "REPLACE_WITH_QA_PROJECT_ID",
-  "qc_uid": "REPLACE_WITH_QA_USER_UID",
-  "qa_isolation_mode": "interim_sealed_account",
+  "qa_project_id": "numista-qc",
+  "qc_uid": "rxXrMBPy34N2q2ZHywCEItGHu2E2",
+  "qa_isolation_mode": "dedicated_project",
 
   "forbidden_accounts": [
     "ericdcman@gmail.com",
