@@ -174,7 +174,7 @@ function Run-FlutterChecks {
     }
     # --no-fatal-infos: warnings and infos are logged but don't fail the suite.
     # Only real errors (exit 1) count as a failure.
-    $analyzeOut = & flutter analyze $flutterDir --no-fatal-infos 2>&1
+    $analyzeOut = & flutter analyze $flutterDir --no-fatal-infos --no-fatal-warnings 2>&1
     $analyzeOut | ForEach-Object { Write-Log $_ }
     if ($LASTEXITCODE -ne 0) { $script:suitePass = $false; Write-Log "flutter analyze: FAIL (errors found)" }
     else { Write-Log "flutter analyze: PASS (warnings/infos logged above)" }
