@@ -137,6 +137,7 @@ $deprecatedHits = @()
 foreach ($p in $searchPaths) {
     if (Test-Path $p) {
         $hits = Get-ChildItem -Path $p -Recurse -Include "*.py","*.dart" -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -notmatch '\\\.venv\\|\\node_modules\\|\\__pycache__\\|\\\.dart_tool\\' } |
                 Select-String -Pattern $deprecatedPattern -ErrorAction SilentlyContinue
         if ($hits) { $deprecatedHits += $hits }
     }
