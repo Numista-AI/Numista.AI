@@ -140,6 +140,21 @@ if ($exitCode -eq 0) {
   Log "WARNING: Playwright E2E suite reported failures (exit code $exitCode)."
 }
 
+# Stack B — numista_qc suite (runs after Stack A; -SkipFlutterChecks avoids double flutter run)
+Log "=== numista_qc Suite (Stack B) starting ==="
+$qcScript = Join-Path $ProjectDir "numista_qc\run_qc.ps1"
+if (Test-Path $qcScript) {
+    & $qcScript -Layer all -SkipFlutterChecks
+    if ($LASTEXITCODE -ne 0) {
+        Log "WARNING: numista_qc suite reported failures. See numista_qc\SESSION_LOG.md."
+    } else {
+        Log "numista_qc suite: PASS"
+    }
+} else {
+    Log "WARNING: numista_qc\run_qc.ps1 not found — Stack B skipped."
+}
+Log "=== numista_qc Suite (Stack B) complete ==="
+
 # 6. Generate 360-Degree Morning Report & Auto-Sync SCAN_REPORT.md (always runs)
 Log "Generating 360-degree morning report..."
 $reportOutput = & node generate_report.js 2>&1
