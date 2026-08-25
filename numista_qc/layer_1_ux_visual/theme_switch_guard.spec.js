@@ -1,4 +1,4 @@
-﻿/**
+/**
  * theme_switch_guard.spec.js — Numista QC Suite Layer 1
  * Asserts that the app remains functional and visible after theme toggle.
  * Theme settle delay: 500ms (per SUITE_MANIFEST.theme_settle_ms).
@@ -51,7 +51,7 @@ async function signInAndWait(page) {
       const nodes = Array.from(document.querySelectorAll('button, [role=button], flt-semantics, div'));
       for (const n of nodes) {
         const text = n.innerText || n.textContent || '';
-        if (/Got It|Let's Explore|That's me|Skip|browse on my own|Homepage \/ Dashboard/i.test(text)) {
+        if (/Got It|Let's go|Let's Explore|That's me|Skip|browse on my own|Homepage \/ Dashboard/i.test(text)) {
           n.click();
         }
       }
