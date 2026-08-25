@@ -1,4 +1,4 @@
-﻿# run_qc.ps1 - Numista QC Suite Master Entry Point
+# run_qc.ps1 - Numista QC Suite Master Entry Point
 # Windows PowerShell. Run from the numista_qc/ directory OR called by run_tests.ps1.
 # Usage: .\run_qc.ps1 [-Layer <1|2|3|4|all>] [-SkipFlutterChecks] [-Verbose]
 
@@ -136,7 +136,8 @@ $searchPaths = @(
 $deprecatedHits = @()
 foreach ($p in $searchPaths) {
     if (Test-Path $p) {
-        $hits = Select-String -Path "$p\*.py","$p\*.dart" -Pattern $deprecatedPattern -Recurse -ErrorAction SilentlyContinue
+        $hits = Get-ChildItem -Path $p -Recurse -Include "*.py","*.dart" -File -ErrorAction SilentlyContinue |
+                Select-String -Pattern $deprecatedPattern -ErrorAction SilentlyContinue
         if ($hits) { $deprecatedHits += $hits }
     }
 }
