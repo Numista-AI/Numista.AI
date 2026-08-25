@@ -1,4 +1,3 @@
-import 'dart:io' show File;
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
@@ -107,7 +106,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   bool    _sortAscending    = false; // false = newest first
   /// Default: hide columns where every visible row is empty
   bool    _showOnlyPopulated = true;
-  bool    _isCardView = false;
+  // Card view first: TableView.builder has a history of web-release gray-screen
+  // layout exceptions. Users can still switch to Table via the toggle.
+  bool    _isCardView = true;
 
   final _searchCtrl      = TextEditingController();
   final _searchFocus     = FocusNode();
@@ -1057,9 +1058,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         else
           SizedBox(
             height: 520,
-            child: _isCardView 
+            child: _isCardView
                 ? _buildCardGrid(docs, advanced: advanced)
-                : _buildDataTable(docs, advanced: advanced),
+                : Builder(
+                    builder: (context) {
+                      try {
+                        return _buildDataTable(docs, advanced: advanced);
+                      } catch (e, stack) {
+                        debugPrint('Collection table build error: $e\n$stack');
+                        return _buildCardGrid(docs, advanced: advanced);
+                      }
+                    },
+                  ),
           ),
       ],
     );
@@ -4115,7 +4125,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       if (result == null || result.files.isEmpty) return;
       final f = result.files.first;
       bytes = f.bytes;
-      if (bytes == null && f.path != null) { bytes = await File(f.path!).readAsBytes(); }
       if (bytes == null) return;
       ext = f.extension?.toLowerCase() ?? 'jpg';
     }
@@ -5097,15 +5106,24 @@ class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
-        if (!widget.controller.hasClients ||
-            !widget.controller.position.hasContentDimensions ||
-            widget.controller.position.maxScrollExtent <= 0) {
+        // TableView attaches a 2D scroll position. Accessing .position as a
+        // 1D ScrollPosition can throw on Flutter web and gray-screen the tab.
+        late final double maxExtent;
+        late final double viewport;
+        late final double offset;
+        try {
+          if (!widget.controller.hasClients ||
+              !widget.controller.position.hasContentDimensions ||
+              widget.controller.position.maxScrollExtent <= 0) {
+            return const SizedBox.shrink();
+          }
+          maxExtent = widget.controller.position.maxScrollExtent;
+          viewport = widget.controller.position.viewportDimension;
+          offset = widget.controller.offset.clamp(0.0, maxExtent);
+        } catch (e) {
+          debugPrint('Top scrollbar track skipped (2D scroll position): $e');
           return const SizedBox.shrink();
         }
-
-        final double maxExtent = widget.controller.position.maxScrollExtent;
-        final double viewport = widget.controller.position.viewportDimension;
-        final double offset = widget.controller.offset.clamp(0.0, maxExtent);
 
         final double totalContent = maxExtent + viewport;
         final double thumbRatio = (viewport / totalContent).clamp(0.1, 0.9);
