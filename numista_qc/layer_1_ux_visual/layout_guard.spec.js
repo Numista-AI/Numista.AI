@@ -24,14 +24,34 @@ async function signInAndWait(page) {
   }, { em: email, pw: password });
   if (!r.ok) throw new Error('Auth failed: ' + r.error);
   await page.evaluate(() => {
-    ['flutter.user_name','flutter.morgan_onboarding_complete','flutter.onboarding_complete'].forEach(k => localStorage.setItem(k,'true'));
+    ['flutter.user_name', 'flutter.userName', 'flutter.morgan_onboarding_complete',
+     'flutter.onboarding_complete', 'flutter.onboarding_done', 'flutter.user_title',
+     'flutter.title_chosen', 'flutter.onboarding_step'].forEach(k => localStorage.setItem(k, 'true'));
   });
   await page.reload();
   await page.waitForFunction(
-    () => { const p = document.querySelector('flt-glass-pane'); return p && window.getComputedStyle(p).visibility === 'visible'; },
+    () => {
+      const p = document.querySelector('flutter-view') ||
+                document.querySelector('flt-glass-pane') ||
+                document.querySelector('canvas');
+      return p && window.getComputedStyle(p).visibility === 'visible';
+    },
     { timeout: 20000 }
   );
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(3000);
+
+  // Dismiss Morgan onboarding modals if present via fast DOM click
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll('button, [role=button], flt-semantics'));
+      for (const n of nodes) {
+        if (/That's me|Skip|browse on my own|Homepage \/ Dashboard/i.test(n.innerText || n.textContent || '')) {
+          n.click();
+        }
+      }
+    }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
 }
 
 test.describe('Layout Guard - 1920x1080 Desktop', () => {

@@ -29,7 +29,9 @@ async function signInAndWait(page) {
   await page.evaluate(() => {
     ['flutter.user_name','flutter.userName','flutter.morgan_onboarding_complete',
      'flutter.onboarding_complete','flutter.onboarding_done', 'flutter.user_title',
-     'flutter.title_chosen', 'flutter.onboarding_step'].forEach(k => localStorage.setItem(k,'true'));
+     'flutter.title_chosen', 'flutter.onboarding_step',
+     'flutter.beta_tester_welcome_seen_v2', 'flutter.beta_tester_welcome_seen',
+     'flutter.morgan_greeter_seen'].forEach(k => localStorage.setItem(k,'true'));
   });
   await page.reload();
   await page.waitForFunction(
@@ -43,13 +45,18 @@ async function signInAndWait(page) {
   );
   await page.waitForTimeout(3000);
 
-  // Dismiss Morgan onboarding modals if present
-  const modalButtons = page.locator('button, [role=button], flt-semantics').filter({ hasText: /That's me|Skip|browse on my own|Homepage \/ Dashboard/i });
+  // Dismiss any lingering dialogs
   for (let i = 0; i < 3; i++) {
-    if (await modalButtons.first().isVisible({ timeout: 1500 }).catch(() => false)) {
-      await modalButtons.first().click().catch(() => {});
-      await page.waitForTimeout(1000);
-    }
+    await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll('button, [role=button], flt-semantics, div'));
+      for (const n of nodes) {
+        const text = n.innerText || n.textContent || '';
+        if (/Got It|Let's Explore|That's me|Skip|browse on my own|Homepage \/ Dashboard/i.test(text)) {
+          n.click();
+        }
+      }
+    }).catch(() => {});
+    await page.waitForTimeout(500);
   }
 }
 
