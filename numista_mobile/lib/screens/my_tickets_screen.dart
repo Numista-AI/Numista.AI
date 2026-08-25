@@ -198,7 +198,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
                 fontStyle: FontStyle.italic,
-                color: Color(0xFF31333F),
+                color: Color(0xFFC8D0E0),
               ),
             ),
             const SizedBox(width: 12),
@@ -226,7 +226,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
           const Text(
             'Track your open tickets. Issue temporary, scoped support access — '
             'you control exactly which coins are visible and for how long.',
-            style: TextStyle(color: Color(0xFF5A5C69), fontSize: 14),
+            style: TextStyle(color: Color(0xFFC8D0E0), fontSize: 14),
           ),
           const SizedBox(height: 32),
 

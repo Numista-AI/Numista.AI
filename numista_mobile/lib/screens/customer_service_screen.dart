@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 import '../services/auth_service.dart';
 import '../services/ticket_service.dart';
@@ -426,16 +428,51 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
               children: [
                 const Icon(Icons.info_outline, color: Color(0xFF1967D2), size: 20),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '✉  customerservice@numista.ai',
-                        style: TextStyle(color: Color(0xFF1967D2), fontSize: 14, fontWeight: FontWeight.w700),
+                      Tooltip(
+                        message: 'Click to email · Right-click to copy address',
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final uri = Uri.parse('mailto:customerservice@numista.ai');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri);
+                              } else {
+                                await Clipboard.setData(const ClipboardData(text: 'customerservice@numista.ai'));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Email address copied to clipboard!')),
+                                  );
+                                }
+                              }
+                            },
+                            onSecondaryTap: () async {
+                              await Clipboard.setData(const ClipboardData(text: 'customerservice@numista.ai'));
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Email address copied to clipboard!')),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              '✉  customerservice@numista.ai',
+                              style: TextStyle(
+                                color: Color(0xFF1967D2),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Color(0xFF1967D2),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      SizedBox(height: 4),
-                      Text(
+                      const SizedBox(height: 4),
+                      const Text(
                         'You can also connect with Eric directly on LinkedIn at linkedin.com/in/ericdseaman',
                         style: TextStyle(color: Color(0xFF1967D2), fontSize: 13),
                       ),

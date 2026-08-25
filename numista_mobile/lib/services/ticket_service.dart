@@ -74,6 +74,9 @@ class TicketService {
           .map((t) => HelpTicket.fromMap(t as Map<String, dynamic>))
           .toList();
     }
+    if (resp.statusCode == 503) {
+      throw Exception('Setting up — please wait a moment and try again.');
+    }
     throw Exception('Failed to load tickets: ${resp.statusCode}');
   }
 
