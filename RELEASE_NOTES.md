@@ -183,6 +183,14 @@
 
 
 
+
+## v4.181 — 2026-08-25
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
 ## v4.180 — 2026-08-25
 **Release Enhancements & Platform Updates**
 
