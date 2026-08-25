@@ -184,6 +184,260 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## v4.201 — 2026-08-25
+**Qc/layer1 Enhancements & Platform Updates**
+
+- Qc/layer1: dismiss 'Let's go!' wizard dialog in theme_switch_guard signInAndWait() - was blocking Settings navigation
+- Qc: add --no-fatal-warnings to flutter analyze (warnings != errors, should not fail suite)
+- Qc/layer1: fix HTML entity encoding in theme_switch_guard.spec.js (=> was written as =&gt;)
+- Security: fail closed on Stripe checkout and portal errors
+- Qc/layer1: navigate to Settings & Backup before looking for theme toggle; add role=switch fallback
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+
+## v4.200 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: add --no-fatal-warnings to flutter analyze (warnings != errors, should not fail suite)
+- Qc/layer1: fix HTML entity encoding in theme_switch_guard.spec.js (=> was written as =&gt;)
+- Security: fail closed on Stripe checkout and portal errors
+- Qc/layer1: navigate to Settings & Backup before looking for theme toggle; add role=switch fallback
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+
+## v4.199 — 2026-08-25
+**Qc/layer1 Enhancements & Platform Updates**
+
+- Qc/layer1: fix HTML entity encoding in theme_switch_guard.spec.js (=> was written as =&gt;)
+- Security: fail closed on Stripe checkout and portal errors
+- Qc/layer1: navigate to Settings & Backup before looking for theme toggle; add role=switch fallback
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+
+## v4.198 — 2026-08-25
+**Qc/layer1 Enhancements & Platform Updates**
+
+- Qc/layer1: navigate to Settings & Backup before looking for theme toggle; add role=switch fallback
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+
+## v4.197 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+
+## v4.196 — 2026-08-25
+**Security Enhancements & Platform Updates**
+
+- Security: require Firebase auth on collection clear
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout — required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+
+## v4.195 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: exclude .venv/node_modules/__pycache__ from deprecated model ID scan to prevent hang
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+
+## v4.194 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+
+## v4.193 — 2026-08-25
+**Ui Enhancements & Platform Updates**
+
+- Ui: default My Collection to card view and soften gray-screen errors
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout — required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token — replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) → 503 instead of 500 crash
+
+## v4.192 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+
+## v4.191 — 2026-08-25
+**Build Enhancements & Platform Updates**
+
+- Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+
+## v4.190 — 2026-08-25
+**Ux Enhancements & Platform Updates**
+
+- Ux: feedback button routes to general feedback or support ticket
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+
+## v4.189 — 2026-08-25
+**Support Enhancements & Platform Updates**
+
+- Support: remove stale grant-token text from portal empty state
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+
+## v4.188 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+
+## v4.187 — 2026-08-25
+**Support Enhancements & Platform Updates**
+
+- Support: eliminate token â€” replace with server-side consent flag
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+
+## v4.186 — 2026-08-25
+**Support Enhancements & Platform Updates**
+
+- Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+
+## v4.185 — 2026-08-25
+**Ui Enhancements & Platform Updates**
+
+- Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.184 — 2026-08-25
+**Support Enhancements & Platform Updates**
+
+- Support: add My Tickets and Support Portal to nav enabled-routes allowlist
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.183 — 2026-08-25
+**Support Enhancements & Platform Updates**
+
+- Support: scoped consent support access system (v5)
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.182 — 2026-08-25
+**Qc Enhancements & Platform Updates**
+
+- Qc: resolve layer 1 visual guard contrast sampling and modal dismissal
+- Release: bump release notes to v4.181
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
 ## v4.181 — 2026-08-25
 **Audit Enhancements & Platform Updates**
 

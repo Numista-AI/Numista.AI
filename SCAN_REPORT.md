@@ -82,3 +82,63 @@
 2. **Navigation Test Hardening:** `05-navigation.spec.js` T01–T12 use hardcoded `(x,y)` pixel coordinates for Flutter sidebar nav. Consider a broader audit to replace remaining coordinates with role/text selectors to prevent future Phase 2+ layout breakage.
 3. **Maintain Skill Documentation:** Keep `project-scanner/SKILL.md` aligned with production Cloud Run URL.
 
+
+---
+## numista_qc Suite (Stack B)
+**Run:** 2026-08-25 16:37:57
+
+| Layer | Result | Notes |
+|-------|--------|-------|
+| L1 UX Visual | PASS | CONTRAST_SAMPLING_PATH: screenshot |
+| L2 Functional (5 specs) | NOT_RUN | auth, navigation, search, valuation, programs |
+| L2 CRUD write test | SUSPENDED (set qa_base_url in SUITE_MANIFEST.json to activate) | collection_crud.spec.js |
+| L3 Data Audit | NOT_RUN | quad title check, estate boundary, API health |
+| L4 Self-Update | NOT_RUN | feedback_miner (today's folder only) |
+
+**Isolation:** Dedicated QA project: numista-qc | qc_uid: SET
+**Suite result:** FAIL - see numista_qc/SESSION_LOG.md
+
+---
+## numista_qc Suite (Stack B)
+**Run:** 2026-08-25 16:50:07
+
+| Layer | Result | Notes |
+|-------|--------|-------|
+| L1 UX Visual | FAIL | CONTRAST_SAMPLING_PATH: screenshot |
+| L2 Functional (5 specs) | NOT_RUN | auth, navigation, search, valuation, programs |
+| L2 CRUD write test | SUSPENDED (set qa_base_url in SUITE_MANIFEST.json to activate) | collection_crud.spec.js |
+| L3 Data Audit | NOT_RUN | quad title check, estate boundary, API health |
+| L4 Self-Update | NOT_RUN | feedback_miner (today's folder only) |
+
+**Isolation:** Dedicated QA project: numista-qc | qc_uid: SET
+**Suite result:** FAIL - see numista_qc/SESSION_LOG.md
+
+---
+## numista_qc Suite (Stack B)
+**Run:** 2026-08-25 16:59:14
+
+| Layer | Result | Notes |
+|-------|--------|-------|
+| L1 UX Visual | PASS | CONTRAST_SAMPLING_PATH: screenshot |
+| L2 Functional (5 specs) | NOT_RUN | auth, navigation, search, valuation, programs |
+| L2 CRUD write test | SUSPENDED (set qa_base_url in SUITE_MANIFEST.json to activate) | collection_crud.spec.js |
+| L3 Data Audit | NOT_RUN | quad title check, estate boundary, API health |
+| L4 Self-Update | NOT_RUN | feedback_miner (today's folder only) |
+
+**Isolation:** Dedicated QA project: numista-qc | qc_uid: SET
+**Suite result:** FAIL - see numista_qc/SESSION_LOG.md
+
+---
+## numista_qc Suite (Stack B)
+**Run:** 2026-08-25 17:20:18
+
+| Layer | Result | Notes |
+|-------|--------|-------|
+| L1 UX Visual | PASS | CONTRAST_SAMPLING_PATH: screenshot |
+| L2 Functional (5 specs) | NOT_RUN | auth, navigation, search, valuation, programs |
+| L2 CRUD write test | SUSPENDED (set qa_base_url in SUITE_MANIFEST.json to activate) | collection_crud.spec.js |
+| L3 Data Audit | NOT_RUN | quad title check, estate boundary, API health |
+| L4 Self-Update | NOT_RUN | feedback_miner (today's folder only) |
+
+**Isolation:** Dedicated QA project: numista-qc | qc_uid: SET
+**Suite result:** PASS

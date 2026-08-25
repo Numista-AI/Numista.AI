@@ -6,7 +6,10 @@
 // redaction, and coin data — this service only makes HTTP calls.
 
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
 import '../models/ticket_model.dart';
@@ -220,6 +223,41 @@ class TicketService {
 
     if (resp.statusCode != 200) {
       throw Exception('Failed to update status: ${_extractError(resp)}');
+    }
+  }
+
+  // ── Screenshot uploads ──────────────────────────────────────────────────
+
+  /// Uploads [bytes] to Firebase Storage under support_screenshots/{ticketId}/
+  /// and returns the public download URL.
+  static Future<String> uploadScreenshot({
+    required String ticketId,
+    required Uint8List bytes,
+    required String extension,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final filename = '${uid}_$timestamp.$extension';
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('support_screenshots/$ticketId/$filename');
+    final metadata = SettableMetadata(contentType: 'image/$extension');
+    await ref.putData(bytes, metadata);
+    return await ref.getDownloadURL();
+  }
+
+  /// PATCHes screenshot_urls onto an existing ticket document via the backend.
+  static Future<void> updateScreenshots({
+    required String ticketId,
+    required List<String> urls,
+  }) async {
+    final resp = await http.patch(
+      Uri.parse('$_base/tickets/$ticketId/screenshots'),
+      headers: await _headers(),
+      body: jsonEncode({'screenshot_urls': urls}),
+    );
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to save screenshots: ${_extractError(resp)}');
     }
   }
 
