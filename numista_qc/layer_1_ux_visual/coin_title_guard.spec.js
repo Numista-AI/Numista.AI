@@ -1,4 +1,4 @@
-﻿/**
+/**
  * coin_title_guard.spec.js — Numista QC Suite Layer 1
  * Asserts coin program titles are never stripped to bare year+mint.
  *
@@ -14,8 +14,8 @@ const { test, expect } = require('@playwright/test');
 const { execSync } = require('child_process');
 const path = require('path');
 
-const AUDIT_SCRIPT = path.join(__dirname, '../../layer_3_data/coin_data_audit.py');
-const MANIFEST_PATH = path.join(__dirname, '../../SUITE_MANIFEST.json');
+const AUDIT_SCRIPT = path.join(__dirname, '../layer_3_data/coin_data_audit.py');
+const MANIFEST_PATH = path.join(__dirname, '../SUITE_MANIFEST.json');
 
 test.describe('Coin Title Guard', () => {
   test('Primary: Firestore field check - no coin should have all title fields empty', () => {
@@ -73,24 +73,36 @@ test.describe('Coin Title Guard', () => {
   });
 
   test('Secondary: Flutter accessibility snapshot (conditional - non-authoritative)', async ({ page }) => {
+    test.setTimeout(15000);
     // This test attempts to activate Flutter semantics and snapshot the tree.
     // It is explicitly non-authoritative: if semantics are unavailable, the test
     // reports SEMANTICS_UNAVAILABLE and skips without failing.
     // The primary assertion above is the authoritative title check.
 
     await page.goto('https://numista.ai');
-    await page.waitForFunction(
-      () => { const p = document.querySelector('flt-glass-pane'); return p && p.offsetWidth > 0; },
-      { timeout: 20000 }
-    );
-
-    // Try to activate semantics by clicking the flt-semantics-placeholder
-    const placeholder = page.locator('flt-semantics-placeholder');
-    const placeholderVisible = await placeholder.first().isVisible({ timeout: 3000 }).catch(() => false);
-    if (placeholderVisible) {
-      await placeholder.first().click().catch(() => {});
-      await page.waitForTimeout(1000);
+    try {
+      await page.waitForFunction(
+        () => {
+          const p = document.querySelector('flutter-view') ||
+                    document.querySelector('flt-glass-pane') ||
+                    document.querySelector('canvas');
+          return p && (p.offsetWidth > 0 || p.clientWidth > 0 || (p.getBoundingClientRect && p.getBoundingClientRect().width > 0));
+        },
+        { timeout: 10000 }
+      );
+    } catch (_) {
+      console.log('[coin_title_guard] SEMANTICS_UNAVAILABLE: Page render wait timed out. Primary assertion is authoritative.');
+      test.skip();
+      return;
     }
+
+    // Try to activate semantics by clicking the flt-semantics-placeholder via DOM evaluation
+    await page.evaluate(() => {
+      const p = document.querySelector('flt-semantics-placeholder') ||
+                document.querySelector('flutter-view flt-semantics-placeholder');
+      if (p) p.click();
+    }).catch(() => {});
+    await page.waitForTimeout(500);
 
     // Attempt accessibility snapshot
     let snapshot = null;

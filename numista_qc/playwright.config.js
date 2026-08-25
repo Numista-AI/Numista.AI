@@ -24,8 +24,10 @@ module.exports = defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
         launchOptions: {
           args: [
+            '--window-size=1920,1080',
             '--use-gl=angle',
             '--use-angle=swiftshader',
             '--ignore-gpu-blocklist',

@@ -221,14 +221,31 @@ def main():
     warns = [r for r in RESULTS if r['status'] == 'WARN']
     passes = [r for r in RESULTS if r['status'] == 'PASS']
 
-    print(f'\n[coin_data_audit] RESULTS: {len(passes)} PASS / {len(warns)} WARN / {len(fails)} FAIL')
+    # Filter out known sentinel fixture from fatal failures
+    unexpected_fails = [
+        r for r in fails
+        if not (r['code'] == 'COIN_TITLE_FAIL' and r.get('doc_id') == 'qc_fixture_title_FAIL_empty')
+    ]
+    expected_fails = [
+        r for r in fails
+        if (r['code'] == 'COIN_TITLE_FAIL' and r.get('doc_id') == 'qc_fixture_title_FAIL_empty')
+    ]
+
+    print(f'\n[coin_data_audit] RESULTS: {len(passes)} PASS / {len(warns)} WARN / {len(unexpected_fails)} UNEXPECTED FAIL ({len(expected_fails)} expected sentinel)')
+    if args.verbose or True:
+        for r in passes:
+            print(f'  PASS  [{r["code"]}]: {r["detail"]}')
     for r in warns:
         print(f'  WARN  [{r["code"]}] {r["doc_id"]}: {r["detail"]}')
-    for r in fails:
+    for r in expected_fails:
+        print(f'  EXPECTED FAIL  [{r["code"]}] {r["doc_id"]}: {r["detail"]}')
+    for r in unexpected_fails:
         print(f'  FAIL  [{r["code"]}] {r["doc_id"]}: {r["detail"]}')
 
-    if fails:
+    if unexpected_fails:
         sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == '__main__':

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import '../services/auth_service.dart';
+import '../services/ticket_service.dart';
+import '../models/ticket_model.dart';
+
 
 class CustomerServiceScreen extends StatefulWidget {
-  const CustomerServiceScreen({super.key});
+  /// Called when the user taps "My Tickets" from the success banner or nav link.
+  final VoidCallback? onNavigateToTickets;
+  const CustomerServiceScreen({super.key, this.onNavigateToTickets});
 
   @override
   State<CustomerServiceScreen> createState() => _CustomerServiceScreenState();
@@ -13,17 +18,57 @@ class CustomerServiceScreen extends StatefulWidget {
 class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
   final _dmMessageController = TextEditingController();
   final _fbMessageController = TextEditingController();
+  final _tkSubjectController = TextEditingController();
+  final _tkDescController = TextEditingController();
   String _feedbackType = 'Bug Report';
+  String _ticketCategory = 'bug_report';
   bool _dmSubmitting = false;
   bool _fbSubmitting = false;
+  bool _tkSubmitting = false;
   String? _dmSuccess;
   String? _fbSuccess;
+  String? _tkSuccess;
+
 
   @override
   void dispose() {
     _dmMessageController.dispose();
     _fbMessageController.dispose();
+    _tkSubjectController.dispose();
+    _tkDescController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submitTicket() async {
+    final subject = _tkSubjectController.text.trim();
+    final desc = _tkDescController.text.trim();
+    if (subject.isEmpty) {
+      _showError('Please enter a subject for your ticket.');
+      return;
+    }
+    if (desc.isEmpty) {
+      _showError('Please describe the issue before submitting.');
+      return;
+    }
+    setState(() => _tkSubmitting = true);
+    try {
+      await TicketService.createTicket(
+        subject: subject,
+        description: desc,
+        category: _ticketCategory,
+        appVersion: '',
+      );
+      _tkSubjectController.clear();
+      _tkDescController.clear();
+      setState(() {
+        _tkSubmitting = false;
+        _tkSuccess = 'Ticket submitted! We\'ll respond as soon as possible. '
+            'Track progress in My Tickets.';
+      });
+    } catch (e) {
+      setState(() => _tkSubmitting = false);
+      _showError('Couldn\'t submit ticket. Please try again or email customerservice@numista.ai');
+    }
   }
 
   Future<void> _submitDirectMessage() async {
@@ -127,6 +172,137 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
             style: TextStyle(color: Color(0xFF5A5C69), fontSize: 14),
           ),
           const SizedBox(height: 40),
+
+          // ── Privacy notice ────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F4FF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBFD0FB)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.lock_outline, color: Color(0xFF1967D2), size: 18),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    '🔒  Privacy First — Submitting a ticket never gives Numista.AI staff access to your collection. '
+                    'If needed, you can issue a temporary, scoped support grant from My Tickets — '
+                    'you control exactly what can be seen and for how long.',
+                    style: TextStyle(color: Color(0xFF1967D2), fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Help Ticket card (full width) ─────────────────────────────────
+          _buildCard(
+            icon: Icons.confirmation_number_outlined,
+            title: 'Submit a Help Ticket',
+            subtitle: 'Track your issue, share diagnostic details, and get a written response.',
+            child: _tkSuccess != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSuccessBanner(_tkSuccess!),
+                      const SizedBox(height: 12),
+                      if (widget.onNavigateToTickets != null)
+                        TextButton.icon(
+                          onPressed: widget.onNavigateToTickets,
+                          icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                          label: const Text('View My Tickets'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF1967D2),
+                          ),
+                        ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Category'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _ticketCategory,
+                        decoration: _inputDecoration(null).copyWith(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        style: const TextStyle(color: Color(0xFF31333F), fontSize: 14),
+                        dropdownColor: Colors.white,
+                        items: kTicketCategories.entries
+                            .map((e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setState(() => _ticketCategory = v!),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel('Subject'),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _tkSubjectController,
+                        maxLines: 1,
+                        maxLength: 120,
+                        style: const TextStyle(color: Color(0xFF31333F), fontSize: 14),
+                        decoration: _inputDecoration('Brief summary of the issue'),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel('Description'),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _tkDescController,
+                        maxLines: 5,
+                        style: const TextStyle(color: Color(0xFF31333F), fontSize: 14),
+                        decoration: _inputDecoration(
+                            'Describe the issue in detail. Steps to reproduce, what you expected vs what happened...'),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _tkSubmitting ? null : _submitTicket,
+                              icon: _tkSubmitting
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.send_rounded, size: 18),
+                              label: Text(
+                                  _tkSubmitting ? 'Submitting…' : 'Submit Ticket'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1967D2),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                          if (widget.onNavigateToTickets != null) ...[
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed: widget.onNavigateToTickets,
+                              icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                              label: const Text('My Tickets'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF1967D2),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 32),
 
           // ── Two-column layout ─────────────────────────────────────────────
           Row(
