@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import os
 import io
 import uuid
@@ -77,6 +77,7 @@ from routes.feedback_callable_route import router as feedback_router
 from routes.greysheet_error_routes import router as greysheet_error_router
 from routes.greysheet_admin_routes import router as greysheet_admin_router
 from routes.support_routes import router as support_router
+from routes.deps import get_current_user
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -6456,9 +6457,27 @@ def receipt_stream(user_email: str, receipt_id: str):
 # +==============================================================================+
 
 class ClearCollectionRequest(BaseModel):
-    user_email: str
     confirm: str          # must equal "DELETE" exactly
-    pin_code: str = ""    # optional 6-digit PIN verification
+    # Ignored if present. Identity comes only from the Firebase Bearer token.
+    user_email: Optional[str] = None
+    pin_code: str = ""    # unused; kept so older clients do not 422
+
+
+def _collection_owner_from_token(user: Dict[str, Any]) -> str:
+    """Firestore users/{id} key matching AuthService.coinsPath.
+
+    Anonymous users are stored under UID. Everyone else under lowercase email.
+    Client-supplied email/uid is never used.
+    """
+    uid = (user.get("uid") or "").strip()
+    email = (user.get("email") or "").strip().lower()
+    firebase = user.get("firebase") or {}
+    is_anonymous = firebase.get("sign_in_provider") == "anonymous"
+    if is_anonymous or not email:
+        if not uid:
+            raise HTTPException(status_code=401, detail="Unable to resolve authenticated identity")
+        return uid
+    return email
 
 
 @app.get("/api/collection/count")
@@ -6646,9 +6665,15 @@ def checklist_add_coins(req: ChecklistAddRequest):
 
 
 @app.post("/api/collection/clear")
-def collection_clear(req: ClearCollectionRequest):
+def collection_clear(
+    req: ClearCollectionRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
-    Permanently delete ALL coins from a user collection.
+    Permanently delete ALL coins from the authenticated user's collection.
+
+    Identity is taken only from the Firebase ID token. req.user_email / uid
+    in the body are ignored.
 
     Safety gate:
         req.confirm must be the exact string "DELETE" -- the endpoint returns
@@ -6666,6 +6691,8 @@ def collection_clear(req: ClearCollectionRequest):
     Returns:
         { "status": "success", "user_email": str, "coins_deleted": int }
     """
+    owner = _collection_owner_from_token(user)
+
     if req.confirm != "DELETE" and req.confirm != "DELETE_CONFIRMED_BY_USER_SETTINGS":
         raise HTTPException(
             status_code=400,
@@ -6673,7 +6700,7 @@ def collection_clear(req: ClearCollectionRequest):
         )
 
     try:
-        coins_ref     = db.collection('users').document(req.user_email).collection('coins')
+        coins_ref     = db.collection('users').document(owner).collection('coins')
         coins_deleted = 0
         BATCH_LIMIT   = 490  # Firestore max is 500 writes per batch
 
@@ -6689,15 +6716,15 @@ def collection_clear(req: ClearCollectionRequest):
                 coins_deleted += 1
             batch.commit()
 
-        logger.info(f"Collection cleared: {coins_deleted} coins deleted", extra={"user_email": req.user_email})
+        logger.info(f"Collection cleared: {coins_deleted} coins deleted", extra={"user_email": owner})
         return {
             "status":        "success",
-            "user_email":    req.user_email,
+            "user_email":    owner,
             "coins_deleted": coins_deleted,
         }
 
     except Exception as e:
-        logger.exception("Collection clear error", extra={"user_email": req.user_email})
+        logger.exception("Collection clear error", extra={"user_email": owner})
         raise HTTPException(status_code=500, detail=str(e))
 
 # +==============================================================================+

@@ -7,12 +7,12 @@ import json
 import uuid
 import time
 from datetime import datetime, timezone, timedelta
-from typing import Optional
-from fastapi import APIRouter, HTTPException, Request
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Request, Depends
 import stripe
 from stripe_config import load_stripe_keys
 from schemas.payment_schemas import StripeCheckoutRequest
-from routes.deps import db, logger
+from routes.deps import db, logger, get_current_user
 from tier_gatekeeper import (
     get_user_profile,
     get_user_tier,
@@ -30,11 +30,19 @@ if stripe_keys.get("secret_key"):
     stripe.api_key = stripe_keys["secret_key"]
 
 @router.post("/create-checkout-session")
-async def api_stripe_checkout(req: StripeCheckoutRequest):
+async def api_stripe_checkout(
+    req: StripeCheckoutRequest,
+    _user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Creates a Stripe Checkout Session for Pro, Numismatist, Dealer, Estate, or Family Estate subscriptions.
     Accepts client_reference_id = user_uid and supports promotion/coupon codes.
+    Requires a valid Firebase ID token. Stripe failures return HTTP 502 — never a mock URL.
     """
+    if not stripe.api_key:
+        logger.error("Stripe checkout rejected: secret key is not configured")
+        raise HTTPException(status_code=502, detail="Stripe is not configured")
+
     try:
         user_uid = getattr(req, "user_uid", None) or getattr(req, "uid", None) or req.user_email
         tier = req.tier.lower()
@@ -64,16 +72,26 @@ async def api_stripe_checkout(req: StripeCheckoutRequest):
             metadata={"user_uid": user_uid, "target_tier": tier}
         )
         return {"checkout_url": session.url, "session_id": session.id}
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception("Stripe checkout session creation failed")
-        fallback_url = f"https://checkout.stripe.com/pay/cs_test_mock_{uuid.uuid4().hex[:8]}"
-        return {"checkout_url": fallback_url, "session_id": f"mock_{uuid.uuid4().hex[:8]}", "note": "Stripe test mode fallback"}
+        raise HTTPException(status_code=502, detail="Unable to create Stripe checkout session")
 
 @router.post("/create-customer-portal")
-async def api_stripe_customer_portal(user_email: str, uid: Optional[str] = None):
+async def api_stripe_customer_portal(
+    user_email: str,
+    uid: Optional[str] = None,
+    _user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Generates a self-serve Stripe Customer Portal session link for plan management.
+    Requires a valid Firebase ID token. Stripe failures return HTTP 502 — never a mock URL.
     """
+    if not stripe.api_key:
+        logger.error("Stripe customer portal rejected: secret key is not configured")
+        raise HTTPException(status_code=502, detail="Stripe is not configured")
+
     try:
         target_id = uid or user_email
         stripe_customer_id = None
@@ -82,7 +100,7 @@ async def api_stripe_customer_portal(user_email: str, uid: Optional[str] = None)
         if user_doc.exists:
             stripe_customer_id = (user_doc.to_dict() or {}).get("stripe_customer_id")
         
-        if not stripe_customer_id and stripe.api_key:
+        if not stripe_customer_id:
             existing = stripe.Customer.list(email=user_email, limit=1)
             if existing.data:
                 stripe_customer_id = existing.data[0].id
@@ -92,16 +110,18 @@ async def api_stripe_customer_portal(user_email: str, uid: Optional[str] = None)
             user_doc_ref.set({"stripe_customer_id": stripe_customer_id}, merge=True)
 
         if not stripe_customer_id:
-            stripe_customer_id = f"cus_mock_{hash(target_id) & 0xffffffff}"
+            raise HTTPException(status_code=502, detail="Unable to resolve Stripe customer")
 
         portal_session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
             return_url="https://numista.ai/#/settings"
         )
         return {"portal_url": portal_session.url}
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         logger.exception("Failed to generate Stripe Customer Portal session")
-        return {"portal_url": "https://billing.stripe.com/p/login/mock_portal", "note": "Stripe test mode fallback"}
+        raise HTTPException(status_code=502, detail="Unable to create Stripe customer portal session")
 
 @router.get("/subscription-status")
 async def api_subscription_status(uid: str):

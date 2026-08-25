@@ -1,4 +1,4 @@
-/**
+﻿/**
  * theme_switch_guard.spec.js — Numista QC Suite Layer 1
  * Asserts that the app remains functional and visible after theme toggle.
  * Theme settle delay: 500ms (per SUITE_MANIFEST.theme_settle_ms).
@@ -80,19 +80,42 @@ test.describe('Theme Switch Guard', () => {
     const aliveBefore = await flutterAlive(page);
     expect(aliveBefore, 'App not visible before theme toggle').toBe(true);
 
-    // Attempt to find and click the theme toggle
+    // Navigate to Settings & Backup — the theme toggle lives there, not on the home screen.
+    // Try clicking the sidebar nav item first.
+    const settingsNav = page.locator('flt-semantics[role=button]').filter({ hasText: /settings/i });
+    const settingsVisible = await settingsNav.first().isVisible({ timeout: 3000 }).catch(() => false);
+    if (settingsVisible) {
+      await settingsNav.first().click();
+      await page.waitForTimeout(1000);
+    } else {
+      // Fallback: navigate directly by URL hash/path
+      const currentUrl = page.url();
+      const settingsUrl = currentUrl.replace(/#.*$/, '') + '#settings';
+      await page.goto(settingsUrl);
+      await page.waitForTimeout(2000);
+    }
+
+    // Attempt to find and click the theme toggle (the on/off switch next to "Application Theme")
     const themeBtn = page.locator('flt-semantics[role=button]').filter({ hasText: /theme|light|dark|mode/i });
-    const btnVisible = await themeBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const themeSwitch = page.locator('flt-semantics[role=switch]');
+
+    const btnVisible = await themeBtn.first().isVisible({ timeout: 3000 }).catch(() => false)
+                    || await themeSwitch.first().isVisible({ timeout: 1000 }).catch(() => false);
 
     if (!btnVisible) {
       // Theme button not found - app may not expose theme toggle at this viewport.
       // This is not a test failure; log and skip assertion.
-      console.log('[theme_switch_guard] Theme toggle button not found at 1920x1080. Skipping toggle test.');
+      console.log('[theme_switch_guard] Theme toggle button not found at 1920x1080 (checked home + Settings). Skipping toggle test.');
       test.skip();
       return;
     }
 
-    await themeBtn.first().click();
+    // Click whichever toggle was found
+    if (await themeBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
+      await themeBtn.first().click();
+    } else {
+      await themeSwitch.first().click();
+    }
     // Wait for settle - 500ms per SUITE_MANIFEST.theme_settle_ms
     await page.waitForTimeout(THEME_SETTLE_MS);
 
@@ -104,8 +127,14 @@ test.describe('Theme Switch Guard', () => {
     await page.screenshot({ path: 'screenshots/theme_switch_after_toggle_' + Date.now() + '.png', fullPage: false });
 
     // Toggle back and verify again
-    if (await themeBtn.first().isVisible({ timeout: 2000 }).catch(() => false)) {
-      await themeBtn.first().click();
+    const canToggleBack = await themeBtn.first().isVisible({ timeout: 2000 }).catch(() => false)
+                       || await themeSwitch.first().isVisible({ timeout: 1000 }).catch(() => false);
+    if (canToggleBack) {
+      if (await themeBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
+        await themeBtn.first().click();
+      } else {
+        await themeSwitch.first().click();
+      }
       await page.waitForTimeout(THEME_SETTLE_MS);
       const aliveAgain = await flutterAlive(page);
       expect(aliveAgain, 'App not visible after second theme toggle').toBe(true);
@@ -114,15 +143,29 @@ test.describe('Theme Switch Guard', () => {
 
   test('Canvas pixel is not pure white (#FFFFFF) immediately after Dark mode toggle', async ({ page }) => {
     // Pure white canvas after Dark mode toggle = likely white-screen bug or theme not applied.
+
+    // Navigate to Settings & Backup where the theme toggle lives
+    const settingsNav = page.locator('flt-semantics[role=button]').filter({ hasText: /settings/i });
+    if (await settingsNav.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+      await settingsNav.first().click();
+      await page.waitForTimeout(1000);
+    }
+
     const themeBtn = page.locator('flt-semantics[role=button]').filter({ hasText: /theme|light|dark|mode/i });
-    const btnVisible = await themeBtn.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const themeSwitch = page.locator('flt-semantics[role=switch]');
+    const btnVisible = await themeBtn.first().isVisible({ timeout: 3000 }).catch(() => false)
+                    || await themeSwitch.first().isVisible({ timeout: 1000 }).catch(() => false);
     if (!btnVisible) {
       test.skip();
       return;
     }
 
-    // Switch to dark
-    await themeBtn.first().click();
+    // Switch to dark — use whichever toggle element was found
+    if (await themeBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
+      await themeBtn.first().click();
+    } else {
+      await themeSwitch.first().click();
+    }
     await page.waitForTimeout(THEME_SETTLE_MS);
 
     // Sample the center pixel of the canvas
@@ -150,3 +193,4 @@ test.describe('Theme Switch Guard', () => {
     expect(isPureWhite, 'Center canvas pixel is pure white after Dark mode toggle - possible white-screen bug. Color: ' + JSON.stringify(centerColor)).toBe(false);
   });
 });
+

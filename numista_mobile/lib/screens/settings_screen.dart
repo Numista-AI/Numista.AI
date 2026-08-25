@@ -7,6 +7,7 @@ import '../services/morgan_prefs.dart';
 import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import '../constants.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/inspector_service.dart';
@@ -37,8 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Danger Zone state ──────────────────────────────────────────────────────
   bool _clearRunning = false;
   int? _clearCoinCount;                          // null = not yet fetched
-  // Target defaults to the currently signed-in user's own collection.
-  // The confirmation dialog lets an admin override the email at runtime.
+  // Display-only. The wipe endpoint ignores client-supplied emails and uses
+  // the Firebase ID token to identify whose collection to clear.
   String get _defaultClearTarget => AuthService.userEmail;
 
   static const _apiUrl = kApiBaseUrl;
@@ -531,25 +532,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _clearCollection(String targetEmail) async {
+  Future<void> _clearCollection() async {
     if (mounted) setState(() => _clearRunning = true);
     try {
-      final resp = await http.post(
+      final resp = await HttpAuthClient.post(
         Uri.parse('$_apiUrl/api/collection/clear'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_email': targetEmail, 'confirm': 'DELETE'}),
+        body: jsonEncode({'confirm': 'DELETE'}),
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final deleted = (data['coins_deleted'] as num).toInt();
+        final owner = (data['user_email'] ?? AuthService.userEmail).toString();
         if (mounted) {
           setState(() => _clearCoinCount = 0);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('✅ $deleted coin${deleted == 1 ? '' : 's'} deleted from $targetEmail'),
+            content: Text('✅ $deleted coin${deleted == 1 ? '' : 's'} deleted from $owner'),
             backgroundColor: const Color(0xFF166534),
             duration: const Duration(seconds: 6),
           ));
         }
+      } else if (resp.statusCode == 401 || resp.statusCode == 403) {
+        throw Exception('Not authorized to clear this collection.');
       } else {
         throw Exception('HTTP ${resp.statusCode}: ${resp.body}');
       }
@@ -568,7 +571,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showClearConfirmDialog(BuildContext context) {
     final confirmController = TextEditingController();
-    final targetController  = TextEditingController(text: _defaultClearTarget);
     bool confirmEnabled = false;
 
     showDialog<void>(
@@ -601,20 +603,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                const Text('Target account:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                const Text('This account:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                 const SizedBox(height: 4),
-                TextField(
-                  controller: targetController,
-                  style: const TextStyle(color: Color(0xFFFBBF24), fontFamily: 'monospace', fontSize: 13),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF374151))),
-                    focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFEF4444))),
-                    fillColor: Color(0xFF0F172A),
-                    filled: true,
+                Text(
+                  _defaultClearTarget,
+                  style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontFamily: 'monospace',
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -681,7 +677,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: confirmEnabled
                     ? () {
                         Navigator.pop(ctx);
-                        _clearCollection(targetController.text.trim());
+                        _clearCollection();
                       }
                     : null,
               ),
