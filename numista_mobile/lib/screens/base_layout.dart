@@ -34,6 +34,8 @@ import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
 import 'admin_feedback_screen.dart';
+import 'my_tickets_screen.dart';
+import 'support_portal_screen.dart';
 import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
 import '../services/feedback_trigger_observer.dart';
@@ -386,7 +388,14 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Beta Feedback Inbox':
         return const AdminFeedbackScreen();
       case 'Customer Service':
-        return const CustomerServiceScreen();
+        return CustomerServiceScreen(
+          onNavigateToTickets: () => setState(() => _activeRoute = 'My Tickets'),
+        );
+      case 'My Tickets':
+        return const MyTicketsScreen();
+      case 'Admin: Support Portal':
+        return const SupportPortalScreen();
+
       case 'Inventory':
         return const SuppliesScreen();
       case 'Coin Search':
@@ -750,7 +759,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                         // Admin-only: Grade Flag & Beta Feedback Inbox
                         if (email == 'jseaman1204@gmail.com' ||
-                            email.endsWith('@numista.ai')) ...[
+                            email.endsWith('@numista.ai')) ...[ 
                           _buildNavItem('Admin Grade Flags',
                               icon: Icons.admin_panel_settings_outlined),
                           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -767,6 +776,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                               );
                             },
                           ),
+                          _buildNavItem('Admin: Support Portal',
+                              icon: Icons.support_agent_outlined),
                         ],
 
                         if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
@@ -780,7 +791,9 @@ class _BaseLayoutState extends State<BaseLayout> {
                         const _SidebarDivider(),
                         _buildNavItem('Our Team', icon: Icons.people_outline),
                         _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
+                        _buildNavItem('My Tickets', icon: Icons.receipt_long_outlined),
                         _buildNavItem('🔍 Numista Lookup', icon: Icons.search_outlined),
+
                       ],
                     ),
                   ),

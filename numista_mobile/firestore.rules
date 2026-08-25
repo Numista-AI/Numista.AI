@@ -146,6 +146,57 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == resource.data.primary_owner_uid;
     }
 
+    // ── Help Tickets ──────────────────────────────────────────────────────────
+    // Base document: no grant token, no diagnostic data — safe for admin queue read.
+    // Sensitive sub-document (private/grant_and_diag): allow read, write: if false
+    // → backend service account only (Admin SDK bypasses rules).
+    match /tickets/{ticket_id} {
+      // User creates their own ticket; grant_active must be false on create
+      allow create: if isAuthenticated()
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.get('grant_active', false) == false;
+
+      // User reads own tickets; admin reads all (base doc only — no sensitive fields here)
+      allow read: if isAuthenticated()
+                  && (resource.data.user_id == request.auth.uid
+                      || request.auth.token.admin == true);
+
+      // User may update subject/description/status only while no grant is active
+      allow update: if isAuthenticated()
+                    && resource.data.user_id == request.auth.uid
+                    && resource.data.get('grant_active', false) == false;
+
+      allow delete: if false;
+
+      // ── Sensitive private sub-document ─────────────────────────────────────
+      // Contains support_grant (token_hash) and diagnostic_package.
+      // ONLY the backend service account (Admin SDK) may read or write this.
+      match /private/{doc} {
+        allow read, write: if false;
+      }
+
+      // ── Messages ────────────────────────────────────────────────────────────
+      // User posts and reads their own ticket messages.
+      // Support posts and reads via backend Admin SDK only (not direct Firestore).
+      match /messages/{message_id} {
+        allow create: if isAuthenticated()
+                      && get(/databases/$(database)/documents/tickets/$(ticket_id))
+                           .data.user_id == request.auth.uid;
+        allow read:   if isAuthenticated()
+                      && get(/databases/$(database)/documents/tickets/$(ticket_id))
+                           .data.user_id == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Support Access Audit Log ──────────────────────────────────────────────
+    // Backend service account writes. Admin may read for audit review.
+    // Clients cannot write audit log entries.
+    match /support_access_logs/{log_id} {
+      allow read:  if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;  // backend service account only via Admin SDK
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
