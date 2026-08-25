@@ -40,6 +40,18 @@ def test_unauthenticated_subaccounts_rejected():
     # In strict auth mode, should return 401 or 403
     assert response.status_code in [401, 403, 200]  # Allow 200 during dev fallback if configured
 
+def test_unauthenticated_collection_clear_rejected(monkeypatch):
+    """Wiping a collection without a Firebase Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/collection/clear",
+        json={"user_email": "victim@example.com", "confirm": "DELETE"},
+    )
+    assert response.status_code == 401
+
+
 def test_stripe_webhook_fail_closed_missing_secret(monkeypatch):
     """Stripe webhook must fail closed (400) if STRIPE_WEBHOOK_SECRET is missing in production."""
     monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
