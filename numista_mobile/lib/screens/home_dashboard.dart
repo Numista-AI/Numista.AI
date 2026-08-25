@@ -1543,10 +1543,35 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.179',
+    date: '2026-08-25',
+    description: 'Infra+tests Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests',
+    ],
+  ),
+  _Release(
+    version: 'v4.178',
+    date: '2026-08-25',
+    description: 'Infra+tests Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests',
+      'Phase3c: spec green â€” 16/16 tests passing on preview channel',
+      'Qc: add numista_qc/ consolidated QC suite (v5 plan)',
+      'A11y: enable Flutter web accessibility for Playwright testing',
+      'Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture',
+      'Mint-set: Phase 2C label color 0xFF64748B to 0xFFB0BEC5 in _mintSetField only',
+      'Mint-set: add Silver Proof Set template + is_foreign fix + Morgan maxWidth 480',
+      'Program-manager: fix white text on light background in detail view nav/headings/progress',
+    ],
+  ),
+  _Release(
     version: 'v4.177',
     date: '2026-08-24',
     description: 'Qc Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Qc: add numista_qc/ consolidated QC suite (v5 plan)',
       'A11y: enable Flutter web accessibility for Playwright testing',
