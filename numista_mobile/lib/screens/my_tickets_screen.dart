@@ -4,7 +4,6 @@
 // Desktop Web only. All security decisions are made server-side.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/ticket_service.dart';
 import '../models/ticket_model.dart';
 
@@ -89,8 +88,6 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
   }
 
   Future<void> _showGrantDialog(HelpTicket ticket) async {
-    // For MVP: no coin selection UI — empty allowed_coin_ids → support sees none
-    // Full grant UI (coin picker) can be added in the next iteration.
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => _GrantDialog(ticket: ticket),
@@ -105,9 +102,22 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
         durationHours: (result['duration_hours'] as int?) ?? 48,
       );
 
-      // Show the token ONCE in an undismissable copy dialog
-      if (mounted) _showTokenDialog(response['token'] as String);
-      _loadTickets();
+      if (mounted) {
+        final expiresAt = response['expires_at'] as String?;
+        final hours = response['duration_hours'] as int? ?? 48;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Support access granted for $hours hours'
+              '${expiresAt != null ? ' (expires ${expiresAt.substring(0, 10)})' : ''}. '
+              'You can revoke it at any time.',
+            ),
+            backgroundColor: const Color(0xFF34A853),
+            duration: const Duration(seconds: 6),
+          ),
+        );
+        _loadTickets();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,72 +125,6 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
         );
       }
     }
-  }
-
-  void _showTokenDialog(String token) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.vpn_key_rounded, color: Color(0xFF1967D2)),
-            SizedBox(width: 8),
-            Text('Your Support Token'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Share this token with Numista.AI support. '
-              'It is shown ONCE and cannot be retrieved again.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF5A5C69)),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FB),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFDDE1E7)),
-              ),
-              child: SelectableText(
-                token,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: Color(0xFF31333F),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('Copy Token'),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: token));
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Token copied to clipboard.')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1967D2)),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('I\'ve Copied the Token',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

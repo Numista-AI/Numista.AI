@@ -81,7 +81,7 @@ class TicketService {
   }
 
   /// Issue a support grant for a ticket.
-  /// Returns the raw token (shown ONCE) and metadata.
+  /// Returns metadata only — no token is generated or returned.
   static Future<Map<String, dynamic>> createGrant({
     required String ticketId,
     required List<String> allowedCoinIds,
@@ -175,15 +175,13 @@ class TicketService {
     throw Exception('Support queue fetch failed: ${resp.statusCode}');
   }
 
-  /// Fetch a ticket's support view — requires valid grant token.
-  /// The backend re-fetches and re-redacts all coin data.
+  /// Fetch a ticket's support view. No token required — backend validates grant_active flag.
   static Future<SupportTicketView> getSupportTicketView({
     required String ticketId,
-    required String grantToken,
   }) async {
     final resp = await http.get(
       Uri.parse('$_base/support/tickets/$ticketId'),
-      headers: await _headers(extra: {'X-Grant-Token': grantToken}),
+      headers: await _headers(),
     );
 
     if (resp.statusCode == 200) {
@@ -194,15 +192,14 @@ class TicketService {
     throw Exception('Support view failed (${resp.statusCode}): $err');
   }
 
-  /// Support agent posts a reply message.
+  /// Support agent posts a reply message. No token required.
   static Future<void> supportPostMessage({
     required String ticketId,
-    required String grantToken,
     required String msgBody,
   }) async {
     final resp = await http.post(
       Uri.parse('$_base/support/tickets/$ticketId/messages'),
-      headers: await _headers(extra: {'X-Grant-Token': grantToken}),
+      headers: await _headers(),
       body: jsonEncode({'body': msgBody}),
     );
 
