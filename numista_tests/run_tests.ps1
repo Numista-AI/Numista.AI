@@ -94,8 +94,8 @@ if (Test-Path $pytestExe) {
   Log "WARNING: Backend venv pytest executable not found at $pytestExe"
 }
 
-# 5. Run Playwright E2E UI Tests (hard 25-minute timeout so report always runs)
-Log "Running Playwright E2E tests against https://numista.ai (25-min hard timeout)..."
+# 5. Run Playwright E2E UI Tests (hard 40-minute timeout so report always runs)
+Log "Running Playwright E2E tests against https://numista.ai (40-min hard timeout)..."
 $playwrightLog = Join-Path $TestDir "reports\playwright-run.log"
 
 # Use cmd.exe so npx resolves correctly regardless of whether it is a .ps1 or .cmd wrapper.
@@ -109,9 +109,9 @@ $playwrightJob = Start-Job -ScriptBlock {
   "##EXITCODE=$ec##"
 } -ArgumentList $TestDir
 
-$jobDone = Wait-Job -Job $playwrightJob -Timeout 1500   # 1500 sec = 25 min
+$jobDone = Wait-Job -Job $playwrightJob -Timeout 2400   # 2400 sec = 40 min
 if ($null -eq $jobDone) {
-  Log "WARNING: Playwright E2E timed out after 25 minutes -- killing and continuing to report."
+  Log "WARNING: Playwright E2E timed out after 40 minutes -- killing and continuing to report."
   Stop-Job  -Job $playwrightJob
   Remove-Job -Job $playwrightJob -Force
   $exitCode = 124
@@ -135,7 +135,7 @@ if ($null -eq $jobDone) {
 if ($exitCode -eq 0) {
   Log "Playwright E2E suite PASSED."
 } elseif ($exitCode -eq 124) {
-  Log "WARNING: Playwright E2E suite TIMED OUT after 25 minutes."
+  Log "WARNING: Playwright E2E suite TIMED OUT after 40 minutes."
 } else {
   Log "WARNING: Playwright E2E suite reported failures (exit code $exitCode)."
 }

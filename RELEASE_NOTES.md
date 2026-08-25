@@ -177,6 +177,79 @@
 
 
 
+
+
+
+
+
+
+
+## v4.181 — 2026-08-25
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.180 — 2026-08-25
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.179 release notes and dashboard version
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.179 — 2026-08-25
+**Infra+tests Enhancements & Platform Updates**
+
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+
+## v4.178 — 2026-08-25
+**Infra+tests Enhancements & Platform Updates**
+
+- Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests
+- Phase3c: spec green â€” 16/16 tests passing on preview channel
+- Qc: add numista_qc/ consolidated QC suite (v5 plan)
+- A11y: enable Flutter web accessibility for Playwright testing
+- Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture
+- Mint-set: Phase 2C label color 0xFF64748B to 0xFFB0BEC5 in _mintSetField only
+- Mint-set: add Silver Proof Set template + is_foreign fix + Morgan maxWidth 480
+- Program-manager: fix white text on light background in detail view nav/headings/progress
+
+## v4.177 — 2026-08-24
+**Qc Enhancements & Platform Updates**
+
+- Qc: add numista_qc/ consolidated QC suite (v5 plan)
+- A11y: enable Flutter web accessibility for Playwright testing
+- Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture
+- Mint-set: Phase 2C label color 0xFF64748B to 0xFFB0BEC5 in _mintSetField only
+- Mint-set: add Silver Proof Set template + is_foreign fix + Morgan maxWidth 480
+- Program-manager: fix white text on light background in detail view nav/headings/progress
+- Program-manager: display coin name (state/design) in checklist rows
+- Chat: View Binder button navigates to My Collection via onNavigateToCollection callback
+
+## v4.176 — 2026-08-24
+**A11y Enhancements & Platform Updates**
+
+- A11y: enable Flutter web accessibility for Playwright testing
+- Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture
+- Mint-set: Phase 2C label color 0xFF64748B to 0xFFB0BEC5 in _mintSetField only
+- Mint-set: add Silver Proof Set template + is_foreign fix + Morgan maxWidth 480
+- Program-manager: fix white text on light background in detail view nav/headings/progress
+- Program-manager: display coin name (state/design) in checklist rows
+- Chat: View Binder button navigates to My Collection via onNavigateToCollection callback
+- Release: sync v4.174 release notes and dashboard version
+
+## v4.175 — 2026-08-24
+**Financials Enhancements & Platform Updates**
+
+- Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture
+- Mint-set: Phase 2C label color 0xFF64748B to 0xFFB0BEC5 in _mintSetField only
+- Mint-set: add Silver Proof Set template + is_foreign fix + Morgan maxWidth 480
+- Program-manager: fix white text on light background in detail view nav/headings/progress
+- Program-manager: display coin name (state/design) in checklist rows
+- Chat: View Binder button navigates to My Collection via onNavigateToCollection callback
+- Release: sync v4.174 release notes and dashboard version
+- Scanner: full system audit 2026-08-24 - 215 pytest PASS, 157 E2E PASS, domain engine 19 PASS
+
 ## v4.174 — 2026-08-24
 **Scanner Enhancements & Platform Updates**
 

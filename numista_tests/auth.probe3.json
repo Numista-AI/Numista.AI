@@ -1,0 +1,16 @@
+{
+  "pageConfig": {
+    "fromApps": true,
+    "options": {
+      "apiKey": "AIzaSyCPGC879Tl1FaGucQmlw7qKL25b8v4ACF8",
+      "authDomain": "studio-9101802118-8c9a8.firebaseapp.com",
+      "databaseURL": null,
+      "projectId": "studio-9101802118-8c9a8",
+      "storageBucket": "studio-9101802118-8c9a8.firebasestorage.app",
+      "messagingSenderId": "568985927038",
+      "measurementId": "G-EPZEHXZR5P",
+      "appId": "1:568985927038:web:9ea56548eed27d5a8b072f"
+    }
+  },
+  "configs": []
+}

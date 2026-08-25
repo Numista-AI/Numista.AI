@@ -1,4 +1,4 @@
-﻿/**
+/**
  * theme_switch_guard.spec.js — Numista QC Suite Layer 1
  * Asserts that the app remains functional and visible after theme toggle.
  * Theme settle delay: 500ms (per SUITE_MANIFEST.theme_settle_ms).
@@ -27,19 +27,37 @@ async function signInAndWait(page) {
   }, { em: email, pw: password });
   if (!r.ok) throw new Error('Auth failed: ' + r.error);
   await page.evaluate(() => {
-    ['flutter.user_name','flutter.morgan_onboarding_complete','flutter.onboarding_complete'].forEach(k => localStorage.setItem(k,'true'));
+    ['flutter.user_name','flutter.userName','flutter.morgan_onboarding_complete',
+     'flutter.onboarding_complete','flutter.onboarding_done', 'flutter.user_title',
+     'flutter.title_chosen', 'flutter.onboarding_step'].forEach(k => localStorage.setItem(k,'true'));
   });
   await page.reload();
   await page.waitForFunction(
-    () => { const p = document.querySelector('flt-glass-pane'); return p && window.getComputedStyle(p).visibility === 'visible'; },
+    () => {
+      const p = document.querySelector('flutter-view') ||
+                document.querySelector('flt-glass-pane') ||
+                document.querySelector('canvas');
+      return p && window.getComputedStyle(p).visibility === 'visible';
+    },
     { timeout: 20000 }
   );
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(3000);
+
+  // Dismiss Morgan onboarding modals if present
+  const modalButtons = page.locator('button, [role=button], flt-semantics').filter({ hasText: /That's me|Skip|browse on my own|Homepage \/ Dashboard/i });
+  for (let i = 0; i < 3; i++) {
+    if (await modalButtons.first().isVisible({ timeout: 1500 }).catch(() => false)) {
+      await modalButtons.first().click().catch(() => {});
+      await page.waitForTimeout(1000);
+    }
+  }
 }
 
 async function flutterAlive(page) {
   return page.evaluate(() => {
-    const pane = document.querySelector('flt-glass-pane');
+    const pane = document.querySelector('flutter-view') ||
+                 document.querySelector('flt-glass-pane') ||
+                 document.querySelector('canvas');
     return pane && window.getComputedStyle(pane).visibility === 'visible';
   });
 }

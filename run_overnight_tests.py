@@ -84,7 +84,19 @@ print("="*70 + "\n")
 
 # ── 1. Health check ───────────────────────────────────────────────────────────
 print("── SECTION 1: Health & Basic Endpoints ──────────────────────────────")
-get("/", label="Root health check")
+# Cold-start mitigation: Cloud Run spins down overnight and may need 20-30s
+# to warm up. Retry root probe up to 3 times with 15s backoff before failing.
+_health_passed = False
+for _attempt in range(3):
+    _r = get("/", label=f"Root health check (attempt {_attempt+1}/3)")
+    if _r is not None:
+        _health_passed = True
+        break
+    if _attempt < 2:
+        print(f"  Waiting 15s for Cloud Run warm-up (attempt {_attempt+1} failed)...")
+        time.sleep(15)
+if not _health_passed:
+    log(FAIL, "Root health check", "Failed after 3 attempts — backend may be down")
 get("/docs", label="FastAPI docs page")
 
 # ── 2. Collection endpoints ───────────────────────────────────────────────────
