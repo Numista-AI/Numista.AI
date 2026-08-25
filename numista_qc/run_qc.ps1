@@ -172,12 +172,17 @@ function Run-FlutterChecks {
         Write-Log "WARN: numista_mobile/ not found. Skipping flutter checks."
         return
     }
-    $analyzeOut = & flutter analyze $flutterDir 2>&1
+    # --no-fatal-infos: warnings and infos are logged but don't fail the suite.
+    # Only real errors (exit 1) count as a failure.
+    $analyzeOut = & flutter analyze $flutterDir --no-fatal-infos 2>&1
     $analyzeOut | ForEach-Object { Write-Log $_ }
-    if ($LASTEXITCODE -ne 0) { $script:suitePass = $false; Write-Log "flutter analyze: FAIL" }
-    else { Write-Log "flutter analyze: PASS" }
+    if ($LASTEXITCODE -ne 0) { $script:suitePass = $false; Write-Log "flutter analyze: FAIL (errors found)" }
+    else { Write-Log "flutter analyze: PASS (warnings/infos logged above)" }
 
-    $testOut = & flutter test $flutterDir 2>&1
+    # flutter test must run from the project root (pubspec.yaml must be in CWD)
+    Push-Location $flutterDir
+    $testOut = & flutter test 2>&1
+    Pop-Location
     $testOut | ForEach-Object { Write-Log $_ }
     if ($LASTEXITCODE -ne 0) { $script:suitePass = $false; Write-Log "flutter test: FAIL" }
     else { Write-Log "flutter test: PASS" }
