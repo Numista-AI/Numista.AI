@@ -1,4 +1,4 @@
-﻿import 'dart:io' show File;
+import 'dart:io' show File;
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
@@ -401,7 +401,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _buildCoinsStream() {
-    if (GuestSeedService.isBrowseDemoMode) {
+    // Auth-primary gate: a real non-anonymous Firebase user always reads from
+    // Firestore, regardless of the in-memory demo flag. The demo branch is only
+    // reached when there is no authenticated user (Browse Demo path, State B).
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+
+    if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
       return GuestSeedService.getDemoCoinsStream();
     }
     if (AuthService.coinsPath.contains('unknown')) {

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
@@ -79,7 +80,13 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     try {
       List<CoinModel> coins = [];
 
-      if (GuestSeedService.isBrowseDemoMode) {
+      // Auth-primary gate: a real non-anonymous Firebase user always reads from
+      // Firestore, regardless of the in-memory demo flag. The demo branch is only
+      // reached when there is no authenticated user (Browse Demo path, State B).
+      final authUser = FirebaseAuth.instance.currentUser;
+      final isRealUser = authUser != null && !authUser.isAnonymous;
+
+      if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
         final snap = await GuestSeedService.getDemoCoinsStream().first;
         coins = snap.docs.map((doc) => CoinModel.fromFirestore(doc)).toList();
       } else {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/currency_image_service.dart';
@@ -65,7 +66,13 @@ class _CurrencyCollectionScreenState extends State<CurrencyCollectionScreen> {
   Future<void> _loadNotes() async {
     setState(() => _loading = true);
     try {
-      if (GuestSeedService.isBrowseDemoMode) {
+      // Auth-primary gate: a real non-anonymous Firebase user always reads from
+      // Firestore, regardless of the in-memory demo flag. The demo branch is
+      // only reached when there is no authenticated user (Browse Demo path).
+      final authUser = FirebaseAuth.instance.currentUser;
+      final isRealUser = authUser != null && !authUser.isAnonymous;
+
+      if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
         final demoNotes = GuestSeedService.demoCoinCache
             .where((item) =>
                 item['Is Currency'] == true ||

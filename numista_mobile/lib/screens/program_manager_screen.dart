@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/coin_programs_data.dart';
 import '../services/reference_service.dart';
@@ -296,8 +297,14 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       builder: (context, refSnapshot) {
         final allProgramsMap = refSnapshot.data ?? CoinProgramsData.usPrograms;
 
+        // Auth-primary gate: a real non-anonymous Firebase user always reads
+        // from Firestore, regardless of the in-memory demo flag. The demo
+        // branch is only reached when there is no authenticated user.
+        final authUser = FirebaseAuth.instance.currentUser;
+        final isRealUser = authUser != null && !authUser.isAnonymous;
+
         return FutureBuilder<QuerySnapshot>(
-          future: GuestSeedService.isBrowseDemoMode
+          future: (!isRealUser && GuestSeedService.isBrowseDemoMode)
               ? GuestSeedService.getDemoCoinsFuture()
               : FirebaseFirestore.instance.collection(AuthService.coinsPath).limit(2000).get(),
           builder: (context, snapshot) {

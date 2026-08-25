@@ -835,14 +835,58 @@ class _BaseLayoutState extends State<BaseLayout> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () {
-                          FeedbackTriggerObserver.instance.fire(
-                            FeedbackTriggerEvent(
-                              reason: FeedbackTriggerReason.manualFAB,
-                              route: _activeRoute,
-                              pageTitle: _activeRoute,
-                              userName: AuthService.displayName,
+                          showDialog<String>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('How can we help?'),
+                              contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.rate_review_outlined,
+                                        color: Color(0xFF1967D2)),
+                                    title: const Text('Send general feedback',
+                                        style: TextStyle(fontWeight: FontWeight.w600)),
+                                    subtitle: const Text(
+                                        'Ratings, suggestions, compliments',
+                                        style: TextStyle(fontSize: 12)),
+                                    onTap: () => Navigator.pop(ctx, 'feedback'),
+                                  ),
+                                  const Divider(height: 1),
+                                  ListTile(
+                                    leading: const Icon(Icons.confirmation_number_outlined,
+                                        color: Color(0xFFE37400)),
+                                    title: const Text('Report a problem / get help',
+                                        style: TextStyle(fontWeight: FontWeight.w600)),
+                                    subtitle: const Text(
+                                        'Opens the support ticket form',
+                                        style: TextStyle(fontSize: 12)),
+                                    onTap: () => Navigator.pop(ctx, 'ticket'),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                              ],
                             ),
-                          );
+                          ).then((choice) {
+                            if (choice == 'feedback') {
+                              FeedbackTriggerObserver.instance.fire(
+                                FeedbackTriggerEvent(
+                                  reason: FeedbackTriggerReason.manualFAB,
+                                  route: _activeRoute,
+                                  pageTitle: _activeRoute,
+                                  userName: AuthService.displayName,
+                                ),
+                              );
+                            } else if (choice == 'ticket') {
+                              _navigateTo('Customer Service');
+                            }
+                          });
                         },
                       ),
                     ),
@@ -918,6 +962,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   MorganChatPopout(
                     initialQuery: _popoutInitialQuery,
                     onClose: () => setState(() => _isMorganPopoutOpen = false),
+                    onNavigateToCollection: () => _navigateTo('My Collection'),
                   ),
               ],
             ),

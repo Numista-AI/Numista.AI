@@ -6,11 +6,13 @@ import '../screens/ai_chat_screen.dart';
 class MorganChatPopout extends StatefulWidget {
   final String? initialQuery;
   final VoidCallback onClose;
+  final VoidCallback? onNavigateToCollection;
 
   const MorganChatPopout({
     super.key,
     this.initialQuery,
     required this.onClose,
+    this.onNavigateToCollection,
   });
 
   @override
@@ -131,6 +133,7 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
                 isMinimized: _isMinimized,
                 onMinimize: _toggleMinimize,
                 onClose: widget.onClose,
+                onNavigateToCollection: widget.onNavigateToCollection,
                 onDragUpdate: (details) {
                   setState(() {
                     _top = (_top + details.delta.dy).clamp(0.0, screenSize.height - 100);

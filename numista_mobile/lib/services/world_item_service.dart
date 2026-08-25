@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -470,7 +471,13 @@ class WorldItemService {
   /// Real-time stream of all world items for the current user,
   /// ordered newest first.
   static Stream<List<WorldItem>> worldItemsStream() {
-    if (GuestSeedService.isBrowseDemoMode) {
+    // Auth-primary gate: a real non-anonymous Firebase user always reads from
+    // Firestore, regardless of the in-memory demo flag. The demo branch is only
+    // reached when there is no authenticated user (Browse Demo path, State B).
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+
+    if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
       final demoWorld = GuestSeedService.demoCoinCache
           .where((item) => item['Category'] == 'World' || (item['Country'] != null && item['Country'] != 'USA'))
           .map((item) => WorldItem(
