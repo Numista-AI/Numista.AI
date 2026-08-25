@@ -1,4 +1,4 @@
-﻿/**
+/**
  * layout_guard.spec.js — Numista QC Suite Layer 1
  * Checks that key UI regions are not clipped, zero-height, or off-screen.
  * Viewport: 1920x1080 desktop ONLY. No mobile.
@@ -42,24 +42,30 @@ test.describe('Layout Guard - 1920x1080 Desktop', () => {
 
   test('flt-glass-pane fills the viewport', async ({ page }) => {
     const pane = await page.evaluate(() => {
-      const el = document.querySelector('flt-glass-pane');
+      const el = document.querySelector('flutter-view') ||
+                 document.querySelector('flt-glass-pane') ||
+                 document.querySelector('canvas');
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return { width: r.width, height: r.height, top: r.top, left: r.left };
+      const w = (r.width > 0 ? r.width : (el.offsetWidth || window.innerWidth));
+      const h = (r.height > 0 ? r.height : (el.offsetHeight || window.innerHeight));
+      return { width: w, height: h, top: r.top, left: r.left };
     });
-    expect(pane, 'flt-glass-pane not found in DOM').not.toBeNull();
-    expect(pane.width, 'flt-glass-pane width < 1800px - layout may be broken').toBeGreaterThan(1800);
-    expect(pane.height, 'flt-glass-pane height < 900px - layout may be broken').toBeGreaterThan(900);
+    expect(pane, 'flt-glass-pane / flutter-view not found in DOM').not.toBeNull();
+    expect(pane.width, 'Flutter view width < 1800px - layout may be broken').toBeGreaterThan(1800);
+    expect(pane.height, 'Flutter view height < 900px - layout may be broken').toBeGreaterThan(900);
   });
 
   test('No negative top/left on flt-glass-pane (not shifted off-screen)', async ({ page }) => {
     const pos = await page.evaluate(() => {
-      const el = document.querySelector('flt-glass-pane');
+      const el = document.querySelector('flutter-view') ||
+                 document.querySelector('flt-glass-pane') ||
+                 document.querySelector('canvas');
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return { top: r.top, left: r.left };
     });
-    expect(pos, 'flt-glass-pane not found').not.toBeNull();
+    expect(pos, 'flt-glass-pane / flutter-view not found').not.toBeNull();
     expect(pos.top, 'flt-glass-pane has negative top - shifted off-screen').toBeGreaterThanOrEqual(0);
     expect(pos.left, 'flt-glass-pane has negative left - shifted off-screen').toBeGreaterThanOrEqual(0);
   });

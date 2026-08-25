@@ -1543,10 +1543,20 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.180',
+    date: '2026-08-25',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: auto-bump v4.179 release notes and dashboard version',
+      'Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests',
+    ],
+  ),
+  _Release(
     version: 'v4.179',
     date: '2026-08-25',
     description: 'Infra+tests Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests',
     ],

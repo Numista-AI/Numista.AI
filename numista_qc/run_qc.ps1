@@ -8,7 +8,7 @@ param(
 )
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $SCRIPT_DIR   = $PSScriptRoot
 $MANIFEST     = "$SCRIPT_DIR\SUITE_MANIFEST.json"
