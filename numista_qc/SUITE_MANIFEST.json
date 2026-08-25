@@ -3,6 +3,7 @@
   "_instructions": "Set qa_project_id and qc_uid after provisioning the QA Firebase project. Never set qa_project_id to studio-9101802118-8c9a8 (production).",
   "qa_project_id": "numista-qc",
   "qc_uid": "rxXrMBPy34N2q2ZHywCEItGHu2E2",
+  "qa_base_url": "REPLACE_WITH_QA_DEPLOYMENT_URL",
   "qa_isolation_mode": "dedicated_project",
   "forbidden_accounts": [
     "ericdcman@gmail.com",

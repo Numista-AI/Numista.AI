@@ -191,14 +191,32 @@ def get_db():
 
 
 def get_qc_uid(db):
-    """Read qc_uid from SUITE_MANIFEST.json."""
+    """Read qc_uid from SUITE_MANIFEST.json. Hard abort if missing or placeholder."""
     manifest_path = Path(__file__).parent.parent / 'SUITE_MANIFEST.json'
     with open(manifest_path) as f:
         manifest = json.load(f)
-    uid = manifest.get('qc_uid')
-    if not uid:
-        sys.exit('ABORT: qc_uid not set in SUITE_MANIFEST.json. Provision the QA account first.')
+    uid = manifest.get('qc_uid', '')
+    if not uid or uid == 'REPLACE_WITH_QA_USER_UID':
+        sys.exit(
+            'ABORT: qc_uid is missing or still a placeholder in SUITE_MANIFEST.json. '
+            'Create a test user in numista-qc Firebase Authentication, copy the UID, '
+            'and set qc_uid before running seed.'
+        )
     return uid
+
+
+def _assert_no_camel_case_keys():
+    """Belt-and-suspenders: abort before any write if a fixture has camelCase keys.
+    Write policy: seed uses whole-document set() (no merge). account_integrity.py
+    uses set(..., merge=True) only for patching existing records.
+    """
+    for fix in FIXTURES_COINS + FIXTURES_CURRENCY + FIXTURES_WORLD_ITEMS:
+        camel_keys = [k for k in fix['data'].keys() if any(c.isupper() for c in k)]
+        if camel_keys:
+            sys.exit(
+                f'ABORT [FIXTURE_SCHEMA]: camelCase keys found in fixture {fix["id"]}: '
+                f'{camel_keys}. All fixture fields must be snake_case. Fix before seeding.'
+            )
 
 
 def seed_collection(db, uid, collection_name, fixtures, reset=False):
@@ -241,6 +259,9 @@ def main():
     parser.add_argument('--check', action='store_true',
                         help='Verify fixtures exist without writing')
     args = parser.parse_args()
+
+    # Run schema assertion before any Firestore connection
+    _assert_no_camel_case_keys()
 
     db = get_db()
     uid = get_qc_uid(db)

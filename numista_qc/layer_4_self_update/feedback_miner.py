@@ -23,9 +23,11 @@ LLM_AVAILABLE = True
 # PII filter — applied to all text before writing to any log or staging file
 # ---------------------------------------------------------------------------
 PII_PATTERNS = [
-    r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # email
+    r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # email addresses
     r'\$[\d,]+(?:\.\d{2})?',                                    # dollar amounts
-    r'\b(?:eric|seaman|jseaman)\w*\b',                          # name fragments
+    r'\b(?:eric|seaman|jseaman|ericdcman)\w*\b',               # name fragments
+    r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b',                      # phone numbers
+    r'\b(?:SSN|EIN|TIN)[\s:]*\d{3}[-\s]?\d{2}[-\s]?\d{4}\b',  # tax IDs
 ]
 
 def strip_pii(text):
@@ -67,7 +69,6 @@ def classify_issues_with_gemini(raw_issues):
         )
 
         response = model.generate_content(prompt)
-        # Parse JSON from response
         text = response.text.strip()
         if text.startswith('```'):
             text = re.sub(r'^```[a-z]*\n?', '', text)
@@ -139,21 +140,89 @@ def generate_staging_spec(classified_issues):
     return spec_path
 
 
+# ---------------------------------------------------------------------------
+# Beta folder resolution — portable path, narrows to today's dated folder
+# ---------------------------------------------------------------------------
+def resolve_beta_scan_dir():
+    """
+    Resolve the folder to scan for .docx feedback files.
+    - Portable: uses Path(__file__).parents[2] relative to this script.
+    - Env override: NUMISTA_BETA_DIR allows CI or other machines to override.
+    - Narrow scope: scans only today's dated folder (e.g. '25 AUG 26').
+      Falls back to root-level *.docx only (non-recursive) if today's folder absent.
+    """
+    beta_root_env = os.environ.get('NUMISTA_BETA_DIR')
+    if beta_root_env:
+        beta_root = Path(beta_root_env)
+    else:
+        # numista_qc/layer_4_self_update/feedback_miner.py
+        # parents[0] = layer_4_self_update, parents[1] = numista_qc, parents[2] = project root
+        beta_root = Path(__file__).parents[2] / '1 NUMISTA.AI' / 'BETA TEST' / 'MY TESTING'
+
+    if not beta_root.exists():
+        print(f'[feedback_miner] Beta root not found: {beta_root}')
+        return None, []
+
+    # Windows-safe date: today.day is a plain integer, no strftime platform extensions
+    today = datetime.date.today()
+    today_folder_name = f"{today.day} {today.strftime('%b %y').upper()}"  # e.g. "25 AUG 26"
+    scan_dir = beta_root / today_folder_name
+
+    if scan_dir.exists():
+        docx_files = list(scan_dir.rglob('*.docx'))
+        print(f'[feedback_miner] Scanning today folder: {scan_dir} ({len(docx_files)} .docx files)')
+        return scan_dir, docx_files
+    else:
+        # Fallback: root-level only (non-recursive), not the whole tree
+        docx_files = [f for f in beta_root.glob('*.docx') if not f.name.startswith('~')]
+        print(f'[feedback_miner] Today folder not found ({today_folder_name}). '
+              f'Scanning beta root only ({len(docx_files)} .docx files).')
+        return beta_root, docx_files
+
+
+def extract_docx_text(docx_path):
+    """Extract text from a .docx file. Returns empty string on any failure."""
+    try:
+        import docx as _docx
+        doc = _docx.Document(str(docx_path))
+        return '\n'.join(p.text for p in doc.paragraphs if p.text.strip())
+    except ImportError:
+        print('[feedback_miner] WARN: python-docx not installed. Skipping .docx extraction. '
+              'Install with: pip install python-docx')
+        return ''
+    except Exception as e:
+        print(f'[feedback_miner] WARN: could not read {docx_path.name}: {e}')
+        return ''
+
+
 def main():
-    # Gather raw issues from any feedback files in the project
-    feedback_sources = list(Path('..').glob('**/feedback_manifest*.json'))
     raw_issues = []
 
-    for source in feedback_sources:
+    # --- JSON feedback manifests (original path) ---
+    json_sources = list(Path(__file__).parents[2].glob('**/feedback_manifest*.json'))
+    for source in json_sources:
         try:
             with open(source) as f:
                 data = json.load(f)
             if isinstance(data, list):
-                raw_issues.extend(str(item) for item in data[:20])  # cap at 20 per file
+                raw_issues.extend(str(item) for item in data[:20])
             elif isinstance(data, dict):
                 raw_issues.extend(str(v) for v in list(data.values())[:20])
         except Exception:
             continue
+
+    # --- Word doc feedback (today's dated folder only) ---
+    _, docx_files = resolve_beta_scan_dir()
+    for docx_path in docx_files:
+        if docx_path.name.startswith('~'):
+            continue  # skip temp files
+        text = extract_docx_text(docx_path)
+        if text:
+            # PII-strip immediately before any processing
+            text = strip_pii(text)
+            # Split into lines, each non-empty line is a candidate issue
+            lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 20]
+            raw_issues.extend(lines[:30])  # cap at 30 per document
 
     if not raw_issues:
         print('[feedback_miner] No feedback sources found. Nothing to mine.')

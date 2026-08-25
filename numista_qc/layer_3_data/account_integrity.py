@@ -46,11 +46,33 @@ def load_manifest():
         return json.load(f)
 
 
+def verify_target_project(app):
+    """Hard abort if the Firestore client is pointed at production or any unexpected project.
+    Called immediately after firebase_admin.initialize_app(), before any read or write.
+    """
+    target = app.project_id
+    if target == PRODUCTION_PROJECT_ID:
+        sys.exit(
+            f'ABORT [PRODUCTION_WRITE_GUARD]: account_integrity.py would target the '
+            f'production project ({target}). Set GOOGLE_CLOUD_PROJECT=numista-qc and '
+            f'use the numista-qc service account credential. Refusing to continue.'
+        )
+    if target != 'numista-qc':
+        sys.exit(
+            f'ABORT [UNEXPECTED_PROJECT]: target project is {target!r}, expected "numista-qc". '
+            f'Check GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_CLOUD_PROJECT env vars.'
+        )
+    print(f'[account_integrity] Target project confirmed: {target}')
+
+
 def init_db(manifest):
     if not firebase_admin._apps:
         sa_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
         cred = credentials.Certificate(sa_path) if sa_path else credentials.ApplicationDefault()
-        firebase_admin.initialize_app(cred, {'projectId': _target_project})
+        app = firebase_admin.initialize_app(cred, {'projectId': _target_project})
+    else:
+        app = firebase_admin.get_app()
+    verify_target_project(app)
     return firestore.client()
 
 

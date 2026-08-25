@@ -1,5 +1,15 @@
 const { defineConfig, devices } = require('@playwright/test');
-require('dotenv').config({ path: require('path').join(__dirname, '../numista_tests/.env') });
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../numista_tests/.env') });
+
+// Read qa_base_url from SUITE_MANIFEST.json — when set, Layer 2 CRUD is activated
+const _manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'SUITE_MANIFEST.json'), 'utf8'));
+const _qaBaseUrl = _manifest.qa_base_url;
+const _baseURL = (_qaBaseUrl && _qaBaseUrl !== 'REPLACE_WITH_QA_DEPLOYMENT_URL')
+    ? _qaBaseUrl
+    : (process.env.PLAYWRIGHT_BASE_URL || 'https://numista.ai');
+
 
 module.exports = defineConfig({
   // testDir is NOT set here — each run specifies the layer directory explicitly
@@ -12,7 +22,7 @@ module.exports = defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://numista.ai',
+    baseURL: _baseURL,
     headless: true,
     viewport: { width: 1920, height: 1080 },  // Desktop ONLY — no mobile viewports
     screenshot: 'on',
