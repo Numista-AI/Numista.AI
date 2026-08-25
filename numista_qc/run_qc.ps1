@@ -1,4 +1,4 @@
-# run_qc.ps1 — Numista QC Suite Master Entry Point
+﻿# run_qc.ps1 - Numista QC Suite Master Entry Point
 # Windows PowerShell. Run from the numista_qc/ directory OR called by run_tests.ps1.
 # Usage: .\run_qc.ps1 [-Layer <1|2|3|4|all>] [-SkipFlutterChecks] [-Verbose]
 
@@ -106,7 +106,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Log "Fixtures OK."
 
-# ---- PRE-FLIGHT CHECK 5: Cloud Run secrets (WARNING — non-blocking) --------
+# ---- PRE-FLIGHT CHECK 5: Cloud Run secrets (WARNING - non-blocking) --------
 Write-Log "Checking Cloud Run secrets (non-blocking)..."
 try {
     $gcResult = & gcloud run services describe numista-backend-568985927038 --region=us-central1 --format=json 2>&1
@@ -126,7 +126,7 @@ try {
     Write-Log "WARN [CLOUD_RUN_CHECK_ERROR]: $_ (non-fatal)"
 }
 
-# ---- PRE-FLIGHT CHECK 6: Deprecated Gemini model IDs (WARNING — non-blocking) ---
+# ---- PRE-FLIGHT CHECK 6: Deprecated Gemini model IDs (WARNING - non-blocking) ---
 Write-Log "Scanning for deprecated Gemini model IDs (non-blocking)..."
 $deprecatedPattern = 'gemini-(1\.5|2\.0|2\.5)'
 $searchPaths = @(
@@ -158,7 +158,7 @@ $l2Status  = "NOT_RUN"
 $l3Status  = "NOT_RUN"
 $l4Status  = "NOT_RUN"
 
-# ---- FLUTTER CHECKS (Layer 0 — skipped if Stack A already ran them) --------
+# ---- FLUTTER CHECKS (Layer 0 - skipped if Stack A already ran them) --------
 function Run-FlutterChecks {
     if ($SkipFlutterChecks) {
         Write-Log "Flutter checks: SKIPPED (-SkipFlutterChecks set by Stack A)"
@@ -262,7 +262,7 @@ function Write-SuiteReport {
     } else {
         "Dedicated QA project: $qaProject"
     }
-    $uidStatus = if ($qcUid -and $qcUid -ne 'REPLACE_WITH_QA_USER_UID') { "SET" } else { "⚠️ NOT SET" }
+    $uidStatus = if ($qcUid -and $qcUid -ne 'REPLACE_WITH_QA_USER_UID') { "SET" } else { "! NOT SET" }
 
     $block = @"
 
@@ -292,6 +292,8 @@ Write-SuiteReport
 if ($suitePass) {
     Write-Log "SUITE_RESULT: PASS"
 } else {
-    Write-Log "SUITE_RESULT: FAIL — check SESSION_LOG.md for details"
+    Write-Log "SUITE_RESULT: FAIL - check SESSION_LOG.md for details"
     exit 1
 }
+
+

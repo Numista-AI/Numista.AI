@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,14 +27,34 @@ Future<void> main() async {
   }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: const Color(0xFF1E2937),
+    debugPrint('UI Error: ${details.exception}\n${details.stack}');
+    FlutterError.dumpErrorToConsole(details);
+    return const Material(
+      color: Color(0xFF1E2937),
       child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: SelectableText(
-            'UI Error:\n${details.exception}\n\n${details.stack}',
-            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, color: Color(0xFFC9A227), size: 40),
+              SizedBox(height: 12),
+              Text(
+                'Something went wrong displaying this screen.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFE8EAF0),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Try refreshing the page. If this continues, use Send Feedback.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF8B92B4), fontSize: 13),
+              ),
+            ],
           ),
         ),
       ),
