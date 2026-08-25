@@ -1,4 +1,4 @@
-/**
+﻿/**
  * theme_switch_guard.spec.js — Numista QC Suite Layer 1
  * Asserts that the app remains functional and visible after theme toggle.
  * Theme settle delay: 500ms (per SUITE_MANIFEST.theme_settle_ms).
@@ -161,7 +161,7 @@ test.describe('Theme Switch Guard', () => {
     }
 
     // Switch to dark — use whichever toggle element was found
-    if (await themeBtn.first().isVisible({ timeout: 500 }).catch(() =&gt; false)) {
+    if (await themeBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
       await themeBtn.first().click();
     } else {
       await themeSwitch.first().click();
@@ -193,3 +193,4 @@ test.describe('Theme Switch Guard', () => {
     expect(isPureWhite, 'Center canvas pixel is pure white after Dark mode toggle - possible white-screen bug. Color: ' + JSON.stringify(centerColor)).toBe(false);
   });
 });
+
