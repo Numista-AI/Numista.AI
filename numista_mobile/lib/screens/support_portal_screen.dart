@@ -254,7 +254,7 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
         children: [
           Icon(Icons.support_agent_outlined, size: 56, color: Color(0xFFB0B4C1)),
           SizedBox(height: 12),
-          Text('Select a ticket and enter the grant token to view.',
+          Text('Select a ticket from the queue to view it.',
               style: TextStyle(color: Color(0xFF8A8C96), fontSize: 14)),
         ],
       ),
