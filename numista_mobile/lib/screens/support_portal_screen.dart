@@ -28,9 +28,6 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
   bool _viewLoading = false;
   String? _viewError;
 
-  // Token entry
-  final _tokenController = TextEditingController();
-
   // Message compose
   final _replyController = TextEditingController();
   bool _replySending = false;
@@ -43,7 +40,6 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
 
   @override
   void dispose() {
-    _tokenController.dispose();
     _replyController.dispose();
     super.dispose();
   }
@@ -59,18 +55,10 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
   }
 
   Future<void> _openTicket(HelpTicket ticket) async {
-    final token = _tokenController.text.trim();
-    if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter the grant token first.')),
-      );
-      return;
-    }
     setState(() { _selectedTicket = ticket; _viewLoading = true; _viewError = null; _ticketView = null; });
     try {
       final view = await TicketService.getSupportTicketView(
         ticketId: ticket.ticketId,
-        grantToken: token,
       );
       if (mounted) setState(() { _ticketView = view; _viewLoading = false; });
     } catch (e) {
@@ -85,14 +73,12 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
     try {
       await TicketService.supportPostMessage(
         ticketId: _selectedTicket!.ticketId,
-        grantToken: _tokenController.text.trim(),
         msgBody: body,
       );
       _replyController.clear();
       // Refresh the view
       final view = await TicketService.getSupportTicketView(
         ticketId: _selectedTicket!.ticketId,
-        grantToken: _tokenController.text.trim(),
       );
       if (mounted) setState(() { _ticketView = view; _replySending = false; });
     } catch (e) {
@@ -170,28 +156,6 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF31333F))),
           const SizedBox(height: 12),
-          TextField(
-            controller: _tokenController,
-            style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-            decoration: InputDecoration(
-              hintText: 'Paste grant token here…',
-              hintStyle: const TextStyle(color: Color(0xFFA0A3AB), fontSize: 13),
-              filled: true,
-              fillColor: const Color(0xFFF8F9FB),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFDDE1E7))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFDDE1E7))),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.clear, size: 16),
-                onPressed: () => _tokenController.clear(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(

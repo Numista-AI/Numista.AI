@@ -6,14 +6,13 @@
 #  - Coin data is ALWAYS re-fetched live from users/{identifier}/coins/{coin_id}.
 #  - The stored diagnostic_package is reference metadata only; its coin field
 #    values are never returned to support.
-#  - Raw grant token is never written to any database; only a SHA-256 hash is stored.
+#  - Grant consent is proven by the user pressing "Grant Access" while authenticated.
+#    No cryptographic token is required — the server-side grant_active flag is the
+#    authority. Admin can only view tickets where grant_active == True AND not expired.
 #  - ALWAYS_REDACTED fields are stripped on every support view regardless of what
 #    the client submitted.
-#  - Token validity is checked on every support call (no caching).
 
 import secrets
-import hashlib
-import hmac
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -124,24 +123,13 @@ def _generate_ticket_id() -> str:
     return "".join(secrets.choice(chars) for _ in range(28))
 
 
-def _hash_token(raw_token: str) -> str:
-    """SHA-256 hex digest of the raw token."""
-    return hashlib.sha256(raw_token.encode()).hexdigest()
-
-
-def _verify_token(incoming: str, stored_hash: str) -> bool:
-    """Constant-time comparison of incoming token against stored hash."""
-    computed = hashlib.sha256(incoming.encode()).hexdigest()
-    return hmac.compare_digest(computed, stored_hash)
-
-
-def _grant_is_valid(grant: dict) -> bool:
-    """Returns True if the grant is not revoked and has not expired.
-    grant_used_at is informational only — it does NOT gate further calls.
-    This exact function is also used by the scheduled expiry job."""
-    if grant.get("revoked"):
+def _grant_is_active(ticket: dict) -> bool:
+    """Returns True if grant_active is set and has not expired.
+    This is the sole gate for admin support-view access — no token required.
+    The same function is used by the scheduled expiry job so it cannot drift."""
+    if not ticket.get("grant_active"):
         return False
-    expires_at = grant.get("expires_at")
+    expires_at = ticket.get("expires_at")
     if expires_at is None:
         return False
     # Firestore Timestamps are returned as datetime objects by the Admin SDK
@@ -330,7 +318,8 @@ async def list_my_tickets(uid: str = Depends(get_current_uid)):
 @router.post("/tickets/{ticket_id}/grant", status_code=201)
 async def create_grant(ticket_id: str, body: dict, uid: str = Depends(get_current_uid)):
     """Create a support access grant for an owned ticket.
-    Validates coin ownership server-side. Stores only token_hash."""
+    Consent is proven by the authenticated user calling this endpoint.
+    No token is generated or returned — grant_active flag is the authority."""
     db = _get_db()
 
     ticket_ref = db.collection("tickets").document(ticket_id)
@@ -355,16 +344,10 @@ async def create_grant(ticket_id: str, body: dict, uid: str = Depends(get_curren
     if allowed_coin_ids:
         _verify_coin_ownership(db, uid, allowed_coin_ids)
 
-    # Generate token — raw_token returned once; only hash stored
-    raw_token = secrets.token_hex(32)    # 64-char hex, 256-bit entropy
-    token_hash = _hash_token(raw_token)
-
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(hours=duration_hours)
 
     grant = {
-        "token_hash": token_hash,
-        "grant_used_at": None,       # informational; not a gate
         "created_at": now,
         "expires_at": expires_at,
         "duration_hours": duration_hours,
@@ -374,7 +357,7 @@ async def create_grant(ticket_id: str, body: dict, uid: str = Depends(get_curren
         "revoked_at": None,
     }
 
-    # Write private sub-document
+    # Write private sub-document (grant + diagnostic metadata)
     private_ref = ticket_ref.collection("private").document("grant_and_diag")
     priv_doc = private_ref.get()
     if priv_doc.exists:
@@ -388,9 +371,10 @@ async def create_grant(ticket_id: str, body: dict, uid: str = Depends(get_curren
             },
         })
 
-    # Set grant_active flag on base document
+    # Set grant_active + expires_at on base document (used by _grant_is_active)
     ticket_ref.update({
         "grant_active": True,
+        "expires_at": expires_at,
         "updated_at": now,
     })
 
@@ -398,7 +382,6 @@ async def create_grant(ticket_id: str, body: dict, uid: str = Depends(get_curren
     logger.info(f"[support] Grant created ticket_id={ticket_id} uid={uid} hours={duration_hours}")
 
     return {
-        "token": raw_token,          # shown to user ONCE — never stored
         "expires_at": expires_at.isoformat(),
         "duration_hours": duration_hours,
         "allowed_coin_ids": allowed_coin_ids,
@@ -545,10 +528,9 @@ async def list_support_tickets(admin_uid: str = Depends(require_admin)):
 @router.get("/support/tickets/{ticket_id}")
 async def get_support_ticket_view(
     ticket_id: str,
-    x_grant_token: str = Header(..., alias="X-Grant-Token"),
     admin_uid: str = Depends(require_admin),
 ):
-    """Redacted support view of a ticket. Requires admin claim + valid grant token.
+    """Redacted support view of a ticket. Requires admin claim + active user consent grant.
     Never reads private sub-document directly from Firestore client — this endpoint
     is the only path through which support sees coin data."""
     db = _get_db()
@@ -561,26 +543,18 @@ async def get_support_ticket_view(
     ticket = ticket_doc.to_dict()
     ticket_user_id = ticket["user_id"]
 
+    # Validate consent flag — user must have actively granted access and not expired
+    if not _grant_is_active(ticket):
+        raise HTTPException(403, "No active grant. The user has not granted support access for this ticket.")
+
     # Load private sub-document via Admin SDK (bypasses Firestore rules)
     private_ref = ticket_ref.collection("private").document("grant_and_diag")
     private_doc = private_ref.get()
     if not private_doc.exists:
-        raise HTTPException(403, "No support grant exists for this ticket")
+        raise HTTPException(403, "No support grant data exists for this ticket")
 
     private_data = private_doc.to_dict() or {}
     grant = private_data.get("support_grant") or {}
-
-    # Validate token
-    if not _verify_token(x_grant_token, grant.get("token_hash", "")):
-        raise HTTPException(403, "Invalid grant token")
-
-    # Validate grant is still live
-    if not _grant_is_valid(grant):
-        raise HTTPException(403, "Grant has expired or been revoked")
-
-    # Record first-use timestamp (informational only)
-    if grant.get("grant_used_at") is None:
-        private_ref.update({"support_grant.grant_used_at": datetime.now(timezone.utc)})
 
     # Ownership verification on every support view (defense in depth)
     allowed_coin_ids = grant.get("allowed_coin_ids", [])
@@ -612,7 +586,7 @@ async def get_support_ticket_view(
         "platform": ticket["platform"],
         "app_version": ticket["app_version"],
         "created_at": ticket["created_at"],
-        "grant_expires_at": grant.get("expires_at"),
+        "grant_expires_at": ticket.get("expires_at"),
         # Safe diagnostic metadata (no financial coin data)
         "device_info": diag.get("device_info", {}),
         "error_logs": diag.get("error_logs", []),
@@ -628,10 +602,9 @@ async def get_support_ticket_view(
 async def support_post_message(
     ticket_id: str,
     body: dict,
-    x_grant_token: str = Header(..., alias="X-Grant-Token"),
     admin_uid: str = Depends(require_admin),
 ):
-    """Support agent posts a message. Requires admin claim + valid grant token."""
+    """Support agent posts a message. Requires admin claim + active user grant."""
     db = _get_db()
 
     ticket_ref = db.collection("tickets").document(ticket_id)
@@ -641,19 +614,9 @@ async def support_post_message(
 
     ticket = ticket_doc.to_dict()
 
-    # Validate grant token
-    private_ref = ticket_ref.collection("private").document("grant_and_diag")
-    private_doc = private_ref.get()
-    if not private_doc.exists:
-        raise HTTPException(403, "No grant exists for this ticket")
-
-    private_data = private_doc.to_dict() or {}
-    grant = private_data.get("support_grant") or {}
-
-    if not _verify_token(x_grant_token, grant.get("token_hash", "")):
-        raise HTTPException(403, "Invalid grant token")
-    if not _grant_is_valid(grant):
-        raise HTTPException(403, "Grant has expired or been revoked")
+    # Validate active grant flag
+    if not _grant_is_active(ticket):
+        raise HTTPException(403, "No active grant. The user has not granted support access.")
 
     msg_body = (body.get("body") or "").strip()
     if not msg_body:
@@ -726,21 +689,10 @@ async def expire_grants():
     for ticket_doc in query:
         ticket = ticket_doc.to_dict()
         ticket_id = ticket["ticket_id"]
-        private_ref = ticket_doc.reference.collection("private").document("grant_and_diag")
-        private_doc = private_ref.get()
 
-        if not private_doc.exists:
-            # Stale flag — clean up
-            ticket_doc.reference.update({"grant_active": False, "updated_at": now})
-            continue
-
-        grant = (private_doc.to_dict() or {}).get("support_grant") or {}
-        if grant and not _grant_is_valid(grant):
-            # Grant is expired (or revoked) — mark it
-            private_ref.update({
-                "support_grant.revoked": True,
-                "support_grant.revoked_at": now,
-            })
+        # _grant_is_active reads expires_at directly from the ticket document
+        if not _grant_is_active(ticket):
+            # Grant has expired — clear the flag
             ticket_doc.reference.update({"grant_active": False, "updated_at": now})
             _write_audit_log(db, ticket_id, ticket.get("user_id", ""), "", "grant_expired")
             expired_count += 1
