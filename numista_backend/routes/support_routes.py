@@ -21,6 +21,7 @@ from typing import Optional
 import firebase_admin.auth
 from fastapi import APIRouter, Header, HTTPException, Depends
 from google.cloud import firestore
+from google.api_core.exceptions import FailedPrecondition
 
 from logging_config import get_logger
 
@@ -309,14 +310,21 @@ async def list_my_tickets(uid: str = Depends(get_current_uid)):
         .order_by("created_at", direction=firestore.Query.DESCENDING)
         .limit(50)
     )
-    docs = query.stream()
-    tickets = []
-    for doc in docs:
-        d = doc.to_dict()
-        # Never expose resolution_notes to the user
-        d.pop("resolution_notes", None)
-        tickets.append(d)
-    return {"tickets": tickets}
+    try:
+        docs = query.stream()
+        tickets = []
+        for doc in docs:
+            d = doc.to_dict()
+            # Never expose resolution_notes to the user
+            d.pop("resolution_notes", None)
+            tickets.append(d)
+        return {"tickets": tickets}
+    except FailedPrecondition:
+        logger.warning("[support] list_my_tickets: Firestore index still building — returning 503")
+        raise HTTPException(
+            status_code=503,
+            detail="Ticket index is still being built. Please wait a moment and try again.",
+        )
 
 
 @router.post("/tickets/{ticket_id}/grant", status_code=201)
@@ -522,9 +530,16 @@ async def list_support_tickets(admin_uid: str = Depends(require_admin)):
         .order_by("updated_at", direction=firestore.Query.DESCENDING)
         .limit(100)
     )
-    docs = list(query.stream())
-    tickets = [doc.to_dict() for doc in docs]
-    return {"tickets": tickets}
+    try:
+        docs = list(query.stream())
+        tickets = [doc.to_dict() for doc in docs]
+        return {"tickets": tickets}
+    except FailedPrecondition:
+        logger.warning("[support] list_support_tickets: Firestore index still building — returning 503")
+        raise HTTPException(
+            status_code=503,
+            detail="Ticket index is still being built. Please wait a moment and try again.",
+        )
 
 
 @router.get("/support/tickets/{ticket_id}")
