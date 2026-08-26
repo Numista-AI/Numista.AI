@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,38 +27,12 @@ Future<void> main() async {
   }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    debugPrint('UI Error: ${details.exception}\n${details.stack}');
-    FlutterError.dumpErrorToConsole(details);
-    return const Material(
-      color: Color(0xFF1E2937),
-      child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, color: Color(0xFFC9A227), size: 40),
-              SizedBox(height: 12),
-              Text(
-                'Something went wrong displaying this screen.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFE8EAF0),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Try refreshing the page. If this continues, use Send Feedback.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF8B92B4), fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    // Log full details to console in debug only — never to UI
+    if (kDebugMode) {
+      debugPrint('UI Error: ${details.exception}\n${details.stack}');
+      FlutterError.dumpErrorToConsole(details);
+    }
+    return const _ErrorFallbackWidget();
   };
 
   final uri = Uri.base;
@@ -414,6 +388,62 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
       ),
     );
       },
+    );
+  }
+}
+
+/// Fallback widget shown when ErrorWidget.builder is triggered.
+/// Plain Material widget — no Navigator, no platform-specific APIs.
+/// Report Issue: displays copyable support email address.
+class _ErrorFallbackWidget extends StatelessWidget {
+  const _ErrorFallbackWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF1E2937),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: Color(0xFFC9A227), size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Something went wrong loading this screen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFE8EAF0),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Please refresh the page. If this keeps happening, '
+                  'contact support at the address below.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF8B92B4), fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                const SelectableText(
+                  'support@numista.ai',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFC9A227),
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
