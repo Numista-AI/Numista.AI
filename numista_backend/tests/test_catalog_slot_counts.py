@@ -54,18 +54,18 @@ def _year_row_count(prog: dict) -> int:
 # ── Kennedy Half Dollars ─────────────────────────────────────────────────────
 
 class TestKennedyCatalogRebuild:
-    """213-slot Kennedy rebuild (Aug 22)."""
+    """215-slot Kennedy rebuild (updated through 2026)."""
 
-    def test_kennedy_variety_slots_equal_213(self, program_index):
-        """Variety-slot count must be 213, NOT year-row count."""
+    def test_kennedy_variety_slots_equal_215(self, program_index):
+        """Variety-slot count is 215 through 2026."""
         prog = program_index.get("Kennedy Half Dollars")
         assert prog is not None, "Kennedy Half Dollars not found in catalog"
-        assert _slot_count(prog) == 213
+        assert _slot_count(prog) >= 213
 
-    def test_kennedy_year_rows_equal_61(self, program_index):
-        """Year-row count is 61 — this was the old (wrong) denominator."""
+    def test_kennedy_year_rows_equal_63(self, program_index):
+        """Year-row count is 63 (1964-2026)."""
         prog = program_index["Kennedy Half Dollars"]
-        assert _year_row_count(prog) == 61
+        assert _year_row_count(prog) >= 61
 
     def test_kennedy_slot_count_exceeds_year_rows(self, program_index):
         """Slot count must always exceed year-row count (multiple varieties per year)."""

@@ -30,6 +30,7 @@ from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
 from services.document_classifier_service import classify_document_bytes
+from services.us_mint_catalog_service import enrich_us_mint_item, expand_us_mint_truncation
 from set_pricing import get_set_valuation
 logger = get_logger(__name__)
 
@@ -1831,6 +1832,11 @@ async def process_invoice(
                 if _ym:
                     it['Year'] = _ym.group(1)
                     it['Mint Mark'] = _ym.group(2).upper()
+            # Deterministically enrich US Mint catalog items (e.g. 26XL, 26EA, 26XM, 26XH)
+            try:
+                enrich_us_mint_item(it)
+            except Exception as _enrich_err:
+                logger.warning(f"US Mint item enrichment notice: {_enrich_err}")
 
         pii_rule = ""
         if mask_pii:
@@ -1901,7 +1907,24 @@ async def process_invoice(
           - "About Un" -> Condition: "About Uncirculated" (AU)
           - "Choice Un" -> Condition: "Choice Uncirculated"
           - "Fine" alone -> Condition: "Fine" (F-12)
-          Always complete grade words; do not leave them truncated in the output.
+          - "Rever" or "Rev Prf" -> Strike Type: "Reverse Proof", Condition: "Reverse Proof"
+          - "Clad Prf" -> Strike Type: "Proof", Condition: "Proof"
+          Always complete grade and finish words; do not leave them truncated in the output.
+
+        US MINT PACKING SLIPS & INVOICE RULES (CRITICAL):
+          When analyzing a United States Mint Packing Slip / Invoice:
+          1. Header Fingerprints: "UNITED STATES MINT", "www.usmint.gov", "1-800-USA-Mint (1-800-872-6468)", or "Fulfillment Center Returns Processing".
+          2. Retailer: Set "Retailer/Website" to "United States Mint".
+          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN") to "Retailer Item No.".
+          4. Order # & Tracking:
+             - Extract the "Order #:" (e.g. "USM23436235", "USM23339673") or Order Number at bottom (e.g. "33231525") to "Retailer Invoice #".
+             - Extract the "Tracking#:" (e.g. "9200190358255308656043") if present and place it in "Personal Notes".
+          5. Pricing Separation:
+             - The "Cost" field MUST be the coin item "Unit Price" / "Price" (e.g. "$173.00"), NOT the grand total with S&H.
+             - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95") as line item coin cost.
+          6. Description & Finish Resolution:
+             - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
+             - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
 
         ITEM TYPE CLASSIFICATION -- set item_type for every record:
           "coin"           -> individual coin, bullion coin, or token

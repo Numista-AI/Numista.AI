@@ -18,8 +18,8 @@ def slugify(text):
 
 def main():
     parser = argparse.ArgumentParser(description="Seed US Mint Coin Programs into Firestore global_programs")
-    parser.add_argument("--dry-run", action="store_true", help="Validate and perform key equality unit test without writing to Firestore")
-    parser.add_argument("--execute", action="store_true", help="Perform live idempotent set(doc, merge=True) writes to Firestore")
+    parser.add_argument("--dry-run", action="store_true", help="Validate data, run key-equality unit test, fetch current Firestore docs and show per-program slot diff. Aborts with exit 1 if any program would lose slots or has empty/duplicate variety IDs. Does NOT write to Firestore.")
+    parser.add_argument("--execute", action="store_true", help="Perform live full-document set() writes to Firestore (no merge). Requires prior --dry-run exit 0.")
     parser.add_argument("--audit-report", type=str, default="program_seed_audit_report.json", help="Path to write JSON audit report")
     args = parser.parse_args()
 
@@ -124,7 +124,33 @@ def main():
 
     print(f"Parsed {len(processed_programs)} canonical programs ({len(quarantined_programs)} quarantined).")
 
-    # Perform Key Equality Unit Test
+    # ── Variety ID validation: no empty IDs, no duplicates within a coin ──────
+    print("\n--- Running Variety ID Validation ---")
+    variety_errors = []
+    for item in processed_programs:
+        doc = item['doc']
+        prog_id = item['doc_id']
+        for coin in doc['coins']:
+            seen_ids = set()
+            for v in coin.get('varieties', []):
+                vid = v.get('id', '')
+                coin_label = f"{prog_id}/{coin.get('name', '')} ({coin.get('year', '')})"
+                if vid == '' or vid is None:
+                    variety_errors.append(f"  EMPTY variety.id in {coin_label}")
+                elif vid in seen_ids:
+                    variety_errors.append(f"  DUPLICATE variety.id '{vid}' in {coin_label}")
+                else:
+                    seen_ids.add(vid)
+
+    if variety_errors:
+        print(f"FAILED: {len(variety_errors)} variety ID error(s):")
+        for e in variety_errors:
+            print(e)
+        sys.exit(1)
+    else:
+        print("PASSED: No empty or duplicate variety IDs.")
+
+    # ── Key Equality Unit Test ────────────────────────────────────────────────
     print("\n--- Running Key-Equality Unit Test (Seeder Slot ID vs Resolver) ---")
     unit_test_passed = True
     for item in processed_programs:
@@ -155,20 +181,52 @@ def main():
         print("FAILED: Key Parity errors encountered!")
         sys.exit(1)
 
-    if args.execute:
+    # ── Firestore slot diff (dry-run and execute both connect for diff) ───────
+    incoming_slot_counts = {item['doc_id']: item['doc']['total_slots'] for item in processed_programs}
+
+    if args.dry_run or args.execute:
         cred_path = r'c:\Users\ericd\Documents\MyVertexProject\numista_backend\serviceAccountKey.json'
         if not firebase_admin._apps:
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
-
         db = firestore.client()
+
+        print("\n--- Per-Program Slot Diff (current Firestore vs incoming JSON) ---")
+        slot_shrink_errors = []
+        for item in processed_programs:
+            doc_id = item['doc_id']
+            incoming_slots = item['doc']['total_slots']
+            existing_doc = db.collection('global_programs').document(doc_id).get()
+            if existing_doc.exists:
+                existing_slots = existing_doc.to_dict().get('total_slots', 0)
+                removed = existing_slots - incoming_slots
+                added = incoming_slots - existing_slots
+                status = "SHRINK \u26a0" if removed > 0 else ("GROW" if added > 0 else "SAME")
+                print(f"  {doc_id}: existing={existing_slots} incoming={incoming_slots} +{max(added,0)} -{max(removed,0)} [{status}]")
+                if removed > 0:
+                    slot_shrink_errors.append(
+                        f"  ABORT: {doc_id} would lose {removed} slot(s) ({existing_slots} \u2192 {incoming_slots})"
+                    )
+            else:
+                print(f"  {doc_id}: NEW PROGRAM \u2014 {incoming_slots} slots")
+
+        if slot_shrink_errors:
+            print(f"\nABORTED: {len(slot_shrink_errors)} program(s) would lose slots:")
+            for e in slot_shrink_errors:
+                print(e)
+            print("Fix the JSON data before running --execute. No writes performed.")
+            sys.exit(1)
+        else:
+            print("PASSED: No slot shrinkage detected.")
+
+    if args.execute:
         print("\n--- Executing Live Firestore Writes ---")
         written = 0
         for item in processed_programs:
             doc_id = item['doc_id']
             doc_data = item['doc']
             doc_data['last_synced'] = firestore.SERVER_TIMESTAMP
-            db.collection('global_programs').document(doc_id).set(doc_data, merge=True)
+            db.collection('global_programs').document(doc_id).set(doc_data)
             print(f"  [FIRESTORE] Seeded global_programs/{doc_id} ({doc_data['total_slots']} slots)")
             written += 1
         print(f"SUCCESS: Seeded {written} programs into Firestore global_programs.")
