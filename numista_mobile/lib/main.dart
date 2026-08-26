@@ -246,10 +246,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               displayColor: const Color(0xFFE8EAF0),
             ),
           ),
-          // Wrap every route in the MORGAN feedback drawer overlay.
-          // FeedbackDrawerOverlay owns the Stack (appShell → blur barrier → drawer).
+          // ITEM 3: Wrap every route in the text scaler + Morgan feedback drawer.
+          // ThemeProvider.textScaleFactor is 1.0 / 1.3 / 1.6 per user setting.
+          // MediaQuery.withClampedTextScaling clamps between minScaleFactor and
+          // maxScaleFactor — we pin both to the chosen value so OS accessibility
+          // settings do not override the in-app control on desktop web.
           builder: (context, child) {
-            return FeedbackDrawerOverlay(child: child ?? const SizedBox.shrink());
+            final scaleFactor = ThemeProvider.instance.textScaleFactor;
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(scaleFactor),
+              ),
+              child: FeedbackDrawerOverlay(child: child ?? const SizedBox.shrink()),
+            );
           },
       // --- Auth Gate ---------------------------------------------------------
       // StreamBuilder on authStateChanges: shows LoginScreen until Firebase

@@ -1543,10 +1543,33 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.205',
+    date: '2026-08-26',
+    description: 'E2e Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper',
+      'Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)',
+      'Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header',
+      'Release: v4.203 release notes update',
+      'Audit: run full system scan and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.204',
+    date: '2026-08-26',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: v4.203 release notes update',
+      'Audit: run full system scan and generate SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.203',
     date: '2026-08-26',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system scan and generate SCAN_REPORT.md',
       'Qc/layer1: dismiss \'Let\'s go!\' wizard dialog in theme_switch_guard signInAndWait() - was blocking Settings navigation',
