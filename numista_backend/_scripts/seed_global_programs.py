@@ -101,7 +101,7 @@ def main():
                 'program_id': doc_id,
                 'name': c_name,
                 'design_slug': c_slug,
-                'year': c_year,
+                'year': str(c_year) if c_year is not None else None,
                 'varieties': normalized_varieties
             }
             if c.get('referenceImagePath'):

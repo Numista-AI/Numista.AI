@@ -81,7 +81,7 @@ class ProgramCoin {
             return ChecklistVariety.fromId(v.toString());
           })
           .toList(),
-      year: map['year'],
+      year: map['year']?.toString(),
       referenceImagePath: map['referenceImagePath'],
     );
   }
