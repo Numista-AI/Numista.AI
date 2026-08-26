@@ -107,6 +107,8 @@ def main():
             }
             if c.get('referenceImagePath'):
                 normalized_coin['referenceImagePath'] = c.get('referenceImagePath')
+            if c.get('product_family'):
+                normalized_coin['product_family'] = c.get('product_family')
 
             normalized_coins.append(normalized_coin)
 
