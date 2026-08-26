@@ -1479,6 +1479,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'image_url_reverse'    : '',
         'image_verification_status': 'unverified',
         'timestamp'            : FieldValue.serverTimestamp(),
+        // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
+        'is_demo'              : false,
+        'is_demo_cleared'      : false,
       });
 
       // ── 2. Create individual coin documents ────────────────────────
@@ -1514,6 +1517,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'image_verification_status': 'unverified',
             'is_reviewed'          : true,  // skip Review Hub -- set coins are confirmed
             'timestamp'            : FieldValue.serverTimestamp(),
+            // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
+            'is_demo'              : false,
+            'is_demo_cleared'      : false,
           });
         }
       }
@@ -1596,6 +1602,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       'Country':           data['Country'] ?? 'United States',
                       'source':            'manual',
                       'Added':             FieldValue.serverTimestamp(),
+                      // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
+                      'is_demo':           false,
+                      'is_demo_cleared':   false,
                     };
 
                     // ── Save to Firestore ────────────────────────────────────
@@ -2019,6 +2028,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'created_at': FieldValue.serverTimestamp(),
         'committed_at': FieldValue.serverTimestamp(),
         'deep_dive_status': 'PENDING',
+        // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
+        'is_demo': false,
+        'is_demo_cleared': false,
       };
 
       if (isSetItem) {

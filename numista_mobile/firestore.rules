@@ -27,6 +27,53 @@ service cloud.firestore {
       allow write: if false;           // backend SA only
     }
 
+    // ── ADDENDUM B: Field-level rules for protected demo/sandbox keys ─────────
+    // These more-specific match blocks are evaluated BEFORE the wildcard
+    // /users/{email}/{document=**} block below.
+    //
+    // Allowed on create: is_demo: false only (never is_demo: true).
+    //   Client may explicitly stamp is_demo: false and is_demo_cleared: false on
+    //   new real-coin creates (Option 1 of the ITEM 6 coding constraint).
+    //   This keeps real coins visible once the WHERE is_demo == false filter ships.
+    // Blocked on update: client may never change is_demo or is_demo_cleared on
+    //   existing documents. Only Admin SDK / backend service account may do so.
+    // Admin SDK bypasses all rules (standard Firestore behavior).
+    match /users/{email}/coins/{coinId} {
+      // Owner reads their own coins (list + get)
+      allow read: if isOwner(email);
+
+      // Owner deletes their own coins (soft-archive is done server-side;
+      // hard delete is not used in this sprint, but not blocked at rules level)
+      allow delete: if isOwner(email);
+
+      // Owner creates a new coin:
+      //   - is_demo must not be true (false or absent only)
+      //   - is_demo_cleared must not be true (false or absent only)
+      allow create: if isOwner(email)
+                    && request.resource.data.get('is_demo', false) != true
+                    && request.resource.data.get('is_demo_cleared', false) != true;
+
+      // Owner updates an existing coin:
+      //   - may not change is_demo (any direction)
+      //   - may not change is_demo_cleared (any direction)
+      allow update: if isOwner(email)
+                    && !request.resource.data.diff(resource.data)
+                          .affectedKeys()
+                          .hasAny(['is_demo', 'is_demo_cleared']);
+    }
+
+    // Profile document: owner may update all fields EXCEPT sandbox_cleared.
+    // sandbox_cleared is set by the backend via POST /api/sandbox/clear (Admin SDK).
+    match /users/{email}/profile {
+      allow read:   if isOwner(email);
+      allow create: if isOwner(email);
+      allow delete: if isOwner(email);
+      allow update: if isOwner(email)
+                    && !request.resource.data.diff(resource.data)
+                          .affectedKeys()
+                          .hasAny(['sandbox_cleared']);
+    }
+
     // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
     // Each user can only read and write their own subcollections.
     // NOTE: feedback_trigger_lock, interviews_this_hour, feedback_dismissal_count,
@@ -34,6 +81,9 @@ service cloud.firestore {
     //       uses Admin SDK (bypasses these rules). Client SDKs are architecturally
     //       blocked from writing those fields because only the callable endpoint
     //       exposes the write path — there is no client-side Firestore write for them.
+    // NOTE: coins/{coinId} and profile have more-specific match blocks above
+    //       that enforce field-level guards. The wildcard below covers all other
+    //       subcollections (wishlist, reviews, etc.).
     match /users/{email}/{document=**} {
       allow read, write: if isOwner(email);
     }

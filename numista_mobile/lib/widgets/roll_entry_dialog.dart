@@ -374,10 +374,13 @@ class _RollDialogState extends State<_RollDialog> {
       final doc = col.doc();
       batch.set(doc, {
         ...coin,
-        'roll_id':   rollId,
-        'roll_type': _rollType?.name ?? 'unknown',
-        'added_at':  DateTime.now().toIso8601String(),
-        'source':    'roll_wizard',
+        'roll_id':          rollId,
+        'roll_type':        _rollType?.name ?? 'unknown',
+        'added_at':         DateTime.now().toIso8601String(),
+        'source':           'roll_wizard',
+        // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
+        'is_demo':          false,
+        'is_demo_cleared':  false,
       });
       count++;
       if (count % 400 == 0) {

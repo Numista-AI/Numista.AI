@@ -265,6 +265,12 @@ class PcgsImportService {
       'Original Description from source': 'Imported via PCGS API',
       'source': 'pcgs_api',
       'importedAt': FieldValue.serverTimestamp(),
+      // ITEM 6 (Addendum A/B): Stamp is_demo: false on every real-coin create so the
+      // WHERE is_demo == false display filter does not hide newly-imported coins.
+      // Rules allow is_demo: false on create; forbid is_demo: true and any update
+      // to this field. Never set to true from client code.
+      'is_demo': false,
+      'is_demo_cleared': false,
     };
   }
 
