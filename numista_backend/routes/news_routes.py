@@ -5,16 +5,16 @@ Numismatic News Feed & Dismissal Routes
 import os
 import re
 from datetime import datetime
-from typing import List
-from fastapi import APIRouter, HTTPException
+from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
-from routes.deps import db, logger
+from routes.deps import db, logger, get_current_user
 
 router = APIRouter(prefix="/api", tags=["US Mint & Numismatic News Feed"])
 
 class DismissNewsRequest(BaseModel):
-    user_email: str
     article_id: str   # SHA-1 hex of the article URL
+    # user_email removed: identity derived from Firebase JWT via get_current_user
 
 # 12-hour in-memory cache for CORS-free proxy
 NEWS_CACHE = {
@@ -182,12 +182,16 @@ def get_mint_news():
     return {"status": "ok", "source": "rss", "news": all_entries}
 
 @router.post("/dismiss_news")
-def dismiss_news(req: DismissNewsRequest):
+def dismiss_news(req: DismissNewsRequest, current_user: Dict[str, Any] = Depends(get_current_user)):
     """
     Records a user's 'Not Relevant' tap so the article never appears again.
+    Identity is derived from the Firebase JWT token — never from the request body.
     """
+    user_email = current_user.get("email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     try:
-        ref = db.collection("users").document(req.user_email) \
+        ref = db.collection("users").document(user_email) \
                   .collection("meta").document("dismissed_news")
         doc = ref.get()
         ids: list = doc.to_dict().get("ids", []) if doc.exists else []
@@ -200,9 +204,14 @@ def dismiss_news(req: DismissNewsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to save dismissed news item.")
 
-@router.get("/dismissed_news/{user_email}")
-def get_dismissed_news(user_email: str):
-    """Returns the list of dismissed article IDs for a user."""
+@router.get("/dismissed_news")
+def get_dismissed_news(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Returns the list of dismissed article IDs for the authenticated user.
+    Identity is derived from the Firebase JWT token — path parameter removed to prevent IDOR.
+    """
+    user_email = current_user.get("email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     try:
         ref = db.collection("users").document(user_email) \
                   .collection("meta").document("dismissed_news")

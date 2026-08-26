@@ -7,6 +7,7 @@ import '../services/morgan_prefs.dart';
 import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
 import '../services/photo_sharing_service.dart';
@@ -852,6 +853,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Force Light Mode or enable Dark Mode across the entire application.',
               style: TextStyle(color: descColor, fontSize: 13, height: 1.4),
             ),
+            // ── ITEM 3: Text Size Selector ───────────────────────────────────
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.text_fields_rounded,
+                      color: Color(0xFF3B82F6), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Text Size',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Make text larger for easier reading',
+                        style: TextStyle(fontSize: 13, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // ignore: deprecated_member_use
+            // RadioGroup is announced for post-3.41 Flutter; RadioListTile.groupValue
+            // is the correct API until RadioGroup ships in stable SDK.
+            ...TextScaleMode.values.map((mode) {
+              final isSelected =
+                  ThemeProvider.instance.textScaleMode == mode;
+              // ignore: deprecated_member_use
+              return RadioListTile<TextScaleMode>(
+                title: Text(
+                  mode.label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? const Color(0xFF3B82F6)
+                        : headerColor,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  '${(mode.factor * 100).round()}% text size',
+                  style: TextStyle(color: descColor, fontSize: 12),
+                ),
+                value: mode,
+                // ignore: deprecated_member_use
+                groupValue: ThemeProvider.instance.textScaleMode,
+                activeColor: const Color(0xFF3B82F6),
+                // ignore: deprecated_member_use
+                onChanged: (val) {
+                  if (val != null) {
+                    ThemeProvider.instance.setTextScaleMode(val);
+                    setState(() {});
+                  }
+                },
+              );
+            }),
           ],
         ),
       ),
@@ -989,10 +1064,147 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _buildBetaInspectorCard(context),
             const SizedBox(height: 16),
+            // ITEM 8: Clear Demo Coins button (soft-archive only, no delete)
+            _buildClearDemoCoinsCard(context),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
+  }
+
+  /// ITEM 8: Clear Demo Coins card — calls POST /api/sandbox/clear (server-side).
+  /// Soft-archives all is_demo == true coins by setting is_demo_cleared: true.
+  /// Never deletes documents or mutations IDs.
+  Widget _buildClearDemoCoinsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF0F1C2E) : const Color(0xFFFFF3E0);
+    final borderColor = Colors.orange.withAlpha(160);
+    final textColor = isDark ? Colors.orange.shade200 : Colors.orange.shade900;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          const Icon(Icons.science_outlined, color: Colors.orange, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Clear Demo Coins',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Hide all seeded demo coins from your collection. '
+                  'This does not delete anything — data is soft-archived.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? Colors.orange.shade300
+                        : Colors.orange.shade800,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
+            onPressed: () => _confirmAndClearDemoCoins(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange,
+              side: const BorderSide(color: Colors.orange),
+            ),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmAndClearDemoCoins(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Demo Coins?'),
+        content: const Text(
+          'This will hide all seeded demo coins from your collection view. '
+          'No data is deleted — this is a soft-archive only. '
+          'You can re-seed from the beta testers guide if needed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Clear Demo Coins'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please sign in to clear demo coins.')),
+          );
+        }
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('$kApiBaseUrl/api/sandbox/clear'),
+        headers: {'Authorization': 'Bearer $idToken'},
+      );
+
+      if (!context.mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final count = data['archived'] as int? ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(count > 0
+                ? 'Demo coins cleared: $count coins soft-archived.'
+                : 'No demo coins found to clear.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not clear demo coins. Please try again.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Network error. Please try again.')),
+        );
+      }
+    }
   }
 
   Widget _buildPrivacyCard(BuildContext context) {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * collection_crud.spec.js — Numista QC Layer 2
  * Add and delete coin in QA account.
  * Rules:
@@ -7,31 +7,16 @@
  *   - Cleanup: afterEach deletes only docs whose ID starts with qc_test_
  *   - Never touches qc_fixture_* documents
  *   - No live eBay / PCGS / Greysheet calls
+ *
+ * Uses qc-helpers.js for robust condition-based Flutter-ready waits.
+ * Fixes Aug 26 failure in "Add coin button" caused by 5s bare sleep timing out.
  */
 const { test, expect } = require('@playwright/test');
-require('dotenv').config({ path: require('path').join(__dirname, '../../numista_tests/.env') });
+const { signInAndWait } = require('../qc-helpers');
+
 
 // Track doc IDs created in this run for cleanup
 const CREATED_IDS = [];
-
-async function signInAndWait(page) {
-  const email = process.env.TEST_USER_EMAIL;
-  const password = process.env.TEST_USER_PASSWORD;
-  await page.waitForFunction(() => (window.firebase_core?.getApps?.() ?? []).length > 0, { timeout: 20000 });
-  const r = await page.evaluate(async ({ em, pw }) => {
-    try {
-      const auth = window.firebase_auth.getAuth();
-      await window.firebase_auth.setPersistence(auth, window.firebase_auth.browserLocalPersistence);
-      await window.firebase_auth.signInWithEmailAndPassword(auth, em, pw);
-      return { ok: true };
-    } catch (e) { return { ok: false, error: e.message }; }
-  }, { em: email, pw: password });
-  if (!r.ok) throw new Error('Auth failed: ' + r.error);
-  await page.evaluate(() => { ['flutter.user_name','flutter.morgan_onboarding_complete','flutter.onboarding_complete'].forEach(k => localStorage.setItem(k,'true')); });
-  await page.reload();
-  await page.waitForFunction(() => { const p = document.querySelector('flt-glass-pane'); return p && window.getComputedStyle(p).visibility === 'visible'; }, { timeout: 20000 });
-  await page.waitForTimeout(5000);
-}
 
 // Generate a qc_test_ prefixed ID
 function makeTestId() {
@@ -75,7 +60,6 @@ test.describe('Collection CRUD', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('https://numista.ai');
     await signInAndWait(page);
   });
 
@@ -85,9 +69,10 @@ test.describe('Collection CRUD', () => {
     if (!visible) { test.skip(); return; }
     await addBtn.first().click();
     await page.waitForTimeout(3000);
-    // After clicking add, a form or dialog should appear
-    const pane = page.locator('flt-glass-pane');
-    await expect(pane).toBeVisible();
+    // After clicking add, a form or dialog should appear — assert on flt-semantics content,
+    // NOT flt-glass-pane which is always 0x0 in this headless config (diagnostic Aug 26).
+    const hasContent = await page.locator('flt-semantics').first().isVisible({ timeout: 5000 }).catch(() => false);
+    expect(hasContent, 'No flt-semantics content after clicking Add Coin').toBe(true);
     // Negative: no error shown
     const error = await page.locator('flt-semantics').filter({ hasText: /error|failed/i }).first().isVisible({ timeout: 2000 }).catch(() => false);
     expect(error, 'Error visible after clicking Add Coin').toBe(false);

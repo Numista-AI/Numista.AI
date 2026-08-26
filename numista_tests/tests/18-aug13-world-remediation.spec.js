@@ -12,17 +12,7 @@ const { test, expect } = require('@playwright/test');
  * Migrated to enterDemo() pattern (2026-08-14) for nightly automated audit compatibility.
  */
 
-async function enterDemo(page) {
-  await page.goto('https://numista.ai');
-  await page.waitForTimeout(4000);
-  const demoBtn = page.getByRole('button', { name: /browse demo/i });
-  if (await demoBtn.count() > 0) {
-    await demoBtn.click();
-  } else {
-    await page.mouse.click(841, 647);
-  }
-  await page.waitForTimeout(4000);
-}
+const { enterDemo } = require('./test-helpers');
 
 test.describe('18 - 13 AUG 2026 World & Remediation E2E Suite', () => {
   test.beforeEach(async ({ page }) => {

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -13,6 +13,7 @@ import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
+import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -27,38 +28,12 @@ Future<void> main() async {
   }
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    debugPrint('UI Error: ${details.exception}\n${details.stack}');
-    FlutterError.dumpErrorToConsole(details);
-    return const Material(
-      color: Color(0xFF1E2937),
-      child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, color: Color(0xFFC9A227), size: 40),
-              SizedBox(height: 12),
-              Text(
-                'Something went wrong displaying this screen.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFE8EAF0),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Try refreshing the page. If this continues, use Send Feedback.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF8B92B4), fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    // Log full details to console in debug only — never to UI
+    if (kDebugMode) {
+      debugPrint('UI Error: ${details.exception}\n${details.stack}');
+      FlutterError.dumpErrorToConsole(details);
+    }
+    return const _ErrorFallbackWidget();
   };
 
   final uri = Uri.base;
@@ -112,6 +87,18 @@ Future<void> main() async {
   // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
   if (uri.queryParameters.containsKey('route') && uri.queryParameters['route']!.isNotEmpty) {
     WelcomeScreen.pendingRoute = uri.queryParameters['route'];
+  }
+
+  // ITEM 10: kApiBaseUrl guard — prevents silent empty-URL HTTP calls.
+  // This is a compile-time const so it will never be empty in production,
+  // but this guard protects against misconfigured forks or env-var overrides.
+  if (kApiBaseUrl.trim().isEmpty) {
+    // Throw synchronously so Flutter's error reporter catches it before
+    // any HTTP request can fire against an empty URL.
+    throw StateError(
+      '[Numista] kApiBaseUrl is empty. '
+      'Set the backend URL in lib/constants.dart before building.',
+    );
   }
 
   // On Flutter web, Firebase.initializeApp() can silently hang forever if the
@@ -272,10 +259,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
               displayColor: const Color(0xFFE8EAF0),
             ),
           ),
-          // Wrap every route in the MORGAN feedback drawer overlay.
-          // FeedbackDrawerOverlay owns the Stack (appShell → blur barrier → drawer).
+          // ITEM 3: Wrap every route in the text scaler + Morgan feedback drawer.
+          // ThemeProvider.textScaleFactor is 1.0 / 1.3 / 1.6 per user setting.
+          // MediaQuery.withClampedTextScaling clamps between minScaleFactor and
+          // maxScaleFactor — we pin both to the chosen value so OS accessibility
+          // settings do not override the in-app control on desktop web.
           builder: (context, child) {
-            return FeedbackDrawerOverlay(child: child ?? const SizedBox.shrink());
+            final scaleFactor = ThemeProvider.instance.textScaleFactor;
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(scaleFactor),
+              ),
+              child: FeedbackDrawerOverlay(child: child ?? const SizedBox.shrink()),
+            );
           },
       // --- Auth Gate ---------------------------------------------------------
       // StreamBuilder on authStateChanges: shows LoginScreen until Firebase
@@ -414,6 +410,62 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
       ),
     );
       },
+    );
+  }
+}
+
+/// Fallback widget shown when ErrorWidget.builder is triggered.
+/// Plain Material widget — no Navigator, no platform-specific APIs.
+/// Report Issue: displays copyable support email address.
+class _ErrorFallbackWidget extends StatelessWidget {
+  const _ErrorFallbackWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF1E2937),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: Color(0xFFC9A227), size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Something went wrong loading this screen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFE8EAF0),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Please refresh the page. If this keeps happening, '
+                  'contact support at the address below.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF8B92B4), fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                const SelectableText(
+                  'support@numista.ai',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFC9A227),
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

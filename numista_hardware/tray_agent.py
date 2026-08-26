@@ -284,6 +284,98 @@ def _patch_auto_capture_user():
     auto_capture.FIRESTORE_COMMANDS_PATH = f"commands/{email}/pending"
     logging.info(f"[TRAY] auto_capture USER_EMAIL → {email!r}")
 
+
+# ─── ITEM 11 (v4.1): Authenticated Pairing Session State ─────────────────────
+# The firebase_token is retained in memory for the FULL duration of the capture
+# session — not dropped after the pairing handshake.
+# The agent uses this token to authenticate all Firestore writes during the session,
+# ensuring writes are JWT-bound to the paired user's uid.
+# On disconnect / re-pair: session cleared entirely. Token, uid, and email all
+# refreshed from the new pairing payload.
+#
+# NON-NEGOTIABLE:
+#   - Token is NEVER written to any file, database, or log.
+#   - Token is NEVER printed to stdout/stderr.
+#   - Only uid and email appear in tray_agent log messages.
+#
+_session_lock = threading.Lock()
+_session: dict = {
+    "uid": None,
+    "email": None,
+    "_firebase_token": None,  # Retained in memory ONLY — never persisted or logged
+}
+
+
+def _session_pair(uid: str, email: str, firebase_token: str) -> None:
+    """Atomically update session state on pairing.  Token is stored in RAM only."""
+    with _session_lock:
+        _session["uid"] = uid
+        _session["email"] = email
+        _session["_firebase_token"] = firebase_token  # NOT logged, NOT written to disk
+    logging.info(f"[TRAY] Session paired: uid={uid!r} email={email!r} (token held in memory)")
+
+
+def _session_clear() -> None:
+    """Wipe all session state on disconnect / re-pair."""
+    with _session_lock:
+        _session["uid"] = None
+        _session["email"] = None
+        _session["_firebase_token"] = None
+    logging.info("[TRAY] Session cleared — awaiting new pairing.")
+
+
+def get_session_token() -> str | None:
+    """Return the in-memory firebase_token for the current session, or None if unpaired.
+    Use this to authenticate Firestore writes.  Never log the return value."""
+    with _session_lock:
+        return _session.get("_firebase_token")
+
+
+def _register_pair_v2_route() -> None:
+    """Register /pair-v2 on auto_capture.app (done once, before Flask starts).
+    This is the ITEM 11 authenticated pairing endpoint:
+      POST /pair-v2  {uid, email, firebase_token}
+    The existing /pair route (auto_capture.py line ~785) is left unchanged
+    to preserve backward compatibility with older clients.
+    """
+    from flask import request as _req, jsonify as _json
+
+    @auto_capture.app.route("/pair-v2", methods=["POST", "OPTIONS"])
+    def _pair_v2():
+        if _req.method == "OPTIONS":
+            return "", 204
+        data = _req.json or {}
+        uid   = data.get("uid",   "")
+        email = data.get("email", "")
+        token = data.get("firebase_token", "")
+
+        if not email or not uid:
+            return _json({"status": "error", "message": "uid and email required"}), 400
+
+        if not token:
+            # Fail-open only if no token provided — still requires uid + email
+            logging.warning(
+                "[TRAY] /pair-v2 called without firebase_token — session NOT authenticated"
+            )
+        else:
+            _session_pair(uid, email, token)
+            # Also update the legacy USER_EMAIL so existing Firestore paths work
+            auto_capture.set_user_email(email)
+
+        return _json({"status": "success", "paired_email": email})
+
+    @auto_capture.app.route("/unpair", methods=["POST", "OPTIONS"])
+    def _unpair():
+        if _req.method == "OPTIONS":
+            return "", 204
+        _session_clear()
+        auto_capture.USER_EMAIL              = None
+        auto_capture.FIRESTORE_COINS_PATH    = None
+        auto_capture.FIRESTORE_COMMANDS_PATH = None
+        return _json({"status": "cleared"})
+
+    logging.info("[TRAY] /pair-v2 and /unpair routes registered on auto_capture.app.")
+
 # ─── Agent thread: Firestore watcher + HTTPS Flask server ─────────────────────
 def _start_agent():
     # Ensure SSL certificate is generated and registered in Windows Root store
@@ -356,6 +448,9 @@ def main():
         logging.info(f"[TRAY] Restored saved account: {_cfg.get_user_email()!r}")
     else:
         logging.info("[TRAY] No saved account — waiting for web app to pair via /pair endpoint.")
+
+    # ITEM 11: Register /pair-v2 route (firebase_token retained for full session)
+    _register_pair_v2_route()
 
     # Start Firestore watcher + Flask server in background daemon thread
     agent_thread = threading.Thread(target=_start_agent, daemon=True)

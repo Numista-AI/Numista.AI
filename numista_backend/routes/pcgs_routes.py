@@ -4,9 +4,9 @@ Shields web clients from CORS restrictions and queries api.pcgs.com using server
 """
 
 import requests as _requests
-from fastapi import APIRouter, HTTPException
-from typing import Optional
-from routes.deps import db, logger, verify_firebase_bearer_token
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Optional, Dict, Any
+from routes.deps import db, logger, verify_firebase_bearer_token, get_current_user
 
 router = APIRouter(prefix="/api/pcgs", tags=["PCGS Certification Lookup"])
 
@@ -27,10 +27,11 @@ def _get_pcgs_token() -> Optional[str]:
         return None
 
 @router.get("/cert/{cert_no}")
-async def pcgs_cert_lookup(cert_no: str):
+async def pcgs_cert_lookup(cert_no: str, current_user: Dict[str, Any] = Depends(get_current_user)):
     """
     Looks up a PCGS certification number via the PCGS Public API.
     Endpoint: GET /api/pcgs/cert/{certNo}
+    Requires valid Firebase JWT. PCGS pre-check: Option A confirmed (Flutter proxy in use).
     """
     if not cert_no.isdigit() or not (6 <= len(cert_no) <= 9):
         raise HTTPException(status_code=400, detail="cert_no must be 6-9 digits.")

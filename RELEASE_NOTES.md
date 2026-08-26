@@ -206,6 +206,241 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## v4.222 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+
+## v4.221 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+
+## v4.220 — 2026-08-26
+**Qc/layer2 Enhancements & Platform Updates**
+
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Release: auto-bump release notes
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+
+## v4.219 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump release notes
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+
+## v4.218 — 2026-08-26
+**Qc/layer2 Enhancements & Platform Updates**
+
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+
+## v4.217 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+
+## v4.216 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+
+## v4.215 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+
+## v4.214 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+
+## v4.213 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+
+## v4.212 — 2026-08-26
+**Qc/layer2 Enhancements & Platform Updates**
+
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+
+## v4.211 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+
+## v4.210 — 2026-08-26
+**Qc/layer2 Enhancements & Platform Updates**
+
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+
+## v4.209 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+
+## v4.208 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+
+## v4.207 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
+## v4.206 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
+## v4.205 — 2026-08-26
+**E2e Enhancements & Platform Updates**
+
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
+## v4.204 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
 ## v4.203 — 2026-08-26
 **Audit Enhancements & Platform Updates**
 
