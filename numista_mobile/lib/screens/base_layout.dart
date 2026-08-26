@@ -55,6 +55,9 @@ class BaseLayout extends StatefulWidget {
 class _BaseLayoutState extends State<BaseLayout> {
   final GlobalKey _repaintKey = GlobalKey();
   String _activeRoute = 'Home Dashboard';
+  // ITEM 5: Route history for browser back-button support.
+  // Starts with 'Home Dashboard' so Back from the second screen returns Home.
+  final List<String> _routeHistory = ['Home Dashboard'];
   String _myCollectionTab = 'All';
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
@@ -282,8 +285,16 @@ class _BaseLayoutState extends State<BaseLayout> {
         final parts = route.split(':');
         _programManagerInitialId = parts[1];
         _activeRoute = 'Coin Programs';
+        // ITEM 5: push resolved route name for history
+        if (_routeHistory.isEmpty || _routeHistory.last != 'Coin Programs') {
+          _routeHistory.add('Coin Programs');
+        }
       } else {
         _activeRoute = route;
+        // ITEM 5: push to history, skip duplicate consecutive entries
+        if (_routeHistory.isEmpty || _routeHistory.last != route) {
+          _routeHistory.add(route);
+        }
       }
     });
   }
@@ -458,8 +469,35 @@ class _BaseLayoutState extends State<BaseLayout> {
       },
     );
 
+    // ITEM 5: Intercept browser Back button. PopScope prevents the Flutter
+    // Navigator from popping the root route (which exits the app / shows a
+    // blank tab on desktop web). Instead we walk our own _routeHistory stack.
+    Widget body = PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return; // already popped — nothing to do
+        if (_routeHistory.length > 1) {
+          _routeHistory.removeLast();
+          final previous = _routeHistory.last;
+          setState(() => _activeRoute = previous);
+        } else {
+          // At root (Home Dashboard) — show a friendly "use X to close" hint
+          // on desktop web instead of silently doing nothing.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("You're on the Home screen. "
+                  'Close the browser tab to exit Numista.AI.'),
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: rootContent,
+    );
+
     if (!_desktopHotkeysEnabled) {
-      return rootContent;
+      return body;
     }
 
     return CallbackShortcuts(
@@ -479,7 +517,7 @@ class _BaseLayoutState extends State<BaseLayout> {
           }
         },
       },
-      child: rootContent,
+      child: body,
     );
   }
 

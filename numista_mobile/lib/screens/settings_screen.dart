@@ -852,6 +852,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Force Light Mode or enable Dark Mode across the entire application.',
               style: TextStyle(color: descColor, fontSize: 13, height: 1.4),
             ),
+            // ── ITEM 3: Text Size Selector ───────────────────────────────────
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.text_fields_rounded,
+                      color: Color(0xFF3B82F6), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Text Size',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: headerColor),
+                      ),
+                      Text(
+                        'Make text larger for easier reading',
+                        style: TextStyle(fontSize: 13, color: descColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...TextScaleMode.values.map((mode) {
+              final isSelected =
+                  ThemeProvider.instance.textScaleMode == mode;
+              return RadioListTile<TextScaleMode>(
+                title: Text(
+                  mode.label,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFF3B82F6) : headerColor,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  '${(mode.factor * 100).round()}% text size',
+                  style: TextStyle(color: descColor, fontSize: 12),
+                ),
+                value: mode,
+                groupValue: ThemeProvider.instance.textScaleMode,
+                activeColor: const Color(0xFF3B82F6),
+                onChanged: (val) {
+                  if (val != null) {
+                    ThemeProvider.instance.setTextScaleMode(val);
+                    setState(() {});
+                  }
+                },
+              );
+            }),
           ],
         ),
       ),
