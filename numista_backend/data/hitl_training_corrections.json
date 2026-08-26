@@ -1,0 +1,16 @@
+[
+  {
+    "task_type": "invoice_us_mint",
+    "consensus_status": "verified",
+    "consensus_ratio": 1.0,
+    "input_payload": "UNITED STATES MINT Packing Slip | Date: 08/05/2026 | Order #: USM23436235 | Item #: 26XL | Description: Peace Silver Dollar 2026 Rever | Unit Price: 173.00 | S & H: 9.95 | Total Amount: 182.95",
+    "verified_output": "{\"item_type\": \"coin\", \"Year\": 2026, \"Mint Mark\": \"\", \"Denomination\": \"Peace Dollar\", \"Program/Series\": \"Morgan and Peace Silver Dollars\", \"Theme/Subject\": \"Peace Dollar Reverse Proof\", \"Strike Type\": \"Reverse Proof\", \"Condition\": \"Reverse Proof\", \"Metal Content\": \"99.9% Silver\", \"Cost\": \"$173.00\", \"Retailer/Website\": \"United States Mint\", \"Retailer Item No.\": \"26XL\", \"Retailer Invoice #\": \"USM23436235\", \"Personal Notes\": \"Mint Facility: Philadelphia (P) | Order: 33231525\"}"
+  },
+  {
+    "task_type": "invoice_us_mint",
+    "consensus_status": "verified",
+    "consensus_ratio": 1.0,
+    "input_payload": "UNITED STATES MINT Packing Slip | Date: 07/31/2026 | Order #: USM23339673 | Item #: 26EA | Description: American Eagle 2026 One Ounce | Unit Price: 173.00 | S & H: 9.95 | Total Amount: 182.95 | Tracking #: 9200190358255308656043",
+    "verified_output": "{\"item_type\": \"coin\", \"Year\": 2026, \"Mint Mark\": \"W\", \"Denomination\": \"American Silver Eagle\", \"Program/Series\": \"American Silver Eagle\", \"Theme/Subject\": \"American Silver Eagle\", \"Strike Type\": \"Proof\", \"Condition\": \"Proof\", \"Metal Content\": \"99.9% Silver\", \"Cost\": \"$173.00\", \"Retailer/Website\": \"United States Mint\", \"Retailer Item No.\": \"26EA\", \"Retailer Invoice #\": \"USM23339673\", \"Personal Notes\": \"Tracking: 9200190358255308656043 | Order: 33204579\"}"
+  }
+]
