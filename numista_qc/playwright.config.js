@@ -13,7 +13,7 @@ const _baseURL = (_qaBaseUrl && _qaBaseUrl !== 'REPLACE_WITH_QA_DEPLOYMENT_URL')
 
 module.exports = defineConfig({
   // testDir is NOT set here — each run specifies the layer directory explicitly
-  timeout: 90000,
+  timeout: 180000,
   retries: 1,
   workers: 1,
   reporter: [

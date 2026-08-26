@@ -49,7 +49,7 @@ async function waitForFlutter(page, timeout = 25000) {
 async function signInAndWait(page, opts = {}) {
   const email    = opts.email    || process.env.TEST_USER_EMAIL;
   const password = opts.password || process.env.TEST_USER_PASSWORD;
-  const flutterTimeout = opts.flutterTimeout || 25000;
+  const flutterTimeout = opts.flutterTimeout || 20000;
 
   if (!email || !password) {
     throw new Error(
@@ -58,13 +58,17 @@ async function signInAndWait(page, opts = {}) {
     );
   }
 
-  // Step 1: Navigate and wait for Firebase SDK to initialize
+  // Step 1: Wait for the page to fully load (Firebase scripts included)
+  // networkidle = no network requests for 500ms → Firebase SDKs are loaded
+  await page.waitForLoadState('networkidle', { timeout: 30000 });
+
+  // Step 2: Wait for Firebase SDK to initialize (app registered)
   await page.waitForFunction(
     () => (window.firebase_core?.getApps?.() ?? []).length > 0,
-    { timeout: 20000 }
+    { timeout: 15000 }
   );
 
-  // Step 2: Sign in via Firebase JS SDK in the browser context
+  // Step 3: Sign in via Firebase JS SDK in the browser context
   const r = await page.evaluate(async ({ em, pw }) => {
     try {
       const auth = window.firebase_auth.getAuth();
@@ -86,8 +90,10 @@ async function signInAndWait(page, opts = {}) {
       .forEach(k => localStorage.setItem(k, 'true'));
   });
 
-  // Step 4: Reload and wait for Flutter canvas — condition-based, not a bare sleep
+  // Step 5: Reload and wait for Flutter canvas — condition-based, not a bare sleep
   await page.reload();
+  // Wait for page to re-load after reload before checking Flutter
+  await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
   try {
     await waitForFlutter(page, flutterTimeout);
   } catch {
