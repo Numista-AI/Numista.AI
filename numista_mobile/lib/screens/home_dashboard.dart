@@ -1547,10 +1547,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.229',
+    date: '2026-08-26',
+    description: 'Resolver+fallback Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync',
+      'Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest',
+      'Programs: Grok review corrections to Phase 1 JSON data',
+      'Deals: update deal spotter links to live eBay search queries with dynamic encoding',
+      'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
+      'Programs: Phase 1 + 1b coin program data and seed script overhaul',
+      'Release: auto-bump v4.222 for Addendum A+B',
+      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+    ],
+  ),
+  _Release(
+    version: 'v4.228',
+    date: '2026-08-26',
+    description: 'Brain Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest',
+      'Programs: Grok review corrections to Phase 1 JSON data',
+      'Deals: update deal spotter links to live eBay search queries with dynamic encoding',
+      'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
+      'Programs: Phase 1 + 1b coin program data and seed script overhaul',
+      'Release: auto-bump v4.222 for Addendum A+B',
+      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Release: auto-bump release notes',
+    ],
+  ),
+  _Release(
     version: 'v4.227',
     date: '2026-08-26',
     description: 'Programs Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Programs: Grok review corrections to Phase 1 JSON data',
       'Deals: update deal spotter links to live eBay search queries with dynamic encoding',
