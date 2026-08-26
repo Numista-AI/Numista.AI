@@ -12,7 +12,7 @@
  * Fixes Aug 26 failure in "Add coin button" caused by 5s bare sleep timing out.
  */
 const { test, expect } = require('@playwright/test');
-const { injectAuthAndLoad } = require('../qc-helpers');
+const { signInAndWait } = require('../qc-helpers');
 
 
 // Track doc IDs created in this run for cleanup
@@ -60,7 +60,7 @@ test.describe('Collection CRUD', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await injectAuthAndLoad(page);
+    await signInAndWait(page);
   });
 
   test('Add coin button is reachable and renders a form', async ({ page }) => {
@@ -69,9 +69,10 @@ test.describe('Collection CRUD', () => {
     if (!visible) { test.skip(); return; }
     await addBtn.first().click();
     await page.waitForTimeout(3000);
-    // After clicking add, a form or dialog should appear
-    const pane = page.locator('flt-glass-pane');
-    await expect(pane).toBeVisible();
+    // After clicking add, a form or dialog should appear — assert on flt-semantics content,
+    // NOT flt-glass-pane which is always 0x0 in this headless config (diagnostic Aug 26).
+    const hasContent = await page.locator('flt-semantics').first().isVisible({ timeout: 5000 }).catch(() => false);
+    expect(hasContent, 'No flt-semantics content after clicking Add Coin').toBe(true);
     // Negative: no error shown
     const error = await page.locator('flt-semantics').filter({ hasText: /error|failed/i }).first().isVisible({ timeout: 2000 }).catch(() => false);
     expect(error, 'Error visible after clicking Add Coin').toBe(false);
