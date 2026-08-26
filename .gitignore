@@ -223,3 +223,5 @@ Gemini Advisor Documents/
 numista_qc/playwright-report/
 numista_qc/reports/
 numista_qc/screenshots/
+
+numista_qc/fixtures/auth-token.json

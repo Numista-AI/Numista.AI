@@ -13,7 +13,7 @@ const _baseURL = (_qaBaseUrl && _qaBaseUrl !== 'REPLACE_WITH_QA_DEPLOYMENT_URL')
 
 module.exports = defineConfig({
   // testDir is NOT set here — each run specifies the layer directory explicitly
-  timeout: 180000,
+  timeout: 120000,
   retries: 1,
   workers: 1,
   reporter: [
@@ -30,6 +30,11 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
+    // auth.setup.js runs once, saves fixtures/auth-token.json
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.js/,
+    },
     {
       name: 'chromium',
       use: {
@@ -44,6 +49,8 @@ module.exports = defineConfig({
           ],
         },
       },
+      // Layer 2 functional tests use pre-loaded auth token from setup
+      dependencies: ['setup'],
     },
   ],
   outputDir: 'screenshots',

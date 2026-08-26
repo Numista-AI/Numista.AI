@@ -12,7 +12,7 @@
  * Fixes Aug 26 failure in "Add coin button" caused by 5s bare sleep timing out.
  */
 const { test, expect } = require('@playwright/test');
-const { signInAndWait } = require('../qc-helpers');
+const { injectAuthAndLoad } = require('../qc-helpers');
 
 
 // Track doc IDs created in this run for cleanup
@@ -60,8 +60,7 @@ test.describe('Collection CRUD', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('https://numista.ai');
-    await signInAndWait(page);
+    await injectAuthAndLoad(page);
   });
 
   test('Add coin button is reachable and renders a form', async ({ page }) => {

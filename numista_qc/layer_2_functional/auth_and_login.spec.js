@@ -7,12 +7,11 @@
  * on cold Cloud Run starts.
  */
 const { test, expect } = require('@playwright/test');
-const { signInAndWait, visitAndWaitForFlutter } = require('../qc-helpers');
+const { injectAuthAndLoad, visitAndWaitForFlutter } = require('../qc-helpers');
 
 test.describe('Auth and Login', () => {
   test('Sign-in succeeds and Flutter canvas renders', async ({ page }) => {
-    await page.goto('https://numista.ai');
-    await signInAndWait(page);
+    await injectAuthAndLoad(page);
     const pane = page.locator('flt-glass-pane');
     await expect(pane).toBeVisible();
     // Negative: no error modal visible
