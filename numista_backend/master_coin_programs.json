@@ -14136,7 +14136,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14154,7 +14154,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14172,7 +14172,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14190,7 +14190,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14208,7 +14208,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14226,7 +14226,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14244,7 +14244,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14262,7 +14262,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14280,7 +14280,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14298,7 +14298,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14316,7 +14316,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14334,7 +14334,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14352,7 +14352,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14374,7 +14374,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14396,7 +14396,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14418,7 +14418,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14440,7 +14440,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14462,7 +14462,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -14484,7 +14484,7 @@
         "varieties": [
           {
             "id": "P",
-            "label": "No Mint Mark"
+            "label": "Philadelphia (P)"
           },
           {
             "id": "D",
@@ -15153,14 +15153,6 @@
           {
             "id": "P",
             "label": "Philadelphia (P)"
-          },
-          {
-            "id": "S",
-            "label": "San Francisco (S)"
-          },
-          {
-            "id": "CC",
-            "label": "Carson City (CC)"
           }
         ]
       },
@@ -17262,11 +17254,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17285,11 +17277,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17308,11 +17300,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17331,11 +17323,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17354,11 +17346,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17377,11 +17369,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17400,11 +17392,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17423,11 +17415,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17446,11 +17438,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17469,11 +17461,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17492,11 +17484,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17515,11 +17507,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17538,11 +17530,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17561,11 +17553,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17584,11 +17576,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17607,11 +17599,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17630,11 +17622,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17653,11 +17645,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17676,11 +17668,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17699,11 +17691,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17722,11 +17714,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17745,11 +17737,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17768,11 +17760,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17791,11 +17783,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17814,11 +17806,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17837,11 +17829,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17860,11 +17852,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17883,11 +17875,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17906,11 +17898,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17929,11 +17921,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17952,11 +17944,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17975,11 +17967,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -17998,11 +17990,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18021,11 +18013,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18044,11 +18036,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18067,11 +18059,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18090,11 +18082,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18113,11 +18105,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18136,11 +18128,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18159,11 +18151,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18182,11 +18174,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18205,11 +18197,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18228,11 +18220,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18251,11 +18243,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18274,11 +18266,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18297,11 +18289,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18320,11 +18312,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18343,11 +18335,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18366,11 +18358,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18389,11 +18381,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18412,11 +18404,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18435,11 +18427,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18458,11 +18450,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18481,11 +18473,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18504,11 +18496,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       },
@@ -18527,11 +18519,11 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Clad Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Clad Proof"
           }
         ]
       }
@@ -23922,10 +23914,6 @@
           {
             "id": "S",
             "label": "S"
-          },
-          {
-            "id": "D",
-            "label": "Denver (D)"
           }
         ]
       },
