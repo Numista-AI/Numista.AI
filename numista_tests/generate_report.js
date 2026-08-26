@@ -43,20 +43,20 @@ function walkSuites(suites, parentTitle) {
     for (const spec of (suite.specs || [])) {
       for (const test of (spec.tests || [])) {
         totalTests++;
-        const result = test.results?.[0];
-        const status = result?.status;
+        const lastResult = test.results?.[test.results.length - 1];
+        const status = test.status || lastResult?.status;
         if (status === 'passed' || status === 'expected') passed++;
+        else if (status === 'flaky') { flaky++; passed++; }
         else if (status === 'failed' || status === 'unexpected') {
           failed++;
-          const errMsg = result?.error?.message || 'Unknown error';
+          const errMsg = lastResult?.error?.message || 'Unknown error';
           failures.push({
             suite: title,
             test: spec.title,
             error: errMsg.substring(0, 300),
-            duration: result?.duration || 0,
+            duration: lastResult?.duration || 0,
           });
         }
-        else if (status === 'flaky') { flaky++; passed++; }
         else if (status === 'skipped') skipped++;
       }
     }

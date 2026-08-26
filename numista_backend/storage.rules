@@ -11,6 +11,18 @@ service firebase.storage {
                          && request.auth.token.email == email;
     }
 
+    // ── Support ticket screenshots ─────────────────────────────────────────────
+    // Path: support_screenshots/{ticketId}/{filename}
+    // Any authenticated user may upload images (max 5 MB, images only).
+    // No client read — admin views via signed URL from Admin SDK.
+    // 90-day retention enforced by scheduled cleanup job.
+    match /support_screenshots/{ticketId}/{filename} {
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow read: if false;
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;

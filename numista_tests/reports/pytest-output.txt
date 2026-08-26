@@ -3,48 +3,36 @@ platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
 plugins: anyio-4.13.0
-[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
-collected 215 items
+collected 262 items
 
-tests\test_active_learning_queue.py ..
-tests\test_auth_security.py [32mINFO   [0m [main] [d5407654] GET / -> 200 (56ms)
-.[33mWARNING[0m [main] [6d82667e] GET /api/spot_prices -> 200 (11963ms)
-.[32mINFO   [0m [main] [7cee734b] GET /api/v1/family/subaccounts -> 200 (46ms)
-.[32mINFO   [0m [main] [3f554333] POST /api/stripe/webhook -> 400 (46ms)
-.
-tests\test_awq_intake_parser.py .......................................
-tests\test_beta_estate_pipeline.py ...
-tests\test_catalog_slot_counts.py ..............
-tests\test_checklist_historical_matcher.py ............
-tests\test_checklist_parser.py ...........
-tests\test_coa_parser.py ....
-tests\test_collector_profile.py .
-tests\test_deal_spotter.py ..[32mINFO   [0m [main] [bfd17837] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
-[32mINFO   [0m [main] [1687e8a4] POST /api/wishlist/deals/check -> 200 (2ms)
-.
-tests\test_few_shot_service.py ..
-tests\test_greysheet.py [32mINFO   [0m [main] [84656834] POST /api/greysheet/resolve -> 200 (2ms)
-.[32mINFO   [0m [main] [20f0f77a] POST /api/greysheet/resolve -> 200 (1ms)
-.[32mINFO   [0m [main] [6a595db8] GET /api/greysheet/pricing/429 -> 200 (11ms)
-.[32mINFO   [0m [main] [f3584fc8] GET /api/greysheet/deals -> 200 (1ms)
-[32mINFO   [0m [main] [0219f2ff] POST /api/greysheet/deals/refresh -> 200 (2ms)
-.[32mINFO   [0m [main] [d54c286b] POST /api/portfolio/snapshot/daily -> 200 (4ms)
-..[32mINFO   [0m [main] [32ae9f00] GET /api/greysheet/quota -> 200 (4ms)
-..
-tests\test_import_worker_integration.py .
-tests\test_ingestion.py [32mINFO   [0m [main] [2e73bda9] GET /api/ingestion/jobs -> 200 (2ms)
-.[32mINFO   [0m [main] [97d3293a] POST /api/ingestion/batch_async -> 200 (3ms)
-[32mINFO   [0m [main] [759c07a9] GET /api/ingestion/status/job_4d893e76 -> 200 (1ms)
-.
-tests\test_invoice_fixtures.py ..
-tests\test_missing_images_csv.py ...
-tests\test_notes_parser.py .............
-tests\test_proxy_bandwidth.py .....
-tests\test_series_manifest_sync.py ....................
-tests\test_set_pricing_extended.py .........................................
-tests\test_transfer.py ....
-tests\test_valuations.py ......
-tests\test_vector_rag.py ...
-tests\test_verifiers.py ............
+numista_backend\tests\test_active_learning_queue.py ..                   [  0%]
+numista_backend\tests\test_auth_security.py ........                     [  3%]
+numista_backend\tests\test_awq_intake_parser.py ........................ [ 12%]
+...............                                                          [ 18%]
+numista_backend\tests\test_beta_estate_pipeline.py ...                   [ 19%]
+numista_backend\tests\test_catalog_slot_counts.py ..............         [ 25%]
+numista_backend\tests\test_checklist_historical_matcher.py ............  [ 29%]
+numista_backend\tests\test_checklist_parser.py ...........               [ 33%]
+numista_backend\tests\test_coa_parser.py ....                            [ 35%]
+numista_backend\tests\test_collector_profile.py .                        [ 35%]
+numista_backend\tests\test_deal_spotter.py ...                           [ 37%]
+numista_backend\tests\test_few_shot_service.py ..                        [ 37%]
+numista_backend\tests\test_financials_phase3.py ........................ [ 46%]
+...................                                                      [ 54%]
+numista_backend\tests\test_greysheet.py ........                         [ 57%]
+numista_backend\tests\test_import_worker_integration.py .                [ 57%]
+numista_backend\tests\test_ingestion.py ..                               [ 58%]
+numista_backend\tests\test_invoice_fixtures.py ..                        [ 59%]
+numista_backend\tests\test_missing_images_csv.py ...                     [ 60%]
+numista_backend\tests\test_notes_parser.py .............                 [ 65%]
+numista_backend\tests\test_proxy_bandwidth.py .....                      [ 67%]
+numista_backend\tests\test_series_manifest_sync.py ....................  [ 74%]
+numista_backend\tests\test_set_pricing_extended.py ..................... [ 82%]
+....................                                                     [ 90%]
+numista_backend\tests\test_transfer.py ....                              [ 91%]
+numista_backend\tests\test_valuations.py ......                          [ 94%]
+numista_backend\tests\test_vector_rag.py ...                             [ 95%]
+numista_backend\tests\test_verifiers.py ............                     [100%]
 
-============================ 215 passed in 24.12s =============================
+============================ 262 passed in 12.76s =============================
+

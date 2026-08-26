@@ -128,6 +128,7 @@ class HelpTicket {
   final String appVersion;
   final bool grantActive;
   final DateTime? closedAt;
+  final List<String> screenshotUrls;
 
   const HelpTicket({
     required this.ticketId,
@@ -142,6 +143,7 @@ class HelpTicket {
     required this.appVersion,
     required this.grantActive,
     this.closedAt,
+    this.screenshotUrls = const [],
   });
 
   factory HelpTicket.fromMap(Map<String, dynamic> m) {
@@ -158,6 +160,7 @@ class HelpTicket {
       appVersion: m['app_version'] as String? ?? '',
       grantActive: m['grant_active'] as bool? ?? false,
       closedAt: m['closed_at'] != null ? _toDateTime(m['closed_at']) : null,
+      screenshotUrls: List<String>.from(m['screenshot_urls'] as List? ?? []),
     );
   }
 
@@ -228,6 +231,7 @@ class SupportTicketView {
   final List<SupportCoinView> coins;
   final List<String> redactedFieldsApplied;
   final List<TicketMessage> messages;
+  final List<String> screenshotUrls;
 
   const SupportTicketView({
     required this.ticketId,
@@ -244,6 +248,7 @@ class SupportTicketView {
     required this.coins,
     required this.redactedFieldsApplied,
     required this.messages,
+    this.screenshotUrls = const [],
   });
 
   factory SupportTicketView.fromJson(Map<String, dynamic> j) {
@@ -270,6 +275,7 @@ class SupportTicketView {
       messages: ((j['messages'] as List?) ?? [])
           .map((m) => TicketMessage.fromMap(m as Map<String, dynamic>))
           .toList(),
+      screenshotUrls: List<String>.from(j['screenshot_urls'] as List? ?? []),
     );
   }
 }
