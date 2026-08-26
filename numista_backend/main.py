@@ -78,6 +78,7 @@ from routes.greysheet_error_routes import router as greysheet_error_router
 from routes.greysheet_admin_routes import router as greysheet_admin_router
 from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
+from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.deps import get_current_user
 
 app.include_router(subaccount_router)
@@ -97,6 +98,7 @@ app.include_router(greysheet_error_router)
 app.include_router(greysheet_admin_router)
 app.include_router(support_router)
 app.include_router(telemetry_router)             # ITEM 4: silent error telemetry
+app.include_router(sandbox_router)               # ITEM 8: demo coin clear
 
 
 # COA parsing endpoint extracted to routes/scan_routes.py

@@ -1274,6 +1274,43 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             ),
                         SizedBox(height: 32),
 
+                        // ITEM 7: Estate $0.00 warning — shown when coins exist
+                        // but no valuation has run yet (all values are zero).
+                        // Guides users to Batch Valuation so estate report is meaningful.
+                        if (coinsCount > 0 && grandTotalValue == 0.0)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withAlpha(20),
+                                border: Border.all(
+                                    color: Colors.orange.withAlpha(160)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded,
+                                      color: Colors.orange, size: 18),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Your collection shows \$0.00 — '
+                                      'run Batch Valuation to price your coins.',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade800,
+                                        fontSize: 13,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
                         // Recent Additions Title
                         Text(
                           'Recent Additions (${combinedItems.length} total)',
@@ -2503,15 +2540,44 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                            ? const Color(0xFF0B1120) 
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: _CollectionCardImage(data: m),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? const Color(0xFF0B1120) 
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: _CollectionCardImage(data: m),
+                          ),
+                        ),
+                        // ITEM 6: Amber DEMO badge — shown only on sandbox coins.
+                        // is_demo is set server-side; never derive from string heuristics.
+                        if (m['is_demo'] == true)
+                          Positioned(
+                            top: 4,
+                            left: 4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'DEMO',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 10),

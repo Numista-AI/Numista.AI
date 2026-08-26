@@ -1,19 +1,18 @@
-﻿/// error_message_service.dart
-/// ITEM 4 — Numista.AI Beta Sprint
-///
-/// Dual-path error handling:
-///   Path 1(a) — Friendly user-facing message (plain English, no stack traces)
-///   Path 1(b) — Silent background telemetry via POST /api/telemetry/silent-error
-///               Backend writes to Firestore beta_feedback via Admin SDK.
-///               NEVER calls FirebaseFirestore.instance.collection('beta_feedback').add()
-///               directly — Firestore rules block client create on that collection.
-///   Path 2(a) — Firebase Crashlytics for crash-level errors (recordError)
+﻿// error_message_service.dart
+// ITEM 4 - Numista.AI Beta Sprint
+//
+// Dual-path error handling:
+//   Path 1(a) - Friendly user-facing message (plain English, no stack traces)
+//   Path 1(b) - Silent background telemetry via POST /api/telemetry/silent-error
+//               Backend writes to Firestore beta_feedback via Admin SDK.
+//               NEVER calls FirebaseFirestore directly - rules block client create.
+//
+// firebase_crashlytics is NOT in pubspec.yaml (desktop-web-only project).
+// Crash-level events are sent via the same telemetry endpoint with isCrash=true.
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 
@@ -21,15 +20,15 @@ class ErrorMessageService {
   ErrorMessageService._();
 
   static const Map<String, String> _friendlyMessages = {
-    'network':   'We couldn''t reach the server. Please check your connection and try again.',
+    'network':   "We couldn't reach the server. Please check your connection and try again.",
     'timeout':   'The request took too long. Please try again in a moment.',
-    'permission':'You don''t have permission to do that. Try signing out and back in.',
+    'permission':"You don't have permission to do that. Try signing out and back in.",
     'unauthenticated': 'Your session may have expired. Please sign in again.',
     '401':       'Your session may have expired. Please sign in again.',
-    '403':       'You don''t have permission to do that.',
-    '404':       'We couldn''t find that item. It may have been moved or deleted.',
+    '403':       "You don't have permission to do that.",
+    '404':       "We couldn't find that item. It may have been moved or deleted.",
     '429':       'Too many requests. Please wait a moment and try again.',
-    '500':       'Something went wrong on our end. We''ve been notified.',
+    '500':       "Something went wrong on our end. We've been notified.",
     '502':       'Our server had trouble connecting to a third-party service.',
     '503':       'A service we depend on is temporarily unavailable.',
     'socket':    'Connection failed. Please check your internet connection.',
@@ -57,19 +56,16 @@ class ErrorMessageService {
   }) async {
     final friendly = userMessage ?? friendlyMessage(error);
 
-    // Path 1(b): silent background telemetry
-    unawaited(_sendSilentTelemetry(error: error, stackTrace: stackTrace, context: context));
+    // Path 1(b): silent background telemetry (also handles crash-level events
+    // since firebase_crashlytics is not installed in this desktop-web project).
+    unawaited(_sendSilentTelemetry(
+      error: error,
+      stackTrace: stackTrace,
+      context: context,
+      isCrash: isCrash,
+    ));
 
-    // Path 2(a): Crashlytics for crash-level errors
-    if (isCrash) {
-      try {
-        await FirebaseCrashlytics.instance.recordError(
-          error, stackTrace,
-          reason: 'ErrorMessageService:$context',
-          fatal: true,
-        );
-      } catch (_) {}
-    } else if (kDebugMode) {
+    if (kDebugMode) {
       // ignore: avoid_print
       print('[ErrorMessageService] $context: $error\n$stackTrace');
     }
@@ -84,12 +80,13 @@ class ErrorMessageService {
     required Object error,
     StackTrace? stackTrace,
     required String context,
+    bool isCrash = false,
   }) async {
     try {
       final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
       if (idToken == null) return;
 
-      final payload = '{"context":"$context","error_type":"${error.runtimeType}","has_stack":${stackTrace != null}}';
+      final payload = '{"context":"$context","error_type":"${error.runtimeType}","has_stack":${stackTrace != null},"is_crash":$isCrash}';
 
       await http.post(
         Uri.parse('$kApiBaseUrl/api/telemetry/silent-error'),
