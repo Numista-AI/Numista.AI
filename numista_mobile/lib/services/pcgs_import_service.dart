@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 import 'collection_stats_service.dart';
 import '../constants.dart';
@@ -141,7 +142,15 @@ class PcgsImportService {
     // bypassing Cloudflare's browser-only restriction.
     final url = Uri.parse('$_backendUrl/api/pcgs/cert/$certNo');
 
-    final response = await http.get(url, headers: {'Accept': 'application/json'});
+    // PCGS pre-check: Option A confirmed. Backend requires Firebase JWT.
+    // Get the current user's ID token and send it as Authorization header.
+    final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (idToken != null) {
+      headers['Authorization'] = 'Bearer $idToken';
+    }
+
+    final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;

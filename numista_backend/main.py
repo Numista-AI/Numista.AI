@@ -7110,10 +7110,14 @@ def reference_stats():
 
 
 @app.get("/api/collection/completion_stats")
-def collection_completion_stats(user_email: str):
+def collection_completion_stats(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     """
-    Returns overall and categorical completion metrics for a user.
+    Returns overall and categorical completion metrics for the authenticated user.
+    Identity is derived from the Firebase JWT token — not from query params.
     """
+    user_email = current_user.get("email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=404, detail="Reference database not found")
         
@@ -7165,10 +7169,14 @@ def collection_completion_stats(user_email: str):
 
 
 @app.get("/api/reference/search")
-def reference_search(q: Optional[str] = "", user_email: Optional[str] = None, page_size: int = 10, offset: int = 0, sort_by: str = "year"):
+def reference_search(request: Request, q: Optional[str] = "", page_size: int = 10, offset: int = 0, sort_by: str = "year", current_user: Dict[str, Any] = Depends(get_current_user)):
     """
-    Returns search results from the definitive catalog with ownership status.
+    Returns search results from the definitive catalog with ownership status for the authenticated user.
+    Identity is derived from the Firebase JWT token — user_email query param removed to prevent IDOR.
     """
+    user_email = current_user.get("email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=404, detail="Reference database not found")
         
@@ -7541,7 +7549,7 @@ def _normalize_lcc_cost(raw_cost: str) -> str:
 # --- Endpoint -----------------------------------------------------------------
 
 @app.post("/api/import/littleton_sync")
-async def littleton_sync(request: LittletonSyncRequest):
+async def littleton_sync(request: Request, payload: LittletonSyncRequest, current_user: Dict[str, Any] = Depends(get_current_user)):
     """
     Ingest a batch of scraped Littleton Coin Company order records into the
     authenticated user's review_queue.
@@ -7582,11 +7590,11 @@ async def littleton_sync(request: LittletonSyncRequest):
             detail="Littleton SKU helper module not available. Check server logs."
         )
 
-    user_email = (request.user_email or "").strip()
+    user_email = current_user.get("email", "").strip()
     if not user_email:
-        raise HTTPException(status_code=400, detail="user_email is required.")
+        raise HTTPException(status_code=401, detail="User email not present in authentication token.")
 
-    orders = request.orders or []
+    orders = payload.orders or []
     if not orders:
         return {
             "status":               "success",
@@ -7665,7 +7673,7 @@ async def littleton_sync(request: LittletonSyncRequest):
                 # Provenance fields
                 "upload_method":                  "littleton_sync",
                 "Retailer/Website":               "Littleton Coin Company",
-                "import_session_id":              request.import_session_id or "",
+                "import_session_id":              payload.import_session_id or "",
                 "created_at":                     firestore.SERVER_TIMESTAMP,
                 "deep_dive_status":               "PENDING",
 
