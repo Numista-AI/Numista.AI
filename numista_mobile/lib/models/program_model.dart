@@ -67,7 +67,9 @@ class ProgramCoin {
 
   factory ProgramCoin.fromMap(Map<String, dynamic> map) {
     return ProgramCoin(
-      id: map['id'] ?? '',
+      id: (map['id']?.toString() ?? '').isNotEmpty
+              ? map['id'].toString()
+              : (map['program_slot_id']?.toString() ?? ''),
       name: map['name'] ?? '',
       varieties: List.from(map['varieties'] as List? ?? [])
           .map((v) {

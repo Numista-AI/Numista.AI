@@ -250,6 +250,20 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (program.id == '2026_semiquincentennial_currency' &&
           (progSeries.toLowerCase().contains('2026') || progSeries.toLowerCase().contains('america250') || progSeries.toLowerCase().contains('semiquincentennial'))) {
         isSeriesMatched = true;
+      } else if (program.id == '2026_semiquincentennial_collectibles') {
+        // Constituent products span multiple Program/Series values:
+        // Peace Dollar, American Silver Eagle, American Gold Buffalo,
+        // American Innovation $1, United States Semiquincentennial, 2026 collectibles.
+        // None of these contain the program display name, so we accept any of them.
+        const collectibleSeries = {
+          'peace dollar', 'american silver eagle', 'american gold buffalo',
+          'american innovation', 'semiquincentennial', 'america250',
+          '2026 collectible', 'numismatic collectible',
+        };
+        final psLower = progSeries.toLowerCase();
+        if (collectibleSeries.any((s) => psLower.contains(s))) {
+          isSeriesMatched = true;
+        }
       } else if (program.id == 'washington_quarters_classic' &&
           (progSeries.toLowerCase().contains('washington') || progSeries.toLowerCase().contains('quarter'))) {
         isSeriesMatched = true;
@@ -261,7 +275,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     const multiDesignProgramIds = {
       'fifty_state_quarters', 'presidential_dollars', 'america_the_beautiful_quarters',
       'american_women_quarters', 'american_innovation_dollars', '2026_semiquincentennial_currency',
-      '2026_semiquincentennial_collectibles', 'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
+      'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
     };
 
     if (multiDesignProgramIds.contains(program.id) || program.name.contains('50 State') || program.name.contains('Presidential') || program.name.contains('America the Beautiful')) {

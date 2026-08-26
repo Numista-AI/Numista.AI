@@ -97,6 +97,7 @@ def main():
                     normalized_varieties.append({'id': str(v), 'label': str(v)})
 
             normalized_coin = {
+                'id': slot_id,
                 'program_slot_id': slot_id,
                 'program_id': doc_id,
                 'name': c_name,
