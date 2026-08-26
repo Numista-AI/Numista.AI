@@ -205,6 +205,19 @@
 
 
 
+
+## v4.203 — 2026-08-26
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system scan and generate SCAN_REPORT.md
+- Qc/layer1: dismiss 'Let's go!' wizard dialog in theme_switch_guard signInAndWait() - was blocking Settings navigation
+- Qc: add --no-fatal-warnings to flutter analyze (warnings != errors, should not fail suite)
+- Qc/layer1: fix HTML entity encoding in theme_switch_guard.spec.js (=> was written as =&gt;)
+- Security: fail closed on Stripe checkout and portal errors
+- Qc/layer1: navigate to Settings & Backup before looking for theme toggle; add role=switch fallback
+- Qc: flutter analyze --no-fatal-infos (warnings don't fail suite); flutter test via Push-Location
+- Security: require Firebase auth on collection clear
+
 ## v4.202 — 2026-08-25
 **Qc/layer1 Enhancements & Platform Updates**
 
