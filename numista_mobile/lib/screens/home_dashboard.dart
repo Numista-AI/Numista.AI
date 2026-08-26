@@ -1543,10 +1543,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.207',
+    version: 'v4.208',
     date: '2026-08-26',
     description: 'Beta Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep',
+      'Release: auto-bump v4.207 for beta sprint P0 items 1-5',
+      'Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix',
+      'Release: auto-bump v4.204 release notes and dashboard version',
+      'E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper',
+      'Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)',
+      'Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header',
+      'Release: v4.203 release notes update',
+    ],
+  ),
+  _Release(
+    version: 'v4.207',
+    date: '2026-08-26',
+    description: 'Beta Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix',
       'Release: auto-bump v4.204 release notes and dashboard version',
