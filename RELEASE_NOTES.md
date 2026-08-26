@@ -224,6 +224,19 @@
 
 
 
+
+## v4.222 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+- Release: auto-bump v4.213 for beta sprint P1 items 9-11
+- Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+
 ## v4.221 — 2026-08-26
 **Release Enhancements & Platform Updates**
 
