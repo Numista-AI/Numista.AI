@@ -200,6 +200,54 @@ class SlotResolver {
 
   // ─── Coin matching ─────────────────────────────────────────────────────────
 
+  // ── Call-chain for PDF banner and grid (both come from one inventoryMap) ───
+  // program_manager_screen.dart:1237
+  //   SlotResolver.resolveProgramInventory(program, coins)
+  //     slot_resolver.dart:476  for each coinSlot in program.coins:
+  //       slot_resolver.dart:487  slotMatches = pool.where((item) => isMatch(...))
+  //         slot_resolver.dart:205  isMatch()  ← THIS FUNCTION — the only gate
+  //       slot_resolver.dart:489  for each variety in coinSlot.varieties:
+  //         slot_resolver.dart:490    slotKey = program.id_coinSlot.id_variety.id
+  //         slot_resolver.dart:491    matchingItems = slotMatches.where(matchesVariety)
+  //         slot_resolver.dart:525    result[slotKey] = SlotMatchResult(isOwned: true)
+  //     returns Map<String, SlotMatchResult> inventoryMap
+  //   program_manager_screen.dart:1241
+  //     distinctOwned = inventoryMap.values.where((r) => r.isOwned).length
+  //   ChecklistGeneratorService.generateChecklist(distinctOwnedSlots: distinctOwned)
+  //     checklist_generator_service.dart:328  banner "Slots: N / 19"
+  //     checklist_generator_service.dart:217  grid checkbox per slotKey
+
+  /// Derives a stable product-family token from a coin's Program/Series + Theme/Subject.
+  ///
+  /// Order is mandatory — checked top-to-bottom, first match wins:
+  ///   1. buffalo  — American Buffalo checked before any gold/eagle rule
+  ///   2. ase      — American Silver Eagle checked before gold eagle (both contain 'eagle')
+  ///   3. age      — American Gold Eagle
+  ///   4. peace    — Peace Dollar
+  ///   5. morgan   — Morgan Dollar
+  ///   6. innovation:state — American Innovation $1; state derived from Theme/Subject.
+  ///                         No state → returns '' → isMatch returns false (no tick).
+  ///   7. trump    — Semiquincentennial Trump $1
+  ///   Default: '' → isMatch returns false, not match-all.
+  static String _deriveCoinFamily(String progSeries, String themeSub) {
+    final ps = progSeries.toLowerCase();
+    final th = themeSub.toLowerCase();
+    if (ps.contains('american buffalo') || ps.contains('buffalo gold')) { return 'buffalo'; }
+    if (ps.contains('american silver eagle') || ps.contains('silver eagle')) { return 'ase'; }
+    if (ps.contains('american gold eagle') || ps.contains('gold eagle')) { return 'age'; }
+    if (ps.contains('peace dollar')) { return 'peace'; }
+    if (ps.contains('morgan dollar') || ps.contains('morgan silver')) { return 'morgan'; }
+    if (ps.contains('american innovation') || ps.contains('innovation dollar')) {
+      if (th.contains('iowa'))       { return 'innovation:iowa'; }
+      if (th.contains('wisconsin'))  { return 'innovation:wisconsin'; }
+      if (th.contains('california')) { return 'innovation:california'; }
+      if (th.contains('minnesota'))  { return 'innovation:minnesota'; }
+      return ''; // No state → no tick
+    }
+    if (ps.contains('trump') || ps.contains('semiquincentennial president')) { return 'trump'; }
+    return '';
+  }
+
   /// Evaluates an item from Firestore against a program coin slot.
 
   static bool isMatch(Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
@@ -264,7 +312,43 @@ class SlotResolver {
 
     // 3. Program/Series Alignment — rule 24 in matchesDbSeries handles 2026/America250 properly
     final bool seriesMatched = program.matchesDbSeries(progSeries);
-    if (!seriesMatched && progSeries.isNotEmpty) return false;
+    if (!seriesMatched && progSeries.isNotEmpty) { return false; }
+
+    // 3b. TEMPORARY: Collectibles product-family guard.
+    // matchesDbSeries() answers "is this coin in this program?" but not
+    // "is this coin in THIS SPECIFIC SLOT?" For the collectibles program,
+    // one W-Proof coin would paint every W-PROOF hole (AGE, Buffalo, ASE).
+    // Fix: require exact productFamily match + finish guard.
+    // Next commit: productFamily on every slot in all programs + delete _isMatch.
+    if (program.id == '2026_semiquincentennial_collectibles') {
+      final slotFamily = coinSlot.productFamily;
+      if (slotFamily.isEmpty) { return false; } // Unknown slot → reject safely
+
+      final coinFamily = _deriveCoinFamily(progSeries, themeSub);
+      if (coinFamily.isEmpty || coinFamily != slotFamily) { return false; }
+
+      // Stage 2: finish guard — RP coin cannot tick EU slot and vice versa.
+      final cNameLower = coinSlot.name.toLowerCase();
+      final variety = (item['Variety']?.toString() ?? item['variety']?.toString() ?? '').toLowerCase();
+      final strikeType = (item['Strike Type']?.toString() ?? item['strike_type']?.toString() ?? '').toLowerCase();
+      final finishHint = '$variety $strikeType'.trim();
+
+      final slotIsRP   = cNameLower.contains('reverse proof');
+      final slotIsEU   = cNameLower.contains('enhanced uncirculated');
+      final slotIsCong = cNameLower.contains('congratulations');
+      final coinIsRP   = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
+      final coinIsEU   = finishHint.contains('enhanced') || finishHint.contains(' eu');
+      final coinIsCong = finishHint.contains('congratulations') || finishHint.contains('cong');
+
+      if (slotIsRP   && !coinIsRP)   { return false; }
+      if (slotIsEU   && !coinIsEU)   { return false; }
+      if (slotIsCong && !coinIsCong) { return false; }
+      if (coinIsRP   && !slotIsRP)   { return false; }
+      if (coinIsEU   && !slotIsEU)   { return false; }
+      if (coinIsCong && !slotIsCong) { return false; }
+
+      // Family + finish matched — year guard falls through below
+    }
 
     // 4. Year Alignment Guard — hard equality when slot has a year.
     // Empty item year is NOT a wildcard: it fails any dated slot.

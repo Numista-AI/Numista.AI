@@ -26607,7 +26607,8 @@
             "id": "P-REVERSE-PROOF",
             "label": "Philadelphia Reverse Proof (P)"
           }
-        ]
+        ],
+        "product_family": "morgan"
       },
       {
         "name": "2026 Peace Silver Dollar Reverse Proof",
@@ -26617,7 +26618,8 @@
             "id": "P-REVERSE-PROOF",
             "label": "Philadelphia Reverse Proof (P)"
           }
-        ]
+        ],
+        "product_family": "peace"
       },
       {
         "name": "2026 Morgan Silver Dollar Enhanced Uncirculated",
@@ -26627,7 +26629,8 @@
             "id": "EU",
             "label": "Enhanced Uncirculated (struck at West Point; confirm mint mark on coin)"
           }
-        ]
+        ],
+        "product_family": "morgan"
       },
       {
         "name": "2026 Peace Silver Dollar Enhanced Uncirculated",
@@ -26637,7 +26640,8 @@
             "id": "EU",
             "label": "Enhanced Uncirculated (struck at West Point; confirm mint mark on coin)"
           }
-        ]
+        ],
+        "product_family": "peace"
       },
       {
         "name": "2026 American Eagle One Ounce Silver Proof Coin",
@@ -26647,7 +26651,8 @@
             "id": "W-PROOF",
             "label": "West Point Proof 250 privy (W)"
           }
-        ]
+        ],
+        "product_family": "ase"
       },
       {
         "name": "2026 American Eagle One Ounce Silver Enhanced Uncirculated Coin",
@@ -26657,7 +26662,8 @@
             "id": "W-EU",
             "label": "West Point Enhanced Uncirculated (W)"
           }
-        ]
+        ],
+        "product_family": "ase"
       },
       {
         "name": "2026 American Eagle One Ounce Silver Proof Coin (Congratulations Set)",
@@ -26667,7 +26673,8 @@
             "id": "P-PROOF-CONG",
             "label": "Philadelphia Proof — Congratulations Set (P)"
           }
-        ]
+        ],
+        "product_family": "ase"
       },
       {
         "name": "2026 American Eagle One Ounce Gold Proof Coin",
@@ -26677,7 +26684,8 @@
             "id": "W-PROOF",
             "label": "West Point Proof (W)"
           }
-        ]
+        ],
+        "product_family": "age"
       },
       {
         "name": "2026 American Eagle One Ounce Gold Enhanced Uncirculated Coin",
@@ -26687,7 +26695,8 @@
             "id": "W-EU",
             "label": "West Point Enhanced Uncirculated (W)"
           }
-        ]
+        ],
+        "product_family": "age"
       },
       {
         "name": "2026 American Buffalo One Ounce Gold Proof Coin",
@@ -26697,7 +26706,8 @@
             "id": "W-PROOF",
             "label": "West Point Proof (W)"
           }
-        ]
+        ],
+        "product_family": "buffalo"
       },
       {
         "name": "2026 American Innovation $1 — Iowa",
@@ -26711,7 +26721,8 @@
             "id": "D",
             "label": "Denver (D)"
           }
-        ]
+        ],
+        "product_family": "innovation:iowa"
       },
       {
         "name": "2026 American Innovation $1 — Wisconsin",
@@ -26725,7 +26736,8 @@
             "id": "D",
             "label": "Denver (D)"
           }
-        ]
+        ],
+        "product_family": "innovation:wisconsin"
       },
       {
         "name": "2026 American Innovation $1 — California",
@@ -26739,7 +26751,8 @@
             "id": "D",
             "label": "Denver (D)"
           }
-        ]
+        ],
+        "product_family": "innovation:california"
       },
       {
         "name": "2026 American Innovation $1 — Minnesota",
@@ -26753,7 +26766,8 @@
             "id": "D",
             "label": "Denver (D)"
           }
-        ]
+        ],
+        "product_family": "innovation:minnesota"
       },
       {
         "name": "2026 Semiquincentennial President Donald J. Trump $1 Coin",
@@ -26764,7 +26778,8 @@
             "label": "Philadelphia (P) — On sale September 2, 2026"
           }
         ],
-        "pending": true
+        "pending": true,
+        "product_family": "trump"
       }
     ]
   }

@@ -233,6 +233,110 @@
 
 
 
+
+
+
+
+
+
+
+
+## v4.238 — 2026-08-26
+**Collectibles Enhancements & Platform Updates**
+
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+
+## v4.237 — 2026-08-26
+**Programs Enhancements & Platform Updates**
+
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+
+## v4.236 — 2026-08-26
+**Programs Enhancements & Platform Updates**
+
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+
+## v4.235 — 2026-08-26
+**Programs Enhancements & Platform Updates**
+
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+
+## v4.234 — 2026-08-26
+**Crash Enhancements & Platform Updates**
+
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+
+## v4.233 — 2026-08-26
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+
+## v4.232 — 2026-08-26
+**Resolver+fallback Enhancements & Platform Updates**
+
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+
+## v4.231 — 2026-08-26
+**Resolver+fallback Enhancements & Platform Updates**
+
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+
 ## v4.230 — 2026-08-26
 **Resolver+fallback Enhancements & Platform Updates**
 

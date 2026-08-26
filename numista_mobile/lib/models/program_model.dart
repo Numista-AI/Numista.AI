@@ -52,10 +52,11 @@ class ChecklistVariety {
 
 class ProgramCoin {
   final String id; // e.g., 'delaware'
-  final String name; 
+  final String name;
   final List<ChecklistVariety> varieties;
   final String? year;
   final String? referenceImagePath; // Fallback image for the whole coin type
+  final String productFamily; // e.g. 'ase', 'age', 'buffalo', 'morgan', 'peace', 'innovation:iowa', 'trump'
 
   const ProgramCoin({
     required this.id,
@@ -63,11 +64,14 @@ class ProgramCoin {
     required this.varieties,
     this.year,
     this.referenceImagePath,
+    this.productFamily = '',
   });
 
   factory ProgramCoin.fromMap(Map<String, dynamic> map) {
     return ProgramCoin(
-      id: map['id'] ?? '',
+      id: (map['id']?.toString() ?? '').isNotEmpty
+              ? map['id'].toString()
+              : (map['program_slot_id']?.toString() ?? ''),
       name: map['name'] ?? '',
       varieties: List.from(map['varieties'] as List? ?? [])
           .map((v) {
@@ -81,8 +85,9 @@ class ProgramCoin {
             return ChecklistVariety.fromId(v.toString());
           })
           .toList(),
-      year: map['year'],
+      year: map['year']?.toString(),
       referenceImagePath: map['referenceImagePath'],
+      productFamily: map['product_family']?.toString() ?? '',
     );
   }
 
@@ -93,6 +98,7 @@ class ProgramCoin {
       'varieties': varieties.map((v) => v.toMap()).toList(),
       if (year != null) 'year': year,
       if (referenceImagePath != null) 'referenceImagePath': referenceImagePath,
+      if (productFamily.isNotEmpty) 'product_family': productFamily,
     };
   }
 }
@@ -343,10 +349,13 @@ class CoinProgram {
           'american buffalo',
           'buffalo gold',
           'innovation dollar',
+          'american innovation', // American Innovation $1 Coin Program
           'companion medal',
+          'trump',              // 2026 Semiquincentennial Trump $1
+          'semiquincentennial president', // same coin, alternative series tag
         ];
         return collectibleSeries.any((n) => dbLower.contains(n));
-        // requiresPrivy gate in matchesVariety is the second required check.
+        // productFamily guard in SlotResolver.isMatch() is the second required check.
       }
     }
 

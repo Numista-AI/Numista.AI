@@ -250,6 +250,20 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (program.id == '2026_semiquincentennial_currency' &&
           (progSeries.toLowerCase().contains('2026') || progSeries.toLowerCase().contains('america250') || progSeries.toLowerCase().contains('semiquincentennial'))) {
         isSeriesMatched = true;
+      } else if (program.id == '2026_semiquincentennial_collectibles') {
+        // Constituent products span multiple Program/Series values:
+        // Peace Dollar, American Silver Eagle, American Gold Buffalo,
+        // American Innovation $1, United States Semiquincentennial, 2026 collectibles.
+        // None of these contain the program display name, so we accept any of them.
+        const collectibleSeries = {
+          'peace dollar', 'american silver eagle', 'american gold buffalo',
+          'american gold eagle', 'american innovation',
+          '2026 collectible', 'numismatic collectible',
+        };
+        final psLower = progSeries.toLowerCase();
+        if (collectibleSeries.any((s) => psLower.contains(s))) {
+          isSeriesMatched = true;
+        }
       } else if (program.id == 'washington_quarters_classic' &&
           (progSeries.toLowerCase().contains('washington') || progSeries.toLowerCase().contains('quarter'))) {
         isSeriesMatched = true;
@@ -261,7 +275,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     const multiDesignProgramIds = {
       'fifty_state_quarters', 'presidential_dollars', 'america_the_beautiful_quarters',
       'american_women_quarters', 'american_innovation_dollars', '2026_semiquincentennial_currency',
-      '2026_semiquincentennial_collectibles', 'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
+      'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
     };
 
     if (multiDesignProgramIds.contains(program.id) || program.name.contains('50 State') || program.name.contains('Presidential') || program.name.contains('America the Beautiful')) {
@@ -275,6 +289,51 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (cNameLower.contains('lowell') && themeSub.contains('lowell')) return true;
       if (cNameLower.contains('mayflower') && themeSub.contains('mayflower')) return true;
       return false;
+    }
+
+    // ── 4b. Collectibles program: match coin's Program/Series to slot name ──────
+    // The collectibles program spans products from different series (Peace Dollar,
+    // American Silver Eagle, American Gold Buffalo, American Innovation $1, etc.).
+    // The year==year fallback below would paint ALL 19 slots for any 2026 coin.
+    // Instead, require that the coin's Program/Series maps to the specific slot name,
+    // AND that the coin's Variety/Strike Type matches the slot's finish.
+    if (program.id == '2026_semiquincentennial_collectibles') {
+      if (cNameLower.isEmpty) return false;
+      final psLower = progSeries.toLowerCase();
+      final variety = (coinData['Variety']?.toString() ?? coinData['variety']?.toString() ?? '').toLowerCase();
+      final strikeType = (coinData['Strike Type']?.toString() ?? coinData['strike_type']?.toString() ?? '').toLowerCase();
+      final finishHint = '$variety $strikeType'.trim();
+
+      // ── Step 1: Series must map to this slot's product ──
+      bool slotSeriesMatch = false;
+      if (psLower.contains('peace dollar') && cNameLower.contains('peace')) { slotSeriesMatch = true; }
+      if (psLower.contains('morgan') && cNameLower.contains('morgan')) { slotSeriesMatch = true; }
+      if (psLower.contains('american silver eagle') && cNameLower.contains('silver') && cNameLower.contains('eagle')) { slotSeriesMatch = true; }
+      if (psLower.contains('american gold eagle') && cNameLower.contains('gold') && cNameLower.contains('eagle') && !cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
+      if (psLower.contains('american buffalo') && cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
+      if (psLower.contains('american innovation') && cNameLower.contains('innovation')) { slotSeriesMatch = true; }
+      if ((psLower.contains('semiquincentennial') || psLower.contains('america250')) &&
+          (cNameLower.contains('trump') || cNameLower.contains('semiquincentennial') || cNameLower.contains('president'))) { slotSeriesMatch = true; }
+      if (!slotSeriesMatch) { return false; }
+
+      // ── Step 2: Finish must match slot name ──
+      // A "Reverse Proof" coin must not match an "Enhanced Uncirculated" slot, etc.
+      final slotIsRP    = cNameLower.contains('reverse proof');
+      final slotIsEU    = cNameLower.contains('enhanced uncirculated') || cNameLower.contains('enhanced unc');
+      final slotIsCong  = cNameLower.contains('congratulations');
+      final coinIsRP    = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
+      final coinIsEU    = finishHint.contains('enhanced') || finishHint.contains(' eu');
+      final coinIsCong  = finishHint.contains('congratulations') || finishHint.contains('cong');
+
+      if (slotIsRP   && !coinIsRP)   { return false; }
+      if (slotIsEU   && !coinIsEU)   { return false; }
+      if (slotIsCong && !coinIsCong) { return false; }
+      // If coin IS an RP/EU/Cong, it should not match a non-matching slot
+      if (coinIsRP   && !slotIsRP)   { return false; }
+      if (coinIsEU   && !slotIsEU)   { return false; }
+      if (coinIsCong && !slotIsCong) { return false; }
+
+      return slotYear.isEmpty || year.isEmpty || slotYear == year;
     }
 
     // Single-design series (Roosevelt Dimes, Morgan, Peace, SBA, Sacagawea, etc.)

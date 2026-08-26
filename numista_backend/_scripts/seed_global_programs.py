@@ -97,15 +97,18 @@ def main():
                     normalized_varieties.append({'id': str(v), 'label': str(v)})
 
             normalized_coin = {
+                'id': slot_id,
                 'program_slot_id': slot_id,
                 'program_id': doc_id,
                 'name': c_name,
                 'design_slug': c_slug,
-                'year': c_year,
+                'year': str(c_year) if c_year is not None else None,
                 'varieties': normalized_varieties
             }
             if c.get('referenceImagePath'):
                 normalized_coin['referenceImagePath'] = c.get('referenceImagePath')
+            if c.get('product_family'):
+                normalized_coin['product_family'] = c.get('product_family')
 
             normalized_coins.append(normalized_coin)
 
