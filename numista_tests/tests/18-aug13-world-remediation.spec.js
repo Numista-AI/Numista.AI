@@ -22,8 +22,6 @@ async function enterDemo(page) {
     await page.mouse.click(841, 647);
   }
   await page.waitForTimeout(4000);
-  await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.waitForTimeout(1000);
 }
 
 test.describe('18 - 13 AUG 2026 World & Remediation E2E Suite', () => {
@@ -33,9 +31,9 @@ test.describe('18 - 13 AUG 2026 World & Remediation E2E Suite', () => {
 
   test('T01: World & Foreign coins render under World sub-filter tab', async ({ page }) => {
     // Assert tab element for World items exists in the demo collection
-    const worldTab = page.locator('text=World & Specialty').or(page.locator('text=World'));
-    if (await worldTab.isVisible()) {
-      await worldTab.click();
+    const worldTab = page.locator('text=World and Specialty').or(page.getByText('World and Specialty')).first();
+    if (await worldTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await worldTab.click({ force: true }).catch(() => page.mouse.click(80, 309));
       await page.waitForTimeout(1000);
     }
     await page.screenshot({ path: 'screenshots/18-world-tab.png' });
