@@ -1547,10 +1547,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.216',
+    date: '2026-08-26',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
+      'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
+      'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
+      'Release: auto-bump v4.205 release notes',
+      'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
+      'Release: auto-bump v4.208 for beta sprint items 6-8',
+      'Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep',
+      'Release: auto-bump v4.207 for beta sprint P0 items 1-5',
+    ],
+  ),
+  _Release(
+    version: 'v4.215',
+    date: '2026-08-26',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
+      'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
+      'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
+      'Release: auto-bump v4.205 release notes',
+      'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
+      'Release: auto-bump v4.208 for beta sprint items 6-8',
+      'Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep',
+      'Release: auto-bump v4.207 for beta sprint P0 items 1-5',
+    ],
+  ),
+  _Release(
     version: 'v4.214',
     date: '2026-08-26',
     description: 'Beta Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
       'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
