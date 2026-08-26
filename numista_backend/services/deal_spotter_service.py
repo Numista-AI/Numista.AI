@@ -34,11 +34,14 @@ class DealSpotterService:
             arb = self.calculate_arbitrage(listing_price, shipping, bid_val)
 
             if arb["is_arbitrage_deal"]:
+                import urllib.parse
+                query = f"{year}-{mint} {series} coin"
+                encoded_query = urllib.parse.quote_plus(query)
                 matched_deals.append({
                     "deal_id": f"deal_{year}_{mint}_{series.replace(' ', '_')}",
                     "title": f"{year}-{mint} {series} PCGS/NGC Certified",
                     "source": "ebay_epn",
-                    "url": f"https://www.ebay.com/itm/deal_{year}_{mint}",
+                    "url": f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}",
                     "listing_price": listing_price,
                     "shipping": shipping,
                     "greysheet_bid": bid_val,

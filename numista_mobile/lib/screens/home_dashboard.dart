@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.225',
+    date: '2026-08-26',
+    description: 'Invoice Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
+      'Programs: Phase 1 + 1b coin program data and seed script overhaul',
+      'Release: auto-bump v4.222 for Addendum A+B',
+      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Release: auto-bump release notes',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Release: auto-bump v4.216 release notes',
+    ],
+  ),
+  _Release(
     version: 'v4.224',
     date: '2026-08-26',
     description: 'Programs Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
