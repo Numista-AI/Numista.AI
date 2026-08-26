@@ -1547,10 +1547,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.238',
+    date: '2026-08-26',
+    description: 'Collectibles Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19',
+      'Programs: prevent 19/19 overcounting on collectibles card (Try 3)',
+      'Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles',
+      'Crash: coerce Firestore int year to String in ProgramCoin.fromMap',
+      'Catalog: pair 2026 US Mint product images and update release notes',
+      'Save 66 official 2026 US Mint coin images and update sprint assets',
+      'Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions',
+      'Update 2026 US Mint mint marks and specifications verified against live catalog PDPs',
+    ],
+  ),
+  _Release(
+    version: 'v4.237',
+    date: '2026-08-26',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Programs: prevent 19/19 overcounting on collectibles card (Try 3)',
+      'Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles',
+      'Crash: coerce Firestore int year to String in ProgramCoin.fromMap',
+      'Catalog: pair 2026 US Mint product images and update release notes',
+      'Save 66 official 2026 US Mint coin images and update sprint assets',
+      'Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions',
+      'Update 2026 US Mint mint marks and specifications verified against live catalog PDPs',
+      'Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync',
+    ],
+  ),
+  _Release(
     version: 'v4.236',
     date: '2026-08-26',
     description: 'Programs Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Programs: prevent 19/19 overcounting on collectibles card (Try 3)',
       'Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles',
