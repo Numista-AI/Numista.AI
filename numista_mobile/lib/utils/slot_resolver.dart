@@ -319,25 +319,25 @@ class SlotResolver {
     final grade      = _field(item, ['Condition', 'grade', 'Grade']);
 
     // ── Shared predicates — computed once, used by every branch ─────────────
-    // isProof: strike_type/variety contains PROOF, OR grade is PCGS/NGC Proof
-    //   designation (PR65, PF-67, PF 67). Word boundary \b so 'PCGS PR69' matches.
-    //   Note: does NOT gate on !REVERSE here (Classic has no reverse proofs).
-    //   Do not copy this helper to programs with Reverse Proof slots without
-    //   restoring the !REVERSE guard.
     final isProof = strikeType.contains('PROOF') ||
                     varField.contains('PROOF')   ||
                     RegExp(r'\b(PR|PF)[- ]?\d', caseSensitive: false).hasMatch(grade);
 
-    // isSilver: metal_content or variety/theme says SILVER.
     final isSilver = metal.contains('SILVER') || varField.contains('SILVER');
 
-    // isSMS: strike_type or variety says SMS, OR grade is PCGS/NGC Specimen.
-    //   SP65, SP-67, SP 67 — word boundary \b so 'NGC SP-67' matches.
-    //   Bare 'SP' or 'Special' alone does NOT qualify.
-    //   Default for unmarked 1965-67 coin with no SMS signal → NMM (P branch).
     final isSMS = strikeType.contains('SMS') ||
                   varField.contains('SMS')   ||
                   RegExp(r'\bSP[- ]?\d{2}', caseSensitive: false).hasMatch(grade);
+
+    // isReverseProof: strike_type or variety explicitly says REVERSE.
+    final isReverseProof = strikeType.contains('REVERSE') ||
+                           varField.contains('REVERSE');
+
+    // isEnhancedUnc: strike_type or variety says ENHANCED or EU.
+    final isEnhancedUnc = strikeType.contains('ENHANCED') ||
+                          varField.contains('ENHANCED')   ||
+                          strikeType.contains('EU')        ||
+                          varField.contains('EU');
 
     // ── requiresPrivy gate ───────────────────────────────────────────────────
     if (variety.requiresPrivy == true) {
@@ -353,6 +353,14 @@ class SlotResolver {
       if (!hasPrivy) return false;
     }
 
+    // ── Innovation legacy empty-variety.id positional fallback ───────────────
+    // Pre-Phase-1 Innovation coins matched against variety.id="" slots.
+    // READ TIME ONLY — zero writes to users/{uid}/coins.
+    // Legacy empty-id slots: preserve existing owns; new IDs handle fresh matches.
+    if (variety.id.isEmpty) {
+      return true; // safe read-time fallback
+    }
+
     // ── Privy-mark varieties ─────────────────────────────────────────────────
     if (vId.contains('PRIVY-JULY4')) {
       return (mintMark == 'P' || mintMark == 'D' || mintMark.isEmpty) &&
@@ -360,49 +368,78 @@ class SlotResolver {
               varField.contains('PRIVY') || strikeType.contains('PRIVY'));
     }
 
-    // ── Reverse Proof ────────────────────────────────────────────────────────
-    if (vId.contains('REVERSE-PROOF')) {
-      return (mintMark == 'S' || mintMark == 'W' || mintMark.isEmpty) &&
-             (strikeType.contains('REVERSE') || varField.contains('REVERSE'));
+    // ── Reverse Proof — mint-specific ────────────────────────────────────────
+    // P-REVERSE-PROOF: Philadelphia RP (Morgan 26XF, Peace 26XL)
+    if (vId == 'P-REVERSE-PROOF') {
+      return (mintMark == 'P' || mintMark.isEmpty) && isReverseProof;
+    }
+    // S-REVERSE-PROOF: San Francisco RP (Innovation dollars)
+    if (vId == 'S-REVERSE-PROOF') {
+      return mintMark == 'S' && isReverseProof;
+    }
+    // W-REVERSE-PROOF: West Point RP (reserved)
+    if (vId == 'W-REVERSE-PROOF') {
+      return mintMark == 'W' && isReverseProof;
+    }
+    // Generic REVERSE-PROOF legacy catch-all
+    if (vId == 'REVERSE-PROOF') {
+      return isReverseProof;
+    }
+
+    // ── Enhanced Uncirculated — mint-specific ─────────────────────────────────
+    // EU: struck at West Point; coin may bear no mint mark (Morgan/Peace 2026 26XE/26XH)
+    if (vId == 'EU') {
+      return isEnhancedUnc && (mintMark == 'W' || mintMark.isEmpty);
+    }
+    // W-EU: Enhanced Unc, West Point marked (ASE 26EG, AGE 26EH)
+    if (vId == 'W-EU') {
+      return isEnhancedUnc && mintMark == 'W';
+    }
+
+    // ── West Point Uncirculated (Kennedy 2019-W/2020-W; AWQ W mint) ──────────
+    if (vId == 'W-UNC') {
+      return mintMark == 'W' && !isProof && !isEnhancedUnc;
+    }
+
+    // ── Congratulations Set Proof — Philadelphia (26RF) ───────────────────────
+    // Separate row from W-PROOF (26EA). Requires 'congratulations' in variety/title.
+    if (vId == 'P-PROOF-CONG') {
+      final title = _field(item, ['Title', 'title', 'official_us_mint_title']);
+      final isCongrats = varField.contains('CONGRATUL') || title.contains('CONGRATUL');
+      return (mintMark == 'P' || mintMark.isEmpty) && isProof && isCongrats;
     }
 
     // ── S-SILVER (1976-S 40% silver BU only — NOT proof) ─────────────────────
-    // !isProof ensures 1976-S silver proof goes to S-SILVER-PROOF instead.
     if (vId == 'S-SILVER') {
       return mintMark == 'S' && isSilver && !isProof;
     }
 
-    // ── S-SILVER-PROOF (1976-S 40% silver proof; 1992-1998 S 90% silver proof) ─
-    // isProof accepts PR/PF grade prefix, so a 1992-S PR69 slab with empty
-    // strike_type correctly matches here instead of landing in S-SILVER (BU).
+    // ── S-SILVER-PROOF (1976-S / 1992-1998 S silver proof) ───────────────────
     if (vId == 'S-SILVER-PROOF') {
       return mintMark == 'S' && isSilver && isProof;
     }
 
     // ── S-PROOF (S-mint clad proof only) ─────────────────────────────────────
-    // !isSilver prevents 1976-S or 1992-S silver proofs from owning the clad slot.
-    // startsWith('S-PROOF-') catches typed variants (S-PROOF-T1, S-PROOF-T2) so
-    // they stay inside this !isSilver gate instead of falling through to the
-    // generic contains('PROOF') branch (which returns isProof for ANY S-mint proof).
-    // T1/T2 share this branch with no type discriminator — identical parity to the
-    // existing P-T1/P-T2 and D-T1/D-T2 slots, which also double-match on mint mark.
     if (vId == 'S-PROOF' || vId == 'S-CLAD' || vId.startsWith('S-PROOF-')) {
       return mintMark == 'S' && isProof && !isSilver;
     }
 
     // ── Philadelphia Proof (1936-1942, 1950-1964) — id: 'PROOF' ──────────────
-    // Struck at Philadelphia with no mint mark.
-    // isProof accepts strike_type, variety, OR PR/PF grade (e.g. PR65, PF-67).
-    // !isSMS: an SMS coin (SP67) must not land here.
-    // isPhillyOrUnmarked: S-mint proofs stay in S-PROOF / S-SILVER-PROOF.
     if (vId == 'PROOF') {
       final isPhillyOrUnmarked = mintMark.isEmpty || mintMark == 'NONE' ||
                                   mintMark == 'P'  || mintMark == 'PHILADELPHIA';
       return isProof && isPhillyOrUnmarked && !isSMS;
     }
 
-    // ── Generic PROOF / specific mint proofs (W-PROOF, P-PROOF, etc.) ────────
-    if (vId.contains('PROOF')) {
+    // ── P-PROOF: Philadelphia Proof (Morgan 1895-P, proof-only dated coins) ───
+    // isReverseProof guard prevents P-REVERSE-PROOF coins landing here.
+    if (vId == 'P-PROOF') {
+      return (mintMark == 'P' || mintMark.isEmpty) && isProof && !isReverseProof;
+    }
+
+    // ── Generic mint+PROOF (W-PROOF: ASE 26EA, AGE 26EB, Buffalo 26EL) ───────
+    // isReverseProof guard: Reverse Proof coins must not land in W-PROOF.
+    if (vId.contains('PROOF') && !isReverseProof) {
       final baseMint = vId.split('-').first;
       if (baseMint.isNotEmpty && baseMint != 'S') {
         return mintMark == baseMint && isProof;
@@ -411,29 +448,23 @@ class SlotResolver {
     }
 
     // ── SMS (Special Mint Set) — 1965, 1966, 1967 ────────────────────────────
-    // Uses shared isSMS predicate (widened to SP[- ]?\d{2}).
-    // matchesVariety() is called once per variety slot independently.
-    // The P/NMM branch below gates on !isSMS to prevent double-stamp.
     if (vId == 'SMS') {
       return isSMS;
     }
 
     // ── Uncirculated standard mint marks (P, D, W, S, CC, O) ────────────────
-    // !isProof: proof coins land in PROOF / S-PROOF / S-SILVER-PROOF, not here.
-    // !isSMS: SMS coins land in SMS, not NMM. matchesVariety() is per-slot;
-    //   branch ordering within one call does NOT prevent double-stamp across two
-    //   independent calls — the explicit !isSMS gate is the only safe guard.
+    // !isProof, !isSMS, !isEnhancedUnc: each handled above.
     final baseMint = vId.split('-').first;
-    if (mintMark == baseMint && !isProof && !isSMS) return true;
+    if (mintMark == baseMint && !isProof && !isSMS && !isEnhancedUnc) return true;
     if (baseMint == 'P' &&
         (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA') &&
-        !isProof && !isSMS) { return true; }
+        !isProof && !isSMS && !isEnhancedUnc) { return true; }
 
     return false;
   }
 
 
-  /// Resolves the entire program inventory across coins, currency, and world_items subcollections.
+  /// Resolves the entire program inventoryllections.
   static Map<String, SlotMatchResult> resolveProgramInventory({
     required CoinProgram program,
     required List<Map<String, dynamic>> coins,

@@ -46,11 +46,18 @@ def absorb_document(file_path: Path, user_intent: str = None):
         with open(file_path, "rb") as f:
             file_bytes = f.read()
         
+        ext = file_path.suffix.lower()
         mime_type = "application/pdf"
-        if file_path.suffix.lower() == ".docx":
+        if ext == ".docx":
             mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        elif file_path.suffix.lower() in [".xlsx", ".xls"]:
-            # Gemini 3.5 Flash doesn't support Excel directly, convert to CSV
+        elif ext in [".md", ".txt", ".markdown"]:
+            mime_type = "text/plain"
+        elif ext == ".json":
+            mime_type = "application/json"
+        elif ext == ".csv":
+            mime_type = "text/csv"
+        elif ext in [".xlsx", ".xls"]:
+            # Convert Excel to CSV
             try:
                 logger.info(f"   Converting Excel to CSV for Gemini: {file_path.name}")
                 df = pd.read_excel(io.BytesIO(file_bytes))
@@ -60,10 +67,9 @@ def absorb_document(file_path: Path, user_intent: str = None):
                 mime_type = "text/csv"
             except Exception as excel_err:
                 logger.error(f"   Excel conversion failed: {excel_err}")
-                # Fallback to binary if conversion fails (though it will likely fail in Gemini too)
                 mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        elif file_path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-            mime_type = f"image/{file_path.suffix.lower()[1:]}"
+        elif ext in [".png", ".jpg", ".jpeg"]:
+            mime_type = f"image/{ext[1:]}"
             if mime_type == "image/jpg": mime_type = "image/jpeg"
             
         # 1. Classify & Extract Summary

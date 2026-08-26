@@ -8,7 +8,7 @@ from pathlib import Path
 # --- CONFIGURATION ---
 INBOX_DIR = r"C:\Users\ericd\Documents\MyVertexProject\Numista_Brain_Inbox"
 LOG_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\brain_watcher.log"
-SUPPORTED_EXTENSIONS = {'.pdf', '.docx', '.xlsx', '.xls', '.jpg', '.jpeg', '.png'}
+SUPPORTED_EXTENSIONS = {'.pdf', '.docx', '.xlsx', '.xls', '.jpg', '.jpeg', '.png', '.md', '.csv', '.json'}
 
 logging.basicConfig(
     level=logging.INFO,

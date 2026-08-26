@@ -19,10 +19,10 @@ export default function DealsOpsDashboard() {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://numista-backend-568985927038.us-central1.run.app';
   const [deals, setDeals] = useState<DealItem[]>([
     {
-      id: "ebay_29584739102",
+      id: "ebay_1881s_ms64",
       title: "1881-S Morgan Silver Dollar NGC MS64 Lustrous White Obverse",
       source: "ebay",
-      url: "https://www.ebay.com/itm/29584739102",
+      url: "https://www.ebay.com/sch/i.html?_nkw=1881-S+Morgan+Silver+Dollar+MS64",
       price: 75.00,
       shipping: 4.00,
       greysheet_bid: 95.00,
@@ -30,10 +30,10 @@ export default function DealsOpsDashboard() {
       margin_percent: 16.8
     },
     {
-      id: "ebay_18492837492",
+      id: "ebay_1921_ms63",
       title: "1921 Morgan Silver Dollar PCGS MS63 Brilliant Uncirculated",
       source: "ebay",
-      url: "https://www.ebay.com/itm/18492837492",
+      url: "https://www.ebay.com/sch/i.html?_nkw=1921+Morgan+Silver+Dollar+MS63",
       price: 42.00,
       shipping: 3.50,
       greysheet_bid: 52.00,
@@ -153,7 +153,14 @@ export default function DealsOpsDashboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <a href={deal.url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:underline font-semibold">View on eBay (EPN) ↗</a>
+                    <a 
+                      href={deal.url && deal.url.includes('ebay.com/sch') ? deal.url : `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(deal.title)}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs text-emerald-400 hover:underline font-semibold"
+                    >
+                      View on eBay (EPN) ↗
+                    </a>
                   </td>
                 </tr>
               ))}

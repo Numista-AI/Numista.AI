@@ -227,6 +227,84 @@
 
 
 
+
+
+
+
+
+
+## v4.230 — 2026-08-26
+**Resolver+fallback Enhancements & Platform Updates**
+
+- Update 2026 US Mint mint marks and specifications verified against live catalog PDPs
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+
+## v4.229 — 2026-08-26
+**Resolver+fallback Enhancements & Platform Updates**
+
+- Resolver+fallback: Phase [N] slot_resolver and coin_programs_data sync
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+
+## v4.228 — 2026-08-26
+**Brain Enhancements & Platform Updates**
+
+- Brain: add text/markdown/json/csv absorption support and save 2026 US Mint catalog harvest
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+
+## v4.227 — 2026-08-26
+**Programs Enhancements & Platform Updates**
+
+- Programs: Grok review corrections to Phase 1 JSON data
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+
+## v4.226 — 2026-08-26
+**Deals Enhancements & Platform Updates**
+
+- Deals: update deal spotter links to live eBay search queries with dynamic encoding
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+
+## v4.225 — 2026-08-26
+**Invoice Enhancements & Platform Updates**
+
+- Invoice: add US Mint product catalog mapping and few-shot extraction rules
+- Programs: Phase 1 + 1b coin program data and seed script overhaul
+- Release: auto-bump v4.222 for Addendum A+B
+- Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script
+- Release: auto-bump release notes
+- Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures
+- Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures
+- Release: auto-bump v4.216 release notes
+
 ## v4.224 — 2026-08-26
 **Programs Enhancements & Platform Updates**
 
