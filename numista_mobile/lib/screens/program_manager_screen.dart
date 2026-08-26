@@ -257,7 +257,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         // None of these contain the program display name, so we accept any of them.
         const collectibleSeries = {
           'peace dollar', 'american silver eagle', 'american gold buffalo',
-          'american innovation', 'semiquincentennial', 'america250',
+          'american gold eagle', 'american innovation',
           '2026 collectible', 'numismatic collectible',
         };
         final psLower = progSeries.toLowerCase();
@@ -289,6 +289,51 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (cNameLower.contains('lowell') && themeSub.contains('lowell')) return true;
       if (cNameLower.contains('mayflower') && themeSub.contains('mayflower')) return true;
       return false;
+    }
+
+    // ── 4b. Collectibles program: match coin's Program/Series to slot name ──────
+    // The collectibles program spans products from different series (Peace Dollar,
+    // American Silver Eagle, American Gold Buffalo, American Innovation $1, etc.).
+    // The year==year fallback below would paint ALL 19 slots for any 2026 coin.
+    // Instead, require that the coin's Program/Series maps to the specific slot name,
+    // AND that the coin's Variety/Strike Type matches the slot's finish.
+    if (program.id == '2026_semiquincentennial_collectibles') {
+      if (cNameLower.isEmpty) return false;
+      final psLower = progSeries.toLowerCase();
+      final variety = (coinData['Variety']?.toString() ?? coinData['variety']?.toString() ?? '').toLowerCase();
+      final strikeType = (coinData['Strike Type']?.toString() ?? coinData['strike_type']?.toString() ?? '').toLowerCase();
+      final finishHint = '$variety $strikeType'.trim();
+
+      // ── Step 1: Series must map to this slot's product ──
+      bool slotSeriesMatch = false;
+      if (psLower.contains('peace dollar') && cNameLower.contains('peace')) { slotSeriesMatch = true; }
+      if (psLower.contains('morgan') && cNameLower.contains('morgan')) { slotSeriesMatch = true; }
+      if (psLower.contains('american silver eagle') && cNameLower.contains('silver') && cNameLower.contains('eagle')) { slotSeriesMatch = true; }
+      if (psLower.contains('american gold eagle') && cNameLower.contains('gold') && cNameLower.contains('eagle') && !cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
+      if (psLower.contains('american buffalo') && cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
+      if (psLower.contains('american innovation') && cNameLower.contains('innovation')) { slotSeriesMatch = true; }
+      if ((psLower.contains('semiquincentennial') || psLower.contains('america250')) &&
+          (cNameLower.contains('trump') || cNameLower.contains('semiquincentennial') || cNameLower.contains('president'))) { slotSeriesMatch = true; }
+      if (!slotSeriesMatch) { return false; }
+
+      // ── Step 2: Finish must match slot name ──
+      // A "Reverse Proof" coin must not match an "Enhanced Uncirculated" slot, etc.
+      final slotIsRP    = cNameLower.contains('reverse proof');
+      final slotIsEU    = cNameLower.contains('enhanced uncirculated') || cNameLower.contains('enhanced unc');
+      final slotIsCong  = cNameLower.contains('congratulations');
+      final coinIsRP    = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
+      final coinIsEU    = finishHint.contains('enhanced') || finishHint.contains(' eu');
+      final coinIsCong  = finishHint.contains('congratulations') || finishHint.contains('cong');
+
+      if (slotIsRP   && !coinIsRP)   { return false; }
+      if (slotIsEU   && !coinIsEU)   { return false; }
+      if (slotIsCong && !coinIsCong) { return false; }
+      // If coin IS an RP/EU/Cong, it should not match a non-matching slot
+      if (coinIsRP   && !slotIsRP)   { return false; }
+      if (coinIsEU   && !slotIsEU)   { return false; }
+      if (coinIsCong && !slotIsCong) { return false; }
+
+      return slotYear.isEmpty || year.isEmpty || slotYear == year;
     }
 
     // Single-design series (Roosevelt Dimes, Morgan, Peace, SBA, Sacagawea, etc.)
