@@ -1547,10 +1547,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.218',
+    version: 'v4.220',
     date: '2026-08-26',
     description: 'Qc/layer2 Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
+      'Release: auto-bump release notes',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Release: auto-bump v4.216 release notes',
+      'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
+      'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
+      'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
+      'Release: auto-bump v4.205 release notes',
+    ],
+  ),
+  _Release(
+    version: 'v4.219',
+    date: '2026-08-26',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: auto-bump release notes',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Release: auto-bump v4.216 release notes',
+      'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
+      'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
+      'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
+      'Release: auto-bump v4.205 release notes',
+      'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
+    ],
+  ),
+  _Release(
+    version: 'v4.218',
+    date: '2026-08-26',
+    description: 'Qc/layer2 Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
