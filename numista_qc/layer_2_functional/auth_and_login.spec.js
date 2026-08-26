@@ -1,28 +1,13 @@
-﻿/**
+/**
  * auth_and_login.spec.js — Numista QC Layer 2
  * Auth flow: sign-in succeeds, Flutter renders, sign-out clears session.
+ *
+ * Uses qc-helpers.js for robust condition-based Flutter-ready waits.
+ * Fixes Aug 26 failures caused by bare waitForTimeout(5000) timing out
+ * on cold Cloud Run starts.
  */
 const { test, expect } = require('@playwright/test');
-require('dotenv').config({ path: require('path').join(__dirname, '../../numista_tests/.env') });
-
-async function signInAndWait(page) {
-  const email = process.env.TEST_USER_EMAIL;
-  const password = process.env.TEST_USER_PASSWORD;
-  await page.waitForFunction(() => (window.firebase_core?.getApps?.() ?? []).length > 0, { timeout: 20000 });
-  const r = await page.evaluate(async ({ em, pw }) => {
-    try {
-      const auth = window.firebase_auth.getAuth();
-      await window.firebase_auth.setPersistence(auth, window.firebase_auth.browserLocalPersistence);
-      await window.firebase_auth.signInWithEmailAndPassword(auth, em, pw);
-      return { ok: true };
-    } catch (e) { return { ok: false, error: e.message }; }
-  }, { em: email, pw: password });
-  if (!r.ok) throw new Error('Auth failed: ' + r.error);
-  await page.evaluate(() => { ['flutter.user_name','flutter.morgan_onboarding_complete','flutter.onboarding_complete'].forEach(k => localStorage.setItem(k,'true')); });
-  await page.reload();
-  await page.waitForFunction(() => { const p = document.querySelector('flt-glass-pane'); return p && window.getComputedStyle(p).visibility === 'visible'; }, { timeout: 20000 });
-  await page.waitForTimeout(5000);
-}
+const { signInAndWait, visitAndWaitForFlutter } = require('../qc-helpers');
 
 test.describe('Auth and Login', () => {
   test('Sign-in succeeds and Flutter canvas renders', async ({ page }) => {
@@ -36,10 +21,8 @@ test.describe('Auth and Login', () => {
   });
 
   test('Unauthenticated visit redirects or shows auth gate (not logged-in content)', async ({ page }) => {
-    await page.goto('https://numista.ai');
-    // Do NOT sign in — check we do not see collection content
-    await page.waitForFunction(() => { const p = document.querySelector('flt-glass-pane'); return p && p.offsetWidth > 0; }, { timeout: 20000 });
-    await page.waitForTimeout(4000);
+    // Do NOT sign in — use visitAndWaitForFlutter for reliable cold-start handling
+    await visitAndWaitForFlutter(page);
     // Should see a sign-in prompt or welcome screen, NOT a coin collection
     const pane = page.locator('flt-glass-pane');
     await expect(pane).toBeVisible();
