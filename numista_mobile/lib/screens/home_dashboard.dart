@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.241',
+    version: 'v4.242',
     date: '2026-08-26',
     description: 'Pitch-deck Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Auto-versioning hook changes (v4.241)',
+      'Auto-versioning hook changes (v4.240)',
+      'Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation',
+      'Auto-versioning hook changes (v4.238)',
+      'Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19',
+      'Programs: prevent 19/19 overcounting on collectibles card (Try 3)',
+      'Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles',
+      'Crash: coerce Firestore int year to String in ProgramCoin.fromMap',
+    ],
+  ),
+  _Release(
+    version: 'v4.241',
+    date: '2026-08-26',
+    description: 'Pitch-deck Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Auto-versioning hook changes (v4.240)',
       'Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation',
