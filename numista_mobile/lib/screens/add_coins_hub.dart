@@ -103,22 +103,24 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   void initState() {
     super.initState();
     int initialIdx = 0;
+    // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
+    // Priority: batch import → AI photo → manual → PCGS → SKU → roll → world → set.
     if (widget.initialTabName != null) {
       switch (widget.initialTabName) {
-        case 'camera':
-        case 'webcam':
+        case 'upload':
           initialIdx = 0;
           break;
-        case 'upload':
+        case 'camera':
+        case 'webcam':
           initialIdx = 1;
           break;
         case 'manual':
           initialIdx = 2;
           break;
-        case 'sku':
+        case 'pcgs':
           initialIdx = 3;
           break;
-        case 'pcgs':
+        case 'sku':
           initialIdx = 4;
           break;
         case 'roll':
@@ -294,11 +296,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildCameraScannerTab(),
+              // ITEM 9: Tab order matches priority: upload → camera → manual → pcgs → sku → roll → world → set
               _buildUploadFilesTab(),
+              _buildCameraScannerTab(),
               _buildManualEntryTab(),
-              _buildSkuImportTab(),
               _buildPcgsImportTab(),
+              _buildSkuImportTab(),
               _buildRollEntryTab(),
               _buildWorldItemsTab(),
               _buildMintSetTab(),
@@ -389,11 +392,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         indicatorColor: const Color(0xFFF63366),
         indicatorWeight: 3,
         tabs: const [
-          Tab(text: 'Quick Camera',      icon: Icon(Icons.photo_camera_outlined, size: 20)),
           Tab(text: 'Upload Files',      icon: Icon(Icons.upload_file_outlined,  size: 20)),
+          Tab(text: 'AI Photo ID',       icon: Icon(Icons.photo_camera_outlined, size: 20)),
           Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
+          Tab(text: 'PCGS Cert Lookup',  icon: Icon(Icons.shield_outlined,       size: 20)),
           Tab(text: 'Add by SKU',        icon: Icon(Icons.qr_code,               size: 20)),
-          Tab(text: 'Import from PCGS',  icon: Icon(Icons.shield_outlined,       size: 20)),
           Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
           Tab(text: 'World & Specialty', icon: Icon(Icons.language_rounded,      size: 20)),
           Tab(text: 'Mint Set',          icon: Icon(Icons.collections_bookmark,  size: 20)),

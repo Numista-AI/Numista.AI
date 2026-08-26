@@ -13,6 +13,7 @@ import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
+import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -86,6 +87,18 @@ Future<void> main() async {
   // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
   if (uri.queryParameters.containsKey('route') && uri.queryParameters['route']!.isNotEmpty) {
     WelcomeScreen.pendingRoute = uri.queryParameters['route'];
+  }
+
+  // ITEM 10: kApiBaseUrl guard — prevents silent empty-URL HTTP calls.
+  // This is a compile-time const so it will never be empty in production,
+  // but this guard protects against misconfigured forks or env-var overrides.
+  if (kApiBaseUrl.trim().isEmpty) {
+    // Throw synchronously so Flutter's error reporter catches it before
+    // any HTTP request can fire against an empty URL.
+    throw StateError(
+      '[Numista] kApiBaseUrl is empty. '
+      'Set the backend URL in lib/constants.dart before building.',
+    );
   }
 
   // On Flutter web, Firebase.initializeApp() can silently hang forever if the

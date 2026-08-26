@@ -210,11 +210,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
   Future<void> _loadDismissedNews() async {
     try {
-      final userEmail = AuthService.userEmail;
+      // ITEM 1: GET /api/dismissed_news (no path param — identity from JWT Bearer token).
+      // Old URL: /api/dismissed_news/{userEmail} was an IDOR vulnerability.
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null) return;
 
-      if (userEmail.isEmpty) return;
       final resp = await http.get(
-          Uri.parse('$kApiBaseUrl/api/dismissed_news/$userEmail'));
+        Uri.parse('$kApiBaseUrl/api/dismissed_news'),
+        headers: {'Authorization': 'Bearer $idToken'},
+      );
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -1543,10 +1547,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.210',
+    version: 'v4.212',
     date: '2026-08-26',
     description: 'Qc/layer2 Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait',
+      'Release: auto-bump v4.205 release notes',
+      'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
+      'Release: auto-bump v4.208 for beta sprint items 6-8',
+      'Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep',
+      'Release: auto-bump v4.207 for beta sprint P0 items 1-5',
+      'Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix',
+      'Release: auto-bump v4.204 release notes and dashboard version',
+    ],
+  ),
+  _Release(
+    version: 'v4.211',
+    date: '2026-08-26',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: auto-bump v4.205 release notes',
+      'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
+      'Release: auto-bump v4.208 for beta sprint items 6-8',
+      'Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep',
+      'Release: auto-bump v4.207 for beta sprint P0 items 1-5',
+      'Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix',
+      'Release: auto-bump v4.204 release notes and dashboard version',
+      'E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper',
+    ],
+  ),
+  _Release(
+    version: 'v4.210',
+    date: '2026-08-26',
+    description: 'Qc/layer2 Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs',
       'Release: auto-bump v4.208 for beta sprint items 6-8',

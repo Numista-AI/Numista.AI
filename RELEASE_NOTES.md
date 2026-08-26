@@ -213,6 +213,32 @@
 
 
 
+
+
+## v4.212 — 2026-08-26
+**Qc/layer2 Enhancements & Platform Updates**
+
+- Qc/layer2: raise timeout 90s->180s, add networkidle waits in signInAndWait
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+
+## v4.211 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.205 release notes
+- Qc/layer2: replace bare waitForTimeout(5s) with condition-based Flutter wait in Layer 2 specs
+- Release: auto-bump v4.208 for beta sprint items 6-8
+- Beta: ITEM 6 DEMO badge + ITEM 7 zero-value warning + ITEM 8 Clear Demo Coins; fix error_message_service Crashlytics dep
+- Release: auto-bump v4.207 for beta sprint P0 items 1-5
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+
 ## v4.210 — 2026-08-26
 **Qc/layer2 Enhancements & Platform Updates**
 
