@@ -208,6 +208,29 @@
 
 
 
+
+
+## v4.207 — 2026-08-26
+**Beta Enhancements & Platform Updates**
+
+- Beta: ITEM 3 text scale + ITEM 4 ErrorMessageService + telemetry route + ITEM 5 browser back fix
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
+## v4.206 — 2026-08-26
+**Release Enhancements & Platform Updates**
+
+- Release: auto-bump v4.204 release notes and dashboard version
+- E2e: replace hard-coded 4s enterDemo() with flt-glass-pane wait in shared helper
+- Ux: gray-screen fallback ErrorWidget with plain-English message + copyable support email (ITEM 2)
+- Security: IDOR auth guard on 6 endpoints; PCGS proxy Option A confirmed + JWT header
+- Release: v4.203 release notes update
+- Audit: run full system scan and generate SCAN_REPORT.md
+
 ## v4.205 — 2026-08-26
 **E2e Enhancements & Platform Updates**
 
