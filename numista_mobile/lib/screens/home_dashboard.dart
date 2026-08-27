@@ -1547,10 +1547,21 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.245',
+    date: '2026-08-27',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Auto-versioning hook changes (v4.244)',
+      'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
+    ],
+  ),
+  _Release(
     version: 'v4.244',
     date: '2026-08-27',
     description: 'Pitch-deck Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
       'Version hook cleanup (v4.242)',

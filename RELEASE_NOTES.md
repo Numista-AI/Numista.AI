@@ -247,6 +247,14 @@
 
 
 
+
+## v4.245 — 2026-08-27
+**Programs Enhancements & Platform Updates**
+
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
 ## v4.244 — 2026-08-27
 **Pitch-deck Enhancements & Platform Updates**
 
