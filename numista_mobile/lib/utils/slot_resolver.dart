@@ -311,7 +311,9 @@ class SlotResolver {
               cNameLower.contains('nickel') ||
               cNameLower.contains('dime') ||
               cNameLower.contains('quarter') ||
-              cNameLower.contains('half')) {
+              cNameLower.contains('half') ||
+              cNameLower.contains('dollar') ||
+              cNameLower.contains('native american')) {
             return true;
           }
         }
@@ -432,6 +434,17 @@ class SlotResolver {
           (ts.contains('half') || ts.contains('enduring') || ts.contains('250th') ||
            ts.contains('independence') || progSeries.toLowerCase().contains('half'))) {
         return true;
+      }
+      // Dollar slot: Native American $1 Coin — Polly Cooper (Oneida Allies at Valley Forge)
+      // Firestore Program/Series: 'Sacagawea & Native American Dollars'
+      // Theme/Subject includes 'oneida', 'polly cooper', 'valley forge', 'sacagawea'
+      if (sl.contains('dollar') || sl.contains('native american')) {
+        if (ts.contains('polly') || ts.contains('oneida') || ts.contains('native american') ||
+            ts.contains('valley forge') || ts.contains('sacagawea') ||
+            progSeries.toLowerCase().contains('native american') ||
+            progSeries.toLowerCase().contains('sacagawea')) {
+          return true;
+        }
       }
       // Quarter slots: design keyword must be in BOTH slot name AND theme
       if (sl.contains('quarter')) {

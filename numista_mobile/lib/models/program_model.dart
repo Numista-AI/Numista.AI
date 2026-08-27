@@ -333,6 +333,13 @@ class CoinProgram {
           'gettysburg address',
           '1776 ~ 2026',                // nickel (with spaces as per Mint copy)
           '1776~2026',                  // nickel (compact form)
+          // Native American $1 Coin — Polly Cooper / Oneida Allies at Valley Forge
+          // Firestore Program/Series: 'Sacagawea & Native American Dollars'
+          // The 5b year guard (slotYear=='2026') blocks pre-2026 NA dollars from matching.
+          'native american dollar',
+          'sacagawea',
+          'polly cooper',               // Theme/Subject substring
+          'oneida',                     // Theme/Subject substring
         ];
         return circulatingDesigns.any((n) => dbLower.contains(n));
       }
