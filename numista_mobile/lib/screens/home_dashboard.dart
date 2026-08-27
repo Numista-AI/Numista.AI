@@ -1547,10 +1547,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.247',
+    date: '2026-08-27',
+    description: 'Circulating Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Auto-versioning and firebase cache',
+      'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
+      'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
+      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Auto-versioning hook changes (v4.244)',
+      'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
+    ],
+  ),
+  _Release(
     version: 'v4.246',
     date: '2026-08-27',
     description: 'Programs Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
       'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
