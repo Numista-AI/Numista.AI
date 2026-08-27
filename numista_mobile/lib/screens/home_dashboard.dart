@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.251',
+    date: '2026-08-27',
+    description: 'Circulating-2026 Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
+      'Auto-version hook files',
+      'Circulating: add Native American dollar slot + set expansion authorized by owner',
+      'Auto-version v4.249 hook files',
+      'Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard',
+      'Auto-version v4.247 hook files',
+      'Auto-versioning and firebase cache',
+      'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
+    ],
+  ),
+  _Release(
     version: 'v4.250',
     date: '2026-08-27',
     description: 'Circulating Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Auto-version v4.249 hook files',
       'Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard',
