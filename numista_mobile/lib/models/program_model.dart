@@ -333,12 +333,6 @@ class CoinProgram {
           'gettysburg address',
           '1776 ~ 2026',                // nickel (with spaces as per Mint copy)
           '1776~2026',                  // nickel (compact form)
-          // Parent-series names stored in Firestore for 2026 redesigns.
-          // Year guard in isMatch() (slotYear == '2026') prevents pre-2026 coins bleeding in.
-          'roosevelt dime',             // 2026 Emerging Liberty Dime parent series
-          'kennedy half',               // 2026 Enduring Liberty Half Dollar parent series
-          'jefferson nickel',           // 2026 redesigned nickel parent series
-          'lincoln cent',               // 2026 redesigned cent parent series
         ];
         return circulatingDesigns.any((n) => dbLower.contains(n));
       }
