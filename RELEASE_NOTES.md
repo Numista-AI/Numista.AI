@@ -245,6 +245,32 @@
 
 
 
+
+
+## v4.244 — 2026-08-27
+**Pitch-deck Enhancements & Platform Updates**
+
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+- Version hook cleanup (v4.242)
+- Auto-versioning hook changes (v4.241)
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+
+## v4.243 — 2026-08-26
+**Pitch-deck Enhancements & Platform Updates**
+
+- Version hook cleanup (v4.242)
+- Auto-versioning hook changes (v4.241)
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+
 ## v4.242 — 2026-08-26
 **Pitch-deck Enhancements & Platform Updates**
 
