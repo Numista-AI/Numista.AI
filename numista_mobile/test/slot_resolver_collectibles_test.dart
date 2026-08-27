@@ -1,4 +1,4 @@
-﻿// test/slot_resolver_collectibles_test.dart
+// test/slot_resolver_collectibles_test.dart
 //
 // Regression tests for the collectibles product-family guard in SlotResolver.isMatch().
 // Fixtures match Eric's actual Firestore coins (26EA, 26XL) plus corrected
@@ -212,6 +212,63 @@ void main() {
         varieties: [ChecklistVariety(id: 'W-PROOF', label: 'W-PROOF')],
       );
       expect(_isMatch(coin26EA, slotNoFamily), isFalse);
+    });
+
+  });
+
+  // ── Annual Uncirculated Set — D-UNC blank-mint guard ─────────────────────────
+  // Regression for the 26RJ annual set (eric.seaman@yahoo.com/coins/71e2d4ae…).
+  // The set has no Mint Mark field. P-UNC must tick; D-UNC must tick.
+  // Individual non-set coins with blank mint must NOT tick D-UNC.
+
+  final Map<String, dynamic> annualSet2026 = {
+    'Denomination': 'Set',
+    'Program/Series': 'Uncirculated Sets',
+    'Year': '2026',
+    'Condition': 'Uncirculated',
+    'Theme/Subject': '250th Anniversary Uncirculated Coin Set',
+    'name': '2026 United States Mint Uncirculated Coin Set',
+    'Country': 'United States',
+    'is_set': true,
+    // No 'Mint Mark' field — verbatim from Firestore doc 71e2d4ae
+  };
+
+  final Map<String, dynamic> coinBlankMintNotASet = {
+    'Denomination': 'Quarter Dollar (25C)',
+    'Program/Series': 'United States Semiquincentennial (250th Anniversary)',
+    'Year': '2026',
+    'Condition': 'UNC',
+    'Theme/Subject': 'Mayflower Compact & Pilgrim Couple',
+    'Country': 'United States',
+    // No Mint Mark, NOT a set
+  };
+
+  final ChecklistVariety vPUnc = ChecklistVariety(id: 'P-UNC', label: 'P (Uncirculated)');
+  final ChecklistVariety vDUnc = ChecklistVariety(id: 'D-UNC', label: 'D (Uncirculated)');
+  final ChecklistVariety vSProof = ChecklistVariety(id: 'S-PROOF', label: 'S (Proof - Clad)');
+
+  group('Annual Uncirculated Set — D-UNC blank-mint guard', () {
+
+    test('Annual set ticks P-UNC (existing blank-mint-P guard)', () {
+      expect(SlotResolver.matchesVariety(annualSet2026, vPUnc), isTrue);
+    });
+
+    test('Annual set ticks D-UNC (new blank-mint-D set guard)', () {
+      expect(SlotResolver.matchesVariety(annualSet2026, vDUnc), isTrue);
+    });
+
+    test('Annual set does NOT tick S-PROOF (no S mint mark in set)', () {
+      expect(SlotResolver.matchesVariety(annualSet2026, vSProof), isFalse);
+    });
+
+    test('Non-set coin with blank mint does NOT tick D-UNC (set guard scope check)', () {
+      // A coin without is_set=true and not denomination 'set' must not use the D blank-mint guard.
+      // This coin would have an implicit P mint (Philadelphia pre-1980 style).
+      expect(SlotResolver.matchesVariety(coinBlankMintNotASet, vDUnc), isFalse);
+    });
+
+    test('Non-set coin with blank mint still ticks P-UNC (P blank-mint guard unaffected)', () {
+      expect(SlotResolver.matchesVariety(coinBlankMintNotASet, vPUnc), isTrue);
     });
 
   });

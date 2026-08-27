@@ -617,6 +617,20 @@ class SlotResolver {
         (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA') &&
         !isProof && !isSMS && !isEnhancedUnc) { return true; }
 
+    // ── Annual uncirculated set — D-UNC blank-mint guard ─────────────────────
+    // Sets (e.g. 26RJ) store no Mint Mark field but contain both P and D cards.
+    // The P blank-mint guard above already covers P-UNC.
+    // This guard covers D-UNC: allow match when the item is a kept set and
+    // mintMark is absent. Individual coins with Mint Mark 'D' are already caught
+    // by the exact-match branch above; this branch is a set-only fallback.
+    if (baseMint == 'D' &&
+        (mintMark.isEmpty || mintMark == 'NONE') &&
+        !isProof && !isSMS && !isEnhancedUnc) {
+      final isAnnualSet = (item['is_set'] as bool? ?? false) ||
+          (item['Denomination']?.toString() ?? '').toLowerCase() == 'set';
+      if (isAnnualSet) return true;
+    }
+
     return false;
   }
 
