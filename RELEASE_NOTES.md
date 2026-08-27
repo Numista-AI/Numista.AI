@@ -250,6 +250,31 @@
 
 
 
+
+
+## v4.249 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.248 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
 ## v4.247 — 2026-08-27
 **Circulating Enhancements & Platform Updates**
 
