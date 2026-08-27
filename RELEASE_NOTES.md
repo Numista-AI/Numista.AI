@@ -241,6 +241,58 @@
 
 
 
+
+
+
+
+## v4.242 — 2026-08-26
+**Pitch-deck Enhancements & Platform Updates**
+
+- Auto-versioning hook changes (v4.241)
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+
+## v4.241 — 2026-08-26
+**Pitch-deck Enhancements & Platform Updates**
+
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+
+## v4.240 — 2026-08-26
+**Pitch-deck Enhancements & Platform Updates**
+
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+
+## v4.239 — 2026-08-26
+**Collectibles Enhancements & Platform Updates**
+
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+- Crash: coerce Firestore int year to String in ProgramCoin.fromMap
+- Catalog: pair 2026 US Mint product images and update release notes
+- Save 66 official 2026 US Mint coin images and update sprint assets
+- Add authoritative 2026 US Mint specifications truth table resolving open sprint checklist questions
+
 ## v4.238 — 2026-08-26
 **Collectibles Enhancements & Platform Updates**
 
