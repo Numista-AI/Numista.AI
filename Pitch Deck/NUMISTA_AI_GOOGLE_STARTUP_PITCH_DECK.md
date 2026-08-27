@@ -1,8 +1,9 @@
 # Numista.AI — Google Cloud for Startups Pitch Deck
 
-> **Document Version:** 1.0 | **Audience:** Google Cloud for Startups Program & Startup Reviewers  
+> **Document Version:** 1.1 | **Audience:** Google Cloud for Startups Program & Startup Reviewers  
+> **Brand Assets:** `Logo Avatar/logo_owl.png` (Numista Owl Logo), `Logo Avatar/morgan_avatar.png` (Morgan AI Avatar)  
 > **Topic:** AI-Native Numismatic Management, Estate Preservation & Morgan AI  
-> **Interactive Web Deck:** Open `pitch_deck.html` in Chrome/Edge
+> **Interactive Web Deck:** Open [`pitch_deck.html`](file:///C:/Users/ericd/Documents/MyVertexProject/Pitch%20Deck/pitch_deck.html) in Chrome/Edge
 
 ---
 
@@ -19,12 +20,22 @@ By uniting **Google Vertex AI (Gemini 3.5 Multimodal)**, **Google Document AI**,
 
 ---
 
+## Brand Visual Identity & Asset Placements
+
+| Asset | File Path | Visual Role & Usage in Pitch Deck |
+|---|---|---|
+| **Numista Owl Logo** | `Logo Avatar/logo_owl.png` | Featured in top header navbar, Slide 1 (Cover Hero Brand Badge), and Slide 12 (Live App Launch Card). Symbolizes wisdom, vigilance, and numismatic heritage. |
+| **Morgan AI Avatar** | `Logo Avatar/morgan_avatar.png` | Featured prominently on Slide 4 (Morgan AI Hero Profile Card), Chat Sandbox header, active thinking indicator in chat bubbles, and Slide 12 (Morgan AI Live Simulator Card). Represents our patient, conversational AI guide. |
+
+---
+
 ## Slide-by-Slide Deck Outline & Talking Script
 
 ```
 +-----------------------------------------------------------------------------------------------+
 | SLIDE 1: Title & Executive Hook                                                               |
 | Preserving $38 Billion in Tangible History — Powered by Google Vertex AI                      |
+| [Features Numista Owl Logo in Header & Hero Badge]                                            |
 +-----------------------------------------------------------------------------------------------+
 ```
 - **Headline:** Preserving $38 Billion in Tangible History. Powered by Google Vertex AI.
@@ -69,6 +80,7 @@ By uniting **Google Vertex AI (Gemini 3.5 Multimodal)**, **Google Document AI**,
 +-----------------------------------------------------------------------------------------------+
 | SLIDE 4: Meet Morgan — The AI Numismatist                                                     |
 | Google Vertex AI & Gemini 3.5 • Collection Context-Aware • Empathetic Senior Persona         |
+| [Features Morgan AI Avatar Card & Interactive Chat Sandbox with Morgan Avatar Bubbles]        |
 +-----------------------------------------------------------------------------------------------+
 ```
 - **Who is Morgan?**  
@@ -77,6 +89,7 @@ By uniting **Google Vertex AI (Gemini 3.5 Multimodal)**, **Google Document AI**,
   - **Full Inventory Memory:** Reads the user's Firestore collection in real time.
   - **Senior Accessibility:** Conversational voice-ready tone, 1.6x dynamic typography magnification, zero condescension or confusing jargon.
   - **Vertex AI Search Grounding:** Cross-references certified auction comps, historical mint records, and die varieties.
+- **Live Demo Interactive Sandbox:** Reviewers can click live prompts to test Morgan's appraisal reasoning and estate guidance.
 
 ---
 
@@ -176,10 +189,11 @@ By uniting **Google Vertex AI (Gemini 3.5 Multimodal)**, **Google Document AI**,
 +-----------------------------------------------------------------------------------------------+
 | SLIDE 12: Vision & Call to Action                                                             |
 | "No Collection Left Forgotten. No Family Left in the Dark."                                   |
+| [Features Owl Logo on Live App Card & Morgan Avatar on AI Card]                               |
 +-----------------------------------------------------------------------------------------------+
 ```
 - **Closing Vision:** Uniting family preservation with Google's most advanced AI technologies.
 - **Action Items:**
   - Launch Live Web App: [numista-vault.web.app](https://numista-vault.web.app)
-  - Interactive Morgan AI Simulator: Open Slide 4 in `pitch_deck.html`
+  - Interactive Morgan AI Simulator: Open Slide 4 in [`pitch_deck.html`](file:///C:/Users/ericd/Documents/MyVertexProject/Pitch%20Deck/pitch_deck.html)
   - Founder Contact: `eric@numista.ai`

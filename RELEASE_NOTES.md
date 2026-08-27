@@ -245,6 +245,111 @@
 
 
 
+
+
+
+
+
+
+
+
+
+## v4.251 — 2026-08-27
+**Circulating-2026 Enhancements & Platform Updates**
+
+- Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets
+- Auto-version hook files
+- Circulating: add Native American dollar slot + set expansion authorized by owner
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+
+## v4.250 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+
+## v4.249 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.248 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.247 — 2026-08-27
+**Circulating Enhancements & Platform Updates**
+
+- Auto-versioning and firebase cache
+- Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.246 — 2026-08-27
+**Programs Enhancements & Platform Updates**
+
+- Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.245 — 2026-08-27
+**Programs Enhancements & Platform Updates**
+
+- Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()
+- Auto-versioning hook changes (v4.244)
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+
+## v4.244 — 2026-08-27
+**Pitch-deck Enhancements & Platform Updates**
+
+- Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs
+- Version hook cleanup (v4.242)
+- Auto-versioning hook changes (v4.241)
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+
+## v4.243 — 2026-08-26
+**Pitch-deck Enhancements & Platform Updates**
+
+- Version hook cleanup (v4.242)
+- Auto-versioning hook changes (v4.241)
+- Auto-versioning hook changes (v4.240)
+- Pitch-deck: add Google Cloud Startup Program pitch deck package with Morgan AI & senior estate preservation
+- Auto-versioning hook changes (v4.238)
+- Collectibles: TEMPORARY productFamily guard in SlotResolver.isMatch -- PDF 5/19 -> 2/19
+- Programs: prevent 19/19 overcounting on collectibles card (Try 3)
+- Programs: resolve 0/19 card count and PDF grid false ticks on 2026 collectibles
+
 ## v4.242 — 2026-08-26
 **Pitch-deck Enhancements & Platform Updates**
 

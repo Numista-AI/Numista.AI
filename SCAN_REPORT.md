@@ -80,3 +80,18 @@
 1. **Dependabot Vulnerability Triage:** Review and triage the 160 open GitHub security alerts before November 2026 Launch. Prioritize the 102 high-severity npm/pub packages.
 2. **Customer Service Screen Cleanup:** Remove unused imports (`file_picker.dart`, `dart:html`, `dart:typed_data`) in `lib/screens/customer_service_screen.dart`.
 3. **Continuous Audit:** Keep `project-scanner/SKILL.md` updated as new Cloud Run services and series definitions are added.
+
+---
+## numista_qc Suite (Stack B)
+**Run:** 2026-08-27 08:25:03
+
+| Layer | Result | Notes |
+|-------|--------|-------|
+| L1 UX Visual | PASS | CONTRAST_SAMPLING_PATH: screenshot |
+| L2 Functional (5 specs) | NOT_RUN | auth, navigation, search, valuation, programs |
+| L2 CRUD write test | SUSPENDED (set qa_base_url in SUITE_MANIFEST.json to activate) | collection_crud.spec.js |
+| L3 Data Audit | NOT_RUN | quad title check, estate boundary, API health |
+| L4 Self-Update | NOT_RUN | feedback_miner (today's folder only) |
+
+**Isolation:** Dedicated QA project: numista-qc | qc_uid: SET
+**Suite result:** PASS

@@ -131,6 +131,16 @@ class CoinProgramsData {
             ChecklistVariety(id: "D-UNC",    label: "D (Uncirculated)"),
             ChecklistVariety(id: "S-PROOF",  label: "S (Proof - Clad)"),
             ChecklistVariety(id: "S-SILVER", label: "S (Proof - Silver)")
+          ]),
+          ProgramCoin(id: "2026_native_american_dollar", name: "Native American \$1 Coin — Polly Cooper (Oneida Allies at Valley Forge)", varieties: [
+            ChecklistVariety(id: "P-UNC",   label: "P (Uncirculated)"),
+            ChecklistVariety(id: "D-UNC",   label: "D (Uncirculated)"),
+            ChecklistVariety(id: "S-PROOF", label: "S (Proof - Clad)")
+          ]),
+          ProgramCoin(id: "2026_cent", name: "1776 ~ 2026 Collectible Cent", varieties: [
+            ChecklistVariety(id: "P-UNC",   label: "P (Uncirculated)"),
+            ChecklistVariety(id: "D-UNC",   label: "D (Uncirculated)"),
+            ChecklistVariety(id: "S-PROOF", label: "S (Proof - Clad)")
           ])
         ],
       )

@@ -2812,3 +2812,385 @@
 [2026-08-25 17:20:18] LAYER 1: PASS
 [2026-08-25 17:20:18] numista_qc block appended to SCAN_REPORT.md
 [2026-08-25 17:20:18] SUITE_RESULT: PASS
+[2026-08-27 08:05:35] QA UID: rxXrMBPy34N2q2ZHywCEItGHu2E2
+[2026-08-27 08:05:35] QA project: numista-qc
+[2026-08-27 08:05:35] Running seed_qc_fixtures.py --check...
+[2026-08-27 08:10:37] Fixtures missing. Running seed_qc_fixtures.py...
+[2026-08-27 08:14:58] PREFLIGHT_FAIL [FIXTURE_SEED_FAILED]: seed_qc_fixtures.py failed. Cannot run suite without fixtures.
+SUITE_RESULT: ABORTED (FIXTURE_SEED_FAILED)
+[2026-08-27 08:18:22] QA UID: rxXrMBPy34N2q2ZHywCEItGHu2E2
+[2026-08-27 08:18:22] QA project: numista-qc
+[2026-08-27 08:18:22] Running seed_qc_fixtures.py --check...
+[2026-08-27 08:18:27] Fixtures OK.
+[2026-08-27 08:18:27] Checking Cloud Run secrets (non-blocking)...
+[2026-08-27 08:18:31] WARN [CLOUD_RUN_UNREACHABLE]: gcloud call failed (non-fatal). Check manually if persistent.
+[2026-08-27 08:18:31] Scanning for deprecated Gemini model IDs (non-blocking)...
+[2026-08-27 08:19:05] Model ID scan: no deprecated patterns found.
+[2026-08-27 08:19:05] GOOGLE_CLOUD_PROJECT set to numista-qc
+[2026-08-27 08:19:05] === Flutter Checks (analyze + test) ===
+[2026-08-27 08:21:22] Analyzing numista_mobile...                                     
+[2026-08-27 08:21:22] 
+[2026-08-27 08:21:22] warning - Unused import: 'package:file_picker/file_picker.dart' - ..\numista_mobile\lib\screens\customer_service_screen.dart:5:8 - unused_import
+[2026-08-27 08:21:22]    info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - ..\numista_mobile\lib\screens\customer_service_screen.dart:7:1 - deprecated_member_use
+[2026-08-27 08:21:22] warning - Unused import: 'dart:html' - ..\numista_mobile\lib\screens\customer_service_screen.dart:7:8 - unused_import
+[2026-08-27 08:21:22] warning - Unused import: 'dart:typed_data' - ..\numista_mobile\lib\screens\customer_service_screen.dart:8:8 - unused_import
+[2026-08-27 08:21:22]    info - Use the null-aware marker '?' rather than a null check via an 'if' - ..\numista_mobile\lib\services\ticket_service.dart:51:7 - use_null_aware_elements
+[2026-08-27 08:21:23]    info - Use the null-aware marker '?' rather than a null check via an 'if' - ..\numista_mobile\lib\services\ticket_service.dart:132:7 - use_null_aware_elements
+[2026-08-27 08:21:23]    info - Use the null-aware marker '?' rather than a null check via an 'if' - ..\numista_mobile\lib\services\ticket_service.dart:133:7 - use_null_aware_elements
+[2026-08-27 08:21:23]    info - Use the null-aware marker '?' rather than a null check via an 'if' - ..\numista_mobile\lib\services\ticket_service.dart:134:7 - use_null_aware_elements
+[2026-08-27 08:21:23] 
+[2026-08-27 08:21:23] 8 issues found. (ran in 134.3s)
+[2026-08-27 08:21:23] flutter analyze: PASS (warnings/infos logged above)
+[2026-08-27 08:21:42] 00:00 +0: loading C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/audit_morgan_guides_test.dart
+[2026-08-27 08:21:42] 00:00 +0: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/audit_morgan_guides_test.dart: Morgan Guides Proactive Audit No step contains redundant tab navigation instructions
+[2026-08-27 08:21:42] 00:00 +1: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/audit_morgan_guides_test.dart: Morgan Guides Proactive Audit No step contains outdated color button references
+[2026-08-27 08:21:42] 00:00 +2: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/audit_morgan_guides_test.dart: Morgan Guides Proactive Audit MorganGuideService supports context-aware initialStep
+[2026-08-27 08:21:42] 00:00 +3: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö Default Profile Contract default profile has all required keys
+[2026-08-27 08:21:42] 00:00 +4: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö Default Profile Contract default preferred_services are PCGS and NGC
+[2026-08-27 08:21:42] 00:00 +5: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö Default Profile Contract default opt_in_chat_extraction is true
+[2026-08-27 08:21:42] 00:00 +6: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö Default Profile Contract default investment_goal is numismatic_study
+[2026-08-27 08:21:42] 00:00 +7: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö Default Profile Contract default budget_tier is intermediate
+[2026-08-27 08:21:42] 00:00 +8: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() empty input returns all default values
+[2026-08-27 08:21:42] 00:00 +9: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() valid profile data is preserved through normalization
+[2026-08-27 08:21:42] 00:00 +10: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() non-list preferred_series is replaced with empty list
+[2026-08-27 08:21:42] 00:00 +11: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() non-list preferred_services falls back to PCGS/NGC defaults
+[2026-08-27 08:21:42] 00:00 +12: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() null opt_in_chat_extraction defaults to true
+[2026-08-27 08:21:42] 00:00 +13: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() false opt_in_chat_extraction is preserved as false
+[2026-08-27 08:21:42] 00:00 +14: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() integer grades are coerced to strings
+[2026-08-27 08:21:43] 00:00 +15: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() preferred_series list elements are coerced to strings
+[2026-08-27 08:21:43] 00:00 +16: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö normalizeProfile() extra unknown fields from API are preserved
+[2026-08-27 08:21:43] 00:00 +17: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() empty updates produces empty payload
+[2026-08-27 08:21:43] 00:00 +18: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() only specified keys are included in payload
+[2026-08-27 08:21:43] 00:00 +19: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() opt_in_chat_extraction true is coerced to bool true
+[2026-08-27 08:21:43] 00:00 +20: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() opt_in_chat_extraction non-true is coerced to false
+[2026-08-27 08:21:43] 00:00 +21: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() null preferred_series in update falls back to empty list
+[2026-08-27 08:21:43] 00:00 +22: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/collector_profile_service_test.dart: CollectorProfileService GÇö buildUpdatePayload() full update payload contains all 7 keys
+[2026-08-27 08:21:43] 00:01 +23: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/estate_models_test.dart: US Army Property Management Inspired Estate Models CoinEstateData handles custody fields and serialization correctly
+[2026-08-27 08:21:43] 00:01 +24: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/estate_models_test.dart: US Army Property Management Inspired Estate Models EstateAuditRecord initializes SHA-256 spot-check audit data
+[2026-08-27 08:21:43] 00:01 +25: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/estate_models_test.dart: US Army Property Management Inspired Estate Models EstateDocumentRegisterRecord formats NUM-DOC-YYYY-XXXXX correctly
+[2026-08-27 08:21:43] 00:02 +26: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/guest_seed_service_demo_flag_test.dart: 1: deactivateBrowseDemo is idempotent
+[2026-08-27 08:21:43] 00:02 +27: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/guest_seed_service_demo_flag_test.dart: 2: setDemoActiveForTest activates; deactivate clears both fields
+[2026-08-27 08:21:43] 00:02 +28: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/guest_seed_service_demo_flag_test.dart: 3: isBrowseDemoMode is a pure getter with no side effects
+[2026-08-27 08:21:43] 00:02 +29: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/guest_seed_service_demo_flag_test.dart: 4: getDemoCoinsStream after deactivate emits empty snapshot
+[2026-08-27 08:21:43] 00:07 +30: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SheldonGradeRanker Tests Calculates accurate Sheldon numerical scores
+[2026-08-27 08:21:43] 00:07 +31: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SheldonGradeRanker Tests Maps adjectival and unnumbered grades correctly
+[2026-08-27 08:21:43] 00:07 +32: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SheldonGradeRanker Tests Docks problem/details coins appropriately
+[2026-08-27 08:21:43] 00:07 +33: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SheldonGradeRanker Tests Sorts multi-item inventory deterministically
+[2026-08-27 08:21:43] 00:07 +34: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SlotResolver & Snapshot ID Tests Resolves inventory against program slots accurately
+[2026-08-27 08:21:43] 00:07 +35: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: SlotResolver & Snapshot ID Tests Generates deterministic SHA-256 Snapshot ID matching format regex
+[2026-08-27 08:21:43] 00:07 +36: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: ChecklistGeneratorService PDF Generation Tests Generates Blank Master PDF bytes without crashing
+[2026-08-27 08:21:43] Helvetica has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:43] Helvetica-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:43] 00:07 +37: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: ChecklistGeneratorService PDF Generation Tests Generates Personalized SoR PDF bytes with legal disclaimer and snapshot hash
+[2026-08-27 08:21:43] Helvetica has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:43] Helvetica-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:43] 00:07 +38: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/checklist_generator_test.dart: ChecklistGeneratorService PDF Generation Tests Handles partial snapshot warning without breaking PDF compilation
+[2026-08-27 08:21:44] Helvetica has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:44] Helvetica-Bold has no Unicode support see https://github.com/DavBfr/dart_pdf/wiki/Fonts-Management
+[2026-08-27 08:21:44] 00:08 +39: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XL Peace Reverse Proof ticks Peace RP slot (correct 1 of 2)
+[2026-08-27 08:21:44] 00:08 +40: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE W-Proof ticks ASE Silver Proof slot (correct 2 of 2)
+[2026-08-27 08:21:44] 00:08 +41: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XL Peace RP does NOT tick Morgan RP slot (Stage 1: wrong product family)
+[2026-08-27 08:21:44] 00:08 +42: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE does NOT tick AGE Gold Proof slot (Stage 1: ase != age)
+[2026-08-27 08:21:44] 00:08 +43: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE does NOT tick Buffalo Gold Proof slot (Stage 1: ase != buffalo)
+[2026-08-27 08:21:44] 00:08 +44: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE Proof does NOT tick ASE Congratulations slot (Stage 2: no cong in Variety)
+[2026-08-27 08:21:44] 00:08 +45: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XL Peace RP does NOT tick Morgan EU slot (Stage 2: RP coin cannot tick EU slot)
+[2026-08-27 08:21:44] 00:08 +46: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE Proof does NOT tick ASE EU slot (Stage 2: plain Proof cannot tick EU slot)
+[2026-08-27 08:21:44] 00:08 +47: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XE (Morgan EU) ticks Morgan EU slot
+[2026-08-27 08:21:44] 00:08 +48: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XE (Morgan EU) does NOT tick Peace EU slot (Stage 1: morgan != peace)
+[2026-08-27 08:21:44] 00:08 +49: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26XE (Morgan EU) does NOT tick ASE EU slot (Stage 1: morgan != ase)
+[2026-08-27 08:21:44] 00:08 +50: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EG (ASE EU) ticks ASE EU slot
+[2026-08-27 08:21:44] 00:08 +51: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EG (ASE EU) does NOT tick AGE EU slot (Stage 1: ase != age)
+[2026-08-27 08:21:44] 00:08 +52: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard Iowa dollar ticks Iowa slot only
+[2026-08-27 08:21:44] 00:08 +53: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard Iowa dollar does NOT tick Wisconsin slot (exact equality blocks)
+[2026-08-27 08:21:44] 00:08 +54: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard Iowa dollar does NOT tick California slot
+[2026-08-27 08:21:44] 00:08 +55: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard Iowa dollar does NOT tick Minnesota slot
+[2026-08-27 08:21:44] 00:08 +56: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard 26EA ASE does NOT tick Iowa Innovation slot (wrong family entirely)
+[2026-08-27 08:21:44] 00:08 +57: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_collectibles_test.dart: SlotResolver collectibles guard Slot with empty productFamily always returns false (safe reject)
+[2026-08-27 08:21:44] 00:08 +58: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1 GÇö 1971-S silver proof (strike_type=PROOF) S-SILVER-PROOF = true
+[2026-08-27 08:21:44] 00:08 +59: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1 GÇö 1971-S silver proof (strike_type=PROOF) S-PROOF = false (!isSilver gate)
+[2026-08-27 08:21:44] 00:08 +60: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1 GÇö 1971-S silver proof (strike_type=PROOF) S-PROOF-T1 = false (!isSilver gate)
+[2026-08-27 08:21:44] 00:08 +61: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1 GÇö 1971-S silver proof (strike_type=PROOF) S-SILVER = false (!isProof)
+[2026-08-27 08:21:45] 00:08 +62: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1b GÇö 1971-S PR69 silver (empty strike_type) S-SILVER-PROOF = true (isProof via grade)
+[2026-08-27 08:21:45] 00:08 +63: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1b GÇö 1971-S PR69 silver (empty strike_type) S-PROOF-T1 = false (!isSilver)
+[2026-08-27 08:21:45] 00:08 +64: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 1b GÇö 1971-S PR69 silver (empty strike_type) S-SILVER = false (!isProof)
+[2026-08-27 08:21:45] 00:08 +65: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 2 GÇö 1971-S silver BU (MS65) S-SILVER = true
+[2026-08-27 08:21:45] 00:08 +66: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 2 GÇö 1971-S silver BU (MS65) S-SILVER-PROOF = false (!isProof)
+[2026-08-27 08:21:45] 00:08 +67: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 2 GÇö 1971-S silver BU (MS65) S-PROOF-T1 = false
+[2026-08-27 08:21:45] 00:08 +68: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 3 GÇö 1972-S silver proof S-SILVER-PROOF = true
+[2026-08-27 08:21:45] 00:08 +69: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 3 GÇö 1972-S silver proof S-PROOF-T1 = false (!isSilver)
+[2026-08-27 08:21:45] 00:08 +70: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 3 GÇö 1972-S silver proof S-SILVER = false
+[2026-08-27 08:21:45] 00:08 +71: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 4 GÇö 1972-S silver BU S-SILVER = true
+[2026-08-27 08:21:45] 00:08 +72: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 4 GÇö 1972-S silver BU S-SILVER-PROOF = false
+[2026-08-27 08:21:45] 00:08 +73: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 5 GÇö 1972-S clad (no metal field) GåÆ no S slot S-PROOF = false (no 1972 clad S proof slot)
+[2026-08-27 08:21:45] 00:08 +74: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 5 GÇö 1972-S clad (no metal field) GåÆ no S slot S-SILVER = false (not silver)
+[2026-08-27 08:21:45] 00:08 +75: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 5 GÇö 1972-S clad (no metal field) GåÆ no S slot S-SILVER-PROOF = false
+[2026-08-27 08:21:45] 00:08 +76: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 6 GÇö 1973-S clad proof (no metal) S-PROOF = true
+[2026-08-27 08:21:45] 00:08 +77: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 6 GÇö 1973-S clad proof (no metal) S-SILVER-PROOF = false (not silver)
+[2026-08-27 08:21:45] 00:08 +78: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 6 GÇö 1973-S clad proof (no metal) S-SILVER = false
+[2026-08-27 08:21:45] 00:08 +79: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 7 GÇö 1973-S silver proof S-SILVER-PROOF = true
+[2026-08-27 08:21:45] 00:08 +80: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 7 GÇö 1973-S silver proof S-PROOF = false (!isSilver)
+[2026-08-27 08:21:45] 00:08 +81: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 8 GÇö 1976-S silver BU (T1 only) S-SILVER = true
+[2026-08-27 08:21:45] 00:08 +82: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 8 GÇö 1976-S silver BU (T1 only) S-PROOF-T1 = false (!isSilver gate)
+[2026-08-27 08:21:45] 00:08 +83: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 8 GÇö 1976-S silver BU (T1 only) S-PROOF-T2 = false (!isSilver gate)
+[2026-08-27 08:21:45] 00:08 +84: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 8 GÇö 1976-S silver BU (T1 only) S-SILVER-PROOF = false (!isProof)
+[2026-08-27 08:21:45] 00:08 +85: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 9 GÇö 1976-S silver proof S-SILVER-PROOF = true
+[2026-08-27 08:21:45] 00:08 +86: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 9 GÇö 1976-S silver proof S-PROOF-T1 = false (!isSilver)
+[2026-08-27 08:21:45] 00:08 +87: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 9 GÇö 1976-S silver proof S-PROOF-T2 = false (!isSilver)
+[2026-08-27 08:21:45] 00:08 +88: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 9 GÇö 1976-S silver proof S-SILVER = false (!isProof)
+[2026-08-27 08:21:45] 00:08 +89: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 10 GÇö 1976-S clad proof GåÆ both S-PROOF-T1 and S-PROOF-T2 (Option B) S-PROOF-T1 = true (double-match, Option B)
+[2026-08-27 08:21:45] 00:08 +90: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 10 GÇö 1976-S clad proof GåÆ both S-PROOF-T1 and S-PROOF-T2 (Option B) S-PROOF-T2 = true (double-match, Option B)
+[2026-08-27 08:21:46] 00:08 +91: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 10 GÇö 1976-S clad proof GåÆ both S-PROOF-T1 and S-PROOF-T2 (Option B) S-SILVER-PROOF = false (not silver)
+[2026-08-27 08:21:46] 00:08 +92: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 10 GÇö 1976-S clad proof GåÆ both S-PROOF-T1 and S-PROOF-T2 (Option B) S-SILVER = false
+[2026-08-27 08:21:46] 00:08 +93: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 11 GÇö 1977-S clad proof S-PROOF = true
+[2026-08-27 08:21:46] 00:08 +94: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 11 GÇö 1977-S clad proof S-SILVER-PROOF = false
+[2026-08-27 08:21:46] 00:08 +95: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 11 GÇö 1977-S clad proof S-SILVER = false
+[2026-08-27 08:21:46] 00:08 +96: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 12 GÇö startsWith fix: 1976-S PR67 never hits S-SILVER-PROOF S-PROOF-T1 = true (isProof && !isSilver)
+[2026-08-27 08:21:46] 00:08 +97: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_eisenhower_test.dart: Test 12 GÇö startsWith fix: 1976-S PR67 never hits S-SILVER-PROOF S-SILVER-PROOF = false (isSilver is false)
+[2026-08-27 08:21:46] 00:09 +98: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1 GÇö 1964 Philly proof GåÆ PROOF only PROOF = true
+[2026-08-27 08:21:46] 00:09 +99: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1 GÇö 1964 Philly proof GåÆ PROOF only S-SILVER-PROOF = false (not S-mint)
+[2026-08-27 08:21:46] 00:09 +100: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1 GÇö 1964 Philly proof GåÆ PROOF only S-PROOF = false (not S-mint)
+[2026-08-27 08:21:46] 00:09 +101: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1b GÇö 1964-P business strike GåÆ P only P = true
+[2026-08-27 08:21:47] 00:09 +102: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1b GÇö 1964-P business strike GåÆ P only PROOF = false (!isProof)
+[2026-08-27 08:21:47] 00:09 +103: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1c GÇö 1964-D business strike GåÆ D only D = true
+[2026-08-27 08:21:47] 00:09 +104: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1c GÇö 1964-D business strike GåÆ D only PROOF = false
+[2026-08-27 08:21:47] 00:09 +105: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 1c GÇö 1964-D business strike GåÆ D only P = false (wrong mint)
+[2026-08-27 08:21:47] 00:09 +106: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2 GÇö 1965 SMS grade (SP67) GåÆ SMS only SMS = true
+[2026-08-27 08:21:47] 00:09 +107: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2 GÇö 1965 SMS grade (SP67) GåÆ SMS only P = false (!isSMS gate)
+[2026-08-27 08:21:47] 00:09 +108: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2 GÇö 1965 SMS grade (SP67) GåÆ SMS only D = false (no D slot)
+[2026-08-27 08:21:47] 00:09 +109: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2b GÇö 1965 NMM business strike (MS65) GåÆ P only P = true
+[2026-08-27 08:21:47] 00:09 +110: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2b GÇö 1965 NMM business strike (MS65) GåÆ P only SMS = false (!isSMS)
+[2026-08-27 08:21:47] 00:09 +111: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 2b GÇö 1965 NMM business strike (MS65) GåÆ P only D = false (no D slot)
+[2026-08-27 08:21:48] 00:09 +112: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 3 GÇö 1967 SMS GåÆ SMS only SMS = true
+[2026-08-27 08:21:48] 00:09 +113: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 3 GÇö 1967 SMS GåÆ SMS only P = false
+[2026-08-27 08:21:48] 00:09 +114: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 4 GÇö 1968-D 40% Ag BU GåÆ D only D = true
+[2026-08-27 08:21:48] 00:09 +115: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 4 GÇö 1968-D 40% Ag BU GåÆ D only P = false (no P slot for 1968)
+[2026-08-27 08:21:48] 00:09 +116: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 5 GÇö 1968-S 40% Ag proof GåÆ S-SILVER-PROOF only S-SILVER-PROOF = true
+[2026-08-27 08:21:48] 00:09 +117: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 5 GÇö 1968-S 40% Ag proof GåÆ S-SILVER-PROOF only S-PROOF = false (!isSilver gate)
+[2026-08-27 08:21:48] 00:09 +118: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 5 GÇö 1968-S 40% Ag proof GåÆ S-SILVER-PROOF only PROOF = false (S-mint)
+[2026-08-27 08:21:48] 00:09 +119: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 5b GÇö 1968-S PR65 silver (empty strike_type) GåÆ S-SILVER-PROOF S-SILVER-PROOF = true (isProof via grade)
+[2026-08-27 08:21:48] 00:09 +120: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 5b GÇö 1968-S PR65 silver (empty strike_type) GåÆ S-SILVER-PROOF S-PROOF = false (!isSilver)
+[2026-08-27 08:21:48] 00:09 +121: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 6 GÇö 1975 coin: S-PROOF returns false (no valid slot exists) S-PROOF predicate would be true if reached (routing blocked by year guard)
+[2026-08-27 08:21:48] 00:09 +122: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 7 GÇö 1776-1976-S Silver PR (dual-date) GåÆ S-SILVER-PROOF S-SILVER-PROOF = true (year guard normalises to 1976)
+[2026-08-27 08:21:48] 00:09 +123: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 7 GÇö 1776-1976-S Silver PR (dual-date) GåÆ S-SILVER-PROOF S-PROOF = false (!isSilver)
+[2026-08-27 08:21:48] 00:09 +124: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 8 GÇö 1976-S Clad proof GåÆ S-PROOF only S-PROOF = true
+[2026-08-27 08:21:48] 00:09 +125: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 8 GÇö 1976-S Clad proof GåÆ S-PROOF only S-SILVER-PROOF = false (not silver)
+[2026-08-27 08:21:48] 00:09 +126: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 8 GÇö 1976-S Clad proof GåÆ S-PROOF only S-SILVER = false
+[2026-08-27 08:21:48] 00:09 +127: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 9 GÇö 1976-S Silver BU GåÆ S-SILVER only S-SILVER = true
+[2026-08-27 08:21:48] 00:09 +128: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 9 GÇö 1976-S Silver BU GåÆ S-SILVER only S-SILVER-PROOF = false (!isProof)
+[2026-08-27 08:21:48] 00:09 +129: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 9 GÇö 1976-S Silver BU GåÆ S-SILVER only S-PROOF = false (!isSilver... wait, isSilver=true, isProof=false)
+[2026-08-27 08:21:48] 00:09 +130: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 10 GÇö 1992-S Clad proof GåÆ S-PROOF only S-PROOF = true
+[2026-08-27 08:21:48] 00:09 +131: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 10 GÇö 1992-S Clad proof GåÆ S-PROOF only S-SILVER-PROOF = false (not silver)
+[2026-08-27 08:21:48] 00:09 +132: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 11 GÇö 1992-S Silver proof GåÆ S-SILVER-PROOF only S-SILVER-PROOF = true
+[2026-08-27 08:21:48] 00:09 +133: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 11 GÇö 1992-S Silver proof GåÆ S-SILVER-PROOF only S-PROOF = false (!isSilver)
+[2026-08-27 08:21:48] 00:09 +134: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 11b GÇö 1992-S Silver PR69 (empty strike_type) GåÆ S-SILVER-PROOF S-SILVER-PROOF = true (isProof via grade)
+[2026-08-27 08:21:48] 00:09 +135: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 11b GÇö 1992-S Silver PR69 (empty strike_type) GåÆ S-SILVER-PROOF S-PROOF = false (!isSilver)
+[2026-08-27 08:21:48] 00:09 +136: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 12 GÇö 2025-S Clad proof GåÆ S-PROOF only S-PROOF = true
+[2026-08-27 08:21:48] 00:09 +137: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 12 GÇö 2025-S Clad proof GåÆ S-PROOF only S-SILVER-PROOF = false
+[2026-08-27 08:21:48] 00:09 +138: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 13 GÇö 2025-S Silver proof GåÆ S-SILVER-PROOF only S-SILVER-PROOF = true
+[2026-08-27 08:21:48] 00:09 +139: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_kennedy_test.dart: Test 13 GÇö 2025-S Silver proof GåÆ S-SILVER-PROOF only S-PROOF = false (!isSilver)
+[2026-08-27 08:21:48] 00:09 +140: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Empty country field passes (domestic default)
+[2026-08-27 08:21:48] 00:09 +141: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Country = United States passes
+[2026-08-27 08:21:48] 00:09 +142: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Country = USA passes
+[2026-08-27 08:21:49] 00:09 +143: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Country = US passes
+[2026-08-27 08:21:49] 00:09 +144: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Explicit non-US country is rejected
+[2026-08-27 08:21:49] 00:09 +145: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard Foreign coin (Mexico) is rejected
+[2026-08-27 08:21:49] 00:09 +146: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Country Guard UK coin is rejected
+[2026-08-27 08:21:49] 00:09 +147: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Quarter program rejects non-quarter denomination
+[2026-08-27 08:21:49] 00:09 +148: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Quarter program accepts quarter denomination
+[2026-08-27 08:21:49] 00:09 +149: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Cent program rejects penny-less denomination
+[2026-08-27 08:21:49] 00:09 +150: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Cent program accepts penny denomination
+[2026-08-27 08:21:49] 00:09 +151: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Nickel program rejects quarter denomination
+[2026-08-27 08:21:49] 00:09 +152: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Denomination Alignment Guard Dime program rejects cent denomination
+[2026-08-27 08:21:49] 00:09 +153: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Year Alignment Guard Year mismatch rejects slot
+[2026-08-27 08:21:49] 00:09 +154: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Year Alignment Guard Year match passes slot
+[2026-08-27 08:21:49] 00:09 +155: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö Year Alignment Guard Empty slot year passes any item year
+[2026-08-27 08:21:49] 00:09 +156: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + silver metal + no proof GåÆ matches S-SILVER
+[2026-08-27 08:21:49] 00:09 +157: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + silver in variety (no proof token) GåÆ matches S-SILVER
+[2026-08-27 08:21:49] 00:09 +158: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + silver + proof strike GåÆ does NOT match S-SILVER (goes to S-SILVER-PROOF)
+[2026-08-27 08:21:49] 00:09 +159: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + silver + PROOF in variety field GåÆ does NOT match S-SILVER
+[2026-08-27 08:21:49] 00:09 +160: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + silver + PR69 grade GåÆ does NOT match S-SILVER (grade-based proof detection)
+[2026-08-27 08:21:49] 00:09 +161: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) D-mint + silver GåÆ does NOT match S-SILVER (wrong mint)
+[2026-08-27 08:21:49] 00:09 +162: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER (BU silver only, 1976-S) S-mint + no silver content GåÆ does NOT match S-SILVER
+[2026-08-27 08:21:49] 00:09 +163: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + silver + proof strike GåÆ matches S-SILVER-PROOF
+[2026-08-27 08:21:49] 00:09 +164: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + silver + PR69 grade GåÆ matches S-SILVER-PROOF (grade-based proof detection)
+[2026-08-27 08:21:49] 00:09 +165: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + silver + PF70 grade GåÆ matches S-SILVER-PROOF
+[2026-08-27 08:21:49] 00:09 +166: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + Silver Proof Set in variety GåÆ matches S-SILVER-PROOF
+[2026-08-27 08:21:49] 00:09 +167: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + silver + NO proof GåÆ does NOT match S-SILVER-PROOF (goes to S-SILVER)
+[2026-08-27 08:21:49] 00:09 +168: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) S-mint + clad + proof GåÆ does NOT match S-SILVER-PROOF (no silver)
+[2026-08-27 08:21:49] 00:09 +169: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) D-mint + silver + proof GåÆ does NOT match S-SILVER-PROOF (wrong mint)
+[2026-08-27 08:21:50] 00:09 +170: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-SILVER-PROOF (50 State Quarter silver proof) Reverse proof S-mint silver also matches S-SILVER-PROOF (isProof=true from PROOF in strikeType)
+[2026-08-27 08:21:50] 00:09 +171: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: No Mint Mark (NMM, pre-1980 classic series) Empty mint mark matches P-UNC variety (Philadelphia no mint mark)
+[2026-08-27 08:21:50] 00:09 +178: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: No Mint Mark (NMM, pre-1980 classic series) 1965-67 SMS coin with SP67 grade does NOT match P-UNC
+[2026-08-27 08:21:50] 00:09 +179: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate Item with 250 in Theme/Subject passes privy gate (P-UNC resolves true)
+[2026-08-27 08:21:50] 00:09 +180: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate Item with AMERICA250 in official title passes privy gate
+[2026-08-27 08:21:50] 00:09 +181: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate Item with SEMIQUINCENTENNIAL passes privy gate
+[2026-08-27 08:21:50] 00:09 +182: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate Item with no 250/SEMIQUINCENTENNIAL/AMERICA250 token is rejected by privy gate
+[2026-08-27 08:21:50] 00:09 +183: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate Item with just Anniversary (no 250) is rejected by privy gate
+[2026-08-27 08:21:50] 00:09 +184: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: requiresPrivy Gate PRIVY alone in variety text is rejected by privy gate
+[2026-08-27 08:21:50] 00:09 +185: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF and S-CLAD S-mint + proof strike GåÆ matches S-PROOF
+[2026-08-27 08:21:50] 00:09 +186: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF and S-CLAD S-mint + proof in variety field GåÆ matches S-PROOF
+[2026-08-27 08:21:50] 00:09 +187: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF and S-CLAD S-mint + no proof GåÆ does NOT match S-PROOF
+[2026-08-27 08:21:50] 00:09 +188: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF and S-CLAD D-mint + proof GåÆ does NOT match S-PROOF (wrong mint)
+[2026-08-27 08:21:50] 00:09 +189: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1: S-mint + clad proof GåÆ matches (startsWith S-PROOF-)
+[2026-08-27 08:21:50] 00:09 +190: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T2: S-mint + clad proof GåÆ matches (startsWith S-PROOF-)
+[2026-08-27 08:21:50] 00:09 +191: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1: S-mint + silver proof GåÆ does NOT match (silver routes to S-SILVER-PROOF)
+[2026-08-27 08:21:50] 00:09 +192: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T2: S-mint + silver proof GåÆ does NOT match
+[2026-08-27 08:21:50] 00:10 +193: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1: D-mint + proof GåÆ does NOT match (wrong mint)
+[2026-08-27 08:21:50] 00:10 +194: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1: S-mint + BU (no proof) GåÆ does NOT match
+[2026-08-27 08:21:50] 00:10 +195: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1: PR68 grade on S-mint clad GåÆ matches (grade-based proof detection)
+[2026-08-27 08:21:50] 00:10 +196: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: S-PROOF-T1 / S-PROOF-T2 (Eisenhower Type variants) S-PROOF-T1 and S-PROOF-T2 both match the same S-mint clad proof item (double-slot design)
+[2026-08-27 08:21:50] 00:10 +197: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Reverse Proof S-mint + Reverse Proof strike GåÆ matches REVERSE-PROOF
+[2026-08-27 08:21:50] 00:10 +198: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Reverse Proof W-mint + Reverse Proof GåÆ matches REVERSE-PROOF
+[2026-08-27 08:21:50] 00:10 +199: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Reverse Proof Reverse Proof in variety field GåÆ matches
+[2026-08-27 08:21:50] 00:10 +200: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Reverse Proof Regular Proof (no Reverse) GåÆ does NOT match REVERSE-PROOF
+[2026-08-27 08:21:50] 00:10 +201: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Standard Mint Marks P-UNC: P mint item matches
+[2026-08-27 08:21:50] 00:10 +202: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Standard Mint Marks P-UNC: D mint item does not match
+[2026-08-27 08:21:51] 00:10 +203: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Standard Mint Marks D-UNC: D mint matches
+[2026-08-27 08:21:51] 00:10 +204: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SlotResolver GÇö matchesVariety: Standard Mint Marks W-UNC: W mint matches
+[2026-08-27 08:21:51] 00:10 +205: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases 50 State Quarters matches "state quarters" series
+[2026-08-27 08:21:51] 00:10 +206: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases 50 State Quarters matches "state and territory quarters"
+[2026-08-27 08:21:51] 00:10 +207: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Lincoln Cents matches "lincoln cent" (singular)
+[2026-08-27 08:21:51] 00:10 +208: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Lincoln Cents matches "lincoln head penny"
+[2026-08-27 08:21:51] 00:10 +209: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Lincoln Wheat Pennies matches "wheat cent"
+[2026-08-27 08:21:51] 00:10 +210: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Lincoln Memorial Cents matches "memorial" series
+[2026-08-27 08:21:51] 00:10 +211: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Lincoln Shield Cents matches "shield" series
+[2026-08-27 08:21:51] 00:10 +212: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Presidential Dollars matches "presidential" series
+[2026-08-27 08:21:51] 00:10 +213: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Sacagawea & Native American matches "native american"
+[2026-08-27 08:21:51] 00:10 +214: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Empty dbSeries always returns false
+[2026-08-27 08:21:51] 00:10 +215: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: CoinProgram GÇö matchesDbSeries Rule 24 Aliases Completely unrelated series returns false
+[2026-08-27 08:21:51] 00:10 +216: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring MS-65 returns 65
+[2026-08-27 08:21:51] 00:10 +217: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring AU-58 returns 58
+[2026-08-27 08:21:51] 00:10 +218: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring VF-20 returns 20
+[2026-08-27 08:21:51] 00:10 +219: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring Proof/PF returns 65
+[2026-08-27 08:21:51] 00:10 +220: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring Details coin docks 5 points
+[2026-08-27 08:21:51] 00:10 +221: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring Null grade returns -1
+[2026-08-27 08:21:51] 00:10 +222: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring Empty string returns -1
+[2026-08-27 08:21:51] 00:10 +223: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring BU/Uncirculated adjectival grade returns 63
+[2026-08-27 08:21:51] 00:10 +224: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring XF adjectival grade returns 42
+[2026-08-27 08:21:51] 00:10 +225: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_phase4a_test.dart: SheldonGradeRanker GÇö Numerical Grade Scoring Higher MS score ranks above lower
+[2026-08-27 08:21:51] 00:10 +226: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 1 GÇö SNAP four-coin fixture GåÆ 0 owned 1a. 2021-P Washington Quarter series MS-63
+[2026-08-27 08:21:51] 00:10 +227: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 1 GÇö SNAP four-coin fixture GåÆ 0 owned 1b. 2021-D no Program/Series
+[2026-08-27 08:21:51] 00:10 +228: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 1 GÇö SNAP four-coin fixture GåÆ 0 owned 1c. 2021 ATB series
+[2026-08-27 08:21:51] 00:10 +229: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 1 GÇö SNAP four-coin fixture GåÆ 0 owned 1d. Undated Washington Quarter coin (empty Year)
+[2026-08-27 08:21:51] 00:10 +230: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 2 GÇö 1965 raw unmarked GåÆ NMM not SMS P/NMM = true
+[2026-08-27 08:21:51] 00:10 +231: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 2 GÇö 1965 raw unmarked GåÆ NMM not SMS SMS = false
+[2026-08-27 08:21:51] 00:10 +232: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 3 GÇö 1965 SP67 GåÆ SMS only NOT NMM (double-stamp fix) SMS = true
+[2026-08-27 08:21:51] 00:10 +233: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 3 GÇö 1965 SP67 GåÆ SMS only NOT NMM (double-stamp fix) P/NMM = false (!isSMS gate)
+[2026-08-27 08:21:51] 00:10 +234: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 3b GÇö 1967 SP-67 hyphen GåÆ SMS only (widened regex) SMS = true
+[2026-08-27 08:21:51] 00:10 +235: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 3b GÇö 1967 SP-67 hyphen GåÆ SMS only (widened regex) P/NMM = false
+[2026-08-27 08:21:51] 00:10 +236: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 4 GÇö 1950 PR65 unmarked GåÆ PROOF not NMM PROOF = true
+[2026-08-27 08:21:52] 00:10 +237: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 4 GÇö 1950 PR65 unmarked GåÆ PROOF not NMM P/NMM = false (!isProof)
+[2026-08-27 08:21:52] 00:10 +238: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 5 GÇö 1976-S silver proof GåÆ S-SILVER-PROOF only S-SILVER-PROOF = true
+[2026-08-27 08:21:52] 00:10 +239: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 5 GÇö 1976-S silver proof GåÆ S-SILVER-PROOF only S-PROOF = false (!isSilver)
+[2026-08-27 08:21:52] 00:10 +240: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 5 GÇö 1976-S silver proof GåÆ S-SILVER-PROOF only S-SILVER = false (!isProof)
+[2026-08-27 08:21:52] 00:10 +241: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 6 GÇö 1992-S silver proof GåÆ S-SILVER-PROOF only S-SILVER-PROOF = true
+[2026-08-27 08:21:52] 00:10 +242: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 6 GÇö 1992-S silver proof GåÆ S-SILVER-PROOF only S-PROOF = false
+[2026-08-27 08:21:52] 00:10 +243: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 6b GÇö 1992-S PR69 silver (empty strike_type) GåÆ S-SILVER-PROOF S-SILVER-PROOF = true (PR69 triggers isProof)
+[2026-08-27 08:21:52] 00:10 +244: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 6b GÇö 1992-S PR69 silver (empty strike_type) GåÆ S-SILVER-PROOF S-SILVER = false
+[2026-08-27 08:21:52] 00:10 +245: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 6b GÇö 1992-S PR69 silver (empty strike_type) GåÆ S-SILVER-PROOF S-PROOF = false
+[2026-08-27 08:21:52] 00:10 +246: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 7 GÇö 1938-D GåÆ no Classic slot 1938-D owns nothing
+[2026-08-27 08:21:52] 00:10 +247: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/slot_resolver_washington_test.dart: Test 8 GÇö Integer year handled by toString() year int 2021 GåÆ 0 owned Classic slots
+[2026-08-27 08:21:52] 00:11 +248: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity (setUpAll)
+[2026-08-27 08:21:52] 00:11 +248: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity Dataset contains exactly 100 items
+[2026-08-27 08:21:52] 00:11 +249: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity Certified-to-Raw ratio meets 60/40 estate credibility requirement
+[2026-08-27 08:21:52] =ƒôè Demo Dataset Ratio: 60 Certified / 40 Raw
+[2026-08-27 08:21:52] 00:11 +250: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity Multi-View dataset distribution covers Coins, Currency, and World items
+[2026-08-27 08:21:52] =ƒîÉ Multi-View Items: 90 US Coins, 5 Banknotes, 5 World Items
+[2026-08-27 08:21:52] 00:11 +251: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity Zero missing or null critical fields across all 100 items
+[2026-08-27 08:21:52] 00:11 +252: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 1: 100 Demo Coin Asset Integrity (tearDownAll)
+[2026-08-27 08:21:52] 00:11 +252: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 2: Cert Verification URL Edge-Case Fuzzing PCGS URL formatting & whitespace trimming
+[2026-08-27 08:21:52] 00:11 +253: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 2: Cert Verification URL Edge-Case Fuzzing NGC URL formatting & slash stripping
+[2026-08-27 08:21:52] 00:11 +254: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 2: Cert Verification URL Edge-Case Fuzzing ANACS URL formatting
+[2026-08-27 08:21:52] 00:11 +255: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 2: Cert Verification URL Edge-Case Fuzzing CAC Sticker vs CACG primary slab URL routing
+[2026-08-27 08:21:52] 00:11 +256: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 2: Cert Verification URL Edge-Case Fuzzing Raw / Uncertified / Malformed cert strings return null safely
+[2026-08-27 08:21:52] 00:11 +257: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark (setUpAll)
+[2026-08-27 08:21:52] 00:11 +257: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark 5,000-row collection generation check
+[2026-08-27 08:21:52] 00:11 +258: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark Benchmark: Sorting 5,000 coins by Year completes in < 30ms
+[2026-08-27 08:21:52] GÅ¦n+Å 5,000-row Year sort time: 5.293 ms
+[2026-08-27 08:21:52] 00:11 +259: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark Benchmark: Sorting 5,000 coins by Condition (Sheldon Scale) completes in < 30ms
+[2026-08-27 08:21:52] GÅ¦n+Å 5,000-row Condition sort time: 2.466 ms
+[2026-08-27 08:21:52] 00:11 +260: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark Benchmark: Sorting 5,000 coins by Cert # completes in < 30ms
+[2026-08-27 08:21:52] GÅ¦n+Å 5,000-row Cert # sort time: 2.274 ms
+[2026-08-27 08:21:53] 00:11 +261: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 3: 5,000-Row Collection Table Sorting Scale Benchmark (tearDownAll)
+[2026-08-27 08:21:53] 00:11 +261: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 4: Wizard Service State Machine & Concurrency Rapid nextStep concurrency check (100 calls)
+[2026-08-27 08:21:53] 00:11 +262: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/sprint_1_stress_test.dart: Sprint 1 Stress Test Suite 4: Wizard Service State Machine & Concurrency Reset and re-start guest tour
+[2026-08-27 08:21:53] 00:11 +263: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/valuation_mode_test.dart: Valuation Mode Parity & Basis Calculations Estate / Liquidation Mode satisfies exact mathematical parity
+[2026-08-27 08:21:53] 00:11 +264: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/valuation_mode_test.dart: Valuation Mode Parity & Basis Calculations Retail Mode satisfies exact mathematical parity
+[2026-08-27 08:21:53] 00:11 +265: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/valuation_mode_test.dart: Valuation Mode Parity & Basis Calculations Collection Stats Schema Contract matches required fields
+[2026-08-27 08:21:53] 00:11 +266: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/valuation_mode_test.dart: Valuation Mode Parity & Basis Calculations Unauthenticated path guard blocks query with unknown in path
+[2026-08-27 08:21:53] 00:11 +267: C:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/widget_test.dart: App smoke test placeholder
+[2026-08-27 08:21:53] 00:12 +268: All tests passed!
+[2026-08-27 08:21:53] flutter test: PASS
+[2026-08-27 08:21:53] === LAYER 1: UX Visual Guard ===
+[2026-08-27 08:25:01] Gùç injected env (2) from ..\numista_tests\.env // tip: Gîÿ suppress logs { quiet: true }
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîü auth for agents [www.vestauth.com]
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gùê encrypted .env [www.dotenvx.com]
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ suppress logs { quiet: true }
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ custom filepath { path: '/custom/path/.env' }
+[2026-08-27 08:25:01] 
+[2026-08-27 08:25:01] Running 11 tests using 1 worker
+[2026-08-27 08:25:01] 
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ suppress logs { quiet: true }
+[2026-08-27 08:25:01] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ multiple files { path: ['.env.local', '.env'] }
+[2026-08-27 08:25:01] [qc-auth] Authenticating as: ericdcman@gmail.com
+[2026-08-27 08:25:01] [qc-auth] Firebase ready. Signing in...
+[2026-08-27 08:25:02] [qc-auth] Signed in: uid=vyFVKI4NkHSqKaqmhaPdDebLOWb2
+[2026-08-27 08:25:02] [qc-auth] IndexedDB entries captured: 1
+[2026-08-27 08:25:02] [qc-auth] Token saved to: C:\Users\ericd\Documents\MyVertexProject\numista_qc\fixtures\auth-token.json (3887 bytes)
+[2026-08-27 08:25:02]   ok  1 [setup] GÇ¦ auth.setup.js:27:1 GÇ¦ qc-authenticate (9.9s)
+[2026-08-27 08:25:02] Gùç injected env (0) from ..\numista_tests\.env // tip: Gùê secrets for agents [www.dotenvx.com]
+[2026-08-27 08:25:02] WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+[2026-08-27 08:25:02] E0000 00:00:1787833360.059527   22244 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+[2026-08-27 08:25:02] [coin_title_guard] coin_data_audit.py output:
+[2026-08-27 08:25:02] [coin_data_audit] No canonical_title_field in manifest n++ quad-check active (['title', 'theme_subject', 'series', 'program_series'])
+[2026-08-27 08:25:02] [coin_data_audit] Auditing coins...
+[2026-08-27 08:25:02]   [TITLE_OK] qc_fixture_estate_coin: non-empty fields=['title', 'series']
+[2026-08-27 08:25:02]   [TITLE_OK] qc_fixture_foreign_coin: non-empty fields=['title', 'theme_subject', 'series', 'program_series']
+[2026-08-27 08:25:02]   [TITLE_OK] qc_fixture_title_ok_dollar: non-empty fields=['title', 'series']
+[2026-08-27 08:25:02]   [TITLE_OK] qc_fixture_title_ok_quarter: non-empty fields=['title', 'theme_subject', 'series', 'program_series']
+[2026-08-27 08:25:02] [coin_data_audit] Auditing estate boundary...
+[2026-08-27 08:25:02] 
+[2026-08-27 08:25:02] [coin_data_audit] RESULTS: 5 PASS / 0 WARN / 0 UNEXPECTED FAIL (1 expected sentinel)
+[2026-08-27 08:25:02]   PASS  [FIXTURE_SENTINEL_OK]: Intentionally-broken fixture correctly triggered COIN_TITLE_FAIL.
+[2026-08-27 08:25:02]   PASS  [COINS_AUDITED]: 5 coin documents checked. 1 title failures.
+[2026-08-27 08:25:02]   PASS  [ESTATE_CURRENCY_SEPARATED]: 1 currency docs confirmed separate from coins.
+[2026-08-27 08:25:02]   PASS  [ESTATE_WORLD_SEPARATED]: 1 world_items docs confirmed separate from coins.
+[2026-08-27 08:25:02]   PASS  [FOREIGN_COINS_IN_COINS]: 1 foreign coin(s) correctly in users/{uid}/coins.
+[2026-08-27 08:25:02]   EXPECTED FAIL  [COIN_TITLE_FAIL] qc_fixture_title_FAIL_empty: All title fields empty: ['title', 'theme_subject', 'series', 'program_series']. Flutter _buildTitle() will degrade to year+mint only.
+[2026-08-27 08:25:02] 
+[2026-08-27 08:25:02]   ok  2 [chromium] GÇ¦ layer_1_ux_visual\coin_title_guard.spec.js:21:3 GÇ¦ Coin Title Guard GÇ¦ Primary: Firestore field check - no coin should have all title fields empty (4.9s)
+[2026-08-27 08:25:02] [coin_title_guard] SEMANTICS_UNAVAILABLE: accessibility tree returned no nodes. Primary assertion is authoritative.
+[2026-08-27 08:25:02]   -   3 [chromium] GÇ¦ layer_1_ux_visual\coin_title_guard.spec.js:75:3 GÇ¦ Coin Title Guard GÇ¦ Secondary: Flutter accessibility snapshot (conditional - non-authoritative)
+[2026-08-27 08:25:02] Gùç injected env (0) from ..\numista_tests\.env // tip: Gùê encrypted .env [www.dotenvx.com]
+[2026-08-27 08:25:02] [contrast_guard] Sampling path: screenshot (CanvasKit/WebGL compatible)
+[2026-08-27 08:25:02] [Sidebar Navigation] fg={"r":255,"g":255,"b":255} bg={"r":14,"g":17,"b":23} ratio=18.90
+[2026-08-27 08:25:03] [Sidebar Coins] fg={"r":157,"g":158,"b":161} bg={"r":14,"g":17,"b":23} ratio=7.05
+[2026-08-27 08:25:03] [Ask Morgan Header] fg={"r":240,"g":253,"b":244} bg={"r":11,"g":17,"b":32} ratio=17.99
+[2026-08-27 08:25:03] [Top Programs Card] fg={"r":255,"g":255,"b":255} bg={"r":49,"g":51,"b":63} ratio=12.53
+[2026-08-27 08:25:03]   ok  4 [chromium] GÇ¦ layer_1_ux_visual\contrast_guard.spec.js:176:3 GÇ¦ Contrast Guard - Light Mode GÇ¦ WCAG AA contrast >= 4.5:1 in Light mode on key UI regions (16.2s)
+[2026-08-27 08:25:03] [contrast_guard] Sampling path: screenshot (CanvasKit/WebGL compatible)
+[2026-08-27 08:25:03] [Sidebar Navigation] fg={"r":255,"g":255,"b":255} bg={"r":14,"g":17,"b":23} ratio=18.90
+[2026-08-27 08:25:03] [Sidebar Coins] fg={"r":157,"g":158,"b":161} bg={"r":14,"g":17,"b":23} ratio=7.05
+[2026-08-27 08:25:03] [Ask Morgan Header] fg={"r":240,"g":253,"b":244} bg={"r":11,"g":17,"b":32} ratio=17.99
+[2026-08-27 08:25:03] [Top Programs Card] fg={"r":255,"g":255,"b":255} bg={"r":49,"g":51,"b":63} ratio=12.53
+[2026-08-27 08:25:03]   ok  5 [chromium] GÇ¦ layer_1_ux_visual\contrast_guard.spec.js:207:3 GÇ¦ Contrast Guard - Dark Mode GÇ¦ WCAG AA contrast >= 4.5:1 in Dark mode on key UI regions (15.3s)
+[2026-08-27 08:25:03] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ suppress logs { quiet: true }
+[2026-08-27 08:25:03]   ok  6 [chromium] GÇ¦ layer_1_ux_visual\layout_guard.spec.js:63:3 GÇ¦ Layout Guard - 1920x1080 Desktop GÇ¦ flt-glass-pane fills the viewport (14.9s)
+[2026-08-27 08:25:03]   ok  7 [chromium] GÇ¦ layer_1_ux_visual\layout_guard.spec.js:79:3 GÇ¦ Layout Guard - 1920x1080 Desktop GÇ¦ No negative top/left on flt-glass-pane (not shifted off-screen) (13.6s)
+[2026-08-27 08:25:03]   ok  8 [chromium] GÇ¦ layer_1_ux_visual\layout_guard.spec.js:93:3 GÇ¦ Layout Guard - 1920x1080 Desktop GÇ¦ Flutter renders in release mode (not debug banner) (13.7s)
+[2026-08-27 08:25:03]   ok  9 [chromium] GÇ¦ layer_1_ux_visual\layout_guard.spec.js:104:3 GÇ¦ Layout Guard - 1920x1080 Desktop GÇ¦ Page title is set (not blank or default) (14.7s)
+[2026-08-27 08:25:03] Gùç injected env (0) from ..\numista_tests\.env // tip: Gîÿ suppress logs { quiet: true }
+[2026-08-27 08:25:03]   ok 10 [chromium] GÇ¦ layer_1_ux_visual\theme_switch_guard.spec.js:78:3 GÇ¦ Theme Switch Guard GÇ¦ App remains visible after theme toggle with 500ms settle (22.6s)
+[2026-08-27 08:25:03] [theme_switch_guard] Canvas not readable - skipping center pixel check.
+[2026-08-27 08:25:03]   -  11 [chromium] GÇ¦ layer_1_ux_visual\theme_switch_guard.spec.js:144:3 GÇ¦ Theme Switch Guard GÇ¦ Canvas pixel is not pure white (#FFFFFF) immediately after Dark mode toggle
+[2026-08-27 08:25:03] 
+[2026-08-27 08:25:03]   2 skipped
+[2026-08-27 08:25:03]   9 passed (2.7m)
+[2026-08-27 08:25:03] 
+[2026-08-27 08:25:03] To open last HTML report run:
+[2026-08-27 08:25:03] [36m[39m
+[2026-08-27 08:25:03] [36m  npx playwright show-report playwright-report[39m
+[2026-08-27 08:25:03] [36m[39m
+[2026-08-27 08:25:03] LAYER 1: PASS
+[2026-08-27 08:25:03] numista_qc block appended to SCAN_REPORT.md
+[2026-08-27 08:25:03] SUITE_RESULT: PASS

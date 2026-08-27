@@ -113,13 +113,21 @@ class _PitchDeckScreenState extends State<PitchDeckScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFD4AF37)),
                 ),
-                child: const Text('🦉', style: TextStyle(fontSize: 18)),
+                clipBehavior: Clip.antiAlias,
+                child: Image.asset(
+                  'assets/logo_owl.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Text('🦉', style: TextStyle(fontSize: 18)),
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -255,17 +263,37 @@ class _PitchDeckScreenState extends State<PitchDeckScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Text(
-            '✨ GOOGLE CLOUD STARTUP SHOWCASE',
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF2DD4BF)),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Text(
+                '✨ GOOGLE CLOUD STARTUP SHOWCASE',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF2DD4BF)),
+              ),
+            ),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFD4AF37), width: 1.5),
+                color: const Color(0xFF1E293B),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/logo_owl.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Center(child: Text('🦉', style: TextStyle(fontSize: 24))),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(
@@ -374,8 +402,44 @@ class _PitchDeckScreenState extends State<PitchDeckScreen> {
               const SizedBox(height: 8),
               Text('Meet Morgan: The AI Numismatist', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 12),
-              Text('Powered by Google Vertex AI & Gemini 3.5. Context-aware, patient, and senior-empowered.', style: GoogleFonts.inter(fontSize: 14, color: Colors.white70)),
-              const SizedBox(height: 20),
+              // Morgan Persona Card with Avatar
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F1E32),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF2DD4BF).withOpacity(0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF2DD4BF), width: 2),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/morgan_avatar.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(child: Text('🦉', style: TextStyle(fontSize: 22))),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Morgan AI', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15)),
+                          Text('Powered by Google Vertex AI & Gemini 3.5', style: GoogleFonts.inter(color: const Color(0xFF2DD4BF), fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildInteractivePromptBtn(
                 '💬 "I inherited an 1881-S Morgan Dollar from dad. What is it worth?"',
                 'That\'s a wonderful heirloom! The 1881-S has one of the sharpest strikes in the series. In MS65 or higher, it can fetch \$180 to \$1,200+. Look closely at Liberty\'s hair above her ear. Would you like me to inspect a microscope photo?',
@@ -403,7 +467,17 @@ class _PitchDeckScreenState extends State<PitchDeckScreen> {
               children: [
                 Row(
                   children: [
-                    const Text('🦉', style: TextStyle(fontSize: 18)),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(shape: BoxShape.circle),
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/morgan_avatar.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Text('🦉', style: TextStyle(fontSize: 14)),
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Text('Morgan AI Sandbox', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
                     const Spacer(),
@@ -427,7 +501,29 @@ class _PitchDeckScreenState extends State<PitchDeckScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: isMorgan ? Border.all(color: const Color(0xFF2DD4BF).withOpacity(0.3)) : null,
                           ),
-                          child: Text(msg['text']!, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isMorgan) ...[
+                                Container(
+                                  width: 18,
+                                  height: 18,
+                                  margin: const EdgeInsets.only(right: 6, top: 2),
+                                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.asset(
+                                    'assets/morgan_avatar.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Text('🦉', style: TextStyle(fontSize: 10)),
+                                  ),
+                                ),
+                              ],
+                              Flexible(
+                                child: Text(msg['text']!, style: GoogleFonts.inter(fontSize: 13, color: Colors.white)),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

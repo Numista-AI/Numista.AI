@@ -176,178 +176,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     }
   }
 
-
-  /// Returns the denomination family expected for a given program name.
-  /// e.g. "Presidential Dollars" → "dollar", "50 State Quarters" → "quarter"
-  String _expectedDenomFamily(String programName) {
-    final lower = programName.toLowerCase();
-    if (lower.contains('dollar'))      return 'dollar';
-    if (lower.contains('half'))        return 'half';
-    if (lower.contains('quarter'))     return 'quarter';
-    if (lower.contains('dime'))        return 'dime';
-    if (lower.contains('nickel'))      return 'nickel';
-    if (lower.contains('cent') || lower.contains('penny')) return 'cent';
-    return ''; // unknown — don't filter
-  }
-
-  /// Returns true only if the coin document's Denomination is consistent with
-  /// the expected denomination family for the given program.
-  bool _denominationMatches(Map<String, dynamic> coinData, String expectedFamily) {
-    if (expectedFamily.isEmpty) return true; // no constraint
-    final denom = (coinData['Denomination']?.toString() ?? '').toLowerCase();
-    switch (expectedFamily) {
-      case 'dollar':
-        // Accept: "dollar", "$1", "1 dollar", "presidential dollar", etc.
-        // Reject: "quarter dollar" (which contains "dollar" but is a quarter),
-        //         "half dollar", "quarter"
-        if (denom.contains('quarter dollar')) return false;
-        if (denom.contains('half dollar'))    return false;
-        return denom.contains('dollar') || denom.contains('\$1') ||
-               denom == '1' || denom.contains('1 dollar');
-      case 'half':
-        return denom.contains('half') || denom.contains('50c') || denom.contains('50¢');
-      case 'quarter':
-        // Reject "quarter dollar" only if we already know it's a quarter program
-        return denom.contains('quarter') || denom.contains('25c') || denom.contains('25¢');
-      case 'dime':
-        return denom.contains('dime') || denom.contains('10c') || denom.contains('10¢');
-      case 'nickel':
-        return denom.contains('nickel') || denom.contains('5c') || denom.contains('5¢');
-      case 'cent':
-        return denom.contains('cent') || denom.contains('penny') ||
-               denom.contains('1c') || denom.contains('1¢');
-      default:
-        return true;
-    }
-  }
-
-  bool _isMatch(Map<String, dynamic> coinData, CoinProgram program, ProgramCoin coinSlot) {
-    final denom      = (coinData['Denomination']?.toString() ?? '').toLowerCase();
-    final progSeries = (coinData['Program/Series']?.toString() ?? '').trim();
-    final themeSub   = (coinData['Theme/Subject']?.toString() ?? '').trim().toLowerCase();
-    final title      = (coinData['Title']?.toString() ?? coinData['name']?.toString() ?? coinData['official_title']?.toString() ?? '').trim().toLowerCase();
-    final year       = coinData['Year']?.toString() ?? '';
-    final cNameLower = coinSlot.name.toLowerCase();
-    final slotYear   = coinSlot.year ?? '';
-
-    // ── 1. Check Multi-coin Mint / Uncirculated Set Matching ─────────────────────────
-    if (denom == 'set' || progSeries.toLowerCase().contains('uncirculated set') || progSeries.toLowerCase().contains('proof set')) {
-      final setContents = coinData['SetContents'] as List? ?? coinData['set_coins'] as List? ?? [];
-      final setStr = '${setContents.join(" ")} $themeSub $title';
-      if (setStr.trim().isNotEmpty) {
-        if (cNameLower.isNotEmpty && setStr.contains(cNameLower)) return true;
-      }
-      return false;
-    }
-
-    // ── 2. Denomination Guard for Single Coins ────────────────────────────────
-    final expectedFamily = _expectedDenomFamily(program.name);
-    if (!_denominationMatches(coinData, expectedFamily)) return false;
-
-    // ── 3. Program/Series Alignment Check ─────────────────────────────────────
-    bool isSeriesMatched = program.matchesDbSeries(progSeries);
-    if (!isSeriesMatched) {
-      if (program.id == '2026_semiquincentennial_currency' &&
-          (progSeries.toLowerCase().contains('2026') || progSeries.toLowerCase().contains('america250') || progSeries.toLowerCase().contains('semiquincentennial'))) {
-        isSeriesMatched = true;
-      } else if (program.id == '2026_semiquincentennial_collectibles') {
-        // Constituent products span multiple Program/Series values:
-        // Peace Dollar, American Silver Eagle, American Gold Buffalo,
-        // American Innovation $1, United States Semiquincentennial, 2026 collectibles.
-        // None of these contain the program display name, so we accept any of them.
-        const collectibleSeries = {
-          'peace dollar', 'american silver eagle', 'american gold buffalo',
-          'american gold eagle', 'american innovation',
-          '2026 collectible', 'numismatic collectible',
-        };
-        final psLower = progSeries.toLowerCase();
-        if (collectibleSeries.any((s) => psLower.contains(s))) {
-          isSeriesMatched = true;
-        }
-      } else if (program.id == 'washington_quarters_classic' &&
-          (progSeries.toLowerCase().contains('washington') || progSeries.toLowerCase().contains('quarter'))) {
-        isSeriesMatched = true;
-      }
-    }
-    if (!isSeriesMatched) return false;
-
-    // ── 4. Multi-design vs Single-design Matching Rules ──────────────────────
-    const multiDesignProgramIds = {
-      'fifty_state_quarters', 'presidential_dollars', 'america_the_beautiful_quarters',
-      'american_women_quarters', 'american_innovation_dollars', '2026_semiquincentennial_currency',
-      'lincoln_bicentennial_cents_2009', 'dc_territories_quarters'
-    };
-
-    if (multiDesignProgramIds.contains(program.id) || program.name.contains('50 State') || program.name.contains('Presidential') || program.name.contains('America the Beautiful')) {
-      // Require design match
-      if (cNameLower.isNotEmpty && ((themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) ||
-                                    (title.isNotEmpty && (title.contains(cNameLower) || cNameLower.contains(title))))) {
-        if (slotYear.isEmpty || year.isEmpty || slotYear == year) {
-          return true;
-        }
-      }
-      if (cNameLower.contains('lowell') && themeSub.contains('lowell')) return true;
-      if (cNameLower.contains('mayflower') && themeSub.contains('mayflower')) return true;
-      return false;
-    }
-
-    // ── 4b. Collectibles program: match coin's Program/Series to slot name ──────
-    // The collectibles program spans products from different series (Peace Dollar,
-    // American Silver Eagle, American Gold Buffalo, American Innovation $1, etc.).
-    // The year==year fallback below would paint ALL 19 slots for any 2026 coin.
-    // Instead, require that the coin's Program/Series maps to the specific slot name,
-    // AND that the coin's Variety/Strike Type matches the slot's finish.
-    if (program.id == '2026_semiquincentennial_collectibles') {
-      if (cNameLower.isEmpty) return false;
-      final psLower = progSeries.toLowerCase();
-      final variety = (coinData['Variety']?.toString() ?? coinData['variety']?.toString() ?? '').toLowerCase();
-      final strikeType = (coinData['Strike Type']?.toString() ?? coinData['strike_type']?.toString() ?? '').toLowerCase();
-      final finishHint = '$variety $strikeType'.trim();
-
-      // ── Step 1: Series must map to this slot's product ──
-      bool slotSeriesMatch = false;
-      if (psLower.contains('peace dollar') && cNameLower.contains('peace')) { slotSeriesMatch = true; }
-      if (psLower.contains('morgan') && cNameLower.contains('morgan')) { slotSeriesMatch = true; }
-      if (psLower.contains('american silver eagle') && cNameLower.contains('silver') && cNameLower.contains('eagle')) { slotSeriesMatch = true; }
-      if (psLower.contains('american gold eagle') && cNameLower.contains('gold') && cNameLower.contains('eagle') && !cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
-      if (psLower.contains('american buffalo') && cNameLower.contains('buffalo')) { slotSeriesMatch = true; }
-      if (psLower.contains('american innovation') && cNameLower.contains('innovation')) { slotSeriesMatch = true; }
-      if ((psLower.contains('semiquincentennial') || psLower.contains('america250')) &&
-          (cNameLower.contains('trump') || cNameLower.contains('semiquincentennial') || cNameLower.contains('president'))) { slotSeriesMatch = true; }
-      if (!slotSeriesMatch) { return false; }
-
-      // ── Step 2: Finish must match slot name ──
-      // A "Reverse Proof" coin must not match an "Enhanced Uncirculated" slot, etc.
-      final slotIsRP    = cNameLower.contains('reverse proof');
-      final slotIsEU    = cNameLower.contains('enhanced uncirculated') || cNameLower.contains('enhanced unc');
-      final slotIsCong  = cNameLower.contains('congratulations');
-      final coinIsRP    = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
-      final coinIsEU    = finishHint.contains('enhanced') || finishHint.contains(' eu');
-      final coinIsCong  = finishHint.contains('congratulations') || finishHint.contains('cong');
-
-      if (slotIsRP   && !coinIsRP)   { return false; }
-      if (slotIsEU   && !coinIsEU)   { return false; }
-      if (slotIsCong && !coinIsCong) { return false; }
-      // If coin IS an RP/EU/Cong, it should not match a non-matching slot
-      if (coinIsRP   && !slotIsRP)   { return false; }
-      if (coinIsEU   && !slotIsEU)   { return false; }
-      if (coinIsCong && !slotIsCong) { return false; }
-
-      return slotYear.isEmpty || year.isEmpty || slotYear == year;
-    }
-
-    // Single-design series (Roosevelt Dimes, Morgan, Peace, SBA, Sacagawea, etc.)
-    if (slotYear.isNotEmpty && year.isNotEmpty) {
-      return slotYear == year;
-    }
-
-    if (cNameLower.isNotEmpty && ((themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) ||
-                                  (title.isNotEmpty && (title.contains(cNameLower) || cNameLower.contains(title))))) {
-      return true;
-    }
-
-    return false;
-  }
+  // _expectedDenomFamily, _denominationMatches, and _isMatch have been removed.
+  // All callers now use SlotResolver.isMatch() — the same function that drives
+  // the PDF banner and grid. One clerk, one count, everywhere.
 
   @override
   Widget build(BuildContext context) {
@@ -445,14 +276,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
                       for (var coin in prog.coins) {
                         if (coin.name.contains("Pending")) continue;
-                        final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
-                        totalCount += slotCount;
-                        for (var doc in docs) {
-                          if (_isMatch(doc.data() as Map<String, dynamic>, prog, coin)) {
-                            // Count matched varieties rather than matched year rows
-                            collectedCount += slotCount;
-                            break;
+                        final varieties = coin.varieties.isEmpty
+                            ? [const ChecklistVariety(id: '', label: '')]
+                            : coin.varieties;
+                        totalCount += varieties.length;
+                        for (var variety in varieties) {
+                          bool owned = false;
+                          for (var doc in docs) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            if (SlotResolver.isMatch(data, prog, coin) &&
+                                SlotResolver.matchesVariety(data, variety)) {
+                              owned = true;
+                              break;
+                            }
                           }
+                          if (owned) collectedCount++;
                         }
                       }
 
@@ -621,13 +459,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     int totalCount = 0;
     for (var coin in program.coins) {
       if (coin.name.contains("Pending")) continue;
-      final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
-      totalCount += slotCount;
-      for (var doc in docs) {
-        if (_isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
-          collectedCount += slotCount;
-          break;
+      final varieties = coin.varieties.isEmpty
+          ? [const ChecklistVariety(id: '', label: '')]
+          : coin.varieties;
+      totalCount += varieties.length;
+      for (var variety in varieties) {
+        bool owned = false;
+        for (var doc in docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (SlotResolver.isMatch(data, program, coin) &&
+              SlotResolver.matchesVariety(data, variety)) {
+            owned = true;
+            break;
+          }
         }
+        if (owned) collectedCount++;
       }
     }
     final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
@@ -1086,19 +932,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 for (var doc in docs) {
                                   final data =
                                       doc.data() as Map<String, dynamic>;
-                                  if (_isMatch(data, program, coin)) {
-                                    final docMint = (data['Mint Mark'] ?? '')
-                                        .toString()
-                                        .toUpperCase();
-                                    final vId = variety.id.toUpperCase();
-                                    final mintOk = vId == 'P' || vId == ''
-                                        ? docMint.isEmpty || docMint == 'P'
-                                        : docMint == vId ||
-                                            vId.startsWith(docMint);
-                                    if (mintOk) {
-                                      matchedDoc = doc;
-                                      break;
-                                    }
+                                  if (SlotResolver.isMatch(data, program, coin) &&
+                                      SlotResolver.matchesVariety(data, variety)) {
+                                    matchedDoc = doc;
+                                    break;
                                   }
                                 }
 

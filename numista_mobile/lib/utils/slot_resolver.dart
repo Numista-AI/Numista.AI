@@ -296,6 +296,28 @@ class SlotResolver {
       if (setStr.trim().isNotEmpty && cNameLower.isNotEmpty && setStr.contains(cNameLower)) {
         return true;
       }
+      // 2026 Annual Uncirculated Set: no SetContents in Firestore, but name/theme confirms
+      // it contains P + D of every circulating denomination.
+      // Match all denomination slots for the circulating program.
+      // July 4th Privy columns are still blocked by requiresPrivy gate in matchesVariety().
+      if (program.id == '2026_semiquincentennial_currency' && year == '2026') {
+        final nameField = (item['name']?.toString() ?? '').toLowerCase();
+        final isAnnualSet = themeSub.contains('250th') ||
+            nameField.contains('uncirculated coin set') ||
+            nameField.contains('annual') ||
+            progSeries.toLowerCase().contains('uncirculated set');
+        if (isAnnualSet) {
+          if (cNameLower.contains('cent') ||
+              cNameLower.contains('nickel') ||
+              cNameLower.contains('dime') ||
+              cNameLower.contains('quarter') ||
+              cNameLower.contains('half') ||
+              cNameLower.contains('dollar') ||
+              cNameLower.contains('native american')) {
+            return true;
+          }
+        }
+      }
       return false;
     }
 
@@ -382,6 +404,57 @@ class SlotResolver {
         if (themeSub.isNotEmpty && (themeSub.contains(cleanSlotName) || cleanSlotName.contains(themeSub))) return true;
         if (title.isNotEmpty && (title.contains(cleanSlotName) || cleanSlotName.contains(title))) return true;
       }
+    }
+
+    // 5b. 2026 Circulating Currency: require design-level match — no year+series wildcard.
+    // Without this, one Semiquincentennial coin (year=2026, seriesMatched=true) paints all 9 slots.
+    if (program.id == '2026_semiquincentennial_currency') {
+      final ts = themeSub; // already lowercased
+      final sl = cNameLower;
+      // Cent slot
+      if (sl.contains('cent') &&
+          (ts.contains('cent') || ts.contains('lincoln') || ts.contains('1776') ||
+           progSeries.toLowerCase().contains('cent'))) {
+        return true;
+      }
+      // Nickel slot
+      if (sl.contains('nickel') &&
+          (ts.contains('nickel') || ts.contains('jefferson') || ts.contains('1776') ||
+           progSeries.toLowerCase().contains('nickel'))) {
+        return true;
+      }
+      // Dime slot
+      if (sl.contains('dime') &&
+          (ts.contains('dime') || ts.contains('roosevelt') || ts.contains('emerging') ||
+           progSeries.toLowerCase().contains('dime'))) {
+        return true;
+      }
+      // Half Dollar slot: enduring liberty stored as Semiquincentennial + '250th anniversary'
+      if (sl.contains('half') &&
+          (ts.contains('half') || ts.contains('enduring') || ts.contains('250th') ||
+           ts.contains('independence') || progSeries.toLowerCase().contains('half'))) {
+        return true;
+      }
+      // Dollar slot: Native American $1 Coin — Polly Cooper (Oneida Allies at Valley Forge)
+      // Firestore Program/Series: 'Sacagawea & Native American Dollars'
+      // Theme/Subject includes 'oneida', 'polly cooper', 'valley forge', 'sacagawea'
+      if (sl.contains('dollar') || sl.contains('native american')) {
+        if (ts.contains('polly') || ts.contains('oneida') || ts.contains('native american') ||
+            ts.contains('valley forge') || ts.contains('sacagawea') ||
+            progSeries.toLowerCase().contains('native american') ||
+            progSeries.toLowerCase().contains('sacagawea')) {
+          return true;
+        }
+      }
+      // Quarter slots: design keyword must be in BOTH slot name AND theme
+      if (sl.contains('quarter')) {
+        if (sl.contains('mayflower')     && ts.contains('mayflower'))     { return true; }
+        if (sl.contains('revolutionary') && ts.contains('revolutionary')) { return true; }
+        if (sl.contains('declaration')   && ts.contains('declaration'))   { return true; }
+        if (sl.contains('constitution')  && ts.contains('constitution'))  { return true; }
+        if (sl.contains('gettysburg')    && ts.contains('gettysburg'))    { return true; }
+      }
+      return false; // No design match → reject
     }
 
     // Single design series where year + series match is sufficient
@@ -543,6 +616,20 @@ class SlotResolver {
     if (baseMint == 'P' &&
         (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA') &&
         !isProof && !isSMS && !isEnhancedUnc) { return true; }
+
+    // ── Annual uncirculated set — D-UNC blank-mint guard ─────────────────────
+    // Sets (e.g. 26RJ) store no Mint Mark field but contain both P and D cards.
+    // The P blank-mint guard above already covers P-UNC.
+    // This guard covers D-UNC: allow match when the item is a kept set and
+    // mintMark is absent. Individual coins with Mint Mark 'D' are already caught
+    // by the exact-match branch above; this branch is a set-only fallback.
+    if (baseMint == 'D' &&
+        (mintMark.isEmpty || mintMark == 'NONE') &&
+        !isProof && !isSMS && !isEnhancedUnc) {
+      final isAnnualSet = (item['is_set'] as bool? ?? false) ||
+          (item['Denomination']?.toString() ?? '').toLowerCase() == 'set';
+      if (isAnnualSet) return true;
+    }
 
     return false;
   }
