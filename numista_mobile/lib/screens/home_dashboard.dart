@@ -1547,10 +1547,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.245',
+    version: 'v4.246',
     date: '2026-08-27',
     description: 'Programs Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
+      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Auto-versioning hook changes (v4.244)',
+      'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
+    ],
+  ),
+  _Release(
+    version: 'v4.245',
+    date: '2026-08-27',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
