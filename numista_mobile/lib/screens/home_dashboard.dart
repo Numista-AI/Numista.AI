@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.252',
+    date: '2026-08-27',
+    description: 'Card-count Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Auto-version hook files',
+      'Card-count: use matchesVariety per variety â€” eliminates 100% overcounting',
+      'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
+      'Circulating: add Native American dollar slot + set expansion authorized by owner',
+      'Auto-version v4.249 hook files',
+      'Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard',
+      'Auto-version v4.247 hook files',
+      'Auto-versioning and firebase cache',
+    ],
+  ),
+  _Release(
     version: 'v4.251',
     date: '2026-08-27',
     description: 'Circulating-2026 Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
       'Auto-version hook files',
