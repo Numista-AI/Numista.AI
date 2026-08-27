@@ -276,14 +276,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
                       for (var coin in prog.coins) {
                         if (coin.name.contains("Pending")) continue;
-                        final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
-                        totalCount += slotCount;
-                        for (var doc in docs) {
-                          if (SlotResolver.isMatch(doc.data() as Map<String, dynamic>, prog, coin)) {
-                            // Count matched varieties rather than matched year rows
-                            collectedCount += slotCount;
-                            break;
+                        final varieties = coin.varieties.isEmpty
+                            ? [const ChecklistVariety(id: '', label: '')]
+                            : coin.varieties;
+                        totalCount += varieties.length;
+                        for (var variety in varieties) {
+                          bool owned = false;
+                          for (var doc in docs) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            if (SlotResolver.isMatch(data, prog, coin) &&
+                                SlotResolver.matchesVariety(data, variety)) {
+                              owned = true;
+                              break;
+                            }
                           }
+                          if (owned) collectedCount++;
                         }
                       }
 
@@ -452,13 +459,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     int totalCount = 0;
     for (var coin in program.coins) {
       if (coin.name.contains("Pending")) continue;
-      final slotCount = coin.varieties.isEmpty ? 1 : coin.varieties.length;
-      totalCount += slotCount;
-      for (var doc in docs) {
-        if (SlotResolver.isMatch(doc.data() as Map<String, dynamic>, program, coin)) {
-          collectedCount += slotCount;
-          break;
+      final varieties = coin.varieties.isEmpty
+          ? [const ChecklistVariety(id: '', label: '')]
+          : coin.varieties;
+      totalCount += varieties.length;
+      for (var variety in varieties) {
+        bool owned = false;
+        for (var doc in docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (SlotResolver.isMatch(data, program, coin) &&
+              SlotResolver.matchesVariety(data, variety)) {
+            owned = true;
+            break;
+          }
         }
+        if (owned) collectedCount++;
       }
     }
     final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
@@ -917,19 +932,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 for (var doc in docs) {
                                   final data =
                                       doc.data() as Map<String, dynamic>;
-                                  if (SlotResolver.isMatch(data, program, coin)) {
-                                    final docMint = (data['Mint Mark'] ?? '')
-                                        .toString()
-                                        .toUpperCase();
-                                    final vId = variety.id.toUpperCase();
-                                    final mintOk = vId == 'P' || vId == ''
-                                        ? docMint.isEmpty || docMint == 'P'
-                                        : docMint == vId ||
-                                            vId.startsWith(docMint);
-                                    if (mintOk) {
-                                      matchedDoc = doc;
-                                      break;
-                                    }
+                                  if (SlotResolver.isMatch(data, program, coin) &&
+                                      SlotResolver.matchesVariety(data, variety)) {
+                                    matchedDoc = doc;
+                                    break;
                                   }
                                 }
 
