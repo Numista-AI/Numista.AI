@@ -256,6 +256,19 @@
 
 
 
+
+## v4.254 — 2026-08-28
+**Audit Enhancements & Platform Updates**
+
+- Audit: sync SCAN_REPORT.md system audit with 100% test pass
+- Auto-version hook files
+- Card-count: use matchesVariety per variety â€” eliminates 100% overcounting
+- Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets
+- Circulating: add Native American dollar slot + set expansion authorized by owner
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+
 ## v4.253 — 2026-08-27
 **Card-count Enhancements & Platform Updates**
 
