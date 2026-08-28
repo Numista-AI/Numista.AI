@@ -257,6 +257,13 @@
 
 
 
+
+## v4.255 — 2026-08-28
+**Release Enhancements & Platform Updates**
+
+- Release: auto-version v4.254 hook files
+- Audit: sync SCAN_REPORT.md system audit with 100% test pass
+
 ## v4.254 — 2026-08-28
 **Audit Enhancements & Platform Updates**
 

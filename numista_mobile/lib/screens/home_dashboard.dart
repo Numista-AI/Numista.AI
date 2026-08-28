@@ -1547,10 +1547,20 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.255',
+    date: '2026-08-28',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: auto-version v4.254 hook files',
+      'Audit: sync SCAN_REPORT.md system audit with 100% test pass',
+    ],
+  ),
+  _Release(
     version: 'v4.254',
     date: '2026-08-28',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: sync SCAN_REPORT.md system audit with 100% test pass',
       'Auto-version hook files',
