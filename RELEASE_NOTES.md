@@ -254,6 +254,52 @@
 
 
 
+
+
+
+
+## v4.255 — 2026-08-28
+**Release Enhancements & Platform Updates**
+
+- Release: auto-version v4.254 hook files
+- Audit: sync SCAN_REPORT.md system audit with 100% test pass
+
+## v4.254 — 2026-08-28
+**Audit Enhancements & Platform Updates**
+
+- Audit: sync SCAN_REPORT.md system audit with 100% test pass
+- Auto-version hook files
+- Card-count: use matchesVariety per variety â€” eliminates 100% overcounting
+- Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets
+- Circulating: add Native American dollar slot + set expansion authorized by owner
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+
+## v4.253 — 2026-08-27
+**Card-count Enhancements & Platform Updates**
+
+- Auto-version hook files
+- Card-count: use matchesVariety per variety â€” eliminates 100% overcounting
+- Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets
+- Circulating: add Native American dollar slot + set expansion authorized by owner
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+
+## v4.252 — 2026-08-27
+**Card-count Enhancements & Platform Updates**
+
+- Auto-version hook files
+- Card-count: use matchesVariety per variety â€” eliminates 100% overcounting
+- Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets
+- Circulating: add Native American dollar slot + set expansion authorized by owner
+- Auto-version v4.249 hook files
+- Circulating: Annual Set matches all denom slots; design guard blocks year+series wildcard
+- Auto-version v4.247 hook files
+- Auto-versioning and firebase cache
+
 ## v4.251 — 2026-08-27
 **Circulating-2026 Enhancements & Platform Updates**
 
