@@ -328,7 +328,8 @@ class SlotResolver {
       if (pNameLower.contains('half dollar') && !denom.contains('half')) return false;
       if (pNameLower.contains('dollar') && !pNameLower.contains('half') && !denom.contains('dollar') && !denom.contains('\$1') && !denom.contains('1 dollar')) return false;
       if (pNameLower.contains('cent') && !denom.contains('cent') && !denom.contains('penny') && !denom.contains('1c')) return false;
-      if (pNameLower.contains('nickel') && !denom.contains('nickel') && !denom.contains('5c')) return false;
+      if (pNameLower.contains('nickel') && !denom.contains('nickel') && !denom.contains('5c')
+          && !denom.contains('five cent') && !denom.contains('5 cent')) { return false; }
       if (pNameLower.contains('dime') && !denom.contains('dime') && !denom.contains('10c')) return false;
     }
 
