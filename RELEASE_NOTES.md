@@ -259,6 +259,121 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+## v4.267 — 2026-08-31
+**Startup Enhancements & Platform Updates**
+
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+
+## v4.266 — 2026-08-31
+**Deps Enhancements & Platform Updates**
+
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+
+## v4.265 — 2026-08-31
+**Attorney-portal Enhancements & Platform Updates**
+
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+
+## v4.264 — 2026-08-31
+**Attorney Enhancements & Platform Updates**
+
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.263 — 2026-08-31
+**Security Enhancements & Platform Updates**
+
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.262 — 2026-08-31
+**Deps Enhancements & Platform Updates**
+
+- Deps: update pip and npm dependencies to resolve dependabot vulnerabilities
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.261 — 2026-08-31
+**Lint Enhancements & Platform Updates**
+
+- Lint: use null-aware map elements in ticket_service.dart
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.260 — 2026-08-31
+**Lint Enhancements & Platform Updates**
+
+- Lint: remove unused imports in customer_service_screen.dart
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.259 — 2026-08-31
+**E2e Enhancements & Platform Updates**
+
+- E2e: fix Playwright locator to support both production (US Mint Coin Programs) and dev (Mint Set) text via aria-label
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.258 — 2026-08-31
+**E2e Enhancements & Platform Updates**
+
+- E2e: fix Mint Set tab locator timeout and add numista_qc to overnight CI
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
+## v4.257 — 2026-08-31
+**Audit Enhancements & Platform Updates**
+
+- Audit: sync SCAN_REPORT.md system audit with August 31 scan
+
 ## v4.256 — 2026-08-31
 **Release Enhancements & Platform Updates**
 
