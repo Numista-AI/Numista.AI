@@ -27,6 +27,9 @@ logger = logging.getLogger("BrainProcessor")
 db = None
 genai_client = None
 try:
+    _sa_path = Path(__file__).parent / "serviceAccountKey.json"
+    if _sa_path.exists():
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_sa_path.resolve())
     credentials, _ = google.auth.default()
     db = firestore.Client(credentials=credentials, project=PROJECT_ID)
     genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)

@@ -186,6 +186,9 @@ LOCATION = "global"
 USER_CONTENT_BUCKET = "numista-uploads-studio-9101802118-8c9a8"
 
 # Initialize Firebase/Firestore 
+_sa_path = Path(__file__).parent / "serviceAccountKey.json"
+if _sa_path.exists():
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_sa_path.resolve())
 credentials, _ = google.auth.default()
 db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 
