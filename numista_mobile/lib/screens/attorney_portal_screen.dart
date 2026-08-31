@@ -55,6 +55,7 @@ class AttorneyPortalScreen extends StatefulWidget {
 
 class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
   bool _loading = true;
+  bool _isNoToken = false;
   String? _error;
   Map<String, dynamic>? _report;
   List<Map<String, dynamic>> _coins = [];
@@ -65,6 +66,14 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
   @override
   void initState() {
     super.initState();
+    // Guard: Attorney Portal is only meaningful when a share token is present.
+    // Accessing it from the sidebar nav passes an empty token — show a
+    // friendly placeholder instead of crashing with a Firestore empty-path error.
+    if (widget.token.isEmpty) {
+      _isNoToken = true;
+      _loading = false;
+      return;
+    }
     _loadReport();
   }
 
@@ -190,9 +199,11 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         appBar: _buildAppBar(),
         body: _loading
             ? _buildLoading()
-            : _error != null
-                ? _buildError()
-                : _buildBody(),
+            : _isNoToken
+                ? _buildNoToken()
+                : _error != null
+                    ? _buildError()
+                    : _buildBody(),
       ),
     );
   }
@@ -280,6 +291,75 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
                 'Contact the collection owner at Numista.AI to request a new report link.',
                 style: TextStyle(color: _kTextSecondary, fontSize: 12),
                 textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shown when the Attorney Portal is accessed from the sidebar nav without a
+  /// share token. This is expected behaviour — the portal requires a URL that
+  /// is generated from Estate Planning. No Firestore calls are made here.
+  Widget _buildNoToken() {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(28),
+        constraints: const BoxConstraints(maxWidth: 480),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _kGold.withAlpha(80)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: _kGold.withAlpha(20),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: _kGold.withAlpha(60)),
+              ),
+              child: const Icon(Icons.link_rounded, color: _kGold, size: 28),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No Report Link Provided',
+              style: TextStyle(
+                  color: _kGold, fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'The Attorney Portal is only accessible via a secure share link '
+              'generated from Estate Planning.',
+              style: TextStyle(color: _kTextSecondary, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kNavy,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _kCardBorder),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: _kAmber, size: 16),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Go to Estate Planning → generate a report → '
+                      'tap "Share with Attorney" to create a secure link.',
+                      style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
