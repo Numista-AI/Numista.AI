@@ -205,6 +205,17 @@ service cloud.firestore {
       }
     }
 
+    // ── Attorney Portal Tokens (ITEM B — B5) ─────────────────────────────────
+    // SHA-256 hashes of raw attorney tokens.
+    // All reads and writes go through Cloud Run (POST /api/attorney/issue,
+    // GET /api/attorney/snapshot, POST /api/attorney/revoke).
+    // No client SDK may read or write this collection directly —
+    // including the authenticated owner.
+    // Admin SDK bypasses these rules (standard Firestore behavior).
+    match /attorney_tokens/{tokenHash} {
+      allow read, write: if false;  // Cloud Run + Admin SDK only
+    }
+
     // ── Family Sub-Account Resource Groups (authenticated member access) ──────
     match /family_groups/{familyGroupId} {
       allow read: if request.auth != null;
