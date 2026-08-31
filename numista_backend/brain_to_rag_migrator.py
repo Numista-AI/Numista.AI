@@ -31,7 +31,9 @@ from typing import Optional
 import google.auth
 from google.api_core.exceptions import ResourceExhausted
 from google.cloud import firestore
+from google.cloud.firestore_v1.vector import Vector
 from google import genai
+from google.genai import types as genai_types
 
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
@@ -43,7 +45,8 @@ MIN_CONTENT_LENGTH = 200
 BATCH_SIZE = 10
 BASE_RATE_DELAY = 1.0
 MAX_RETRIES = 3
-EXPECTED_VECTOR_DIM = 3072
+EXPECTED_VECTOR_DIM = 1536   # Phase 4: 1536-dim MRL cut (Firestore cap is 2048; 3072 is illegal for indexing)
+OUTPUT_DIMENSIONALITY = 1536  # Passed to gemini-embedding-2 via EmbedContentConfig
 MAX_ALLOWLIST_ENTRIES = 50
 
 # 10 named pilot documents - resolved to current filename winners at runtime.
@@ -92,9 +95,32 @@ def is_hard_deny(filename: str) -> bool:
     return any(kw in fname_lower for kw in HARD_DENY_FILENAME_KEYWORDS)
 
 
+def probe_embedding(client) -> None:
+    """
+    Runs a single probe call before any writes.
+    Asserts output is the correct dimension and type.
+    Halts execution on failure.
+    """
+    resp = client.models.embed_content(
+        model=EMBEDDING_MODEL,
+        contents="probe",
+        config=genai_types.EmbedContentConfig(output_dimensionality=OUTPUT_DIMENSIONALITY),
+    )
+    if hasattr(resp, "embeddings") and len(resp.embeddings) > 0:
+        probe_vec = resp.embeddings[0].values
+    elif hasattr(resp, "embedding"):
+        probe_vec = resp.embedding.values
+    else:
+        raise AssertionError("Probe: unrecognised response shape")
+
+    assert isinstance(probe_vec, (list, Vector)) and len(probe_vec) == 1536, \
+        f"Probe failed: type={type(probe_vec).__name__}, len={len(probe_vec)}"
+    logger.info(f"PROBE_OK: dimension={len(probe_vec)}, type={type(probe_vec).__name__}")
+
+
 def generate_embedding(client, text: str) -> Optional[list]:
     """
-    Generate 768-dim embedding via gemini-embedding-2.
+    Generate 1536-dim embedding via gemini-embedding-2 with MRL output_dimensionality.
     Exponential backoff on ResourceExhausted. Returns None on failure.
     Never returns a partial or zero-length vector.
     """
@@ -103,6 +129,7 @@ def generate_embedding(client, text: str) -> Optional[list]:
             resp = client.models.embed_content(
                 model=EMBEDDING_MODEL,
                 contents=text.strip(),
+                config=genai_types.EmbedContentConfig(output_dimensionality=OUTPUT_DIMENSIONALITY),
             )
             if hasattr(resp, "embedding") and hasattr(resp.embedding, "values"):
                 vec = list(resp.embedding.values)
@@ -128,6 +155,7 @@ def generate_embedding(client, text: str) -> Optional[list]:
 
     logger.error(f"  EMBED_FAILED after {MAX_RETRIES} retries")
     return None
+
 
 
 def probe_embedding_dim(client) -> bool:
@@ -289,8 +317,7 @@ def run(args):
         logger.info("           python brain_to_rag_migrator.py --allowlist-file allowlist.txt --write-production")
         return
 
-    if not probe_embedding_dim(client):
-        sys.exit(1)
+    probe_embedding(client)  # AssertionError halts execution if dimension != 1536
 
     batch = db.batch()
     batch_count = 0
@@ -333,7 +360,7 @@ def run(args):
             "title": Path(entry["filename"]).stem,
             "source_document": entry["filename"],
             "content_text": content_text,
-            "embedding_vector": vec,
+            "embedding_vector": Vector(vec),   # Phase 4: Firestore Vector type (not raw list)
             "category": entry["category"],
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -356,10 +383,11 @@ def run(args):
     logger.info("=" * 64)
     logger.info("DONE:")
     logger.info(f"  {written} written")
-    logger.info(f"  {skipped_exists} skipped (SKIP_EXISTS, valid 768-dim vector)")
+    logger.info(f"  {skipped_exists} skipped (SKIP_EXISTS, valid {EXPECTED_VECTOR_DIM}-dim vector)")
     logger.info(f"  {overwritten} overwritten (malformed vector replaced)")
     logger.info(f"  {failed_embed} failed embedding (no write)")
     logger.info("=" * 64)
+
 
 
 def main():

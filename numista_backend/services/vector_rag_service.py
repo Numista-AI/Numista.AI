@@ -3,6 +3,10 @@ Numismatic Semantic Vector RAG Service for MORGAN
 Binds exclusively to gemini-embedding-2 on Vertex AI / Google GenAI SDK.
 Provides semantic retrieval across official Red Book standards, PCGS Photograde,
 and VAM variety reference chunks with fail-safe cold-start fallback.
+
+Phase 4: Dual-path retrieval behind RAG_RETRIEVAL env flag.
+  cosine_all  (default) — fetch all docs, in-memory cosine, no limit(50).
+  find_nearest           — Firestore native KNN; requires 1536-dim Vector index READY.
 """
 
 import os
@@ -10,17 +14,25 @@ import logging
 import math
 from typing import List, Dict, Any, Optional
 
+import google.api_core.exceptions
+from google.cloud.firestore_v1.vector import Vector
+from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
+from google.genai import types as genai_types
+
 from routes.deps import genai_client, db
 
 logger = logging.getLogger("numista_backend.vector_rag_service")
 
 # Active 2026 Embedding Model Binding
 ACTIVE_EMBEDDING_MODEL = "gemini-embedding-2"
-MAX_COSINE_DISTANCE_THRESHOLD = 0.45  # Distance > 0.45 rejected as low-relevance
+RAG_EMBEDDING_DIM = 1536                        # Phase 4: MRL cut; Firestore cap is 2048
+MAX_COSINE_DISTANCE_THRESHOLD = 0.45            # distance <= 0.45 (similarity >= 0.55); Phase 3 semantics unchanged
+RAG_RETRIEVAL = os.environ.get("RAG_RETRIEVAL", "cosine_all")  # cosine_all | find_nearest
+FIELDS_TO_EXCLUDE = {"embedding_vector", "cosine_distance"}    # never sent to Morgan's prompt
 
 
 def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
-    """Calculates cosine similarity between two float vectors."""
+    """Calculates cosine similarity between two equal-length float vectors."""
     if not vec_a or not vec_b or len(vec_a) != len(vec_b):
         return 0.0
     dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
@@ -44,7 +56,7 @@ class VectorRAGService:
 
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """
-        Generates 768-dim float embedding using gemini-embedding-2.
+        Generates 1536-dim float embedding using gemini-embedding-2 with MRL output_dimensionality.
         """
         if not self.client or not text or not text.strip():
             return None
@@ -53,6 +65,7 @@ class VectorRAGService:
             resp = self.client.models.embed_content(
                 model=self.model_id,
                 contents=text.strip(),
+                config=genai_types.EmbedContentConfig(output_dimensionality=RAG_EMBEDDING_DIM),
             )
             # Support both google-genai SDK response shapes
             if hasattr(resp, "embedding") and hasattr(resp.embedding, "values"):
@@ -66,6 +79,83 @@ class VectorRAGService:
             logger.warning(f"Embedding generation error via {self.model_id}: {e}")
             return None
 
+    def _cosine_all(self, query_vector: List[float], limit: int) -> List[Dict[str, Any]]:
+        """
+        Phase 4a default path: fetch all docs, in-memory cosine. No limit(50).
+        Skips any doc whose embedding length != query length (SKIP_DIM).
+        """
+        docs = list(self.db.collection("numismatic_reference_chunks").stream())
+        scored = []
+        for doc in docs:
+            data = doc.to_dict() or {}
+            vec = data.get("embedding_vector", [])
+            if isinstance(vec, Vector):
+                vec = list(vec)
+            if not vec:
+                continue
+            if len(vec) != len(query_vector):
+                logger.warning(f"SKIP_DIM {doc.id}: vec={len(vec)}, query={len(query_vector)}")
+                continue
+            sim = cosine_similarity(query_vector, vec)
+            distance = 1.0 - sim
+            if distance <= MAX_COSINE_DISTANCE_THRESHOLD:
+                scored.append({
+                    "chunk_id": doc.id,
+                    "distance": round(distance, 4),
+                    "similarity_score": round(sim, 4),
+                    **{k: v for k, v in data.items() if k not in FIELDS_TO_EXCLUDE},
+                })
+        scored.sort(key=lambda x: x["similarity_score"], reverse=True)
+        return scored[:limit]
+
+    def _find_nearest(self, query_vector: List[float], limit: int) -> List[Dict[str, Any]]:
+        """
+        Phase 4b KNN path: Firestore native find_nearest.
+        Requires index READY + all docs as Vector(1536).
+        Falls back to cosine_all on any transient GCP error.
+        """
+        try:
+            results = (
+                self.db.collection("numismatic_reference_chunks")
+                .find_nearest(
+                    vector_field="embedding_vector",
+                    query_vector=Vector(query_vector),
+                    distance_measure=DistanceMeasure.COSINE,
+                    limit=limit,
+                    distance_result_field="cosine_distance",
+                )
+                .stream()
+            )
+            chunks = []
+            for doc in results:
+                data = doc.to_dict() or {}
+                distance = data.get("cosine_distance", None)
+                if distance is None:
+                    # cosine_distance missing from snapshot — compute client-side
+                    vec = data.get("embedding_vector", [])
+                    if isinstance(vec, Vector):
+                        vec = list(vec)
+                    if vec and len(vec) == len(query_vector):
+                        logger.warning(f"cosine_distance missing for {doc.id}; computing client-side")
+                        distance = 1.0 - cosine_similarity(query_vector, vec)
+                    else:
+                        logger.warning(
+                            f"SKIP_DIM (fallback) {doc.id}: "
+                            f"vec={len(vec) if vec else 0}, query={len(query_vector)}"
+                        )
+                        continue
+                if distance <= MAX_COSINE_DISTANCE_THRESHOLD:
+                    chunks.append({
+                        "chunk_id": doc.id,
+                        "distance": round(distance, 4),
+                        "similarity_score": round(1.0 - distance, 4),
+                        **{k: v for k, v in data.items() if k not in FIELDS_TO_EXCLUDE},
+                    })
+            return chunks   # already ordered by distance (server-side)
+        except google.api_core.exceptions.GoogleAPIError as e:
+            logger.warning(f"find_nearest failed ({e}); falling back to cosine_all")
+            return self._cosine_all(query_vector, limit)
+
     def query_reference_chunks(
         self,
         query_text: str,
@@ -74,44 +164,25 @@ class VectorRAGService:
     ) -> List[Dict[str, Any]]:
         """
         Queries indexed numismatic reference chunks.
-        Performs in-memory / Firestore vector distance matching with fallback.
+        Routes to cosine_all or find_nearest based on RAG_RETRIEVAL env flag.
         """
         query_vector = self.generate_embedding(query_text)
         if not query_vector or not self.db:
             return []
 
-        scored_results: List[Dict[str, Any]] = []
+        if RAG_RETRIEVAL == "find_nearest":
+            results = self._find_nearest(query_vector, limit)
+        else:
+            results = self._cosine_all(query_vector, limit)
 
-        try:
-            chunks_ref = self.db.collection("numismatic_reference_chunks")
-            if category:
-                query = chunks_ref.where("category", "==", category).limit(50)
-            else:
-                query = chunks_ref.limit(50)
+        # Retrieval log — chunk_id + distance + similarity_score visible in Cloud Run logs
+        hit_summary = ", ".join(
+            f"{r['chunk_id']}:d={r['distance']}:s={r['similarity_score']}"
+            for r in results
+        )
+        logger.info(f"RAG retrieval={RAG_RETRIEVAL} hits={len(results)} [{hit_summary}]")
 
-            docs = list(query.stream())
-            for doc in docs:
-                chunk_data = doc.to_dict() or {}
-                chunk_vec = chunk_data.get("embedding_vector")
-                if chunk_vec and isinstance(chunk_vec, list):
-                    sim = cosine_similarity(query_vector, chunk_vec)
-                    distance = 1.0 - sim
-                    if distance <= MAX_COSINE_DISTANCE_THRESHOLD:
-                        scored_results.append({
-                            "chunk_id": doc.id,
-                            "title": chunk_data.get("title", ""),
-                            "source_document": chunk_data.get("source_document", "Official Numismatic Canon"),
-                            "content_text": chunk_data.get("content_text", ""),
-                            "similarity_score": round(sim, 4),
-                            "distance": round(distance, 4),
-                        })
-
-            # Sort by highest similarity
-            scored_results.sort(key=lambda x: x["similarity_score"], reverse=True)
-        except Exception as qe:
-            logger.warning(f"Vector search retrieval error: {qe}")
-
-        return scored_results[:limit]
+        return results
 
     def build_rag_prompt_context(self, query_text: str, limit: int = 3) -> str:
         """
