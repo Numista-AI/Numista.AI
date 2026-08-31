@@ -47,11 +47,16 @@ service cloud.firestore {
       allow delete: if isOwner(email);
 
       // Owner creates a new coin:
-      //   - is_demo must not be true (false or absent only)
-      //   - is_demo_cleared must not be true (false or absent only)
+      //   - is_demo MUST be present in the document AND explicitly false.
+      //     get('is_demo', false) != true would allow omitting the field entirely;
+      //     the display filter WHERE is_demo == false would then hide that coin.
+      //   - is_demo_cleared MUST be present AND explicitly false.
+      //   Admin SDK / Cloud Run creators bypass these rules and must write both
+      //   fields in the payload (enforced by server-side payload unit tests).
       allow create: if isOwner(email)
-                    && request.resource.data.get('is_demo', false) != true
-                    && request.resource.data.get('is_demo_cleared', false) != true;
+                    && request.resource.data.keys().hasAll(['is_demo', 'is_demo_cleared'])
+                    && request.resource.data.is_demo == false
+                    && request.resource.data.is_demo_cleared == false;
 
       // Owner updates an existing coin:
       //   - may not change is_demo (any direction)
@@ -62,8 +67,13 @@ service cloud.firestore {
                           .hasAny(['is_demo', 'is_demo_cleared']);
     }
 
-    // Profile document: owner may update all fields EXCEPT sandbox_cleared.
-    // sandbox_cleared is set by the backend via POST /api/sandbox/clear (Admin SDK).
+    // Profile document: owner may update general fields but NOT sandbox_cleared
+    // or the three estate-entitlement flags.
+    //   - sandbox_cleared: set by POST /api/sandbox/clear (Admin SDK only)
+    //   - is_lifetime_family_estate: set by set_owner_entitlements.py (Admin SDK only)
+    //   - is_ai_qc_account:          set by set_owner_entitlements.py (Admin SDK only)
+    //   - beta_tester:               set by set_owner_entitlements.py (Admin SDK only)
+    // Admin SDK bypasses all rules (standard Firestore behavior).
     match /users/{email}/profile {
       allow read:   if isOwner(email);
       allow create: if isOwner(email);
@@ -71,7 +81,12 @@ service cloud.firestore {
       allow update: if isOwner(email)
                     && !request.resource.data.diff(resource.data)
                           .affectedKeys()
-                          .hasAny(['sandbox_cleared']);
+                          .hasAny([
+                            'sandbox_cleared',
+                            'is_lifetime_family_estate',
+                            'is_ai_qc_account',
+                            'beta_tester'
+                          ]);
     }
 
     // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
@@ -188,6 +203,17 @@ service cloud.firestore {
       match /access_logs/{logId} {
         allow read, write: if false; // backend service account only
       }
+    }
+
+    // ── Attorney Portal Tokens (ITEM B — B5) ─────────────────────────────────
+    // SHA-256 hashes of raw attorney tokens.
+    // All reads and writes go through Cloud Run (POST /api/attorney/issue,
+    // GET /api/attorney/snapshot, POST /api/attorney/revoke).
+    // No client SDK may read or write this collection directly —
+    // including the authenticated owner.
+    // Admin SDK bypasses these rules (standard Firestore behavior).
+    match /attorney_tokens/{tokenHash} {
+      allow read, write: if false;  // Cloud Run + Admin SDK only
     }
 
     // ── Family Sub-Account Resource Groups (authenticated member access) ──────
