@@ -48,7 +48,7 @@ class TicketService {
       'description': description,
       'category': category,
       'app_version': appVersion,
-      if (diagnosticPackage != null) 'diagnostic_package': diagnosticPackage,
+      'diagnostic_package': ?diagnosticPackage,
     };
 
     final resp = await http.post(
@@ -129,9 +129,9 @@ class TicketService {
     String? status,
   }) async {
     final body = <String, dynamic>{
-      if (subject != null) 'subject': subject,
-      if (description != null) 'description': description,
-      if (status != null) 'status': status,
+      'subject': ?subject,
+      'description': ?description,
+      'status': ?status,
     };
 
     final resp = await http.patch(
