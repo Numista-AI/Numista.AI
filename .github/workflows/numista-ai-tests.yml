@@ -54,13 +54,20 @@ jobs:
         working-directory: numista_tests
         run: npx playwright install chromium --with-deps
 
-      # ── 5. Run all tests ─────────────────────────────────────────
+      # 📸 5. Run all tests 📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸📸
       - name: Run Playwright tests
         working-directory: numista_tests
         run: npx playwright test --reporter=list,json,html
         env:
           CI: true
         continue-on-error: true  # Always generate report even if tests fail
+
+      - name: Run QC Consolidation tests
+        working-directory: numista_qc
+        run: npm ci --prefer-offline || npm install && npx playwright test --reporter=list,json,html
+        env:
+          CI: true
+        continue-on-error: true
 
       # ── 6. Generate morning report ──────────────────────────────
       - name: Generate morning report
