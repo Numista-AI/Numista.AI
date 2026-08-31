@@ -1,0 +1,71 @@
+# Morgan RAG Phase 3 allowlist — 50 documents
+# Generated: 2026-08-31
+# Selection rationale: core references, coin guides, LC checklists,
+# Semiquincentennial, terminology, grading, 2026-specific data.
+# Excluded: thin image summaries, monthly newsletters, internal/ToS docs, duplicates.
+
+# --- Pilot 10 (already in Firestore, idempotent) ---
+100_Famous_US_Coin_Errors_1787769192
+Coin Counterfeit Diagnostics Guide_1787769209
+Diagnostic & Authentication Prompt Guide_1787769273
+Grading-Standards_1787769680
+List of Official US Mint Terms_1787769370
+Numismatic Abbreviations_1787769478
+US_Mint_Official_2026_Specifications_Truth_Table_1788207074
+guide-to-us-type-coins_1787769848
+official us coin nomenclatures_1787769492
+usmint_2026_harvest_report_1787770438
+
+# --- Coin guides (PCGS/NGC reference series) ---
+guide-to-morgan-silver-dollars_1787769811
+guide-to-washington-quarters_1787769864
+guide-to-lincoln-head-cents_1787769774
+guide-to-silver-dollars_1787769832
+guide-to-kennedy-half-dollars_1787769738
+guide-to-liberty-walking-halves_1787769753
+guide-to-franklin-half-dollars_1787769717
+guide-to-modern-commemoratives_1787769794
+
+# --- LC-series Whitman checklists ---
+LC-152-Morgan-Dollar-Checklist_1787770526
+LC-142-Lincoln-Cent-Checklist_1787770126
+LC-151-Kennedy-Half-Dollar-Checklist_1787770516
+LC-145-Jefferson-Nickel-Checklist_1787770328
+LC-141-Flying-Eagle-Cent-and-Indian-Head-Cent-Checklist_1787770115
+LC-4760-American-Silver-Eagle-Checklist_1787770612
+LC-8436-Innovation-Dollar-Checklist_1787770668
+LC-3843-National-Park-Quarter-Checklist_1787770603
+LC-1385-Small-Size-Paper-Money-Checklist_1787769887
+LC-KGW-50-State-Commemorative-Quarter-Checklist_1787770714
+LC-144-Buffalo-Nickel-Checklist_1787770293
+LC-154-Eisenhower-Dollar-Checklist_1787770571
+LC-4745-Ancient-Roman-Coins-Checklist_1787769358
+
+# --- Semiquincentennial / 250th anniversary ---
+Semiquincentennial Coins_ US 250th Anniversary Medals _ U.S. Mint_1787769527
+Semiquincentennial Coins_ US 250th Anniversary Medals _ U.S. Mint v2_1784734092
+United States Semiquincentennial coinage - Wikipedia_1787769585
+SemiQ-CirculatingBrochure_1787769631
+US_Mint_Official_Programs_Checklist_Audit_1787834091
+
+# --- Terminology and reference ---
+Mint Marks _ U.S. Mint_1787769986
+LC53-Mint-Mark-Guide_1787770728
+Language-of-Coins_1787769874
+Coin Glossary _ Coin Classroom_1787769995
+Error Coin Essentials_ Die Breaks _ The Reading Room_1787769621
+
+# --- Grading and authentication ---
+Grading Indian Head $5 - Indian Half Eagle - Indian Head Five Dollar _ NGC_1787769913
+Collection Starter Guide_1787769669
+Unique Wilma Mankiller Quarter Error Certified by PCGS_1787769657
+
+# --- 2026-specific data ---
+2025-annual-report_1787770034
+2026-US-Circulating-Coins-Identification-Chart-508_1787770084
+Coins-For-You-Booklet-2026_1787769251
+Greysheet Coin and Currency Pricing for Dealers and Collectors - Greensheet - CPG - CACv2_1787769935
+American Innovation Dollars_1787770104
+
+# --- New: web-verified 2026 product reference (from Claude research session) ---
+2026_USMint_Product_Reference_1788207409
