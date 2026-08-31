@@ -1,4 +1,4 @@
-﻿/**
+/**
  * firestore.rules.test.js
  * =======================
  * ADDENDUM B — Firestore field-level rules unit tests
@@ -61,18 +61,26 @@ const profilePath = `users/${ownerEmail}/profile`;
 
 // ─── CREATE rules ──────────────────────────────────────────────────────────────
 
-test("ALLOW: owner creates coin without is_demo field", async () => {
+// Rule change (v2 plan): is_demo and is_demo_cleared must BOTH be present and
+// explicitly false on create. get('is_demo', false) != true allowed omitting the
+// field — then WHERE is_demo == false hides the coin (empty-vault bug).
+
+test("DENY: owner_create_omitting_is_demo — field absent triggers PERMISSION_DENIED", async () => {
+  // This is the critical empty-vault regression test.
+  // A coin created without is_demo would survive the old get() rule but be
+  // hidden by the WHERE is_demo == false display filter.
   const db = ownerCtx.firestore();
-  await assertSucceeds(
+  await assertFails(
     setDoc(doc(db, coinPath("c1")), {
       Year: "1921",
       Denomination: "Dollar",
       source: "manual",
+      // is_demo intentionally omitted — MUST be DENIED by new rule
     })
   );
 });
 
-test("ALLOW: owner creates coin with is_demo: false", async () => {
+test("ALLOW: owner creates coin with is_demo: false and is_demo_cleared: false", async () => {
   const db = ownerCtx.firestore();
   await assertSucceeds(
     setDoc(doc(db, coinPath("c2")), {
@@ -90,7 +98,8 @@ test("DENY: owner creates coin with is_demo: true", async () => {
     setDoc(doc(db, coinPath("c3")), {
       Year: "1944",
       Denomination: "Cent",
-      is_demo: true,   // BLOCKED — client may never create a demo coin
+      is_demo: true,         // BLOCKED — client may never create a demo coin
+      is_demo_cleared: false,
     })
   );
 });
@@ -100,6 +109,7 @@ test("DENY: owner creates coin with is_demo_cleared: true", async () => {
   await assertFails(
     setDoc(doc(db, coinPath("c4")), {
       Year: "1921",
+      is_demo: false,
       is_demo_cleared: true,  // BLOCKED — client may never set this on create
     })
   );
@@ -179,6 +189,34 @@ test("DENY: owner attempts to change sandbox_cleared on own profile", async () =
   const db = ownerCtx.firestore();
   await assertFails(
     updateDoc(doc(db, profilePath), { sandbox_cleared: true })
+  );
+});
+
+// ─── Estate entitlement flag rules (v2.1 B-ADD-1) ────────────────────────────
+// These three flags may only be set by Admin SDK (set_owner_entitlements.py).
+// An owner patching them directly could forge tier access or attorney eligibility.
+
+test("DENY: owner_cannot_self_grant_estate — is_lifetime_family_estate blocked", async () => {
+  await seedProfile();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, profilePath), { is_lifetime_family_estate: true })
+  );
+});
+
+test("DENY: owner_cannot_self_grant_estate — is_ai_qc_account blocked", async () => {
+  await seedProfile();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, profilePath), { is_ai_qc_account: true })
+  );
+});
+
+test("DENY: owner_cannot_self_grant_estate — beta_tester blocked", async () => {
+  await seedProfile();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, profilePath), { beta_tester: true })
   );
 });
 
