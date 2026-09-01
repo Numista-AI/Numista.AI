@@ -24,11 +24,11 @@ Verify data schemas and test environment configuration:
 
 ### 3. Core Feature Health Probes
 Audit core platform features:
-- **Greysheet API Health**: Check `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN` presence and probe endpoints (`/api/greysheet/config`, `/api/greysheet/pricing/<gsid>`). Report tier (Basic vs Advanced) and fallback rates.
+- **Greysheet API Health**: Check `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN` presence and probe endpoints (`/api/greysheet/config`, `/api/greysheet/pricing/<gsid>`) on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai`. Report tier (Basic vs Advanced) and fallback rates.
 - **Asset Transfer & Passport System**: Verify Lateral Transfer API routes (`/api/transfer/...`) and Secure Passport schema endpoints.
 - **Estate Management System**: Audit Army Property Management estate data structures (`/api/estate/...`) and ownership handshakes.
 - **Vertex AI & Search Grounding**: Verify Vertex AI Data Store connection and Morgan Chat Google Search grounding configurations.
-- **2026 America250 Coin Series & Checklists**: Validate 2026 series registration and Uncirculated Set / checklist templates.
+- **2026 America250 Coin Series & Checklists**: Validate all 33 official US Mint programs, 2026 series registration, and Uncirculated Set / checklist templates.
 
 ### 4. Execution
 Run existing test suites with desktop viewport (1920x1080) enforcement:

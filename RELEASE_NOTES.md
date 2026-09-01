@@ -273,6 +273,65 @@
 
 
 
+
+
+
+
+
+## v4.275 — 2026-09-01
+**Audit Enhancements & Platform Updates**
+
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.274 — 2026-09-01
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+- Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log
+- Slot_resolver: accept 'Five Cents'/'5 Cents' as nickel denomination in checklist guard
+- Rag: reduce batch size to 10, add Phase 3 allowlist
+- Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population
+- Release: update release notes v4.267
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+
+## v4.273 — 2026-08-31
+**Rag Enhancements & Platform Updates**
+
+- Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log
+- Slot_resolver: accept 'Five Cents'/'5 Cents' as nickel denomination in checklist guard
+- Rag: reduce batch size to 10, add Phase 3 allowlist
+- Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population
+- Release: update release notes v4.267
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+
+## v4.272 — 2026-08-31
+**Slot_resolver Enhancements & Platform Updates**
+
+- Slot_resolver: accept 'Five Cents'/'5 Cents' as nickel denomination in checklist guard
+- Rag: reduce batch size to 10, add Phase 3 allowlist
+- Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population
+- Release: update release notes v4.267
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+
+## v4.271 — 2026-08-31
+**Rag Enhancements & Platform Updates**
+
+- Rag: reduce batch size to 10, add Phase 3 allowlist
+- Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population
+- Release: update release notes v4.267
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+- Attorney-portal: guard empty token in initState, add no-token placeholder
+- Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script
+- Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage
+
 ## v4.270 — 2026-08-31
 **Rag Enhancements & Platform Updates**
 

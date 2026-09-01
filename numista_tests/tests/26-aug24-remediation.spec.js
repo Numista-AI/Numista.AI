@@ -178,9 +178,11 @@ test.describe('CAT-A: Morgan AI Set Ingestion', () => {
     await page.goto('/');
     await waitForFlutter(page);
     await navigateTo(page, 'Add Coins');
+    // Allow the Flutter canvas to fully settle under heavy CI load before checking semantics
+    await page.waitForTimeout(3000);
     // Verify the Add to Collection hub loaded with the US Mint card visible.
     // The deeper program list (Uncirculated/Proof sets) is two levels deep -- tested in E2E.
-    const mintSetTab = page.locator('flt-semantics[aria-label*="US Mint Coin Programs"]').or(page.locator('flt-semantics[aria-label*="Mint Set"]'));
+    const mintSetTab = page.locator('text=US Mint Coin Programs').or(page.locator('text=Mint Set'));
     await expect(mintSetTab.first()).toBeVisible({ timeout: 15000 });
     await mintSetTab.first().click();
     await page.waitForTimeout(2000);
@@ -199,7 +201,7 @@ test.describe('CAT-A: Morgan AI Set Ingestion', () => {
     await waitForFlutter(page);
     await navigateTo(page, 'Add Coins');
     // Q2-LOCK: 2026 Silver Proof Set exists. Verify hub renders + no error on US Mint click.
-    const mintSetTab = page.locator('flt-semantics[aria-label*="US Mint Coin Programs"]').or(page.locator('flt-semantics[aria-label*="Mint Set"]'));
+    const mintSetTab = page.locator('text=US Mint Coin Programs').or(page.locator('text=Mint Set'));
     if (await mintSetTab.first().isVisible({ timeout: 8000 }).catch(() => false)) {
       await mintSetTab.first().click();
       await page.waitForTimeout(2000);

@@ -7,7 +7,7 @@ from services.vector_rag_service import VectorRAGService, cosine_similarity, ACT
 
 
 class DummyEmbeddingModel:
-    def embed_content(self, model, contents):
+    def embed_content(self, model, contents, **kwargs):
         class Resp:
             def __init__(self, values):
                 self.embedding = type("Emb", (), {"values": values})()
