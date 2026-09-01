@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.274',
+    date: '2026-09-01',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check and generate SCAN_REPORT.md v4.273',
+      'Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log',
+      'Slot_resolver: accept \'Five Cents\'/\'5 Cents\' as nickel denomination in checklist guard',
+      'Rag: reduce batch size to 10, add Phase 3 allowlist',
+      'Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population',
+      'Release: update release notes v4.267',
+      'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
+      'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
+    ],
+  ),
+  _Release(
     version: 'v4.273',
     date: '2026-08-31',
     description: 'Rag Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log',
       'Slot_resolver: accept \'Five Cents\'/\'5 Cents\' as nickel denomination in checklist guard',

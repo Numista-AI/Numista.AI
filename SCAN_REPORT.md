@@ -14,7 +14,7 @@
 * **Dart Analysis Warnings:** `0` — Clean.
 * **Dart Analysis Infos:** `0` — Clean.
 * **Playwright E2E Failures:** `1` — `tests/26-aug24-remediation.spec.js` (ISSUE-002: Mint Set tab accessible from Add Coins Hub timeout).
-* **Security Alerts:** `102` — Open Dependabot dependency alerts on GitHub default branch (70 high, 29 moderate, 3 low).
+* **Security Alerts:** `29` — Open Dependabot dependency alerts on GitHub default branch (20 high, 6 moderate, 3 low).
 
 ---
 
@@ -83,7 +83,7 @@
 * **CodeQL Alert #69:** ✅ **RESOLVED.** Incomplete URL substring sanitization for Smithsonian domain check replaced with `urlparse` netloc comparison.
 * **Phase 1 Security Hardening:** ✅ Complete. Auth interceptors, subaccount persistence, and secret hygiene enforced.
 * **PCGS Bearer Token:** ✅ Confirmed via `PCGS_BEARER_TOKEN` environment variable.
-* **Open Dependabot Alerts:** ⚠️ **102 vulnerabilities** (70 high, 29 moderate, 3 low) flagged on GitHub default branch. Down from 160 alerts in earlier scans. Continued dependency upgrades recommended before November 2026 Launch.
+* **Open Dependabot Alerts:** ⚠️ **29 vulnerabilities** (20 high, 6 moderate, 3 low) flagged on GitHub default branch. Down from 102 alerts in earlier scans. Continued dependency upgrades recommended before November 2026 Launch.
 
 ---
 

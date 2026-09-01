@@ -276,6 +276,19 @@
 
 
 
+
+## v4.274 — 2026-09-01
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+- Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log
+- Slot_resolver: accept 'Five Cents'/'5 Cents' as nickel denomination in checklist guard
+- Rag: reduce batch size to 10, add Phase 3 allowlist
+- Rag: add brain_to_rag_migrator.py for Morgan RAG knowledge base population
+- Release: update release notes v4.267
+- Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root
+- Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)
+
 ## v4.273 — 2026-08-31
 **Rag Enhancements & Platform Updates**
 
