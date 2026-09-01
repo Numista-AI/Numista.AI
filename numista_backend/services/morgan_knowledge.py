@@ -43,6 +43,7 @@ def get_morgan_system_knowledge_context(user_query: str = "") -> str:
             if rag_context:
                 prompt += f"\n{rag_context}\n"
         except Exception as ve:
+            print(f"[rag] Vector RAG error: {ve}", flush=True)
             logger.warning(f"Vector RAG context retrieval error: {ve}")
 
     return prompt

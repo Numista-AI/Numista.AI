@@ -59,6 +59,7 @@ class VectorRAGService:
         Generates 1536-dim float embedding using gemini-embedding-2 with MRL output_dimensionality.
         """
         if not self.client or not text or not text.strip():
+            print("[rag] generate_embedding: no client or empty text", flush=True)
             return None
 
         try:
@@ -69,13 +70,18 @@ class VectorRAGService:
             )
             # Support both google-genai SDK response shapes
             if hasattr(resp, "embedding") and hasattr(resp.embedding, "values"):
-                return list(resp.embedding.values)
+                vec = list(resp.embedding.values)
             elif hasattr(resp, "embeddings") and len(resp.embeddings) > 0:
-                return list(resp.embeddings[0].values)
+                vec = list(resp.embeddings[0].values)
             elif isinstance(resp, dict) and "embedding" in resp:
-                return resp["embedding"].get("values", [])
-            return None
+                vec = resp["embedding"].get("values", [])
+            else:
+                print("[rag] generate_embedding: unrecognised response shape", flush=True)
+                return None
+            print(f"[rag] generate_embedding: OK dim={len(vec)}", flush=True)
+            return vec
         except Exception as e:
+            print(f"[rag] generate_embedding ERROR: {e}", flush=True)
             logger.warning(f"Embedding generation error via {self.model_id}: {e}")
             return None
 
