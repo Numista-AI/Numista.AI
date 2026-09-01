@@ -196,6 +196,7 @@ class VectorRAGService:
         """
         Constructs verified RAG citation text block for MORGAN system prompt.
         """
+        print(f"[rag] build_rag_prompt_context called, query len={len(query_text)}", flush=True)
         results = self.query_reference_chunks(query_text, limit=limit)
         if not results:
             return ""

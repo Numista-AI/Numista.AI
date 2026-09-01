@@ -17,6 +17,7 @@ def get_morgan_system_knowledge_context(user_query: str = "") -> str:
     Includes dynamic Feature Registry context, explicit rules preventing negative answers,
     and semantic vector RAG context from numismatic reference chunks.
     """
+    print(f"[rag] get_morgan_system_knowledge_context called, query len={len(user_query)}", flush=True)
     prompt = (
         "CRITICAL INSTRUCTIONS & NEGATIVE ANSWER OVERRIDES:\n"
         "1. Lateral Transfers / Account-to-Account Transfers ARE FULLY SUPPORTED in Numista.AI via the 'Passport Protocol'.\n"
