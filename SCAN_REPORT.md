@@ -1,19 +1,19 @@
-# SCAN REPORT: Numista.AI System Audit (v4.256)
+# SCAN REPORT: Numista.AI System Audit (v4.273)
 
 ## Executive Summary
-* **Status:** 🟡 **PASS WITH NOTICES** (Full system audit executed on 2026-08-31 ahead of November Launch. Pytest backend suite: 268 passed [100% pass rate in 28.19s]. Playwright E2E: 172 passed, 2 failed, 2 skipped across 26 test specs [97.7% pass rate]. Dart analyzer: 0 fatal errors, 3 warnings, 5 infos. Gemini models: 100% active 2026 GA compliance).
-* **Scan Date:** 2026-08-31
+* **Status:** 🟡 **PASS WITH NOTICES** (Full system audit executed on 2026-09-01 ahead of November Launch. Pytest backend suite: 268 passed [100% pass rate in 15.12s]. Playwright E2E: 173 passed, 1 failed, 2 skipped across 25 test specs [98.3% pass rate]. Dart analyzer: 0 fatal errors, 0 warnings, 0 infos [Clean]. Gemini models: 100% active 2026 GA compliance).
+* **Scan Date:** 2026-09-01
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` project)
-* **Versions Scanned:** Backend v4.256 / Frontend v4.256 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.273 / Frontend v4.273 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
 ## Critical Errors & Warnings Summary
 * **Critical Backend Errors:** `0` — All primary backend APIs, database schemas, and FastAPI routing paths are stable and responsive.
 * **Dart Analysis Errors:** `0` — Zero fatal compilation or syntax errors.
-* **Dart Analysis Warnings:** `3` — Minor unused imports in `lib/screens/customer_service_screen.dart` (`file_picker.dart`, `dart:html`, `dart:typed_data`).
-* **Dart Analysis Infos:** `5` — Deprecated `dart:html` usage recommendation in `customer_service_screen.dart` and 4 null-aware marker recommendations in `lib/services/ticket_service.dart`.
-* **Playwright E2E Failures:** `2` — `tests/26-aug24-remediation.spec.js` (ISSUE-002: Mint Set tab navigation timeout; ISSUE-003: Silver Proof Set card visible timeout).
+* **Dart Analysis Warnings:** `0` — Clean.
+* **Dart Analysis Infos:** `0` — Clean.
+* **Playwright E2E Failures:** `1` — `tests/26-aug24-remediation.spec.js` (ISSUE-002: Mint Set tab accessible from Add Coins Hub timeout).
 * **Security Alerts:** `102` — Open Dependabot dependency alerts on GitHub default branch (70 high, 29 moderate, 3 low).
 
 ---
@@ -39,6 +39,8 @@
    * `GEMINI_PRO_MODEL`: `gemini-3.1-pro-preview` 🟢 PASS (Active GA / No shutdown date)
    * `GEMINI_LITE_MODEL`: `gemini-3.5-flash-lite` 🟢 PASS (Active GA / No shutdown date)
    * `GEMINI_IMAGE_MODEL`: `gemini-3.1-flash-image` 🟢 PASS (Active GA / No shutdown date)
+* **Embedding Model Binding (`numista_backend/services/vector_rag_service.py`):**
+   * `ACTIVE_EMBEDDING_MODEL`: `gemini-embedding-2` 🟢 PASS (Active GA / 1536-dim MRL output dimensionality)
 * **AGENTS.md Rule 6 Compliance:** Strictly compliant. All active models use 2026 GA versions.
 
 ---
@@ -57,6 +59,7 @@
 ---
 
 ## Core Features Audit
+* **Vector RAG (Phase 4):** Verified. 1536-dim embeddings via `gemini-embedding-2`, dual-path retrieval (`cosine_all` / `find_nearest`), and `SKIP_DIM` length guard active.
 * **Asset Transfer & Passport System:** Verified. Lateral Transfer API routes (`/api/transfer/...`) & Secure Passport active.
 * **Estate Management System:** Verified. Army Property Management estate data structures (`/api/v1/estate/...`), legal tokenized URL generation, and 256 KB chunked PDF proxy streaming active.
 * **Vertex AI & Search Grounding:** Verified. Morgan Chat Google Search grounding & Vertex AI endpoints active.
@@ -72,7 +75,7 @@
 * **FastAPI APIRouter Modularity:** ✅ **COMPLETE.** Monolithic routes decoupled into 17 dedicated `APIRouter` modules under `numista_backend/routes/`:
    * `affiliate_routes.py`, `ai_routes.py`, `collection_routes.py`, `estate_routes.py`, `grade_review_routes.py`, `greysheet_admin_routes.py`, `greysheet_error_routes.py`, `import_routes.py`, `news_routes.py`, `payment_routes.py`, `pcgs_routes.py`, `sandbox_routes.py`, `scan_routes.py`, `subaccount_routes.py`, `support_routes.py`, `telemetry_routes.py`, `valuation_routes.py`.
 * **Route Parity:** `route_snapshot_baseline.json` committed — diff tool active for regression detection.
-* **Backend Test Coverage:** 268 passed unit tests across all APIRouter modules and backend services (100% pass rate).
+* **Backend Test Coverage:** 268 passed unit tests across all APIRouter modules and backend services (100% pass rate in 15.12s).
 
 ---
 
@@ -85,18 +88,16 @@
 ---
 
 ## Test Logs & Environment Isolation Summary
-* **Backend Pytest Unit Suite:** `268 passed, 218 warnings in 28.19s` (100% pass rate)
-* **Frontend Dart Analysis (`dart analyze .`):** `0 fatal errors`, `3 warnings` (unused imports), `5 infos`
-* **Frontend Playwright E2E Suite (1920x1080 Viewport):** `172 passed`, `2 failed`, `2 skipped` across 26 test specs (97.7% pass rate)
+* **Backend Pytest Unit Suite:** `268 passed, 224 warnings in 15.12s` (100% pass rate)
+* **Frontend Dart Analysis (`dart analyze .`):** `0 fatal errors`, `0 warnings`, `0 infos` (No issues found)
+* **Frontend Playwright E2E Suite (1920x1080 Viewport):** `173 passed`, `1 failed`, `2 skipped` across 25 test specs (98.3% pass rate)
 * **E2E Timeout Notices:**
-   * `tests/26-aug24-remediation.spec.js` (ISSUE-002: Mint Set tab navigation timeout at 60s)
-   * `tests/26-aug24-remediation.spec.js` (ISSUE-003: Silver Proof Set card visibility timeout at 60s)
+   * `tests/26-aug24-remediation.spec.js` (ISSUE-002: Mint Set tab accessible from Add Coins Hub locator timeout)
 * **Test Isolation:** Enforced. E2E tests target `ericdcman@gmail.com` / Demo Suite with zero production Firestore mutation.
 
 ---
 
 ## Recommended Fixes & Pre-Launch Action Items
-1. **Remediation Spec Tab Navigation (26-aug24-remediation.spec.js):** Adjust locator strategy or add explicit canvas settle wait before clicking Mint Set tab in `ISSUE-002` and `ISSUE-003` to prevent 60s timeout under heavy test runner loads.
-2. **Customer Service Screen Cleanup:** Remove unused imports (`file_picker.dart`, `dart:html`, `dart:typed_data`) in `lib/screens/customer_service_screen.dart`.
-3. **Dependabot Vulnerabilities:** Continue triaging remaining 102 open GitHub security alerts before November 2026 Launch (prioritizing 70 high-severity items).
-4. **Maintain Skill Documentation:** Keep `.antigravity/skills/project-scanner/SKILL.md` aligned with production Cloud Run URLs and series additions.
+1. **Remediation Spec Tab Navigation (`26-aug24-remediation.spec.js`):** Adjust locator strategy or add explicit canvas settle wait before clicking Mint Set tab in `ISSUE-002` to prevent locator timeout under heavy test runner loads.
+2. **Dependabot Vulnerabilities:** Continue triaging remaining 102 open GitHub security alerts before November 2026 Launch (prioritizing 70 high-severity items).
+3. **Maintain Skill Documentation:** Keep `.antigravity/skills/project-scanner/SKILL.md` aligned with production Cloud Run URLs and series additions.
