@@ -2679,6 +2679,16 @@ async def deep_dive(request: DeepDiveRequest):
                 threading.Thread(target=scrape_url, args=(search_term, False), daemon=True).start()
                 knowledge_block += f"\n\n[SYSTEM NOTIFICATION] The user asked about a coin currently missing from the database: '{search_term}'. The system has automatically launched a background scraping task to find, scrape, and ingest this coin from the US Mint or Wikipedia. Acknowledge this action warmly and reassure the user that it will be ingested momentarily."
 
+        # -- 3c. Vector RAG: semantic numismatic reference chunks ------------------
+        rag_block = ""
+        try:
+            from services.vector_rag_service import vector_rag_service
+            rag_context = vector_rag_service.build_rag_prompt_context(request.query)
+            if rag_context:
+                rag_block = f"\n\n{rag_context}"
+        except Exception as rag_err:
+            print(f"[rag] deep_dive: vector RAG error: {rag_err}", flush=True)
+
         # -- 4. Build prompt ----------------------------------------------------
         prompt = f"""You are Morgan, the friendly AI numismatic guide owl for Numista.AI.
 You are an enthusiastic, expert numismatic mentor -- warm and patient like a trusted friend who happens to be a world-class coin expert.
@@ -2686,7 +2696,7 @@ You have encyclopedic knowledge of US coinage history, mint marks, designers, er
 {name_line}
 
 Here is the user's current coin collection data:
-{context}{knowledge_block}{history_block}
+{context}{knowledge_block}{rag_block}{history_block}
 
 User's Input: {request.query}
 
