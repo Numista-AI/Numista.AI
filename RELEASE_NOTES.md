@@ -278,6 +278,69 @@
 
 
 
+
+
+
+
+
+
+## v4.281 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.280 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.279 — 2026-09-01
+**Skills Enhancements & Platform Updates**
+
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.278 — 2026-09-01
+**E2e Enhancements & Platform Updates**
+
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.277 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
+## v4.276 — 2026-09-01
+**Audit Enhancements & Platform Updates**
+
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
 ## v4.275 — 2026-09-01
 **Audit Enhancements & Platform Updates**
 

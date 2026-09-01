@@ -19,7 +19,8 @@ from google.cloud.firestore_v1.vector import Vector
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 from google.genai import types as genai_types
 
-from routes.deps import genai_client, db
+from google import genai as _genai
+from routes.deps import db
 
 logger = logging.getLogger("numista_backend.vector_rag_service")
 
@@ -29,6 +30,17 @@ RAG_EMBEDDING_DIM = 1536                        # Phase 4: MRL cut; Firestore ca
 MAX_COSINE_DISTANCE_THRESHOLD = 0.45            # distance <= 0.45 (similarity >= 0.55); Phase 3 semantics unchanged
 RAG_RETRIEVAL = os.environ.get("RAG_RETRIEVAL", "cosine_all")  # cosine_all | find_nearest
 FIELDS_TO_EXCLUDE = {"embedding_vector", "cosine_distance"}    # never sent to Morgan's prompt
+
+# gemini-embedding-2 requires location="global" on Vertex AI.
+# The shared genai_client in deps.py uses location="us-central1" (correct for text generation)
+# but that endpoint hangs on embed_content. Match the migrator exactly.
+PROJECT_ID = "studio-9101802118-8c9a8"
+try:
+    _embed_client = _genai.Client(vertexai=True, project=PROJECT_ID, location="global")
+    print("[rag] Embedding client initialised (location=global)", flush=True)
+except Exception as _e:
+    print(f"[rag] Embedding client init FAILED: {_e}", flush=True)
+    _embed_client = None
 
 
 def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
@@ -51,7 +63,7 @@ class VectorRAGService:
 
     def __init__(self, db_client=None, client=None):
         self.db = db_client or db
-        self.client = client or genai_client
+        self.client = client or _embed_client   # location="global" — required for gemini-embedding-2
         self.model_id = ACTIVE_EMBEDDING_MODEL
 
     def generate_embedding(self, text: str) -> Optional[List[float]]:
@@ -196,6 +208,7 @@ class VectorRAGService:
         """
         Constructs verified RAG citation text block for MORGAN system prompt.
         """
+        print(f"[rag] build_rag_prompt_context called, query len={len(query_text)}", flush=True)
         results = self.query_reference_chunks(query_text, limit=limit)
         if not results:
             return ""
