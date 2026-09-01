@@ -277,6 +277,13 @@
 
 
 
+
+## v4.275 — 2026-09-01
+**Audit Enhancements & Platform Updates**
+
+- Audit: update security alert metrics in SCAN_REPORT.md
+- Audit: run full system check and generate SCAN_REPORT.md v4.273
+
 ## v4.274 — 2026-09-01
 **Audit Enhancements & Platform Updates**
 

@@ -1547,10 +1547,20 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.274',
+    version: 'v4.275',
     date: '2026-09-01',
     description: 'Audit Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Audit: update security alert metrics in SCAN_REPORT.md',
+      'Audit: run full system check and generate SCAN_REPORT.md v4.273',
+    ],
+  ),
+  _Release(
+    version: 'v4.274',
+    date: '2026-09-01',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Audit: run full system check and generate SCAN_REPORT.md v4.273',
       'Rag: Phase 4 - 1536-dim Vector embeddings, dual-path retrieval, SKIP_DIM, retrieval log',
