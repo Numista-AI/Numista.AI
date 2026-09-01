@@ -284,6 +284,45 @@
 
 
 
+
+
+
+## v4.284 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+
+## v4.283 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+
+## v4.282 — 2026-09-01
+**Rag Enhancements & Platform Updates**
+
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+- Rag: route SKIP_DIM and retrieval logs to print() for Cloud Run stdout visibility
+- Auto-sync release notes
+- Audit: update security alert metrics in SCAN_REPORT.md
+
 ## v4.281 — 2026-09-01
 **Rag Enhancements & Platform Updates**
 
