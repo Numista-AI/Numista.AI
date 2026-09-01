@@ -224,10 +224,37 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     final recentHistory = _messages.length > 6 ? _messages.sublist(_messages.length - 6) : _messages;
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _messages.add({
+          'role': 'assistant',
+          'content': 'You need to sign in again to chat with me. Please sign in and try again.',
+        });
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final idToken = await user.getIdToken();
+    if (idToken == null) {
+      setState(() {
+        _messages.add({
+          'role': 'assistant',
+          'content': 'Your session has expired. Please sign in again.',
+        });
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('$kApiBaseUrl/api/deep_dive'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
           'query':               effectiveQuery,

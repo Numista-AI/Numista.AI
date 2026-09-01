@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -194,6 +194,12 @@ db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 
 # Initialize GCS client (shares same SA credentials)
 gcs_client = gcs.Client(credentials=credentials, project=PROJECT_ID)
+
+# Initialize Firebase Admin SDK (for verify_id_token in deep_dive auth)
+import firebase_admin
+from firebase_admin import auth as fb_auth
+if not firebase_admin._apps:
+    firebase_admin.initialize_app()
 
 # In-memory micro-cache for Grade Review Stats to bypass eventual consistency replication latency
 # Structure: {user_email: {"stats": dict, "timestamp": float}}
@@ -2519,6 +2525,14 @@ def execute_update_coin(
     personal_notes: str = None
 ) -> dict:
     try:
+        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
+        if coin_id and "__set_coin_" in str(coin_id):
+            return {
+                "action": "update_coin_in_collection",
+                "status": "error",
+                "message": "That coin lives inside a set and cannot be modified individually. "
+                           "To manage it, break up the set first from your collection screen."
+            }
         col_ref = db.collection('users').document(user_email).collection('coins')
 
         # 10-minute recency resolution if coin_id is omitted by model
@@ -2565,6 +2579,14 @@ def execute_update_coin(
 
 def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
     try:
+        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
+        if coin_id and "__set_coin_" in str(coin_id):
+            return {
+                "action": "undo_add_coin",
+                "status": "error",
+                "message": "That coin lives inside a set and cannot be removed individually. "
+                           "To manage it, break up the set first from your collection screen."
+            }
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
         doc_ref.delete()
         return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
@@ -2573,46 +2595,265 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
         return {"action": "undo_add_coin", "status": "error", "message": "Failed to undo. Please try again."}
 
 
+# ---------------------------------------------------------------------------
+# Set-Expansion Helpers (Dimes Bug Fix)
+# Pure functions — no FastAPI dependency.  Used by deep_dive, unit tests, and
+# the live COUNT acceptance script.
+# ---------------------------------------------------------------------------
+MAX_INVENTORY_ITEMS = 2000
+
+_INHERIT_BLOCKLIST_YEAR  = {"", "multiple", "various", "n/a"}
+_INHERIT_BLOCKLIST_DENOM = {"", "set", "multiple", "various", "n/a"}
+
+_DIME_SYNONYMS = {"dime", "10c", "10-cent", "10 cent", "roosevelt dime"}
+
+
+def _get_field(d: dict, *keys, default=""):
+    """Read first non-empty value from multiple key variants (PascalCase / snake_case)."""
+    for k in keys:
+        v = d.get(k)
+        if v is not None and str(v).strip():
+            return str(v).strip()
+    return default
+
+
+def is_dime(denom: str) -> bool:
+    """Returns True if the denomination string represents a dime."""
+    return denom.strip().lower() in _DIME_SYNONYMS
+
+
+def expand_collection_inventory(docs_iter):
+    """Expand Firestore coin documents into a flat inventory list.
+
+    Set documents (item_type == "set" OR set_contents is a non-empty list)
+    are projected as one set-parent row plus one row per child in set_contents.
+
+    Returns:
+        (inventory_items, stats_dict)
+
+    inventory_items: list of dicts with canonical snake_case keys:
+        coin_id, year, denomination, mint_mark, condition, theme_subject,
+        program_series, ai_estimated_value, cost, item_type, from_set,
+        fields_incomplete
+
+    stats_dict: { "docs": int, "sets": int, "expanded": int, "total_items": int }
+
+    Synthetic coin_id values contain "__set_coin_" and MUST be rejected
+    by any write tool (add/update/undo).  They are prompt-only.
+    """
+    inventory = []
+    doc_count = 0
+    set_count = 0
+    expanded_count = 0
+
+    for doc in docs_iter:
+        d = doc.to_dict()
+        doc_count += 1
+
+        item_type_raw = _get_field(d, "item_type", default="coin").lower()
+
+        # Detect set: explicit item_type OR presence of set_contents
+        raw_contents = d.get("set_contents")
+        if isinstance(raw_contents, str):
+            try:
+                raw_contents = json.loads(raw_contents)
+            except (json.JSONDecodeError, TypeError):
+                raw_contents = None
+
+        is_set = (item_type_raw == "set") or (isinstance(raw_contents, list) and len(raw_contents) > 0)
+
+        if is_set:
+            set_count += 1
+            set_contents = raw_contents if isinstance(raw_contents, list) else []
+
+            set_name = _get_field(d, "Theme/Subject", "theme_subject",
+                                  "Original Description from source", default="Unknown Set")
+
+            # Parent set row
+            inventory.append({
+                "coin_id":            doc.id,
+                "year":               _get_field(d, "Year", "year"),
+                "denomination":       _get_field(d, "Denomination", "denomination"),
+                "mint_mark":          _get_field(d, "Mint Mark", "mint_mark"),
+                "condition":          _get_field(d, "Condition", "condition"),
+                "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
+                "program_series":     _get_field(d, "Program/Series", "program_series"),
+                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
+                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
+                "item_type":          "set",
+                "from_set":           None,
+                "fields_incomplete":  False,
+            })
+
+            parent_year = _get_field(d, "Year", "year")
+            parent_cond = _get_field(d, "Condition", "condition")
+
+            for idx, coin in enumerate(set_contents):
+                if not isinstance(coin, dict):
+                    continue
+
+                child_year  = _get_field(coin, "Year", "year")
+                child_denom = _get_field(coin, "Denomination", "denomination")
+
+                # Inherit parent year ONLY if child is blank AND parent is not blocked
+                if not child_year and parent_year.lower() not in _INHERIT_BLOCKLIST_YEAR:
+                    child_year = parent_year
+
+                # Never inherit blocked denominations
+                if child_denom.lower() in _INHERIT_BLOCKLIST_DENOM:
+                    child_denom = ""
+
+                incomplete = (not child_year) or (not child_denom)
+
+                # Child item_type from the child itself (default "coin").
+                # Paper/medal/supply children stay those types.
+                child_item_type = _get_field(coin, "item_type", default="coin").lower()
+                if child_item_type in ("set", "multiple", "n/a", ""):
+                    child_item_type = "coin"
+
+                inventory.append({
+                    "coin_id":            f"{doc.id}__set_coin_{idx}",
+                    "year":               child_year,
+                    "denomination":       child_denom,
+                    "mint_mark":          _get_field(coin, "Mint Mark", "mint_mark"),
+                    "condition":          _get_field(coin, "Condition", "condition") or parent_cond,
+                    "theme_subject":      _get_field(coin, "Theme/Subject", "theme_subject"),
+                    "program_series":     _get_field(coin, "Program/Series", "program_series"),
+                    "ai_estimated_value": _get_field(coin, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
+                    "cost":               _get_field(coin, "Cost", "cost", "purchase_cost", default="$0.00"),
+                    "item_type":          child_item_type,
+                    "from_set":           set_name,
+                    "fields_incomplete":  incomplete,
+                })
+                expanded_count += 1
+        else:
+            # Regular coin / paper_currency / medal / other
+            inventory.append({
+                "coin_id":            doc.id,
+                "year":               _get_field(d, "Year", "year"),
+                "denomination":       _get_field(d, "Denomination", "denomination"),
+                "mint_mark":          _get_field(d, "Mint Mark", "mint_mark"),
+                "condition":          _get_field(d, "Condition", "condition"),
+                "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
+                "program_series":     _get_field(d, "Program/Series", "program_series"),
+                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
+                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
+                "item_type":          item_type_raw if item_type_raw else "coin",
+                "from_set":           None,
+                "fields_incomplete":  False,
+            })
+
+    stats = {
+        "docs": doc_count,
+        "sets": set_count,
+        "expanded": expanded_count,
+        "total_items": len(inventory),
+    }
+
+    return inventory, stats
+
+
 @app.post("/api/deep_dive")
-async def deep_dive(request: DeepDiveRequest):
+async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None)):
     """
     Morgan AI chat: answers questions about the user's coin collection and logs/updates coins via tools.
+    Token-verified: requires Authorization: Bearer {idToken}.
     """
     try:
-        # -- 0. Handle Direct Button Commands (Undo / Quick Actions) -----------------
+        # -- 0a. Verify identity from Bearer token ----------------------------------
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        id_token = authorization.split("Bearer ", 1)[1].strip()
+        try:
+            decoded_token = fb_auth.verify_id_token(id_token)
+        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+            raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token")
+        except Exception as e:
+            logger.error(f"[deep_dive] unexpected auth error: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Authentication failed")
+
+        owner_key = _collection_owner_from_token(decoded_token)
+
+        # Log mismatch if body email disagrees with token owner
+        if request.user_email and request.user_email.strip().lower() != owner_key:
+            owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
+            body_hash = hashlib.sha256(request.user_email.encode()).hexdigest()[:12]
+            logger.warning(
+                f"[deep_dive] owner mismatch: token={owner_hash} body={body_hash}"
+            )
+
+        # -- 0b. Handle Direct Button Commands (Undo / Quick Actions) ----------------
         if request.query.startswith("INTERNAL_UNDO:"):
             target_id = request.query.split(":")[-1].strip()
-            res = execute_undo_add_coin(request.user_email, target_id)
+            res = execute_undo_add_coin(owner_key, target_id)
             return {
                 "status": "success",
                 "response": "I've removed that coin from your collection binder.",
                 "action_payload": res
             }
 
-        # -- 1. Resolve collection context --------------------------------------
-        if request.collection_context and len(request.collection_context.strip()) > 50:
-            context = request.collection_context.strip()
+        # -- 1. Build authoritative inventory from Firestore (SoR) -------------------
+        col_ref = db.collection('users').document(owner_key).collection('coins')
+        docs = col_ref.stream()
+        inventory_items, inv_stats = expand_collection_inventory(docs)
+
+        # Pre-cap tally (always computed on full list)
+        coin_items_count = sum(1 for it in inventory_items if it["item_type"] in ("coin", ""))
+        tally_header = (
+            f"INVENTORY TALLY: {coin_items_count} coins across {inv_stats['sets']} sets "
+            f"({inv_stats['expanded']} coins expanded from sets). "
+            f"Total Firestore docs: {inv_stats['docs']}."
+        )
+
+        # Apply cap — compact overflow rows instead of dropping them
+        truncated = False
+        if len(inventory_items) > MAX_INVENTORY_ITEMS:
+            truncated = True
+            full_items = inventory_items[:MAX_INVENTORY_ITEMS]
+            compact_items = [
+                {
+                    "coin_id": it["coin_id"],
+                    "year": it["year"],
+                    "denomination": it["denomination"],
+                    "mint_mark": it["mint_mark"],
+                    "item_type": it["item_type"],
+                    "from_set": it["from_set"],
+                }
+                for it in inventory_items[MAX_INVENTORY_ITEMS:]
+            ]
+            inventory_items = full_items + compact_items
+
+        if not inventory_items:
+            context = "The user's collection is currently empty."
         else:
-            col_ref = db.collection('users').document(request.user_email).collection('coins')
-            docs = col_ref.stream()
-            inventory_items = []
-            for doc in docs:
-                d = doc.to_dict()
-                inventory_items.append({
-                    "coin_id":   doc.id,
-                    "Year":      d.get("Year", ""),
-                    "Denom":     d.get("Denomination", ""),
-                    "Mint":      d.get("Mint Mark", ""),
-                    "Condition": d.get("Condition", ""),
-                    "Subject":   d.get("Theme/Subject", ""),
-                    "Series":    d.get("Program/Series", ""),
-                    "Value":     d.get("AI Estimated Value", "$0.00"),
-                    "Cost":      d.get("Cost", "$0.00"),
-                })
-            if not inventory_items:
-                context = "The user's collection is currently empty."
-            else:
-                context = json.dumps(inventory_items, default=str)
+            trunc_flag = f"\nINVENTORY_TRUNCATED=true (first {MAX_INVENTORY_ITEMS} have full detail, remainder are compact count-only records)" if truncated else ""
+            context = tally_header + trunc_flag + "\n" + json.dumps(inventory_items, default=str)
+
+        # COUNTING RULES — after inventory JSON, before CLIENT_SUMMARY_NOT_SOR
+        context += """
+
+COUNTING RULES (follow these exactly for any counting or inventory question):
+1. "How many coins" or "how many [denomination]" = count items where item_type is "coin" or "" (empty). Do NOT count item_type="set" (set parents), "paper_currency", "medal", "exonumia", or "supply" as coins.
+2. "How many sets" = count items where item_type == "set".
+3. When a counted coin has a from_set value, mention the set name: "from your [set name]".
+4. Items with fields_incomplete=true may have missing year or denomination — do not assume their year or denomination. State what is known and what is missing.
+5. NEVER pass a coin_id containing "__set_coin_" to add_coin_to_collection, update_coin_in_collection, or undo_add_coin. Those are virtual IDs for set-expanded coins. If the user wants to modify a coin inside a set, tell them to break up the set first.
+"""
+
+        # Optional: append client summary as UI hint (NOT the coin list)
+        if request.collection_context and len(request.collection_context.strip()) > 50:
+            context += "\n[CLIENT_SUMMARY_NOT_SOR — do not use for counting, defer to the inventory JSON above]\n" + request.collection_context.strip()
+
+        # Log (no raw email — hash the owner key)
+        owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
+        logger.info(
+            f"[deep_dive] owner={owner_hash} docs={inv_stats['docs']} "
+            f"sets={inv_stats['sets']} expanded={inv_stats['expanded']} "
+            f"total_items={inv_stats['total_items']} context_chars={len(context)} "
+            f"truncated={truncated} used_client_context=false"
+        )
+
 
         # -- 2. Personalisation & Conversation History ----------------------------
         name = (request.user_name or "").strip()
@@ -2777,11 +3018,11 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 c_name = call.name
                 c_args = call.args or {}
                 if c_name == "add_coin_to_collection":
-                    action_payload = execute_add_coin(request.user_email, **c_args)
+                    action_payload = execute_add_coin(owner_key, **c_args)
                 elif c_name == "update_coin_in_collection":
-                    action_payload = execute_update_coin(request.user_email, **c_args)
+                    action_payload = execute_update_coin(owner_key, **c_args)
                 elif c_name == "undo_add_coin":
-                    action_payload = execute_undo_add_coin(request.user_email, **c_args)
+                    action_payload = execute_undo_add_coin(owner_key, **c_args)
 
             # Second turn to generate Morgan's final response after executing tool
             second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
