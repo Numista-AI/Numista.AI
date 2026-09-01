@@ -94,7 +94,7 @@ class VectorRAGService:
             if not vec:
                 continue
             if len(vec) != len(query_vector):
-                logger.warning(f"SKIP_DIM {doc.id}: vec={len(vec)}, query={len(query_vector)}")
+                print(f"[rag] SKIP_DIM {doc.id}: vec={len(vec)}, query={len(query_vector)}", flush=True)
                 continue
             sim = cosine_similarity(query_vector, vec)
             distance = 1.0 - sim
@@ -136,12 +136,13 @@ class VectorRAGService:
                     if isinstance(vec, Vector):
                         vec = list(vec)
                     if vec and len(vec) == len(query_vector):
-                        logger.warning(f"cosine_distance missing for {doc.id}; computing client-side")
+                        print(f"[rag] cosine_distance missing for {doc.id}; computing client-side", flush=True)
                         distance = 1.0 - cosine_similarity(query_vector, vec)
                     else:
-                        logger.warning(
-                            f"SKIP_DIM (fallback) {doc.id}: "
-                            f"vec={len(vec) if vec else 0}, query={len(query_vector)}"
+                        print(
+                            f"[rag] SKIP_DIM (fallback) {doc.id}: "
+                            f"vec={len(vec) if vec else 0}, query={len(query_vector)}",
+                            flush=True,
                         )
                         continue
                 if distance <= MAX_COSINE_DISTANCE_THRESHOLD:
@@ -180,7 +181,8 @@ class VectorRAGService:
             f"{r['chunk_id']}:d={r['distance']}:s={r['similarity_score']}"
             for r in results
         )
-        logger.info(f"RAG retrieval={RAG_RETRIEVAL} hits={len(results)} [{hit_summary}]")
+        logger.info(f"[rag] retrieval={RAG_RETRIEVAL} hits={len(results)} [{hit_summary}]")
+        print(f"[rag] retrieval={RAG_RETRIEVAL} hits={len(results)} [{hit_summary}]", flush=True)
 
         return results
 
