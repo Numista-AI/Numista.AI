@@ -1551,10 +1551,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.294',
+    date: '2026-09-02',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
+      'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
+      'E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies',
+      'Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)',
+      'Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)',
+      'Release: bump to v4.289 release metadata',
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
     version: 'v4.293',
     date: '2026-09-02',
     description: 'E2e Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies',
       'Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)',
