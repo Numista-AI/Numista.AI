@@ -1551,10 +1551,62 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.293',
+    date: '2026-09-02',
+    description: 'E2e Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies',
+      'Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)',
+      'Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)',
+      'Release: bump to v4.289 release metadata',
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
+    version: 'v4.292',
+    date: '2026-09-02',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)',
+      'Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)',
+      'Release: bump to v4.289 release metadata',
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
+    version: 'v4.291',
+    date: '2026-09-02',
+    description: 'Programs Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)',
+      'Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)',
+      'Release: bump to v4.289 release metadata',
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
+    version: 'v4.290',
+    date: '2026-09-02',
+    description: 'Collection Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)',
+      'Release: bump to v4.289 release metadata',
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
     version: 'v4.289',
     date: '2026-09-02',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: bump to v4.288 from pre-push hook',
       'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
