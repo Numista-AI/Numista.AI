@@ -287,6 +287,65 @@
 
 
 
+
+
+
+
+
+## v4.289 — 2026-09-02
+**Release Enhancements & Platform Updates**
+
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
+## v4.288 — 2026-09-02
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+- Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)
+- Release: v4.284 auto-bump (Phase 4 RAG complete)
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+
+## v4.287 — 2026-09-01
+**Deep_dive Enhancements & Platform Updates**
+
+- Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)
+- Release: v4.284 auto-bump (Phase 4 RAG complete)
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+
+## v4.286 — 2026-09-01
+**Deep_dive Enhancements & Platform Updates**
+
+- Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)
+- Release: v4.284 auto-bump (Phase 4 RAG complete)
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+
+## v4.285 — 2026-09-01
+**Release Enhancements & Platform Updates**
+
+- Release: v4.284 auto-bump (Phase 4 RAG complete)
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+- E2e: fix ISSUE-002 mint set tab timeout using semantic text locator
+
 ## v4.284 — 2026-09-01
 **Rag Enhancements & Platform Updates**
 

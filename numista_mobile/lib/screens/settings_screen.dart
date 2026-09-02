@@ -472,8 +472,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _fetchCoinCount(String email) async {
     try {
+      // Get Firebase ID token for Bearer auth (Dimes Bug v2.2 — gate 4)
+      final user = FirebaseAuth.instance.currentUser;
+      final idToken = await user?.getIdToken();
+      if (idToken == null) return;
+
       final resp = await http.get(
         Uri.parse('$_apiUrl/api/collection/count?user_email=${Uri.encodeComponent(email)}'),
+        headers: {'Authorization': 'Bearer $idToken'},
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;

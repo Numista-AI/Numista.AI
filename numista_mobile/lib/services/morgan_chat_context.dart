@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import '../services/auth_service.dart';
+import '../services/set_expansion_helper.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MorganChatContext
@@ -204,15 +206,75 @@ class MorganChatContextService {
       // Collect all docs with their parsed value for ranking
       final ranked = <Map<String, dynamic>>[];
 
+
       for (final doc in docs) {
         final data = doc.data();
 
-        final value = _parseCurrency(data['AI Estimated Value']);
-        final cost  = _parseCurrency(data['Cost']);
+        final value = _parseCurrency(data['AI Estimated Value'] ?? data['ai_estimated_value']);
+        final cost  = _parseCurrency(data['Cost'] ?? data['cost'] ?? data['purchase_cost']);
         portfolioValue  += value;
         acquisitionCost += cost;
 
-        // Grade & Verification count
+        final rawItemType = data['item_type']?.toString().trim();
+        final itemType = (rawItemType == null || rawItemType.isEmpty) ? 'coin' : rawItemType.toLowerCase();
+
+        final rawSetContents = data['set_contents'];
+        List<dynamic> setContentsList = [];
+        if (rawSetContents is String && rawSetContents.isNotEmpty) {
+          try {
+            setContentsList = jsonDecode(rawSetContents) as List<dynamic>;
+          } catch (_) {}
+        } else if (rawSetContents is List) {
+          setContentsList = rawSetContents;
+        }
+
+        final isSet = itemType == 'set' || setContentsList.isNotEmpty;
+
+        if (isSet) {
+
+          for (final child in setContentsList) {
+            if (child is! Map) continue;
+            
+            final rawChildItemType = child['item_type']?.toString().trim();
+            // ignore: unused_local_variable
+            final childItemType = (rawChildItemType == null || rawChildItemType.isEmpty) ? 'coin' : rawChildItemType.toLowerCase();
+
+            final childDenom = child['Denomination']?.toString().trim() ?? child['denomination']?.toString().trim() ?? '';
+            if (childDenom.isNotEmpty && childDenom != 'Multiple') {
+              byDenomination[childDenom] = (byDenomination[childDenom] ?? 0) + 1;
+            }
+
+            final childSeries = child['Program/Series']?.toString().trim() ?? child['series']?.toString().trim() ?? '';
+            if (childSeries.isNotEmpty && childSeries != 'Multiple') {
+              bySeries[childSeries] = (bySeries[childSeries] ?? 0) + 1;
+            }
+
+            final childMetal = child['Metal Content']?.toString().trim() ?? child['metal']?.toString().trim() ?? '';
+            if (childMetal.isNotEmpty && childMetal != 'Multiple') {
+              final match = RegExp(r'[A-Z][a-z]+').firstMatch(childMetal);
+              if (match != null) metals.add(match.group(0)!);
+            }
+          }
+        } else {
+          // Regular coin breakdowns
+          final denom = data['Denomination']?.toString().trim() ?? '';
+          if (denom.isNotEmpty && denom != 'Multiple') {
+            byDenomination[denom] = (byDenomination[denom] ?? 0) + 1;
+          }
+
+          final series = data['Program/Series']?.toString().trim() ?? '';
+          if (series.isNotEmpty && series != 'Multiple') {
+            bySeries[series] = (bySeries[series] ?? 0) + 1;
+          }
+
+          final metal = data['Metal Content']?.toString().trim() ?? '';
+          if (metal.isNotEmpty && metal != 'Multiple') {
+            final match = RegExp(r'[A-Z][a-z]+').firstMatch(metal);
+            if (match != null) metals.add(match.group(0)!);
+          }
+        }
+
+        // Grade & Verification count for the main document
         final condition = data['Condition']?.toString() ?? '';
         final certNo = data['Certification Number']?.toString().trim() ?? '';
         final confidence = data['verification_confidence']?.toString().toUpperCase() ?? '';
@@ -222,26 +284,6 @@ class MorganChatContextService {
           verifiedCount++;
         } else {
           unverifiedCount++;
-        }
-
-        // By denomination
-        final denom = data['Denomination']?.toString().trim() ?? '';
-        if (denom.isNotEmpty && denom != 'Multiple') {
-          byDenomination[denom] = (byDenomination[denom] ?? 0) + 1;
-        }
-
-        // By series
-        final series = data['Program/Series']?.toString().trim() ?? '';
-        if (series.isNotEmpty && series != 'Multiple') {
-          bySeries[series] = (bySeries[series] ?? 0) + 1;
-        }
-
-        // Metals
-        final metal = data['Metal Content']?.toString().trim() ?? '';
-        if (metal.isNotEmpty && metal != 'Multiple') {
-          // Extract primary metal name (e.g. "90% Silver" → "Silver")
-          final match = RegExp(r'[A-Z][a-z]+').firstMatch(metal);
-          if (match != null) metals.add(match.group(0)!);
         }
 
         ranked.add({...data, '_parsedValue': value, '_docId': doc.id});
@@ -299,8 +341,13 @@ class MorganChatContextService {
         return year.isNotEmpty ? '$year $name' : name;
       }).where((s) => s.trim().isNotEmpty).toList();
 
+      // Use shared expansion helper for accurate totalCoins (Dimes Bug v2.2)
+      final docDataList = docs.map((d) => d.data()).toList();
+      final docIdList = docs.map((d) => d.id).toList();
+      final expansion = expandCollection(docDataList, docIdList);
+
       _cache = MorganCollectionContext(
-        totalCoins: docs.length,
+        totalCoins: expansion.totalCoins,
         portfolioValue: portfolioValue,
         acquisitionCost: acquisitionCost,
         profit: portfolioValue - acquisitionCost,

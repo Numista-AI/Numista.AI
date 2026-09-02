@@ -14,6 +14,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
+import '../services/set_expansion_helper.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
@@ -341,7 +342,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 final advanced = modeSnap.data ?? false;
 
                 // ── Compute portfolio metrics ──────────────────────────────────
-                int totalItems = coins.length + currency.length + worldItems.length;
+                // Use expansion-aware counting (Dimes Bug v2.2)
+                final coinDocIds = coins.map((d) => (d['id'] ?? '').toString()).toList();
+                final expansion = expandCollection(coins, coinDocIds);
+                int totalItems = expansion.totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
             double bidTotal = 0;
             double askTotal = 0;
@@ -648,7 +652,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     if (narrow) {
                       return Column(children: [
                         Row(children: [
-                          Expanded(child: _metricCard('Total Items', totalItems.toString())),
+                          Expanded(child: _metricCard('Total Coins', totalItems.toString())),
                           const SizedBox(width: 10),
                           Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
                         ]),
@@ -667,7 +671,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _metricCardFlex('Total Items', totalItems.toString()),
+                        _metricCardFlex('Total Coins', totalItems.toString()),
                         _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
                         _metricCardFlex('Melt Value', fmt.format(meltValue)),
                         _metricCardFlex('Face Value', fmt.format(faceValue)),
@@ -1547,10 +1551,84 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.289',
+    date: '2026-09-02',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
+    version: 'v4.288',
+    date: '2026-09-02',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+      'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',
+      'Release: v4.284 auto-bump (Phase 4 RAG complete)',
+      'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
+      'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',
+      'Add authoritative US Mint mintage figures dataset and knowledge base',
+      'Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run',
+      'Rag: add print() traces to expose embedding errors and exception paths in Cloud Run',
+    ],
+  ),
+  _Release(
+    version: 'v4.287',
+    date: '2026-09-01',
+    description: 'Deep_dive Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',
+      'Release: v4.284 auto-bump (Phase 4 RAG complete)',
+      'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
+      'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',
+      'Add authoritative US Mint mintage figures dataset and knowledge base',
+      'Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run',
+      'Rag: add print() traces to expose embedding errors and exception paths in Cloud Run',
+      'Skills: update project-scanner skill with prod URLs and US Mint programs',
+    ],
+  ),
+  _Release(
+    version: 'v4.286',
+    date: '2026-09-01',
+    description: 'Deep_dive Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',
+      'Release: v4.284 auto-bump (Phase 4 RAG complete)',
+      'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
+      'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',
+      'Add authoritative US Mint mintage figures dataset and knowledge base',
+      'Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run',
+      'Rag: add print() traces to expose embedding errors and exception paths in Cloud Run',
+      'Skills: update project-scanner skill with prod URLs and US Mint programs',
+    ],
+  ),
+  _Release(
+    version: 'v4.285',
+    date: '2026-09-01',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: v4.284 auto-bump (Phase 4 RAG complete)',
+      'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
+      'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',
+      'Add authoritative US Mint mintage figures dataset and knowledge base',
+      'Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run',
+      'Rag: add print() traces to expose embedding errors and exception paths in Cloud Run',
+      'Skills: update project-scanner skill with prod URLs and US Mint programs',
+      'E2e: fix ISSUE-002 mint set tab timeout using semantic text locator',
+    ],
+  ),
+  _Release(
     version: 'v4.284',
     date: '2026-09-01',
     description: 'Rag Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
       'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -194,6 +194,12 @@ db = firestore.Client(credentials=credentials, project=PROJECT_ID)
 
 # Initialize GCS client (shares same SA credentials)
 gcs_client = gcs.Client(credentials=credentials, project=PROJECT_ID)
+
+# Initialize Firebase Admin SDK (for verify_id_token in deep_dive auth)
+import firebase_admin
+from firebase_admin import auth as fb_auth
+if not firebase_admin._apps:
+    firebase_admin.initialize_app()
 
 # In-memory micro-cache for Grade Review Stats to bypass eventual consistency replication latency
 # Structure: {user_email: {"stats": dict, "timestamp": float}}
@@ -2519,6 +2525,14 @@ def execute_update_coin(
     personal_notes: str = None
 ) -> dict:
     try:
+        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
+        if coin_id and "__set_coin_" in str(coin_id):
+            return {
+                "action": "update_coin_in_collection",
+                "status": "error",
+                "message": "That coin lives inside a set and cannot be modified individually. "
+                           "To manage it, break up the set first from your collection screen."
+            }
         col_ref = db.collection('users').document(user_email).collection('coins')
 
         # 10-minute recency resolution if coin_id is omitted by model
@@ -2565,6 +2579,14 @@ def execute_update_coin(
 
 def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
     try:
+        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
+        if coin_id and "__set_coin_" in str(coin_id):
+            return {
+                "action": "undo_add_coin",
+                "status": "error",
+                "message": "That coin lives inside a set and cannot be removed individually. "
+                           "To manage it, break up the set first from your collection screen."
+            }
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
         doc_ref.delete()
         return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
@@ -2573,46 +2595,120 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
         return {"action": "undo_add_coin", "status": "error", "message": "Failed to undo. Please try again."}
 
 
+# ---------------------------------------------------------------------------
+# Set-Expansion Helpers (Dimes Bug v2.2 — moved to shared module)
+# ---------------------------------------------------------------------------
+from scan_service.collection_inventory import (
+    expand_collection_inventory, _get_field, is_dime, is_set_parent,
+    is_physical_coin, count_coins_and_lots, lot_value,
+    MAX_INVENTORY_ITEMS, _INHERIT_BLOCKLIST_YEAR, _INHERIT_BLOCKLIST_DENOM,
+    _DIME_SYNONYMS,
+)
+
+
+
+
 @app.post("/api/deep_dive")
-async def deep_dive(request: DeepDiveRequest):
+async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None)):
     """
     Morgan AI chat: answers questions about the user's coin collection and logs/updates coins via tools.
+    Token-verified: requires Authorization: Bearer {idToken}.
     """
     try:
-        # -- 0. Handle Direct Button Commands (Undo / Quick Actions) -----------------
+        # -- 0a. Verify identity from Bearer token ----------------------------------
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        id_token = authorization.split("Bearer ", 1)[1].strip()
+        try:
+            decoded_token = fb_auth.verify_id_token(id_token)
+        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+            raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token")
+        except Exception as e:
+            logger.error(f"[deep_dive] unexpected auth error: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Authentication failed")
+
+        owner_key = _collection_owner_from_token(decoded_token)
+
+        # Log mismatch if body email disagrees with token owner
+        if request.user_email and request.user_email.strip().lower() != owner_key:
+            owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
+            body_hash = hashlib.sha256(request.user_email.encode()).hexdigest()[:12]
+            logger.warning(
+                f"[deep_dive] owner mismatch: token={owner_hash} body={body_hash}"
+            )
+
+        # -- 0b. Handle Direct Button Commands (Undo / Quick Actions) ----------------
         if request.query.startswith("INTERNAL_UNDO:"):
             target_id = request.query.split(":")[-1].strip()
-            res = execute_undo_add_coin(request.user_email, target_id)
+            res = execute_undo_add_coin(owner_key, target_id)
             return {
                 "status": "success",
                 "response": "I've removed that coin from your collection binder.",
                 "action_payload": res
             }
 
-        # -- 1. Resolve collection context --------------------------------------
-        if request.collection_context and len(request.collection_context.strip()) > 50:
-            context = request.collection_context.strip()
+        # -- 1. Build authoritative inventory from Firestore (SoR) -------------------
+        col_ref = db.collection('users').document(owner_key).collection('coins')
+        docs = col_ref.stream()
+        inventory_items, inv_stats = expand_collection_inventory(docs)
+
+        # Pre-cap tally (always computed on full list)
+        coin_items_count = sum(1 for it in inventory_items if it["item_type"] in ("coin", ""))
+        tally_header = (
+            f"INVENTORY TALLY: {coin_items_count} coins across {inv_stats['sets']} sets "
+            f"({inv_stats['expanded']} coins expanded from sets). "
+            f"Total Firestore docs: {inv_stats['docs']}."
+        )
+
+        # Apply cap — compact overflow rows instead of dropping them
+        truncated = False
+        if len(inventory_items) > MAX_INVENTORY_ITEMS:
+            truncated = True
+            full_items = inventory_items[:MAX_INVENTORY_ITEMS]
+            compact_items = [
+                {
+                    "coin_id": it["coin_id"],
+                    "year": it["year"],
+                    "denomination": it["denomination"],
+                    "mint_mark": it["mint_mark"],
+                    "item_type": it["item_type"],
+                    "from_set": it["from_set"],
+                }
+                for it in inventory_items[MAX_INVENTORY_ITEMS:]
+            ]
+            inventory_items = full_items + compact_items
+
+        if not inventory_items:
+            context = "The user's collection is currently empty."
         else:
-            col_ref = db.collection('users').document(request.user_email).collection('coins')
-            docs = col_ref.stream()
-            inventory_items = []
-            for doc in docs:
-                d = doc.to_dict()
-                inventory_items.append({
-                    "coin_id":   doc.id,
-                    "Year":      d.get("Year", ""),
-                    "Denom":     d.get("Denomination", ""),
-                    "Mint":      d.get("Mint Mark", ""),
-                    "Condition": d.get("Condition", ""),
-                    "Subject":   d.get("Theme/Subject", ""),
-                    "Series":    d.get("Program/Series", ""),
-                    "Value":     d.get("AI Estimated Value", "$0.00"),
-                    "Cost":      d.get("Cost", "$0.00"),
-                })
-            if not inventory_items:
-                context = "The user's collection is currently empty."
-            else:
-                context = json.dumps(inventory_items, default=str)
+            trunc_flag = f"\nINVENTORY_TRUNCATED=true (first {MAX_INVENTORY_ITEMS} have full detail, remainder are compact count-only records)" if truncated else ""
+            context = tally_header + trunc_flag + "\n" + json.dumps(inventory_items, default=str)
+
+        # COUNTING RULES — after inventory JSON, before CLIENT_SUMMARY_NOT_SOR
+        context += """
+
+COUNTING RULES (follow these exactly for any counting or inventory question):
+1. "How many coins" or "how many [denomination]" = count items where item_type is "coin" or "" (empty). Do NOT count item_type="set" (set parents), "paper_currency", "medal", "exonumia", or "supply" as coins.
+2. "How many sets" = count items where item_type == "set".
+3. When a counted coin has a from_set value, mention the set name: "from your [set name]".
+4. Items with fields_incomplete=true may have missing year or denomination — do not assume their year or denomination. State what is known and what is missing.
+5. NEVER pass a coin_id containing "__set_coin_" to add_coin_to_collection, update_coin_in_collection, or undo_add_coin. Those are virtual IDs for set-expanded coins. If the user wants to modify a coin inside a set, tell them to break up the set first.
+"""
+
+        # Optional: append client summary as UI hint (NOT the coin list)
+        if request.collection_context and len(request.collection_context.strip()) > 50:
+            context += "\n[CLIENT_SUMMARY_NOT_SOR — do not use for counting, defer to the inventory JSON above]\n" + request.collection_context.strip()
+
+        # Log (no raw email — hash the owner key)
+        owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
+        logger.info(
+            f"[deep_dive] owner={owner_hash} docs={inv_stats['docs']} "
+            f"sets={inv_stats['sets']} expanded={inv_stats['expanded']} "
+            f"total_items={inv_stats['total_items']} context_chars={len(context)} "
+            f"truncated={truncated} used_client_context=false"
+        )
+
 
         # -- 2. Personalisation & Conversation History ----------------------------
         name = (request.user_name or "").strip()
@@ -2777,11 +2873,11 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 c_name = call.name
                 c_args = call.args or {}
                 if c_name == "add_coin_to_collection":
-                    action_payload = execute_add_coin(request.user_email, **c_args)
+                    action_payload = execute_add_coin(owner_key, **c_args)
                 elif c_name == "update_coin_in_collection":
-                    action_payload = execute_update_coin(request.user_email, **c_args)
+                    action_payload = execute_update_coin(owner_key, **c_args)
                 elif c_name == "undo_add_coin":
-                    action_payload = execute_undo_add_coin(request.user_email, **c_args)
+                    action_payload = execute_undo_add_coin(owner_key, **c_args)
 
             # Second turn to generate Morgan's final response after executing tool
             second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
@@ -6523,25 +6619,54 @@ def _collection_owner_from_token(user: Dict[str, Any]) -> str:
 
 
 @app.get("/api/collection/count")
-def collection_count(user_email: str):
-    """
-    Return the number of coins in a user's collection using Firestore's
-    aggregation query (COUNT) -- reads zero documents, billed as a single
-    aggregation query.
+def collection_count(authorization: str = Header(None), user_email: str = ""):
+    """Return expanded coin/lot counts. Token-verified.
 
     Returns:
-        { "user_email": str, "coins": int }
+        { "owner": str, "user_email": str, "coins": int, "lots": int, "sets": int }
     """
     try:
-        coins_ref   = db.collection('users').document(user_email).collection('coins')
-        agg_query   = coins_ref.count()
-        result      = agg_query.get()
-        # result is a list of AggregationResult; first item holds the count
-        count = result[0][0].value if result and result[0] else 0
-        return {"user_email": user_email, "coins": count}
+        # --- Auth: same pattern as deep_dive ---
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing Authorization header")
+        id_token = authorization.split("Bearer ", 1)[1].strip()
+        try:
+            decoded_token = fb_auth.verify_id_token(id_token)
+        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        except Exception as e:
+            logger.error(f"[collection/count] auth error: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Authentication failed")
+
+        owner_key = _collection_owner_from_token(decoded_token)
+
+        # Log mismatch — user_email is deprecated, not used to select collection
+        if user_email and user_email.strip().lower() != owner_key:
+            logger.info(
+                f"[collection/count] deprecated user_email param ignored; "
+                f"owner={hashlib.sha256(owner_key.encode()).hexdigest()[:12]}"
+            )
+
+        # --- Expand and count ---
+        coins_ref = db.collection('users').document(owner_key).collection('coins')
+        docs = coins_ref.stream()
+        inventory, stats = expand_collection_inventory(docs)
+        counts = count_coins_and_lots(inventory)
+
+        return {
+            "owner": owner_key,
+            "user_email": owner_key,     # deprecated field, kept for back-compat
+            "coins": counts["total_coins"],
+            "lots": counts["total_lots"],
+            "sets": counts["set_count"],
+        }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("Collection count error", extra={"user_email": user_email})
+        logger.exception("Collection count error")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ── Checklist write callable ──────────────────────────────────────────────────
