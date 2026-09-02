@@ -57,13 +57,65 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // PDF Generation State per Program
   String? _generatingProgramId;
 
+  // ── Coin collection cache (Part 2a/2b) ──────────────────────────────────
+  // State-local, 60-second TTL. Cache survives remounts within the same
+  // State lifetime but is cleared on widget disposal (hot restart, full nav).
+  // DESIGN CHOICE (C-1 option b): cache is State-local only; writes on other
+  // screens do not cross-invalidate within the TTL window. This is a
+  // documented trade-off. Ticket B's programs_progress approach eliminates it.
+  List<QueryDocumentSnapshot>? _cachedCoinDocs;
+  DateTime? _cacheTimestamp;
+  static const Duration _cacheTtl = Duration(seconds: 60);
+
+  /// The Future started in initState() so it runs in parallel with the
+  /// programs StreamBuilder rather than waiting for it to emit first.
+  /// Typed as `List<QueryDocumentSnapshot>` so cache and live paths are uniform.
+  Future<List<QueryDocumentSnapshot>>? _coinsFuture;
+
   @override
   void initState() {
     super.initState();
     _loadTotalReferenceCount();
     _loadProgramPreferences();
     _preloadPdfAssets();
+    _startCoinsFetch();
   }
+
+  /// Kick off the coins fetch immediately. Uses the 60-second state-local
+  /// cache when still fresh; otherwise fires a new Firestore read.
+  void _startCoinsFetch() {
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+
+    if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
+      _coinsFuture = GuestSeedService.getDemoCoinsFuture()
+          .then((snap) => snap.docs);
+      return;
+    }
+
+    // Serve from cache if still fresh — resolves immediately, no network hit.
+    if (_cachedCoinDocs != null &&
+        _cacheTimestamp != null &&
+        DateTime.now().difference(_cacheTimestamp!) < _cacheTtl) {
+      _coinsFuture = Future.value(_cachedCoinDocs!);
+      return;
+    }
+
+    // TODO Ticket B: remove limit(2000) after programsProgressAggregator
+    // is confirmed live on all users. Until then, collections > 2,000 coins
+    // will show program completion bars capped at 2,000 documents.
+    _coinsFuture = FirebaseFirestore.instance
+        .collection(AuthService.coinsPath)
+        .limit(2000)
+        .get()
+        .then((snap) {
+          // Populate the state-local cache on a live fetch.
+          _cachedCoinDocs = snap.docs;
+          _cacheTimestamp = DateTime.now();
+          return snap.docs;
+        });
+  }
+
 
   Future<void> _preloadPdfAssets() async {
     if (_assetsPreloaded) return;
@@ -187,22 +239,20 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       builder: (context, refSnapshot) {
         final allProgramsMap = refSnapshot.data ?? CoinProgramsData.usPrograms;
 
-        // Auth-primary gate: a real non-anonymous Firebase user always reads
-        // from Firestore, regardless of the in-memory demo flag. The demo
-        // branch is only reached when there is no authenticated user.
-        final authUser = FirebaseAuth.instance.currentUser;
-        final isRealUser = authUser != null && !authUser.isAnonymous;
-
-        return FutureBuilder<QuerySnapshot>(
-          future: (!isRealUser && GuestSeedService.isBrowseDemoMode)
-              ? GuestSeedService.getDemoCoinsFuture()
-              : FirebaseFirestore.instance.collection(AuthService.coinsPath).limit(2000).get(),
+        return FutureBuilder<List<QueryDocumentSnapshot>>(
+          // _coinsFuture was started in initState() — it runs in parallel with
+          // the StreamBuilder above rather than waiting for it to emit first.
+          // Cache path resolves immediately with no network round-trip.
+          future: _coinsFuture,
           builder: (context, snapshot) {
+            // ── Show skeleton while waiting ──────────────────────────────
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Color(0xFFF63366)));
+              return _buildSkeletonGrid(allProgramsMap);
             }
 
-            final docs = snapshot.data?.docs ?? [];
+            // Cache population is handled inside _startCoinsFetch's .then().
+            final docs = snapshot.data ?? [];
+
             
             if (_selectedProgram == null && widget.initialProgramId != null) {
               for (final entry in allProgramsMap.entries) {
@@ -360,8 +410,208 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     }
     return 0;
   }
+  // ── Skeleton Loader (Part 1) ─────────────────────────────────────────────
+  //
+  // Shown during FutureBuilder ConnectionState.waiting.
+  // Program names are sourced from CoinProgramsData.usPrograms — the local
+  // static fallback (last synced 2026-08-26). No network call is needed.
+  // If a program exists in Firestore but not in the local list, it will
+  // "pop in" after data loads — documented, acceptable trade-off.
+  Widget _buildSkeletonGrid(Map<String, List<CoinProgram>> programsMap) {
+    // Use local static data so names are available immediately.
+    final localMap = CoinProgramsData.usPrograms;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header (same as real view) ──────────────────────────────────
+          const Text(
+            'US Mint Coin Programs',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+              color: Color(0xFF31333F),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              'PROGRAM MANAGER',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Track your progress on official US Mint series.',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Option B loading banner ─────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded,
+                    size: 16, color: Color(0xFF64748B)),
+                SizedBox(width: 8),
+                Text(
+                  'Loading collection data \u2014 first visit may take 3\u20135 seconds',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── Skeleton category sections ──────────────────────────────────
+          ...localMap.entries.map((entry) {
+            final programs = entry.value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(color: Color(0xFFE2E6E9)),
+                const SizedBox(height: 16),
+                // Category heading — ghosted
+                Container(
+                  height: 20,
+                  width: 220,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.4,
+                  ),
+                  itemCount: programs.length,
+                  itemBuilder: (context, index) {
+                    final prog = programs[index];
+                    return _buildSkeletonCard(prog.name, prog.years);
+                  },
+                ),
+                const SizedBox(height: 32),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// A single skeleton card — shows ghosted program name + year in real text,
+  /// grey shimmer blocks for progress stats.
+  Widget _buildSkeletonCard(String name, String years) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E6E9)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Ghosted program name
+          Text(
+            name,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: Color(0xFFCBD5E1), // ghost — same position, lighter colour
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          // Ghosted year range
+          Text(
+            years,
+            style: const TextStyle(fontSize: 12, color: Color(0xFFE2E8F0)),
+          ),
+          const Spacer(),
+          // Grey shimmer — progress text row
+          Container(
+            height: 12,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Grey shimmer — progress bar
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Grey shimmer — advancement text
+          Container(
+            height: 10,
+            width: 180,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Grey shimmer — button
+          Container(
+            height: 36,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildProgramCard(CoinProgram program, int collected, int total, double pct) {
+
     final programOverallAdvancement = _totalReferenceCount > 0 ? (collected / _totalReferenceCount) * 100 : 0.0;
 
     return Container(
