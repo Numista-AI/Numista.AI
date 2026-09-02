@@ -289,6 +289,19 @@
 
 
 
+
+## v4.287 — 2026-09-01
+**Deep_dive Enhancements & Platform Updates**
+
+- Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)
+- Release: v4.284 auto-bump (Phase 4 RAG complete)
+- Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)
+- Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)
+- Add authoritative US Mint mintage figures dataset and knowledge base
+- Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run
+- Rag: add print() traces to expose embedding errors and exception paths in Cloud Run
+- Skills: update project-scanner skill with prod URLs and US Mint programs
+
 ## v4.286 — 2026-09-01
 **Deep_dive Enhancements & Platform Updates**
 

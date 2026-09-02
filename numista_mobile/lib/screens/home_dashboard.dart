@@ -1547,10 +1547,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.286',
+    version: 'v4.287',
     date: '2026-09-01',
     description: 'Deep_dive Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',
+      'Release: v4.284 auto-bump (Phase 4 RAG complete)',
+      'Rag: wire vector_rag_service into /api/deep_dive prompt (was only in /api/ai/chat)',
+      'Rag: use location=global for gemini-embedding-2 client (us-central1 hangs on embed_content)',
+      'Add authoritative US Mint mintage figures dataset and knowledge base',
+      'Rag: add function-entry trace prints to pinpoint execution cutoff in Cloud Run',
+      'Rag: add print() traces to expose embedding errors and exception paths in Cloud Run',
+      'Skills: update project-scanner skill with prod URLs and US Mint programs',
+    ],
+  ),
+  _Release(
+    version: 'v4.286',
+    date: '2026-09-01',
+    description: 'Deep_dive Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',
       'Release: v4.284 auto-bump (Phase 4 RAG complete)',
