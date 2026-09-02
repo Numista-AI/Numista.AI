@@ -292,6 +292,59 @@
 
 
 
+
+
+
+
+
+## v4.294 — 2026-09-02
+**Collection Enhancements & Platform Updates**
+
+- Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)
+- Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files
+- E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies
+- Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)
+- Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)
+- Release: bump to v4.289 release metadata
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
+## v4.293 — 2026-09-02
+**E2e Enhancements & Platform Updates**
+
+- E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies
+- Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)
+- Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)
+- Release: bump to v4.289 release metadata
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
+## v4.292 — 2026-09-02
+**Programs Enhancements & Platform Updates**
+
+- Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)
+- Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)
+- Release: bump to v4.289 release metadata
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
+## v4.291 — 2026-09-02
+**Programs Enhancements & Platform Updates**
+
+- Programs: skeleton loader, parallel fetch, and 60s cache (Ticket A)
+- Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)
+- Release: bump to v4.289 release metadata
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
+## v4.290 — 2026-09-02
+**Collection Enhancements & Platform Updates**
+
+- Collection: shared expansion module, lot_value, token-bound /count (Dimes Bug v2.2)
+- Release: bump to v4.289 release metadata
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
 ## v4.289 — 2026-09-02
 **Release Enhancements & Platform Updates**
 
