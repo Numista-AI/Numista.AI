@@ -32,6 +32,7 @@ import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../widgets/header_stats_bar.dart';
+import '../services/set_expansion_helper.dart';
 import '../constants.dart';
 
 // --- Field name constants -----------------------------------------------------
@@ -845,7 +846,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         Expanded(
                           child: HeaderStatsBar(
                             docs: _sorted(_filtered(_cachedCoinsDocs)),
-                            totalCoinsCount: _cachedCoinsDocs.length,
+                            totalCoinsCount: expandCollection(
+                              _cachedCoinsDocs.map((d) => d.data()).toList(),
+                              _cachedCoinsDocs.map((d) => d.id).toList(),
+                            ).totalCoins,
                             spotPrices: _spotPrices,
                             valuation: _valuation,
                             onRunValuation: () => BatchValuationService.instance.start(),
@@ -872,7 +876,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         const SizedBox(height: 12),
                         HeaderStatsBar(
                           docs: _sorted(_filtered(_cachedCoinsDocs)),
-                          totalCoinsCount: _cachedCoinsDocs.length,
+                          totalCoinsCount: expandCollection(
+                            _cachedCoinsDocs.map((d) => d.data()).toList(),
+                            _cachedCoinsDocs.map((d) => d.id).toList(),
+                          ).totalCoins,
                           spotPrices: _spotPrices,
                           valuation: _valuation,
                           onRunValuation: () => BatchValuationService.instance.start(),
