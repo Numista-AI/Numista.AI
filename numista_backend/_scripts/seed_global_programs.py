@@ -46,7 +46,6 @@ def main():
         "D.C. & U.S. Territories Quarters": "dc_territories_quarters",
         "Lincoln Bicentennial Cents (2009)": "lincoln_bicentennial_cents_2009",
         "50 State Quarters": "fifty_state_quarters",
-        "Westward Journey Nickel Series": "westward_journey_nickel_series",
         "2026 America250 - Circulating Currency": "2026_semiquincentennial_currency",
         "2026 America250 - Numismatic Collectibles": "2026_semiquincentennial_collectibles",
     }
