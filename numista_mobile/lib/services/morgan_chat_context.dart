@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../services/auth_service.dart';
+import '../services/set_expansion_helper.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MorganChatContext
@@ -205,8 +206,6 @@ class MorganChatContextService {
       // Collect all docs with their parsed value for ranking
       final ranked = <Map<String, dynamic>>[];
 
-      int setDocCount = 0;
-      int expandedFromSets = 0;
 
       for (final doc in docs) {
         final data = doc.data();
@@ -232,8 +231,6 @@ class MorganChatContextService {
         final isSet = itemType == 'set' || setContentsList.isNotEmpty;
 
         if (isSet) {
-          setDocCount++;
-          expandedFromSets += setContentsList.length;
 
           for (final child in setContentsList) {
             if (child is! Map) continue;
@@ -344,8 +341,13 @@ class MorganChatContextService {
         return year.isNotEmpty ? '$year $name' : name;
       }).where((s) => s.trim().isNotEmpty).toList();
 
+      // Use shared expansion helper for accurate totalCoins (Dimes Bug v2.2)
+      final docDataList = docs.map((d) => d.data()).toList();
+      final docIdList = docs.map((d) => d.id).toList();
+      final expansion = expandCollection(docDataList, docIdList);
+
       _cache = MorganCollectionContext(
-        totalCoins: (docs.length - setDocCount) + expandedFromSets,
+        totalCoins: expansion.totalCoins,
         portfolioValue: portfolioValue,
         acquisitionCost: acquisitionCost,
         profit: portfolioValue - acquisitionCost,

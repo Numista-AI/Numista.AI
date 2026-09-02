@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
+import 'set_expansion_helper.dart';
 
 class CollectionStatsService {
   static double _parseNumber(dynamic val) {
@@ -25,7 +26,9 @@ class CollectionStatsService {
     return v > 100000 ? 0.0 : v;
   }
 
-  /// One-shot aggregation rebuild of collection_stats capped at 500 docs.
+  /// One-shot aggregation rebuild of collection_stats.
+  /// Reads ALL docs (no 500 limit — Dimes Bug v2.2).
+  /// Uses expansion-aware counting via set_expansion_helper.
   /// Writes exclusively to canonical 4-segment path: users/{uid}/metadata/collection_stats.
   static Future<Map<String, dynamic>> rebuildAndUpsertStats() async {
     if (AuthService.coinsPath.contains('unknown')) {
@@ -33,9 +36,13 @@ class CollectionStatsService {
     }
 
     final db = FirebaseFirestore.instance;
-    final snap = await db.collection(AuthService.coinsPath).limit(500).get();
+    final snap = await db.collection(AuthService.coinsPath).get();  // no .limit(500)
 
-    int totalItems = snap.docs.length;
+    // Build expansion-aware counts
+    final docs = snap.docs.map((d) => d.data()).toList();
+    final docIds = snap.docs.map((d) => d.id).toList();
+    final expansion = expandCollection(docs, docIds);
+
     int coinCount = 0;
     int supplyCount = 0;
     double faceValue = 0.0;
@@ -44,36 +51,48 @@ class CollectionStatsService {
     double bidTotal = 0.0;
     double cpgTotal = 0.0;
 
+    // Iterate original docs for value aggregation (lot_value per lot)
+    // Iterate expanded items for counting
+    for (final item in expansion.allItems) {
+      final isSupply = item['item_type'] == 'supply';
+      if (isSupply) {
+        supplyCount++;
+        continue;
+      }
+      if (isPhysicalCoin(item)) {
+        coinCount++;
+      }
+    }
+
+    // Value aggregation: iterate original docs for lot_value
     for (final doc in snap.docs) {
       final d = doc.data();
       final itemType = (d['item_type'] ?? '').toString().toLowerCase().trim();
       final isSupply = d['is_supply'] == true || itemType == 'supply';
+      if (isSupply) continue;
 
-      if (isSupply) {
-        supplyCount++;
-      } else {
-        coinCount++;
-        faceValue += _parseNumber(d['Face Value'] ?? d['face_value'] ?? d['Denomination']);
-        meltValue += _parseNumber(d['Melt Value'] ?? d['melt_value']);
-        acquisitionCost += _parseNumber(d['Cost'] ?? d['purchase_price']);
+      faceValue += _parseNumber(d['Face Value'] ?? d['face_value'] ?? d['Denomination']);
+      meltValue += _parseNumber(d['Melt Value'] ?? d['melt_value']);
+      acquisitionCost += _parseNumber(d['Cost'] ?? d['purchase_price']);
 
-        final cpg = _parseNumber(d['cpgRetail']);
-        final bid = _parseNumber(d['greysheetBid']);
-        final aiVal = _parseAiValue((d['AI Estimated Value'] ?? d['ai_value'] ?? '').toString());
-        final baseVal = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
+      final cpg = _parseNumber(d['cpgRetail']);
+      final bid = _parseNumber(d['greysheetBid']);
+      final aiVal = _parseAiValue((d['AI Estimated Value'] ?? d['ai_value'] ?? '').toString());
+      final baseVal = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
 
-        final finalCpg = cpg > 0 ? cpg : baseVal;
-        final finalBid = bid > 0 ? bid : (baseVal * 0.80);
+      final finalCpg = cpg > 0 ? cpg : baseVal;
+      final finalBid = bid > 0 ? bid : (baseVal * 0.80);
 
-        cpgTotal += finalCpg;
-        bidTotal += finalBid;
-      }
+      cpgTotal += finalCpg;
+      bidTotal += finalBid;
     }
 
     final stats = {
-      'item_count': totalItems,
+      'item_count': expansion.totalCoins,
       'coin_count': coinCount,
       'supply_count': supplyCount,
+      'total_lots': expansion.totalLots,
+      'set_count': expansion.setCount,
       'face_value': double.parse(faceValue.toStringAsFixed(2)),
       'melt_value': double.parse(meltValue.toStringAsFixed(2)),
       'acquisition_cost': double.parse(acquisitionCost.toStringAsFixed(2)),

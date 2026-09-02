@@ -2596,161 +2596,16 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Set-Expansion Helpers (Dimes Bug Fix)
-# Pure functions — no FastAPI dependency.  Used by deep_dive, unit tests, and
-# the live COUNT acceptance script.
+# Set-Expansion Helpers (Dimes Bug v2.2 — moved to shared module)
 # ---------------------------------------------------------------------------
-MAX_INVENTORY_ITEMS = 2000
-
-_INHERIT_BLOCKLIST_YEAR  = {"", "multiple", "various", "n/a"}
-_INHERIT_BLOCKLIST_DENOM = {"", "set", "multiple", "various", "n/a"}
-
-_DIME_SYNONYMS = {"dime", "10c", "10-cent", "10 cent", "roosevelt dime"}
-
-
-def _get_field(d: dict, *keys, default=""):
-    """Read first non-empty value from multiple key variants (PascalCase / snake_case)."""
-    for k in keys:
-        v = d.get(k)
-        if v is not None and str(v).strip():
-            return str(v).strip()
-    return default
+from scan_service.collection_inventory import (
+    expand_collection_inventory, _get_field, is_dime, is_set_parent,
+    is_physical_coin, count_coins_and_lots, lot_value,
+    MAX_INVENTORY_ITEMS, _INHERIT_BLOCKLIST_YEAR, _INHERIT_BLOCKLIST_DENOM,
+    _DIME_SYNONYMS,
+)
 
 
-def is_dime(denom: str) -> bool:
-    """Returns True if the denomination string represents a dime."""
-    return denom.strip().lower() in _DIME_SYNONYMS
-
-
-def expand_collection_inventory(docs_iter):
-    """Expand Firestore coin documents into a flat inventory list.
-
-    Set documents (item_type == "set" OR set_contents is a non-empty list)
-    are projected as one set-parent row plus one row per child in set_contents.
-
-    Returns:
-        (inventory_items, stats_dict)
-
-    inventory_items: list of dicts with canonical snake_case keys:
-        coin_id, year, denomination, mint_mark, condition, theme_subject,
-        program_series, ai_estimated_value, cost, item_type, from_set,
-        fields_incomplete
-
-    stats_dict: { "docs": int, "sets": int, "expanded": int, "total_items": int }
-
-    Synthetic coin_id values contain "__set_coin_" and MUST be rejected
-    by any write tool (add/update/undo).  They are prompt-only.
-    """
-    inventory = []
-    doc_count = 0
-    set_count = 0
-    expanded_count = 0
-
-    for doc in docs_iter:
-        d = doc.to_dict()
-        doc_count += 1
-
-        item_type_raw = _get_field(d, "item_type", default="coin").lower()
-
-        # Detect set: explicit item_type OR presence of set_contents
-        raw_contents = d.get("set_contents")
-        if isinstance(raw_contents, str):
-            try:
-                raw_contents = json.loads(raw_contents)
-            except (json.JSONDecodeError, TypeError):
-                raw_contents = None
-
-        is_set = (item_type_raw == "set") or (isinstance(raw_contents, list) and len(raw_contents) > 0)
-
-        if is_set:
-            set_count += 1
-            set_contents = raw_contents if isinstance(raw_contents, list) else []
-
-            set_name = _get_field(d, "Theme/Subject", "theme_subject",
-                                  "Original Description from source", default="Unknown Set")
-
-            # Parent set row
-            inventory.append({
-                "coin_id":            doc.id,
-                "year":               _get_field(d, "Year", "year"),
-                "denomination":       _get_field(d, "Denomination", "denomination"),
-                "mint_mark":          _get_field(d, "Mint Mark", "mint_mark"),
-                "condition":          _get_field(d, "Condition", "condition"),
-                "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
-                "program_series":     _get_field(d, "Program/Series", "program_series"),
-                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
-                "item_type":          "set",
-                "from_set":           None,
-                "fields_incomplete":  False,
-            })
-
-            parent_year = _get_field(d, "Year", "year")
-            parent_cond = _get_field(d, "Condition", "condition")
-
-            for idx, coin in enumerate(set_contents):
-                if not isinstance(coin, dict):
-                    continue
-
-                child_year  = _get_field(coin, "Year", "year")
-                child_denom = _get_field(coin, "Denomination", "denomination")
-
-                # Inherit parent year ONLY if child is blank AND parent is not blocked
-                if not child_year and parent_year.lower() not in _INHERIT_BLOCKLIST_YEAR:
-                    child_year = parent_year
-
-                # Never inherit blocked denominations
-                if child_denom.lower() in _INHERIT_BLOCKLIST_DENOM:
-                    child_denom = ""
-
-                incomplete = (not child_year) or (not child_denom)
-
-                # Child item_type from the child itself (default "coin").
-                # Paper/medal/supply children stay those types.
-                child_item_type = _get_field(coin, "item_type", default="coin").lower()
-                if child_item_type in ("set", "multiple", "n/a", ""):
-                    child_item_type = "coin"
-
-                inventory.append({
-                    "coin_id":            f"{doc.id}__set_coin_{idx}",
-                    "year":               child_year,
-                    "denomination":       child_denom,
-                    "mint_mark":          _get_field(coin, "Mint Mark", "mint_mark"),
-                    "condition":          _get_field(coin, "Condition", "condition") or parent_cond,
-                    "theme_subject":      _get_field(coin, "Theme/Subject", "theme_subject"),
-                    "program_series":     _get_field(coin, "Program/Series", "program_series"),
-                    "ai_estimated_value": _get_field(coin, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                    "cost":               _get_field(coin, "Cost", "cost", "purchase_cost", default="$0.00"),
-                    "item_type":          child_item_type,
-                    "from_set":           set_name,
-                    "fields_incomplete":  incomplete,
-                })
-                expanded_count += 1
-        else:
-            # Regular coin / paper_currency / medal / other
-            inventory.append({
-                "coin_id":            doc.id,
-                "year":               _get_field(d, "Year", "year"),
-                "denomination":       _get_field(d, "Denomination", "denomination"),
-                "mint_mark":          _get_field(d, "Mint Mark", "mint_mark"),
-                "condition":          _get_field(d, "Condition", "condition"),
-                "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
-                "program_series":     _get_field(d, "Program/Series", "program_series"),
-                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
-                "item_type":          item_type_raw if item_type_raw else "coin",
-                "from_set":           None,
-                "fields_incomplete":  False,
-            })
-
-    stats = {
-        "docs": doc_count,
-        "sets": set_count,
-        "expanded": expanded_count,
-        "total_items": len(inventory),
-    }
-
-    return inventory, stats
 
 
 @app.post("/api/deep_dive")
@@ -6764,25 +6619,54 @@ def _collection_owner_from_token(user: Dict[str, Any]) -> str:
 
 
 @app.get("/api/collection/count")
-def collection_count(user_email: str):
-    """
-    Return the number of coins in a user's collection using Firestore's
-    aggregation query (COUNT) -- reads zero documents, billed as a single
-    aggregation query.
+def collection_count(authorization: str = Header(None), user_email: str = ""):
+    """Return expanded coin/lot counts. Token-verified.
 
     Returns:
-        { "user_email": str, "coins": int }
+        { "owner": str, "user_email": str, "coins": int, "lots": int, "sets": int }
     """
     try:
-        coins_ref   = db.collection('users').document(user_email).collection('coins')
-        agg_query   = coins_ref.count()
-        result      = agg_query.get()
-        # result is a list of AggregationResult; first item holds the count
-        count = result[0][0].value if result and result[0] else 0
-        return {"user_email": user_email, "coins": count}
+        # --- Auth: same pattern as deep_dive ---
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing Authorization header")
+        id_token = authorization.split("Bearer ", 1)[1].strip()
+        try:
+            decoded_token = fb_auth.verify_id_token(id_token)
+        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        except Exception as e:
+            logger.error(f"[collection/count] auth error: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Authentication failed")
+
+        owner_key = _collection_owner_from_token(decoded_token)
+
+        # Log mismatch — user_email is deprecated, not used to select collection
+        if user_email and user_email.strip().lower() != owner_key:
+            logger.info(
+                f"[collection/count] deprecated user_email param ignored; "
+                f"owner={hashlib.sha256(owner_key.encode()).hexdigest()[:12]}"
+            )
+
+        # --- Expand and count ---
+        coins_ref = db.collection('users').document(owner_key).collection('coins')
+        docs = coins_ref.stream()
+        inventory, stats = expand_collection_inventory(docs)
+        counts = count_coins_and_lots(inventory)
+
+        return {
+            "owner": owner_key,
+            "user_email": owner_key,     # deprecated field, kept for back-compat
+            "coins": counts["total_coins"],
+            "lots": counts["total_lots"],
+            "sets": counts["set_count"],
+        }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("Collection count error", extra={"user_email": user_email})
+        logger.exception("Collection count error")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ── Checklist write callable ──────────────────────────────────────────────────

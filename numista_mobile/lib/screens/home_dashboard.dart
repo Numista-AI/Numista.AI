@@ -14,6 +14,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import '../services/melt_value_service.dart';
 import '../services/portfolio_snapshot_service.dart';
+import '../services/set_expansion_helper.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
@@ -341,7 +342,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 final advanced = modeSnap.data ?? false;
 
                 // ── Compute portfolio metrics ──────────────────────────────────
-                int totalItems = coins.length + currency.length + worldItems.length;
+                // Use expansion-aware counting (Dimes Bug v2.2)
+                final coinDocIds = coins.map((d) => (d['id'] ?? '').toString()).toList();
+                final expansion = expandCollection(coins, coinDocIds);
+                int totalItems = expansion.totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
             double bidTotal = 0;
             double askTotal = 0;
@@ -648,7 +652,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     if (narrow) {
                       return Column(children: [
                         Row(children: [
-                          Expanded(child: _metricCard('Total Items', totalItems.toString())),
+                          Expanded(child: _metricCard('Total Coins', totalItems.toString())),
                           const SizedBox(width: 10),
                           Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
                         ]),
@@ -667,7 +671,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _metricCardFlex('Total Items', totalItems.toString()),
+                        _metricCardFlex('Total Coins', totalItems.toString()),
                         _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
                         _metricCardFlex('Melt Value', fmt.format(meltValue)),
                         _metricCardFlex('Face Value', fmt.format(faceValue)),

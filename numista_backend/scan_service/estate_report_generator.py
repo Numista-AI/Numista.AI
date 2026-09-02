@@ -28,6 +28,10 @@ from typing import Any
 from google.cloud import firestore
 from google.genai import types
 
+from collection_inventory import (
+    expand_collection_inventory, count_coins_and_lots, lot_value,
+)
+
 from estate_state_rules import STATE_RULES, get_state_rules
 
 log = logging.getLogger(__name__)
@@ -106,25 +110,39 @@ def parse_purchase_cost(value_str: Any) -> float | None:
 # FIRESTORE FETCHERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_coins(db: firestore.Client, uid: str) -> list[dict]:
+def fetch_coins(db: firestore.Client, uid: str) -> tuple[list[dict], list[dict]]:
     """
-    Fetch all coin documents from users/{uid}/coins.
+    Fetch all coin documents from users/{uid}/coins, expand sets.
 
-    Each returned dict merges the Firestore document data with its document ID
-    under the key '_doc_id'.  Returns an empty list if the collection is absent.
+    Returns:
+        (partition_coins, display_coins)
+
+        partition_coins: parent rows only (loose coins + set parents). For LPT.
+        display_coins:   all rows (parents + children). For PDF line listing + FMV.
+
+    Each row carries '_doc_id' = row['coin_id'] for estate override matching.
     """
     try:
         docs = db.collection('users').document(uid).collection('coins').stream()
-        coins = []
-        for doc in docs:
-            data = doc.to_dict() or {}
-            data['_doc_id'] = doc.id
-            coins.append(data)
-        log.info(f'[estate] Fetched {len(coins)} coins for uid={uid}')
-        return coins
+        inventory, stats = expand_collection_inventory(docs)
+
+        # Stamp _doc_id on every row (gate 2: grouping keys on _doc_id)
+        for row in inventory:
+            row['_doc_id'] = row['coin_id']
+
+        partition_coins = [r for r in inventory if r.get('from_set') is None]
+        display_coins = inventory
+
+        log.info(
+            f'[estate] Fetched and expanded for uid={uid}: '
+            f'{stats["docs"]} docs, {stats["sets"]} sets, '
+            f'{stats["expanded"]} children, {len(partition_coins)} lots, '
+            f'{len(display_coins)} display rows'
+        )
+        return partition_coins, display_coins
     except Exception as exc:
         log.error(f'[estate] Error fetching coins for uid={uid}: {exc}')
-        return []
+        return [], []
 
 
 def fetch_estate_profile(db: firestore.Client, uid: str) -> dict:
@@ -174,10 +192,7 @@ def build_collection_summary(
     Returns a summary dict consumed by both the AI narrative and PDF builder.
     Coins with no parseable FMV are counted but excluded from dollar totals.
     """
-    total_coins = len(coins)
-    total_fmv = 0.0
-    total_melt_value = 0.0
-    total_cost_basis = 0.0
+    total_coins = len(coins)  # raw count for logging only
     fmv_by_denomination: dict[str, dict] = {}   # {denom: {count, total_fmv}}
     fmv_by_location: dict[str, dict] = {}        # {location: {count, total_fmv}}
     coins_needing_appraisal: list[dict] = []
@@ -220,13 +235,7 @@ def build_collection_summary(
         raw_cost = coin.get('Purchase Cost', '') or coin.get('purchase_cost', '')
         cost = parse_purchase_cost(raw_cost)
 
-        # ── Accumulate totals ─────────────────────────────────────────────────
-        if fmv is not None:
-            total_fmv += fmv
-        if melt is not None:
-            total_melt_value += melt
-        if cost is not None:
-            total_cost_basis += cost
+        # ── Per-row accumulation deferred to Pass 2 (lot_value) ─────────────
 
         # ── Denomination breakdown ────────────────────────────────────────────
         denom = (
@@ -275,6 +284,70 @@ def build_collection_summary(
 
         if needs_appraisal:
             coins_needing_appraisal.append(enriched)
+
+    # ── Pass 2: Group by lot, compute lot_value, stamp onto parent ────────────
+    # A "lot" = one parent doc. Children belong via from_set = parent doc.id.
+    lots: dict[str, dict] = {}  # {parent_doc_id: {"parent": enriched, "children": [...]}}
+    for ec in enriched_coins:
+        if ec.get('from_set') is None:
+            # Parent (loose coin or set parent)
+            doc_id = ec.get('_doc_id', '')
+            if doc_id not in lots:
+                lots[doc_id] = {"parent": ec, "children": []}
+            else:
+                lots[doc_id]["parent"] = ec
+        else:
+            # Child — from_set is parent doc.id
+            parent_id = ec['from_set']
+            if parent_id not in lots:
+                lots[parent_id] = {"parent": None, "children": []}
+            lots[parent_id]["children"].append(ec)
+
+    total_fmv = 0.0
+    total_melt_value = 0.0
+    total_cost_basis = 0.0
+
+    for lot_id, lot_data in lots.items():
+        p = lot_data["parent"]
+        children = lot_data["children"]
+        if p is None:
+            # Gate 3: orphan children — log, do not silently drop dollars
+            log.error(
+                f'[estate] Orphan children for lot_id={lot_id}: '
+                f'{len(children)} children have no parent row. '
+                f'Dollars will be attributed to children directly.'
+            )
+            for c in children:
+                total_fmv += (c['_fmv'] or 0.0)
+                total_melt_value += (c['_melt'] or 0.0)
+                total_cost_basis += (c['_cost'] or 0.0)
+            continue
+        if not children:
+            # Loose coin or empty set — use parent value directly
+            total_fmv += (p['_fmv'] or 0.0)
+            total_melt_value += (p['_melt'] or 0.0)
+            total_cost_basis += (p['_cost'] or 0.0)
+        else:
+            # Kept set — use lot_value ladder, stamp onto parent
+            stamped_fmv = lot_value(p['_fmv'] or 0.0,
+                                     [c['_fmv'] or 0.0 for c in children])
+            stamped_melt = lot_value(p['_melt'] or 0.0,
+                                      [c['_melt'] or 0.0 for c in children])
+            stamped_cost = lot_value(p['_cost'] or 0.0,
+                                      [c['_cost'] or 0.0 for c in children])
+            # Stamp mutates the same parent object in enriched_coins
+            p['_fmv'] = stamped_fmv
+            p['_melt'] = stamped_melt
+            p['_cost'] = stamped_cost
+            total_fmv += stamped_fmv
+            total_melt_value += stamped_melt
+            total_cost_basis += stamped_cost
+
+    # enriched_lots = parents only (with stamped lot_value). For LPT partitioner.
+    enriched_lots = [ec for ec in enriched_coins if ec.get('from_set') is None]
+
+    # Use expansion-aware counts
+    counts = count_coins_and_lots(enriched_coins)
 
     # ── Sort by FMV descending for top-coins list ─────────────────────────────
     enriched_coins.sort(key=lambda c: (c['_fmv'] or 0.0), reverse=True)
@@ -327,7 +400,9 @@ def build_collection_summary(
     )
 
     return {
-        'total_coins': total_coins,
+        'total_coins': counts['total_coins'],
+        'total_lots': counts['total_lots'],
+        'set_count': counts['set_count'],
         'total_fmv': total_fmv,
         'total_melt_value': total_melt_value,
         'total_cost_basis': total_cost_basis,
@@ -339,6 +414,7 @@ def build_collection_summary(
         'total_coins_needing_appraisal': len(coins_needing_appraisal),
         'cliff_warning': cliff_warning,
         'enriched_coins': enriched_coins,
+        'enriched_lots': enriched_lots,
     }
 
 
@@ -661,19 +737,20 @@ async def generate_estate_report(
     # ── Fetch Firestore data (run sync in executor for async compat) ───────────
     loop = asyncio.get_event_loop()
 
-    coins, estate_profile, estate_overrides = await asyncio.gather(
+    (partition_coins, display_coins), estate_profile, estate_overrides = await asyncio.gather(
         loop.run_in_executor(None, fetch_coins, db, uid),
         loop.run_in_executor(None, fetch_estate_profile, db, uid),
         loop.run_in_executor(None, fetch_estate_data_overrides, db, uid),
     )
 
     log.info(
-        f'[estate] Data fetched: {len(coins)} coins, '
+        f'[estate] Data fetched: {len(display_coins)} display rows, '
+        f'{len(partition_coins)} lots, '
         f'{len(estate_overrides)} overrides for uid={uid}'
     )
 
-    # ── Build financial summary ────────────────────────────────────────────────
-    summary = build_collection_summary(coins, estate_overrides, state_rules)
+    # ── Build financial summary (one summary on display_coins) ─────────────────
+    summary = build_collection_summary(display_coins, estate_overrides, state_rules)
 
     # ── Generate AI narrative ──────────────────────────────────────────────────
     narrative = await loop.run_in_executor(
@@ -706,11 +783,11 @@ async def generate_estate_report(
         log.warning(f'[estate] QR generation failed (non-fatal): {exc}')
         qr_bytes = None
 
-    # ── Smart Division ─────────────────────────────────────────────────────────
+    # ── Smart Division — LPT on enriched_lots (parents with stamped lot_value) ─
     heirs = report_request.get('beneficiaries', []) or estate_profile.get('beneficiaries', [])
     division_results = None
     if len(heirs) > 1:
-        division_results = partition_collection_equitably(summary['enriched_coins'], estate_overrides, heirs)
+        division_results = partition_collection_equitably(summary['enriched_lots'], estate_overrides, heirs)
 
     # ── Build PDF ──────────────────────────────────────────────────────────────
     from estate_pdf_builder import build_estate_pdf
