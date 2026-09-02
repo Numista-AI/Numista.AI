@@ -33,6 +33,7 @@ import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../widgets/header_stats_bar.dart';
 import '../services/set_expansion_helper.dart';
+import '../models/collection_row.dart';
 import '../constants.dart';
 
 // --- Field name constants -----------------------------------------------------
@@ -643,6 +644,243 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return copy;
   }
 
+  // ---------------------------------------------------------------------------
+  // Fix B: CollectionRow pipeline — virtual set children as table rows
+  // ---------------------------------------------------------------------------
+
+  /// Dual-key field getter: tries snake_case first, then legacy PascalCase.
+  static String _rowField(Map<String, dynamic> data, String snakeKey, String legacyKey) {
+    return data[snakeKey]?.toString() ?? data[legacyKey]?.toString() ?? '';
+  }
+
+  /// Map from snake_case helper keys to PascalCase _F constants.
+  /// Used to stamp PascalCase aliases on virtual child data maps so that
+  /// _getCellValue and _sortKey (which use _F constants) work without changes.
+  static const _snakeToPascal = <String, String>{
+    'year': _F.year,                  // 'Year'
+    'denomination': _F.denomination,  // 'Denomination'
+    'mint_mark': _F.mintMark,         // 'Mint Mark'
+    'condition': _F.condition,        // 'Condition'
+    'theme_subject': _F.themeSubject, // 'Theme/Subject'
+    'program_series': _F.programSeries, // 'Program/Series'
+    'country': _F.country,           // 'Country'
+    'ai_estimated_value': _F.aiValue, // 'AI Estimated Value'
+    'cost': _F.cost,                 // 'Cost'
+    'item_type': 'Item Type',
+  };
+
+  /// Expand _cachedCoinsDocs into CollectionRows.
+  /// Calls expandCollection() ONCE. One flat pass over allItems.
+  /// Virtual child test: from_set != null && isNotEmpty.
+  /// Exclusive rule: if real child docs exist for parent P, skip virtual children for P.
+  List<CollectionRow> _expandedRows() {
+    final maps = _cachedCoinsDocs
+        .map((d) => (d.data() as Map<String, dynamic>?) ?? {})
+        .toList();
+    final ids = _cachedCoinsDocs.map((d) => d.id).toList();
+    final expansion = expandCollection(maps, ids); // ONE call
+
+    // Build parent_set_id exclusion set: which parents have real child docs?
+    final parentSetIdSet = <String>{};
+    for (final doc in _cachedCoinsDocs) {
+      final m = (doc.data() as Map<String, dynamic>?) ?? {};
+      final psid = m['parent_set_id']?.toString() ?? '';
+      if (psid.isNotEmpty) parentSetIdSet.add(psid);
+    }
+
+    // Build snapshot lookup: docId → QueryDocumentSnapshot
+    final snapById = <String, QueryDocumentSnapshot>{};
+    for (final doc in _cachedCoinsDocs) {
+      snapById[doc.id] = doc;
+    }
+
+    final List<CollectionRow> rows = [];
+
+    for (final item in expansion.allItems) {
+      final coinId = item['coin_id'] as String;
+      final fromSet = item['from_set'];
+
+      // Virtual child: from_set is non-null and non-empty
+      if (fromSet != null && fromSet.toString().isNotEmpty) {
+        // Exclusive rule: if real child docs exist for this parent, skip virtual
+        if (parentSetIdSet.contains(fromSet)) continue;
+
+        // Stamp PascalCase aliases so _getCellValue / _sortKey work
+        final data = Map<String, dynamic>.from(item);
+        for (final e in _snakeToPascal.entries) {
+          if (data.containsKey(e.key) && !data.containsKey(e.value)) {
+            data[e.value] = data[e.key];
+          }
+        }
+
+        rows.add(CollectionRow(
+          id: coinId,
+          data: data,
+          isVirtualChild: true,
+          parentDocId: fromSet as String,
+          snapshot: null,
+        ));
+      } else {
+        // Real doc (parent or loose coin)
+        rows.add(CollectionRow(
+          id: coinId,
+          data: item,
+          isVirtualChild: false,
+          parentDocId: null,
+          snapshot: snapById[coinId],
+        ));
+      }
+    }
+
+    return rows;
+  }
+
+  /// Filter CollectionRows — adapted from _filtered() for the CollectionRow pipeline.
+  /// - Transferred items: hidden
+  /// - Supplies: hidden
+  /// - Virtual non-coin children on Coins tab: hidden
+  /// - Real parent_set_id children: always shown (exclusive rule prevents virtual dupes)
+  /// - Origin filter: U.S. / World via _rowField
+  /// - Search: 14 keys (PascalCase + snake_case)
+  List<CollectionRow> _filteredRows(List<CollectionRow> rows) {
+    // Phase 1: Visibility gate
+    final List<CollectionRow> visible = rows.where((row) {
+      final m = row.data;
+      if (m.isEmpty) return false;
+
+      // Transferred items
+      final tStatus = m['transferStatus']?.toString() ?? '';
+      if (tStatus == 'transferred') return false;
+
+      // Supplies
+      final itemType = _rowField(m, 'item_type', 'Item Type').toLowerCase();
+      final isSupply = m['is_supply'] == true || itemType == 'supply';
+      if (isSupply) return false;
+
+      // Virtual children: tab gate
+      if (row.isVirtualChild) {
+        // Coins tab: only coin-type virtual children
+        if (_currentTab == 'Coins' && itemType != 'coin' && itemType.isNotEmpty) {
+          return false;
+        }
+        // All tab / other tabs: all virtual children pass
+      }
+
+      // Search reveals everything (including parent_set_id real children)
+      if (_searchQuery.isNotEmpty) return true;
+
+      // Real docs: real parent_set_id children always show.
+      // The exclusive rule in _expandedRows() already prevents virtual dupes
+      // for parents that have real child docs.
+      if (!row.isVirtualChild) {
+        final parentSetId = m['parent_set_id']?.toString() ?? '';
+        if (parentSetId.isNotEmpty) {
+          // This is a real child doc — always visible
+          return true;
+        }
+      }
+
+      return true;
+    }).toList();
+
+    // Phase 2: Origin filter (U.S. / World)
+    const usAllowList = {
+      'united states', 'usa', 'us', 'united states of america', 'u.s.', 'u.s.a.',
+      'united states mint', 'puerto rico', 'guam', 'u.s. virgin islands', 'usvi',
+      'american samoa', 'northern mariana islands', 'confederate states', 'csa', 'us philippines'
+    };
+    const usDenoms = {
+      'quarter dollar', 'quarter', 'dime', 'one cent', 'cent', 'penny',
+      'lincoln cent', 'jefferson nickel', 'half dollar', 'dollar',
+      'five dollars (half eagle)', 'half eagle', 'eagle', 'double eagle',
+      'silver eagle', 'gold eagle', 'sacagawea', 'susan b. anthony'
+    };
+
+    final originFiltered = visible.where((row) {
+      if (_coinOriginFilter == 'All') return true;
+      final m = row.data;
+      final countryClean = _rowField(m, 'country', 'Country').toLowerCase().trim();
+      final denomClean = _rowField(m, 'denomination', 'Denomination').toLowerCase().trim();
+      final isUSCountry = usAllowList.contains(countryClean);
+      final isUSDenom = usDenoms.contains(denomClean)
+          || denomClean.contains('quarter')
+          || denomClean.contains('dime')
+          || denomClean.contains('cent');
+
+      bool isForeign;
+      if (m['is_foreign'] == false) {
+        isForeign = false;
+      } else if (isUSCountry) {
+        isForeign = false;
+      } else if ((countryClean.isEmpty || countryClean == 'none') && isUSDenom) {
+        isForeign = false;
+      } else {
+        isForeign = (m['is_foreign'] as bool?) ?? false;
+      }
+
+      if (_coinOriginFilter == 'World') return isForeign;
+      if (_coinOriginFilter == 'U.S.') return !isForeign;
+      return true;
+    }).toList();
+
+    // Phase 3: Search filter (both PascalCase _F keys and snake_case helper keys)
+    if (_searchQuery.isEmpty) return originFiltered;
+    return originFiltered.where((row) {
+      final m = row.data;
+      return [
+        _F.year, 'year',
+        _F.denomination, 'denomination',
+        _F.mintMark, 'mint_mark',
+        _F.country, 'country',
+        _F.programSeries, 'program_series',
+        _F.themeSubject, 'theme_subject',
+        _F.variety, 'variety',
+        _F.condition, 'condition',
+        _F.pcgsNumber,
+        _F.meltValue,
+        _F.aiValue, 'ai_estimated_value',
+        _F.storageLocation, 'storage_location',
+      ].any((k) => (m[k]?.toString().toLowerCase() ?? '').contains(_searchQuery));
+    }).toList();
+  }
+
+  /// Sort CollectionRows — adapted from _sorted() for the CollectionRow pipeline.
+  List<CollectionRow> _sortedRows(List<CollectionRow> raw) {
+    final copy = List<CollectionRow>.from(raw);
+
+    // Special case: index -1 = sort by Added/timestamp
+    if (_sortColumnIndex < 0) {
+      copy.sort((a, b) {
+        final aTs = a.data['Added'] ?? a.data['timestamp'] ?? a.data['created_at'];
+        final bTs = b.data['Added'] ?? b.data['timestamp'] ?? b.data['created_at'];
+
+        final aHas = aTs is Timestamp;
+        final bHas = bTs is Timestamp;
+
+        if (aHas && bHas) {
+          return _sortAscending ? aTs.compareTo(bTs) : bTs.compareTo(aTs);
+        }
+        if (aHas && !bHas) return _sortAscending ? 1 : -1;
+        if (!aHas && bHas) return _sortAscending ? -1 : 1;
+        return _sortAscending ? a.id.compareTo(b.id) : b.id.compareTo(a.id);
+      });
+      return copy;
+    }
+
+    final field = _columns[_sortColumnIndex].field;
+    copy.sort((a, b) {
+      final ak = _sortKey(field, a.data);
+      final bk = _sortKey(field, b.data);
+      int cmp;
+      if (ak is double && bk is double) {
+        cmp = ak.compareTo(bk);
+      } else {
+        cmp = ak.toString().compareTo(bk.toString());
+      }
+      return _sortAscending ? cmp : -cmp;
+    });
+    return copy;
+  }
 
   List<QueryDocumentSnapshot> _filtered(List<QueryDocumentSnapshot> docs) {
     // Option A: individual set-member coins are hidden from the default grid.
@@ -923,24 +1161,28 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         if (_coinsError != null && _cachedCoinsDocs.isEmpty) {
           return _buildErrorState(onRetry: _subscribeCoinsStream);
         }
-        final allDocs = _cachedCoinsDocs;
-        final docs    = _sorted(_filtered(allDocs));
+        final allRows = _expandedRows();
+        final rows    = _sortedRows(_filteredRows(allRows));
 
-        if (_selectedCoinId == null && docs.isNotEmpty) {
-          _selectedCoinId = docs.first.id;
+        if (_selectedCoinId == null && rows.isNotEmpty) {
+          // For initial selection, pick the first real doc
+          final firstReal = rows.where((r) => !r.isVirtualChild).firstOrNull;
+          _selectedCoinId = firstReal?.id ?? rows.first.id;
         }
-        final selDoc = docs.isNotEmpty
-            ? (docs.any((d) => d.id == _selectedCoinId)
-                ? docs.firstWhere((d) => d.id == _selectedCoinId)
-                : docs.first)
-            : null;
-        if (selDoc != null) _selectedCoinId = selDoc.id;
+        // Ensure selected coin is in the filtered list
+        if (rows.isNotEmpty) {
+          final hasSelected = rows.any((r) => r.id == _selectedCoinId);
+          if (!hasSelected) {
+            final firstReal = rows.where((r) => !r.isVirtualChild).firstOrNull;
+            _selectedCoinId = firstReal?.id ?? rows.first.id;
+          }
+        }
 
         return FutureBuilder<bool>(
           future: ValuationModeService.isAdvancedMode(),
           builder: (context, modeSnap) {
             final advanced = modeSnap.data ?? false;
-            return _buildCoinsTab(docs, allDocs, advanced: advanced);
+            return _buildCoinsTab(rows, allRows, advanced: advanced);
           },
         );
       case 'Currency':
@@ -954,11 +1196,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
-  Widget _buildCoinsTab(List<QueryDocumentSnapshot> docs, List<QueryDocumentSnapshot> allDocs, {bool advanced = false}) {
+  Widget _buildCoinsTab(List<CollectionRow> rows, List<CollectionRow> allRows, {bool advanced = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFiltersRow(allDocs),
+        _buildFiltersRow(_cachedCoinsDocs),
         const SizedBox(height: 12),
 
         // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
@@ -1055,9 +1297,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         const SizedBox(height: 12),
 
         // Data view -- three distinct states
-        if (allDocs.isEmpty)
+        if (_cachedCoinsDocs.isEmpty)
           _buildCollectionEmptyState()
-        else if (docs.isEmpty)
+        else if (rows.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(child: Text('No coins match your filter.',
@@ -1066,14 +1308,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           SizedBox(
             height: 520,
             child: _isCardView
-                ? _buildCardGrid(docs, advanced: advanced)
+                ? _buildCardGrid(rows, advanced: advanced)
                 : Builder(
                     builder: (context) {
                       try {
-                        return _buildDataTable(docs, advanced: advanced);
+                        return _buildDataTable(rows, advanced: advanced);
                       } catch (e, stack) {
                         debugPrint('Collection table build error: $e\n$stack');
-                        return _buildCardGrid(docs, advanced: advanced);
+                        return _buildCardGrid(rows, advanced: advanced);
                       }
                     },
                   ),
@@ -2224,8 +2466,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // --- Data Table (TableView -- sticky header + pinned Actions col) ---------
-  Widget _buildDataTable(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
-    final visCols   = _visibleColumns(docs);
+  Widget _buildDataTable(List<CollectionRow> docs, {bool advanced = false}) {
+    final visCols   = _visibleColumns(_cachedCoinsDocs);
     final totalCols = 1 + visCols.length; // col 0 = Actions (pinned)
     final totalRows = 1 + docs.length;    // row 0 = header (pinned)
 
@@ -2290,7 +2532,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   : (docs.length > row - 1 &&
                           docs[row - 1].id == _selectedCoinId
                       ? _accent.withAlpha(28)
-                      : null),
+                      : (docs.length > row - 1 && docs[row - 1].isVirtualChild
+                          ? (Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF0D1520) : const Color(0xFFF5F5F0))
+                          : null)),
               border: TableSpanBorder(
                 trailing: BorderSide(color: _border.withAlpha(120), width: 0.5),
               ),
@@ -2329,14 +2574,18 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             }
 
             // -- DATA ROW ----------------------------------------------
-            final doc = docs[row - 1];
-            final m   = (doc.data() as Map<String, dynamic>?) ?? {};
-            final sel = doc.id == _selectedCoinId;
+            final crw = docs[row - 1];
+            final m   = crw.data;
+            final sel = crw.id == _selectedCoinId;
 
-            void onTap() => _showCoinInspectorDialog(doc.id, m);
+            // For virtual children, inspector/detail navigate to parent
+            final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
+
+            void onTap() => _showCoinInspectorDialog(effectiveId, m);
 
             // Actions cell (col 0)
             if (col == 0) {
+              final canMutate = crw.snapshot != null; // real doc with valid reference
               return TableViewCell(
                 child: InkWell(
                   onTap: onTap,
@@ -2346,25 +2595,47 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _iconBtn(Icons.info_outline, 'View Details', () {
-                          final coin = CoinModel.fromMap(m, doc.id);
-                          CoinDetailScreen.show(
-                            context,
-                            coin: coin,
-                            spotPrices: _spotPrices,
-                            onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                : null,
-                            onDeleted: () => setState(() {}),
-                            onEdited: () => setState(() {}),
-                          );
+                        _iconBtn(Icons.info_outline,
+                          crw.isVirtualChild ? 'View Parent Set' : 'View Details', () {
+                          // G-2: For virtual children, look up parent doc data.
+                          // If parent not in cache, skip navigation.
+                          if (crw.isVirtualChild) {
+                            final parentDoc = _cachedCoinsDocs
+                                .where((d) => d.id == crw.parentDocId)
+                                .firstOrNull;
+                            if (parentDoc == null) return; // parent missing — skip
+                            final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
+                            final coin = CoinModel.fromMap(parentData, parentDoc.id);
+                            CoinDetailScreen.show(
+                              context,
+                              coin: coin,
+                              spotPrices: _spotPrices,
+                              onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                  : null,
+                              onDeleted: () => setState(() {}),
+                              onEdited: () => setState(() {}),
+                            );
+                          } else {
+                            final coin = CoinModel.fromMap(m, crw.id);
+                            CoinDetailScreen.show(
+                              context,
+                              coin: coin,
+                              spotPrices: _spotPrices,
+                              onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                  : null,
+                              onDeleted: () => setState(() {}),
+                              onEdited: () => setState(() {}),
+                            );
+                          }
                         }),
-                        _iconBtn(Icons.edit_outlined,   'Edit',
-                            () => _onEdit(doc.id, m)),
-                        _iconBtn(Icons.auto_stories,    'AI Deep Dive',
-                            () => _onDeepDive(doc.id, m)),
-                        _iconBtn(Icons.delete_outline,  'Delete',
-                            () => _onDelete(doc.id, m)),
+                        if (canMutate) _iconBtn(Icons.edit_outlined, 'Edit',
+                            () => _onEdit(crw.id, m)),
+                        if (canMutate) _iconBtn(Icons.auto_stories, 'AI Deep Dive',
+                            () => _onDeepDive(crw.id, m)),
+                        if (canMutate) _iconBtn(Icons.delete_outline, 'Delete',
+                            () => _onDelete(crw.id, m)),
                       ],
                     ),
                   ),
@@ -2378,7 +2649,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
             // -- Cert # column: interactive verification link pop-up -------------------------
             if (colDef.field == _F.gradingCert && value.isNotEmpty) {
-              final coinModel = CoinModel.fromMap(m, doc.id);
+              final coinModel = CoinModel.fromMap(m, crw.id);
               final verifyUrl = coinModel.getVerificationUrl();
               final hasUrl = verifyUrl != null;
               final svcName = coinModel.gradingService.isNotEmpty
@@ -2454,11 +2725,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      value,
+                      // First data column on virtual children gets ↳ prefix
+                      (crw.isVirtualChild && col == 1) ? '↳ $value' : value,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 12,
-                          color: sel ? _accent : _text),
+                          color: sel ? _accent : (crw.isVirtualChild ? _subtext : _text)),
                     ),
                   ),
                 ),
@@ -2492,7 +2764,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
 
 
-  Widget _buildCardGrid(List<QueryDocumentSnapshot> docs, {bool advanced = false}) {
+  Widget _buildCardGrid(List<CollectionRow> docs, {bool advanced = false}) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
@@ -2502,19 +2774,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
       itemCount: docs.length,
       itemBuilder: (context, index) {
-        final doc = docs[index];
-        final m = (doc.data() as Map<String, dynamic>?) ?? {};
+        final crw = docs[index];
+        final m = crw.data;
         
-        final year = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-        final mint = m[_F.mintMark]?.toString() ?? '';
-        final denom = m[_F.denomination]?.toString() ?? '';
-        final series = m[_F.programSeries]?.toString() ?? '';
-        final variety = m[_F.variety]?.toString() ?? '';
-        final condition = m[_F.condition]?.toString() ?? '';
-        final theme = m[_F.themeSubject]?.toString() ?? '';
+        final year = _rowField(m, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+        final mint = _rowField(m, 'mint_mark', _F.mintMark);
+        final denom = _rowField(m, 'denomination', _F.denomination);
+        final series = _rowField(m, 'program_series', _F.programSeries);
+        final variety = _rowField(m, 'variety', _F.variety);
+        final condition = _rowField(m, 'condition', _F.condition);
+        final theme = _rowField(m, 'theme_subject', _F.themeSubject);
         
         final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
-        final displayTitle = '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
+        final displayTitle = crw.isVirtualChild
+            ? '↳ $yearMint ${theme.isNotEmpty ? theme : denom}'.trim()
+            : '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);
         final valBid = _parseNumber(m['greysheetBid']);
@@ -2525,20 +2799,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? fmt.format(finalVal) 
             : (m[_F.aiValue]?.toString() ?? '—');
 
+        // For virtual children, selection targets parent doc
+        final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
+
         return Card(
-          color: _surface,
+          color: crw.isVirtualChild
+              ? (Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0D1520) : const Color(0xFFF5F5F0))
+              : _surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
-              color: doc.id == _selectedCoinId ? _accent : _border,
-              width: doc.id == _selectedCoinId ? 2.0 : 1.0,
+              color: crw.id == _selectedCoinId ? _accent : _border,
+              width: crw.id == _selectedCoinId ? 2.0 : 1.0,
             ),
           ),
-          elevation: doc.id == _selectedCoinId ? 4 : 1,
+          elevation: crw.id == _selectedCoinId ? 4 : 1,
           child: InkWell(
             onTap: () {
-              setState(() => _selectedCoinId = doc.id);
-              _showCoinInspectorDialog(doc.id, m);
+              setState(() => _selectedCoinId = effectiveId);
+              _showCoinInspectorDialog(effectiveId, m);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
