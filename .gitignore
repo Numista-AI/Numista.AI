@@ -225,3 +225,5 @@ numista_qc/reports/
 numista_qc/screenshots/
 
 numista_qc/fixtures/auth-token.json
+
+numista_qc/node_modules/

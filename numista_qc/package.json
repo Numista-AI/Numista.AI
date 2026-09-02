@@ -1,0 +1,14 @@
+{
+  "name": "numista-qc",
+  "version": "1.0.0",
+  "description": "Numista QC Suite - Layer 1-4 automated quality checks",
+  "private": true,
+  "scripts": {
+    "test:layer1": "playwright test layer_1_ux_visual/ --config playwright.config.js",
+    "test:layer2": "playwright test layer_2_functional/ --config playwright.config.js --ignore-glob **/collection_crud.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "dotenv": "^16.6.1"
+  }
+}
