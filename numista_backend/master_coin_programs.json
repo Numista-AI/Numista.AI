@@ -10016,6 +10016,155 @@
     "Mint_mark_description": "MIXED ERA: Pre-1942 Jefferson Nickels have the mint mark on the REVERSE (back), to the right of Monticello. The 1942-1945 War Nickels (35% silver) have a large mint mark above the dome of Monticello on the reverse. From 1968 onward, the mint mark moved to the OBVERSE (front), to the right of Jefferson's portrait."
   },
   {
+    "Name": "Westward Journey Nickel Series",
+    "Id": "westward_journey_nickel_series",
+    "Years": "2004-2005",
+    "Url": "https://www.usmint.gov/learn/coin-and-medal-programs/westward-journey-nickel-series",
+    "Category": "Circulating Coin Programs",
+    "Denomination": "Five Cents",
+    "Mint_mark_locations": "Right side of Jefferson portrait (obverse). 2004 obverse: 1938 Schlag portrait. 2005 obverse: One-year-only Houdon/Fitzgerald portrait with handwritten Liberty script.",
+    "Mint_mark_type": "OBVERSE_PORTRAIT",
+    "Mint_mark_description": "Mint mark appears to the right of Jeffersons portrait on the obverse. 2005 coins use a unique one-year-only close-up obverse (Houdon bust by Fitzgerald/Everhart) -- do not expect the classic 1938 Schlag portrait.",
+    "Statutory_authority": "American 5-Cent Coin Design Continuity Act of 2003 (P.L. 108-15; 31 U.S.C. Section 5112(p))",
+    "Coins": [
+      {
+        "year": "2004",
+        "name": "Peace Medal",
+        "design_slug": "2004_peace_medal",
+        "item_type": "circulating",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 361440000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 372000000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 2965422,
+            "note": "Proof Set only; same production run as 2004-S Keelboat"
+          }
+        ]
+      },
+      {
+        "year": "2004",
+        "name": "Keelboat",
+        "design_slug": "2004_keelboat",
+        "item_type": "circulating",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 366720000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 344880000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 2965422,
+            "note": "Proof Set only; same production run as 2004-S Peace Medal"
+          }
+        ]
+      },
+      {
+        "year": "2005",
+        "name": "American Bison",
+        "design_slug": "2005_american_bison",
+        "item_type": "circulating",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 448320000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 487680000,
+            "note": "Mintage per PCGS CoinFacts #4159. Includes Speared Bison die-gouge variety (PCGS FS-901) within this run."
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 3344679
+          },
+          {
+            "id": "P-SATIN",
+            "label": "P (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only"
+          },
+          {
+            "id": "D-SATIN",
+            "label": "D (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only"
+          }
+        ]
+      },
+      {
+        "year": "2005",
+        "name": "Ocean in View!",
+        "design_slug": "2005_ocean_in_view",
+        "item_type": "circulating",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 394080000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 411120000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 3344679
+          },
+          {
+            "id": "P-SATIN",
+            "label": "P (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only"
+          },
+          {
+            "id": "D-SATIN",
+            "label": "D (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "Mercury Dimes",
     "Years": "1916-1945",
     "Mint_mark_locations": "Mint Mark Key: | Philadelphia - P (no mark) | Denver - D | San Francisco - S |",
