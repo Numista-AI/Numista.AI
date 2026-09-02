@@ -1547,10 +1547,20 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.289',
+    date: '2026-09-02',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Release: bump to v4.288 from pre-push hook',
+      'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
+    ],
+  ),
+  _Release(
     version: 'v4.288',
     date: '2026-09-02',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)',
       'Deep_dive: expand set_contents for accurate coin counting (Dimes Bug)',

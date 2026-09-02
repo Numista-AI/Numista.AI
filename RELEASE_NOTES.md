@@ -291,6 +291,13 @@
 
 
 
+
+## v4.289 — 2026-09-02
+**Release Enhancements & Platform Updates**
+
+- Release: bump to v4.288 from pre-push hook
+- Audit: run full system check via project-scanner skill and sync SCAN_REPORT.md (v4.287)
+
 ## v4.288 — 2026-09-02
 **Audit Enhancements & Platform Updates**
 
