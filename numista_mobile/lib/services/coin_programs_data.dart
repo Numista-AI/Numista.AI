@@ -7,7 +7,7 @@ import '../models/program_model.dart';
 /// SYNC RULE: Every variety id/label here must match master_coin_programs.json
 /// and the live Firestore seed. If you edit one, edit all three.
 ///
-/// Last synced: 2026-08-26 (Phase 1 + Grok corrections)
+/// Last synced: 2026-09-02 (+ Westward Journey Nickel Series, 16 slots)
 /// Slot counts  (must match Firestore after seed):
 ///   morgan_dollars                       = 106
 ///   barber_dimes                         = 75
@@ -73,6 +73,73 @@ class CoinProgramsData {
               varieties: [ChecklistVariety.fromId('P-UNC'), ChecklistVariety.fromId('D-UNC')]),
           ProgramCoin(id: "dollar",  name: "Dollar",
               varieties: [ChecklistVariety.fromId('P-UNC'), ChecklistVariety.fromId('D-UNC')]),
+        ],
+      ),
+      // ── Westward Journey Nickel Series™ (2004-2005) ─────────────────────────
+      // P.L. 108-15; 31 U.S.C. § 5112(p). Standalone statutory program.
+      // 16 slots: 4 designs × (P + D + S-PROOF) + (P-SATIN + D-SATIN) on 2005 only.
+      // 2004 had NO Satin Finish Mint Set — those varieties are absent here.
+      // Jefferson exclusion: 2004-2005 coins tracked ONLY on this program.
+      //   Do NOT score them on jefferson_nickels — avoids double-counting.
+      //   Residual: untagged coins (no program_id) may match both; fix in WJNS-followup.
+      // Firestore doc id: westward_journey_nickel_series (matches JSON Name slug)
+      // Last synced: 2026-09-02 (v1.2-final — no item_type, split 2004-S mintages)
+      CoinProgram(
+        id: "westward_journey_nickel_series",
+        name: "Westward Journey Nickel Series",
+        url: "https://www.usmint.gov/learn/coin-and-medal-programs/westward-journey-nickel-series",
+        years: "2004-2005",
+        category: "Circulating Coin Programs",
+        mintMarkLocations: "Right side of Jefferson portrait (obverse). "
+            "2005: one-year-only Houdon/Fitzgerald portrait with handwritten Liberty script.",
+        mintMarkType: "OBVERSE_PORTRAIT",
+        coins: [
+          // 2004 — 1938 Classic Schlag obverse. NO Satin Finish that year.
+          ProgramCoin(
+            id: "2004_peace_medal",
+            name: "Peace Medal (Louisiana Purchase)",
+            year: "2004",
+            varieties: [
+              ChecklistVariety(id: "P",       label: "P (Philadelphia)"),
+              ChecklistVariety(id: "D",       label: "D (Denver)"),
+              ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),  // 2,992,069 per PCGS #4155
+            ],
+          ),
+          ProgramCoin(
+            id: "2004_keelboat",
+            name: "Keelboat (Missouri River)",
+            year: "2004",
+            varieties: [
+              ChecklistVariety(id: "P",       label: "P (Philadelphia)"),
+              ChecklistVariety(id: "D",       label: "D (Denver)"),
+              ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),  // 2,965,422 per PCGS #4156
+            ],
+          ),
+          // 2005 — Unique one-year obverse. Satin = 2005 Mint Set only.
+          ProgramCoin(
+            id: "2005_american_bison",
+            name: "American Bison",
+            year: "2005",
+            varieties: [
+              ChecklistVariety(id: "P",       label: "P (Philadelphia)"),
+              ChecklistVariety(id: "D",       label: "D (Denver)"),        // 487,680,000 per PCGS #4159
+              ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),
+              ChecklistVariety(id: "P-SATIN", label: "P (Satin - Mint Set)"),
+              ChecklistVariety(id: "D-SATIN", label: "D (Satin - Mint Set)"),
+            ],
+          ),
+          ProgramCoin(
+            id: "2005_ocean_in_view",
+            name: "Ocean in View!",
+            year: "2005",
+            varieties: [
+              ChecklistVariety(id: "P",       label: "P (Philadelphia)"),
+              ChecklistVariety(id: "D",       label: "D (Denver)"),
+              ChecklistVariety(id: "S-PROOF", label: "S (Proof)"),
+              ChecklistVariety(id: "P-SATIN", label: "P (Satin - Mint Set)"),
+              ChecklistVariety(id: "D-SATIN", label: "D (Satin - Mint Set)"),
+            ],
+          ),
         ],
       ),
       CoinProgram(

@@ -10016,6 +10016,146 @@
     "Mint_mark_description": "MIXED ERA: Pre-1942 Jefferson Nickels have the mint mark on the REVERSE (back), to the right of Monticello. The 1942-1945 War Nickels (35% silver) have a large mint mark above the dome of Monticello on the reverse. From 1968 onward, the mint mark moved to the OBVERSE (front), to the right of Jefferson's portrait."
   },
   {
+    "Name": "Westward Journey Nickel Series",
+    "Years": "2004-2005",
+    "Mint_mark_locations": "Mint Mark Key: | Philadelphia - P | Denver - D | San Francisco - S (Proof) | Philadelphia - P (Satin) | Denver - D (Satin)",
+    "Category": "Nickel",
+    "Mint_mark_type": "OBVERSE_PORTRAIT",
+    "Mint_mark_description": "Look on the FRONT (obverse) of the coin. The mint mark appears to the RIGHT of Jeffersons portrait. 2004 coins use the 1938 Schlag portrait. 2005 coins use a unique one-year-only close-up portrait (Houdon/Fitzgerald) with handwritten Liberty script.",
+    "Statutory_authority": "American 5-Cent Coin Design Continuity Act of 2003 (P.L. 108-15; 31 U.S.C. Section 5112(p))",
+    "Coins": [
+      {
+        "year": "2004",
+        "name": "Peace Medal",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 361440000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 372000000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 2992069,
+            "note": "2004 Proof Set. Both Peace Medal and Keelboat S appear in every 2004 Proof Set."
+          }
+        ]
+      },
+      {
+        "year": "2004",
+        "name": "Keelboat",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 366720000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 344880000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 2965422,
+            "note": "2004 Proof Set. Both Peace Medal and Keelboat S appear in every 2004 Proof Set."
+          }
+        ]
+      },
+      {
+        "year": "2005",
+        "name": "American Bison",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 448320000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 487680000,
+            "note": "Per PCGS CoinFacts #4159. Includes Speared Bison die-gouge variety (PCGS FS-901)."
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 3344679,
+            "note": "2005 Proof Set. Both Bison and Ocean in View S appear in every 2005 Proof Set."
+          },
+          {
+            "id": "P-SATIN",
+            "label": "P (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only. One lot covers all four 2005 satin slots."
+          },
+          {
+            "id": "D-SATIN",
+            "label": "D (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only. One lot covers all four 2005 satin slots."
+          }
+        ]
+      },
+      {
+        "year": "2005",
+        "name": "Ocean in View!",
+        "varieties": [
+          {
+            "id": "P",
+            "label": "P (Philadelphia)",
+            "finish": "business_strike",
+            "mintage": 394080000
+          },
+          {
+            "id": "D",
+            "label": "D (Denver)",
+            "finish": "business_strike",
+            "mintage": 411120000
+          },
+          {
+            "id": "S-PROOF",
+            "label": "S (Proof)",
+            "finish": "proof",
+            "mintage": 3344679,
+            "note": "2005 Proof Set. Both Bison and Ocean in View S appear in every 2005 Proof Set."
+          },
+          {
+            "id": "P-SATIN",
+            "label": "P (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only. One lot covers all four 2005 satin slots."
+          },
+          {
+            "id": "D-SATIN",
+            "label": "D (Satin Finish)",
+            "finish": "satin",
+            "mintage": 1160000,
+            "note": "2005 US Mint Uncirculated Set only. One lot covers all four 2005 satin slots."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "Mercury Dimes",
     "Years": "1916-1945",
     "Mint_mark_locations": "Mint Mark Key: | Philadelphia - P (no mark) | Denver - D | San Francisco - S |",
