@@ -1551,10 +1551,46 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.304',
+    date: '2026-09-03',
+    description: 'Auth Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Auth: add PIN + password dual login support',
+      'Testing: use 6-digit PIN instead of password in create_grokbot_account.py',
+      'Testing: add create_grokbot_account.py for Grok Bot sovereign test account',
+      'Release: bump version history to v4.301',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)',
+    ],
+  ),
+  _Release(
+    version: 'v4.303',
+    date: '2026-09-03',
+    description: 'Testing Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Testing: use 6-digit PIN instead of password in create_grokbot_account.py',
+      'Testing: add create_grokbot_account.py for Grok Bot sovereign test account',
+      'Release: bump version history to v4.301',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)',
+    ],
+  ),
+  _Release(
+    version: 'v4.302',
+    date: '2026-09-03',
+    description: 'Testing Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Testing: add create_grokbot_account.py for Grok Bot sovereign test account',
+      'Release: bump version history to v4.301',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)',
+    ],
+  ),
+  _Release(
     version: 'v4.301',
     date: '2026-09-03',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)',
       'Qc: add package.json with @playwright/test to numista_qc (was resolving from root where it wasn\'t installed)',

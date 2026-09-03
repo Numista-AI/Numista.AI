@@ -304,6 +304,33 @@
 
 
 
+
+
+
+## v4.304 — 2026-09-03
+**Auth Enhancements & Platform Updates**
+
+- Auth: add PIN + password dual login support
+- Testing: use 6-digit PIN instead of password in create_grokbot_account.py
+- Testing: add create_grokbot_account.py for Grok Bot sovereign test account
+- Release: bump version history to v4.301
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)
+
+## v4.303 — 2026-09-03
+**Testing Enhancements & Platform Updates**
+
+- Testing: use 6-digit PIN instead of password in create_grokbot_account.py
+- Testing: add create_grokbot_account.py for Grok Bot sovereign test account
+- Release: bump version history to v4.301
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)
+
+## v4.302 — 2026-09-03
+**Testing Enhancements & Platform Updates**
+
+- Testing: add create_grokbot_account.py for Grok Bot sovereign test account
+- Release: bump version history to v4.301
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)
+
 ## v4.301 — 2026-09-03
 **Audit Enhancements & Platform Updates**
 
