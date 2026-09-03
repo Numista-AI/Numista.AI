@@ -16,7 +16,6 @@ import argparse
 import os
 import sys
 import secrets
-import string
 from datetime import datetime, timezone
 
 import firebase_admin
@@ -50,15 +49,14 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 
-def generate_password(length: int = 20) -> str:
-    """Generate a secure random password."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+def generate_pin() -> str:
+    """Generate a cryptographically random 6-digit PIN (100000-999999)."""
+    return str(secrets.randbelow(900000) + 100000)
 
 
 def run(commit: bool = False):
     now_iso = datetime.now(timezone.utc).isoformat()
-    password = generate_password()
+    pin = generate_pin()
 
     print("=" * 60)
     print(f"  GROK BOT ACCOUNT CREATION — MODE: {'LIVE' if commit else 'DRY RUN'}")
@@ -67,9 +65,9 @@ def run(commit: bool = False):
     print(f"  Display Name : {BOT_DISPLAY_NAME}")
     print(f"  Tier         : {BOT_TIER}")
     if commit:
-        print(f"  Password     : {password}")
+        print(f"  PIN (6-digit): {pin}")
     else:
-        print(f"  Password     : (will be generated on --commit)")
+        print(f"  PIN (6-digit): (will be generated on --commit)")
     print()
 
     # ── Step 1: Check if Auth user already exists ─────────────────────────────
@@ -102,14 +100,14 @@ def run(commit: bool = False):
         try:
             new_user = auth.create_user(
                 email        = BOT_EMAIL,
-                password     = password,
+                password     = pin,          # In Numista.AI, the PIN IS the Firebase password
                 display_name = BOT_DISPLAY_NAME,
                 email_verified = True,
             )
             uid = new_user.uid
-            print(f"[AUTH] ✅ Created Firebase Auth user — UID: {uid}")
+            print(f"[AUTH] Created Firebase Auth user — UID: {uid}")
         except Exception as e:
-            print(f"[AUTH] ❌ Failed to create Auth user: {e}")
+            print(f"[AUTH] FAILED to create Auth user: {e}")
             sys.exit(1)
 
     # ── Step 4: Write Firestore user document ─────────────────────────────────
@@ -129,29 +127,30 @@ def run(commit: bool = False):
 
     try:
         doc_ref.set(user_doc, merge=True)
-        print(f"[FIRESTORE] ✅ User document written: users/{BOT_EMAIL}")
+        print(f"[FIRESTORE] User document written: users/{BOT_EMAIL}")
     except Exception as e:
-        print(f"[FIRESTORE] ❌ Failed to write Firestore document: {e}")
+        print(f"[FIRESTORE] FAILED to write Firestore document: {e}")
         sys.exit(1)
 
     # ── Step 5: Also write by UID (secondary lookup) ──────────────────────────
     try:
         db.collection("users").document(uid).set(user_doc, merge=True)
-        print(f"[FIRESTORE] ✅ UID-keyed document written: users/{uid}")
+        print(f"[FIRESTORE] UID-keyed document written: users/{uid}")
     except Exception as e:
-        print(f"[FIRESTORE] ⚠️  Could not write UID-keyed document: {e}")
+        print(f"[FIRESTORE] Warning: Could not write UID-keyed document: {e}")
 
     print()
     print("=" * 60)
     print("  ACCOUNT CREATION COMPLETE")
     print("=" * 60)
-    print(f"  Email   : {BOT_EMAIL}")
-    print(f"  UID     : {uid}")
-    print(f"  Tier    : {BOT_TIER}")
-    print(f"  Password: {password}")
+    print(f"  Email      : {BOT_EMAIL}")
+    print(f"  UID        : {uid}")
+    print(f"  Tier       : {BOT_TIER}")
+    print(f"  PIN        : {pin}")
     print()
-    print("  ⚠️  Save this password — it cannot be recovered later.")
-    print("     You can reset it anytime via the Firebase Console.")
+    print("  NOTE: Save this PIN — it is the 6-digit login credential.")
+    print("  You can reset it anytime via the Firebase Console or by")
+    print("  running this script again with --commit.")
     print()
 
 
