@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-08-22T14:35:47.159266+00:00",
-  "mode": "EXECUTE",
-  "total_parsed_programs": 31,
+  "timestamp": "2026-09-02T22:11:52.961210+00:00",
+  "mode": "DRY_RUN",
+  "total_parsed_programs": 33,
   "total_quarantined": 0,
   "unit_test_passed": true,
   "programs": [
@@ -60,6 +60,12 @@
       "slots_count": 264
     },
     {
+      "doc_id": "westward_journey_nickel_series",
+      "name": "Westward Journey Nickel Series",
+      "category": "Nickel",
+      "slots_count": 16
+    },
+    {
       "doc_id": "mercury_dimes",
       "name": "Mercury Dimes",
       "category": "Dime",
@@ -87,13 +93,13 @@
       "doc_id": "kennedy_half_dollars",
       "name": "Kennedy Half Dollars",
       "category": "Half Dollar",
-      "slots_count": 213
+      "slots_count": 215
     },
     {
       "doc_id": "morgan_dollars",
       "name": "Morgan Dollars",
       "category": "Dollar",
-      "slots_count": 103
+      "slots_count": 106
     },
     {
       "doc_id": "peace_dollars",
@@ -171,7 +177,7 @@
       "doc_id": "american_women_quarters",
       "name": "American Women Quarters",
       "category": "Quarter",
-      "slots_count": 80
+      "slots_count": 100
     },
     {
       "doc_id": "susan_b_anthony_dollars",
@@ -190,6 +196,12 @@
       "name": "D.C. & U.S. Territories Quarters",
       "category": "Quarter",
       "slots_count": 18
+    },
+    {
+      "doc_id": "2026_semiquincentennial_collectibles",
+      "name": "2026 America250 - Numismatic Collectibles",
+      "category": "America250",
+      "slots_count": 19
     }
   ]
 }
