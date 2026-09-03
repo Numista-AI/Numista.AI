@@ -32,7 +32,7 @@ except Exception as ge:
     genai_client = None
 
 # Model Constants (Rule 6 compliant)
-MODEL_FLASH = "gemini-3.7-flash"
+MODEL_FLASH = "gemini-3.8-flash"
 MODEL_PRO = "gemini-3.1-pro-preview"
 
 # ── 3. Firebase Admin SDK Initialization ──────────────────────────────────────

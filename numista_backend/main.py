@@ -211,7 +211,7 @@ GRADE_WRITE_TIMESTAMPS = {}
 # --- GEMINI MODEL CONFIGURATION ----------------------------------------------
 # Per official deprecation schedule as of August 14, 2026:
 #
-#   gemini-3.7-flash       Released August 2026. NO shutdown announced. -> PRIMARY WORKHORSE
+#   gemini-3.8-flash       Released September 2, 2026. NO shutdown announced. -> PRIMARY WORKHORSE
 #   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. -> PRO
 #   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced. -> LITE TASKS
 #   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced. -> IMAGE EDITING

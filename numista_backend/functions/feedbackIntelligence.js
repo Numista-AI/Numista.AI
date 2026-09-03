@@ -67,7 +67,7 @@ estimated_effort must be exactly one of: small, medium, large
 pattern_tags should be 2-5 lowercase keywords (e.g. "overlay", "web-only", "auth", "navigation", "performance")`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-3.8-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 

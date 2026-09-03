@@ -16,7 +16,7 @@ const fs = require('fs');
 
 require('dotenv').config();
 const PROJECT_ID = 'studio-9101802118-8c9a8';
-const MODEL_NAME = process.env.GEMINI_FLASH_MODEL || 'gemini-3.7-flash';
+const MODEL_NAME = process.env.GEMINI_FLASH_MODEL || 'gemini-3.8-flash';
 
 // Initialize Firebase
 try {
