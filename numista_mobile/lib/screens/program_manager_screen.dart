@@ -213,6 +213,53 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Goal Filter Helpers — PROGRAM_GOAL_PROGRESS
+  // ---------------------------------------------------------------------------
+  // Goal keys stored in _programGoals (from DropdownMenuItem value: confirmed
+  // in live file): 'Full Master Set' | 'Circulation Only' | 'Standard Set'.
+  // Long display text ('Full Master Set (All Varieties)' etc.) is child: Text only.
+  //
+  // Variety ID taxonomy from coin_programs_data.dart + master registry.
+  // ---------------------------------------------------------------------------
+
+  /// Returns true if [variety] counts toward [goal].
+  /// Empty variety.id (variety-less coin slots) always count.
+  bool _goalAllowsVariety(ChecklistVariety variety, String goal) {
+    final id = variety.id.toUpperCase().trim();
+    if (id.isEmpty) return true; // variety-less slots (single denomination, no mint split)
+
+    switch (goal) {
+      // ── Circulation Only: P and D business strikes only ─────────────────
+      case 'Circulation Only':
+        return _isCirculationVariety(id);
+
+      // ── Standard Set: P, D, and S clad proofs ───────────────────────────
+      case 'Standard Set':
+        if (_isCirculationVariety(id)) return true;
+        // S clad proof only — NOT silver proof, NOT satin, NOT bullion
+        return id == 'S-CLAD' ||            // 50 State Quarters, DC Territories, ATB
+               id == 'S-PROOF' ||           // WJNS, America250, most modern programs
+               id.startsWith('S-PROOF-');   // compound: S-PROOF-T1, S-PROOF-T2 (Ike)
+
+      // ── Full Master Set: everything counts (existing behaviour) ─────────
+      case 'Full Master Set':
+      default:
+        return true;
+    }
+  }
+
+  /// True for P and D business-strike variety ids.
+  /// Explicit allowlist — does NOT include P-SATIN, P-REVERSE-PROOF,
+  /// P-PROOF-CONG, or P-VDB (all Full Master only).
+  bool _isCirculationVariety(String id) {
+    if (id == 'P' || id == 'D') return true;                                             // bare (WJNS, Innovation, Trump, classic)
+    if (id == 'P-UNC' || id == 'D-UNC') return true;                                    // uncirculated (50SQ, ATB, America250)
+    if (id == 'P-T1' || id == 'P-T2' || id == 'D-T1' || id == 'D-T2') return true;    // type splits (Morgan, Ike)
+    if (id.startsWith('P-PRIVY-') || id.startsWith('D-PRIVY-')) return true;            // privy P/D (America250)
+    return false;
+  }
+
   Future<void> _loadTotalReferenceCount() async {
     try {
       final snap = await FirebaseFirestore.instance
@@ -712,6 +759,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final expanded = expandCollection(rawMaps, rawIds);
     final coinPool = expanded.allItems; // parents + virtual set children
 
+    final goal = _programGoals[program.id] ?? 'Full Master Set';
+
     int collectedCount = 0;
     int totalCount = 0;
     for (var coin in program.coins) {
@@ -719,8 +768,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       final varieties = coin.varieties.isEmpty
           ? [const ChecklistVariety(id: '', label: '')]
           : coin.varieties;
-      totalCount += varieties.length;
       for (var variety in varieties) {
+        if (!_goalAllowsVariety(variety, goal)) continue; // skip out-of-goal slots
+        totalCount++;                                      // only in-goal slots
         bool owned = false;
         for (final data in coinPool) {
           if (SlotResolver.isMatch(data, program, coin) &&
