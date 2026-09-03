@@ -307,6 +307,32 @@
 
 
 
+
+
+## v4.306 — 2026-09-03
+**Proof-sets Enhancements & Platform Updates**
+
+- Proof-sets: expand set children in checklist + pass-through strike_type/metal_content (STATE_Q_PROOFSET_S_PROOF)
+- Ai(model): upgrade primary flash model gemini-3.7-flash -> gemini-3.8-flash
+- Brain: hash-idempotent absorb, on_modified, pass file_bytes, deny-lists
+- Add complete master registry of all 139 US Mint, BEP currency, and Treasury medal programs
+- Auth: add PIN + password dual login support
+- Testing: use 6-digit PIN instead of password in create_grokbot_account.py
+- Testing: add create_grokbot_account.py for Grok Bot sovereign test account
+- Release: bump version history to v4.301
+
+## v4.305 — 2026-09-03
+**Ai(model) Enhancements & Platform Updates**
+
+- Ai(model): upgrade primary flash model gemini-3.7-flash -> gemini-3.8-flash
+- Brain: hash-idempotent absorb, on_modified, pass file_bytes, deny-lists
+- Add complete master registry of all 139 US Mint, BEP currency, and Treasury medal programs
+- Auth: add PIN + password dual login support
+- Testing: use 6-digit PIN instead of password in create_grokbot_account.py
+- Testing: add create_grokbot_account.py for Grok Bot sovereign test account
+- Release: bump version history to v4.301
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)
+
 ## v4.304 — 2026-09-03
 **Auth Enhancements & Platform Updates**
 
