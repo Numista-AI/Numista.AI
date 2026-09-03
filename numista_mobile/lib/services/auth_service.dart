@@ -123,16 +123,20 @@ class AuthService {
     }
   }
 
-  // ─── Reset PIN (sends password-reset email) ───────────────────────────────
-  static Future<AuthResult> resetPin(String email) async {
+  // ─── Reset PIN or Password (sends password-reset email) ─────────────────
+  static Future<AuthResult> resetCredential(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
       return AuthResult.success(
-          message: 'PIN reset email sent to ${email.trim()}. Please check your Inbox (and Trash/Spam folder if not visible). Email comes from auth@numista.ai.');
+          message: 'Reset email sent to ${email.trim()}. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
     }
   }
+
+  /// Legacy alias kept so any code still calling resetPin() continues to work.
+  @Deprecated('Use resetCredential() instead')
+  static Future<AuthResult> resetPin(String email) => resetCredential(email);
 
   // ─── Guest / Anonymous Sign-In ───────────────────────────────────────────
   static Future<AuthResult> signInAsGuest() async {

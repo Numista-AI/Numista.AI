@@ -441,9 +441,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => AuthService.resetPin(AuthService.userEmail),
+                  onPressed: () async {
+                    await AuthService.resetCredential(AuthService.userEmail);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Reset link sent — check your inbox.'),
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                    }
+                  },
                   icon: const Icon(Icons.lock_reset, size: 16),
-                  label: const Text('Reset PIN'),
+                  label: const Text('Reset PIN / Password'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark ? Colors.white : const Color(0xFF31333F),
                     side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
