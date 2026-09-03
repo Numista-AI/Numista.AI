@@ -145,6 +145,14 @@ def expand_collection_inventory(docs_iter):
                     "condition":          _get_field(coin, "Condition", "condition") or parent_cond,
                     "theme_subject":      _get_field(coin, "Theme/Subject", "theme_subject"),
                     "program_series":     _get_field(coin, "Program/Series", "program_series"),
+                    # ── Option B (dual-key — matches Dart contract) ───────
+                    "strike_type":        _get_field(coin, "Strike Type", "strike_type"),
+                    "Strike Type":        _get_field(coin, "Strike Type", "strike_type"),
+                    "metal_content":      _get_field(coin, "Metal Content", "metal_content",
+                                                     "Composition", "composition"),
+                    "Metal Content":      _get_field(coin, "Metal Content", "metal_content",
+                                                     "Composition", "composition"),
+                    # ── End Option B ─────────────────────────────────────
                     "ai_estimated_value": _get_field(coin, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
                     "cost":               _get_field(coin, "Cost", "cost", "purchase_cost", default="$0.00"),
                     "item_type":          child_item_type,
