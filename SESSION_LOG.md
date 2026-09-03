@@ -169,3 +169,13 @@ See `launch_readiness_plan.md` for the full 35-hour sprint. Block 1 complete. Bl
 
 ### Verification
 - `flutter analyze` run on all changed files to confirm zero errors.
+
+---
+
+## Brain Watcher — Startup Sync Removed (Sep 3 2026)
+After this diff (`brain_watcher.py`, `brain_processor.py`, `brain_to_rag_migrator.py`),
+files already sitting in `Numista_Brain_Inbox` will NOT be absorbed automatically.
+They absorb on next `on_created` or `on_modified` event (re-save or copy-in).
+This is intended. Do NOT restore the `os.walk` startup loop.
+To absorb the existing reference library: re-save or copy files into the inbox,
+or request a `DELETE_AFTER_USE` one-off script with an explicit file list.

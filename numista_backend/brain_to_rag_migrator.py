@@ -72,6 +72,10 @@ VALID_CATEGORIES = {
 # Filename keyword hard deny - case-insensitive substring match on filename only.
 HARD_DENY_FILENAME_KEYWORDS = {
     "invoice", "receipt", "payment", "estate_worksheet", "partition", "token",
+    # Price Guide derivatives — valuation stays on its own cache path, not in RAG.
+    "greysheet", "cpg", "dealer", "newsletter",
+    # Planning and admin documents — must not pollute Morgan's knowledge.
+    "brain_sorter", "walkthrough", "implementation_plan", "session_log",
 }
 
 logging.basicConfig(
@@ -171,50 +175,57 @@ def probe_embedding_dim(client) -> bool:
 
 def load_eligible_docs(db) -> list:
     """
-    Load brain_knowledge_base, deduplicate by filename (keep most recent absorbed_at),
-    and apply corpus inclusion policy.
+    Load brain_knowledge_base and apply corpus inclusion policy.
+
+    Eligibility is keyed on doc.id (the sha256_ hash), NOT on filename.
+    - Legacy timestamp-id rows are skipped with SKIP_LEGACY_ID.
+    - Price Guide category is blocked — valuation has its own cache path.
+    - Only status=processed docs are eligible for RAG.
+    - SKIP_EXISTS (on chunk_id = {doc_id}_0000) prevents re-embedding.
     """
     logger.info(f"Loading {KB_COLLECTION}...")
     all_docs = list(db.collection(KB_COLLECTION).stream())
     logger.info(f"  Total KB documents: {len(all_docs)}")
 
-    # Group by filename, keep most recent absorbed_at
-    by_filename: dict = {}
+    eligible = []
     for doc in all_docs:
         d = doc.to_dict() or {}
+        doc_id = doc.id
         filename = (d.get("filename") or "").strip()
-        absorbed_at = d.get("absorbed_at")
-        if not filename:
+
+        # Skip legacy timestamp-id rows — only hash-keyed docs are migrated.
+        if not doc_id.startswith("sha256_"):
+            logger.info(f"  SKIP_LEGACY_ID   {doc_id}")
             continue
-        if filename not in by_filename:
-            by_filename[filename] = (doc.id, d, absorbed_at)
-        else:
-            existing_at = by_filename[filename][2]
-            if absorbed_at and (existing_at is None or absorbed_at > existing_at):
-                by_filename[filename] = (doc.id, d, absorbed_at)
 
-    total_dup = len(all_docs) - len(by_filename)
-    logger.info(f"  After filename dedup: {len(by_filename)} unique sources ({total_dup} SKIP_DUPLICATE)")
-
-    eligible = []
-    for filename, (doc_id, d, absorbed_at) in sorted(by_filename.items()):
-        summary = (d.get("summary") or "").strip()
-        raw_type = (d.get("type") or "").strip()
-
+        # Deny: filename keywords
         if is_hard_deny(filename):
-            logger.info(f"  SKIP_DENY    {doc_id} | {filename}")
+            logger.info(f"  SKIP_DENY        {doc_id} | {filename}")
             continue
 
+        # Deny: Price Guide category (valuation stays on greysheet/PCGS cache path)
+        category = normalize_category((d.get("type") or "").strip())
+        if category == "Price Guide":
+            logger.info(f"  SKIP_CATEGORY    {doc_id} | {filename}")
+            continue
+
+        # Skip non-processed (absorb_failed, unknown, etc.)
+        if d.get("status") != "processed":
+            logger.info(f"  SKIP_NOT_PROCESSED  {doc_id} | {filename} (status={d.get('status')})")
+            continue
+
+        # Skip short summaries
+        summary = (d.get("summary") or "").strip()
         if len(summary) < MIN_CONTENT_LENGTH:
-            logger.info(f"  SKIP_SHORT   {doc_id} | {filename} ({len(summary)} chars)")
+            logger.info(f"  SKIP_SHORT       {doc_id} | {filename} ({len(summary)} chars)")
             continue
 
         eligible.append({
             "source_doc_id": doc_id,
-            "filename": filename,
+            "filename": filename,          # kept for deny-list checks and --pilot-10 resolution
             "summary": summary,
-            "category": normalize_category(raw_type),
-            "absorbed_at": absorbed_at,
+            "category": category,
+            "absorbed_at": d.get("absorbed_at"),
         })
 
     logger.info(f"  Eligible after policy: {len(eligible)}")
