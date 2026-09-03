@@ -227,3 +227,10 @@ numista_qc/screenshots/
 numista_qc/fixtures/auth-token.json
 
 numista_qc/node_modules/
+
+# ============================================================
+# Brain system — service key and generated status report
+# ============================================================
+# Note: Numista_Brain_Inbox/ is already excluded above (line 159).
+numista_backend/serviceAccountKey.json
+Numista_Brain_Inbox/Brain Sorter/brain_status.md

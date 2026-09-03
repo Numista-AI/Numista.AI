@@ -95,7 +95,7 @@ def test_gold_standard_checklist_extraction():
     # Check Immutable Provenance Struct
     prov = items[0]["source_provenance"]
     assert prov["source_type"] == "checklist_scan"
-    assert prov["classifier_model"] == "gemini-3.7-flash"
+    assert prov["classifier_model"] == "gemini-3.8-flash"
     assert prov["extraction_model"] == EXTRACTION_MODEL
     assert prov["prompt_version"] == CHECKLIST_PROMPT_VERSION
     assert len(prov["prompt_hash"]) == 16
