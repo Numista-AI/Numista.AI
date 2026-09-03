@@ -35,6 +35,8 @@ class _LoginScreenState extends State<LoginScreen>
   bool _loading          = false;
   bool _pinSignInVisible = false;   // Show/hide on Sign In tab
   bool _pinCreateVisible = false;   // Show/hide on Create Account tab (independent)
+  bool _usePasswordSignIn = false;  // Toggle: PIN vs password on Sign In tab
+  bool _usePasswordCreate = false;  // Toggle: PIN vs password on Create Account tab
   bool _showResetForm    = false;
   bool _termsAccepted    = false;   // Must be true before Create My Vault button enables
   String? _error;
@@ -61,6 +63,8 @@ class _LoginScreenState extends State<LoginScreen>
         setState(() { _error = null; _successMsg = null; });
       }
     });
+    // Rebuild on every keystroke so the strength hint is live
+    _pinCreateCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -77,36 +81,51 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ─── Actions ─────────────────────────────────────────────────────────────
   Future<void> _signIn() async {
-    final email = _emailCtrl.text.trim();
-    final pin   = _pinCtrl.text.trim();
-    if (email.isEmpty || pin.isEmpty) {
-      setState(() => _error = 'Please enter your email and PIN.');
+    final email      = _emailCtrl.text.trim();
+    final credential = _pinCtrl.text.trim();
+    if (email.isEmpty || credential.isEmpty) {
+      setState(() => _error = _usePasswordSignIn
+          ? 'Please enter your email and password.'
+          : 'Please enter your email and PIN.');
       return;
     }
-    if (pin.length != 6) {
-      setState(() => _error = 'Your PIN must be exactly 6 digits.');
-      return;
+    if (!_usePasswordSignIn) {
+      if (credential.length != 6 || int.tryParse(credential) == null) {
+        setState(() => _error = 'Your PIN must be exactly 6 digits.');
+        return;
+      }
+    } else {
+      if (credential.length < 8) {
+        setState(() => _error = 'Password must be at least 8 characters.');
+        return;
+      }
     }
-    // Clear Browse Demo before real sign-in. This is the third clearance
-    // point (after home_dashboard and main.dart); fires before the
-    // StreamBuilder receives the auth-state-changed event.
     GuestSeedService.deactivateBrowseDemo();
     setState(() { _loading = true; _error = null; });
-    final result = await AuthService.signIn(email, pin);
+    final result = await AuthService.signIn(email, credential);
     if (mounted) setState(() { _loading = false; _error = result.error; });
   }
 
   Future<void> _createAccount() async {
-    final email = _emailCreateCtrl.text.trim();
-    final name  = _nameCtrl.text.trim();
-    final pin   = _pinCreateCtrl.text.trim();
-    if (email.isEmpty || pin.isEmpty) {
-      setState(() => _error = 'Please fill in your email and choose a PIN.');
+    final email      = _emailCreateCtrl.text.trim();
+    final name       = _nameCtrl.text.trim();
+    final credential = _pinCreateCtrl.text.trim();
+    if (email.isEmpty || credential.isEmpty) {
+      setState(() => _error = _usePasswordCreate
+          ? 'Please fill in your email and choose a password.'
+          : 'Please fill in your email and choose a PIN.');
       return;
     }
-    if (pin.length != 6 || int.tryParse(pin) == null) {
-      setState(() => _error = 'PIN must be exactly 6 digits (numbers only).');
-      return;
+    if (!_usePasswordCreate) {
+      if (credential.length != 6 || int.tryParse(credential) == null) {
+        setState(() => _error = 'PIN must be exactly 6 digits (numbers only).');
+        return;
+      }
+    } else {
+      if (credential.length < 8) {
+        setState(() => _error = 'Password must be at least 8 characters.');
+        return;
+      }
     }
     if (!_termsAccepted) {
       setState(() => _error = 'Please accept the Terms of Use and Privacy Policy to continue.');
@@ -114,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.createAccount(
-        email, name.isEmpty ? email.split('@').first : name, pin);
+        email, name.isEmpty ? email.split('@').first : name, credential);
     if (mounted) setState(() { _loading = false; _error = result.error; });
   }
 
@@ -155,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
     setState(() { _loading = true; _error = null; });
-    final result = await AuthService.resetPin(email);
+    final result = await AuthService.resetCredential(email);
     if (mounted) {
       setState(() {
         _loading    = false;
@@ -442,7 +461,7 @@ class _LoginScreenState extends State<LoginScreen>
         Center(
           child: TextButton(
             onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-            child: Text('Forgot your 6-digit PIN?', style: TextStyle(color: _grey, fontSize: 13)),
+            child: Text('Forgot your PIN or password?', style: TextStyle(color: _grey, fontSize: 13)),
           ),
         ),
 
@@ -480,18 +499,44 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 6),
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 16),
+          // ── Credential label row ──────────────────────────────────────────
           Row(
             children: [
-              Expanded(child: _label('6-Digit PIN')),
-              const Text(
-                'Instead of a password',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
-              ),
+              Expanded(child: _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN')),
+              if (!_usePasswordSignIn)
+                const Text(
+                  'Instead of a password',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
+                ),
             ],
           ),
           const SizedBox(height: 6),
-          _pinField(_pinCtrl, _pinSignInVisible, () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
-          const SizedBox(height: 20),
+          // ── Credential input — PIN or password ───────────────────────────
+          _usePasswordSignIn
+              ? _passwordField(_pinCtrl, _pinSignInVisible,
+                  () => setState(() => _pinSignInVisible = !_pinSignInVisible))
+              : _pinField(_pinCtrl, _pinSignInVisible,
+                  () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
+          // ── Mode toggle link ──────────────────────────────────────────────
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => setState(() {
+                _usePasswordSignIn = !_usePasswordSignIn;
+                _pinCtrl.clear();
+                _error = null;
+              }),
+              child: Text(
+                _usePasswordSignIn ? 'Use 6-digit PIN instead' : 'Use password instead',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
         ],
       ),
@@ -511,10 +556,39 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 6),
           _textField(controller: _emailCreateCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 12),
-          _label('Choose a 6-Digit PIN'),
+          _label(_usePasswordCreate ? 'Choose a Password' : 'Choose a 6-Digit PIN'),
           const SizedBox(height: 6),
-          _pinField(_pinCreateCtrl, _pinCreateVisible, () => setState(() => _pinCreateVisible = !_pinCreateVisible)),
-          const SizedBox(height: 16),
+          _usePasswordCreate
+              ? _passwordField(_pinCreateCtrl, _pinCreateVisible,
+                  () => setState(() => _pinCreateVisible = !_pinCreateVisible))
+              : _pinField(_pinCreateCtrl, _pinCreateVisible,
+                  () => setState(() => _pinCreateVisible = !_pinCreateVisible)),
+          // ── Password strength hint (password mode only) ───────────────────
+          if (_usePasswordCreate && _pinCreateCtrl.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: _strengthHint(_pinCreateCtrl.text),
+            ),
+          // ── Mode toggle link ──────────────────────────────────────────────
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => setState(() {
+                _usePasswordCreate = !_usePasswordCreate;
+                _pinCreateCtrl.clear();
+                _error = null;
+              }),
+              child: Text(
+                _usePasswordCreate ? 'Use 6-digit PIN instead' : 'Use password instead',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           // Terms of Use + Privacy Policy acceptance
           InkWell(
             onTap: () => setState(() => _termsAccepted = !_termsAccepted),
@@ -596,10 +670,10 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Reset Your 6-Digit PIN',
+        const Text('Reset Your PIN or Password',
             style: TextStyle(color: _text, fontSize: 26, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text("Enter your account email address. We'll send a 6-digit PIN reset link from auth@numista.ai directly to your Inbox.",
+        const Text("Enter your account email address. We'll send a reset link from auth@numista.ai directly to your Inbox.",
             style: TextStyle(color: _sub, fontSize: 14)),
         const SizedBox(height: 32),
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
@@ -608,7 +682,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         _textField(controller: _resetEmailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 24),
-        _primaryButton(label: _loading ? 'Sending…' : 'Send 6-Digit PIN Reset Link', onTap: _loading ? null : _sendResetLink),
+        _primaryButton(label: _loading ? 'Sending…' : 'Send Reset Link', onTap: _loading ? null : _sendResetLink),
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => setState(() { _showResetForm = false; _error = null; _successMsg = null; }),
@@ -711,6 +785,63 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         child: Text(msg, style: TextStyle(color: isError ? const Color(0xFFDC2626) : _green, fontSize: 13)),
       );
+
+  // ─── Password field (full text, no digit restriction) ────────────────────
+  Widget _passwordField(TextEditingController ctrl, bool visible, VoidCallback onToggle) =>
+      TextField(
+        controller: ctrl,
+        obscureText: !visible,
+        style: const TextStyle(color: _text, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Min. 8 characters',
+          hintStyle: TextStyle(color: _grey.withAlpha(140), fontSize: 14),
+          filled: true,
+          fillColor: _inputBg,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _blue, width: 1.5)),
+          suffixIcon: IconButton(
+            icon: Icon(visible ? Icons.visibility_off : Icons.visibility, color: _grey, size: 18),
+            onPressed: onToggle,
+          ),
+        ),
+      );
+
+  // ─── Password strength hint ────────────────────────────────────────────────
+  Widget _strengthHint(String pw) {
+    final hasLength  = pw.length >= 8;
+    final hasUpper   = pw.contains(RegExp(r'[A-Z]'));
+    final hasDigit   = pw.contains(RegExp(r'[0-9]'));
+    final hasSpecial = pw.contains(RegExp(r'[^A-Za-z0-9]'));
+    final score = [hasLength, hasUpper, hasDigit, hasSpecial].where((b) => b).length;
+
+    final (label, color) = switch (score) {
+      0 || 1 => ('Weak', const Color(0xFFDC2626)),
+      2      => ('Fair', const Color(0xFFF59E0B)),
+      3      => ('Good', const Color(0xFF16A34A)),
+      _      => ('Strong', const Color(0xFF15803D)),
+    };
+
+    return Row(
+      children: [
+        // Progress bar
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: score / 4,
+              minHeight: 4,
+              backgroundColor: _border,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
 }
 
 // ─── Helper widgets ────────────────────────────────────────────────────────
