@@ -1551,10 +1551,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.300',
+    date: '2026-09-02',
+    description: 'Qc Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Qc: add package.json with @playwright/test to numista_qc (was resolving from root where it wasn\'t installed)',
+      'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
+      'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
+      'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
+      'Collection: Fix B — virtual set children as table rows',
+      'Add authoritative Westward Journey Nickel Series program research and checklist reference',
+      'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
+      'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
+    ],
+  ),
+  _Release(
+    version: 'v4.299',
+    date: '2026-09-02',
+    description: 'Checklists Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
+      'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
+      'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
+      'Collection: Fix B — virtual set children as table rows',
+      'Add authoritative Westward Journey Nickel Series program research and checklist reference',
+      'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
+      'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
+      'E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies',
+    ],
+  ),
+  _Release(
     version: 'v4.298',
     date: '2026-09-02',
     description: 'Checklists Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',

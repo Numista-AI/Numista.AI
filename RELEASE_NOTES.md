@@ -301,6 +301,32 @@
 
 
 
+
+
+## v4.300 — 2026-09-02
+**Qc Enhancements & Platform Updates**
+
+- Qc: add package.json with @playwright/test to numista_qc (was resolving from root where it wasn't installed)
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)
+- Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005
+- Collection: Fix B â€” virtual set children as table rows
+- Add authoritative Westward Journey Nickel Series program research and checklist reference
+- Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)
+- Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files
+
+## v4.299 — 2026-09-02
+**Checklists Enhancements & Platform Updates**
+
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)
+- Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005
+- Collection: Fix B â€” virtual set children as table rows
+- Add authoritative Westward Journey Nickel Series program research and checklist reference
+- Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)
+- Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files
+- E2e: resolve ISSUE-002 and ISSUE-003 permanent timeouts; bump pip/npm dependencies
+
 ## v4.298 — 2026-09-02
 **Checklists Enhancements & Platform Updates**
 
