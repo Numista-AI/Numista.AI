@@ -134,6 +134,14 @@ ExpansionResult expandCollection(
               _getField(child, ['Theme/Subject', 'theme_subject']),
           'program_series':
               _getField(child, ['Program/Series', 'program_series']),
+          // ── Option B: finish / metal pass-through ─────────────────────
+          'strike_type':   _getField(child, ['Strike Type', 'strike_type']),
+          'Strike Type':   _getField(child, ['Strike Type', 'strike_type']),
+          'metal_content': _getField(child, ['Metal Content', 'metal_content',
+                                             'Composition', 'composition']),
+          'Metal Content': _getField(child, ['Metal Content', 'metal_content',
+                                             'Composition', 'composition']),
+          // ── End Option B ──────────────────────────────────────────────
           'ai_estimated_value': _getField(
               child, ['AI Estimated Value', 'ai_estimated_value'],
               defaultVal: '\$0.00'),

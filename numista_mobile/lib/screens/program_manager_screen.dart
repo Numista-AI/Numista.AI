@@ -16,6 +16,7 @@ import 'coin_search_screen.dart';
 import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../utils/slot_resolver.dart';
+import '../services/set_expansion_helper.dart';
 
 
 class ProgramManagerScreen extends StatefulWidget {
@@ -705,6 +706,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // --------------------------------------------------------------------------
 
   Widget _buildProgramDetailView(List<QueryDocumentSnapshot> docs, CoinProgram program) {
+    // Expand set parents into virtual children so set members match program slots.
+    final rawMaps  = docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    final rawIds   = docs.map((d) => d.id).toList();
+    final expanded = expandCollection(rawMaps, rawIds);
+    final coinPool = expanded.allItems; // parents + virtual set children
+
     int collectedCount = 0;
     int totalCount = 0;
     for (var coin in program.coins) {
@@ -715,8 +722,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       totalCount += varieties.length;
       for (var variety in varieties) {
         bool owned = false;
-        for (var doc in docs) {
-          final data = doc.data() as Map<String, dynamic>;
+        for (final data in coinPool) {
           if (SlotResolver.isMatch(data, program, coin) &&
               SlotResolver.matchesVariety(data, variety)) {
             owned = true;
@@ -1365,10 +1371,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
       if (personalized) {
         userEmail = AuthService.currentUser?.email ?? 'Authenticated Collector';
-        final coinList = (docs ?? []).map((d) => d.data() as Map<String, dynamic>).toList();
+        final rawMaps  = (docs ?? []).map((d) => d.data() as Map<String, dynamic>).toList();
+        final rawIds   = (docs ?? []).map((d) => d.id).toList();
+        final expanded = expandCollection(rawMaps, rawIds);
         inventoryMap = SlotResolver.resolveProgramInventory(
           program: program,
-          coins: coinList,
+          coins: expanded.allItems, // virtual set children included
         );
         distinctOwned = inventoryMap.values.where((r) => r.isOwned).length;
         totalOwned = inventoryMap.values.where((r) => r.isOwned).fold<int>(0, (acc, r) => acc + r.quantity);
