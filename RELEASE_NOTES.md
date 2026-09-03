@@ -303,6 +303,19 @@
 
 
 
+
+## v4.301 — 2026-09-03
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.300)
+- Qc: add package.json with @playwright/test to numista_qc (was resolving from root where it wasn't installed)
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)
+- Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"
+- Checklists: add Westward Journey Nickel Series(tm) 2004-2005
+- Collection: Fix B — virtual set children as table rows
+- Add authoritative Westward Journey Nickel Series program research and checklist reference
+- Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)
+
 ## v4.300 — 2026-09-02
 **Qc Enhancements & Platform Updates**
 
