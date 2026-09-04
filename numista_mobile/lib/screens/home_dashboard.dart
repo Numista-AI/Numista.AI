@@ -1551,10 +1551,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.307',
+    date: '2026-09-03',
+    description: 'Goals Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Goals: filter progress counter by goal dropdown (PROGRAM_GOAL_PROGRESS)',
+      'Proof-sets: expand set children in checklist + pass-through strike_type/metal_content (STATE_Q_PROOFSET_S_PROOF)',
+      'Ai(model): upgrade primary flash model gemini-3.7-flash -> gemini-3.8-flash',
+      'Brain: hash-idempotent absorb, on_modified, pass file_bytes, deny-lists',
+      'Add complete master registry of all 139 US Mint, BEP currency, and Treasury medal programs',
+      'Auth: add PIN + password dual login support',
+      'Testing: use 6-digit PIN instead of password in create_grokbot_account.py',
+      'Testing: add create_grokbot_account.py for Grok Bot sovereign test account',
+    ],
+  ),
+  _Release(
     version: 'v4.306',
     date: '2026-09-03',
     description: 'Proof-sets Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Proof-sets: expand set children in checklist + pass-through strike_type/metal_content (STATE_Q_PROOFSET_S_PROOF)',
       'Ai(model): upgrade primary flash model gemini-3.7-flash -> gemini-3.8-flash',
