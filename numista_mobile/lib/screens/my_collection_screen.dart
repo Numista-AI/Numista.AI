@@ -2480,16 +2480,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // --- Data Table (TableView -- sticky header + pinned Actions col) ---------
+  // --- Data Table (TableView -- external header + pinned Actions col) --------
+  //
+  // Option A: Header is a normal Row OUTSIDE the TableView. It scrolls
+  // horizontally via Transform.translate slaved to _tvHorizCtrl, so taps
+  // never share the pinned-row hit-test coordinate space with data cells.
+  // This eliminates the scroll-offset hit-test mismatch that caused header
+  // clicks to open Coin Inspector after horizontal panning on Flutter web
+  // (two_dimensional_scrollables 0.4.2, pinnedRowCount: 1).
   Widget _buildDataTable(List<CollectionRow> docs, {bool advanced = false}) {
     final visCols   = _visibleColumns(_cachedCoinsDocs);
     final totalCols = 1 + visCols.length; // col 0 = Actions (pinned)
-    final totalRows = 1 + docs.length;    // row 0 = header (pinned)
 
     const double actionsW   = 96.0;
     const double headerH    = 44.0;
     const double dataH      = 44.0;
     const double colPadding = 8.0;
+
+    // Total scrollable content width for header (must match TableView extents)
+    final double scrollableHeaderW = visCols.fold<double>(
+        0.0, (acc, c) => acc + c.width.toDouble() + 2 * colPadding);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2500,25 +2510,113 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           trackColor: _border.withAlpha(80),
         ),
         const SizedBox(height: 6),
+
+        // ── EXTERNAL HEADER ROW ─────────────────────────────────────────
+        // Not inside the TableView. Not pinned. Normal Flutter Row.
+        // Taps here NEVER fall through to data cells.
+        Container(
+          height: headerH,
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF151B26) : const Color(0xFFE2E2DF),
+            border: Border(
+              left: BorderSide(color: _border),
+              top: BorderSide(color: _border),
+              right: BorderSide(color: _border),
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(8),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Fixed Actions header (matches pinned col 0 width + padding)
+              SizedBox(
+                width: actionsW + 2 * colPadding,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(color: _border, width: 0.8),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Actions',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _text),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Scrollable header cells — slaved to _tvHorizCtrl via Transform
+              Expanded(
+                child: ClipRect(
+                  child: ListenableBuilder(
+                    listenable: _tvHorizCtrl,
+                    builder: (context, _) {
+                      final double offset = _tvHorizCtrl.hasClients
+                          ? _tvHorizCtrl.offset
+                          : 0.0;
+                      return Transform.translate(
+                        offset: Offset(-offset, 0),
+                        child: SizedBox(
+                          width: scrollableHeaderW,
+                          height: headerH,
+                          child: Row(
+                            children: [
+                              for (int i = 0; i < visCols.length; i++)
+                                _buildExternalHeaderCell(
+                                  visCols[i],
+                                  colPadding,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── DATA-ONLY TABLE VIEW ────────────────────────────────────────
+        // pinnedRowCount: 0 — no header inside the TableView.
+        // All rows are data rows. Index = docs[row], not docs[row-1].
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: _surface,
                 border: Border.all(color: _border),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
               ),
               child: TableView.builder(
             horizontalDetails: ScrollableDetails.horizontal(
                 controller: _tvHorizCtrl),
             verticalDetails: ScrollableDetails.vertical(
                 controller: _tvVertCtrl),
-          // -- Pinning: freeze row 0 and column 0 --------------------------
-          pinnedRowCount:    1,
+          // -- Pinning: NO header row; freeze column 0 only ----------------
+          pinnedRowCount:    0,
           pinnedColumnCount: 1,
           columnCount: totalCols,
-          rowCount:    totalRows,
+          rowCount:    docs.length,
 
           // -- Column sizing -----------------------------------------------
           columnBuilder: (col) {
@@ -2540,14 +2638,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
           // -- Row sizing --------------------------------------------------
           rowBuilder: (row) => TableSpan(
-            extent: FixedTableSpanExtent(row == 0 ? headerH : dataH),
+            extent: FixedTableSpanExtent(dataH),
             backgroundDecoration: TableSpanDecoration(
-              color: row == 0
-                  ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF151B26) : const Color(0xFFE2E2DF))
-                  : (docs.length > row - 1 &&
-                          docs[row - 1].id == _selectedCoinId
+              color: (docs.length > row &&
+                          docs[row].id == _selectedCoinId
                       ? _accent.withAlpha(28)
-                      : (docs.length > row - 1 && docs[row - 1].isVirtualChild
+                      : (docs.length > row && docs[row].isVirtualChild
                           ? (Theme.of(context).brightness == Brightness.dark
                               ? const Color(0xFF0D1520) : const Color(0xFFF5F5F0))
                           : null)),
@@ -2563,33 +2659,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               final col = vicinity.column;
               final row = vicinity.row;
 
-            // -- HEADER ROW (row 0) -------------------------------------
-            if (row == 0) {
-              if (col == 0) {
-                return _tvHeaderCell('Actions', null, sortAsc: null);
-              }
-              final colDef    = visCols[col - 1];
-              final sortIdx   = _columns.indexOf(colDef);
-              final isSorted  = _sortColumnIndex == sortIdx;
-              return _tvHeaderCell(
-                colDef.header,
-                () {
-                  setState(() {
-                    if (_sortColumnIndex == sortIdx) {
-                      _sortAscending = !_sortAscending;
-                    } else {
-                      _sortColumnIndex = sortIdx;
-                      _sortAscending   = true;
-                    }
-                  });
-                  _saveSortPreferences(_sortColumnIndex, _sortAscending);
-                },
-                sortAsc: isSorted ? _sortAscending : null,
-              );
-            }
-
-            // -- DATA ROW ----------------------------------------------
-            final crw = docs[row - 1];
+            // -- ALL ROWS ARE DATA (no row == 0 header branch) ----------
+            final crw = docs[row];
             final m   = crw.data;
             final sel = crw.id == _selectedCoinId;
 
@@ -2936,51 +3007,57 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  /// Sticky header cell with optional sort-direction arrow.
-  ///
-  /// The entire cell is an opaque hit target so taps on empty space in wide
-  /// columns (e.g. Theme/Subject) trigger sort instead of leaking through the
-  /// pinned header row to the first data row's InkWell.
-  TableViewCell _tvHeaderCell(
-      String label, VoidCallback? onTap, {required bool? sortAsc}) {
-    return TableViewCell(
-      child: GestureDetector(
-        // Opaque: absorb ALL taps in this cell — never let them fall through
-        // the pinned header to the data row underneath.
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            mouseCursor: onTap != null
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            child: SizedBox.expand(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        label,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _text),
-                      ),
+  /// External header cell for the sort header Row (Option A).
+  /// Returns a plain Widget (not TableViewCell) sized to the column width.
+  /// Sort tap fills the entire cell — no pinned-row hit-test mismatch.
+  Widget _buildExternalHeaderCell(_ColDef colDef, double colPadding) {
+    final sortIdx  = _columns.indexOf(colDef);
+    final isSorted = _sortColumnIndex == sortIdx;
+    final bool? sortAsc = isSorted ? _sortAscending : null;
+
+    return SizedBox(
+      width: colDef.width.toDouble() + 2 * colPadding,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              if (_sortColumnIndex == sortIdx) {
+                _sortAscending = !_sortAscending;
+              } else {
+                _sortColumnIndex = sortIdx;
+                _sortAscending   = true;
+              }
+            });
+            _saveSortPreferences(_sortColumnIndex, _sortAscending);
+          },
+          mouseCursor: SystemMouseCursors.click,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      colDef.header,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _text),
                     ),
-                    if (sortAsc != null) ...[
-                      SizedBox(width: 2),
-                      Icon(
-                        sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                        size: 11,
-                        color: _accent,
-                      ),
-                    ],
+                  ),
+                  if (sortAsc != null) ...[
+                    const SizedBox(width: 2),
+                    Icon(
+                      sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                      size: 11,
+                      color: _accent,
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
