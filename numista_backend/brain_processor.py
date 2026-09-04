@@ -56,11 +56,11 @@ except Exception as e:
     raise RuntimeError(f"BrainProcessor cannot start — auth/client init failed: {e}") from e
 
 
-def absorb_document(file_path: Path, file_bytes: bytes, user_intent: str = None):
+def absorb_document(file_path: Path, file_bytes: bytes = None, user_intent: str = None):
     """
     Core absorption pipeline.
 
-    Signature: absorb_document(file_path, file_bytes, user_intent=None)
+    Signature: absorb_document(file_path, file_bytes=None, user_intent=None)
     - file_bytes: read exactly once by the watcher after size-stable check.
       This function never re-opens the file.
     - doc_id is deterministic: sha256_<hex> of file_bytes.
@@ -71,6 +71,14 @@ def absorb_document(file_path: Path, file_bytes: bytes, user_intent: str = None)
       missing       -> Fresh absorb.
     """
     logger.info(f"🧠 Starting absorption for: {file_path.name}")
+
+    if isinstance(file_bytes, str) and user_intent is None:
+        user_intent = file_bytes
+        file_bytes = file_path.read_bytes()
+    elif file_bytes is None:
+        file_bytes = file_path.read_bytes()
+    elif isinstance(file_bytes, str):
+        file_bytes = file_bytes.encode('utf-8')
 
     # Deterministic document ID from file content bytes.
     sha256_hex = hashlib.sha256(file_bytes).hexdigest()

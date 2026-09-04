@@ -301,7 +301,15 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             // Cache population is handled inside _startCoinsFetch's .then().
             final docs = snapshot.data ?? [];
 
-            
+            // Expand once for the entire grid — reused across all categories
+            // and all programs. expandCollection() builds virtual set children
+            // (e.g. 2002-S proof quarters) that are absent from raw docs.
+            // Hoisted here so we never call expandCollection 139× inside the map.
+            final gridRawMaps = docs.map((d) => d.data() as Map<String, dynamic>).toList();
+            final gridRawIds  = docs.map((d) => d.id).toList();
+            final gridExpanded = expandCollection(gridRawMaps, gridRawIds);
+            final coinPool = gridExpanded.allItems; // parents + virtual children
+
             if (_selectedProgram == null && widget.initialProgramId != null) {
               for (final entry in allProgramsMap.entries) {
                 for (final prog in entry.value) {
@@ -369,6 +377,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     
                     // Calculate completion stats for sorting
                     final List<Map<String, dynamic>> enrichedPrograms = programsList.map((prog) {
+                      // Read saved goal — missing = Full Master Set = all varieties
+                      final goal = _programGoals[prog.id] ?? 'Full Master Set';
                       int collectedCount = 0;
                       int totalCount = 0;
 
@@ -377,11 +387,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         final varieties = coin.varieties.isEmpty
                             ? [const ChecklistVariety(id: '', label: '')]
                             : coin.varieties;
-                        totalCount += varieties.length;
                         for (var variety in varieties) {
+                          // Apply goal filter — skip varieties outside the saved goal
+                          if (!_goalAllowsVariety(variety, goal)) continue;
+                          totalCount++;
                           bool owned = false;
-                          for (var doc in docs) {
-                            final data = doc.data() as Map<String, dynamic>;
+                          for (final data in coinPool) {
                             if (SlotResolver.isMatch(data, prog, coin) &&
                                 SlotResolver.matchesVariety(data, variety)) {
                               owned = true;
