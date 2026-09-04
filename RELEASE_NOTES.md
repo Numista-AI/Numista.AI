@@ -313,6 +313,52 @@
 
 
 
+
+
+
+
+## v4.314 — 2026-09-04
+**Collection Enhancements & Platform Updates**
+
+- Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)
+- Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved
+- Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+- Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
+## v4.313 — 2026-09-04
+**Scan Enhancements & Platform Updates**
+
+- Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved
+- Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+- Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
+## v4.312 — 2026-09-04
+**Checklists Enhancements & Platform Updates**
+
+- Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+- Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
+## v4.311 — 2026-09-04
+**Deps Enhancements & Platform Updates**
+
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+- Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
 ## v4.310 — 2026-09-04
 **Brain Enhancements & Platform Updates**
 
