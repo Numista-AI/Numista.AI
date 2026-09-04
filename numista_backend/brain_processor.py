@@ -308,18 +308,38 @@ def dump_brain_status(db_client, output_path: str):
     all_docs = list(db_client.collection('brain_knowledge_base').stream())
 
     total = len(all_docs)
-    processed = sum(1 for d in all_docs if (d.to_dict() or {}).get('status') == 'processed')
-    failed = sum(1 for d in all_docs if (d.to_dict() or {}).get('status') == 'absorb_failed')
+
+    # Issue 4: separate hash-keyed (sha256_ prefix, new watcher) from legacy
+    # (timestamp-id, pre-47b5f4c watcher). absorb_failed kept visible on both sides.
+    hash_processed = sum(
+        1 for d in all_docs
+        if d.id.startswith('sha256_') and (d.to_dict() or {}).get('status') == 'processed'
+    )
+    hash_failed = sum(
+        1 for d in all_docs
+        if d.id.startswith('sha256_') and (d.to_dict() or {}).get('status') == 'absorb_failed'
+    )
     legacy = sum(1 for d in all_docs if not d.id.startswith('sha256_'))
-    other = total - processed - failed
+    legacy_processed = sum(
+        1 for d in all_docs
+        if not d.id.startswith('sha256_') and (d.to_dict() or {}).get('status') == 'processed'
+    )
+    legacy_failed = sum(
+        1 for d in all_docs
+        if not d.id.startswith('sha256_') and (d.to_dict() or {}).get('status') == 'absorb_failed'
+    )
 
     chunks = list(db_client.collection('numismatic_reference_chunks').stream())
     total_chunks = len(chunks)
-    valid_chunks = sum(
-        1 for c in chunks
-        if isinstance((c.to_dict() or {}).get('embedding'), list)
-        and len((c.to_dict() or {}).get('embedding', [])) == 1536
-    )
+
+    # Issue 5: field is 'embedding_vector' (google.cloud.firestore_v1.vector.Vector, dim=1536).
+    # 'embedding' key is absent / None on all existing chunks — do not use it.
+    # Read-only status report only — no write to numismatic_reference_chunks.
+    valid_chunks = 0
+    for c in chunks:
+        emb = (c.to_dict() or {}).get('embedding_vector')
+        if emb is not None and len(emb) == 1536:
+            valid_chunks += 1
 
     pending_migration = sum(
         1 for d in all_docs
@@ -334,10 +354,17 @@ Generated: {now}
 
 ## Knowledge Base (brain_knowledge_base)
 - Total documents: {total}
-- status=processed (hash-keyed): {processed}
-- status=absorb_failed: {failed}
-- Legacy timestamp-id rows (not migrated): {legacy}
-- Other: {other}
+
+### Hash-keyed rows (sha256_ prefix — new watcher, eligible for RAG migration):
+- status=processed: {hash_processed}
+- status=absorb_failed: {hash_failed}
+
+### Legacy rows (timestamp-id — pre-47b5f4c watcher, will never migrate):
+- Total: {legacy}
+  - Of those, status=processed: {legacy_processed}
+  - Of those, status=absorb_failed: {legacy_failed}
+
+### Ready for RAG migration (hash-keyed + processed): {hash_processed}
 
 ## RAG Pool (numismatic_reference_chunks)
 - Total chunks: {total_chunks}
