@@ -208,26 +208,40 @@ class ChecklistGeneratorService {
     // ── Table data builders ───────────────────────────────────────────────────
     List<dynamic> buildMultiRow(ProgramCoin coin, int rowIndex) {
       final row = <dynamic>[coinLabel(coin)];
-      final coinVarietyIds = coin.varieties.map((v) => v.id).toSet();
-      final notesList = <String>[];
+      // Map variety id → ChecklistVariety so we can access .label for the Notes prefix.
+      final coinVarietyMap = {for (final cv in coin.varieties) cv.id: cv};
+      // Pairs of (varietyLabel, formattedNotes) for every owned variety in this row.
+      final ownedNotes = <(String, String)>[];
 
-      for (var v in vList) {
-        if (coinVarietyIds.contains(v)) {
-          final slotKey = '${program.id}_${coin.id}_$v';
+      for (var vId in vList) {
+        if (coinVarietyMap.containsKey(vId)) {
+          final slotKey = '${program.id}_${coin.id}_$vId';
           final match = resolvedInventory?[slotKey];
           final isOwned = match != null && match.isOwned;
           row.add(_buildVectorCheckbox(isOwned: isOwned));
 
           if (isOwned && match.formattedNotes.isNotEmpty) {
-            notesList.add(match.formattedNotes);
+            final label = coinVarietyMap[vId]!.label;
+            ownedNotes.add((label, match.formattedNotes));
           }
         } else {
           row.add('');
         }
       }
 
-      // Notes / QTY Column
-      row.add(_s(notesList.join('; ')));
+      // Notes / QTY Column — labeled join (G3 Phase 1, OQ2).
+      // One owned variety  → bare phrase, no label prefix (e.g. "3 loose (Raw)").
+      // Multiple varieties → "P Unc: 3 loose (Raw) | D Unc: 2 loose (Raw) | S Proof: Raw".
+      // ' | ' is used directly — unicode bullet \u2022 would be re-mapped by _s().
+      final String notesText;
+      if (ownedNotes.isEmpty) {
+        notesText = '';
+      } else if (ownedNotes.length == 1) {
+        notesText = ownedNotes.first.$2;
+      } else {
+        notesText = ownedNotes.map((e) => '${e.$1}: ${e.$2}').join(' | ');
+      }
+      row.add(_s(notesText));
       return row;
     }
 
