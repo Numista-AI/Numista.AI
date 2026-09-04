@@ -311,6 +311,23 @@
 
 
 
+
+
+## v4.310 — 2026-09-04
+**Brain Enhancements & Platform Updates**
+
+- Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
+## v4.309 — 2026-09-04
+**Ingest Enhancements & Platform Updates**
+
+- Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)
+- Auto-version bump to v4.308
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)
+
 ## v4.308 — 2026-09-04
 **Audit Enhancements & Platform Updates**
 

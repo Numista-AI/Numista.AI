@@ -1551,10 +1551,33 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.310',
+    date: '2026-09-04',
+    description: 'Brain Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
+      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Auto-version bump to v4.308',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
+    ],
+  ),
+  _Release(
+    version: 'v4.309',
+    date: '2026-09-04',
+    description: 'Ingest Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Auto-version bump to v4.308',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
+    ],
+  ),
+  _Release(
     version: 'v4.308',
     date: '2026-09-04',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
       'Goals: filter progress counter by goal dropdown (PROGRAM_GOAL_PROGRESS)',

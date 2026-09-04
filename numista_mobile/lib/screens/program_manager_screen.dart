@@ -1233,19 +1233,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                     coin.name.contains('Pending') ||
                                     variety.label.contains('Pending');
 
-                                // Variety-level ownership check
-                                QueryDocumentSnapshot? matchedDoc;
-                                for (var doc in docs) {
-                                  final data =
-                                      doc.data() as Map<String, dynamic>;
+                                // Variety-level ownership check — uses coinPool
+                                // (expanded.allItems) so virtual set children
+                                // (e.g. 2002-S proof quarters) resolve correctly.
+                                // Loop A (banner) already uses coinPool; Loop B
+                                // must match the same source.
+                                bool isOwned = false;
+                                for (final data in coinPool) {
                                   if (SlotResolver.isMatch(data, program, coin) &&
                                       SlotResolver.matchesVariety(data, variety)) {
-                                    matchedDoc = doc;
+                                    isOwned = true;
                                     break;
                                   }
                                 }
 
-                                if (matchedDoc != null) {
+                                if (isOwned) {
                                   // ── Owned ──────────────────────────────
                                   return Container(
                                     padding: const EdgeInsets.symmetric(
