@@ -2937,40 +2937,51 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   /// Sticky header cell with optional sort-direction arrow.
+  ///
+  /// The entire cell is an opaque hit target so taps on empty space in wide
+  /// columns (e.g. Theme/Subject) trigger sort instead of leaking through the
+  /// pinned header row to the first data row's InkWell.
   TableViewCell _tvHeaderCell(
       String label, VoidCallback? onTap, {required bool? sortAsc}) {
     return TableViewCell(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          mouseCursor: onTap != null
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: _text),
-                  ),
+      child: GestureDetector(
+        // Opaque: absorb ALL taps in this cell — never let them fall through
+        // the pinned header to the data row underneath.
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            mouseCursor: onTap != null
+                ? SystemMouseCursors.click
+                : SystemMouseCursors.basic,
+            child: SizedBox.expand(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _text),
+                      ),
+                    ),
+                    if (sortAsc != null) ...[
+                      SizedBox(width: 2),
+                      Icon(
+                        sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                        size: 11,
+                        color: _accent,
+                      ),
+                    ],
+                  ],
                 ),
-                if (sortAsc != null) ...[
-                  SizedBox(width: 2),
-                  Icon(
-                    sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 11,
-                    color: _accent,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),
