@@ -689,9 +689,57 @@ class SlotResolver {
               formattedNotes = topGrade;
             }
           } else {
-            final othersCount = matchingItems.length - 1;
-            final topStr = (topService != null && topService.isNotEmpty) ? '$topGrade $topService' : topGrade;
-            formattedNotes = 'QTY: ${matchingItems.length} | $topStr, +$othersCount other${othersCount > 1 ? "s" : ""}';
+            // Multi-item — plain-English locked templates (G3 Phase 1 / OQ1).
+            // Single-item branch above (L683-690) is NOT touched.
+            final n             = matchingItems.length;
+            final othersCount   = n - 1;
+            final topGradeStr   = topGrade.isEmpty ? 'Raw' : topGrade;
+            final hasTopSvc     = topService != null && topService.isNotEmpty;
+
+            // Count unslabbed (raw) items across all matches.
+            final looseCount = matchingItems.where((item) {
+              final s = item['Grading Service']?.toString() ??
+                        item['grading_service']?.toString() ?? '';
+              return s.isEmpty;
+            }).length;
+
+            // Raw-grade-only strings (no service suffix) for same-grade check.
+            final rawGradeList = matchingItems.map((item) =>
+                (item['Condition']?.toString() ??
+                 item['grade']?.toString() ?? 'Raw')).toList();
+            final allSameRawGrade = rawGradeList.every((g) => g == rawGradeList.first);
+
+            if (hasTopSvc) {
+              if (looseCount == 0) {
+                // All items are slabbed — check whether grade + service are identical.
+                final allSameSvc = matchingItems.every((item) {
+                  final s = (item['Grading Service']?.toString() ??
+                             item['grading_service']?.toString() ?? '').toUpperCase();
+                  return s == topService.toUpperCase();
+                });
+                if (allSameRawGrade && allSameSvc) {
+                  // Case 2: N same grade, all slabbed same service.
+                  formattedNotes = '$n\u00D7 $topGradeStr $topService';
+                } else {
+                  // Case 3: mixed grades or mixed services (all slabbed).
+                  formattedNotes = '$topGradeStr $topService + $othersCount others';
+                }
+              } else if (looseCount == othersCount) {
+                // Case 4: top coin is slabbed; all other coins are raw/loose.
+                formattedNotes = '$topGradeStr $topService + $othersCount loose';
+              } else {
+                // Case 3: mixed slab + loose.
+                formattedNotes = '$topGradeStr $topService + $othersCount others';
+              }
+            } else {
+              if (allSameRawGrade) {
+                // Case 1: N coins, same grade, all raw/unslabbed.
+                formattedNotes = '$n loose ($topGradeStr)';
+              } else {
+                // Case 3: mixed raw grades.
+                formattedNotes = '$topGradeStr + $othersCount others';
+              }
+            }
           }
 
           result[slotKey] = SlotMatchResult(
