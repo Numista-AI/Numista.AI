@@ -1,10 +1,10 @@
-# SCAN REPORT: Numista.AI System Audit (v4.307)
+# SCAN REPORT: Numista.AI System Audit (v4.311)
 
 ## Executive Summary
 * **Status:** 🟢 **PASS** (System scan completed with a 100% backend unit pass rate [268 passed, 0 failed in 25.82s], 0 Dart analysis issues [Clean: `dart analyze lib` passed with 0 errors/warnings], live Cloud Run backend probes 100% operational, and Playwright E2E smoke test suite 100% operational [8/8 passed in 40.6s]. Gemini model policy: 100% compliant with 2026 GA models including the newly upgraded primary flash model `gemini-3.8-flash`).
 * **Scan Date:** 2026-09-04
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.307, Mobile/Web Frontend v4.307 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.311, Mobile/Web Frontend v4.311 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
@@ -15,7 +15,7 @@
 * **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai`
 * **Backend Pytest Suite:** 268 passed, 0 failed in 25.82s (100% pass rate)
 * **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 40.6s (100% pass rate)
-* **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 security hardening active
+* **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 security hardening active. **Dependabot: 0 open alerts** (pyarrow #67 dismissed as inaccurate — already at 23.0.1; xlsx alerts #1/#2/#45/#46 dismissed as not_used — legacy internal tooling not exposed to user data).
 
 ---
 
@@ -99,6 +99,6 @@
 ---
 
 ## Recommended Pre-Launch Action Items
-1. **Remediation E2E Spec Stabilization:** Maintain canvas settle wait times for complex multi-card set locators (`tests/26-aug24-remediation.spec.js`) during full concurrent test runs.
-2. **Dependabot Vulnerability Triage:** Continue updating and trimming npm/pub dependencies ahead of the November 1, 2026 public launch.
+1. ✅ **Remediation E2E Spec Stabilization (RESOLVED 2026-09-02):** ISSUE-002 and ISSUE-003 fixed — replaced `flt-glass-pane` `waitForFunction` (always 0×0 in headless SwiftShader) with real content assertions on `program_manager_screen.dart` heading text. ISSUE-003 given `test.setTimeout(120000)` per-test budget. Both green.
+2. ✅ **Dependabot Vulnerability Triage (COMPLETE 2026-09-04):** 0 open alerts. pyarrow #67 dismissed as inaccurate; xlsx #1/#2/#45/#46 dismissed as not_used (legacy internal tooling). All patchable packages bumped to latest safe versions.
 3. **Skill Maintenance:** Keep `.antigravity/skills/project-scanner/SKILL.md` aligned with current backend Cloud Run endpoints and newly registered coin programs.
