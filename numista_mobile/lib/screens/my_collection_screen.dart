@@ -721,13 +721,28 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           snapshot: null,
         ));
       } else {
-        // Real doc (parent or loose coin)
+        // Real doc (parent or loose coin) — use the ORIGINAL Firestore snapshot
+        // map, not the expansion projection. expandCollection()'s item is a
+        // snake_case-only projection that drops photos, grades, metal, and every
+        // PascalCase field that _getCellValue / Coin Inspector expect.
+        // Virtual children still use stamped item (stamped in the branch above).
+        final snap = snapById[coinId];
+        final raw = (snap?.data() as Map<String, dynamic>?) ?? {};
+        final data = Map<String, dynamic>.from(raw);
+        // Safety backfill: if the snapshot is missing a PascalCase alias but
+        // the expansion item has the snake equivalent, copy it in so dual-key
+        // consumers work even on pre-contract legacy docs.
+        for (final e in _snakeToPascal.entries) {
+          if (!data.containsKey(e.value) && item.containsKey(e.key)) {
+            data[e.value] = item[e.key];
+          }
+        }
         rows.add(CollectionRow(
           id: coinId,
-          data: item,
+          data: data,
           isVirtualChild: false,
           parentDocId: null,
-          snapshot: snapById[coinId],
+          snapshot: snap,
         ));
       }
     }
@@ -2969,13 +2984,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   String _getCellValue(_ColDef col, Map<String, dynamic> m, {bool advanced = false}) {
     switch (col.field) {
       case _F.year:
-        final v = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        final v = _rowField(m, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
         return v == 'null' ? '' : v;
       case _F.mintMark:
-        final v = m[_F.mintMark]?.toString().trim() ?? '';
+        final v = _rowField(m, 'mint_mark', _F.mintMark).trim();
         return (v == 'null' || v == 'nan') ? '' : v;
       case _F.denomination:
-        final rawD = m[_F.denomination]?.toString().trim() ?? '';
+        final rawD = _rowField(m, 'denomination', _F.denomination).trim();
         if (rawD.isEmpty || rawD == 'null') return '';
         if (rawD.startsWith(r'$')) return rawD;         // '$1', '$5' etc -- keep as-is
         if (RegExp(r'^\d+(\.\d+)?$').hasMatch(rawD)) { // '1', '25' etc -- add $
@@ -2992,7 +3007,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
         return dRaw[0].toUpperCase() + dRaw.substring(1);
       case _F.condition:
-        return _conditionLabel(m[_F.condition]?.toString().trim() ?? '');
+        return _conditionLabel(_rowField(m, 'condition', _F.condition).trim());
       case _F.gradingService:
         final svc = m[_F.gradingService]?.toString().trim() ??
                     m[_F.holderType]?.toString().trim() ?? '';
@@ -3159,9 +3174,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     });
     _fetchInspectorSimilar(data);
 
-    final year  = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final mint  = data[_F.mintMark]?.toString().trim() ?? '';
-    final denom = data[_F.denomination]?.toString() ?? '';
+    final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+    final mint  = _rowField(data, 'mint_mark', _F.mintMark).trim();
+    final denom = _rowField(data, 'denomination', _F.denomination);
     // Capitalise word-form denomination in the dialog title (penny > Penny)
     final denomTrim = denom.trim();
     final denomDisplay = denomTrim.isNotEmpty && !denomTrim.startsWith(r'$')
