@@ -96,8 +96,30 @@ def build_set_contents(year, metal, parent_doc_id):
     return children  # always 10
 
 
+def _get_field(doc_dict, *keys):
+    """Return first non-None value across candidate field names (dual-key safe).
+
+    Covers both PascalCase-only legacy parents (written before the Founder
+    dual-key contract) and snake_case + PascalCase parents created by this script.
+    """
+    for k in keys:
+        v = doc_dict.get(k)
+        if v is not None:
+            return v
+    return None
+
+
 def _find_or_create_parent(year, metal, uid, execute):
-    """For 2003+ runs: query for an existing Set parent, or create one."""
+    """For 2003+ runs: query for an existing Set parent, or create one.
+
+    Identity contract:
+      - Query: Year == str(year) AND Denomination == "Set"  (no spaced field in .where)
+      - Filter in Python: _get_field(doc, "Mint Mark", "mint_mark") == "S"
+        (covers PascalCase-only legacy parents and dual-key script-created parents)
+      - 0 matches  → create new UUID parent (print id; execute writes it)
+      - 1 match    → reuse; print doc id
+      - 2+ matches → hard-exit, print all ids, require --parent-doc-id explicitly
+    """
     try:
         import firebase_admin
         from firebase_admin import firestore as fs
@@ -107,11 +129,19 @@ def _find_or_create_parent(year, metal, uid, execute):
     except Exception as e:
         print(f"ERROR: Firestore connection failed: {e}", file=sys.stderr)
         sys.exit(1)
-    docs = (db.collection(f"users/{uid}/coins")
-              .where("Year", "==", str(year))
-              .where("Denomination", "==", "Set")
-              .where("Mint Mark", "==", "S")
-              .get())
+
+    # Query by Year + Denomination only — no spaced field path in .where().
+    # Python filter below covers the Mint Mark == "S" constraint, dual-key safe.
+    raw = (db.collection(f"users/{uid}/coins")
+             .where("Year",         "==", str(year))
+             .where("Denomination", "==", "Set")
+             .get())
+
+    docs = [
+        d for d in raw
+        if _get_field(d.to_dict(), "Mint Mark", "mint_mark") == "S"
+    ]
+
     if len(docs) == 1:
         print(f"Found existing parent: {docs[0].id}")
         return docs[0].id
@@ -130,8 +160,9 @@ def _find_or_create_parent(year, metal, uid, execute):
         return new_id
     else:
         ids = [d.id for d in docs]
-        print(f"ERROR: Multiple Set parents found for {year}: {ids}\n"
-              f"Provide --parent-doc-id explicitly.", file=sys.stderr)
+        print(f"ERROR: {len(docs)} Set parents found for {year} with Mint Mark S: {ids}\n"
+              f"Resolve duplicates in Firestore, then provide --parent-doc-id explicitly.",
+              file=sys.stderr)
         sys.exit(1)
 
 
