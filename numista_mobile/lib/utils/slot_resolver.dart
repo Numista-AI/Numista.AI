@@ -482,6 +482,19 @@ class SlotResolver {
       }
     }
 
+    // §5c — Multi-design heuristic guard (G3b v5.1)
+    // For multi-design programs (50SQ, ATB, AWQ, WJNS, …), the heuristic §5
+    // bidirectional contains match is NOT a safe subject gate:
+    //   Theme "West Virginia" → "west virginia".contains("virginia") = true at §5
+    //   → Virginia slot wrongly returns true → wrong-state Notes on estate PDFs.
+    // Placed BEFORE §5 so contains cannot fire for multi-design programs.
+    // Coins reaching this point: no program_id (import path), passed §2 denom,
+    // §3 series, §4 year guards.
+    // Subject decision: exact Theme / longest-phrase Title — same contract as fast path.
+    if (_isProgramMultiDesign(program)) {
+      return _fastPathSubjectMatchesSlot(item, program, coinSlot);
+    }
+
     // 5. Subject / Design Match
     if (cNameLower.isNotEmpty) {
       if (themeSub.isNotEmpty && (themeSub.contains(cNameLower) || cNameLower.contains(themeSub))) return true;
