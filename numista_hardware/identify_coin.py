@@ -394,7 +394,7 @@ Return ONLY a valid JSON object:
         from google.genai import types
         contents = [verification_prompt, img_a, img_b] + ref_uploads
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-3.8-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',
@@ -537,7 +537,7 @@ def run_numista_report(img_path_a, img_path_b):
 
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-3.8-flash",
             contents=[prompt, img_a, img_b],
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',

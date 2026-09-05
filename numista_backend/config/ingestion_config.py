@@ -6,7 +6,7 @@ Numista.AI System of Record
 # Mandatory Model Policy (2026 Production Active Models)
 CLASSIFIER_MODEL = "gemini-3.8-flash"
 EXTRACTION_MODEL = "gemini-3.1-pro-preview"
-FALLBACK_FLASH_MODEL = "gemini-3.5-flash"
+FALLBACK_FLASH_MODEL = "gemini-3.8-flash"
 FALLBACK_PRO_MODEL = "gemini-3.5-pro"
 
 # Prompt and Processing Versions

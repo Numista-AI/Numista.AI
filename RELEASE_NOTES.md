@@ -322,6 +322,16 @@
 
 
 
+
+## v4.320 — 2026-09-05
+**Resolver Enhancements & Platform Updates**
+
+- Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)
+- Release: push pending auto-version hook changes
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.317 and update SCAN_REPORT.md
+
 ## v4.319 — 2026-09-05
 **Resolver Enhancements & Platform Updates**
 

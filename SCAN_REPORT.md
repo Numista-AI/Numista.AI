@@ -1,4 +1,4 @@
-﻿# SCAN REPORT: Numista.AI System Audit (v4.317)
+# SCAN REPORT: Numista.AI System Audit (v4.317)
 
 ## Executive Summary
 * **Status:** 🟢 **PASS** (System scan completed with a 100% backend unit pass rate [268 passed, 0 failed in 29.70s], 0 Dart analysis issues [Clean: `dart analyze lib` passed with 0 errors/warnings], live Cloud Run backend probes 100% operational, and Playwright E2E smoke test suite 100% operational [8/8 passed in 44.6s]. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash`).
@@ -35,12 +35,12 @@
 * **Ingestion & Classification Models (`numista_backend/config/ingestion_config.py`):**
   * `CLASSIFIER_MODEL`: `gemini-3.8-flash` 🟢 PASS
   * `EXTRACTION_MODEL`: `gemini-3.1-pro-preview` 🟢 PASS
-  * `FALLBACK_FLASH_MODEL`: `gemini-3.5-flash` 🟢 PASS
+  * `FALLBACK_FLASH_MODEL`: `gemini-3.8-flash` 🟢 PASS
 * **Vector Embeddings (`numista_backend/services/vector_rag_service.py`):**
   * Embedding Model: `gemini-embedding-2` (1536 dimensions, Vertex AI `location="global"`) 🟢 PASS
   * Dual-Path Retrieval: `cosine_all` (exact Cosine Distance scan) & `find_nearest` (Vector Search Index) with fallback 🟢 PASS
   * Safe Embedding Guard: `SKIP_DIM` string-length check preventing API overflow on oversized payloads 🟢 PASS
-* **Offline Tooling Observation:** `numista_qc/layer_4_self_update/test_synthesizer.py` and `feedback_miner.py` contain legacy fallback references to `gemini-2.0-flash-exp`. These are offline evaluation tools and do not execute in user-facing flows, but should be updated to `gemini-3.8-flash`.
+* **Offline Tooling Observation:** `numista_qc/layer_4_self_update/test_synthesizer.py` and `feedback_miner.py` updated to `gemini-3.8-flash` 🟢 PASS.
 * **AGENTS.md Rule 6 Compliance:** 100% compliant across production serving stack.
 
 ---

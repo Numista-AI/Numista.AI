@@ -5,7 +5,7 @@
 //
 // Design decisions:
 //   - Edit flow   : inline form inside the detail view (no screen switch)
-//   - AI Insights : direct Gemini 3.5 Flash call via firebase_ai (no backend hop)
+//   - AI Insights : direct Gemini 3.8 Flash call via firebase_ai (no backend hop)
 //
 // Usage:
 //   CoinDetailScreen.show(context, coin: coin, spotPrices: _spotPrices,
@@ -285,20 +285,36 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
     super.dispose();
   }
 
-  // ── AI Insight (Gemini 3.5 Flash — direct via firebase_ai) ────────────────
+  // ── AI Insight (Gemini 3.8 Flash — direct via firebase_ai) ────────────────
   Future<void> _loadAiInsight() async {
     if (_aiLoading || _aiLoaded) return;
     setState(() { _aiLoading = true; _aiError = null; _aiInsight = ''; });
 
     try {
       final model = FirebaseAI.googleAI().generativeModel(
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.8-flash',
         generationConfig: GenerationConfig(temperature: 0.7),
       );
 
-      // Build parts list — text prompt only (Vertex AI FileData requires GCS URIs,
-      // not public HTTP URLs; image URL is referenced in prompt text instead)
-      final parts = <Part>[TextPart(_buildAiPrompt())];
+      // Build multimodal parts list — attach coin photos if available for true visual appraisal
+      final parts = <Part>[];
+
+      for (final url in [_coin.imageUrlObverse, _coin.imageUrlReverse]) {
+        if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://'))) {
+          try {
+            final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 4));
+            if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+              final contentType = res.headers['content-type'] ?? 'image/jpeg';
+              final mime = contentType.contains('png') ? 'image/png' : 'image/jpeg';
+              parts.add(InlineDataPart(mime, res.bodyBytes));
+            }
+          } catch (_) {
+            // Non-fatal: if image fetch fails/times out, proceed gracefully with remaining parts
+          }
+        }
+      }
+
+      parts.add(TextPart(_buildAiPrompt()));
 
       // Stream the response for a live typing feel
       final stream = model.generateContentStream([Content.multi(parts)]);
@@ -2733,7 +2749,7 @@ class _AiInsightsTab extends StatelessWidget {
                 Row(children: const [
                   Icon(Icons.auto_awesome, size: 14, color: _kAccent),
                   SizedBox(width: 6),
-                  Text('Gemini 3.5 Flash • AI Numismatic Deepdive',
+                  Text('Gemini 3.8 Flash • AI Numismatic Deepdive',
                     style: TextStyle(fontSize: 11, color: _kAccent, fontWeight: FontWeight.w600)),
                 ]),
                 const SizedBox(height: 12),

@@ -10,7 +10,7 @@ from firebase_admin import credentials, firestore, initialize_app, _apps
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
-PRIMARY_MODEL = "gemini-3.5-flash"
+PRIMARY_MODEL = "gemini-3.8-flash"
 DB_PATH = os.path.join("database", "numista_coins.db")
 COINS_JSON = "definitive_catalog_full.json"
 BANKNOTES_JSON = "banknotes_expanded.json"

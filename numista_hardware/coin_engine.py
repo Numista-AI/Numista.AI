@@ -8,8 +8,8 @@ import kagglehub
 GEMINI_API_KEY = "AIzaSyDJu-oigNje1gjgulHQQDfe8Gv8CSYjCzM"
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Use Gemini 3 for identification
-model = genai.GenerativeModel('gemini-3-flash')
+# Use Gemini 3.8 Flash for identification
+model = genai.GenerativeModel('gemini-3.8-flash')
 
 # File Paths (Matching your current folder structure)
 MANIFEST_PATH = 'numista_database_ready (1).csv'

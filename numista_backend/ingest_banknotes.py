@@ -8,7 +8,7 @@ from google.genai import types as genai_types
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
-PRIMARY_MODEL = "gemini-3.5-flash"
+PRIMARY_MODEL = "gemini-3.8-flash"
 OUTPUT_JSON_PATH = "banknotes_expanded.json"
 
 def normalize_denom(raw, default="One Dollar"):

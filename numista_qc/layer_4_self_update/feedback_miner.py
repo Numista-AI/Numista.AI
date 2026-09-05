@@ -56,7 +56,7 @@ def classify_issues_with_gemini(raw_issues):
         manifest_path = Path(__file__).parent.parent / 'SUITE_MANIFEST.json'
         with open(manifest_path) as f:
             manifest = json.load(f)
-        model_id = manifest.get('synthesizer_model_id', 'gemini-2.0-flash-exp')
+        model_id = manifest.get('synthesizer_model_id', 'gemini-3.8-flash')
 
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(model_id)
