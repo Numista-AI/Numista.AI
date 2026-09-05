@@ -261,8 +261,10 @@ class SlotResolver {
       }
     }
     if (longestMatch == null) return false;
-    // This slot wins if it IS the longest match (or tied-longest).
-    return longestMatch == slotNorm || longestMatch.length == slotNorm.length;
+    // This slot wins only if its name IS the longest-matching name.
+    // Length equality alone is not sufficient — "new mexico" and "new jersey"
+    // are both 10 chars; only the name that actually appeared in the title wins.
+    return longestMatch == slotNorm;
   }
 
   // ─── Coin matching ─────────────────────────────────────────────────────────

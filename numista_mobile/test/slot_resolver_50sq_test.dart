@@ -1,4 +1,4 @@
-﻿// Numista.AI — Slot Resolver Unit Tests (G3b: 50SQ subject guard)
+// Numista.AI — Slot Resolver Unit Tests (G3b: 50SQ subject guard)
 // Verifies that the program_id fast path requires a subject match for
 // multi-design programs (50 State Quarters) so that:
 //   - A Tennessee coin does NOT inflate Ohio's Notes count (and vice versa)
@@ -147,6 +147,51 @@ void main() {
 
       expect(ohMatch?.isOwned, isTrue);
       expect(ohMatch?.quantity, 1);
+    });
+  });
+
+  // ── Same-length slot names must not cross-match via Title ─────────────────
+  group('G3b — same-length slot names: Title path (v4 fix)', () {
+    test('NM title coin does NOT match New Jersey slot (both 10 chars)', () {
+      final nmSlot = ProgramCoin(
+          id: 'new_mexico', name: 'New Mexico',
+          varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+      final njSlot = ProgramCoin(
+          id: 'new_jersey', name: 'New Jersey',
+          varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+      final program = CoinProgram(
+          id: '50state', name: '50 State Quarters Program',
+          url: '', years: '1999-2008', coins: [nmSlot, njSlot]);
+      final nmTitleCoin = {
+        'program_id': '50state',
+        'Theme/Subject': '',
+        'Title': '2000 New Mexico State Quarter',
+        'Year': '2000',
+        'Mint Mark': 'P',
+      };
+      expect(SlotResolver.isMatch(nmTitleCoin, program, nmSlot), isTrue);
+      expect(SlotResolver.isMatch(nmTitleCoin, program, njSlot), isFalse);
+    });
+
+    test('ND title coin does NOT match South Dakota slot (both 12 chars)', () {
+      final ndSlot = ProgramCoin(
+          id: 'north_dakota', name: 'North Dakota',
+          varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+      final sdSlot = ProgramCoin(
+          id: 'south_dakota', name: 'South Dakota',
+          varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+      final program = CoinProgram(
+          id: '50state', name: '50 State Quarters Program',
+          url: '', years: '1999-2008', coins: [ndSlot, sdSlot]);
+      final ndTitleCoin = {
+        'program_id': '50state',
+        'Theme/Subject': '',
+        'Title': '2006 North Dakota State Quarter',
+        'Year': '2006',
+        'Mint Mark': 'P',
+      };
+      expect(SlotResolver.isMatch(ndTitleCoin, program, ndSlot), isTrue);
+      expect(SlotResolver.isMatch(ndTitleCoin, program, sdSlot), isFalse);
     });
   });
 }
