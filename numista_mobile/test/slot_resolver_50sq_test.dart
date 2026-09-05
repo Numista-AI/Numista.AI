@@ -194,4 +194,66 @@ void main() {
       expect(SlotResolver.isMatch(ndTitleCoin, program, sdSlot), isFalse);
     });
   });
+
+  // ── G3b v5.1 — heuristic path (no program_id, year-injected slots) ─────────
+  // Slots have year set — matching what the checklist injects at render time.
+  // Without year on the slot, slotYear="" and L550 never fires in the test,
+  // giving a false green even if §5c were deleted. These tests are the real gate.
+  group('G3b v5.1 — heuristic path (no program_id, year-injected slots)', () {
+    // Slots with year — production-equivalent
+    final tnSlotYr = ProgramCoin(
+        id: 'tennessee', name: 'Tennessee', year: '2002',
+        varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+    final ohSlotYr = ProgramCoin(
+        id: 'ohio', name: 'Ohio', year: '2002',
+        varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+    final vaSlotYr = ProgramCoin(
+        id: 'virginia', name: 'Virginia', year: '2000',
+        varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+    final wvSlotYr = ProgramCoin(
+        id: 'west_virginia', name: 'West Virginia', year: '2005',
+        varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')]);
+    final programYr = CoinProgram(
+        id: '50state', name: '50 State Quarters Program',
+        url: '', years: '1999-2008',
+        coins: [tnSlotYr, ohSlotYr, vaSlotYr, wvSlotYr]);
+
+    // Coin data matching live Firestore probe: no program_id, Theme/Subject filled
+    final tnHeuristic = {
+      // No 'program_id' key — import path
+      'Theme/Subject': 'Tennessee',
+      'theme_subject': 'Tennessee',
+      'Year': '2002',
+      'Mint Mark': 'P',
+      'Denomination': 'Quarter',
+      'Program/Series': '50 State Quarters',
+    };
+    final wvHeuristic = {
+      'Theme/Subject': 'West Virginia',
+      'theme_subject': 'West Virginia',
+      'Year': '2005',
+      'Mint Mark': 'P',
+      'Denomination': 'Quarter',
+      'Program/Series': '50 State Quarters',
+    };
+    final blankHeuristic = {
+      'Theme/Subject': '',
+      'Year': '2002',
+      'Mint Mark': 'P',
+      'Denomination': 'Quarter',
+      'Program/Series': '50 State Quarters',
+    };
+
+    test('no-program_id TN coin matches TN slot (slot year = 2002)', () =>
+        expect(SlotResolver.isMatch(tnHeuristic, programYr, tnSlotYr), isTrue));
+
+    test('no-program_id TN coin does NOT match OH slot (L550 live — slotYear=2002)', () =>
+        expect(SlotResolver.isMatch(tnHeuristic, programYr, ohSlotYr), isFalse));
+
+    test('no-program_id WV Theme coin does NOT match Virginia slot (§5 contains trap closed)', () =>
+        expect(SlotResolver.isMatch(wvHeuristic, programYr, vaSlotYr), isFalse));
+
+    test('no-program_id blank-theme coin does NOT match TN slot (dark on all rows)', () =>
+        expect(SlotResolver.isMatch(blankHeuristic, programYr, tnSlotYr), isFalse));
+  });
 }
