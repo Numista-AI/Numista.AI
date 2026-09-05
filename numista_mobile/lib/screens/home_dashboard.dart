@@ -1551,10 +1551,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.318',
+    version: 'v4.319',
     date: '2026-09-05',
     description: 'Resolver Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)',
+      'Release: push pending auto-version hook changes',
+      'Resolver: remove length-equality OR in title path (G3b v4)',
+      'Resolver: subject guard on program_id fast path (G3b)',
+      'Scan: full system check v4.317 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.318',
+    date: '2026-09-05',
+    description: 'Resolver Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Resolver: remove length-equality OR in title path (G3b v4)',
       'Resolver: subject guard on program_id fast path (G3b)',
