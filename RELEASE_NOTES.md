@@ -318,6 +318,32 @@
 
 
 
+
+
+## v4.317 — 2026-09-05
+**Checklists Enhancements & Platform Updates**
+
+- Checklists: plain-English PDF Notes/QTY (G3 Phase 1)
+- Collection: column header click sorts instead of opening a coin card
+- Checklists: Program Manager grid card uses expandCollection + saved goal (GRID_CARD_PCT_LAG)
+- Brain: make absorb_document signature robust and ingest 4 SEP 2026 live US Mint harvest
+- Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)
+- Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved
+- Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+
+## v4.316 — 2026-09-04
+**Checklists Enhancements & Platform Updates**
+
+- Checklists: plain-English PDF Notes/QTY (G3 Phase 1)
+- Collection: column header click sorts instead of opening a coin card
+- Checklists: Program Manager grid card uses expandCollection + saved goal (GRID_CARD_PCT_LAG)
+- Brain: make absorb_document signature robust and ingest 4 SEP 2026 live US Mint harvest
+- Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)
+- Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved
+- Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)
+- Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9
+
 ## v4.315 — 2026-09-04
 **Checklists Enhancements & Platform Updates**
 
