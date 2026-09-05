@@ -198,6 +198,75 @@ class SlotResolver {
   static String _mintMark(Map<String, dynamic> item) =>
       _field(item, ['Mint Mark', 'mint_mark', 'Mint', 'mint']);
 
+  // ─── G3b fast-path subject helpers ─────────────────────────────────────────
+
+  /// Strips a leading 4-digit year + separator from a subject string, then
+  /// lowercases and trims.  "2002 - Tennessee" → "tennessee".
+  static String _normalizeSubject(String raw) => raw
+      .toLowerCase()
+      .trim()
+      .replaceFirst(RegExp(r'^\d{4}\s*[-–]\s*'), '');
+
+  /// Returns true if [program] has more than one distinct coin design name.
+  /// Uses slot name count, NOT catalog years (50SQ ProgramCoin.year is null).
+  /// Single-design programs (Kennedy, Morgan, Roosevelt …) return false.
+  static bool _isProgramMultiDesign(CoinProgram program) {
+    if (program.coins.length <= 1) return false;
+    final distinctNames =
+        program.coins.map((c) => c.name.toLowerCase().trim()).toSet();
+    return distinctNames.length > 1;
+  }
+
+  /// Subject check for program_id-tagged coins on the fast path.
+  /// Heuristic §5 in the legacy path is NOT modified.
+  ///
+  /// Theme path : normalize + exact equality (Virginia ≠ West Virginia).
+  /// Title path : longest slot name in [program] that appears as a full phrase
+  ///              in the normalized title wins — prevents suffix traps.
+  /// Both empty : false (blank-theme coins are dark on Notes AND checkbox).
+  static bool _fastPathSubjectMatchesSlot(
+      Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
+    final slotNorm = _normalizeSubject(coinSlot.name);
+    if (slotNorm.isEmpty) return true; // Unnamed slot — no gate needed
+
+    final theme = (item['Theme/Subject']?.toString() ??
+                   item['theme_subject']?.toString() ?? '').trim();
+    final title = (item['Title']?.toString() ??
+                   item['name']?.toString() ??
+                   item['official_title']?.toString() ?? '').trim();
+
+    // ── 1. Theme path: exact ──────────────────────────────────────────────
+    if (theme.isNotEmpty) {
+      return _normalizeSubject(theme) == slotNorm;
+      // Non-empty wrong theme → false; no fallback.
+    }
+
+    // ── 2. Title path: longest full-phrase winner ─────────────────────────
+    if (title.isEmpty) return false; // Both empty → unknown state → dark
+
+    final normTitle = _normalizeSubject(title);
+
+    // Find the longest slot name that appears as a full phrase in the title.
+    // Full-phrase = preceded/followed by word boundary (start, end, space, hyphen).
+    String? longestMatch;
+    for (final slot in program.coins) {
+      final candidate = _normalizeSubject(slot.name);
+      if (candidate.isEmpty) continue;
+      final pattern = RegExp(
+          r'(?:^|[\s\-])' + RegExp.escape(candidate) + r'(?:$|[\s\-])');
+      if (pattern.hasMatch(normTitle)) {
+        if (longestMatch == null || candidate.length > longestMatch.length) {
+          longestMatch = candidate;
+        }
+      }
+    }
+    if (longestMatch == null) return false;
+    // This slot wins only if its name IS the longest-matching name.
+    // Length equality alone is not sufficient — "new mexico" and "new jersey"
+    // are both 10 chars; only the name that actually appeared in the title wins.
+    return longestMatch == slotNorm;
+  }
+
   // ─── Coin matching ─────────────────────────────────────────────────────────
 
   // ── Call-chain for PDF banner and grid (both come from one inventoryMap) ───
@@ -254,21 +323,40 @@ class SlotResolver {
     // ── 0a. program_id fast path ────────────────────────────────────────────
     // Coins added via POST /api/checklist/add_coins carry a mandatory
     // snake_case `program_id` field written by the server. When present, use it
-    // as the single source of truth and skip all string heuristics below.
+    // as the primary source of truth and skip all string heuristics below.
     // Legacy coins (added before Phase 4) have no `program_id` field and fall
     // through to the existing matching logic unchanged.
+    //
+    // G3b (5 Sep 2026): added subject guard for multi-design programs.
+    // Without it, every coin in a program matches every slot in the same year
+    // (e.g. all 2002-P state quarters paint all 2002 state rows).
     final storedProgramId = item['program_id']?.toString();
     if (storedProgramId != null && storedProgramId.isNotEmpty) {
-      // Year guard still applies even on fast-path — we must still match the
-      // correct slot row within the program.
+      // ── Year guard ─────────────────────────────────────────────────────────
+      // Applies when coinSlot.year is set (WJNS, 2026 programs, etc.).
+      // 50SQ slots have ProgramCoin.year == null → slotYear == '' → guard skips;
+      // subject identity is the sole discriminator for those programs.
       final slotYear = (coinSlot.year ?? '').trim();
       if (slotYear.isNotEmpty) {
         final itemYear = (item['Year']?.toString() ?? item['year']?.toString() ?? '').trim();
         final normalizedYear = (itemYear == '1776-1976') ? '1976' : itemYear;
         if (normalizedYear.isEmpty || normalizedYear != slotYear) return false;
       }
-      return storedProgramId == program.id;
+
+      // ── Program membership ────────────────────────────────────────────────
+      if (storedProgramId != program.id) return false;
+
+      // ── Subject guard for multi-design programs ───────────────────────────
+      // For programs with multiple distinct coin designs (50SQ, WJNS, ATB, AWQ,
+      // Bicentennial…), a year match alone is insufficient — one coin would
+      // match every slot in the program.
+      // Single-design programs (Kennedy, Morgan, Roosevelt…) are exempt.
+      if (_isProgramMultiDesign(program)) {
+        return _fastPathSubjectMatchesSlot(item, program, coinSlot);
+      }
+      return true;
     }
+
 
     final denom      = (item['Denomination']?.toString() ?? item['denomination']?.toString() ?? '').toLowerCase();
     final progSeries = (item['Program/Series']?.toString() ?? item['program_series']?.toString() ?? '').trim();
