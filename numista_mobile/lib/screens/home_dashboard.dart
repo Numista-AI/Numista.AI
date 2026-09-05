@@ -1551,10 +1551,21 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.318',
+    date: '2026-09-05',
+    description: 'Resolver Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Resolver: remove length-equality OR in title path (G3b v4)',
+      'Resolver: subject guard on program_id fast path (G3b)',
+      'Scan: full system check v4.317 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.317',
     date: '2026-09-05',
     description: 'Checklists Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Checklists: plain-English PDF Notes/QTY (G3 Phase 1)',
       'Collection: column header click sorts instead of opening a coin card',

@@ -320,6 +320,14 @@
 
 
 
+
+## v4.318 — 2026-09-05
+**Resolver Enhancements & Platform Updates**
+
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.317 and update SCAN_REPORT.md
+
 ## v4.317 — 2026-09-05
 **Checklists Enhancements & Platform Updates**
 
