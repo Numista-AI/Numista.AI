@@ -325,6 +325,12 @@
 
 
 
+
+## v4.323 — 2026-09-06
+**Scan Enhancements & Platform Updates**
+
+- Scan: full system check v4.322 and update SCAN_REPORT.md
+
 ## v4.322 — 2026-09-06
 **Release Enhancements & Platform Updates**
 

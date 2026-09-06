@@ -1551,10 +1551,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.323',
+    date: '2026-09-06',
+    description: 'Scan Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Scan: full system check v4.322 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.322',
     date: '2026-09-06',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: update v4.321 release notes',
       'Ai: upgrade to gemini-3.8-flash with multimodal coin deepdive across frontend and backend',
