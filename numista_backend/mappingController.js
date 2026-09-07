@@ -22,9 +22,9 @@ const COIN_DICTIONARY = [
 ];
 
 // 3. Define the Model
-// Using 'gemini-3.5-flash' for production consistency.
+// Using 'gemini-3.8-flash' for production consistency.
 // MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-const modelId = 'gemini-3.5-flash';
+const modelId = 'gemini-3.8-flash';
 
 async function mapToSchema(entities) {
     // Lazy Initialization

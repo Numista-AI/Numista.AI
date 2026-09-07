@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
-PRIMARY_MODEL = "gemini-3.5-flash"
+PRIMARY_MODEL = "gemini-3.8-flash"
 DB_PATH = os.path.join("database", "numista_coins.db")
 MASTER_JSON_PATH = "master_coin_programs.json"
 OUTPUT_JSON_PATH = "definitive_catalog_full.json"

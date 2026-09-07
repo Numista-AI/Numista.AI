@@ -167,7 +167,7 @@ class CoinNormalizerService {
 
     try {
       final model = FirebaseAI.googleAI().generativeModel(
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.8-flash',
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
           temperature: 0.1,

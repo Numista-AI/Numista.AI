@@ -40,7 +40,7 @@ def mock_external_services(monkeypatch):
     
     # Mock resolve_gsid_hybrid to return a valid mapping for Lincoln Cent test payload
     orig_resolve = gs_module.GreysheetService.resolve_gsid_hybrid
-    def mock_resolve(self, coin_data, genai_client=None, primary_model="gemini-3.5-flash"):
+    def mock_resolve(self, coin_data, genai_client=None, primary_model="gemini-3.8-flash"):
         if coin_data.get("item_type") == "paper_currency":
             return None
         return (429, "Lincoln Cents (1909-1958)")

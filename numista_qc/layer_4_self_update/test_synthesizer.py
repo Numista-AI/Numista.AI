@@ -52,8 +52,8 @@ def get_model_id(manifest):
     if not model_id:
         print('[test_synthesizer] WARNING: synthesizer_model_id not set in SUITE_MANIFEST.json.')
         print('  Set it after reading C:\\Users\\ericd\\Documents\\MyVertexProject\\Gemini Deprecation Schedules\\')
-        print('  Defaulting to gemini-2.0-flash-exp (may be stale).')
-        model_id = 'gemini-2.0-flash-exp'
+        print('  Defaulting to gemini-3.8-flash.')
+        model_id = 'gemini-3.8-flash'
     return model_id
 
 

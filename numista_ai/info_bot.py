@@ -6,7 +6,7 @@ from google.genai import types
 
 PROJECT_ID = os.getenv("GCP_PROJECT", "studio-9101802118-8c9a8")
 LOCATION = os.getenv("GCP_LOCATION", "us-central1")
-GEMINI_MODEL = "gemini-3.5-flash"
+GEMINI_MODEL = "gemini-3.8-flash"
 EMBEDDING_MODEL = "gemini-embedding-2"
 
 _client = None
@@ -19,7 +19,7 @@ def get_client() -> genai.Client:
 
 def query_rag_info_bot(query: str, collection_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    RAG info bot query engine using gemini-embedding-2 and gemini-3.5-flash.
+    RAG info bot query engine using gemini-embedding-2 and gemini-3.8-flash.
     Grounds response using embedded reference data and user's collection context.
     """
     client = get_client()

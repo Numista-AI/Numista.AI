@@ -690,7 +690,7 @@ def _fallback_narrative(
 async def generate_estate_report(
     db: firestore.Client,
     client,           # google-genai Client
-    model: str,       # e.g. 'gemini-3.5-flash'
+    model: str,       # e.g. 'gemini-3.8-flash'
     uid: str,
     report_request: dict,
 ) -> dict:

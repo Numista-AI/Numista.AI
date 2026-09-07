@@ -321,6 +321,61 @@
 
 
 
+
+
+
+
+
+
+## v4.324 — 2026-09-07
+**Scan Enhancements & Platform Updates**
+
+- Scan: full system check v4.322 and update SCAN_REPORT.md
+
+## v4.323 — 2026-09-06
+**Scan Enhancements & Platform Updates**
+
+- Scan: full system check v4.322 and update SCAN_REPORT.md
+
+## v4.322 — 2026-09-06
+**Release Enhancements & Platform Updates**
+
+- Release: update v4.321 release notes
+- Ai: upgrade to gemini-3.8-flash with multimodal coin deepdive across frontend and backend
+- Resolver: heuristic multi-design guard before §5 contains (G3b v5.1)
+- Release: push pending auto-version hook changes
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.322 and update SCAN_REPORT.md
+
+## v4.321 — 2026-09-05
+**Ai Enhancements & Platform Updates**
+
+- Ai: upgrade to gemini-3.8-flash with multimodal coin deepdive across frontend and backend
+- Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)
+- Release: push pending auto-version hook changes
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.317 and update SCAN_REPORT.md
+
+## v4.320 — 2026-09-05
+**Resolver Enhancements & Platform Updates**
+
+- Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)
+- Release: push pending auto-version hook changes
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.317 and update SCAN_REPORT.md
+
+## v4.319 — 2026-09-05
+**Resolver Enhancements & Platform Updates**
+
+- Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)
+- Release: push pending auto-version hook changes
+- Resolver: remove length-equality OR in title path (G3b v4)
+- Resolver: subject guard on program_id fast path (G3b)
+- Scan: full system check v4.317 and update SCAN_REPORT.md
+
 ## v4.318 — 2026-09-05
 **Resolver Enhancements & Platform Updates**
 

@@ -669,7 +669,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Processes multi-page PDFs and photo batches asynchronously in parallel chunks via Gemini 3.5 Flash.',
+                      'Processes multi-page PDFs and photo batches asynchronously in parallel chunks via Gemini 3.8 Flash.',
                       style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                     ),
                     if (_isBatchProcessing) ...[
@@ -749,7 +749,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     setState(() {
       _isBatchProcessing = true;
       _batchProgress = 0.1;
-      _batchStatusMsg = 'Spawning 4 concurrent Gemini 3.5 Flash worker coroutines...';
+      _batchStatusMsg = 'Spawning 4 concurrent Gemini 3.8 Flash worker coroutines...';
       _batchItems = [
         {'title': 'Page 1: 1909-S VDB Lincoln Cent', 'status': 'Processing'},
         {'title': 'Page 2: 1881-S Morgan Silver Dollar', 'status': 'Processing'},
