@@ -32,8 +32,15 @@ class BetaWelcomeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final card = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final sub = isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
+    final text70 = isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+
     return Dialog(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 550),
@@ -80,19 +87,19 @@ class BetaWelcomeDialog extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Title
-              const Text(
+              Text(
                 'Welcome, Beta Tester! 👋🎉',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: text,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Official Test Phase Active through October 1, 2026',
                 style: TextStyle(
-                  color: Color(0xFF94A3B8),
+                  color: sub,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -103,15 +110,15 @@ class BetaWelcomeDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: card,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white10),
                 ),
-                child: const Text(
+                child: Text(
                   'Thank you for joining our early access collector community! '
                   'Your hands-on experience and real-world feedback are vital to making Numista.AI '
                   'the most accurate, delightful, and easy-to-use coin collection app ever built.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                  style: TextStyle(color: text70, fontSize: 14, height: 1.5),
                 ),
               ),
               const SizedBox(height: 20),
@@ -122,18 +129,18 @@ class BetaWelcomeDialog extends StatelessWidget {
                 style: TextStyle(color: Color(0xFF38BDF8), fontSize: 15, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              _bulletPoint('Ease of Use & Clarity — Is navigating the app intuitive and clear?'),
-              _bulletPoint('AI Accuracy — Did camera scans & cert lookups identify your coins correctly?'),
-              _bulletPoint('Variety & Edge Cases — Testing paper currency, world coins, and roll imports.'),
-              _bulletPoint('Fun & Utility — Is managing your portfolio engaging and useful for your collection?'),
+              _bulletPoint(context, 'Ease of Use & Clarity — Is navigating the app intuitive and clear?'),
+              _bulletPoint(context, 'AI Accuracy — Did camera scans & cert lookups identify your coins correctly?'),
+              _bulletPoint(context, 'Variety & Edge Cases — Testing paper currency, world coins, and roll imports.'),
+              _bulletPoint(context, 'Fun & Utility — Is managing your portfolio engaging and useful for your collection?'),
               const SizedBox(height: 24),
 
               // 18-Step Track Callout
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1E3A8A), Color(0xFF0F172A)],
+                  gradient: LinearGradient(
+                    colors: isDark ? const [Color(0xFF1E3A8A), Color(0xFF0F172A)] : const [Color(0xFFDBEAFE), Color(0xFFEFF6FF)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.5)),
@@ -142,18 +149,18 @@ class BetaWelcomeDialog extends StatelessWidget {
                   children: [
                     const Icon(Icons.checklist_rtl_rounded, color: Color(0xFF60A5FA), size: 32),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '18-Step Beta Testing Track',
-                            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: text, fontSize: 15, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
                             'We created a guided 18-task checklist to walk you through every major feature.',
-                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                            style: TextStyle(color: sub, fontSize: 12),
                           ),
                         ],
                       ),
@@ -202,7 +209,9 @@ class BetaWelcomeDialog extends StatelessWidget {
     );
   }
 
-  static Widget _bulletPoint(String text) {
+  static Widget _bulletPoint(BuildContext context, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textCol = isDark ? Colors.white.withValues(alpha: 0.87) : const Color(0xFF0F172A).withValues(alpha: 0.87);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -210,7 +219,7 @@ class BetaWelcomeDialog extends StatelessWidget {
         children: [
           const Text('• ', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 16, fontWeight: FontWeight.bold)),
           Expanded(
-            child: Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.87), fontSize: 13, height: 1.4)),
+            child: Text(text, style: TextStyle(color: textCol, fontSize: 13, height: 1.4)),
           ),
         ],
       ),

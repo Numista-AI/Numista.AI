@@ -596,33 +596,33 @@ class _BaseLayoutState extends State<BaseLayout> {
         selectedIndex: currentIndex,
         onDestinationSelected: (i) =>
             setState(() => _activeRoute = mobileRoutes[i]),
-        backgroundColor: const Color(0xFF0E1117),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0E1117) : Colors.white,
         indicatorColor: const Color(0xFFF63366).withAlpha(40),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined, color: Colors.white54),
-            selectedIcon: Icon(Icons.dashboard, color: Color(0xFFF63366)),
+            icon: Icon(Icons.dashboard_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
+            selectedIcon: const Icon(Icons.dashboard, color: Color(0xFFF63366)),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined, color: Colors.white54),
-            selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFFF63366)),
+            icon: Icon(Icons.auto_awesome_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
+            selectedIcon: const Icon(Icons.auto_awesome, color: Color(0xFFF63366)),
             label: 'Programs',
           ),
           NavigationDestination(
-            icon: Icon(Icons.collections_bookmark_outlined, color: Colors.white54),
-            selectedIcon: Icon(Icons.collections_bookmark, color: Color(0xFFF63366)),
+            icon: Icon(Icons.collections_bookmark_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
+            selectedIcon: const Icon(Icons.collections_bookmark, color: Color(0xFFF63366)),
             label: 'Collection',
           ),
           NavigationDestination(
-            icon: Icon(Icons.psychology_outlined, color: Colors.white54),
-            selectedIcon: Icon(Icons.psychology, color: Color(0xFFF63366)),
+            icon: Icon(Icons.psychology_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
+            selectedIcon: const Icon(Icons.psychology, color: Color(0xFFF63366)),
             label: 'AI Chat',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined, color: Colors.white54),
-            selectedIcon: Icon(Icons.settings, color: Color(0xFFF63366)),
+            icon: Icon(Icons.settings_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
+            selectedIcon: const Icon(Icons.settings, color: Color(0xFFF63366)),
             label: 'Settings',
           ),
         ],
@@ -861,13 +861,13 @@ class _BaseLayoutState extends State<BaseLayout> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2A1F4E),
-                          foregroundColor: const Color(0xFFFFD700),
+                          backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2A1F4E) : const Color(0xFFE0E7FF),
+                          foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           elevation: 0,
                         ),
-                        icon: const Icon(Icons.feedback_outlined, size: 14, color: Color(0xFFFFD700)),
+                        icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
                         label: const Text(
                           'Send Beta Feedback',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
@@ -1489,7 +1489,7 @@ class _MorganSidebarButtonState extends State<_MorganSidebarButton> {
             borderRadius: BorderRadius.circular(8),
             color: _hovered
                 ? const Color(0xFF2DD4BF).withAlpha(20)
-                : const Color(0xFF0B3D6E).withAlpha(120),
+                : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B3D6E).withAlpha(120) : const Color(0xFFF1F5F9)),
             border: Border.all(
               color: _hovered
                   ? const Color(0xFFD4A843).withAlpha(200)

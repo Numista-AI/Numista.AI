@@ -282,6 +282,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return StreamBuilder<Map<String, List<CoinProgram>>>(
       stream: ReferenceService.getGroupedProgramsStream(),
       builder: (context, refSnapshot) {
@@ -764,6 +765,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   // --------------------------------------------------------------------------
 
   Widget _buildProgramDetailView(List<QueryDocumentSnapshot> docs, CoinProgram program) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Expand set parents into virtual children so set members match program slots.
     final rawMaps  = docs.map((d) => d.data() as Map<String, dynamic>).toList();
     final rawIds   = docs.map((d) => d.id).toList();
@@ -878,8 +880,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               padding: const EdgeInsets.all(20),
               width: double.infinity,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                gradient: LinearGradient(
+                  colors: isDark 
+                      ? const [Color(0xFF0F172A), Color(0xFF1E293B)]
+                      : const [Color(0xFFF8FAFC), Color(0xFFE2E8F0)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -890,7 +894,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD4A843).withAlpha(25),
+                      color: const Color(0xFFD4A843).withAlpha(isDark ? 25 : 50),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.auto_awesome_rounded,
@@ -901,16 +905,16 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('AI Coin Reference Search',
+                        Text('AI Coin Reference Search',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 3),
                         Text(
                           'Search 1,900+ coins from this program in the Vertex AI reference library',
                           style: TextStyle(
-                              color: Colors.white.withAlpha(150), fontSize: 12, height: 1.4),
+                              color: isDark ? Colors.white.withAlpha(150) : const Color(0xFF64748B), fontSize: 12, height: 1.4),
                         ),
                       ],
                     ),

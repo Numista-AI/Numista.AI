@@ -4,16 +4,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/hardware_service.dart';
 import '../services/auth_service.dart';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const _bg           = Color(0xFF0B1220);
-const _card         = Color(0xFF1A2540);
+bool _isDarkCtx(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _bg(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2);
+Color _card(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF1A2540) : Colors.white;
 const _electricBlue = Color(0xFF4C8CDA);
 const _gold         = Color(0xFFC9A84C);
 const _successGreen = Color(0xFF00C853);
 const _warningAmber = Color(0xFFFFAB00);
 const _errorRed     = Color(0xFFFF5252);
 const _muted        = Color(0xFF94A3B8);
-const _white        = Colors.white;
+Color _white(BuildContext c) => _isDarkCtx(c) ? Colors.white : const Color(0xFF0F172A);
 
 // ─── Public GCS download URLs ─────────────────────────────────────────────────
 const _kWindowsInstallerUrl =
@@ -110,11 +110,11 @@ class _DesktopAgentDownloadScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _bg(context),
       appBar: widget.showBack
           ? AppBar(
-              backgroundColor: _card,
-              foregroundColor: _white,
+              backgroundColor: _card(context),
+              foregroundColor: _white(context),
               title: const Text('Desktop Agent'),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -176,8 +176,8 @@ class _DesktopAgentDownloadScreenState
                 ),
                 const SizedBox(height: 4),
                 RichText(
-                  text: const TextSpan(
-                    style: TextStyle(color: _white, fontSize: 13, height: 1.5),
+                  text: TextSpan(
+                    style: TextStyle(color: _white(context), fontSize: 13, height: 1.5),
                     children: [
                       TextSpan(
                         text: 'Using a digital USB microscope? ',
@@ -222,7 +222,7 @@ class _DesktopAgentDownloadScreenState
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _electricBlue.withValues(alpha: 0.3)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.shield_rounded, color: _successGreen, size: 24),
@@ -234,7 +234,7 @@ class _DesktopAgentDownloadScreenState
                 Text(
                   'Privacy & Security Disclosure',
                   style: TextStyle(
-                    color: _white,
+                    color: _white(context),
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -260,11 +260,11 @@ class _DesktopAgentDownloadScreenState
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0B1220), Color(0xFF1A2540)],
+          colors: [_bg(context), _card(context)],
         ),
       ),
       child: Column(
@@ -280,11 +280,11 @@ class _DesktopAgentDownloadScreenState
             child: const Icon(Icons.lens_rounded, color: _gold, size: 36),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Numista.AI Desktop Agent',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: _white,
+              color: _white(context),
               fontSize: 28,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
@@ -358,7 +358,7 @@ class _DesktopAgentDownloadScreenState
                 Text(
                   statusTitle,
                   style: TextStyle(
-                    color: _white,
+                    color: _white(context),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -379,8 +379,8 @@ class _DesktopAgentDownloadScreenState
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _card,
-              foregroundColor: _white,
+              backgroundColor: _card(context),
+              foregroundColor: _white(context),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
           ),
@@ -395,21 +395,21 @@ class _DesktopAgentDownloadScreenState
       margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _card,
+        color: _card(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.health_and_safety_rounded, color: _electricBlue, size: 22),
               SizedBox(width: 10),
               Text(
                 'Live System Diagnostics',
                 style: TextStyle(
-                  color: _white,
+                  color: _white(context),
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -494,8 +494,8 @@ class _DesktopAgentDownloadScreenState
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: _white,
+                style: TextStyle(
+                  color: _white(context),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -548,13 +548,13 @@ class _DesktopAgentDownloadScreenState
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 32),
-      color: _bg,
+      color: _bg(context),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Three steps. Thirty seconds.',
             style: TextStyle(
-              color: _white,
+              color: _white(context),
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),
@@ -604,8 +604,8 @@ class _DesktopAgentDownloadScreenState
                 child: Center(
                   child: Text(
                     s.number,
-                    style: const TextStyle(
-                      color: _white,
+                    style: TextStyle(
+                      color: _white(context),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -617,8 +617,8 @@ class _DesktopAgentDownloadScreenState
           const SizedBox(height: 10),
           Text(
             s.title,
-            style: const TextStyle(
-              color: _white,
+            style: TextStyle(
+              color: _white(context),
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
@@ -640,7 +640,7 @@ class _DesktopAgentDownloadScreenState
       margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: _card,
+        color: _card(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _electricBlue.withValues(alpha: 0.3)),
         boxShadow: [
@@ -659,12 +659,12 @@ class _DesktopAgentDownloadScreenState
             child: ElevatedButton.icon(
               onPressed: () => _launchUrl(_kWindowsInstallerUrl),
               icon: const Icon(Icons.download_rounded, size: 24),
-              label: const Text(
+              label: Text(
                 '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: _white,
+                  color: _white(context),
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -686,7 +686,7 @@ class _DesktopAgentDownloadScreenState
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: _warningAmber.withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.shield_outlined, color: _warningAmber, size: 20),
                 SizedBox(width: 10),
@@ -695,7 +695,7 @@ class _DesktopAgentDownloadScreenState
                     'If Windows shows "Windows protected your PC":\n'
                     'Step 1: Click "More info"   ➔   Step 2: Click "Run anyway"',
                     style: TextStyle(
-                      color: _white,
+                      color: _white(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
@@ -782,10 +782,10 @@ class _DesktopAgentDownloadScreenState
       color: const Color(0xFF0F1928),
       child: Column(
         children: [
-          const Text(
+          Text(
             'What the Desktop Agent does',
             style: TextStyle(
-              color: _white,
+              color: _white(context),
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -809,7 +809,7 @@ class _DesktopAgentDownloadScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _card,
+        color: _card(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: f.color.withValues(alpha: 0.2)),
       ),
@@ -824,8 +824,8 @@ class _DesktopAgentDownloadScreenState
               children: [
                 Text(
                   f.title,
-                  style: const TextStyle(
-                    color: _white,
+                  style: TextStyle(
+                    color: _white(context),
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -848,7 +848,7 @@ class _DesktopAgentDownloadScreenState
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 32),
-      color: _bg,
+      color: _bg(context),
       child: Column(
         children: [
           Text(

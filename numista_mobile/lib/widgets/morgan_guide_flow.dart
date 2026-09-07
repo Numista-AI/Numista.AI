@@ -187,10 +187,13 @@ class MorganGuidePanel extends StatefulWidget {
   });
 
   // Shared palette — also used by child private widgets below.
-  static const bg   = Color(0xFF0B1F3A);
+  static Color bg(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1F3A) : Colors.white;
   static const teal = Color(0xFF2DD4BF);
   static const gold = Color(0xFFD4A843);
-  static const sub  = Color(0xFF94A3B8);
+  static Color sub(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
+  static Color text(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
+  static Color divider(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E3A5F) : const Color(0xFFE2E8F0);
+  static Color inputFill(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F2744) : const Color(0xFFF8FAFC);
 
   @override
   State<MorganGuidePanel> createState() => _MorganGuidePanelState();
@@ -280,7 +283,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: MorganGuidePanel.bg,
+          color: MorganGuidePanel.bg(context),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: MorganGuidePanel.gold.withAlpha(80), width: 1),
@@ -336,7 +339,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
         width: 300,
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: MorganGuidePanel.bg,
+          color: MorganGuidePanel.bg(context),
           borderRadius: BorderRadius.circular(16),
           border:
               Border.all(color: MorganGuidePanel.gold.withAlpha(70), width: 1),
@@ -390,10 +393,10 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: MorganGuideService.toggleCollapsed,
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Icon(Icons.remove_rounded,
-                          color: MorganGuidePanel.sub, size: 18),
+                          color: MorganGuidePanel.sub(context), size: 18),
                     ),
                   ),
                 ),
@@ -414,14 +417,14 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
             ),
 
             const SizedBox(height: 8),
-          const Divider(color: Color(0xFF1E3A5F), height: 1),
+          Divider(color: MorganGuidePanel.divider(context), height: 1),
           const SizedBox(height: 10),
 
           // ── Narration ──────────────────────────────────────────────────
           Text(
             step.narration,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 14, height: 1.45),
+            style: TextStyle(
+                color: MorganGuidePanel.text(context), fontSize: 14, height: 1.45),
           ),
 
           // ── Hint ───────────────────────────────────────────────────────
@@ -455,7 +458,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
               height: 36,
               child: TextField(
                 controller: _searchCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                style: TextStyle(color: MorganGuidePanel.text(context), fontSize: 13),
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   filled: true,
@@ -464,7 +467,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                       horizontal: 10, vertical: 0),
                   hintText: 'Search your collection…',
                   hintStyle: TextStyle(
-                      color: MorganGuidePanel.sub.withAlpha(140),
+                      color: MorganGuidePanel.sub(context).withAlpha(140),
                       fontSize: 13),
                   prefixIcon: const Icon(Icons.search,
                       color: MorganGuidePanel.teal, size: 16),
@@ -474,8 +477,8 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                             _searchCtrl.clear();
                             setState(() => _searchResults = []);
                           },
-                          child: const Icon(Icons.close,
-                              color: MorganGuidePanel.sub, size: 14),
+                          child: Icon(Icons.close,
+                              color: MorganGuidePanel.sub(context), size: 14),
                         )
                       : null,
                   border: OutlineInputBorder(
@@ -532,7 +535,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                 child: Text(
                   'No matches — try a year, name, or series.',
                   style: TextStyle(
-                      color: MorganGuidePanel.sub, fontSize: 11),
+                      color: MorganGuidePanel.sub(context), fontSize: 11),
                 ),
               ),
           ],
@@ -550,7 +553,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text('← Back',
                         style: TextStyle(
-                            color: MorganGuidePanel.sub.withAlpha(180),
+                            color: MorganGuidePanel.sub(context).withAlpha(180),
                             fontSize: 12)),
                   ),
                 )
@@ -561,7 +564,7 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text('✕ Exit',
                         style: TextStyle(
-                            color: MorganGuidePanel.sub.withAlpha(110),
+                            color: MorganGuidePanel.sub(context).withAlpha(110),
                             fontSize: 11)),
                   ),
                 ),
@@ -692,8 +695,8 @@ class _SearchResultTile extends StatelessWidget {
                 children: [
                   Text(
                     result.title,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: MorganGuidePanel.text(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w600),
                     maxLines: 1,
@@ -702,8 +705,8 @@ class _SearchResultTile extends StatelessWidget {
                   if (result.subtitle.isNotEmpty)
                     Text(
                       result.subtitle,
-                      style: const TextStyle(
-                          color: MorganGuidePanel.sub, fontSize: 10),
+                      style: TextStyle(
+                          color: MorganGuidePanel.sub(context), fontSize: 10),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

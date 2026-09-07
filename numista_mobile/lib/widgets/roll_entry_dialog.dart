@@ -14,13 +14,13 @@ class RollEntryResult {
 }
 
 // ─── Colours (match app palette) ─────────────────────────────────────────────
-const _bg      = Color(0xFFF8FAFC);
-const _surface = Colors.white;
-const _text    = Color(0xFF1E293B);
-const _sub     = Color(0xFF64748B);
+Color _bg(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+Color _surface(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white;
+Color _text(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+Color _sub(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 const _accent  = Color(0xFFF63366);
 const _blue    = Color(0xFF4C8CDA);
-const _border  = Color(0xFFE2E6E9);
+Color _border(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : const Color(0xFFE2E6E9);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main entry point — call this from any upload tab
@@ -82,9 +82,9 @@ class _RollDialogState extends State<_RollDialog> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('What kind of roll?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _text)),
+        Text('What kind of roll?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _text(context))),
         const SizedBox(height: 4),
-        const Text('Choose the type that best describes your coins.', style: TextStyle(color: _sub, fontSize: 13)),
+        Text('Choose the type that best describes your coins.', style: TextStyle(color: _sub(context), fontSize: 13)),
         const SizedBox(height: 20),
         ...types.map((t) {
           final selected = _rollType == t.$1;
@@ -95,16 +95,16 @@ class _RollDialogState extends State<_RollDialog> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: selected ? _accent.withAlpha(15) : _surface,
-                border: Border.all(color: selected ? _accent : _border, width: selected ? 2 : 1),
+                color: selected ? _accent.withAlpha(15) : _surface(context),
+                border: Border.all(color: selected ? _accent : _border(context), width: selected ? 2 : 1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(children: [
-                Icon(t.$2, color: selected ? _accent : _sub, size: 22),
+                Icon(t.$2, color: selected ? _accent : _sub(context), size: 22),
                 const SizedBox(width: 14),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(t.$3, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? _accent : _text, fontSize: 14)),
-                  Text(t.$4, style: const TextStyle(color: _sub, fontSize: 12)),
+                  Text(t.$3, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? _accent : _text(context), fontSize: 14)),
+                  Text(t.$4, style: TextStyle(color: _sub(context), fontSize: 12)),
                 ])),
                 if (selected) const Icon(Icons.check_circle, color: _accent, size: 20),
               ]),
@@ -213,10 +213,10 @@ class _RollDialogState extends State<_RollDialog> {
       _conditionPicker(),
       const SizedBox(height: 16),
       if (_yearMints.isEmpty)
-        const Text('Tap Load to auto-fill mint marks.', style: TextStyle(color: _sub, fontSize: 12))
+        Text('Tap Load to auto-fill mint marks.', style: TextStyle(color: _sub(context), fontSize: 12))
       else ...[
         Row(children: [
-          const Text('Uncheck mints you don\'t have:', style: TextStyle(color: _sub, fontSize: 12)),
+          Text('Uncheck mints you don\'t have:', style: TextStyle(color: _sub(context), fontSize: 12)),
           const Spacer(),
           Text('${_yearMints.values.fold(0, (s, m) => s + m.length)} coins selected', style: const TextStyle(color: _blue, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
@@ -226,19 +226,19 @@ class _RollDialogState extends State<_RollDialog> {
           child: SingleChildScrollView(
             child: Table(
               columnWidths: const {0: FixedColumnWidth(56)},
-              border: TableBorder.all(color: _border, width: 0.5, borderRadius: BorderRadius.circular(6)),
+              border: TableBorder.all(color: _border(context), width: 0.5, borderRadius: BorderRadius.circular(6)),
               children: [
                 TableRow(decoration: const BoxDecoration(color: Color(0xFFF1F5F9)), children: [
-                  const Padding(padding: EdgeInsets.all(8), child: Text('Year', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _text))),
+                  Padding(padding: const EdgeInsets.all(8), child: Text('Year', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _text(context)))),
                   ..._allMints().map((m) => Padding(padding: const EdgeInsets.all(8),
-                    child: Text(m.isEmpty ? 'P*' : m, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _text), textAlign: TextAlign.center))),
+                    child: Text(m.isEmpty ? 'P*' : m, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _text(context)), textAlign: TextAlign.center))),
                 ]),
                 ..._yearMints.entries.map((e) {
                   final year = e.key;
                   final available = MintHistoryService.getMints(_denom, year);
                   return TableRow(children: [
                     Padding(padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Text(year.toString(), style: const TextStyle(fontSize: 12, color: _text))),
+                      child: Text(year.toString(), style: TextStyle(fontSize: 12, color: _text(context)))),
                     ..._allMints().map((m) {
                       final avail = available.contains(m);
                       final checked = e.value.contains(m);
@@ -248,7 +248,7 @@ class _RollDialogState extends State<_RollDialog> {
                             activeColor: _accent,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             onChanged: (v) => setState(() { v == true ? e.value.add(m) : e.value.remove(m); }))
-                        : const Text('—', style: TextStyle(color: _border, fontSize: 12)),
+                        : Text('—', style: TextStyle(color: _border(context), fontSize: 12)),
                       );
                     }),
                   ]);
@@ -258,7 +258,7 @@ class _RollDialogState extends State<_RollDialog> {
           ),
         ),
         const SizedBox(height: 6),
-        const Text('* P (no mark) = Philadelphia pre-1980', style: TextStyle(color: _sub, fontSize: 10)),
+        Text('* P (no mark) = Philadelphia pre-1980', style: TextStyle(color: _sub(context), fontSize: 10)),
       ],
     ]);
   }
@@ -324,12 +324,12 @@ class _RollDialogState extends State<_RollDialog> {
 
   // ── Step 2: preview ───────────────────────────────────────────────────────
   Widget _buildPreviewStep() {
-    if (_preview.isEmpty) return const Center(child: Text('No coins to add.', style: TextStyle(color: _sub)));
+    if (_preview.isEmpty) return Center(child: Text('No coins to add.', style: TextStyle(color: _sub(context))));
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         const Icon(Icons.fact_check_outlined, color: _blue, size: 20),
         const SizedBox(width: 8),
-        Text('${_preview.length} coin${_preview.length == 1 ? '' : 's'} will be added', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _text)),
+        Text('${_preview.length} coin${_preview.length == 1 ? '' : 's'} will be added', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _text(context))),
       ]),
       const SizedBox(height: 12),
       ConstrainedBox(
@@ -337,23 +337,23 @@ class _RollDialogState extends State<_RollDialog> {
         child: ListView.separated(
           shrinkWrap: true,
           itemCount: _preview.length > 50 ? 51 : _preview.length,
-          separatorBuilder: (_, _) => const Divider(height: 1, color: _border),
+          separatorBuilder: (_, _) => Divider(height: 1, color: _border(context)),
           itemBuilder: (_, i) {
-            if (i == 50) return Padding(padding: const EdgeInsets.all(8), child: Text('... and ${_preview.length - 50} more', style: const TextStyle(color: _sub, fontSize: 12)));
+            if (i == 50) return Padding(padding: const EdgeInsets.all(8), child: Text('... and ${_preview.length - 50} more', style: TextStyle(color: _sub(context), fontSize: 12)));
             final c = _preview[i];
             final mint = c['Mint Mark'] as String? ?? '';
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               child: Row(children: [
-                SizedBox(width: 48, child: Text(c['Year'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _text))),
+                SizedBox(width: 48, child: Text(c['Year'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _text(context)))),
                 if (mint.isNotEmpty) Container(
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: _blue.withAlpha(20), borderRadius: BorderRadius.circular(4), border: Border.all(color: _blue.withAlpha(80))),
                   child: Text(mint, style: const TextStyle(fontSize: 11, color: _blue, fontWeight: FontWeight.bold)),
                 ),
-                Expanded(child: Text(c['Program/Series'] ?? c['Denomination'] ?? '', style: const TextStyle(fontSize: 12, color: _sub), overflow: TextOverflow.ellipsis)),
-                Text(c['Condition'] ?? '', style: const TextStyle(fontSize: 11, color: _sub)),
+                Expanded(child: Text(c['Program/Series'] ?? c['Denomination'] ?? '', style: TextStyle(fontSize: 12, color: _sub(context)), overflow: TextOverflow.ellipsis)),
+                Text(c['Condition'] ?? '', style: TextStyle(fontSize: 11, color: _sub(context))),
               ]),
             );
           },
@@ -409,7 +409,7 @@ class _RollDialogState extends State<_RollDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: _bg,
+      backgroundColor: _bg(context),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
@@ -421,18 +421,18 @@ class _RollDialogState extends State<_RollDialog> {
             children: [
               // Header
               Row(children: [
-                if (_step > 0) IconButton(icon: const Icon(Icons.arrow_back, color: _sub), onPressed: () => setState(() => _step--), tooltip: 'Back'),
+                if (_step > 0) IconButton(icon: Icon(Icons.arrow_back, color: _sub(context)), onPressed: () => setState(() => _step--), tooltip: 'Back'),
                 const Icon(Icons.currency_exchange, color: _accent, size: 24),
                 const SizedBox(width: 10),
-                Expanded(child: Text(_title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _text))),
+                Expanded(child: Text(_title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _text(context)))),
                 // Step indicator
                 Row(children: List.generate(3, (i) => Container(
                   margin: const EdgeInsets.only(left: 5),
                   width: 8, height: 8,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: i == _step ? _accent : _border),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: i == _step ? _accent : _border(context)),
                 ))),
                 const SizedBox(width: 8),
-                IconButton(icon: const Icon(Icons.close, color: _sub), onPressed: () => Navigator.pop(context)),
+                IconButton(icon: Icon(Icons.close, color: _sub(context)), onPressed: () => Navigator.pop(context)),
               ]),
               const SizedBox(height: 20),
               // Body
@@ -454,11 +454,11 @@ class _RollDialogState extends State<_RollDialog> {
               // Footer buttons
               Row(children: [
                 if (_rollType == RollType.mixed && _step == 0) ...[
-                  const Icon(Icons.info_outline, color: _sub, size: 16),
+                  Icon(Icons.info_outline, color: _sub(context), size: 16),
                   const SizedBox(width: 6),
-                  const Expanded(child: Text('Use the AI Scanner tab to identify each coin individually.', style: TextStyle(color: _sub, fontSize: 12))),
+                  Expanded(child: Text('Use the AI Scanner tab to identify each coin individually.', style: TextStyle(color: _sub(context), fontSize: 12))),
                 ] else const Spacer(),
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: _sub))),
+                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: _sub(context)))),
                 const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: _accent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),

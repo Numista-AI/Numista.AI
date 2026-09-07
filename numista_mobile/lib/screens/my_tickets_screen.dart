@@ -129,6 +129,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -136,13 +137,13 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
         children: [
           // Header
           Row(children: [
-            const Text(
+            Text(
               'My Tickets',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
                 fontStyle: FontStyle.italic,
-                color: Color(0xFFC8D0E0),
+                color: isDark ? const Color(0xFFC8D0E0) : const Color(0xFF0F172A),
               ),
             ),
             const SizedBox(width: 12),
@@ -167,10 +168,10 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
             ),
           ]),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Track your open tickets. Issue temporary, scoped support access — '
             'you control exactly which coins are visible and for how long.',
-            style: TextStyle(color: Color(0xFFC8D0E0), fontSize: 14),
+            style: TextStyle(color: isDark ? const Color(0xFFC8D0E0) : const Color(0xFF5A5C69), fontSize: 14),
           ),
           const SizedBox(height: 32),
 

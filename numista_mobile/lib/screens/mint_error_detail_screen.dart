@@ -144,14 +144,15 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
 
   // ── Top bar ───────────────────────────────────────────────────────────────
   Widget _buildTopBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: _kDark,
+      color: isDark ? _kDark : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 18),
+            icon: Icon(Icons.arrow_back_ios_new, color: isDark ? Colors.white70 : Colors.black87, size: 18),
             tooltip: 'Back to Error Library',
           ),
           const SizedBox(width: 4),
@@ -161,8 +162,8 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
               children: [
                 Text(
                   error.name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -171,7 +172,7 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
                 ),
                 Text(
                   error.category + (error.designation.isNotEmpty ? ' · ${error.designation}' : ''),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 11),
                 ),
               ],
             ),

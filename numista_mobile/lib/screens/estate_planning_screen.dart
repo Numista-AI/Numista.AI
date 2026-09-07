@@ -14,16 +14,18 @@ import '../services/estate_fiduciary_service.dart';
 import '../services/valuation_mode_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Theme constants
+// Theme-aware color tokens
 // ─────────────────────────────────────────────────────────────────────────────
-const _kNavy       = Color(0xFF0E1117);
-const _kDeepPurple = Color(0xFF1a1a2e);
 const _kGold       = Color(0xFFFFD700);
 const _kRed        = Color(0xFFF63366);
-const _kCard       = Color(0xFF161B27);
-const _kCardBorder = Color(0xFF2A3045);
-const _kTextPrimary   = Color(0xFFECEFF4);
-const _kTextSecondary = Color(0xFF8B92A5);
+
+bool _isDarkCtx(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _kNavy(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0E1117) : const Color(0xFFF4F4F2);
+Color _kDeepPurple(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF1a1a2e) : const Color(0xFFEDE9FE);
+Color _kCard(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF161B27) : Colors.white;
+Color _kCardBorder(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF2A3045) : const Color(0xFFE2E6E9);
+Color _kTextPrimary(BuildContext c) => _isDarkCtx(c) ? const Color(0xFFECEFF4) : const Color(0xFF0F172A);
+Color _kTextSecondary(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF8B92A5) : const Color(0xFF5A5C69);
 
 final _dollarFmt = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
@@ -191,7 +193,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
     return Theme(
       data: _estateTheme(context),
       child: Scaffold(
-        backgroundColor: _kNavy,
+        backgroundColor: _kNavy(context),
         body: Column(
           children: [
             _buildHeader(),
@@ -248,15 +250,15 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                   ),
                 ),
                 // Header
-                const Text('\u{1F451}', style: TextStyle(fontSize: 40)),
+                Text('\u{1F451}', style: TextStyle(fontSize: 40)),
                 const SizedBox(height: 12),
-                const Text('Estate Tier',
+                Text('Estate Tier',
                     style: TextStyle(
                         color: _kGold, fontSize: 26, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                const Text(
+                SizedBox(height: 6),
+                Text(
                   'Court-ready estate reports for serious collectors.',
-                  style: TextStyle(color: _kTextSecondary, fontSize: 14, height: 1.5),
+                  style: TextStyle(color: _kTextSecondary(context), fontSize: 14, height: 1.5),
                 ),
                 const SizedBox(height: 24),
 
@@ -275,20 +277,20 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                         ),
                         child: Icon(f.$1, color: _kGold, size: 18),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(f.$2,
-                                style: const TextStyle(
-                                    color: _kTextPrimary,
+                                style: TextStyle(
+                                    color: _kTextPrimary(context),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
+                            SizedBox(height: 2),
                             Text(f.$3,
-                                style: const TextStyle(
-                                    color: _kTextSecondary, fontSize: 12)),
+                                style: TextStyle(
+                                    color: _kTextSecondary(context), fontSize: 12)),
                           ],
                         ),
                       ),
@@ -308,7 +310,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                   ),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -319,18 +321,18 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                                     fontWeight: FontWeight.w700)),
                             Text('Billed annually',
                                 style: TextStyle(
-                                    color: _kTextSecondary, fontSize: 11)),
+                                    color: _kTextSecondary(context), fontSize: 11)),
                           ],
                         ),
                       ),
-                      const Text('\$9.99',
+                      Text('\$9.99',
                           style: TextStyle(
-                              color: _kTextPrimary,
+                              color: _kTextPrimary(context),
                               fontSize: 22,
                               fontWeight: FontWeight.w800)),
-                      const Text('/mo',
+                      Text('/mo',
                           style: TextStyle(
-                              color: _kTextSecondary, fontSize: 13)),
+                              color: _kTextSecondary(context), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -354,7 +356,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGold,
-                      foregroundColor: _kNavy,
+                      foregroundColor: _kNavy(context),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       textStyle: const TextStyle(
@@ -363,12 +365,12 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                     child: const Text('Get Estate Tier'),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Center(
                   child: TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Maybe later',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 13)),
+                    child: Text('Maybe later',
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 13)),
                   ),
                 ),
               ],
@@ -404,14 +406,14 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   Widget _buildHeader() {
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [_kNavy, _kDeepPurple],
+          colors: [_kNavy(context), _kDeepPurple(context)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         border: Border(
-          bottom: BorderSide(color: _kCardBorder, width: 1),
+          bottom: BorderSide(color: _kCardBorder(context), width: 1),
         ),
       ),
       child: SafeArea(
@@ -433,7 +435,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                     child: const Icon(Icons.account_balance_outlined,
                         color: _kGold, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,7 +452,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                         Text(
                           'Legal-grade coin collection documentation',
                           style: TextStyle(
-                            color: _kTextSecondary,
+                            color: _kTextSecondary(context),
                             fontSize: 11,
                           ),
                         ),
@@ -465,7 +467,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
               indicatorColor: _kGold,
               indicatorWeight: 2,
               labelColor: _kGold,
-              unselectedLabelColor: _kTextSecondary,
+              unselectedLabelColor: _kTextSecondary(context),
               labelStyle: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -610,7 +612,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           // ── Personal Information ──────────────────────────────────────
           _SectionHeader(title: 'Personal Information', icon: Icons.person_outline),
           _EstateCard(children: [
-            _label('Marital Status'),
+            _label(context, 'Marital Status'),
             const SizedBox(height: 6),
             _SegmentedPicker(
               options: const ['Single', 'Married', 'Widowed', 'Divorced'],
@@ -630,7 +632,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     'which coins are separate vs. community property.',
               ),
               const SizedBox(height: 8),
-              _formField('Community Property Notes', _maritalNotesCtrl,
+              _formField(context, 'Community Property Notes', _maritalNotesCtrl,
                   hint: 'e.g. "Coins purchased before 2005 are separate property"',
                   maxLines: 3),
             ],
@@ -641,17 +643,17 @@ class _ProfileTabState extends State<_ProfileTab> {
           // ── Jurisdiction ──────────────────────────────────────────────
           _SectionHeader(title: 'Jurisdiction', icon: Icons.location_city_outlined),
           _EstateCard(children: [
-            _label('State / Jurisdiction'),
-            const SizedBox(height: 6),
+            _label(context, 'State / Jurisdiction'),
+            SizedBox(height: 6),
             DropdownButtonFormField<String>(
               // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
               value: _jurisdiction.isEmpty ? null : _jurisdiction,
-              decoration: _inputDecoration(hint: 'Select your state'),
-              dropdownColor: _kCard,
-              style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+              decoration: _inputDecoration(context, hint: 'Select your state'),
+              dropdownColor: _kCard(context),
+              style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
               items: _jurisdictions.map((s) => DropdownMenuItem(
                 value: s,
-                child: Text(s, style: const TextStyle(color: _kTextPrimary)),
+                child: Text(s, style: TextStyle(color: _kTextPrimary(context))),
               )).toList(),
               onChanged: (v) => setState(() => _jurisdiction = v ?? ''),
               validator: (v) => (v == null || v.isEmpty)
@@ -674,7 +676,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           // ── Estate Documents ──────────────────────────────────────────
           _SectionHeader(title: 'Estate Documents', icon: Icons.description_outlined),
           _EstateCard(children: [
-            _label('Will / Trust Status'),
+            _label(context, 'Will / Trust Status'),
             const SizedBox(height: 6),
             _SegmentedPicker(
               options: const ['Has Will', 'Has Trust', 'Has Both', 'Neither', 'Unknown'],
@@ -693,8 +695,8 @@ class _ProfileTabState extends State<_ProfileTab> {
               message: 'Assigning beneficiaries lets you direct specific coins '
                   'to specific heirs in the report. Required for NJ '
                   'inheritance tax class calculations.',
-              child: const Icon(Icons.help_outline,
-                  size: 16, color: _kTextSecondary),
+              child: Icon(Icons.help_outline,
+                  size: 16, color: _kTextSecondary(context)),
             ),
           ),
           _BeneficiaryListEditor(
@@ -711,14 +713,14 @@ class _ProfileTabState extends State<_ProfileTab> {
             icon: Icons.pie_chart_outline,
           ),
           _EstateCard(children: [
-            _label('Liquidation Strategy'),
-            const SizedBox(height: 6),
+            _label(context, 'Liquidation Strategy'),
+            SizedBox(height: 6),
             DropdownButtonFormField<String>(
               // ignore: deprecated_member_use
               value: _liquidationPreference,
-              decoration: _inputDecoration(),
-              dropdownColor: _kCard,
-              style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+              decoration: _inputDecoration(context),
+              dropdownColor: _kCard(context),
+              style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
               items: const [
                 DropdownMenuItem(value: 'consign_all', child: Text('Consign High-Value to Auctions')),
                 DropdownMenuItem(value: 'maximize_value', child: Text('Maximize Value (Bullion Spot + Auction)')),
@@ -727,14 +729,14 @@ class _ProfileTabState extends State<_ProfileTab> {
               onChanged: (v) => setState(() => _liquidationPreference = v ?? 'consign_all'),
             ),
             const SizedBox(height: 12),
-            _label('Preferred Auction Partner'),
-            const SizedBox(height: 6),
+            _label(context, 'Preferred Auction Partner'),
+            SizedBox(height: 6),
             DropdownButtonFormField<String>(
               // ignore: deprecated_member_use
               value: _preferredConsignor,
-              decoration: _inputDecoration(),
-              dropdownColor: _kCard,
-              style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+              decoration: _inputDecoration(context),
+              dropdownColor: _kCard(context),
+              style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
               items: const [
                 DropdownMenuItem(value: 'None', child: Text('None (AI Dynamic Selection)')),
                 DropdownMenuItem(value: 'GreatCollections', child: Text('GreatCollections')),
@@ -743,7 +745,7 @@ class _ProfileTabState extends State<_ProfileTab> {
               ],
               onChanged: (v) => setState(() => _preferredConsignor = v ?? 'None'),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -751,11 +753,11 @@ class _ProfileTabState extends State<_ProfileTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _label('Number of Heirs'),
-                      const SizedBox(height: 2),
+                      _label(context, 'Number of Heirs'),
+                      SizedBox(height: 2),
                       Text(
                         'For automatic division calculations',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 10),
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                       ),
                     ],
                   ),
@@ -770,7 +772,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     ),
                     Text(
                       _heirsCount.toString(),
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline, color: _kGold),
@@ -793,7 +795,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             child: ElevatedButton(
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kNavy,
+                backgroundColor: _kNavy(context),
                 foregroundColor: _kGold,
                 side: const BorderSide(color: _kGold, width: 1.5),
                 shape: RoundedRectangleBorder(
@@ -935,7 +937,7 @@ class _CollectionTabState extends State<_CollectionTab> {
       children: [
         // ── Stat cards ──────────────────────────────────────────────────
         Container(
-          color: _kDeepPurple.withAlpha(180),
+          color: _kDeepPurple(context).withAlpha(180),
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: Row(
             children: [
@@ -969,12 +971,12 @@ class _CollectionTabState extends State<_CollectionTab> {
                       color: active ? _kGold.withAlpha(30) : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: active ? _kGold : _kCardBorder,
+                        color: active ? _kGold : _kCardBorder(context),
                       ),
                     ),
                     child: Text(f,
                         style: TextStyle(
-                          color: active ? _kGold : _kTextSecondary,
+                          color: active ? _kGold : _kTextSecondary(context),
                           fontSize: 12,
                           fontWeight: active
                               ? FontWeight.w600
@@ -993,7 +995,7 @@ class _CollectionTabState extends State<_CollectionTab> {
               ? Center(
                   child: Text(
                     'No coins match this filter.',
-                    style: TextStyle(color: _kTextSecondary),
+                    style: TextStyle(color: _kTextSecondary(context)),
                   ),
                 )
               : ListView.builder(
@@ -1317,26 +1319,26 @@ class _DivisionTabState extends State<_DivisionTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.pie_chart_outline, size: 64, color: _kTextSecondary),
-              const SizedBox(height: 16),
-              const Text(
+              Icon(Icons.pie_chart_outline, size: 64, color: _kTextSecondary(context)),
+              SizedBox(height: 16),
+              Text(
                 'Beneficiaries Required',
-                style: TextStyle(color: _kTextPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: _kTextPrimary(context), fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8),
+              Text(
                 'The Smart Division Engine requires at least 2 beneficiaries configured in your profile to run partitioning simulations.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _kTextSecondary, fontSize: 13, height: 1.4),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 13, height: 1.4),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
                   DefaultTabController.of(context).animateTo(0);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGold,
-                  foregroundColor: _kNavy,
+                  foregroundColor: _kNavy(context),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -1363,19 +1365,19 @@ class _DivisionTabState extends State<_DivisionTab> {
                 title: 'Smart Division Engine',
                 icon: Icons.pie_chart_outline,
               ),
-              const Text(
+              Text(
                 'Automatically partitions your collection into balanced lots of near-equal value. Use the lock icon to manually assign specific coins to heirs.',
-                style: TextStyle(color: _kTextSecondary, fontSize: 12, height: 1.4),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 12, height: 1.4),
               ),
               const SizedBox(height: 16),
 
               _EstateCard(
                 children: [
-                  const Text(
+                  Text(
                     'Division Summary',
-                    style: TextStyle(color: _kTextPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: _kTextPrimary(context), fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   ...heirs.map((heir) {
                     final lotCoins = _simulatedLots[heir.id] ?? [];
                     final lotTotal = _simulatedTotals[heir.id] ?? 0.0;
@@ -1397,12 +1399,12 @@ class _DivisionTabState extends State<_DivisionTab> {
                               children: [
                                 Text(
                                   heir.alias,
-                                  style: const TextStyle(color: _kTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                                  style: TextStyle(color: _kTextPrimary(context), fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
-                                const SizedBox(height: 2),
+                                SizedBox(height: 2),
                                 Text(
                                   '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
-                                  style: const TextStyle(color: _kTextSecondary, fontSize: 11),
+                                  style: TextStyle(color: _kTextSecondary(context), fontSize: 11),
                                 ),
                               ],
                             ),
@@ -1414,12 +1416,12 @@ class _DivisionTabState extends State<_DivisionTab> {
                                 '${diff >= 0 ? "+" : ""}${pctDiff.toStringAsFixed(1)}% vs avg',
                                 style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(height: 2),
+                              SizedBox(height: 2),
                               Text(
                                 cashOffset >= 0
                                     ? '+\$${_formatCompactFmv(cashOffset)} cash'
                                     : '-\$${_formatCompactFmv(cashOffset.abs())} cash',
-                                style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                                style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                               ),
                             ],
                           ),
@@ -1427,13 +1429,13 @@ class _DivisionTabState extends State<_DivisionTab> {
                       ),
                     );
                   }),
-                  const Divider(color: _kCardBorder, height: 16),
+                  Divider(color: _kCardBorder(context), height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Average Lot Value',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                       ),
                       Text(
                         _dollarFmt.format(avgValue),
@@ -1454,36 +1456,36 @@ class _DivisionTabState extends State<_DivisionTab> {
                 final lotTotal = _simulatedTotals[heir.id] ?? 0.0;
 
                 return Card(
-                  color: _kCard,
+                  color: _kCard(context),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: _kCardBorder),
+                    side: BorderSide(color: _kCardBorder(context)),
                   ),
                   margin: const EdgeInsets.only(bottom: 10),
                   clipBehavior: Clip.antiAlias,
                   child: ExpansionTile(
                     title: Text(
                       heir.alias,
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
                       '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
-                      style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                      style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                     ),
                     iconColor: _kGold,
-                    collapsedIconColor: _kTextSecondary,
+                    collapsedIconColor: _kTextSecondary(context),
                     children: [
                       if (lotCoins.isEmpty)
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.all(16.0),
                           child: Text(
                             'No coins in this lot.',
-                            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                            style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                           ),
                         )
                       else
                         ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 500),
+                          constraints: BoxConstraints(maxHeight: 500),
                           child: ListView.builder(
                             shrinkWrap: true,
                             itemCount: lotCoins.length,
@@ -1497,8 +1499,8 @@ class _DivisionTabState extends State<_DivisionTab> {
 
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: const BoxDecoration(
-                                  border: Border(bottom: BorderSide(color: _kCardBorder, width: 0.5)),
+                                decoration: BoxDecoration(
+                                  border: Border(bottom: BorderSide(color: _kCardBorder(context), width: 0.5)),
                                 ),
                                 child: Row(
                                   children: [
@@ -1508,25 +1510,25 @@ class _DivisionTabState extends State<_DivisionTab> {
                                         children: [
                                           Text(
                                             title,
-                                            style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                            style: TextStyle(color: _kTextPrimary(context), fontSize: 12, fontWeight: FontWeight.w600),
                                           ),
                                           if (coin.condition.isNotEmpty)
                                             Text(
                                               coin.condition,
-                                              style: const TextStyle(color: _kTextSecondary, fontSize: 10),
+                                              style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                                             ),
                                         ],
                                       ),
                                     ),
                                     Text(
                                       _dollarFmt.format(fmv),
-                                      style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: _kTextPrimary(context), fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     IconButton(
                                       icon: Icon(
                                         isLocked ? Icons.lock : Icons.lock_open_outlined,
-                                        color: isLocked ? _kGold : _kTextSecondary,
+                                        color: isLocked ? _kGold : _kTextSecondary(context),
                                         size: 18,
                                       ),
                                       onPressed: () async {
@@ -1556,9 +1558,9 @@ class _DivisionTabState extends State<_DivisionTab> {
         if (_isDirty)
           Container(
             padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
-              color: _kNavy,
-              border: Border(top: BorderSide(color: _kCardBorder)),
+            decoration: BoxDecoration(
+              color: _kNavy(context),
+              border: Border(top: BorderSide(color: _kCardBorder(context))),
             ),
             child: SizedBox(
               width: double.infinity,
@@ -1582,9 +1584,9 @@ class _DivisionTabState extends State<_DivisionTab> {
         else
           Container(
             padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
-              color: _kNavy,
-              border: Border(top: BorderSide(color: _kCardBorder)),
+            decoration: BoxDecoration(
+              color: _kNavy(context),
+              border: Border(top: BorderSide(color: _kCardBorder(context))),
             ),
             child: SizedBox(
               width: double.infinity,
@@ -1592,13 +1594,13 @@ class _DivisionTabState extends State<_DivisionTab> {
               child: OutlinedButton.icon(
                 onPressed: null,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: _kCardBorder),
+                  side: BorderSide(color: _kCardBorder(context)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                icon: const Icon(Icons.check_circle_outline, color: _kTextSecondary, size: 18),
-                label: const Text(
+                icon: Icon(Icons.check_circle_outline, color: _kTextSecondary(context), size: 18),
+                label: Text(
                   'Division Plan is Up-to-Date',
-                  style: TextStyle(color: _kTextSecondary, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: _kTextSecondary(context), fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1792,22 +1794,22 @@ class _GenerateTabState extends State<_GenerateTab> {
             Row(children: [
               const Icon(Icons.share_rounded, color: _kGold, size: 20),
               const SizedBox(width: 10),
-              const Text('Share Report',
+              Text('Share Report',
                   style: TextStyle(
                       color: _kGold,
                       fontSize: 16,
                       fontWeight: FontWeight.w700)),
-              const Spacer(),
+              Spacer(),
               IconButton(
-                icon: const Icon(Icons.close_rounded,
-                    color: _kTextSecondary, size: 20),
+                icon: Icon(Icons.close_rounded,
+                    color: _kTextSecondary(context), size: 20),
                 onPressed: () => Navigator.pop(ctx),
               ),
             ]),
-            const SizedBox(height: 4),
-            const Text(
+            SizedBox(height: 4),
+            Text(
               'Your PDF has been generated. Send the attorney portal link to your estate attorney for a live, interactive view.',
-              style: TextStyle(color: _kTextSecondary, fontSize: 12),
+              style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
             ),
             const SizedBox(height: 20),
 
@@ -1878,14 +1880,14 @@ class _GenerateTabState extends State<_GenerateTab> {
                 border: Border.all(color: const Color(0xFF2A3045)),
               ),
               child: Row(children: [
-                const Icon(Icons.fingerprint_rounded,
-                    color: _kTextSecondary, size: 14),
-                const SizedBox(width: 8),
+                Icon(Icons.fingerprint_rounded,
+                    color: _kTextSecondary(context), size: 14),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Report ID: $reportId',
-                    style: const TextStyle(
-                        color: _kTextSecondary,
+                    style: TextStyle(
+                        color: _kTextSecondary(context),
                         fontSize: 10,
                         fontFamily: 'monospace'),
                   ),
@@ -1893,8 +1895,8 @@ class _GenerateTabState extends State<_GenerateTab> {
                 GestureDetector(
                   onTap: () => Clipboard.setData(
                       ClipboardData(text: reportId)),
-                  child: const Icon(Icons.copy_rounded,
-                      color: _kTextSecondary, size: 14),
+                  child: Icon(Icons.copy_rounded,
+                      color: _kTextSecondary(context), size: 14),
                 ),
               ]),
             ),
@@ -1933,10 +1935,10 @@ class _GenerateTabState extends State<_GenerateTab> {
 
         // ── Estate settlement extra fields ───────────────────────────────
         if (_mode == 'estate_settlement') ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _EstateCard(children: [
-            _label('Date of Death'),
-            const SizedBox(height: 8),
+            _label(context, 'Date of Death'),
+            SizedBox(height: 8),
             GestureDetector(
               onTap: () async {
                 final picked = await showDatePicker(
@@ -1960,9 +1962,9 @@ class _GenerateTabState extends State<_GenerateTab> {
                   border: Border.all(
                       color: _dateOfDeath == null
                           ? _kRed.withAlpha(180)
-                          : _kCardBorder),
+                          : _kCardBorder(context)),
                   borderRadius: BorderRadius.circular(8),
-                  color: _kCard,
+                  color: _kCard(context),
                 ),
                 child: Row(
                   children: [
@@ -1970,16 +1972,16 @@ class _GenerateTabState extends State<_GenerateTab> {
                         size: 16,
                         color: _dateOfDeath == null
                             ? _kRed
-                            : _kTextSecondary),
-                    const SizedBox(width: 10),
+                            : _kTextSecondary(context)),
+                    SizedBox(width: 10),
                     Text(
                       _dateOfDeath != null
                           ? DateFormat('MMMM d, yyyy').format(_dateOfDeath!)
                           : 'Select date of death (required)',
                       style: TextStyle(
                         color: _dateOfDeath != null
-                            ? _kTextPrimary
-                            : _kTextSecondary,
+                            ? _kTextPrimary(context)
+                            : _kTextSecondary(context),
                         fontSize: 14,
                       ),
                     ),
@@ -2001,14 +2003,14 @@ class _GenerateTabState extends State<_GenerateTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Include Coin Photos',
+                    Text('Include Coin Photos',
                         style: TextStyle(
-                            color: _kTextPrimary,
+                            color: _kTextPrimary(context),
                             fontSize: 13,
                             fontWeight: FontWeight.w500)),
                     Text('Embeds obverse images in the PDF',
                         style: TextStyle(
-                            color: _kTextSecondary, fontSize: 11)),
+                            color: _kTextSecondary(context), fontSize: 11)),
                   ],
                 ),
               ),
@@ -2017,7 +2019,7 @@ class _GenerateTabState extends State<_GenerateTab> {
                 onChanged: (v) => setState(() => _includePhotos = v),
                 activeThumbColor: _kGold,
                 activeTrackColor: _kGold.withAlpha(80),
-                inactiveTrackColor: _kCardBorder,
+                inactiveTrackColor: _kCardBorder(context),
               ),
             ],
           ),
@@ -2195,10 +2197,10 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
       minChildSize: 0.5,
       expand: false,
       builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: _kCard,
+        decoration: BoxDecoration(
+          color: _kCard(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          border: Border(top: BorderSide(color: _kCardBorder)),
+          border: Border(top: BorderSide(color: _kCardBorder(context))),
         ),
         child: Column(
           children: [
@@ -2209,7 +2211,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _kCardBorder,
+                  color: _kCardBorder(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -2237,25 +2239,25 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(coinTitle,
-                            style: const TextStyle(
-                                color: _kTextPrimary,
+                            style: TextStyle(
+                                color: _kTextPrimary(context),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700)),
                         if (widget.coin.condition.isNotEmpty)
                           Text(widget.coin.condition,
                               style: TextStyle(
-                                  color: _kTextSecondary, fontSize: 11)),
+                                  color: _kTextSecondary(context), fontSize: 11)),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: _kTextSecondary),
+                    icon: Icon(Icons.close, color: _kTextSecondary(context)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            const Divider(color: _kCardBorder, height: 1),
+            Divider(color: _kCardBorder(context), height: 1),
             // Body
             Expanded(
               child: ListView(
@@ -2263,23 +2265,23 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // Beneficiary
-                  _label('Assign to Beneficiary'),
-                  const SizedBox(height: 6),
+                  _label(context, 'Assign to Beneficiary'),
+                  SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
                     // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
                     value: _beneficiaryId,
-                    decoration: _inputDecoration(hint: 'Unassigned'),
-                    dropdownColor: _kCard,
-                    style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+                    decoration: _inputDecoration(context, hint: 'Unassigned'),
+                    dropdownColor: _kCard(context),
+                    style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                           value: null,
                           child: Text('Unassigned',
-                              style: TextStyle(color: _kTextSecondary))),
+                              style: TextStyle(color: _kTextSecondary(context)))),
                       ...widget.beneficiaries.map((b) => DropdownMenuItem(
                             value: b.id,
                             child: Text(b.alias,
-                                style: const TextStyle(color: _kTextPrimary)),
+                                style: TextStyle(color: _kTextPrimary(context))),
                           )),
                     ],
                     onChanged: (v) {
@@ -2302,13 +2304,13 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                   const SizedBox(height: 14),
 
                   // Estate Notes
-                  _label('Estate Notes'),
-                  const SizedBox(height: 6),
+                  _label(context, 'Estate Notes'),
+                  SizedBox(height: 6),
                   TextFormField(
                     controller: _notesCtrl,
                     maxLines: 2,
-                    style: const TextStyle(color: _kTextPrimary, fontSize: 14),
-                    decoration: _inputDecoration(
+                    style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
+                    decoration: _inputDecoration(context,
                         hint: 'e.g. "Heirloom — do not sell", "Store separately"'),
                   ),
 
@@ -2345,19 +2347,19 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                     onChanged: (v) => setState(() => _useFmvOverride = v),
                   ),
                   if (_useFmvOverride) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     TextFormField(
                       controller: _fmvOverrideCtrl,
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true),
-                      style: const TextStyle(
-                          color: _kTextPrimary, fontSize: 14),
-                      decoration: _inputDecoration(hint: 'e.g. 4500.00'),
+                      style: TextStyle(
+                          color: _kTextPrimary(context), fontSize: 14),
+                      decoration: _inputDecoration(context, hint: 'e.g. 4500.00'),
                     ),
                   ],
 
-                  const SizedBox(height: 16),
-                  const Divider(color: _kCardBorder),
+                  SizedBox(height: 16),
+                  Divider(color: _kCardBorder(context)),
                   const SizedBox(height: 8),
 
                   // Formal Appraisal
@@ -2367,17 +2369,17 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
-                  _sheetField('Appraiser Name', _appraiserCtrl,
+                  _sheetField(context, 'Appraiser Name', _appraiserCtrl,
                       hint: 'John Doe, ANA Certified'),
-                  _sheetField('Appraisal Value (\$)', _appraisalValCtrl,
+                  _sheetField(context, 'Appraisal Value (\$)', _appraisalValCtrl,
                       hint: '5000.00',
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true)),
-                  _sheetField('Certificate Number', _certNumCtrl,
+                  _sheetField(context, 'Certificate Number', _certNumCtrl,
                       hint: 'CERT-12345'),
                   const SizedBox(height: 8),
-                  _label('Appraisal Date'),
-                  const SizedBox(height: 6),
+                  _label(context, 'Appraisal Date'),
+                  SizedBox(height: 6),
                   GestureDetector(
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -2396,14 +2398,14 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        border: Border.all(color: _kCardBorder),
+                        border: Border.all(color: _kCardBorder(context)),
                         borderRadius: BorderRadius.circular(8),
-                        color: _kNavy,
+                        color: _kNavy(context),
                       ),
                       child: Row(children: [
                         Icon(Icons.calendar_today_outlined,
-                            size: 14, color: _kTextSecondary),
-                        const SizedBox(width: 8),
+                            size: 14, color: _kTextSecondary(context)),
+                        SizedBox(width: 8),
                         Text(
                           _appraisalDate != null
                               ? DateFormat('MMMM d, yyyy')
@@ -2411,8 +2413,8 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                               : 'Select appraisal date',
                           style: TextStyle(
                             color: _appraisalDate != null
-                                ? _kTextPrimary
-                                : _kTextSecondary,
+                                ? _kTextPrimary(context)
+                                : _kTextSecondary(context),
                             fontSize: 13,
                           ),
                         ),
@@ -2429,7 +2431,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kNavy,
+                        backgroundColor: _kNavy(context),
                         foregroundColor: _kGold,
                         side: const BorderSide(color: _kGold),
                         shape: RoundedRectangleBorder(
@@ -2496,9 +2498,9 @@ class _EstateCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _kCardBorder),
+          border: Border.all(color: _kCardBorder(context)),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withAlpha(60),
@@ -2546,10 +2548,10 @@ class _InfoBanner extends StatelessWidget {
                         fontWeight: FontWeight.w700)),
               ),
             ]),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(body,
-                style: const TextStyle(
-                    color: _kTextSecondary, fontSize: 11, height: 1.5)),
+                style: TextStyle(
+                    color: _kTextSecondary(context), fontSize: 11, height: 1.5)),
           ],
         ),
       );
@@ -2578,12 +2580,12 @@ class _SegmentedPicker extends StatelessWidget {
                 color: active ? _kGold.withAlpha(25) : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: active ? _kGold : _kCardBorder,
+                    color: active ? _kGold : _kCardBorder(context),
                     width: active ? 1.5 : 1),
               ),
               child: Text(o,
                   style: TextStyle(
-                    color: active ? _kGold : _kTextSecondary,
+                    color: active ? _kGold : _kTextSecondary(context),
                     fontSize: 12,
                     fontWeight:
                         active ? FontWeight.w600 : FontWeight.normal,
@@ -2613,17 +2615,17 @@ class _BeneficiaryListEditor extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _kCard,
+              color: _kCard(context),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _kCardBorder),
+              border: Border.all(color: _kCardBorder(context)),
             ),
             child: Column(
               children: [
                 Icon(Icons.people_outline,
-                    size: 32, color: _kTextSecondary.withAlpha(120)),
-                const SizedBox(height: 8),
+                    size: 32, color: _kTextSecondary(context).withAlpha(120)),
+                SizedBox(height: 8),
                 Text('No beneficiaries added yet.',
-                    style: TextStyle(color: _kTextSecondary, fontSize: 12)),
+                    style: TextStyle(color: _kTextSecondary(context), fontSize: 12)),
               ],
             ),
           )
@@ -2711,9 +2713,9 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _kCardBorder),
+          border: Border.all(color: _kCardBorder(context)),
         ),
         child: Column(
           children: [
@@ -2723,32 +2725,32 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
                 child: TextField(
                   controller: _nameCtrl,
                   onChanged: (_) => _emit(),
-                  style: const TextStyle(color: _kTextPrimary, fontSize: 13),
-                  decoration: _inputDecoration(hint: 'Alias (e.g. Daughter)').copyWith(
+                  style: TextStyle(color: _kTextPrimary(context), fontSize: 13),
+                  decoration: _inputDecoration(context, hint: 'Alias (e.g. Daughter)').copyWith(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 8),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
                   // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
                   value: _relationship,
-                  decoration: _inputDecoration(hint: 'Rel.').copyWith(
+                  decoration: _inputDecoration(context, hint: 'Rel.').copyWith(
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 8),
                   ),
-                  dropdownColor: _kCard,
-                  style: const TextStyle(color: _kTextPrimary, fontSize: 12),
+                  dropdownColor: _kCard(context),
+                  style: TextStyle(color: _kTextPrimary(context), fontSize: 12),
                   items: const [
                     'Spouse', 'Child', 'Sibling',
                     'Friend', 'Charity', 'Other',
                   ].map((r) => DropdownMenuItem(
                         value: r,
                         child: Text(r,
-                            style: const TextStyle(color: _kTextPrimary)),
+                            style: TextStyle(color: _kTextPrimary(context))),
                       )).toList(),
                   onChanged: (v) {
                     if (v != null) {
@@ -2765,11 +2767,11 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
               ),
             ]),
             if (widget.showNjClass) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Row(children: [
                 Text('NJ Class: ',
                     style: TextStyle(
-                        color: _kTextSecondary, fontSize: 11)),
+                        color: _kTextSecondary(context), fontSize: 11)),
                 ...['A', 'C', 'D', 'E'].map((cls) {
                   final active = _njClass == cls;
                   return GestureDetector(
@@ -2789,14 +2791,14 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                             color: active
-                                ? const Color(0xFFEF4444)
-                                : _kCardBorder),
+                                ? Color(0xFFEF4444)
+                                : _kCardBorder(context)),
                       ),
                       child: Text(cls,
                           style: TextStyle(
                               color: active
-                                  ? const Color(0xFFEF4444)
-                                  : _kTextSecondary,
+                                  ? Color(0xFFEF4444)
+                                  : _kTextSecondary(context),
                               fontSize: 11,
                               fontWeight: active
                                   ? FontWeight.w700
@@ -2833,38 +2835,38 @@ class _ModeCard extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: selected ? _kGold.withAlpha(15) : _kCard,
+            color: selected ? _kGold.withAlpha(15) : _kCard(context),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? _kGold : _kCardBorder,
+              color: selected ? _kGold : _kCardBorder(context),
               width: selected ? 1.5 : 1,
             ),
           ),
           child: Row(children: [
-            Text(icon, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 12),
+            Text(icon, style: TextStyle(fontSize: 24)),
+            SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
                       style: TextStyle(
-                          color: selected ? _kGold : _kTextPrimary,
+                          color: selected ? _kGold : _kTextPrimary(context),
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(subtitle,
                       style: TextStyle(
-                          color: _kTextSecondary, fontSize: 11)),
+                          color: _kTextSecondary(context), fontSize: 11)),
                 ],
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded,
+              Icon(Icons.check_circle_rounded,
                   color: _kGold, size: 20)
             else
               Icon(Icons.radio_button_unchecked_rounded,
-                  color: _kTextSecondary.withAlpha(120), size: 20),
+                  color: _kTextSecondary(context).withAlpha(120), size: 20),
           ]),
         ),
       );
@@ -2919,15 +2921,15 @@ class _ChecklistCard extends StatelessWidget {
                         : item.required
                             ? _kRed
                             : item.warnIfMissing
-                                ? const Color(0xFFF59E0B)
-                                : _kTextSecondary,
+                                ? Color(0xFFF59E0B)
+                                : _kTextSecondary(context),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(item.label,
                       style: TextStyle(
                           color: item.ok
-                              ? _kTextPrimary
-                              : _kTextSecondary,
+                              ? _kTextPrimary(context)
+                              : _kTextSecondary(context),
                           fontSize: 12)),
                 ]),
               ))
@@ -2974,19 +2976,19 @@ class _GenerateButton extends StatelessWidget {
           child: GestureDetector(
             onTap: canGenerate ? onGenerate : null,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: Duration(milliseconds: 200),
               decoration: BoxDecoration(
                 gradient: canGenerate
-                    ? const LinearGradient(
-                        colors: [_kNavy, _kDeepPurple],
+                    ? LinearGradient(
+                        colors: [_kNavy(context), _kDeepPurple(context)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       )
                     : null,
-                color: canGenerate ? null : _kCard,
+                color: canGenerate ? null : _kCard(context),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: canGenerate ? _kGold : _kCardBorder,
+                  color: canGenerate ? _kGold : _kCardBorder(context),
                   width: canGenerate ? 1.5 : 1,
                 ),
                 boxShadow: canGenerate
@@ -3023,15 +3025,15 @@ class _GenerateButton extends StatelessWidget {
                           Icon(Icons.description_outlined,
                               color: canGenerate
                                   ? _kGold
-                                  : _kTextSecondary,
+                                  : _kTextSecondary(context),
                               size: 18),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           Text(
                             'Generate Estate Report',
                             style: TextStyle(
                               color: canGenerate
                                   ? _kGold
-                                  : _kTextSecondary,
+                                  : _kTextSecondary(context),
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -3044,18 +3046,18 @@ class _GenerateButton extends StatelessWidget {
           ),
         ),
         if (!canGenerate && !generating) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             'Complete required fields above to generate',
-            style: TextStyle(color: _kTextSecondary, fontSize: 11),
+            style: TextStyle(color: _kTextSecondary(context), fontSize: 11),
             textAlign: TextAlign.center,
           ),
         ],
         if (generating && progressStep < 4) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           LinearProgressIndicator(
             value: (progressStep + 1) / 5.0,
-            backgroundColor: _kCardBorder,
+            backgroundColor: _kCardBorder(context),
             valueColor: const AlwaysStoppedAnimation<Color>(_kGold),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -3079,14 +3081,14 @@ class _StatChip extends StatelessWidget {
           margin: const EdgeInsets.only(right: 6),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(
-            color: _kCard,
+            color: _kCard(context),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: highlight
                   ? _kGold.withAlpha(80)
                   : warn
                       ? _kRed.withAlpha(80)
-                      : _kCardBorder,
+                      : _kCardBorder(context),
             ),
           ),
           child: Column(
@@ -3097,13 +3099,13 @@ class _StatChip extends StatelessWidget {
                           ? _kGold
                           : warn
                               ? _kRed
-                              : _kTextPrimary,
+                              : _kTextPrimary(context),
                       fontSize: 13,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(label,
                   style: TextStyle(
-                      color: _kTextSecondary, fontSize: 9),
+                      color: _kTextSecondary(context), fontSize: 9),
                   textAlign: TextAlign.center),
             ],
           ),
@@ -3140,12 +3142,12 @@ class _CoinEstateRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: needsAppraisal
                 ? _kGold.withAlpha(80)
-                : _kCardBorder,
+                : _kCardBorder(context),
           ),
         ),
         child: Row(children: [
@@ -3155,7 +3157,7 @@ class _CoinEstateRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
-              color: _kNavy,
+              color: _kNavy(context),
               image: hasPhoto
                   ? DecorationImage(
                       image: NetworkImage(coin.imageUrlObverse),
@@ -3165,8 +3167,8 @@ class _CoinEstateRow extends StatelessWidget {
             ),
             child: hasPhoto
                 ? null
-                : const Icon(Icons.monetization_on_outlined,
-                    color: _kTextSecondary, size: 18),
+                : Icon(Icons.monetization_on_outlined,
+                    color: _kTextSecondary(context), size: 18),
           ),
           const SizedBox(width: 10),
 
@@ -3176,14 +3178,14 @@ class _CoinEstateRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
-                        color: _kTextPrimary,
+                    style: TextStyle(
+                        color: _kTextPrimary(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 if (coin.condition.isNotEmpty)
                   Text(coin.condition,
                       style: TextStyle(
-                          color: _kTextSecondary, fontSize: 10)),
+                          color: _kTextSecondary(context), fontSize: 10)),
               ],
             ),
           ),
@@ -3195,7 +3197,7 @@ class _CoinEstateRow extends StatelessWidget {
               Text(
                 fmv > 0 ? _dollarFmt.format(fmv) : '–',
                 style: TextStyle(
-                  color: needsAppraisal ? _kGold : _kTextPrimary,
+                  color: needsAppraisal ? _kGold : _kTextPrimary(context),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -3234,12 +3236,12 @@ class _CoinEstateRow extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                    color: _kTextSecondary.withAlpha(60),
+                    color: _kTextSecondary(context).withAlpha(60),
                     style: BorderStyle.solid),
               ),
               child: Text('+Assign',
                   style: TextStyle(
-                      color: _kTextSecondary, fontSize: 9)),
+                      color: _kTextSecondary(context), fontSize: 9)),
             ),
         ]),
       ),
@@ -3258,32 +3260,32 @@ class _ReportHistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _kCardBorder),
+          border: Border.all(color: _kCardBorder(context)),
         ),
         child: Row(children: [
-          const Icon(Icons.description_outlined,
-              size: 20, color: _kTextSecondary),
-          const SizedBox(width: 10),
+          Icon(Icons.description_outlined,
+              size: 20, color: _kTextSecondary(context)),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(record.modeLabel,
-                    style: const TextStyle(
-                        color: _kTextPrimary,
+                    style: TextStyle(
+                        color: _kTextPrimary(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 Text(
                   '${record.state} • ${record.totalCoins} coins • '
                   '${_dollarFmt.format(record.totalFmv)} FMV',
-                  style: TextStyle(color: _kTextSecondary, fontSize: 10),
+                  style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                 ),
                 Text(
                   DateFormat('MMM d, yyyy – h:mm a').format(record.generatedAt),
                   style:
-                      TextStyle(color: _kTextSecondary.withAlpha(140), fontSize: 9),
+                      TextStyle(color: _kTextSecondary(context).withAlpha(140), fontSize: 9),
                 ),
               ],
             ),
@@ -3381,7 +3383,7 @@ class _NyWarningCard extends StatelessWidget {
           ),
 
           if (fmv != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -3390,9 +3392,9 @@ class _NyWarningCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Text('Collection FMV',
+                  Text('Collection FMV',
                       style: TextStyle(
-                          color: _kTextSecondary, fontSize: 12)),
+                          color: _kTextSecondary(context), fontSize: 12)),
                   const Spacer(),
                   Text(
                     '\$${fmv.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")}',
@@ -3401,7 +3403,7 @@ class _NyWarningCard extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     overCliff
                         ? '⚠ OVER CLIFF'
@@ -3412,8 +3414,8 @@ class _NyWarningCard extends StatelessWidget {
                         color: overCliff
                             ? _kRed
                             : nearCliff
-                                ? const Color(0xFFFF9800)
-                                : _kTextSecondary,
+                                ? Color(0xFFFF9800)
+                                : _kTextSecondary(context),
                         fontSize: 11),
                   ),
                 ],
@@ -3437,20 +3439,20 @@ class _NyAlert extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Icon(icon, size: 15, color: const Color(0xFFE3B04B)),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style: const TextStyle(
-                    color: _kTextPrimary,
+                style: TextStyle(
+                    color: _kTextPrimary(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(body,
-                style: const TextStyle(
-                    color: _kTextSecondary, fontSize: 11, height: 1.5)),
+                style: TextStyle(
+                    color: _kTextSecondary(context), fontSize: 11, height: 1.5)),
           ],
         ),
       ),
@@ -3473,26 +3475,26 @@ class _PremiumGate extends StatelessWidget {
             children: [
               const Text('👑', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 16),
-              const Text('Estate Planning',
+              Text('Estate Planning',
                   style: TextStyle(
                       color: _kGold,
                       fontSize: 22,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 'Premium Feature',
-                style: TextStyle(color: _kTextSecondary, fontSize: 14),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 14),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 'Generate court-ready estate reports, assign beneficiaries, '
                 'track formal appraisals, and share a secure attorney portal — '
                 'all with one click.',
                 style: TextStyle(
-                    color: _kTextSecondary, fontSize: 13, height: 1.6),
+                    color: _kTextSecondary(context), fontSize: 13, height: 1.6),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 28),
+              SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -3500,7 +3502,7 @@ class _PremiumGate extends StatelessWidget {
                   onPressed: onUpgrade,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kGold,
-                    foregroundColor: _kNavy,
+                    foregroundColor: _kNavy(context),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     textStyle: const TextStyle(
@@ -3526,22 +3528,22 @@ class _ToggleTile extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: _kNavy,
+          color: _kNavy(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _kCardBorder),
+          border: Border.all(color: _kCardBorder(context)),
         ),
         child: Row(children: [
           Expanded(
             child: Text(label,
-                style: const TextStyle(
-                    color: _kTextPrimary, fontSize: 12)),
+                style: TextStyle(
+                    color: _kTextPrimary(context), fontSize: 12)),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
             activeThumbColor: _kGold,
             activeTrackColor: _kGold.withAlpha(80),
-            inactiveTrackColor: _kCardBorder,
+            inactiveTrackColor: _kCardBorder(context),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ]),
@@ -3551,7 +3553,7 @@ class _ToggleTile extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: Sheet text field
 // ─────────────────────────────────────────────────────────────────────────────
-Widget _sheetField(String label, TextEditingController ctrl,
+Widget _sheetField(BuildContext context, String label, TextEditingController ctrl,
     {String hint = '', TextInputType? keyboardType}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 10),
@@ -3560,15 +3562,15 @@ Widget _sheetField(String label, TextEditingController ctrl,
       children: [
         Text(label,
             style: TextStyle(
-                color: _kTextSecondary,
+                color: _kTextSecondary(context),
                 fontSize: 10,
                 fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         TextFormField(
           controller: ctrl,
           keyboardType: keyboardType,
-          style: const TextStyle(color: _kTextPrimary, fontSize: 13),
-          decoration: _inputDecoration(hint: hint),
+          style: TextStyle(color: _kTextPrimary(context), fontSize: 13),
+          decoration: _inputDecoration(context, hint: hint),
         ),
       ],
     ),
@@ -3579,6 +3581,7 @@ Widget _sheetField(String label, TextEditingController ctrl,
 // Helper: form field with label
 // ─────────────────────────────────────────────────────────────────────────────
 Widget _formField(
+  BuildContext context,
   String label,
   TextEditingController ctrl, {
   String hint = '',
@@ -3594,20 +3597,20 @@ Widget _formField(
         Row(children: [
           Text(label,
               style: TextStyle(
-                  color: _kTextSecondary,
+                  color: _kTextSecondary(context),
                   fontSize: 10,
                   fontWeight: FontWeight.w600)),
           if (required)
-            const Text(' *',
+            Text(' *',
                 style: TextStyle(color: _kRed, fontSize: 10)),
         ]),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         TextFormField(
           controller: ctrl,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(color: _kTextPrimary, fontSize: 14),
-          decoration: _inputDecoration(hint: hint),
+          style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
+          decoration: _inputDecoration(context, hint: hint),
           validator: required
               ? (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null
@@ -3618,26 +3621,26 @@ Widget _formField(
   );
 }
 
-Widget _label(String text) => Text(text,
+Widget _label(BuildContext context, String text) => Text(text,
     style: TextStyle(
-        color: _kTextSecondary,
+        color: _kTextSecondary(context),
         fontSize: 10,
         fontWeight: FontWeight.w600));
 
-InputDecoration _inputDecoration({String hint = ''}) => InputDecoration(
+InputDecoration _inputDecoration(BuildContext context, {String hint = ''}) => InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: _kTextSecondary.withAlpha(120), fontSize: 13),
+      hintStyle: TextStyle(color: _kTextSecondary(context).withAlpha(120), fontSize: 13),
       filled: true,
-      fillColor: _kNavy,
+      fillColor: _kNavy(context),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _kCardBorder),
+        borderSide: BorderSide(color: _kCardBorder(context)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _kCardBorder),
+        borderSide: BorderSide(color: _kCardBorder(context)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -3675,9 +3678,9 @@ class _ShareOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _kNavy,
+          color: _kNavy(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _kCardBorder),
+          border: Border.all(color: _kCardBorder(context)),
         ),
         child: Row(
           children: [
@@ -3691,25 +3694,25 @@ class _ShareOption extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
-                          color: _kTextPrimary,
+                      style: TextStyle(
+                          color: _kTextPrimary(context),
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(subtitle,
-                      style: const TextStyle(
-                          color: _kTextSecondary, fontSize: 11)),
+                      style: TextStyle(
+                          color: _kTextSecondary(context), fontSize: 11)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: _kTextSecondary, size: 18),
+            Icon(Icons.chevron_right_rounded,
+                color: _kTextSecondary(context), size: 18),
           ],
         ),
       ),
@@ -3718,19 +3721,19 @@ class _ShareOption extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Estate-specific dark theme
+// Estate-specific theme (adapts to light/dark)
 // ─────────────────────────────────────────────────────────────────────────────
-ThemeData _estateTheme(BuildContext context) => ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: _kNavy,
-      colorScheme: const ColorScheme.dark(
-        primary: _kGold,
-        secondary: _kGold,
-        surface: _kCard,
-        error: _kRed,
-      ),
-      dialogTheme: const DialogThemeData(backgroundColor: _kCard),
-      cardColor: _kCard,
-    );
+ThemeData _estateTheme(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+    scaffoldBackgroundColor: _kNavy(context),
+    colorScheme: isDark
+        ? const ColorScheme.dark(primary: _kGold, secondary: _kGold, surface: Color(0xFF161B27), error: _kRed)
+        : const ColorScheme.light(primary: Color(0xFF8C7355), secondary: Color(0xFFC9A227), surface: Colors.white, error: _kRed),
+    dialogTheme: DialogThemeData(backgroundColor: _kCard(context)),
+    cardColor: _kCard(context),
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ephemeral Wizard Dialog for Zero-Knowledge PDF Generation (RAM-only)
@@ -3839,7 +3842,7 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: _kNavy,
+      backgroundColor: _kNavy(context),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Theme(
         data: _estateTheme(context),
@@ -3857,52 +3860,52 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
                     'Step $_step of 3',
                     style: const TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
-                  const Text(
+                  Text(
                     '🔒 Ephemeral RAM-Only',
-                    style: TextStyle(color: _kTextSecondary, fontSize: 10),
+                    style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 _stepTitle,
-                style: const TextStyle(color: _kTextPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: _kTextPrimary(context), fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const Divider(color: _kCardBorder, height: 16),
+              Divider(color: _kCardBorder(context), height: 16),
               Flexible(
                 child: SingleChildScrollView(
                   child: _buildStepContent(),
                 ),
               ),
-              const Divider(color: _kCardBorder, height: 20),
+              Divider(color: _kCardBorder(context), height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: _kTextSecondary)),
+                    child: Text('Cancel', style: TextStyle(color: _kTextSecondary(context))),
                   ),
                   const Spacer(),
                   if (_step > 1)
                     OutlinedButton(
                       onPressed: _back,
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: _kCardBorder),
+                        side: BorderSide(color: _kCardBorder(context)),
                       ),
-                      child: const Text('Back', style: TextStyle(color: _kTextPrimary)),
+                      child: Text('Back', style: TextStyle(color: _kTextPrimary(context))),
                     ),
                   const SizedBox(width: 8),
                   if (_step < 3)
                     ElevatedButton(
                       onPressed: _next,
                       style: ElevatedButton.styleFrom(backgroundColor: _kGold),
-                      child: const Text('Next', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold)),
+                      child: Text('Next', style: TextStyle(color: _kNavy(context), fontWeight: FontWeight.bold)),
                     )
                   else
                     ElevatedButton(
                       onPressed: _submit,
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-                      child: const Text('Generate PDF', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF10B981)),
+                      child: Text('Generate PDF', style: TextStyle(color: _kNavy(context), fontWeight: FontWeight.bold)),
                     ),
                 ],
               ),
@@ -3930,9 +3933,9 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Enter the owner\'s full legal name as it should appear on the PDF cover page and within legal declarations.',
-                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
               ),
               const SizedBox(height: 16),
               _formFieldLocal('Owner Full Legal Name', _ownerNameCtrl,
@@ -3944,9 +3947,9 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Link beneficiary aliases from your profile to their legal names. (Optional, aliases will show if left blank).',
-              style: TextStyle(color: _kTextSecondary, fontSize: 12),
+              style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
             ),
             const SizedBox(height: 12),
             ..._heirNameCtrls.entries.map((e) => Padding(
@@ -3962,9 +3965,9 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Provide executor and legal counsel contacts to assist with future inquiries (optional).',
-                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
               ),
               const SizedBox(height: 12),
               _formFieldLocal('Executor Name', _execNameCtrl, hint: 'e.g. Bob Smith'),
@@ -3973,7 +3976,7 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
               _formFieldLocal('Attorney Email', _attEmailCtrl,
                   hint: 'attorney@apexlegal.com',
                   keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   Checkbox(
@@ -3981,10 +3984,10 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
                     onChanged: (v) => setState(() => _includeContacts = v ?? true),
                     activeColor: _kGold,
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Print contact details on PDF cover page',
-                      style: TextStyle(color: _kTextPrimary, fontSize: 12),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 12),
                     ),
                   ),
                 ],
@@ -4004,16 +4007,16 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(color: _kTextPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(label, style: TextStyle(color: _kTextPrimary(context), fontSize: 12, fontWeight: FontWeight.w600)),
             if (required) const Text(' *', style: TextStyle(color: _kRed, fontSize: 12)),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         TextFormField(
           controller: ctrl,
           keyboardType: keyboardType,
-          style: const TextStyle(color: _kTextPrimary, fontSize: 13),
-          decoration: _inputDecoration(hint: hint ?? '').copyWith(
+          style: TextStyle(color: _kTextPrimary(context), fontSize: 13),
+          decoration: _inputDecoration(context, hint: hint ?? '').copyWith(
             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           ),
           validator: required
@@ -4068,9 +4071,9 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _kCard,
+                  color: _kCard(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _kCardBorder),
+                  border: Border.all(color: _kCardBorder(context)),
                 ),
                 child: Row(
                   children: [
@@ -4083,17 +4086,17 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                       ),
                       child: const Icon(Icons.handshake_outlined, color: _kGold, size: 28),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('Custody Transfers & Offsite Loans',
                               style: TextStyle(color: _kGold, fontSize: 18, fontWeight: FontWeight.w700)),
                           SizedBox(height: 4),
                           Text(
                             'Track physical custody of coins held in safety deposit boxes, offsite vaults, or loaned to museum exhibits or heirs.',
-                            style: TextStyle(color: _kTextSecondary, fontSize: 13, height: 1.4),
+                            style: TextStyle(color: _kTextSecondary(context), fontSize: 13, height: 1.4),
                           ),
                         ],
                       ),
@@ -4108,14 +4111,14 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Active Custody Locations (${itemsWithCustody.length} Tracked Items)',
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 16, fontWeight: FontWeight.w700)),
                   ElevatedButton.icon(
                     onPressed: () => _showNewCustodyModal(context),
-                    icon: const Icon(Icons.add_link_rounded, size: 18),
-                    label: const Text('New Custody Agreement'),
+                    icon: Icon(Icons.add_link_rounded, size: 18),
+                    label: Text('New Custody Agreement'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGold,
-                      foregroundColor: _kNavy,
+                      foregroundColor: _kNavy(context),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
@@ -4129,20 +4132,20 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: _kCard,
+                    color: _kCard(context),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kCardBorder),
+                    border: Border.all(color: _kCardBorder(context)),
                   ),
                   child: Column(
-                    children: const [
-                      Icon(Icons.inventory_2_outlined, color: _kTextSecondary, size: 48),
+                    children: [
+                      Icon(Icons.inventory_2_outlined, color: _kTextSecondary(context), size: 48),
                       SizedBox(height: 12),
                       Text('No Active Offsite Custody Agreements',
-                          style: TextStyle(color: _kTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: TextStyle(color: _kTextPrimary(context), fontSize: 15, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
                         'All coins are currently recorded in primary storage. Click "New Custody Agreement" to record offsite loans or safety deposit boxes.',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 13),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -4159,24 +4162,24 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: _kCard,
+                        color: _kCard(context),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kCardBorder),
+                        border: Border.all(color: _kCardBorder(context)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.shield_outlined, color: _kGold, size: 24),
-                          const SizedBox(width: 16),
+                          Icon(Icons.shield_outlined, color: _kGold, size: 24),
+                          SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Coin ID: ${item.coinId}',
-                                    style: const TextStyle(color: _kTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                                const SizedBox(height: 4),
+                                    style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
+                                SizedBox(height: 4),
                                 Text(
                                   'Location: ${item.custodialLocation ?? "Primary Storage"} • Custodian: ${item.subHandReceiptHolder ?? "Self"}',
-                                  style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                                  style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
                             ),
@@ -4218,35 +4221,35 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
   void _showNewCustodyModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _kCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: _kCard(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Issue Custody Transfer Agreement',
+            Text('Issue Custody Transfer Agreement',
                 style: TextStyle(color: _kGold, fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               controller: _locationCtrl,
-              style: const TextStyle(color: _kTextPrimary),
-              decoration: const InputDecoration(
+              style: TextStyle(color: _kTextPrimary(context)),
+              decoration: InputDecoration(
                 labelText: 'Storage Sub-Location (e.g. Bank Box #402, Gallery Vault)',
-                labelStyle: TextStyle(color: _kTextSecondary),
+                labelStyle: TextStyle(color: _kTextSecondary(context)),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: _custodianCtrl,
-              style: const TextStyle(color: _kTextPrimary),
-              decoration: const InputDecoration(
+              style: TextStyle(color: _kTextPrimary(context)),
+              decoration: InputDecoration(
                 labelText: 'Custodian / Borrower Alias (e.g. Son - Storage, Museum)',
-                labelStyle: TextStyle(color: _kTextSecondary),
+                labelStyle: TextStyle(color: _kTextSecondary(context)),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -4270,7 +4273,7 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: _kGold, foregroundColor: _kNavy),
+                style: ElevatedButton.styleFrom(backgroundColor: _kGold, foregroundColor: _kNavy(context)),
                 child: const Text('Issue Agreement & Log Document'),
               ),
             ),
@@ -4311,9 +4314,9 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _kCard,
+                  color: _kCard(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _kCardBorder),
+                  border: Border.all(color: _kCardBorder(context)),
                 ),
                 child: Row(
                   children: [
@@ -4326,17 +4329,17 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
                       ),
                       child: const Icon(Icons.verified_user_outlined, color: _kGold, size: 28),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('Routine Collection Spot-Checks & Audits',
                               style: TextStyle(color: _kGold, fontSize: 18, fontWeight: FontWeight.w700)),
                           SizedBox(height: 4),
                           Text(
                             'Value-Tiered Audits: Quarterly checks for high-value coins (>\$5,000) with automated PCGS/NGC cert status verification.',
-                            style: TextStyle(color: _kTextSecondary, fontSize: 13, height: 1.4),
+                            style: TextStyle(color: _kTextSecondary(context), fontSize: 13, height: 1.4),
                           ),
                         ],
                       ),
@@ -4351,16 +4354,16 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Audit History (${auditList.length} Verified Log Entries)',
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 16, fontWeight: FontWeight.w700)),
                   ElevatedButton.icon(
                     onPressed: _isAuditing ? null : () => _runSpotCheck(context),
                     icon: _isAuditing
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _kNavy))
-                        : const Icon(Icons.play_arrow_rounded, size: 18),
+                        ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _kNavy(context)))
+                        : Icon(Icons.play_arrow_rounded, size: 18),
                     label: Text(_isAuditing ? 'Auditing...' : 'Run Spot-Check Session'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGold,
-                      foregroundColor: _kNavy,
+                      foregroundColor: _kNavy(context),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
@@ -4374,20 +4377,20 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: _kCard,
+                    color: _kCard(context),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kCardBorder),
+                    border: Border.all(color: _kCardBorder(context)),
                   ),
                   child: Column(
-                    children: const [
-                      Icon(Icons.fact_check_outlined, color: _kTextSecondary, size: 48),
+                    children: [
+                      Icon(Icons.fact_check_outlined, color: _kTextSecondary(context), size: 48),
                       SizedBox(height: 12),
                       Text('No Spot-Check Audit Logs Recorded Yet',
-                          style: TextStyle(color: _kTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: TextStyle(color: _kTextPrimary(context), fontSize: 15, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
                         'Run a routine collection spot-check to verify slab cert statuses and generate tamper-evident SHA-256 probate logs.',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 13),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -4404,24 +4407,24 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: _kCard,
+                        color: _kCard(context),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kCardBorder),
+                        border: Border.all(color: _kCardBorder(context)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, color: Color(0xFF10B981), size: 24),
-                          const SizedBox(width: 16),
+                          Icon(Icons.check_circle_outline, color: Color(0xFF10B981), size: 24),
+                          SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Coin ID: ${audit.coinId} • ${audit.auditType}',
-                                    style: const TextStyle(color: _kTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                                const SizedBox(height: 4),
+                                    style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
+                                SizedBox(height: 4),
                                 Text(
                                   'Condition: ${audit.physicalConditionCode} • Verified By: ${audit.verifiedByAlias} • Hash: ${audit.auditHash.substring(0, 16)}...',
-                                  style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                                  style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
                             ),
@@ -4500,9 +4503,9 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _kCard,
+                  color: _kCard(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _kCardBorder),
+                  border: Border.all(color: _kCardBorder(context)),
                 ),
                 child: Row(
                   children: [
@@ -4515,17 +4518,17 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                       ),
                       child: const Icon(Icons.receipt_long_outlined, color: _kGold, size: 28),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('Estate Audit Log & Basis Ledger',
                               style: TextStyle(color: _kGold, fontSize: 18, fontWeight: FontWeight.w700)),
                           SizedBox(height: 4),
                           Text(
                             'Sequential Document Register (NUM-DOC-YYYY-XXXXX). Tracks baseline locks, appraisal updates, and IRC § 1014 stepped-up basis snapshots.',
-                            style: TextStyle(color: _kTextSecondary, fontSize: 13, height: 1.4),
+                            style: TextStyle(color: _kTextSecondary(context), fontSize: 13, height: 1.4),
                           ),
                         ],
                       ),
@@ -4540,14 +4543,14 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Document Register Ledger (${docs.length} Official Records)',
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: _kTextPrimary(context), fontSize: 16, fontWeight: FontWeight.w700)),
                   ElevatedButton.icon(
                     onPressed: () => _snapshotSteppedUpBasis(context),
-                    icon: const Icon(Icons.trending_up_rounded, size: 18),
-                    label: const Text('Snapshot Stepped-Up Basis (IRC § 1014)'),
+                    icon: Icon(Icons.trending_up_rounded, size: 18),
+                    label: Text('Snapshot Stepped-Up Basis (IRC § 1014)'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGold,
-                      foregroundColor: _kNavy,
+                      foregroundColor: _kNavy(context),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
@@ -4561,20 +4564,20 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: _kCard,
+                    color: _kCard(context),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kCardBorder),
+                    border: Border.all(color: _kCardBorder(context)),
                   ),
                   child: Column(
-                    children: const [
-                      Icon(Icons.find_in_page_outlined, color: _kTextSecondary, size: 48),
+                    children: [
+                      Icon(Icons.find_in_page_outlined, color: _kTextSecondary(context), size: 48),
                       SizedBox(height: 12),
                       Text('No Document Register Records Issued Yet',
-                          style: TextStyle(color: _kTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: TextStyle(color: _kTextPrimary(context), fontSize: 15, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
                         'Document Register numbers (NUM-DOC-YYYY-XXXXX) are automatically issued upon Baseline Lock, Custody Transfer, or Stepped-Up Basis Snapshots.',
-                        style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                        style: TextStyle(color: _kTextSecondary(context), fontSize: 13),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -4591,9 +4594,9 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: _kCard,
+                        color: _kCard(context),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kCardBorder),
+                        border: Border.all(color: _kCardBorder(context)),
                       ),
                       child: Row(
                         children: [
@@ -4608,24 +4611,24 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                               style: const TextStyle(color: _kGold, fontSize: 12, fontWeight: FontWeight.w800, fontFamily: 'monospace'),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(doc.title,
-                                    style: const TextStyle(color: _kTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                                const SizedBox(height: 4),
+                                    style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
+                                SizedBox(height: 4),
                                 Text(
                                   '${doc.typeLabel} • ${doc.assetCount} Assets • Total FMV: ${_dollarFmt.format(doc.totalFmv)}',
-                                  style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                                  style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
                             ),
                           ),
                           Text(
                             DateFormat('yyyy-MM-dd').format(doc.createdAt),
-                            style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                            style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                           ),
                         ],
                       ),

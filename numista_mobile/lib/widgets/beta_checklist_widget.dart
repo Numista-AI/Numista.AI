@@ -72,6 +72,11 @@ class BetaChecklistModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtext = isDark ? Colors.grey.shade400 : const Color(0xFF5A5C69);
+    final divider = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
 
     return Container(
       margin: EdgeInsets.only(
@@ -82,7 +87,7 @@ class BetaChecklistModal extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: bg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
         boxShadow: const [
@@ -116,7 +121,7 @@ class BetaChecklistModal extends StatelessWidget {
                   Text(
                     '20-Point Beta Checklist',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
+                          color: text,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
@@ -159,8 +164,8 @@ class BetaChecklistModal extends StatelessWidget {
                     children: [
                       Text(
                         'Progress: $totalDone / $totalTasks Tasks (${(progressRatio * 100).toInt()}%)',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: text,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -190,7 +195,7 @@ class BetaChecklistModal extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progressRatio,
                       minHeight: 10,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         progressRatio == 1.0
                             ? Colors.green
@@ -205,8 +210,8 @@ class BetaChecklistModal extends StatelessWidget {
                     height: mediaQuery.size.height * 0.55,
                     child: ListView.separated(
                       itemCount: BetaChecklistService.allTasks.length,
-                      separatorBuilder: (_, i) => const Divider(
-                          color: Colors.white12, height: 1),
+                      separatorBuilder: (_, i) => Divider(
+                          color: divider, height: 1),
                       itemBuilder: (context, index) {
                         final task = BetaChecklistService.allTasks[index];
                         final isDone = completedTasks.contains(task.id);
@@ -242,7 +247,7 @@ class BetaChecklistModal extends StatelessWidget {
                                             style: TextStyle(
                                               color: isDone
                                                   ? Colors.grey
-                                                  : Colors.white,
+                                                  : text,
                                               fontWeight: FontWeight.w600,
                                               decoration: isDone
                                                   ? TextDecoration.lineThrough
@@ -276,7 +281,7 @@ class BetaChecklistModal extends StatelessWidget {
                                     Text(
                                       task.description,
                                       style: TextStyle(
-                                        color: Colors.grey.shade400,
+                                        color: subtext,
                                         fontSize: 12,
                                       ),
                                     ),

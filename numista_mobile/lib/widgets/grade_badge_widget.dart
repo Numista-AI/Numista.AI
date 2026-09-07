@@ -20,24 +20,25 @@ class GradeBadgeWidget extends StatelessWidget {
 
     final colors = _getBadgeColors(gradeCode);
     final tooltipText = _getGradeTooltip(gradeCode);
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Tooltip(
       message: tooltipText,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF334155)),
-        boxShadow: const [
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black38,
+            color: isDark ? Colors.black38 : Colors.black12,
             blurRadius: 6,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      textStyle: const TextStyle(
-        color: Colors.white,
+      textStyle: TextStyle(
+        color: isDark ? Colors.white : const Color(0xFF0F172A),
         fontSize: 12,
         fontWeight: FontWeight.w500,
         height: 1.3,
@@ -221,12 +222,17 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
   @override
   Widget build(BuildContext context) {
     final double sheetHeight = MediaQuery.of(context).size.height * 0.85;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0E1117) : Colors.white;
+    final text70 = isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+    final text54 = isDark ? Colors.white54 : const Color(0xFF0F172A).withAlpha(140);
+    final divider = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
 
     return Container(
       height: sheetHeight,
-      decoration: const BoxDecoration(
-        color: Color(0xFF0E1117), // Premium Dark Mode Background
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
         ),
@@ -239,7 +245,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white24,
+              color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -249,22 +255,22 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Sheldon Grade Guide',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: text70,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54),
+                  icon: Icon(Icons.close, color: text54),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
           ),
-          const Divider(color: Colors.white12, height: 1),
+          Divider(color: divider, height: 1),
           // Content
           Expanded(
             child: _buildContent(),
@@ -275,6 +281,10 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
   }
 
   Widget _buildContent() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final text70 = isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+
     if (_loading) {
       return const Center(
         child: CircularProgressIndicator(
@@ -295,7 +305,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: text70, fontSize: 14),
               ),
             ],
           ),
@@ -325,13 +335,13 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+              gradient: LinearGradient(
+                colors: isDark ? const [Color(0xFF1E293B), Color(0xFF0F172A)] : const [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFCBD5E1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,13 +360,13 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white10,
+                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'Sheldon Score: $scoreStr',
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: text70,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -367,8 +377,8 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
                 const SizedBox(height: 8),
                 Text(
                   gradeName,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: text,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -382,7 +392,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
           _SectionTitle(title: 'Wear & Preservation'),
           Text(
             wearDesc,
-            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+            style: TextStyle(color: text, fontSize: 14, height: 1.5),
           ),
           const SizedBox(height: 20),
 
@@ -390,7 +400,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
           _SectionTitle(title: 'Surface Luster'),
           Text(
             lusterDesc,
-            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+            style: TextStyle(color: text, fontSize: 14, height: 1.5),
           ),
           const SizedBox(height: 20),
 
@@ -432,8 +442,8 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-                color: Colors.white.withAlpha(5),
+                border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                color: isDark ? Colors.white.withAlpha(5) : const Color(0xFFF8FAFC),
               ),
               clipBehavior: Clip.antiAlias,
               child: CachedNetworkImage(
@@ -445,12 +455,12 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
                     child: CircularProgressIndicator(color: Color(0xFFF63366)),
                   ),
                 ),
-                errorWidget: (context, url, error) => const SizedBox(
+                errorWidget: (context, url, error) => SizedBox(
                   height: 100,
                   child: Center(
                     child: Text(
                       'Failed to load illustration.',
-                      style: TextStyle(color: Colors.white30, fontSize: 12),
+                      style: TextStyle(color: isDark ? Colors.white30 : const Color(0xFF0F172A).withAlpha(80), fontSize: 12),
                     ),
                   ),
                 ),
@@ -473,8 +483,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white38,
+        style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : const Color(0xFF0F172A).withAlpha(100),
           fontSize: 11,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.2,

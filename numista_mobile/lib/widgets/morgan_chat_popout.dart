@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/ai_chat_screen.dart';
@@ -104,9 +104,11 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
     _top = _top.clamp(0.0, (screenSize.height - 100).clamp(0.0, screenSize.height));
     _left = _left.clamp(0.0, (screenSize.width - 100).clamp(0.0, screenSize.width));
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final popoutCard = Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1220), // matching AiChatScreen deep navy background
+        color: isDark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2), // matching AiChatScreen deep navy background
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

@@ -192,6 +192,7 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildHeader(),
       _buildStatsBar(),
@@ -232,12 +233,14 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
     ]),
   );
 
-  Widget _buildStatsBar() => Container(
+  Widget _buildStatsBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
     margin: const EdgeInsets.fromLTRB(24, 10, 24, 6),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)]),
+      gradient: LinearGradient(
+          colors: isDark ? const [Color(0xFF0F172A), Color(0xFF1E293B)] : const [Color(0xFFF8FAFC), Color(0xFFE2E8F0)]),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
@@ -254,18 +257,26 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
       _sc('💡', '$_nicknamePending',    'Nicknames'),
     ]),
   );
+  }
 
-  Widget _sc(String icon, String val, String lbl) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text('$icon $val', style: const TextStyle(
-          color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-      Text(lbl, style: const TextStyle(
-          color: Color(0xFF94A3B8), fontSize: 10)),
-    ],
-  );
 
-  Widget _vd() => Container(height: 26, width: 1, color: const Color(0xFF334155));
+  Widget _sc(String icon, String val, String lbl) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$icon $val', style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 12)),
+        Text(lbl, style: TextStyle(
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _vd() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(height: 26, width: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1));
+  }
 
   Widget _buildTabBar() => Container(
     margin: const EdgeInsets.symmetric(horizontal: 24),

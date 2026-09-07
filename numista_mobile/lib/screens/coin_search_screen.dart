@@ -1051,12 +1051,13 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
+      title: Text(
         'Add to Wish List',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
       ),
       content: SizedBox(
         width: 320,
@@ -1067,30 +1068,37 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
             children: [
               Text(
                 widget.result.displayTitle,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
               ),
               if (widget.result.displaySubtitle.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   widget.result.displaySubtitle,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 12),
                 ),
               ],
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Target Price',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               TextField(
                 controller: _priceCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
                 decoration: InputDecoration(
-                  fillColor: const Color(0xFF0F172A),
+                  fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: isDark ? Colors.transparent : const Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: isDark ? Colors.transparent : const Color(0xFFE2E8F0)),
+                  ),
                   hintText: '\$0.00',
-                  hintStyle: const TextStyle(color: Colors.white30),
+                  hintStyle: TextStyle(color: isDark ? Colors.white30 : const Color(0xFF94A3B8)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1101,10 +1109,10 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                     child: CircularProgressIndicator(color: Color(0xFFF63366)),
                   ),
                 ),
-                const Center(
+                Center(
                   child: Text(
                     'Fetching live eBay market value...',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 12),
                   ),
                 ),
               ] else if (_error != null) ...[
@@ -1113,9 +1121,9 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                   style: const TextStyle(color: Colors.redAccent, fontSize: 12),
                 ),
               ] else if (_ebayResults.isEmpty) ...[
-                const Text(
+                Text(
                   'No active listings found on eBay. Target price defaulted.',
-                  style: TextStyle(color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
+                  style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ] else ...[
                 const Text(
@@ -1144,9 +1152,9 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                           width: 80,
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
                           ),
                           child: Column(
                             children: [
@@ -1155,7 +1163,7 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                                   borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
                                   child: img.isNotEmpty
                                       ? Image.network(img, fit: BoxFit.cover, width: double.infinity)
-                                      : const Icon(Icons.image_not_supported, size: 20, color: Colors.white24),
+                                      : Icon(Icons.image_not_supported, size: 20, color: isDark ? Colors.white24 : const Color(0xFF94A3B8)),
                                 ),
                               ),
                               Padding(
@@ -1180,7 +1188,7 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(

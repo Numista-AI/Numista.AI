@@ -1551,10 +1551,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.324',
+    version: 'v4.325',
     date: '2026-09-07',
     description: 'Scan Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Scan: full system check v4.324 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.324',
+    date: '2026-09-07',
+    description: 'Scan Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Scan: full system check v4.322 and update SCAN_REPORT.md',
     ],

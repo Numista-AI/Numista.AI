@@ -149,13 +149,13 @@ class _MintErrorLibraryScreenState extends State<MintErrorLibraryScreen>
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _kDark,
+                  color: Theme.of(context).brightness == Brightness.dark ? _kDark : const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count errors',
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF475569),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),

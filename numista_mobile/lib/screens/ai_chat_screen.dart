@@ -61,13 +61,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
   String _displayName = 'there';
 
   // ── Morgan colour palette ────────────────────────────────────────────────
-  static const _bg    = Color(0xFF0B1220);   // deep navy
-  static const _surf  = Color(0xFF162033);   // surface
-  static const _teal  = Color(0xFF2DD4BF);   // Morgan teal
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0B1220) : Color(0xFFF4F4F2);
+  Color get _surf => Theme.of(context).brightness == Brightness.dark ? Color(0xFF162033) : Colors.white;
+  Color get _teal => Color(0xFF2DD4BF);
   static const _gold  = Color(0xFFD4A843);   // Morgan gold
-  static const _sub   = Color(0xFF94A3B8);   // slate sub-text
-  static const _userBubble = Color(0xFF1E4D4D); // dark teal for user
-  static const _aiBubble   = Color(0xFF162033); // surface for Morgan
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? Color(0xFF94A3B8) : Color(0xFF5A5C69);
+  Color get _userBubble => Theme.of(context).brightness == Brightness.dark ? Color(0xFF1E4D4D) : Color(0xFFE0F2F1);
+  Color get _aiBubble => Theme.of(context).brightness == Brightness.dark ? Color(0xFF162033) : Color(0xFFF0F4F8);
+  Color get _textPrimary => Theme.of(context).brightness == Brightness.dark ? Colors.white : Color(0xFF0F172A);
 
   // ── Firestore session path (Keyed strictly by Auth UID) ────────────────────
   CollectionReference? get _sessionsRef {
@@ -333,16 +334,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: _surf,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Start a new chat?',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
+        title: Text('Start a new chat?',
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(
           'I\'ll remember your collection, but this conversation will start fresh.',
           style: TextStyle(color: _sub, fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _sub)),
+            child: Text('Cancel', style: TextStyle(color: _sub)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -426,7 +427,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         child: Row(
           children: [
             if (widget.isPopout)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(right: 8),
                 child: Icon(Icons.drag_indicator_rounded, color: _teal, size: 18),
               ),
@@ -452,18 +453,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Ask Morgan',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                        color: _textPrimary),
                   ),
                   Text(
                     _isLoadingContext
@@ -471,7 +472,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         : _ctx == null || _ctx!.isEmpty
                             ? 'Your personal numismatic guide'
                             : '${_ctx!.totalCoins} coins · \$${_ctx!.portfolioValue.toStringAsFixed(2)}',
-                    style: const TextStyle(color: _sub, fontSize: 11),
+                    style: TextStyle(color: _sub, fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -495,7 +496,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           // Settings
           if (!widget.isMinimized)
             IconButton(
-              icon: const Icon(Icons.tune_rounded, color: _sub, size: 20),
+              icon: Icon(Icons.tune_rounded, color: _sub, size: 20),
               tooltip: 'Morgan settings',
               onPressed: () async {
                 final changed = await showMorganSettings(context);
@@ -512,7 +513,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           // Refresh context
           if (!widget.isMinimized)
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: _sub, size: 20),
+              icon: Icon(Icons.refresh_rounded, color: _sub, size: 20),
               tooltip: 'Refresh collection data',
               onPressed: () async {
                 MorganChatContextService.invalidate();
@@ -523,7 +524,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           // New chat
           if (!widget.isMinimized)
             IconButton(
-              icon: const Icon(Icons.add_comment_outlined, color: _sub, size: 20),
+              icon: Icon(Icons.add_comment_outlined, color: _sub, size: 20),
               tooltip: 'New chat',
               onPressed: _isLoading ? null : _onNewChat,
             ),
@@ -539,7 +540,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
           if (widget.isPopout && widget.onClose != null)
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: _sub, size: 20),
+              icon: Icon(Icons.close_rounded, color: _sub, size: 20),
               tooltip: 'Close chat',
               onPressed: widget.onClose,
             ),
@@ -560,7 +561,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             _ctx != null && !_ctx!.isEmpty
                 ? 'Hi $_displayName! Try asking:'
                 : 'Try asking:',
-            style: const TextStyle(
+            style: TextStyle(
                 color: _sub, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
@@ -606,7 +607,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       margin: const EdgeInsets.only(top: 10, bottom: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _teal.withAlpha(120), width: 1.5),
       ),
@@ -615,13 +616,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: _teal, size: 20),
-              const SizedBox(width: 8),
+              Icon(Icons.check_circle_rounded, color: _teal, size: 20),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Added to Binder: $year${mint.isNotEmpty ? "-$mint" : ""} $denom',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: TextStyle(
+                      color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
               if (isDupe)
@@ -636,10 +637,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text('Storage: $storage  •  Condition: $condition',
-              style: const TextStyle(color: _sub, fontSize: 11)),
-          const SizedBox(height: 10),
+              style: TextStyle(color: _sub, fontSize: 11)),
+          SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -655,7 +656,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _teal,
-                        side: const BorderSide(color: _teal),
+                        side: BorderSide(color: _teal),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         textStyle: const TextStyle(fontSize: 11),
                       ),
@@ -720,7 +721,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           border: isUser
               ? Border.all(color: _teal.withAlpha(60), width: 1)
-              : Border.all(color: Colors.white.withAlpha(15), width: 1),
+              : Border.all(color: _textPrimary.withAlpha(15), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,12 +772,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               color: _teal,
                               size: 15,
                             ),
-                            const SizedBox(width: 3),
+                            SizedBox(width: 3),
                             Text(
                               TtsVoiceService.isPlaying && TtsVoiceService.currentlySpeakingText == content
                                   ? 'Stop'
                                   : 'Listen',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: _teal, fontSize: 11, fontWeight: FontWeight.w500),
                             ),
                           ],
@@ -790,7 +791,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               content,
               style: TextStyle(
                   fontSize: 15,
-                  color: isUser ? Colors.white : Colors.white.withAlpha(230),
+                  color: isUser ? _textPrimary : _textPrimary.withAlpha(230),
                   height: 1.55),
             ),
             if (payload != null && payload['action'] == 'add_coin')
@@ -810,14 +811,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
         decoration: BoxDecoration(
           color: _aiBubble,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withAlpha(15)),
+          border: Border.all(color: _textPrimary.withAlpha(15)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Morgan is thinking',
+            Text('Morgan is thinking',
                 style: TextStyle(color: _sub, fontSize: 13)),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             SizedBox(
               width: 32, height: 10,
               child: LinearProgressIndicator(
@@ -850,7 +851,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  const Text('Mint Marks: ', style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text('Mint Marks: ', style: TextStyle(color: _sub, fontSize: 11, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
                   _mintChip('Philadelphia (P)', 'P'),
                   _mintChip('Denver (D)', 'D'),
@@ -875,7 +876,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     spellCheckConfiguration: const SpellCheckConfiguration(),
                     autocorrect: true,
                     enableSuggestions: true,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    style: TextStyle(color: _textPrimary, fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Ask Morgan about your collection…',
                       hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
@@ -889,7 +890,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               GestureDetector(
                 onTap: _isLoading ? null : () => _send(_controller.text),
                 child: AnimatedContainer(
@@ -932,7 +933,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _teal.withAlpha(80)),
         ),
-        child: Text(label, style: const TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold)),
+        child: Text(label, style: TextStyle(color: _teal, fontSize: 11, fontWeight: FontWeight.bold)),
       ),
     ),
   );
@@ -947,9 +948,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
         border: Border.all(color: _teal.withAlpha(80)),
       ),
       child: Text(label,
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 13,
-              color: Colors.white)),
+              color: _textPrimary)),
     ),
   );
 }

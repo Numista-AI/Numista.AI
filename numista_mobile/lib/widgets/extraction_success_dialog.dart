@@ -20,9 +20,15 @@ class ExtractionSuccessDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasItems = count > 0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtext = isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+    final text60 = isDark ? Colors.white60 : const Color(0xFF0F172A).withAlpha(150);
+    final text54 = isDark ? Colors.white54 : const Color(0xFF0F172A).withAlpha(140);
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
@@ -34,8 +40,8 @@ class ExtractionSuccessDialog extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             hasItems ? 'Coins Sent to Review!' : 'Nothing Found',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: text,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
@@ -46,35 +52,35 @@ class ExtractionSuccessDialog extends StatelessWidget {
           ? Text(
               'I found $count item${count == 1 ? '' : 's'} and sent ${count == 1 ? 'it' : 'them'} '
               'to the Review Hub. Check them over and tap "Commit" to save.',
-              style: const TextStyle(color: Colors.white70, height: 1.5),
+              style: TextStyle(color: subtext, height: 1.5),
             )
-          : const Column(
+          : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "I processed the file but couldn't find any coin or numismatic items.",
-                  style: TextStyle(color: Colors.white70, height: 1.5),
+                  style: TextStyle(color: subtext, height: 1.5),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Text(
                   'Common reasons:',
                   style: TextStyle(
-                      color: Colors.white60,
+                      color: text60,
                       fontWeight: FontWeight.w600,
                       fontSize: 13),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '• The PDF is a scanned image (no selectable text)\n'
                   '• The invoice only contains supplies or non-coin items\n'
                   '• The file is password-protected or corrupted',
-                  style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.6),
+                  style: TextStyle(color: text54, fontSize: 13, height: 1.6),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   'Try a different file, or use the Manual Entry tab to add coins one at a time.',
-                  style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5),
+                  style: TextStyle(color: text60, fontSize: 13, height: 1.5),
                 ),
               ],
             ),
@@ -83,7 +89,7 @@ class ExtractionSuccessDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: Text(
             hasItems ? 'Add More' : 'Try Another File',
-            style: const TextStyle(color: Colors.white54),
+            style: TextStyle(color: text54),
           ),
         ),
         if (hasItems)

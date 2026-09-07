@@ -48,11 +48,12 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
   String _saved = '';
 
   // Colours (same palette as MorganGreeter)
-  static const _bg   = Color(0xFF0B1220);
-  static const _surf = Color(0xFF162033);
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2);
+  Color get _surf => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF162033) : Colors.white;
   static const _teal = Color(0xFF2DD4BF);
   static const _gold = Color(0xFFD4A843);
-  static const _sub  = Color(0xFF94A3B8);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
 
   @override
   void initState() {
@@ -164,23 +165,23 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
           const SizedBox(height: 20),
 
           // Question
-          const Text(
+          Text(
             'Before we get started —',
             style: TextStyle(color: _sub, fontSize: 15),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'What should I call you?',
             style: TextStyle(
-                color: Colors.white,
+                color: _text,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.3),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'You can say "Eric", "Sir", "Grandpa" —\nwhatever feels right to you!',
             style: TextStyle(color: _sub, fontSize: 14, height: 1.5),
             textAlign: TextAlign.center,
@@ -198,13 +199,13 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
               controller: _ctrl,
               focusNode: _focus,
               autofocus: true,
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: _text,
                   fontSize: 20,
                   fontWeight: FontWeight.w500),
               textCapitalization: TextCapitalization.words,
               textAlign: TextAlign.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Type your name here…',
                 hintStyle: TextStyle(color: _sub, fontSize: 16),
                 border: InputBorder.none,
@@ -290,8 +291,8 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
 
           Text(
             'Perfect$name! 😊',
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: _text,
                 fontSize: 26,
                 fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
@@ -302,7 +303,7 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
                 ? "I'll take you through this one step at a time.\nYou can ask me anything, any time."
                 : "I'll call you $_saved from now on.\nI'll take you through this one step at a time.",
             style:
-                const TextStyle(color: _sub, fontSize: 16, height: 1.6),
+                TextStyle(color: _sub, fontSize: 16, height: 1.6),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
