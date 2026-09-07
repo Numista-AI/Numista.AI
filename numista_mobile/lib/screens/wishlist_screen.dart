@@ -28,6 +28,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   bool _coinsLoaded = false;
   String? _expandedProgramId; // which program card is open
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   @override
   void initState() {
     super.initState();
@@ -145,27 +147,27 @@ class _WishlistScreenState extends State<WishlistScreen> {
           showDialog(
             context: context,
             builder: (_) => AlertDialog(
-              backgroundColor: const Color(0xFF161B27),
+              backgroundColor: _isDark ? const Color(0xFF161B27) : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.share, color: Color(0xFF10B981)),
-                  SizedBox(width: 10),
-                  Text("Share Wish List", style: TextStyle(color: Colors.white)),
+                  const Icon(Icons.share, color: Color(0xFF10B981)),
+                  const SizedBox(width: 10),
+                  Text("Share Wish List", style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A))),
                 ],
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Your read-only public wish list link is ready:", style: TextStyle(color: Colors.white70)),
+                  Text("Your read-only public wish list link is ready:", style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69))),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0E1117),
+                      color: _isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F4F2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF2A3045)),
+                      border: Border.all(color: _isDark ? const Color(0xFF2A3045) : const Color(0xFFE2E8F0)),
                     ),
                     child: SelectableText(shareUrl, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                   ),
@@ -174,7 +176,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text("Close", style: TextStyle(color: Colors.white54)),
+                  child: Text("Close", style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF64748B))),
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
@@ -674,11 +676,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   size: 44, color: const Color(0xFFF63366).withAlpha(200)),
             ),
             const SizedBox(height: 20),
-            const Text('Your Wish List is Empty',
+            Text('Your Wish List is Empty',
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white)),
+                    color: _isDark ? Colors.white : const Color(0xFF0F172A))),
             const SizedBox(height: 8),
             const Text(
               'Tap ♥ Wish List on any coin in\nMy Collection to save it here.',
@@ -1145,24 +1147,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final isReserved = reservedCount > 0;
     return Container(
       decoration: BoxDecoration(
-        color: isReserved ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
+        color: isReserved ? (_isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7)) : (_isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReserved ? const Color(0xFF10B981) : const Color(0xFF334155),
+          color: isReserved ? const Color(0xFF10B981) : (_isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
         ),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Icon(
           isReserved ? Icons.card_giftcard : Icons.card_giftcard_outlined,
-          color: isReserved ? const Color(0xFF34D399) : Colors.white54,
+          color: isReserved ? const Color(0xFF34D399) : (_isDark ? Colors.white54 : const Color(0xFF64748B)),
         ),
         title: Text(
           isReserved
               ? "🎁 $reservedCount Wish List Items Reserved by Relatives ✓"
               : "🎁 0 items currently reserved by family members",
           style: TextStyle(
-            color: isReserved ? Colors.white : Colors.white70,
+            color: isReserved ? (_isDark ? Colors.white : const Color(0xFF064E3B)) : (_isDark ? Colors.white70 : const Color(0xFF475569)),
             fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
@@ -1171,14 +1173,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
           isReserved
               ? "Tap to view gift items family members marked as bought"
               : "Share your gift list to let family members reserve items for holidays",
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 11),
         ),
         children: details.isEmpty
             ? []
             : details.map((d) => ListTile(
                   dense: true,
                   leading: const Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 18),
-                  title: Text(d['title']!, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                  title: Text(d['title']!, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
                   subtitle: Text("Reserved by ${d['reserved_by']}", style: const TextStyle(color: Color(0xFF34D399), fontSize: 11)),
                 )).toList(),
       ),

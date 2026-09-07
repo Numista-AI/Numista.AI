@@ -12,6 +12,8 @@ class AdminFeedbackScreen extends StatefulWidget {
 
 class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
     with SingleTickerProviderStateMixin {
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   late TabController _tabController;
   final TextEditingController _testerEmailController = TextEditingController();
   String _selectedCategoryFilter = 'ALL';
@@ -49,9 +51,9 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
           alignment: Alignment.center,
           children: [
             Container(
-              constraints: const BoxConstraints(maxHeight: 700, maxWidth: 900),
+              constraints: BoxConstraints(maxHeight: 700, maxWidth: 900),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
+                color: _isDark ? Color(0xFF0F172A) : Color(0xFFF4F4F2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
               ),
@@ -79,7 +81,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
               child: CircleAvatar(
                 backgroundColor: Colors.black54,
                 child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
+                  icon: Icon(Icons.close, color: _isDark ? Colors.white : Color(0xFF0F172A)),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ),
@@ -95,23 +97,23 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Update Status & Log Note', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: _isDark ? Color(0xFF1E293B) : Colors.white,
+        title: Text('Update Status & Log Note', style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A), fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Change status to: $currentStatus', style: const TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: noteController,
               maxLines: 2,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: 'Optional resolution or triage notes...',
                 hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
-                fillColor: const Color(0xFF0F172A),
+                fillColor: _isDark ? Color(0xFF0F172A) : Color(0xFFF4F4F2),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
@@ -135,7 +137,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                 newStatus: currentStatus,
               );
             },
-            child: const Text('Save Status', style: TextStyle(color: Colors.white)),
+            child: Text('Save Status', style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A))),
           ),
         ],
       ),
@@ -145,12 +147,12 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: _isDark ? Color(0xFF0F172A) : Color(0xFFF4F4F2),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text(
+        backgroundColor: _isDark ? Color(0xFF1E293B) : Colors.white,
+        title: Text(
           'Admin Beta Feedback Portal',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A), fontWeight: FontWeight.bold),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -236,7 +238,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: _isDark ? Color(0xFF1E293B) : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.2)),
               ),
@@ -256,7 +258,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
               child: Row(
                 children: [
-                  const Text('Category: ', style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('Category: ', style: TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -269,7 +271,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                               selected: isSelected,
                               label: Text(cat, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.grey)),
                               selectedColor: Colors.blueAccent,
-                              backgroundColor: const Color(0xFF1E293B),
+                              backgroundColor: _isDark ? Color(0xFF1E293B) : Colors.white,
                               onSelected: (val) {
                                 setState(() {
                                   _selectedCategoryFilter = cat;
@@ -314,7 +316,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                         if (status == 'RESOLVED') statusColor = Colors.green;
 
                         return Card(
-                          color: const Color(0xFF1E293B),
+                          color: _isDark ? Color(0xFF1E293B) : Colors.white,
                           margin: const EdgeInsets.only(bottom: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -348,7 +350,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                     ),
                                     DropdownButton<String>(
                                       value: status,
-                                      dropdownColor: const Color(0xFF0F172A),
+                                      dropdownColor: _isDark ? Color(0xFF0F172A) : Color(0xFFF4F4F2),
                                       underline: const SizedBox.shrink(),
                                       items: ['OPEN', 'TRIAGED', 'RESOLVED']
                                           .map((s) => DropdownMenuItem(
@@ -400,12 +402,12 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0F172A),
+                                      color: _isDark ? Color(0xFF0F172A) : Color(0xFFF4F4F2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       comment,
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A), fontSize: 14),
                                     ),
                                   ),
 
@@ -454,7 +456,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                                       color: Colors.black54,
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
-                                                    child: const Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                                    child: Icon(Icons.zoom_in, color: _isDark ? Colors.white : Color(0xFF0F172A), size: 14),
                                                   ),
                                                 ),
                                               ],
@@ -462,13 +464,13 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      SizedBox(width: 12),
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
+                                          Text(
                                             'Attached Screenshot',
-                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                            style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
                                           ),
                                           const SizedBox(height: 4),
                                           const Text(
@@ -543,7 +545,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
             children: [
               // Add Tester Card
               Card(
-                color: const Color(0xFF1E293B),
+                color: _isDark ? Color(0xFF1E293B) : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -551,7 +553,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                       Expanded(
                         child: TextField(
                           controller: _testerEmailController,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A)),
                           decoration: const InputDecoration(
                             hintText: 'Enter tester email address...',
                             hintStyle: TextStyle(color: Colors.grey),
@@ -563,8 +565,8 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
                         ),
-                        icon: const Icon(Icons.person_add, color: Colors.white),
-                        label: const Text('Add Beta Tester', style: TextStyle(color: Colors.white)),
+                        icon: Icon(Icons.person_add, color: _isDark ? Colors.white : Color(0xFF0F172A)),
+                        label: Text('Add Beta Tester', style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A))),
                         onPressed: () async {
                           final email = _testerEmailController.text.trim();
                           if (email.isNotEmpty) {
@@ -588,9 +590,9 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
               ),
               const SizedBox(height: 16),
 
-              const Text(
+              Text(
                 'Active Testers List',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
@@ -603,9 +605,9 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen>
                     final isBeta = (doc.data()['isBetaTester'] ?? false) as bool;
 
                     return ListTile(
-                      tileColor: const Color(0xFF1E293B),
+                      tileColor: _isDark ? Color(0xFF1E293B) : Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      title: Text(email, style: const TextStyle(color: Colors.white)),
+                      title: Text(email, style: TextStyle(color: _isDark ? Colors.white : Color(0xFF0F172A))),
                       trailing: Switch(
                         value: isBeta,
                         activeThumbColor: Colors.blueAccent,

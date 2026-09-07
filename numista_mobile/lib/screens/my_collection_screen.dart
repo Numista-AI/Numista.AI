@@ -5445,17 +5445,18 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const bgCard = Color(0xFF161B27);
     const pink   = Color(0xFFF63366);
 
     return AlertDialog(
       backgroundColor: bgCard,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.auto_awesome, color: pink),
-          SizedBox(width: 10),
-          Text('AI Collection & Inventory Report', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const Icon(Icons.auto_awesome, color: pink),
+          const SizedBox(width: 10),
+          Text('AI Collection & Inventory Report', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
       content: SizedBox(
@@ -5465,14 +5466,14 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_isLoading) ...[
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Column(
                     children: [
-                      CircularProgressIndicator(color: pink),
-                      SizedBox(height: 16),
-                      Text('Compiling legal-grade PDF report via Cloud Run...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      const CircularProgressIndicator(color: pink),
+                      const SizedBox(height: 16),
+                      Text('Compiling legal-grade PDF report via Cloud Run...', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -5483,14 +5484,14 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                 decoration: BoxDecoration(color: const Color(0x25F63366), borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: pink),
+                    Icon(Icons.error_outline, color: pink),
                     const SizedBox(width: 10),
-                    Expanded(child: Text(_error!, style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                    Expanded(child: Text(_error!, style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 13))),
                   ],
                 ),
               ),
             ] else if (_result != null) ...[
-              const Text('Your AI Collection Inventory Report has been compiled successfully!', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              Text('Your AI Collection Inventory Report has been compiled successfully!', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 14)),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -5507,7 +5508,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                   const SizedBox(width: 8),
                   IconButton(
                     tooltip: 'Copy Attorney Portal Link',
-                    icon: const Icon(Icons.link, color: Colors.white),
+                    icon: Icon(Icons.link, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
                       await EstateReportService.copyAttorneyLink(widget.userEmail, _result!.reportId);
@@ -5530,7 +5531,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
           ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close', style: TextStyle(color: Colors.white70)),
+          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69))),
         ),
       ],
     );

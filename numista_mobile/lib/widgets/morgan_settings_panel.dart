@@ -36,11 +36,12 @@ class _MorganSettingsSheet extends StatefulWidget {
 
 class _MorganSettingsSheetState extends State<_MorganSettingsSheet> {
   // ── Colours ────────────────────────────────────────────────────────────────
-  static const _bg   = Color(0xFF0B1220);
-  static const _surf = Color(0xFF162033);
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2);
+  Color get _surf => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF162033) : Colors.white;
   static const _teal = Color(0xFF2DD4BF);
   static const _gold = Color(0xFFD4A843);
-  static const _sub  = Color(0xFF94A3B8);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
   static const _red  = Color(0xFFEF4444);
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -113,16 +114,16 @@ class _MorganSettingsSheetState extends State<_MorganSettingsSheet> {
       builder: (ctx) => AlertDialog(
         backgroundColor: _surf,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Reset name?',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
+        title: Text('Reset name?',
+            style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+        content: Text(
           'Morgan will ask your name again next time.',
           style: TextStyle(color: _sub, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: _sub)),
+            child: Text('Cancel', style: TextStyle(color: _sub)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -223,12 +224,12 @@ class _MorganSettingsSheetState extends State<_MorganSettingsSheet> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Morgan Settings',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: _text,
                           fontSize: 18,
                           fontWeight: FontWeight.bold)),
                   Text('Personalise your AI guide',
@@ -271,8 +272,8 @@ class _MorganSettingsSheetState extends State<_MorganSettingsSheet> {
                   child: TextField(
                     controller: _nameCtrl,
                     focusNode: _nameFocus,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: _text,
                         fontSize: 17,
                         fontWeight: FontWeight.w500),
                     textCapitalization: TextCapitalization.words,
@@ -406,12 +407,12 @@ class _MorganSettingsSheetState extends State<_MorganSettingsSheet> {
               children: [
                 Text(title,
                     style: TextStyle(
-                        color: disabled ? _sub : Colors.white,
+                        color: disabled ? _sub : _text,
                         fontSize: 14,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(subtitle,
-                    style: const TextStyle(color: _sub, fontSize: 12)),
+                    style: TextStyle(color: _sub, fontSize: 12)),
               ],
             ),
           ),

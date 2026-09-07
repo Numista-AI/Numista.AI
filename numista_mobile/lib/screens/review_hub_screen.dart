@@ -603,7 +603,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
           );
 
           return Dialog(
-            backgroundColor: const Color(0xFF1A1D27),
+            backgroundColor: (Theme.of(context).brightness == Brightness.dark) ? const Color(0xFF1A1D27) : Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -616,8 +616,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   // ── Header ────────────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.fromLTRB(24, 20, 12, 16),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Colors.white10)),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white10 : const Color(0xFFE2E8F0))),
                     ),
                     child: Row(
                       children: [
@@ -627,19 +627,19 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Edit Coin',
-                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                               Text(
                                 '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Review Item'}',
-                                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                                style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B), fontSize: 13),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white38),
+                          icon: Icon(Icons.close, color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF64748B)),
                           onPressed: () => Navigator.pop(dialogContext),
                         ),
                       ],
@@ -695,20 +695,20 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 return TextField(
                                   controller: fieldCtrl,
                                   focusNode: focusNode,
-                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                  style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                                   decoration: InputDecoration(
-                                    prefixIcon: const Icon(
+                                    prefixIcon: Icon(
                                       Icons.collections_bookmark_outlined,
-                                      color: Colors.white38,
+                                      color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8),
                                       size: 18,
                                     ),
                                     labelText: 'Program / Series',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.white38,
+                                    labelStyle: TextStyle(
+                                      color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8),
                                       fontSize: 13,
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderSide: const BorderSide(color: Colors.white12),
+                                      borderSide: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white12 : const Color(0xFFE2E8F0)),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -716,7 +716,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     filled: true,
-                                    fillColor: Colors.white.withAlpha(8),
+                                    fillColor: (Theme.of(context).brightness == Brightness.dark) ? Colors.white.withAlpha(8) : const Color(0xFFF8FAFC),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 12,
                                       horizontal: 12,
@@ -729,7 +729,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 return Align(
                                   alignment: Alignment.topLeft,
                                   child: Material(
-                                    color: const Color(0xFF252836),
+                                    color: (Theme.of(context).brightness == Brightness.dark) ? const Color(0xFF252836) : Colors.white,
                                     borderRadius: BorderRadius.circular(10),
                                     elevation: 4,
                                     child: ConstrainedBox(
@@ -752,16 +752,16 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                                 children: [
                                                   Text(
                                                     opt.label,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
+                                                    style: TextStyle(
+                                                      color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A),
                                                       fontSize: 13,
                                                     ),
                                                   ),
                                                   if (opt.value != opt.label)
                                                     Text(
                                                       opt.value,
-                                                      style: const TextStyle(
-                                                        color: Colors.white38,
+                                                      style: TextStyle(
+                                                        color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF64748B),
                                                         fontSize: 11,
                                                       ),
                                                     ),
@@ -811,8 +811,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   // ── Footer buttons ─────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.white10)),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white10 : const Color(0xFFE2E8F0))),
                     ),
                     child: Row(
                       children: [
@@ -820,8 +820,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         Expanded(
                           child: OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white24),
+                              foregroundColor: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A),
+                              side: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white24 : const Color(0xFFCBD5E1)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -970,7 +970,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1A1D27),
+      backgroundColor: (Theme.of(context).brightness == Brightness.dark) ? const Color(0xFF1A1D27) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
@@ -978,9 +978,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Bulk Edit Metadata', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Bulk Edit Metadata', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('Applying to ${_selectedIds.length} selected items.', style: const TextStyle(color: Colors.white54)),
+            Text('Applying to ${_selectedIds.length} selected items.', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B))),
             const SizedBox(height: 24),
             _buildDialogField('Storage Location', locationController, Icons.inventory_2_outlined),
             _buildDialogField('Cost per Item', costController, Icons.attach_money),
@@ -991,6 +991,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF63366),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -1016,15 +1017,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A)),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+          prefixIcon: Icon(icon, color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8), size: 20),
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white38),
-          enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.white10), borderRadius: BorderRadius.circular(12)),
+          labelStyle: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8)),
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white10 : const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFFF63366)), borderRadius: BorderRadius.circular(12)),
           filled: true,
-          fillColor: Colors.white.withAlpha(10),
+          fillColor: (Theme.of(context).brightness == Brightness.dark) ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
         ),
       ),
     );

@@ -17,7 +17,6 @@ import '../widgets/morgan_guide_flow.dart';
 const _electricBlue = Color(0xFF4C8CDA);
 const _neuralBronze = Color(0xFF8B6B00);
 const _charcoal = Color(0xFF31333F);
-const _darkCard = Color(0xFF1E1E2E);
 const _successGreen = Color(0xFF00C853);
 const _warningAmber = Color(0xFFFFAB00);
 const _errorRed = Color(0xFFFF5252);
@@ -32,6 +31,9 @@ class MicroscopeScanScreen extends StatefulWidget {
 class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     with SingleTickerProviderStateMixin {
   final HardwareService _hw = HardwareService();
+
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _cardBg => _isDark ? const Color(0xFF1E1E2E) : Colors.white;
 
   // ─── State ─────────────────────────────────────────────────────────────────
   HardwareStatus? _status;
@@ -447,7 +449,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _darkCard,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _electricBlue.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
@@ -470,10 +472,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Focus Microscope Locally',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _isDark ? Colors.white : const Color(0xFF0F172A),
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -482,7 +484,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                 Text(
                   'Please look for a pop-up window on your computer screen to help align and focus the microscope.',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: _isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF5A5C69),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -519,14 +521,14 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
-              color: _darkCard,
+              color: _cardBg,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: _electricBlue.withValues(alpha: 0.3)),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _activeCameraIdx != -1 && _availableCameras.contains(_activeCameraIdx) ? _activeCameraIdx : null,
-                dropdownColor: _darkCard,
+                dropdownColor: _cardBg,
                 icon: const Icon(Icons.arrow_drop_down, color: _electricBlue),
                 hint: const Text('Select Camera', style: TextStyle(color: Colors.grey, fontSize: 14)),
                 items: _availableCameras.map((int idx) {
@@ -538,7 +540,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                   }
                   return DropdownMenuItem<int>(
                     value: idx,
-                    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    child: Text(label, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
                   );
                 }).toList(),
                 onChanged: isScanning
@@ -609,7 +611,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _darkCard,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -670,7 +672,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                     child: CircularProgressIndicator(
                       value: s.captureCountdownPct,
                       strokeWidth: 8,
-                      backgroundColor: Colors.white12,
+                      backgroundColor: _isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(_successGreen),
                     ),
@@ -685,9 +687,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                             fontSize: 34,
                             fontWeight: FontWeight.w900),
                       ),
-                      const Text('seconds',
+                      Text('seconds',
                           style: TextStyle(
-                              color: Colors.white38,
+                              color: _isDark ? Colors.white38 : const Color(0xFF64748B),
                               fontSize: 11,
                               letterSpacing: 1.0)),
                     ],
@@ -696,11 +698,11 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               ),
             ),
             const SizedBox(height: 8),
-            const Center(
+            Center(
               child: Text(
                 'Any movement resets the countdown',
                 style: TextStyle(
-                    color: Colors.white38,
+                    color: _isDark ? Colors.white38 : const Color(0xFF64748B),
                     fontSize: 11,
                     fontStyle: FontStyle.italic),
               ),
@@ -750,10 +752,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             const SizedBox(height: 20),
 
             // Auto-timer ring (secondary — fires if user doesn't tap button)
-            const Center(
+            Center(
               child: Text(
                 'Or wait for auto-advance:',
-                style: TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF64748B), fontSize: 11),
               ),
             ),
             const SizedBox(height: 8),
@@ -767,7 +769,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                     child: CircularProgressIndicator(
                       value: s.flipCountdownPct,
                       strokeWidth: 6,
-                      backgroundColor: Colors.white12,
+                      backgroundColor: _isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(_warningAmber),
                     ),
@@ -793,7 +795,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             Text(
               s.statusMessage,
               style: TextStyle(
-                  color: Colors.white70,
+                  color: _isDark ? Colors.white70 : const Color(0xFF475569),
                   fontSize: 14,
                   fontStyle: s.statusMessage == 'READY!'
                       ? FontStyle.normal
@@ -895,10 +897,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label.toUpperCase(),
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 11, letterSpacing: 1.2)),
+                style: TextStyle(
+                    color: _isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 11, letterSpacing: 1.2)),
             Text('$current / $max',
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 11)),
           ],
         ),
         const SizedBox(height: 6),
@@ -906,7 +908,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: value,
-            backgroundColor: Colors.white12,
+            backgroundColor: _isDark ? Colors.white12 : const Color(0xFFE2E8F0),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 8,
           ),
@@ -921,7 +923,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _successGreen.withValues(alpha: 0.4)),
         boxShadow: [
@@ -935,10 +937,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'AI Identification Result',
             style: TextStyle(
-                color: _charcoal,
+                color: _isDark ? Colors.white : _charcoal,
                 fontSize: 20,
                 fontWeight: FontWeight.w800),
           ),
@@ -970,9 +972,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             ),
           if (report['report'] != null) ...[
             const SizedBox(height: 16),
-            const Text('Gemini Analysis:',
+            Text('Gemini Analysis:',
                 style: TextStyle(
-                    color: _charcoal,
+                    color: _isDark ? Colors.white : _charcoal,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.8)),
@@ -981,33 +983,33 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFD3E3FD),
+                color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFD3E3FD),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 report['report'].toString(),
-                style: const TextStyle(color: Color(0xFF003884), fontSize: 13),
+                style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF003884), fontSize: 13),
               ),
             ),
           ],
           const SizedBox(height: 24),
-          const Text('Storage Location', style: TextStyle(color: _charcoal, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text('Storage Location', style: TextStyle(color: _isDark ? Colors.white : _charcoal, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
             controller: _locationCtrl,
-            style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(color: _isDark ? Colors.white : Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: 'e.g., Safe Box 1, Album C...',
               hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: _isDark ? const Color(0xFF0F172A) : Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
+                borderSide: BorderSide(color: _isDark ? Colors.white10 : Colors.grey.shade400, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                borderSide: BorderSide(color: _isDark ? Colors.white10 : Colors.grey.shade300, width: 1),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -1230,7 +1232,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _darkCard,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1245,13 +1247,12 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.photo_library_outlined,
-                  color: _electricBlue, size: 18),
+              const Icon(Icons.photo_library_outlined, color: _electricBlue, size: 18),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Similar Coins in Reference Library',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _isDark ? Colors.white : const Color(0xFF0F172A),
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                   letterSpacing: 0.4,
@@ -1271,22 +1272,22 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           ),
           const SizedBox(height: 14),
           if (_loadingSimilar)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
                   'Searching reference library…',
-                  style: TextStyle(color: Colors.white38, fontSize: 12,
+                  style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 12,
                       fontStyle: FontStyle.italic),
                 ),
               ),
             )
           else if (_similarCoins.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 'No matching reference images found for this denomination/year.',
-                style: TextStyle(color: Colors.white38, fontSize: 12,
+                style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF94A3B8), fontSize: 12,
                     fontStyle: FontStyle.italic),
               ),
             )
@@ -1307,7 +1308,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
               'Source: Kaggle reference datasets  •  Tap image to expand',
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.28),
+                color: _isDark ? Colors.white.withValues(alpha: 0.28) : const Color(0xFF94A3B8),
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -1323,9 +1324,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
       child: Container(
         width: 110,
         decoration: BoxDecoration(
-          color: Colors.black26,
+          color: _isDark ? Colors.black26 : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: _isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -1338,7 +1339,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                 loadingBuilder: (_, child, progress) => progress == null
                     ? child
                     : Container(
-                        color: Colors.white10,
+                        color: _isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         child: const Center(
                           child: CircularProgressIndicator(
                             color: _electricBlue,
@@ -1346,9 +1347,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                           ),
                         ),
                       ),
-                errorBuilder: (_, _, _) => const Icon(
+                errorBuilder: (_, _, _) => Icon(
                     Icons.broken_image_outlined,
-                    color: Colors.white30,
+                    color: _isDark ? Colors.white30 : const Color(0xFF94A3B8),
                     size: 32),
               ),
               // Year badge at bottom
@@ -1361,11 +1362,11 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         vertical: 3, horizontal: 6),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
-                        colors: [Colors.black87, Colors.transparent],
+                        colors: _isDark ? [Colors.black87, Colors.transparent] : [const Color(0xFF0F172A), Colors.transparent],
                       ),
                     ),
                     child: Text(
@@ -1394,7 +1395,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            color: const Color(0xFF1A1A2E),
+            color: _isDark ? const Color(0xFF1A1A2E) : Colors.white,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1404,10 +1405,10 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                   child: Image.network(
                     img.gcsUrl,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Padding(
-                      padding: EdgeInsets.all(40),
+                    errorBuilder: (_, _, _) => Padding(
+                      padding: const EdgeInsets.all(40),
                       child: Icon(Icons.broken_image_outlined,
-                          color: Colors.white30, size: 60),
+                          color: _isDark ? Colors.white30 : const Color(0xFF94A3B8), size: 60),
                     ),
                   ),
                 ),
@@ -1420,8 +1421,8 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                     children: [
                       Text(
                         img.caption,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                        style: TextStyle(
+                            color: _isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 12),
                       ),
                       if (img.licenseUrl != null) ...[
                         const SizedBox(height: 6),

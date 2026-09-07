@@ -65,7 +65,7 @@ class SecondaryDisplayLayout extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12.0),
-                        color: const Color(0xFF1E3A8A),
+                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
                         width: double.infinity,
                         child: const Text(
                           '🤖 Morgan AI Assistant — Live Studio',

@@ -117,6 +117,12 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtext = isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+    final fill = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final borderCol = isDark ? const Color(0xFF374151) : const Color(0xFFCBD5E1);
+
     if (_submitted) {
       return Padding(
         padding: const EdgeInsets.all(24),
@@ -126,8 +132,8 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
             const Icon(Icons.check_circle_outline,
                 color: Colors.greenAccent, size: 40),
             const SizedBox(height: 12),
-            const Text('Note filed. Thank you!',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+            Text('Note filed. Thank you!',
+                style: TextStyle(color: text, fontSize: 14)),
             const SizedBox(height: 24),
             TextButton(
                 onPressed: widget.onClose,
@@ -161,9 +167,9 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
             const SizedBox(height: 16),
           ],
 
-          const Text('What type of feedback is this?',
+          Text('What type of feedback is this?',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: subtext,
                   fontSize: 13,
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
@@ -182,18 +188,18 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
                   decoration: BoxDecoration(
                     color: selected
                         ? const Color(0xFF1E4ED8)
-                        : const Color(0xFF0F172A),
+                        : fill,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: selected
                           ? const Color(0xFF1E4ED8)
-                          : const Color(0xFF374151),
+                          : borderCol,
                     ),
                   ),
                   child: Text(
                     _labelFor(t),
                     style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
+                      color: selected ? Colors.white : subtext,
                       fontSize: 12,
                     ),
                   ),
@@ -208,23 +214,23 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
           ),
 
           const SizedBox(height: 16),
-          const Text('Brief description',
+          Text('Brief description',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: subtext,
                   fontSize: 13,
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           TextField(
             controller: _commentCtrl,
             maxLines: 4,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: TextStyle(color: text, fontSize: 13),
             decoration: InputDecoration(
               hintText:
                   'Describe the issue or suggestion in a few words...',
               hintStyle:
                   const TextStyle(color: Colors.grey, fontSize: 12),
               filled: true,
-              fillColor: const Color(0xFF0F172A),
+              fillColor: fill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,

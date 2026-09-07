@@ -27,6 +27,11 @@ class ScanResultDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtext = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
+
     final confidence = result.pageConfidence;
     final confidencePct = confidence != null
         ? '${(confidence * 100).toStringAsFixed(0)}%'
@@ -49,7 +54,7 @@ class ScanResultDialog extends StatelessWidget {
           maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: bg,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -167,9 +172,9 @@ class ScanResultDialog extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
+                          color: isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                          border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
                         ),
                         child: Row(
                           children: [
@@ -181,8 +186,8 @@ class ScanResultDialog extends StatelessWidget {
                                 result.firestoreWritten
                                     ? 'Collection updated successfully! Your checked coins are now synced.'
                                     : 'Scan complete — collection sync pending.',
-                                style: const TextStyle(
-                                    color: Color(0xFF166534),
+                                style: TextStyle(
+                                    color: isDark ? const Color(0xFF34D399) : const Color(0xFF166534),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500),
                               ),
@@ -197,20 +202,20 @@ class ScanResultDialog extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFAF5FF),
+                            color: isDark ? const Color(0xFF3B0764) : const Color(0xFFFAF5FF),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE9D5FF)),
+                            border: Border.all(color: isDark ? const Color(0xFF7C3AED) : const Color(0xFFE9D5FF)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.bookmark_add_rounded,
+                              Icon(Icons.bookmark_add_rounded,
                                   color: Color(0xFF7C3AED), size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   '${result.wishlistAdded} coin${result.wishlistAdded == 1 ? '' : 's'} added to your Wish List.',
-                                  style: const TextStyle(
-                                      color: Color(0xFF4C1D95),
+                                  style: TextStyle(
+                                      color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF4C1D95),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500),
                                 ),
@@ -226,20 +231,20 @@ class ScanResultDialog extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: isDark ? const Color(0xFF451A03) : const Color(0xFFFFFBEB),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
+                            border: Border.all(color: isDark ? const Color(0xFFD97706) : const Color(0xFFFDE68A)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.tips_and_updates_outlined,
+                              Icon(Icons.tips_and_updates_outlined,
                                   color: Color(0xFFD97706), size: 18),
                               const SizedBox(width: 10),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
                                   'Tip: For best results, use bright, even lighting and hold the camera directly above the checklist.',
                                   style: TextStyle(
-                                      color: Color(0xFF92400E), fontSize: 12),
+                                      color: isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E), fontSize: 12),
                                 ),
                               ),
                             ],
@@ -260,8 +265,8 @@ class ScanResultDialog extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF475569),
-                          side: const BorderSide(color: Color(0xFFE2E8F0)),
+                          foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                          side: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -315,13 +320,18 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtext = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,14 +339,14 @@ class _StatCard extends StatelessWidget {
             Icon(icon, color: iconColor, size: 22),
             const SizedBox(height: 8),
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A))),
+                    color: text)),
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: subtext,
                     fontWeight: FontWeight.w500)),
             if (subtitle != null) ...[
               const SizedBox(height: 2),

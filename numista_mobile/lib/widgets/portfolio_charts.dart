@@ -33,10 +33,10 @@ class PortfolioChartsPanel extends StatelessWidget {
 
   // ── Shared styling constants ──────────────────────────────────────────────
 
-  static const _cardColor = Colors.white;
-  static const _borderColor = Color(0xFFE2E6E9);
-  static const _titleColor = Color(0xFF31333F);
-  static const _subtitleColor = Color(0xFF64748B);
+  Color _cardColor(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2937) : Colors.white;
+  Color _borderColor(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D3143) : const Color(0xFFE2E6E9);
+  Color _titleColor(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF31333F);
+  Color _subtitleColor(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF8B92B4) : const Color(0xFF64748B);
   static const _meltColor = Color(0xFF94A3B8);      // silver-grey
   static const _premiumColor = Color(0xFF6C63FF);    // purple
   static const _lineColor = Color(0xFF0F9D58);       // green
@@ -48,10 +48,10 @@ class PortfolioChartsPanel extends StatelessWidget {
     Color(0xFFEF4444),  // red
   ];
 
-  BoxDecoration get _cardDecoration => BoxDecoration(
-    color: _cardColor,
+  BoxDecoration _cardDecoration(BuildContext context) => BoxDecoration(
+    color: _cardColor(context),
     borderRadius: BorderRadius.circular(8),
-    border: Border.all(color: _borderColor),
+    border: Border.all(color: _borderColor(context)),
     boxShadow: [
       BoxShadow(
         color: Colors.black.withValues(alpha: 0.04),
@@ -68,15 +68,15 @@ class PortfolioChartsPanel extends StatelessWidget {
       children: [
         // Section header
         Row(
-          children: const [
-            Icon(Icons.insights, size: 15, color: Color(0xFF6C63FF)),
-            SizedBox(width: 6),
+          children: [
+            const Icon(Icons.insights, size: 15, color: Color(0xFF6C63FF)),
+            const SizedBox(width: 6),
             Text(
               'PORTFOLIO INSIGHTS',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: _subtitleColor,
+                color: _subtitleColor(context),
                 letterSpacing: 0.5,
               ),
             ),
@@ -95,24 +95,24 @@ class PortfolioChartsPanel extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: _buildDonutChart()),
+                      Expanded(child: _buildDonutChart(context)),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildBarChart()),
+                      Expanded(child: _buildBarChart(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildLineChart(),
+                  _buildLineChart(context),
                 ],
               );
             }
             // Stacked on narrow screens
             return Column(
               children: [
-                _buildDonutChart(),
+                _buildDonutChart(context),
                 const SizedBox(height: 12),
-                _buildBarChart(),
+                _buildBarChart(context),
                 const SizedBox(height: 12),
-                _buildLineChart(),
+                _buildLineChart(context),
               ],
             );
           },
@@ -123,28 +123,28 @@ class PortfolioChartsPanel extends StatelessWidget {
 
   // ── Chart 1: Value Composition Donut ──────────────────────────────────────
 
-  Widget _buildDonutChart() {
+  Widget _buildDonutChart(BuildContext context) {
     final premium = (portfolioValue - meltValue).clamp(0.0, double.infinity);
     final fmt = intl.NumberFormat.currency(symbol: '\$');
     final hasMelt = meltValue > 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration,
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Value Composition',
+          Text('Value Composition',
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: _titleColor)),
+                  color: _titleColor(context))),
           const SizedBox(height: 4),
           Text(
             hasMelt
                 ? 'Precious metal melt value vs. numismatic premium'
                 : 'Add silver or gold coins to see melt breakdown',
-            style: const TextStyle(fontSize: 10, color: _subtitleColor),
+            style: TextStyle(fontSize: 10, color: _subtitleColor(context)),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -185,18 +185,18 @@ class PortfolioChartsPanel extends StatelessWidget {
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('TOTAL',
+                          Text('TOTAL',
                               style: TextStyle(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w600,
-                                  color: _subtitleColor)),
+                                  color: _subtitleColor(context))),
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(fmt.format(portfolioValue),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
-                                    color: _titleColor)),
+                                    color: _titleColor(context))),
                           ),
                         ],
                       ),
@@ -209,25 +209,25 @@ class PortfolioChartsPanel extends StatelessWidget {
                         Icon(Icons.donut_large,
                             size: 40, color: Colors.grey.shade300),
                         const SizedBox(height: 8),
-                        const Text('No precious metal data yet',
+                        Text('No precious metal data yet',
                             style: TextStyle(
-                                fontSize: 11, color: _subtitleColor)),
+                                fontSize: 11, color: _subtitleColor(context))),
                       ],
                     ),
                   ),
           ),
           if (hasMelt) ...[
             const SizedBox(height: 12),
-            _legend(_meltColor, 'Melt Value', fmt.format(meltValue)),
+            _legend(context, _meltColor, 'Melt Value', fmt.format(meltValue)),
             const SizedBox(height: 4),
-            _legend(_premiumColor, 'Numismatic Premium', fmt.format(premium)),
+            _legend(context, _premiumColor, 'Numismatic Premium', fmt.format(premium)),
           ],
         ],
       ),
     );
   }
 
-  Widget _legend(Color color, String label, String value) {
+  Widget _legend(BuildContext context, Color color, String label, String value) {
     return Row(
       children: [
         Container(
@@ -240,20 +240,20 @@ class PortfolioChartsPanel extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(label,
-              style: const TextStyle(fontSize: 11, color: _subtitleColor)),
+              style: TextStyle(fontSize: 11, color: _subtitleColor(context))),
         ),
         Text(value,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: _titleColor)),
+                color: _titleColor(context))),
       ],
     );
   }
 
   // ── Chart 2: Top Programs Bar Chart ───────────────────────────────────────
 
-  Widget _buildBarChart() {
+  Widget _buildBarChart(BuildContext context) {
     // Sort programs by value descending, take top 5
     final sorted = programValues.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -262,21 +262,21 @@ class PortfolioChartsPanel extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration,
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Top Programs by Value',
+          Text('Top Programs by Value',
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: _titleColor)),
+                  color: _titleColor(context))),
           const SizedBox(height: 4),
           Text(
             top.isEmpty
                 ? 'Add coins to see program breakdown'
                 : 'Top ${top.length} series by AI estimated value',
-            style: const TextStyle(fontSize: 10, color: _subtitleColor),
+            style: TextStyle(fontSize: 10, color: _subtitleColor(context)),
           ),
           const SizedBox(height: 16),
           if (top.isEmpty)
@@ -288,8 +288,8 @@ class PortfolioChartsPanel extends StatelessWidget {
                   children: [
                     Icon(Icons.bar_chart, size: 40, color: Colors.grey.shade300),
                     const SizedBox(height: 8),
-                    const Text('No program data yet',
-                        style: TextStyle(fontSize: 11, color: _subtitleColor)),
+                    Text('No program data yet',
+                        style: TextStyle(fontSize: 11, color: _subtitleColor(context))),
                   ],
                 ),
               ),
@@ -313,10 +313,10 @@ class PortfolioChartsPanel extends StatelessWidget {
                           child: Text(
                             program.key,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: _titleColor),
+                                color: _titleColor(context)),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -333,7 +333,7 @@ class PortfolioChartsPanel extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: pct,
                         minHeight: 8,
-                        backgroundColor: const Color(0xFFF0F2F6),
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D3143) : const Color(0xFFF0F2F6),
                         valueColor: AlwaysStoppedAnimation<Color>(color),
                       ),
                     ),
@@ -348,19 +348,19 @@ class PortfolioChartsPanel extends StatelessWidget {
 
   // ── Chart 3: Portfolio Value Over Time ─────────────────────────────────────
 
-  Widget _buildLineChart() {
+  Widget _buildLineChart(BuildContext context) {
     final hasData = snapshots.length >= 2;
     final fmt = intl.NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration,
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -368,10 +368,10 @@ class PortfolioChartsPanel extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: _titleColor)),
-                    SizedBox(height: 4),
+                            color: _titleColor(context))),
+                    const SizedBox(height: 4),
                     Text('Daily snapshots from each visit',
-                        style: TextStyle(fontSize: 10, color: _subtitleColor)),
+                        style: TextStyle(fontSize: 10, color: _subtitleColor(context))),
                   ],
                 ),
               ),
@@ -397,26 +397,26 @@ class PortfolioChartsPanel extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
-            child: hasData ? _buildLineChartContent(fmt) : _buildLineChartPlaceholder(),
+            child: hasData ? _buildLineChartContent(context, fmt) : _buildLineChartPlaceholder(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLineChartPlaceholder() {
+  Widget _buildLineChartPlaceholder(BuildContext context) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.timeline, size: 40, color: Colors.grey.shade300),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Not enough data yet',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: _subtitleColor),
+                color: _subtitleColor(context)),
           ),
           const SizedBox(height: 4),
           Text(
@@ -424,14 +424,14 @@ class PortfolioChartsPanel extends StatelessWidget {
                 ? 'Your first snapshot was just recorded — check back tomorrow!'
                 : 'One snapshot recorded so far — the chart appears after your next visit.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10, color: _subtitleColor),
+            style: TextStyle(fontSize: 10, color: _subtitleColor(context)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLineChartContent(intl.NumberFormat fmt) {
+  Widget _buildLineChartContent(BuildContext context, intl.NumberFormat fmt) {
     // Build spots from snapshots
     final spots = snapshots.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value.portfolioValue);
@@ -459,7 +459,7 @@ class PortfolioChartsPanel extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: range > 0 ? range / 4 : maxY / 4,
           getDrawingHorizontalLine: (_) => FlLine(
-            color: const Color(0xFFE2E6E9),
+            color: _borderColor(context),
             strokeWidth: 0.8,
           ),
         ),
@@ -480,8 +480,8 @@ class PortfolioChartsPanel extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 4),
                   child: Text(
                     fmt.format(value),
-                    style: const TextStyle(
-                        fontSize: 9, color: _subtitleColor),
+                    style: TextStyle(
+                        fontSize: 9, color: _subtitleColor(context)),
                   ),
                 );
               },
@@ -515,8 +515,8 @@ class PortfolioChartsPanel extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     '$month $day',
-                    style: const TextStyle(
-                        fontSize: 9, color: _subtitleColor),
+                    style: TextStyle(
+                        fontSize: 9, color: _subtitleColor(context)),
                   ),
                 );
               },
@@ -556,15 +556,15 @@ class PortfolioChartsPanel extends StatelessWidget {
         ],
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => const Color(0xFF1E293B),
+            getTooltipColor: (_) => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((spot) {
                 final idx = spot.spotIndex;
                 final snap = snapshots[idx];
                 return LineTooltipItem(
                   '${snap.date}\n${fmt.format(snap.portfolioValue)}',
-                  const TextStyle(
-                    color: Colors.white,
+                  TextStyle(
+                    color: _titleColor(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),

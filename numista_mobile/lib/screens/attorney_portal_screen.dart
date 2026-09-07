@@ -17,18 +17,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Theme constants (matches estate_planning_screen.dart)
+// Theme-aware color tokens (matches estate_planning_screen.dart pattern)
 // ─────────────────────────────────────────────────────────────────────────────
-const _kNavy       = Color(0xFF0E1117);
-const _kDeepBlue   = Color(0xFF0B1A2E);
 const _kGold       = Color(0xFFFFD700);
 const _kRed        = Color(0xFFF63366);
 const _kGreen      = Color(0xFF10B981);
-const _kCard       = Color(0xFF161B27);
-const _kCardBorder = Color(0xFF2A3045);
-const _kTextPrimary   = Color(0xFFECEFF4);
-const _kTextSecondary = Color(0xFF8B92A5);
 const _kAmber      = Color(0xFFF59E0B);
+
+bool _isDarkCtx(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _kNavy(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0E1117) : const Color(0xFFF4F4F2);
+Color _kDeepBlue(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0B1A2E) : Colors.white;
+Color _kCard(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF161B27) : Colors.white;
+Color _kCardBorder(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF2A3045) : const Color(0xFFE2E6E9);
+Color _kTextPrimary(BuildContext c) => _isDarkCtx(c) ? const Color(0xFFECEFF4) : const Color(0xFF0F172A);
+Color _kTextSecondary(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF8B92A5) : const Color(0xFF5A5C69);
 
 final _dollarFmt  = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 final _dollar2Fmt = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
@@ -193,9 +195,9 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: _portalTheme(),
+      data: _portalTheme(context),
       child: Scaffold(
-        backgroundColor: _kNavy,
+        backgroundColor: _kNavy(context),
         appBar: _buildAppBar(),
         body: _loading
             ? _buildLoading()
@@ -210,7 +212,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: _kDeepBlue,
+      backgroundColor: _kDeepBlue(context),
       elevation: 0,
       automaticallyImplyLeading: false,
       title: Row(
@@ -226,8 +228,8 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
             child: const Icon(Icons.account_balance_rounded,
                 color: _kGold, size: 18),
           ),
-          const SizedBox(width: 12),
-          const Column(
+          SizedBox(width: 12),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -239,7 +241,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
                       letterSpacing: 0.5)),
               Text('Attorney Access — Read Only',
                   style: TextStyle(
-                      color: _kTextSecondary, fontSize: 10)),
+                      color: _kTextSecondary(context), fontSize: 10)),
             ],
           ),
           const Spacer(),
@@ -251,14 +253,14 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
   }
 
   Widget _buildLoading() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(color: _kGold, strokeWidth: 2),
           SizedBox(height: 16),
           Text('Loading estate report…',
-              style: TextStyle(color: _kTextSecondary)),
+              style: TextStyle(color: _kTextSecondary(context))),
         ],
       ),
     );
@@ -270,26 +272,26 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         margin: const EdgeInsets.all(32),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _kRed.withAlpha(80)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, color: _kRed, size: 48),
+            Icon(Icons.error_outline_rounded, color: _kRed, size: 48),
             const SizedBox(height: 16),
-            const Text('Access Error',
+            Text('Access Error',
                 style: TextStyle(
                     color: _kRed, fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(_error!,
-                style: const TextStyle(color: _kTextSecondary, fontSize: 14),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 14),
                 textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20),
+            Text(
                 'Contact the collection owner at Numista.AI to request a new report link.',
-                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -305,9 +307,9 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       child: Container(
         margin: const EdgeInsets.all(32),
         padding: const EdgeInsets.all(28),
-        constraints: const BoxConstraints(maxWidth: 480),
+        constraints: BoxConstraints(maxWidth: 480),
         decoration: BoxDecoration(
-          color: _kCard,
+          color: _kCard(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _kGold.withAlpha(80)),
         ),
@@ -330,22 +332,22 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
               style: TextStyle(
                   color: _kGold, fontSize: 18, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12),
+            Text(
               'The Attorney Portal is only accessible via a secure share link '
               'generated from Estate Planning.',
-              style: TextStyle(color: _kTextSecondary, fontSize: 14),
+              style: TextStyle(color: _kTextSecondary(context), fontSize: 14),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kNavy,
+                color: _kNavy(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kCardBorder),
+                border: Border.all(color: _kCardBorder(context)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.info_outline_rounded,
                       color: _kAmber, size: 16),
@@ -354,7 +356,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
                     child: Text(
                       'Go to Estate Planning → generate a report → '
                       'tap "Share with Attorney" to create a secure link.',
-                      style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                      style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                     ),
                   ),
                 ],
@@ -466,21 +468,21 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
                       letterSpacing: -0.3)),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text('Secure Client Collection',
+          SizedBox(height: 8),
+          Text('Secure Client Collection',
               style: TextStyle(
-                  color: _kTextPrimary,
+                  color: _kTextPrimary(context),
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Row(
             children: [
               _Chip('$state Jurisdiction', _kAmber),
-              const SizedBox(width: 8),
-              _Chip('Report Date: $reportDate', _kTextSecondary),
-              const SizedBox(width: 8),
-              _Chip('Prepared by Numista.AI', _kTextSecondary),
+              SizedBox(width: 8),
+              _Chip('Report Date: $reportDate', _kTextSecondary(context)),
+              SizedBox(width: 8),
+              _Chip('Prepared by Numista.AI', _kTextSecondary(context)),
             ],
           ),
           const SizedBox(height: 16),
@@ -534,7 +536,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         _SummaryCard('Total Coins', '$totalCoins items',
             Icons.toll_rounded, _kGreen),
         _SummaryCard('Cost Basis', _dollarFmt.format(costBasis),
-            Icons.receipt_long_outlined, _kTextSecondary),
+            Icons.receipt_long_outlined, _kTextSecondary(context)),
         _SummaryCard('Melt / Bullion Value', _dollarFmt.format(meltValue),
             Icons.bar_chart_rounded, _kAmber),
         _SummaryCard('Step-Up Benefit', _dollarFmt.format(stepUp),
@@ -559,7 +561,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       child: Row(
         children: [
           const Icon(Icons.gavel_rounded, color: _kRed, size: 24),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,12 +571,12 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
                         color: _kRed,
                         fontSize: 14,
                         fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   '$count coin(s) have an estimated FMV ≥ \$3,000 and require a '
                   'qualified appraisal under IRC §170(f)(11) for inclusion on IRS Form 706.',
                   style:
-                      const TextStyle(color: _kTextSecondary, fontSize: 12),
+                      TextStyle(color: _kTextSecondary(context), fontSize: 12),
                 ),
               ],
             ),
@@ -592,38 +594,38 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       children: [
         Row(
           children: [
-            const Text('Collection Inventory',
+            Text('Collection Inventory',
                 style: TextStyle(
-                    color: _kTextPrimary,
+                    color: _kTextPrimary(context),
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Text('(${coins.length} of ${_coins.length} shown)',
                 style:
-                    const TextStyle(color: _kTextSecondary, fontSize: 12)),
-            const Spacer(),
+                    TextStyle(color: _kTextSecondary(context), fontSize: 12)),
+            Spacer(),
             SizedBox(
               width: 240,
               child: TextField(
                 style:
-                    const TextStyle(color: _kTextPrimary, fontSize: 13),
+                    TextStyle(color: _kTextPrimary(context), fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Search coins…',
                   hintStyle: TextStyle(
-                      color: _kTextSecondary.withAlpha(120), fontSize: 13),
-                  prefixIcon: const Icon(Icons.search,
-                      color: _kTextSecondary, size: 18),
+                      color: _kTextSecondary(context).withAlpha(120), fontSize: 13),
+                  prefixIcon: Icon(Icons.search,
+                      color: _kTextSecondary(context), size: 18),
                   filled: true,
-                  fillColor: _kCard,
+                  fillColor: _kCard(context),
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: _kCardBorder),
+                    borderSide: BorderSide(color: _kCardBorder(context)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: _kCardBorder),
+                    borderSide: BorderSide(color: _kCardBorder(context)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -636,12 +638,12 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: _kCard,
+            color: _kCard(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _kCardBorder),
+            border: Border.all(color: _kCardBorder(context)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -649,7 +651,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor:
-                    WidgetStateProperty.all(_kDeepBlue),
+                    WidgetStateProperty.all(_kDeepBlue(context)),
                 dataRowColor: WidgetStateProperty.resolveWith((states) {
                   if (states.contains(WidgetState.hovered)) {
                     return _kGold.withAlpha(10);
@@ -713,7 +715,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         Flexible(
           child: Text(c['Name']?.toString() ?? '—',
               style: TextStyle(
-                  color: needsAppraisal ? _kRed : _kTextPrimary,
+                  color: needsAppraisal ? _kRed : _kTextPrimary(context),
                   fontSize: 12,
                   fontWeight: needsAppraisal
                       ? FontWeight.w600
@@ -723,30 +725,30 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
         ),
       ])),
       DataCell(Text(c['Year']?.toString() ?? '—',
-          style: const TextStyle(color: _kTextSecondary, fontSize: 12))),
+          style: TextStyle(color: _kTextSecondary(context), fontSize: 12))),
       DataCell(Text(c['Mint Mark']?.toString() ?? '—',
-          style: const TextStyle(color: _kTextSecondary, fontSize: 12))),
+          style: TextStyle(color: _kTextSecondary(context), fontSize: 12))),
       DataCell(Text(c['Condition']?.toString() ?? '—',
-          style: const TextStyle(color: _kTextPrimary, fontSize: 12))),
+          style: TextStyle(color: _kTextPrimary(context), fontSize: 12))),
       DataCell(
         SizedBox(
           width: 120,
           child: Text(c['Program/Series']?.toString() ?? '—',
-              style: const TextStyle(color: _kTextSecondary, fontSize: 11),
+              style: TextStyle(color: _kTextSecondary(context), fontSize: 11),
               overflow: TextOverflow.ellipsis),
         ),
       ),
       DataCell(Text(
           fmv > 0 ? _dollar2Fmt.format(fmv) : '—',
           style: TextStyle(
-              color: fmv > 0 ? _kGold : _kTextSecondary, fontSize: 12))),
+              color: fmv > 0 ? _kGold : _kTextSecondary(context), fontSize: 12))),
       DataCell(Text(
           cost > 0 ? _dollar2Fmt.format(cost) : '—',
-          style: const TextStyle(color: _kTextSecondary, fontSize: 12))),
+          style: TextStyle(color: _kTextSecondary(context), fontSize: 12))),
       DataCell(Text(
           melt > 0 ? _dollar2Fmt.format(melt) : '—',
           style: TextStyle(
-              color: melt > 0 ? _kAmber : _kTextSecondary, fontSize: 12))),
+              color: melt > 0 ? _kAmber : _kTextSecondary(context), fontSize: 12))),
     ]);
   }
 
@@ -756,26 +758,26 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
+        color: _kCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kCardBorder),
+        border: Border.all(color: _kCardBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.info_outline_rounded,
-                  color: _kTextSecondary, size: 16),
+                  color: _kTextSecondary(context), size: 16),
               SizedBox(width: 8),
               Text('Legal Disclaimer',
                   style: TextStyle(
-                      color: _kTextSecondary,
+                      color: _kTextSecondary(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'This report was generated by Numista.AI for informational purposes only and does '
             'not constitute legal, tax, or financial advice. FMV estimates are AI-generated '
@@ -783,32 +785,32 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
             'tax purposes, a qualified appraisal by a certified numismatist may be required. '
             'This document is intended solely for the named recipient and is confidential. '
             'Numista.AI is a product of SGroup LLC.',
-            style: const TextStyle(
-                color: _kTextSecondary, fontSize: 11, height: 1.5),
+            style: TextStyle(
+                color: _kTextSecondary(context), fontSize: 11, height: 1.5),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.copyright_rounded,
-                  color: _kTextSecondary, size: 12),
-              const SizedBox(width: 4),
+              Icon(Icons.copyright_rounded,
+                  color: _kTextSecondary(context), size: 12),
+              SizedBox(width: 4),
               Text(
                 '${DateTime.now().year} SGroup LLC / Numista.AI  •  '
                 'Report ID: ${widget.token}',
                 style:
-                    const TextStyle(color: _kTextSecondary, fontSize: 10),
+                    TextStyle(color: _kTextSecondary(context), fontSize: 10),
               ),
-              const Spacer(),
+              Spacer(),
               TextButton.icon(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(
                       text:
                           'https://numista.ai/attorney?uid=${widget.uid}&token=${widget.token}'));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content:
                           Text('Report link copied to clipboard'),
-                      backgroundColor: _kCard,
+                      backgroundColor: _kCard(context),
                     ),
                   );
                 },
@@ -878,9 +880,9 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
+        color: _kCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kCardBorder),
+        border: Border.all(color: _kCardBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -889,11 +891,11 @@ class _SummaryCard extends StatelessWidget {
           Row(
             children: [
               Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Flexible(
                 child: Text(label,
-                    style: const TextStyle(
-                        color: _kTextSecondary, fontSize: 10),
+                    style: TextStyle(
+                        color: _kTextSecondary(context), fontSize: 10),
                     overflow: TextOverflow.ellipsis),
               ),
             ],
@@ -932,20 +934,20 @@ class _Chip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Theme
+// Theme (adapts to light/dark)
 // ─────────────────────────────────────────────────────────────────────────────
-ThemeData _portalTheme() => ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: _kNavy,
-      colorScheme: const ColorScheme.dark(
-        primary: _kGold,
-        secondary: _kGold,
-        surface: _kCard,
-        error: _kRed,
-      ),
-      dataTableTheme: const DataTableThemeData(
-        headingTextStyle:
-            TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.w600),
-        dataTextStyle:
-            TextStyle(color: _kTextPrimary, fontSize: 12),
-      ),
-    );
+ThemeData _portalTheme(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+    scaffoldBackgroundColor: _kNavy(context),
+    colorScheme: isDark
+        ? const ColorScheme.dark(primary: _kGold, secondary: _kGold, surface: Color(0xFF161B27), error: _kRed)
+        : const ColorScheme.light(primary: Color(0xFF8C7355), secondary: Color(0xFFC9A227), surface: Colors.white, error: _kRed),
+    dataTableTheme: DataTableThemeData(
+      headingTextStyle:
+          TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.w600),
+      dataTextStyle:
+          TextStyle(color: _kTextPrimary(context), fontSize: 12),
+    ),
+  );
+}

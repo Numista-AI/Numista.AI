@@ -343,28 +343,36 @@ class _MorganFeedbackDrawerPanelState
     });
   }
 
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF111827) : Colors.white;
+  Color get _surf => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2937) : const Color(0xFFF8FAFC);
+  Color get _input => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white;
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? Colors.grey : const Color(0xFF5A5C69);
+  Color get _border => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF374151) : const Color(0xFFE2E8F0);
+  Color get _text70 => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180);
+
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
-      decoration: const BoxDecoration(
-        color: Color(0xFF111827),
+      decoration: BoxDecoration(
+        color: _bg,
         border: Border(
-          left: BorderSide(color: Color(0xFF374151), width: 1),
+          left: BorderSide(color: _border, width: 1),
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black54, blurRadius: 24, offset: Offset(-4, 0)),
         ],
       ),
       child: Column(
         children: [
           _buildHeader(),
-          const Divider(height: 1, color: Color(0xFF374151)),
+          Divider(height: 1, color: _border),
           // Inline correction panel — replaces showDialog (no Navigator needed)
           if (_correctionOpen) _buildInlineCorrectionPanel(),
           if (_correctionOpen)
-            const Divider(height: 1, color: Color(0xFF374151)),
+            Divider(height: 1, color: _border),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -373,28 +381,28 @@ class _MorganFeedbackDrawerPanelState
 
   Widget _buildInlineCorrectionPanel() {
     return Container(
-      color: const Color(0xFF1E2937),
+      color: _surf,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Add a correction',
+          Text('Add a correction',
               style: TextStyle(
-                  color: Colors.white,
+                  color: _text,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
             controller: _correctionController,
             maxLines: 3,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: TextStyle(color: _text, fontSize: 13),
             autofocus: true,
             decoration: InputDecoration(
               hintText: 'What would you like to correct or add?',
-              hintStyle: const TextStyle(color: Colors.grey),
+              hintStyle: TextStyle(color: _sub),
               filled: true,
-              fillColor: const Color(0xFF0F172A),
+              fillColor: _input,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none),
@@ -407,8 +415,8 @@ class _MorganFeedbackDrawerPanelState
             children: [
               TextButton(
                 onPressed: () => setState(() => _correctionOpen = false),
-                child: const Text('Cancel',
-                    style: TextStyle(color: Colors.grey, fontSize: 12)),
+                child: Text('Cancel',
+                    style: TextStyle(color: _sub, fontSize: 12)),
               ),
               const Spacer(),
               ElevatedButton(
@@ -430,7 +438,7 @@ class _MorganFeedbackDrawerPanelState
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: const Color(0xFF1E2937),
+      color: _surf,
       child: Row(
         children: [
           // Feedback mode chip
@@ -456,8 +464,8 @@ class _MorganFeedbackDrawerPanelState
           Expanded(
             child: Text(
               widget.session?.triggerEvent.pageTitle ?? 'Feedback',
-              style: const TextStyle(
-                  color: Colors.white70,
+              style: TextStyle(
+                  color: _text70,
                   fontSize: 12,
                   overflow: TextOverflow.ellipsis),
             ),
@@ -468,13 +476,13 @@ class _MorganFeedbackDrawerPanelState
               onPressed: widget.onOpenFallback,
               style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8)),
-              child: const Text(
+              child: Text(
                 'File a short note instead',
-                style: TextStyle(color: Colors.grey, fontSize: 11),
+                style: TextStyle(color: _sub, fontSize: 11),
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+            icon: Icon(Icons.close, color: _sub, size: 18),
             onPressed: widget.onClose,
             // No tooltip — FeedbackDrawerOverlay lives above MaterialApp's
             // Navigator, so Tooltip.of(context) cannot find an Overlay and
@@ -543,8 +551,8 @@ class _MorganFeedbackDrawerPanelState
     final busy = session.phase == SessionPhase.extracting;
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF374151))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: _border)),
       ),
       child: Row(
         children: [
@@ -554,13 +562,13 @@ class _MorganFeedbackDrawerPanelState
               enabled: !busy,
               maxLines: null, // expands vertically for long messages
               keyboardType: TextInputType.multiline,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: _text, fontSize: 14),
               decoration: InputDecoration(
                 hintText: busy ? 'MORGAN is thinking…' : 'Type your reply…',
                 hintStyle:
-                    const TextStyle(color: Colors.grey, fontSize: 13),
+                    TextStyle(color: _sub, fontSize: 13),
                 filled: true,
-                fillColor: const Color(0xFF1E2937),
+                fillColor: _input,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -600,8 +608,8 @@ class _MorganFeedbackDrawerPanelState
   Widget _buildConfirmationButtons(MorganFeedbackSession session) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF374151))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: _border)),
       ),
       child: Row(
         children: [
@@ -633,8 +641,8 @@ class _MorganFeedbackDrawerPanelState
                   session.requestCorrection(note);
                 });
               },
-              child: const Text("No, let me clarify",
-                  style: TextStyle(color: Colors.white70)),
+              child: Text("No, let me clarify",
+                  style: TextStyle(color: _text70)),
             ),
           ),
         ],
@@ -653,19 +661,19 @@ class _MorganFeedbackDrawerPanelState
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E2937),
+                color: _surf,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 session.bubbles.last.text,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: _text70, fontSize: 13),
               ),
             ),
             const SizedBox(height: 20),
           ],
-          const Text(
+          Text(
             'I wasn\'t able to fully structure your feedback, but I\'ve captured our conversation.',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(color: _sub, fontSize: 12),
           ),
           const SizedBox(height: 16),
           // Primary action — must be explicit tap
@@ -693,8 +701,8 @@ class _MorganFeedbackDrawerPanelState
             width: double.infinity,
             child: TextButton(
               onPressed: widget.onClose, // triggers DISMISS in _hardClose
-              child: const Text('Close without filing',
-                  style: TextStyle(color: Colors.grey)),
+              child: Text('Close without filing',
+                  style: TextStyle(color: _sub)),
             ),
           ),
         ],
@@ -711,17 +719,17 @@ class _MorganFeedbackDrawerPanelState
           const Icon(Icons.check_circle_outline,
               color: Colors.greenAccent, size: 40),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Filed and on its way to the team.',
             style: TextStyle(
-                color: Colors.white,
+                color: _text,
                 fontSize: 15,
                 fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
             'Back to ${session.triggerEvent.pageTitle}',
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(color: _sub, fontSize: 12),
           ),
           if (session.correctionWindowOpen) ...[
             const SizedBox(height: 16),
@@ -748,13 +756,13 @@ class _MorganFeedbackDrawerPanelState
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E2937),
+                backgroundColor: _surf,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: widget.onClose,
-              child: const Text('Close',
-                  style: TextStyle(color: Colors.white70)),
+              child: Text('Close',
+                  style: TextStyle(color: _text70)),
             ),
           ),
         ],
@@ -774,6 +782,7 @@ class _ChatBubbleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAssistant = bubble.role == 'assistant';
     return Align(
       alignment:
@@ -785,7 +794,7 @@ class _ChatBubbleWidget extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isAssistant
-              ? const Color(0xFF1E2937)
+              ? (isDark ? const Color(0xFF1E2937) : const Color(0xFFF8FAFC))
               : const Color(0xFF1E4ED8),
           borderRadius: BorderRadius.circular(12).copyWith(
             bottomLeft: isAssistant
@@ -802,8 +811,8 @@ class _ChatBubbleWidget extends StatelessWidget {
                 children: [
                   Text(
                     bubble.text,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 13),
+                    style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   ),
                   const SizedBox(width: 6),
                   const SizedBox(
@@ -819,7 +828,7 @@ class _ChatBubbleWidget extends StatelessWidget {
                 bubble.text,
                 style: TextStyle(
                     color: isAssistant
-                        ? Colors.white
+                        ? (isDark ? Colors.white : const Color(0xFF0F172A))
                         : Colors.white,
                     fontSize: 13,
                     height: 1.45),

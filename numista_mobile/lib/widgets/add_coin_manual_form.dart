@@ -38,7 +38,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   };
 
   static const _accent = Color(0xFF3B82F6);
-  static const _border = Color(0xFFCBD5E1);
+  Color get _border => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
   static const _labelStyle = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w600,
@@ -63,45 +63,45 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           _sectionHeader('Identity', Icons.tag),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(flex: 2, child: _buildField('Year', 'e.g. 1921',
+            Expanded(flex: 2, child: _buildField(context, 'Year', 'e.g. 1921',
                 keyboardType: TextInputType.number)),
             const SizedBox(width: 12),
-            Expanded(child: _buildMintMarkField()),
+            Expanded(child: _buildMintMarkField(context)),
             const SizedBox(width: 12),
-            Expanded(flex: 2, child: _buildField('Denomination', 'e.g. \$1, 25c')),
+            Expanded(flex: 2, child: _buildField(context, 'Denomination', 'e.g. \$1, 25c')),
           ]),
           const SizedBox(height: 12),
-          _buildField('Program/Series', 'e.g. Morgan Silver Dollar'),
-          _buildField('Theme/Subject', 'e.g. Liberty Head'),
-          _buildField('Variety', 'e.g. Double Die, Over Mint Mark'),
+          _buildField(context, 'Program/Series', 'e.g. Morgan Silver Dollar'),
+          _buildField(context, 'Theme/Subject', 'e.g. Liberty Head'),
+          _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark'),
 
           const SizedBox(height: 8),
           // ── Section: Condition ────────────────────────────────────────────
           _sectionHeader('Condition & Grading', Icons.grade),
           const SizedBox(height: 12),
-          _buildField('Condition', 'e.g. MS65, AU58, Ungraded'),
+          _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded'),
 
           const SizedBox(height: 8),
           // ── Section: Purchase ─────────────────────────────────────────────
           _sectionHeader('Purchase Details', Icons.receipt_long),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _buildField('Cost', 'e.g. \$25.00',
+            Expanded(child: _buildField(context, 'Cost', 'e.g. \$25.00',
                 keyboardType: TextInputType.number,
                 prefixText: '\$')),
             const SizedBox(width: 12),
-            Expanded(child: _buildField('Quantity', 'e.g. 1',
+            Expanded(child: _buildField(context, 'Quantity', 'e.g. 1',
                 keyboardType: TextInputType.number)),
           ]),
-          _buildField('Retailer/Website', 'e.g. APMEX, eBay'),
-          _buildField('Retailer Invoice #', 'e.g. INV-9988'),
+          _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay'),
+          _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988'),
 
           const SizedBox(height: 8),
           // ── Section: Storage ──────────────────────────────────────────────
           _sectionHeader('Storage & Notes', Icons.inventory_2_outlined),
           const SizedBox(height: 12),
-          _buildField('Storage Location', 'e.g. Safe Box A, Folder 2'),
-          _buildField('Notes', 'Any additional notes', maxLines: 3),
+          _buildField(context, 'Storage Location', 'e.g. Safe Box A, Folder 2'),
+          _buildField(context, 'Notes', 'Any additional notes', maxLines: 3),
 
           const SizedBox(height: 32),
 
@@ -148,27 +148,28 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
         const SizedBox(width: 6),
         Text(title.toUpperCase(), style: _labelStyle),
         const SizedBox(width: 8),
-        const Expanded(child: Divider(color: Color(0xFFE2E6E9))),
+        Expanded(child: Divider(color: _border)),
       ]),
     );
   }
 
   /// Special Mint Mark field — auto-uppercase on every keystroke.
-  Widget _buildMintMarkField() {
+  Widget _buildMintMarkField(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: _mintCtrl,
         textCapitalization: TextCapitalization.characters,
         inputFormatters: [UpperCaseTextFormatter()],
-        style: const TextStyle(color: Color(0xFF1E293B)),
-        decoration: _inputDeco('Mint Mark', 'D, S, P, W'),
+        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B)),
+        decoration: _inputDeco(context, 'Mint Mark', 'D, S, P, W'),
         onSaved: (val) => _formData['Mint Mark'] = (val ?? '').toUpperCase(),
       ),
     );
   }
 
   Widget _buildField(
+    BuildContext context,
     String key,
     String hint, {
     TextInputType keyboardType = TextInputType.text,
@@ -181,30 +182,33 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
         initialValue: _formData[key]?.toString(),
         keyboardType: keyboardType,
         maxLines: maxLines,
-        style: const TextStyle(color: Color(0xFF1E293B)),
-        decoration: _inputDeco(key, hint, prefixText: prefixText),
+        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B)),
+        decoration: _inputDeco(context, key, hint, prefixText: prefixText),
         onSaved: (val) => _formData[key] = val ?? '',
       ),
     );
   }
 
-  InputDecoration _inputDeco(String label, String hint, {String? prefixText}) {
+  InputDecoration _inputDeco(BuildContext context, String label, String hint, {String? prefixText}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderCol = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixText: prefixText,
-      prefixStyle: const TextStyle(color: Color(0xFF1E293B)),
+      prefixStyle: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
       labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
       hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
+      fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: _border)),
+          borderSide: BorderSide(color: borderCol)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: _border)),
+          borderSide: BorderSide(color: borderCol)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: _accent, width: 1.5)),

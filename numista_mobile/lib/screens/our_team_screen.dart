@@ -17,6 +17,7 @@ class OurTeamScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -176,14 +177,14 @@ class OurTeamScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0B1220), Color(0xFF112240)],
+              gradient: LinearGradient(
+                colors: isDark ? const [Color(0xFF0B1220), Color(0xFF112240)] : const [Color(0xFFF8FAFC), Color(0xFFE2E8F0)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: const Color(0xFFD4A843).withAlpha(60), width: 1.5),
+                  color: Color(0xFFD4A843).withAlpha(isDark ? 60 : 120), width: 1.5),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF2DD4BF).withAlpha(20),

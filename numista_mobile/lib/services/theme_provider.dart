@@ -29,8 +29,8 @@ class ThemeProvider extends ChangeNotifier {
     _loadPrefs();
   }
 
-  // Set default to dark mode per UI/UX stability guidelines
-  ThemeMode _themeMode = ThemeMode.dark;
+  // Set default to light mode — dark mode is available via Settings toggle
+  ThemeMode _themeMode = ThemeMode.light;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -72,10 +72,10 @@ class ThemeProvider extends ChangeNotifier {
     if (savedTheme != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (e) => e.name == savedTheme,
-        orElse: () => ThemeMode.dark,
+        orElse: () => ThemeMode.light,
       );
     } else {
-      _themeMode = ThemeMode.dark;
+      _themeMode = ThemeMode.light;
     }
 
     // Text scale mode

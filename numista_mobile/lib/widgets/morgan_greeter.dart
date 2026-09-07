@@ -57,10 +57,10 @@ class _MorganGreeterState extends State<MorganGreeter>
   late final Animation<double> _tilesAnim;
 
   // ── Colours ─────────────────────────────────────────────────────────────────
-  static const _bg      = Color(0xFF0B1220);   // deep navy
+  Color get _bg => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2);
   static const _teal    = Color(0xFF2DD4BF);   // teal accent (matches logo eyes)
-  static const _text    = Colors.white;
-  static const _sub     = Color(0xFF94A3B8);
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
 
   // ── Greeting copy ───────────────────────────────────────────────────────────
   String _firstName = 'there'; // populated async in initState
@@ -286,7 +286,7 @@ class _MorganGreeterState extends State<MorganGreeter>
         // ── Greeting ───────────────────────────────────────────
         Text(
           _headlineText,
-          style: const TextStyle(
+          style: TextStyle(
             color: _text,
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -298,7 +298,7 @@ class _MorganGreeterState extends State<MorganGreeter>
         const SizedBox(height: 8),
         Text(
           _subText,
-          style: const TextStyle(
+          style: TextStyle(
             color: _sub,
             fontSize: 14,
             height: 1.4,
@@ -335,7 +335,7 @@ class _MorganGreeterState extends State<MorganGreeter>
             await MorganGreeter.markSeen();
             widget.onAction(null, null);
           },
-          child: const Text(
+          child: Text(
             'I\'ll browse on my own, thanks',
             style: TextStyle(color: _sub, fontSize: 13),
           ),
@@ -357,12 +357,12 @@ class _MorganGreeterState extends State<MorganGreeter>
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: _text, size: 24),
+              icon: Icon(Icons.arrow_back_rounded, color: _text, size: 24),
               onPressed: () => setState(() => _showingSubMenu = false),
               tooltip: 'Back to main menu',
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'Add to Collection',
               style: TextStyle(
                 color: _text,
@@ -373,7 +373,7 @@ class _MorganGreeterState extends State<MorganGreeter>
             ),
           ],
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(left: 12, top: 4, bottom: 20),
           child: Text(
             'Choose how you\'d like to add items.',
@@ -436,7 +436,7 @@ class _MorganGreeterState extends State<MorganGreeter>
           ),
         ),
         const SizedBox(width: 6),
-        const Text(
+        Text(
           'Morgan • Your Numista.AI Guide',
           style: TextStyle(color: _sub, fontSize: 11),
         ),
@@ -581,9 +581,9 @@ class _ActionTileCard extends StatefulWidget {
 class _ActionTileCardState extends State<_ActionTileCard> {
   bool _pressed = false;
 
-  static const _surface = Color(0xFF162033);
-  static const _text    = Colors.white;
-  static const _sub     = Color(0xFF94A3B8);
+  Color get _surface => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF162033) : Colors.white;
+  Color get _text => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69);
 
   @override
   Widget build(BuildContext context) {

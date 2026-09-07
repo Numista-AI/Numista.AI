@@ -97,6 +97,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   Map<String, dynamic>? _camResult;
   bool _camSaving = false;
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   // Backend API URL
 
   @override
@@ -254,16 +255,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Matched Wishlist Item!', style: TextStyle(color: Colors.white)),
-        content: const Text('This coin matches an item on your Wishlist. Would you like to remove it from your Wishlist now?', style: TextStyle(color: Colors.white70)),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
+        title: Text('Matched Wishlist Item!', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A))),
+        content: Text('This coin matches an item on your Wishlist. Would you like to remove it from your Wishlist now?', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF5A5C69))),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _showSuccessDialog(1);
             },
-            child: const Text('Keep on Wishlist', style: TextStyle(color: Colors.white54)),
+            child: Text('Keep on Wishlist', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF5A5C69))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -318,9 +319,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: _isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF334155)),
+        border: Border.all(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
@@ -329,21 +330,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Explore 7 Ways to Add Coins & Items to Numista.AI',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _isDark ? Colors.white : const Color(0xFF0F172A)),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'Quick Camera • Upload Files/PDFs • Manual Entry • Add by SKU • PCGS/NGC Cert • Roll/Batch • World & Mint Sets',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  style: TextStyle(fontSize: 11, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69)),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18, color: Color(0xFF94A3B8)),
+            icon: Icon(Icons.close, size: 18, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69)),
             onPressed: _dismissBanner,
             tooltip: 'Dismiss Tour Banner',
           ),
@@ -635,8 +636,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                  gradient: LinearGradient(
+                    colors: _isDark ? [const Color(0xFF1E293B), const Color(0xFF0F172A)] : [Colors.white, const Color(0xFFF4F4F2)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -652,9 +653,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       children: [
                         const Icon(Icons.bolt, color: Color(0xFFF0C040), size: 24),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'High-Speed Parallel Ingestion',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const Spacer(),
                         Container(
@@ -668,9 +669,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Processes multi-page PDFs and photo batches asynchronously in parallel chunks via Gemini 3.8 Flash.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 12),
                     ),
                     if (_isBatchProcessing) ...[
                       const SizedBox(height: 16),
@@ -686,7 +687,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       const SizedBox(height: 8),
                       Text(
                         _batchStatusMsg,
-                        style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 12, fontStyle: FontStyle.italic),
+                        style: TextStyle(color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF5A5C69), fontSize: 12, fontStyle: FontStyle.italic),
                       ),
                       const SizedBox(height: 12),
                       ..._batchItems.map((item) => Padding(
@@ -702,7 +703,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             Expanded(
                               child: Text(
                                 item['title'] ?? '',
-                                style: const TextStyle(color: Colors.white, fontSize: 13),
+                                style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                               ),
                             ),
                             Container(
@@ -1176,8 +1177,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  gradient: LinearGradient(
+                    colors: _isDark ? [const Color(0xFF0F172A), const Color(0xFF1E293B)] : [Colors.white, const Color(0xFFF4F4F2)],
                     begin: Alignment.topLeft, end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
@@ -1197,10 +1198,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       children: [
                         const Text('🏛️', style: TextStyle(fontSize: 24)),
                         const SizedBox(width: 10),
-                        const Text(
+                        Text(
                           "America250 Checklists",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: _isDark ? Colors.white : const Color(0xFF0F172A),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -1225,10 +1226,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       "Track your collection of the U.S. Mint's Semiquincentennial coins. "
                       "Separate checklists for Circulating Currency and Numismatic Collectibles.",
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.4),
+                      style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 13, height: 1.4),
                     ),
                     const SizedBox(height: 14),
                     Row(
@@ -1242,9 +1243,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             onPressed: () {
                               widget.onNavigate?.call('Coin Programs:2026_semiquincentennial_currency');
                             },
-                            child: const Text(
+                            child: Text(
                               "Circulating Currency",
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -2086,19 +2087,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: _isDark ? const Color(0xFF1E293B) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Color(0xFF22C55E)),
-            SizedBox(width: 8),
-            Text('Item Added!', style: TextStyle(color: Colors.white)),
+            const Icon(Icons.check_circle, color: Color(0xFF22C55E)),
+            const SizedBox(width: 8),
+            Text('Item Added!', style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A))),
           ],
         ),
-        content: const Text(
+        content: Text(
           'This item has been successfully added to your collection. '
           'Would you like to add more details (such as cost, notes, or storage location) now?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69)),
         ),
         actions: [
           TextButton(
@@ -2109,7 +2110,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 _skuSearchResult = null;
               });
             },
-            child: const Text('No, Add More SKUs', style: TextStyle(color: Color(0xFF94A3B8))),
+            child: Text('No, Add More SKUs', style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -2136,9 +2137,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: _isDark ? const Color(0xFF1E293B) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Add Item Details', style: TextStyle(color: Colors.white)),
+        title: Text('Add Item Details', style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A))),
         content: SingleChildScrollView(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -2146,48 +2147,48 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('PURCHASE COST (\$)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                Text('PURCHASE COST (\$)', style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 10, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: costCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A)),
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     hintText: 'e.g. 197.95',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF5A5C69)),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text('STORAGE LOCATION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                Text('STORAGE LOCATION', style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 10, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: locationCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A)),
                   decoration: InputDecoration(
                     hintText: 'e.g. Safe Box A, Safe Deposit',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF5A5C69)),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text('NOTES / DESCRIPTION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
+                Text('NOTES / DESCRIPTION', style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 10, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: notesCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A)),
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'Any extra details...',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF5A5C69)),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                   ),
                 ),
@@ -2204,7 +2205,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 _skuSearchResult = null;
               });
             },
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+            child: Text('Cancel', style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -2782,8 +2783,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+        gradient: LinearGradient(
+          colors: _isDark ? [const Color(0xFF064E3B), const Color(0xFF065F46)] : [Colors.white, const Color(0xFFF4F4F2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -2792,28 +2793,28 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 22),
-            SizedBox(width: 10),
-            Text('Import Complete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+          Row(children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 22),
+            const SizedBox(width: 10),
+            Text('Import Complete', style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w900, fontSize: 18)),
           ]),
           const SizedBox(height: 20),
           Row(
             children: [
-              _resultStat('${result.successCount}', 'Coins Added', Colors.white),
+              _resultStat('${result.successCount}', 'Coins Added', _isDark ? Colors.white : const Color(0xFF0F172A)),
               const SizedBox(width: 24),
-              _resultStat('${result.duplicateCount}', 'Duplicates Skipped', Colors.white70),
+              _resultStat('${result.duplicateCount}', 'Duplicates Skipped', _isDark ? Colors.white70 : const Color(0xFF5A5C69)),
               const SizedBox(width: 24),
-              _resultStat('${result.failedCount}', 'Failed', result.failedCount > 0 ? const Color(0xFFFCA5A5) : Colors.white70),
+              _resultStat('${result.failedCount}', 'Failed', result.failedCount > 0 ? const Color(0xFFFCA5A5) : (_isDark ? Colors.white70 : const Color(0xFF5A5C69))),
             ],
           ),
           if (result.failedCerts.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Divider(color: Colors.white24),
+            Divider(color: _isDark ? Colors.white24 : Colors.black12),
             const SizedBox(height: 8),
             Text(
               'Failed cert numbers:\n${result.failedCerts.take(10).join(', ')}${result.failedCerts.length > 10 ? " ...and ${result.failedCerts.length - 10} more" : ""}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 12),
             ),
           ],
         ],
@@ -3576,23 +3577,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
               // ── Actions: Scan Button or Loader ─────────────────────────────
               if (_camLoading) ...[
-                const Center(
+                Center(
                   child: Card(
-                    color: Color(0xFF0F172A),
+                    color: _isDark ? const Color(0xFF0F172A) : Colors.white,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
                       child: Column(
                         children: [
-                          CircularProgressIndicator(color: Color(0xFFEC4899)),
-                          SizedBox(height: 16),
+                          const CircularProgressIndicator(color: Color(0xFFEC4899)),
+                          const SizedBox(height: 16),
                           Text(
                             'Morgan is scanning your coin...',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'Analyzing visual details & estimating grade...',
-                            style: TextStyle(color: Colors.white54, fontSize: 11),
+                            style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF5A5C69), fontSize: 11),
                           ),
                         ],
                       ),

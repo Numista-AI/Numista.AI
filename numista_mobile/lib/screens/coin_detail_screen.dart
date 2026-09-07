@@ -38,18 +38,23 @@ import 'mint_error_detail_screen.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
 
-// ─── Design tokens (match app-wide palette) ────────────────────────────────────
-const _kBg       = Color(0xFF0B1120);
-const _kSurface  = Color(0xFF1E2937);
-const _kDark     = Color(0xFF0B1120);
-const _kText     = Color(0xFFE8EAF0);
-const _kSubtext  = Color(0xFF8B92B4);
-const _kAccent   = Color(0xFFC9A227);
+// ─── Design tokens — theme-aware via BuildContext ───────────────────────────
 const _kBrand    = Color(0xFFF63366);
 const _kGreen    = Color(0xFF28A745);
 const _kRed      = Color(0xFFDC3545);
 const _kGold     = Color(0xFFC9A227);
-const _kBorder   = Color(0xFF2D3143);
+
+/// Theme-aware colors for coin detail. Call with a BuildContext to get the
+/// correct light/dark variant. Inner widgets that don't have State access
+/// can use these static helpers.
+bool _isDarkCtx(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _kBg(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0B1120) : const Color(0xFFF4F4F2);
+Color _kSurface(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF1E2937) : Colors.white;
+Color _kDark(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF0B1120) : const Color(0xFFF4F4F2);
+Color _kText(BuildContext c) => _isDarkCtx(c) ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
+Color _kSubtext(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF8B92B4) : const Color(0xFF5A5C69);
+Color _kAccent(BuildContext c) => _isDarkCtx(c) ? const Color(0xFFC9A227) : const Color(0xFF8C7355);
+Color _kBorder(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF2D3143) : const Color(0xFFE2E8F0);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -197,8 +202,8 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
-          children: const [
-            Icon(Icons.bug_report, color: _kAccent),
+          children: [
+            Icon(Icons.bug_report, color: _kAccent(context)),
             SizedBox(width: 8),
             Text('Report Discrepancy'),
           ],
@@ -208,10 +213,10 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Field: $fieldName',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 6),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            SizedBox(height: 6),
             Text('Current value: "$currentValue"',
-                style: const TextStyle(fontSize: 13, color: _kSubtext)),
+                style: TextStyle(fontSize: 13, color: _kSubtext(context))),
             const SizedBox(height: 16),
             TextField(
               controller: reportedCtrl,
@@ -239,7 +244,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _kAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: _kAccent(context)),
             onPressed: () async {
               final comment = commentCtrl.text.trim();
               final corrected = reportedCtrl.text.trim();
@@ -585,7 +590,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: _kSurface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Verify Manually?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
@@ -682,7 +687,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: _kBg(context),
       body: _inEditMode ? _buildEditForm() : _buildDetailView(),
     );
   }
@@ -724,12 +729,12 @@ Write in an engaging, authoritative style like a respected numismatic reference.
         ),
         // Tab bar
         Container(
-          color: _kSurface,
+          color: _kSurface(context),
           child: TabBar(
             controller: _tabCtrl,
-            labelColor: _kAccent,
-            unselectedLabelColor: _kSubtext,
-            indicatorColor: _kAccent,
+            labelColor: _kAccent(context),
+            unselectedLabelColor: _kSubtext(context),
+            indicatorColor: _kAccent(context),
             indicatorWeight: 2.5,
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: const [
@@ -785,7 +790,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       children: [
         // Edit header
         Container(
-          color: _kDark,
+          color: _kDark(context),
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
           child: Row(children: [
             const Icon(Icons.edit, color: _kBrand, size: 18),
@@ -865,7 +870,7 @@ class _HeroHeader extends StatelessWidget {
     final isSetItem = coin.isSet || (coin.setId != null && coin.setId!.isNotEmpty);
 
     return Container(
-      color: _kDark,
+      color: _kDark(context),
       padding: const EdgeInsets.fromLTRB(20, 14, 12, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,7 +883,7 @@ class _HeroHeader extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
+                  color: _kDark(context),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFC9A227).withAlpha(80)),
                 ),
@@ -1123,7 +1128,7 @@ class _CoinImagePairState extends State<_CoinImagePair> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Reporting error on $side image for this $assetType.',
-                  style: const TextStyle(fontSize: 13, color: _kSubtext)),
+                  style: TextStyle(fontSize: 13, color: _kSubtext(context))),
               const SizedBox(height: 16),
               const Text('What is wrong with this image?',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -1298,7 +1303,7 @@ class _CoinImageTile extends StatelessWidget {
               width: width,
               height: height,
               decoration: BoxDecoration(
-                color: const Color(0xFF0B1120), // Dark background canvas
+                color: _kDark(context), // Background canvas
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: url.isNotEmpty ? const Color(0xFFC9A227).withAlpha(80) : Colors.white.withAlpha(30),
@@ -1374,7 +1379,7 @@ class _CoinImageTile extends StatelessWidget {
 
   Widget _placeholder() => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.monetization_on_outlined, size: 36, color: _kAccent.withAlpha(150)),
+      Icon(Icons.monetization_on_outlined, size: 36, color: _kBrand.withAlpha(150)),
       const SizedBox(height: 4),
       Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
     ]),
@@ -1384,7 +1389,7 @@ class _CoinImageTile extends StatelessWidget {
     decoration: BoxDecoration(
       gradient: LinearGradient(
         colors: [Colors.white.withAlpha(8), Colors.white.withAlpha(20), Colors.white.withAlpha(8)],
-        stops: const [0.0, 0.5, 1.0],
+        stops: [0.0, 0.5, 1.0],
       ),
     ),
   );
@@ -1512,7 +1517,7 @@ class _DetailsTab extends StatelessWidget {
         f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
 
     if (fields.isEmpty) {
-      return _emptyState('No details recorded yet.\nTap Edit to add information.');
+      return _emptyState(context, 'No details recorded yet.\nTap Edit to add information.');
     }
 
     final isSetItem = coin.isSet || (coin.setId != null && coin.setId!.isNotEmpty);
@@ -1660,7 +1665,7 @@ class _FinancialsTab extends StatelessWidget {
         ? '${profit >= 0 ? '+' : '-'}\$${profit.abs().toStringAsFixed(2)}' : '—';
     final plPctStr = (canCalcPL && profitPct != null)
         ? '${profitPct >= 0 ? '+' : ''}${profitPct.toStringAsFixed(1)}%' : '—';
-    final plColor  = canCalcPL ? (profit >= 0 ? _kGreen : _kRed) : _kSubtext;
+    final plColor  = canCalcPL ? (profit >= 0 ? _kGreen : _kRed) : _kSubtext(context);
 
     Widget metricBox(String label, String value, Color valueColor) => Expanded(
       child: Semantics(
@@ -1668,15 +1673,15 @@ class _FinancialsTab extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           decoration: BoxDecoration(
-            color: _kSurface,
+            color: _kSurface(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: _kBorder),
+            border: Border.all(color: _kBorder(context)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(
-                  fontSize: 12, color: _kSubtext, letterSpacing: 0.5)),
+              Text(label, style: TextStyle(
+                  fontSize: 12, color: _kSubtext(context), letterSpacing: 0.5)),
               const SizedBox(height: 4),
               Text(value, style: TextStyle(
                   fontSize: 15, fontWeight: FontWeight.w600, color: valueColor),
@@ -1693,18 +1698,18 @@ class _FinancialsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Always-visible 4-metric summary ─────────────────────────────
-          const Text('Financial Summary',
+          Text('Financial Summary',
               style: TextStyle(
                   fontSize: 12,
-                  color: _kSubtext,
+                  color: _kSubtext(context),
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(children: [
-            metricBox('ACQUISITION COST', costDisplay, _kText),
-            const SizedBox(width: 8),
+            metricBox('ACQUISITION COST', costDisplay, _kText(context)),
+            SizedBox(width: 8),
             metricBox('EST. VALUE', aiDisplay,
-                aiDisplay == 'Pending' ? _kSubtext : _kAccent),
+                aiDisplay == 'Pending' ? _kSubtext(context) : _kAccent(context)),
           ]),
           const SizedBox(height: 6),
           // ── Greysheet CPG attribution (per §4.4 & §4.5 of API license) ──
@@ -1715,7 +1720,7 @@ class _FinancialsTab extends StatelessWidget {
             },
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 10, color: _kSubtext),
+                style: TextStyle(fontSize: 10, color: _kSubtext(context)),
                 children: [
                   TextSpan(text: 'Coin, note & medal value estimate based on CPG data from '),
                   const TextSpan(
@@ -1755,39 +1760,39 @@ class _FinancialsTab extends StatelessWidget {
           ]),
 
           // ── Melt Value card with formula ─────────────────────────────────
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: _kSurface,
+              color: _kSurface(context),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _kBorder),
+              border: Border.all(color: _kBorder(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Melt Value',
-                  style: TextStyle(fontSize: 11, color: _kSubtext, letterSpacing: 0.4),
+                  style: TextStyle(fontSize: 11, color: _kSubtext(context), letterSpacing: 0.4),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   meltDisplay,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: _kText,
+                    color: _kText(context),
                     letterSpacing: -0.5,
                   ),
                 ),
                 if (meltFormula.isNotEmpty) ...[
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5),
                   Text(
                     '($meltFormula)',
                     style: TextStyle(
                       fontSize: 11,
-                      color: _kSubtext,
+                      color: _kSubtext(context),
                       height: 1.4,
                     ),
                   ),
@@ -1802,13 +1807,13 @@ class _FinancialsTab extends StatelessWidget {
           ],
           
           if (coin.gradingService.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
               ),
               child: Row(
                 children: [
@@ -1824,12 +1829,12 @@ class _FinancialsTab extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Text(
                           'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Bid/Retail values).',
                           style: TextStyle(
                             fontSize: 12,
-                            color: _kSubtext,
+                            color: _kSubtext(context),
                             height: 1.4,
                           ),
                         ),
@@ -1963,11 +1968,11 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
     }
 
     if (_error != null || _pricing.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 10),
         child: Text(
           'No Greysheet pricing table available.',
-          style: TextStyle(fontSize: 12, color: _kSubtext, fontStyle: FontStyle.italic),
+          style: TextStyle(fontSize: 12, color: _kSubtext(context), fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -1980,36 +1985,36 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Greysheet Pricing Guide',
               style: TextStyle(
                 fontSize: 12,
-                color: _kSubtext,
+                color: _kSubtext(context),
                 letterSpacing: 0.8,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
               'GSID: #${widget.gsid}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: _kSubtext,
+                color: _kSubtext(context),
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: _kSurface,
+            color: _kSurface(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: _kBorder),
+            border: Border.all(color: _kBorder(context)),
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -2019,12 +2024,12 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
               headingRowHeight: 36,
               dataRowMinHeight: 32,
               dataRowMaxHeight: 36,
-              columns: const [
-                DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('Red Book (CPG® Retail)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('PCGS® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('NGC® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
-                DataColumn(label: Text('Blue Book', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText))),
+              columns: [
+                DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText(context)))),
+                DataColumn(label: Text('Red Book (CPG® Retail)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText(context)))),
+                DataColumn(label: Text('PCGS® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText(context)))),
+                DataColumn(label: Text('NGC® Guide', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText(context)))),
+                DataColumn(label: Text('Blue Book', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _kText(context)))),
               ],
               rows: _pricing.map<DataRow>((p) {
                 final gradeLabel = p['GradeLabel'] ?? '—';
@@ -2040,7 +2045,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                 return DataRow(
                   selected: isCurrent,
                   color: WidgetStateProperty.resolveWith<Color?>((states) {
-                    if (isCurrent) return _kAccent.withAlpha(20);
+                    if (isCurrent) return _kAccent(context).withAlpha(20);
                     return null;
                   }),
                   cells: [
@@ -2049,7 +2054,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? _kAccent : _kText,
+                        color: isCurrent ? _kAccent(context) : _kText(context),
                       ),
                     )),
                     DataCell(Text(
@@ -2057,28 +2062,28 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? _kAccent : _kText,
+                        color: isCurrent ? _kAccent(context) : _kText(context),
                       ),
                     )),
                     DataCell(Text(
                       pcgsVal.toString().isEmpty || pcgsVal.toString() == '0' ? '—' : '\$$pcgsVal',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _kText,
+                        color: _kText(context),
                       ),
                     )),
                     DataCell(Text(
                       ngcVal.toString().isEmpty || ngcVal.toString() == '0' ? '—' : '\$$ngcVal',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _kText,
+                        color: _kText(context),
                       ),
                     )),
                     DataCell(Text(
                       blueBookVal.toString().isEmpty || blueBookVal.toString() == '0' ? '—' : '\$$blueBookVal',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _kText,
+                        color: _kText(context),
                       ),
                     )),
                   ],
@@ -2096,7 +2101,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
           },
           child: RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: 10, color: _kSubtext, fontStyle: FontStyle.italic),
+              style: TextStyle(fontSize: 10, color: _kSubtext(context), fontStyle: FontStyle.italic),
               children: [
                 const TextSpan(text: 'Coin, note & medal value estimates based on Red Book / CPG® Retail data from '),
                 const TextSpan(
@@ -2130,20 +2135,20 @@ class _SpotPriceRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _kSurface,
+        color: _kSurface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: _kBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Live Spot Prices', style: TextStyle(
-            fontSize: 11, color: _kSubtext, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          Text('Live Spot Prices', style: TextStyle(
+            fontSize: 11, color: _kSubtext(context), fontWeight: FontWeight.w600)),
+          SizedBox(height: 8),
           Wrap(spacing: 16, runSpacing: 6,
             children: spotPrices.entries.map((e) => Text(
               '${e.key}: \$${e.value.toStringAsFixed(2)}/oz',
-              style: const TextStyle(fontSize: 12, color: _kText),
+              style: TextStyle(fontSize: 12, color: _kText(context)),
             )).toList(),
           ),
         ],
@@ -2215,14 +2220,14 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
           // ── Acquisition / Purchase Record ───────────────────────────────
           if (hasAcquisition) ...[
             _SectionHeader('Acquisition'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2274,14 +2279,14 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
           // ── Storage ────────────────────────────────────────────
           if (hasStorage) ...[
             _SectionHeader('Storage'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
               ),
               child: _ProvenanceRow(
                 icon: Icons.lock_outline,
@@ -2295,18 +2300,18 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
           // ── Personal Notes ───────────────────────────────────
           if (hasNotes) ...[
             _SectionHeader('Personal Notes'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kAccent.withAlpha(15),
+                color: _kAccent(context).withAlpha(15),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kAccent.withAlpha(50)),
+                border: Border.all(color: _kAccent(context).withAlpha(50)),
               ),
               child: GlossaryTooltipWrapper(
                 text: coin.personalNotes,
-                style: const TextStyle(fontSize: 13, color: _kText,
+                style: TextStyle(fontSize: 13, color: _kText(context),
                     fontStyle: FontStyle.italic, height: 1.5),
               ),
             ),
@@ -2323,18 +2328,18 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
           if (hasDesc) ...[
             const SizedBox(height: 16),
             _SectionHeader('Original Seller Description'),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
               ),
               child: GlossaryTooltipWrapper(
                 text: coin.originalDescription,
-                style: const TextStyle(fontSize: 12, color: _kSubtext, height: 1.5),
+                style: TextStyle(fontSize: 12, color: _kSubtext(context), height: 1.5),
               ),
             ),
           ],
@@ -2441,7 +2446,7 @@ class _ProvenanceTabState extends State<_ProvenanceTab> {
           ],
 
           if (!hasAny)
-            _emptyState(
+            _emptyState(context, 
               'No provenance information recorded yet.\n\n'
               'Add acquisition details via Edit — retailer, invoice number, '
               'purchase date and cost, storage location, and personal notes.'
@@ -2465,16 +2470,16 @@ class _ProvenanceRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 15, color: _kAccent),
-        const SizedBox(width: 8),
+        Icon(icon, size: 15, color: _kAccent(context)),
+        SizedBox(width: 8),
         SizedBox(
           width: 110,
-          child: Text('$label:', style: const TextStyle(
-            fontSize: 12, color: _kSubtext, fontWeight: FontWeight.w500)),
+          child: Text('$label:', style: TextStyle(
+            fontSize: 12, color: _kSubtext(context), fontWeight: FontWeight.w500)),
         ),
         Expanded(
-          child: Text(value, style: const TextStyle(
-            fontSize: 13, color: _kText, fontWeight: FontWeight.w600)),
+          child: Text(value, style: TextStyle(
+            fontSize: 13, color: _kText(context), fontWeight: FontWeight.w600)),
         ),
       ]),
     );
@@ -2498,34 +2503,34 @@ class _CertCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _kSurface,
+        color: _kSurface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: _kBorder(context)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (coin.gradingService.isNotEmpty)
           Row(children: [
-            const Icon(Icons.verified_outlined, size: 16, color: _kAccent),
-            const SizedBox(width: 6),
+            Icon(Icons.verified_outlined, size: 16, color: _kAccent(context)),
+            SizedBox(width: 6),
             Text(coin.gradingService,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _kText)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _kText(context))),
           ]),
         if (coin.certificationNumber.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Row(children: [
-            Text('Cert #: ', style: const TextStyle(fontSize: 12, color: _kSubtext)),
+            Text('Cert #: ', style: TextStyle(fontSize: 12, color: _kSubtext(context))),
             Text(coin.certificationNumber,
-              style: const TextStyle(fontSize: 12, color: _kText, fontWeight: FontWeight.w600)),
+              style: TextStyle(fontSize: 12, color: _kText(context), fontWeight: FontWeight.w600)),
             const Spacer(),
             if (pcgsUrl != null)
               GestureDetector(
                 onTap: () => launchUrl(Uri.parse(pcgsUrl),
                     mode: LaunchMode.externalApplication),
-                child: const Row(children: [
+                child: Row(children: [
                   Text('Verify →', style: TextStyle(
-                    fontSize: 11, color: _kAccent, fontWeight: FontWeight.w600)),
+                    fontSize: 11, color: _kAccent(context), fontWeight: FontWeight.w600)),
                   SizedBox(width: 2),
-                  Icon(Icons.open_in_new, size: 12, color: _kAccent),
+                  Icon(Icons.open_in_new, size: 12, color: _kAccent(context)),
                 ]),
               ),
           ]),
@@ -2682,30 +2687,30 @@ class _AiInsightsTab extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_kAccent.withAlpha(25), _kBrand.withAlpha(15)],
+                  colors: [_kAccent(context).withAlpha(25), _kBrand.withAlpha(15)],
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kAccent.withAlpha(60)),
+                border: Border.all(color: _kAccent(context).withAlpha(60)),
               ),
               child: Column(children: [
-                const Icon(Icons.psychology_outlined, size: 40, color: _kAccent),
-                const SizedBox(height: 10),
-                const Text('AI Insights', style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: _kText)),
-                const SizedBox(height: 6),
-                const Text(
+                Icon(Icons.psychology_outlined, size: 40, color: _kAccent(context)),
+                SizedBox(height: 10),
+                Text('AI Insights', style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: _kText(context))),
+                SizedBox(height: 6),
+                Text(
                   'Get a Gemini-powered collector\'s analysis of this coin — '
                   'historical context, rarity, and what makes it special.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: _kSubtext, height: 1.5),
+                  style: TextStyle(fontSize: 13, color: _kSubtext(context), height: 1.5),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 ElevatedButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Generate Insight'),
+                  icon: Icon(Icons.auto_awesome, size: 16),
+                  label: Text('Generate Insight'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kAccent,
+                    backgroundColor: _kAccent(context),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
@@ -2715,11 +2720,11 @@ class _AiInsightsTab extends StatelessWidget {
           ],
 
           if (loading) ...[
-            const SizedBox(height: 40),
-            const Center(child: Column(children: [
-              CircularProgressIndicator(color: _kAccent),
+            SizedBox(height: 40),
+            Center(child: Column(children: [
+              CircularProgressIndicator(color: _kAccent(context)),
               SizedBox(height: 16),
-              Text('Analysing this coin...', style: TextStyle(color: _kSubtext)),
+              Text('Analysing this coin...', style: TextStyle(color: _kSubtext(context))),
             ])),
           ],
 
@@ -2732,43 +2737,43 @@ class _AiInsightsTab extends StatelessWidget {
                   color: _kRed.withAlpha(20),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(error!, style: const TextStyle(fontSize: 11, color: _kRed)),
+                child: Text(error!, style: TextStyle(fontSize: 11, color: _kRed)),
               ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
                 boxShadow: [BoxShadow(
-                  color: Colors.black.withAlpha(15), blurRadius: 8, offset: const Offset(0, 2)
+                  color: Colors.black.withAlpha(15), blurRadius: 8, offset: Offset(0, 2)
                 )],
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: const [
-                  Icon(Icons.auto_awesome, size: 14, color: _kAccent),
+                Row(children: [
+                  Icon(Icons.auto_awesome, size: 14, color: _kAccent(context)),
                   SizedBox(width: 6),
                   Text('Gemini 3.8 Flash • AI Numismatic Deepdive',
-                    style: TextStyle(fontSize: 11, color: _kAccent, fontWeight: FontWeight.w600)),
+                    style: TextStyle(fontSize: 11, color: _kAccent(context), fontWeight: FontWeight.w600)),
                 ]),
                 const SizedBox(height: 12),
                 // Render as markdown — gives bold headers, bullets, numbered lists
                 MarkdownBody(
                   data: insight,
                   styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(fontSize: 14, color: _kText, height: 1.7),
-                    h1: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
-                    h2: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
-                    h3: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText, height: 1.8),
-                    strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                    listBullet: const TextStyle(fontSize: 14, color: _kText, height: 1.7),
+                    p: TextStyle(fontSize: 14, color: _kText(context), height: 1.7),
+                    h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
+                    h2: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
+                    h3: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText(context), height: 1.8),
+                    strong: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    listBullet: TextStyle(fontSize: 14, color: _kText(context), height: 1.7),
                     blockquoteDecoration: BoxDecoration(
-                      color: _kAccent.withAlpha(20),
+                      color: _kAccent(context).withAlpha(20),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border(left: BorderSide(color: _kAccent, width: 3)),
+                      border: Border(left: BorderSide(color: _kAccent(context), width: 3)),
                     ),
-                    code: TextStyle(fontSize: 13, backgroundColor: _kBg, color: _kText),
+                    code: TextStyle(fontSize: 13, backgroundColor: _kBg(context), color: _kText(context)),
                   ),
                   onTapLink: (text, href, title) {
                     if (href != null) {
@@ -2778,15 +2783,15 @@ class _AiInsightsTab extends StatelessWidget {
                 ),
               ]),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(children: [
               OutlinedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 14),
-                label: const Text('Regenerate'),
+                icon: Icon(Icons.refresh, size: 14),
+                label: Text('Regenerate'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _kSubtext,
-                  side: const BorderSide(color: _kBorder),
+                  foregroundColor: _kSubtext(context),
+                  side: BorderSide(color: _kBorder(context)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   textStyle: const TextStyle(fontSize: 12),
                 ),
@@ -2832,30 +2837,30 @@ class _HistoryTab extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _kSurface,
+              color: _kSurface(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _kBorder),
+              border: Border.all(color: _kBorder(context)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.history_edu_outlined, color: _kAccent, size: 28),
-                const SizedBox(width: 14),
+                Icon(Icons.history_edu_outlined, color: _kAccent(context), size: 28),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Historical & Numismatic Background',
-                        style: const TextStyle(
-                          color: _kText,
+                        style: TextStyle(
+                          color: _kText(context),
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Contextual history, mintage era, and design origin for $title.',
-                        style: const TextStyle(color: _kSubtext, fontSize: 13),
+                        style: TextStyle(color: _kSubtext(context), fontSize: 13),
                       ),
                     ],
                   ),
@@ -2863,34 +2868,34 @@ class _HistoryTab extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: _kSurface,
+              color: _kSurface(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _kBorder),
+              border: Border.all(color: _kBorder(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '${coin.year} ${coin.mintMark} ${coin.denomination}',
-                  style: const TextStyle(
-                    color: _kAccent,
+                  style: TextStyle(
+                    color: _kAccent(context),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   'This issue represents an important piece of ${coin.country.isNotEmpty ? coin.country : 'numismatic'} coinage history. '
                   'Minted in ${coin.year.isNotEmpty ? coin.year : 'its era'}${coin.mintMark.isNotEmpty ? ' at the ${coin.mintMark} Mint facility' : ''}, '
                   'it was struck in ${coin.metalContent.isNotEmpty ? coin.metalContent : 'standard coinage metal'}. '
                   '${coin.programSeries.isNotEmpty ? 'Part of the canonical ${coin.programSeries} series.' : ''}',
-                  style: const TextStyle(
-                    color: _kText,
+                  style: TextStyle(
+                    color: _kText(context),
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -3043,10 +3048,10 @@ class _LegislationTabState extends State<_LegislationTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(color: _kAccent),
+          child: CircularProgressIndicator(color: _kAccent(context)),
         ),
       );
     }
@@ -3066,11 +3071,11 @@ class _LegislationTabState extends State<_LegislationTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Section header ──────────────────────────────────────────────
-          Row(children: const [
-            Icon(Icons.account_balance, size: 16, color: _kAccent),
+          Row(children: [
+            Icon(Icons.account_balance, size: 16, color: _kAccent(context)),
             SizedBox(width: 8),
             Text('Founding Legislation',
-                style: TextStyle(fontSize: 13, color: _kSubtext,
+                style: TextStyle(fontSize: 13, color: _kSubtext(context),
                     letterSpacing: 0.8, fontWeight: FontWeight.w600)),
           ]),
           const SizedBox(height: 12),
@@ -3081,9 +3086,9 @@ class _LegislationTabState extends State<_LegislationTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
                 boxShadow: [BoxShadow(
                   color: Colors.black.withAlpha(15),
                   blurRadius: 8, offset: const Offset(0, 2),
@@ -3094,20 +3099,20 @@ class _LegislationTabState extends State<_LegislationTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _kAccent.withAlpha(22),
+                    color: _kAccent(context).withAlpha(22),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _kAccent.withAlpha(60)),
+                    border: Border.all(color: _kAccent(context).withAlpha(60)),
                   ),
                   child: Text('Public Law ${law['public_law'] ?? lawKey}',
-                      style: const TextStyle(fontSize: 11, color: _kAccent,
+                      style: TextStyle(fontSize: 11, color: _kAccent(context),
                           fontWeight: FontWeight.w700, letterSpacing: 0.4)),
                 ),
                 const SizedBox(height: 12),
 
                 // Law title
                 Text(law['name'] ?? '',
-                    style: const TextStyle(fontSize: 16,
-                        fontWeight: FontWeight.bold, color: _kText, height: 1.4)),
+                    style: TextStyle(fontSize: 16,
+                        fontWeight: FontWeight.bold, color: _kText(context), height: 1.4)),
                 const SizedBox(height: 12),
 
                 // Metadata rows
@@ -3122,17 +3127,17 @@ class _LegislationTabState extends State<_LegislationTab> {
                       '${law['actions_count']} recorded actions'),
 
                 if ((law['congress_url'] ?? '').toString().isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: () => launchUrl(
                       Uri.parse(law!['congress_url'].toString()),
                       mode: LaunchMode.externalApplication,
                     ),
-                    icon: const Icon(Icons.open_in_new, size: 14),
-                    label: const Text('View on Congress.gov'),
+                    icon: Icon(Icons.open_in_new, size: 14),
+                    label: Text('View on Congress.gov'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: _kAccent,
-                      side: const BorderSide(color: _kAccent),
+                      foregroundColor: _kAccent(context),
+                      side: BorderSide(color: _kAccent(context)),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
                       textStyle: const TextStyle(fontSize: 12,
@@ -3148,17 +3153,17 @@ class _LegislationTabState extends State<_LegislationTab> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _kAccent.withAlpha(10),
+                color: _kAccent(context).withAlpha(10),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kAccent.withAlpha(30)),
+                border: Border.all(color: _kAccent(context).withAlpha(30)),
               ),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                const Icon(Icons.info_outline, size: 16, color: _kAccent),
-                const SizedBox(width: 8),
+                Icon(Icons.info_outline, size: 16, color: _kAccent(context)),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(law['description'] ?? '',
-                      style: const TextStyle(fontSize: 13, color: _kSubtext,
+                      style: TextStyle(fontSize: 13, color: _kSubtext(context),
                           height: 1.5)),
                 ),
               ]),
@@ -3169,24 +3174,24 @@ class _LegislationTabState extends State<_LegislationTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: _kSurface,
+                color: _kSurface(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
+                border: Border.all(color: _kBorder(context)),
               ),
               child: Column(children: [
                 Icon(Icons.history_edu_outlined, size: 40,
-                    color: _kSubtext.withAlpha(100)),
-                const SizedBox(height: 12),
-                const Text('No Legislation Matched',
+                    color: _kSubtext(context).withAlpha(100)),
+                SizedBox(height: 12),
+                Text('No Legislation Matched',
                     style: TextStyle(fontSize: 15,
-                        fontWeight: FontWeight.bold, color: _kText)),
-                const SizedBox(height: 6),
+                        fontWeight: FontWeight.bold, color: _kText(context))),
+                SizedBox(height: 6),
                 Text(
                   'Legislation data for "${widget.coin.programSeries.isEmpty ? widget.coin.denomination : widget.coin.programSeries}" '
                   'is not yet in our database.\n\n'
                   'The AI Insights tab can provide historical context about this coin.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: _kSubtext,
+                  style: TextStyle(fontSize: 13, color: _kSubtext(context),
                       height: 1.5),
                 ),
               ]),
@@ -3194,12 +3199,12 @@ class _LegislationTabState extends State<_LegislationTab> {
           ],
 
           // ── Source credit ──────────────────────────────────────────────
-          const SizedBox(height: 20),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-            Icon(Icons.verified_outlined, size: 11, color: _kSubtext),
+          SizedBox(height: 20),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.verified_outlined, size: 11, color: _kSubtext(context)),
             SizedBox(width: 4),
             Text('Legislation data via Congress.gov API',
-                style: TextStyle(fontSize: 10, color: _kSubtext)),
+                style: TextStyle(fontSize: 10, color: _kSubtext(context))),
           ]),
         ],
       ),
@@ -3220,13 +3225,13 @@ class _HistoryRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 14, color: _kSubtext),
-        const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(
-            fontSize: 13, color: _kSubtext, fontWeight: FontWeight.w500)),
+        Icon(icon, size: 14, color: _kSubtext(context)),
+        SizedBox(width: 8),
+        Text('$label: ', style: TextStyle(
+            fontSize: 13, color: _kSubtext(context), fontWeight: FontWeight.w500)),
         Expanded(
           child: Text(value,
-              style: const TextStyle(fontSize: 13, color: _kText)),
+              style: TextStyle(fontSize: 13, color: _kText(context))),
         ),
       ]),
     );
@@ -3250,29 +3255,29 @@ class _DetailTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: _kSurface,
+          color: _kSurface(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _kBorder),
+          border: Border.all(color: _kBorder(context)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: _kSubtext,
+              Text(label, style: TextStyle(fontSize: 10, color: _kSubtext(context),
                   fontWeight: FontWeight.w600, letterSpacing: 0.2)),
               if (onInspect != null)
                 GestureDetector(
                   onTap: onInspect,
-                  child: const Icon(Icons.comment_outlined, size: 12, color: _kAccent),
+                  child: Icon(Icons.comment_outlined, size: 12, color: _kAccent(context)),
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           GestureDetector(
             onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
             child: Text(value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                  color: _kText)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                  color: _kText(context))),
           ),
         ]),
       ),
@@ -3286,8 +3291,8 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(text,
-    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold,
-        color: _kSubtext, letterSpacing: 0.3));
+    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold,
+        color: _kSubtext(context), letterSpacing: 0.3));
 }
 
 class _EditField extends StatelessWidget {
@@ -3301,28 +3306,28 @@ class _EditField extends StatelessWidget {
     return SizedBox(
       width: multiline ? double.infinity : 220,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: _kSubtext,
+        Text(label, style: TextStyle(fontSize: 11, color: _kSubtext(context),
             fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         TextField(
           controller: controller,
           maxLines: multiline ? 4 : 1,
-          style: const TextStyle(fontSize: 14, color: _kText),
+          style: TextStyle(fontSize: 14, color: _kText(context)),
           decoration: InputDecoration(
             filled: true,
-            fillColor: _kSurface,
+            fillColor: _kSurface(context),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: _kBorder),
+              borderSide: BorderSide(color: _kBorder(context)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: _kBorder),
+              borderSide: BorderSide(color: _kBorder(context)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide: const BorderSide(color: _kAccent, width: 2),
+              borderSide: BorderSide(color: _kAccent(context), width: 2),
             ),
           ),
         ),
@@ -3331,15 +3336,15 @@ class _EditField extends StatelessWidget {
   }
 }
 
-Widget _emptyState(String message) => Center(
+Widget _emptyState(BuildContext context, String message) => Center(
   child: Padding(
     padding: const EdgeInsets.all(40),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.info_outline, size: 36, color: _kSubtext.withAlpha(120)),
-      const SizedBox(height: 12),
+      Icon(Icons.info_outline, size: 36, color: _kSubtext(context).withAlpha(120)),
+      SizedBox(height: 12),
       Text(message,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: _kSubtext, fontSize: 14, height: 1.5)),
+        style: TextStyle(color: _kSubtext(context), fontSize: 14, height: 1.5)),
     ]),
   ),
 );
@@ -3596,7 +3601,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
     }
 
     if (_loaded && _rows.isEmpty) {
-      return _emptyState(
+      return _emptyState(context, 
         'No known errors on record for this coin.\n\n'
         'Check the Error Library for general error types\n'
         'or search by denomination.',
@@ -3623,7 +3628,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
           child: Row(
             children: [
               const Icon(Icons.error_outline, size: 16, color: _kBrand),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3631,10 +3636,10 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
                     Text(
                       '${_rows.length} error${_rows.length == 1 ? '' : 's'} for '
                       '${widget.coin.year} ${widget.coin.denomination}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _kText,
+                        color: _kText(context),
                       ),
                     ),
                     if (gsCount > 0 || libCount > 0)
@@ -3643,12 +3648,12 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
                           if (gsCount > 0) '$gsCount from Greysheet',
                           if (libCount > 0) '$libCount from library',
                         ].join(' · '),
-                        style: const TextStyle(fontSize: 11, color: _kSubtext),
+                        style: TextStyle(fontSize: 11, color: _kSubtext(context)),
                       ),
                     if (_isAdmin && candidateCount > 0)
                       Text(
                         '$candidateCount unconfirmed candidate${candidateCount == 1 ? '' : 's'}',
-                        style: const TextStyle(fontSize: 11, color: _kAccent),
+                        style: TextStyle(fontSize: 11, color: _kAccent(context)),
                       ),
                   ],
                 ),
@@ -3656,7 +3661,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
             ],
           ),
         ),
-        const Divider(height: 1, color: _kBorder),
+        Divider(height: 1, color: _kBorder(context)),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(12),
@@ -3673,11 +3678,11 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
     switch (row) {
       case _LibraryOnlyRow(:final library):
         return _buildLibraryCard(context, library,
-            sourceTags: const ['Library']);
+            sourceTags: ['Library']);
 
       case _AugmentedRow(:final library, :final gs):
         return _buildLibraryCard(context, library,
-            sourceTags: const ['Library', 'Greysheet'],
+            sourceTags: ['Library', 'Greysheet'],
             gs: gs);
 
       case _GreysheetOnlyRow(:final gs):
@@ -3705,9 +3710,9 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _kSurface,
+          color: _kSurface(context),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _kBorder),
+          border: Border.all(color: _kBorder(context)),
         ),
         child: Row(
           children: [
@@ -3719,22 +3724,22 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     err.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: _kText,
+                      color: _kText(context),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Row(
                     children: [
                       _ErrorBadge(err.category, _errorCategoryColor(err.category)),
@@ -3742,7 +3747,7 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
                       _ErrorBadge(err.rarity, _errorRarityColor(err.rarity)),
                       const SizedBox(width: 6),
                       for (final tag in sourceTags) ...[
-                        _ErrorBadge(tag, _kSubtext),
+                        _ErrorBadge(tag, _kSubtext(context)),
                         const SizedBox(width: 4),
                       ],
                       const Spacer(),
@@ -3759,8 +3764,8 @@ class _KnownErrorsTabState extends State<_KnownErrorsTab>
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 18, color: _kSubtext),
+            SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 18, color: _kSubtext(context)),
           ],
         ),
       ),
@@ -3836,10 +3841,10 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _kSurface,
+          color: _kSurface(context),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isCandidate ? _kAccent.withAlpha(80) : _kBorder,
+            color: isCandidate ? _kAccent(context).withAlpha(80) : _kBorder(context),
           ),
         ),
         child: Column(
@@ -3852,29 +3857,29 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
                   width: 4,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _kSubtext,
+                    color: _kSubtext(context),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.gs.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: _kText,
+                          color: _kText(context),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
+                      SizedBox(height: 3),
                       Row(
                         children: [
-                          _ErrorBadge('Greysheet', _kSubtext),
+                          _ErrorBadge('Greysheet', _kSubtext(context)),
                           const SizedBox(width: 6),
                           if (widget.gs.categoryHint != null) ...[
                             _ErrorBadge(
@@ -3884,7 +3889,7 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
                             const SizedBox(width: 6),
                           ],
                           if (widget.isAdmin && isCandidate)
-                            _ErrorBadge('Candidate', _kAccent),
+                            _ErrorBadge('Candidate', _kAccent(context)),
                         ],
                       ),
                     ],
@@ -3893,15 +3898,15 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
                 Icon(
                   _expanded ? Icons.expand_less : Icons.chevron_right,
                   size: 18,
-                  color: _kSubtext,
+                  color: _kSubtext(context),
                 ),
               ],
             ),
 
             // ── Expanded panel ───────────────────────────────────────────────
             if (_expanded) ...[
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: _kBorder),
+              SizedBox(height: 12),
+              Divider(height: 1, color: _kBorder(context)),
               const SizedBox(height: 10),
               if (_pricingLoading)
                 const Center(
@@ -3916,10 +3921,10 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
                   message: 'Price data unavailable (monthly limit reached).',
                   child: Row(
                     children: [
-                      const Text('—', style: TextStyle(color: _kSubtext, fontSize: 13)),
-                      const SizedBox(width: 6),
-                      const Text(_attribution,
-                          style: TextStyle(fontSize: 10, color: _kSubtext)),
+                      Text('—', style: TextStyle(color: _kSubtext(context), fontSize: 13)),
+                      SizedBox(width: 6),
+                      Text(_attribution,
+                          style: TextStyle(fontSize: 10, color: _kSubtext(context))),
                     ],
                   ),
                 )
@@ -3928,25 +3933,25 @@ class _GreysheetErrorCardState extends State<_GreysheetErrorCard> {
                   children: [
                     Text(
                       _formatPriceRange(_bidLow, _askHigh, _gradeCount),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: _kGold,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       _attribution,
-                      style: TextStyle(fontSize: 10, color: _kSubtext),
+                      style: TextStyle(fontSize: 10, color: _kSubtext(context)),
                     ),
                   ],
                 )
               else if (_pricingLoaded)
                 Row(
-                  children: const [
-                    Text('—', style: TextStyle(color: _kSubtext, fontSize: 13)),
+                  children: [
+                    Text('—', style: TextStyle(color: _kSubtext(context), fontSize: 13)),
                     SizedBox(width: 6),
-                    Text(_attribution, style: TextStyle(fontSize: 10, color: _kSubtext)),
+                    Text(_attribution, style: TextStyle(fontSize: 10, color: _kSubtext(context))),
                   ],
                 ),
 
@@ -4014,21 +4019,21 @@ class _ConfirmErrorButtonState extends State<_ConfirmErrorButton> {
   @override
   Widget build(BuildContext context) {
     if (_done) {
-      return const Text('✓ Confirmed',
+      return Text('✓ Confirmed',
           style: TextStyle(fontSize: 11, color: _kGreen));
     }
     return TextButton(
       onPressed: _confirming ? null : _confirm,
       style: TextButton.styleFrom(
-        foregroundColor: _kAccent,
+        foregroundColor: _kAccent(context),
         textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       ),
       child: _confirming
-          ? const SizedBox(
+          ? SizedBox(
               width: 14,
               height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kAccent),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kAccent(context)),
             )
           : const Text('Confirm Error'),
     );

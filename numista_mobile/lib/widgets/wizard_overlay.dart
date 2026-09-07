@@ -73,6 +73,9 @@ class _WizardOverlayState extends State<WizardOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
     return ValueListenableBuilder<WizardState?>(
       valueListenable: WizardService.state,
       builder: (context, wizardState, _) {
@@ -114,12 +117,15 @@ class _WizardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
     return Material(
       elevation: 0,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: const Color(0xFF1565C0).withValues(alpha: 0.18),
@@ -137,9 +143,9 @@ class _WizardCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            _buildMessage(),
-            _buildProgress(),
+            _buildHeader(context),
+            _buildMessage(context),
+            _buildProgress(context),
             const SizedBox(height: 8),
             _buildActions(),
           ],
@@ -149,11 +155,14 @@ class _WizardCard extends StatelessWidget {
   }
 
   // ── Header: owl + title + step counter + close ──────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF);
+    final text = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 12, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: headerBg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         border: Border(
           bottom: BorderSide(
@@ -169,7 +178,7 @@ class _WizardCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -190,10 +199,10 @@ class _WizardCard extends StatelessWidget {
               children: [
                 Text(
                   state.step.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: text,
                     height: 1.3,
                   ),
                 ),
@@ -227,14 +236,16 @@ class _WizardCard extends StatelessWidget {
   }
 
   // ── Message body ────────────────────────────────────────────────────────────
-  Widget _buildMessage() {
+  Widget _buildMessage(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textBody = isDark ? Colors.white70 : const Color(0xFF334155);
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       child: Text(
         state.step.message,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
-          color: Color(0xFF334155),
+          color: textBody,
           height: 1.65,
         ),
       ),
@@ -242,7 +253,8 @@ class _WizardCard extends StatelessWidget {
   }
 
   // ── Progress dots ───────────────────────────────────────────────────────────
-  Widget _buildProgress() {
+  Widget _buildProgress(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
       child: Row(
@@ -260,7 +272,7 @@ class _WizardCard extends StatelessWidget {
                   ? const Color(0xFF1565C0)
                   : isPast
                       ? const Color(0xFF93C5FD)
-                      : const Color(0xFFE2E8F0),
+                      : isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
               borderRadius: BorderRadius.circular(4),
             ),
           );
@@ -361,6 +373,9 @@ class _WizardNavPulseState extends State<WizardNavPulse>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
     if (!widget.active) return widget.child;
 
     return AnimatedBuilder(

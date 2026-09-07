@@ -587,6 +587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showClearConfirmDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final confirmController = TextEditingController();
     bool confirmEnabled = false;
 
@@ -596,7 +597,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF1E293B),
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
@@ -617,24 +618,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'You are about to permanently delete '
                   '${_clearCoinCount != null ? '$_clearCoinCount coins' : 'all coins'} '
                   'from the collection below. This cannot be undone.',
-                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
+                  style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 14, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                const Text('This account:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Text('This account:', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 12)),
                 const SizedBox(height: 4),
                 Text(
                   _defaultClearTarget,
-                  style: const TextStyle(
-                    color: Color(0xFFFBBF24),
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                     fontFamily: 'monospace',
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 20),
                 RichText(
-                  text: const TextSpan(
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                    children: [
+                  text: TextSpan(
+                    style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 13),
+                    children: const [
                       TextSpan(text: 'Type '),
                       TextSpan(
                         text: 'DELETE',
@@ -653,22 +654,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 TextField(
                   controller: confirmController,
                   autofocus: true,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                     fontFamily: 'monospace',
                     letterSpacing: 2,
                     fontSize: 15,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Type DELETE here',
-                    hintStyle: TextStyle(color: Color(0xFF4B5563), letterSpacing: 1),
+                    hintStyle: TextStyle(color: isDark ? const Color(0xFF4B5563) : const Color(0xFF94A3B8), letterSpacing: 1),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF374151))),
-                    focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: isDark ? const Color(0xFF374151) : const Color(0xFFCBD5E1))),
+                    focusedBorder: const OutlineInputBorder(
                         borderSide: BorderSide(color: Color(0xFFEF4444))),
-                    fillColor: Color(0xFF0F172A),
+                    fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     filled: true,
                   ),
                   onChanged: (v) =>
@@ -679,17 +680,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+                child: Text('Cancel', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69))),
               ),
               ElevatedButton.icon(
                 icon: const Icon(Icons.delete_forever, size: 18),
                 label: const Text('Wipe Collection'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      confirmEnabled ? const Color(0xFFDC2626) : const Color(0xFF374151),
+                      confirmEnabled ? const Color(0xFFDC2626) : (isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0)),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFF374151),
-                  disabledForegroundColor: const Color(0xFF6B7280),
+                  disabledBackgroundColor: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
+                  disabledForegroundColor: isDark ? const Color(0xFF6B7280) : const Color(0xFF94A3B8),
                 ),
                 onPressed: confirmEnabled
                     ? () {
@@ -1713,20 +1714,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Morgan Settings Card ────────────────────────────────────────────────────
   Widget _buildMorganCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return FutureBuilder<String?>(
       future: MorganPrefs.getPreferredName(),
       builder: (ctx, snap) {
         final name = (snap.data ?? '').isNotEmpty ? snap.data! : null;
         return Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0B1220), Color(0xFF112240)],
+            gradient: LinearGradient(
+              colors: isDark 
+                  ? const [Color(0xFF0B1220), Color(0xFF112240)]
+                  : const [Color(0xFFF8FAFC), Color(0xFFE2E8F0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: const Color(0xFFD4A843).withAlpha(60), width: 1.5),
+                color: const Color(0xFFD4A843).withAlpha(isDark ? 60 : 120), width: 1.5),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -1759,9 +1763,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Morgan — Your AI Guide',
+                      Text('Morgan — Your AI Guide',
                           style: TextStyle(
-                              color: Colors.white,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontSize: 15,
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 3),
@@ -1769,8 +1773,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         name != null
                             ? 'Morgan knows you as "$name"'
                             : 'Tell Morgan your name to personalise your experience',
-                        style: const TextStyle(
-                            color: Color(0xFF94A3B8), fontSize: 12),
+                        style: TextStyle(
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 12),
                       ),
                     ],
                   ),
@@ -1804,6 +1808,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildCollectorMemoryCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return FutureBuilder<Map<String, dynamic>>(
       future: CollectorProfileService.getProfile(),
       builder: (ctx, snap) {
@@ -1837,14 +1842,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         return Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
+            gradient: LinearGradient(
+              colors: isDark 
+                  ? const [Color(0xFF0F172A), Color(0xFF1E1B4B)]
+                  : const [Color(0xFFF8FAFC), Color(0xFFEDE9FE)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFF8B5CF6).withAlpha(80),
+              color: const Color(0xFF8B5CF6).withAlpha(isDark ? 80 : 120),
               width: 1.5,
             ),
           ),
@@ -1877,10 +1884,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             '🧠 Learned Preferences & AI Memory',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1900,7 +1907,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: Text(
                               isOptedIn ? 'Active' : 'Paused',
                               style: TextStyle(
-                                color: isOptedIn ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+                                color: isOptedIn ? (isDark ? const Color(0xFF34D399) : const Color(0xFF059669)) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1911,12 +1918,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 6),
                       Text(
                         'Target Grades: $gradeSummary  •  Services: ${services.isEmpty ? 'None' : services}  •  Goal: $goalSummary',
-                        style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+                        style: TextStyle(color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569), fontSize: 13),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Continuous in-context learning personalizes Morgan and document scanning to your terminology, grading standards, and collection goals.',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 12),
                       ),
                     ],
                   ),
@@ -1945,6 +1952,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showCollectorMemoryDialog(Map<String, dynamic> initialProfile) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final gradeOptions = [
       'Unset',
       'PO-01', 'FR-02', 'AG-03', 'G-04', 'VG-08', 'F-12', 'VF-20', 'VF-30',

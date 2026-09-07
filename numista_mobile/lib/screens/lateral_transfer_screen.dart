@@ -33,6 +33,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
   String _activeTab = 'send'; // 'send' or 'claim'
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _scaffoldBg => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF4F4F2);
+  Color get _cardBg => _isDark ? const Color(0xFF1E293B) : Colors.white;
+  Color get _borderCol => _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? const Color(0xFFCBD5E1) : const Color(0xFF5A5C69);
+  Color get _inputFill => _isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+
   // Default to FALSE so nothing is scrubbed unless sender explicitly checks the toggle
   bool _hideCostBasis = false;
   bool _hidePrivateNotes = false;
@@ -242,10 +250,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          title: const Text('Transfer Adopted Successfully!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: _cardBg,
+          title: Text('Transfer Adopted Successfully!', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
           content: Text('$count item(s) were added to your collection vault with full provenance records.',
-              style: const TextStyle(color: Color(0xFFCBD5E1))),
+              style: TextStyle(color: _textSecondary)),
           actions: [
             ElevatedButton(
               onPressed: () {
@@ -271,14 +279,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: _scaffoldBg,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Lateral Transfer — Passport Protocol',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF1E293B),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: _cardBg,
+        iconTheme: IconThemeData(color: _textPrimary),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -289,9 +297,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: _cardBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF334155)),
+                border: Border.all(color: _borderCol),
               ),
               child: Row(
                 children: [
@@ -307,12 +315,12 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                         alignment: Alignment.center,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.send_outlined, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
+                          children: [
+                            Icon(Icons.send_outlined, color: _activeTab == 'send' ? Colors.white : _textPrimary, size: 18),
+                            const SizedBox(width: 8),
                             Text(
                               'Send Transfer',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(color: _activeTab == 'send' ? Colors.white : _textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                           ],
                         ),
@@ -331,12 +339,12 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                         alignment: Alignment.center,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.download_for_offline_outlined, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
+                          children: [
+                            Icon(Icons.download_for_offline_outlined, color: _activeTab == 'claim' ? Colors.white : _textPrimary, size: 18),
+                            const SizedBox(width: 8),
                             Text(
                               'Claim / Receive Transfer',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(color: _activeTab == 'claim' ? Colors.white : _textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                           ],
                         ),
@@ -367,10 +375,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       children: [
         // Privacy & Sanitization Card
         Card(
-          color: const Color(0xFF1E293B),
+          color: _cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF334155)),
+            side: BorderSide(color: _borderCol),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -378,25 +386,25 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.shield_outlined, color: Color(0xFF0284C7)),
-                    SizedBox(width: 8),
+                  children: [
+                    const Icon(Icons.shield_outlined, color: Color(0xFF0284C7)),
+                    const SizedBox(width: 8),
                     Text(
                       'Privacy & Sanitization Settings',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.white,
+                        color: _textPrimary,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'All invoice and financial details are included by default. Toggle switches on below if you wish to scrub specific data.',
-                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+                  style: TextStyle(color: _textSecondary, fontSize: 13),
                 ),
-                const Divider(height: 24, color: Color(0xFF334155)),
+                Divider(height: 24, color: _borderCol),
 
                 _buildPrivacySwitchTile(
                   title: 'Hide Purchase Cost & Cost Basis',
@@ -429,26 +437,26 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         const SizedBox(height: 20),
 
         // Recipient Email
-        const Text(
+        Text(
           'Recipient Email (Optional)',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: _recipientEmailController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _textPrimary),
           decoration: InputDecoration(
             hintText: 'user@example.com (or leave blank for face-to-face PIN claim)',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             filled: true,
-            fillColor: const Color(0xFF1E293B),
+            fillColor: _inputFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF334155)),
+              borderSide: BorderSide(color: _borderCol),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF334155)),
+              borderSide: BorderSide(color: _borderCol),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -470,10 +478,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 children: [
                   Text(
                     'Select Items to Transfer ($selectedCount of $totalCount)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.white,
+                      color: _textPrimary,
                     ),
                   ),
                   if (totalCount > 0 && selectedCount == totalCount)
@@ -545,7 +553,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         // Search Bar
         TextField(
           controller: _searchController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: _textPrimary),
           onChanged: (val) => setState(() => _searchQuery = val),
           decoration: InputDecoration(
             hintText: 'Search by year, series, denomination, gold/silver, grade...',
@@ -561,11 +569,11 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                   )
                 : null,
             filled: true,
-            fillColor: const Color(0xFF1E293B),
+            fillColor: _inputFill,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF334155)),
+              borderSide: BorderSide(color: _borderCol),
             ),
           ),
         ),
@@ -604,9 +612,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: _cardBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF334155)),
+              border: Border.all(color: _borderCol),
             ),
             child: Column(
               children: const [
@@ -650,14 +658,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           Container(
             constraints: const BoxConstraints(maxHeight: 360),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: _cardBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF334155)),
+              border: Border.all(color: _borderCol),
             ),
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: filtered.length,
-              separatorBuilder: (ctx, i) => const Divider(height: 1, color: Color(0xFF334155)),
+              separatorBuilder: (ctx, i) => Divider(height: 1, color: _borderCol),
               itemBuilder: (ctx, idx) {
                 final coin = filtered[idx];
                 final isSelected = _selectedCoinIds.contains(coin.id);
@@ -696,7 +704,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                       : const Icon(Icons.monetization_on, color: Color(0xFF0284C7)),
                   title: Text(
                     titleText,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                    style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   subtitle: Text(
                     '${coin.condition} | ${coin.gradingService.isNotEmpty ? coin.gradingService : "Raw"} ${coin.certificationNumber} ${coin.variety}'.trim(),
@@ -761,10 +769,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Card(
-          color: const Color(0xFF1E293B),
+          color: _cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF334155)),
+            side: BorderSide(color: _borderCol),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -772,55 +780,55 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.move_to_inbox_outlined, color: Color(0xFF0284C7), size: 28),
-                    SizedBox(width: 10),
+                  children: [
+                    const Icon(Icons.move_to_inbox_outlined, color: Color(0xFF0284C7), size: 28),
+                    const SizedBox(width: 10),
                     Text(
                       'Adopt Transferred Items into Your Vault',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _textPrimary),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Enter the Transfer ID and 6-digit Claim PIN code from the Passport Certificate to adopt the items directly into your personal collection vault.',
-                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 14, height: 1.4),
+                  style: TextStyle(color: _textSecondary, fontSize: 14, height: 1.4),
                 ),
-                const Divider(height: 28, color: Color(0xFF334155)),
+                Divider(height: 28, color: _borderCol),
 
-                const Text('Transfer ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('Transfer ID', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _claimTransferIdController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: _textPrimary),
                   decoration: InputDecoration(
                     hintText: 'e.g. 10cb9dbd7a1d45069329a7e3f4db5443',
                     hintStyle: const TextStyle(color: Color(0xFF64748B)),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    fillColor: _scaffoldBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
                     prefixIcon: const Icon(Icons.key, color: Color(0xFF0284C7)),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text('6-Digit Claim PIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('6-Digit Claim PIN', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _claimPinController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, letterSpacing: 3, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: _textPrimary, fontSize: 18, letterSpacing: 3, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     hintText: '704167',
                     hintStyle: const TextStyle(color: Color(0xFF64748B), letterSpacing: 0, fontSize: 14),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: _scaffoldBg,
                     counterStyle: const TextStyle(color: Color(0xFF64748B)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
                     prefixIcon: const Icon(Icons.pin, color: Color(0xFF0284C7)),
                   ),
@@ -865,13 +873,13 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       activeThumbColor: const Color(0xFF38BDF8),
       activeTrackColor: const Color(0xFF0284C7).withValues(alpha: 0.4),
       inactiveThumbColor: Colors.grey.shade400,
-      inactiveTrackColor: const Color(0xFF334155),
+      inactiveTrackColor: _borderCol,
       title: Row(
         children: [
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+              style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
             ),
           ),
           Container(
@@ -912,15 +920,15 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       children: [
         const Icon(Icons.check_circle_outline, color: Colors.green, size: 72),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Transfer Initiated Successfully!',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: _textPrimary),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Share the 6-digit Claim PIN below with the recipient or print the Official Passport PDF.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFFCBD5E1)),
+          style: TextStyle(color: _textSecondary),
         ),
         if (transfer.recipientEmail != null && transfer.recipientEmail!.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -950,9 +958,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
+            color: _cardBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF334155)),
+            border: Border.all(color: _borderCol),
           ),
           child: Column(
             children: [

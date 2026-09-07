@@ -91,6 +91,7 @@ class _GlossaryTooltipWrapperState extends State<GlossaryTooltipWrapper> {
 
     _overlayEntry = OverlayEntry(
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Stack(
           children: [
             // Full screen dismisser
@@ -113,14 +114,14 @@ class _GlossaryTooltipWrapperState extends State<GlossaryTooltipWrapper> {
                   width: 250,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF334155), width: 1),
-                    boxShadow: const [
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0), width: 1),
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black45,
+                        color: isDark ? Colors.black45 : Colors.black12,
                         blurRadius: 8,
-                        offset: Offset(0, 4),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -139,8 +140,8 @@ class _GlossaryTooltipWrapperState extends State<GlossaryTooltipWrapper> {
                       const SizedBox(height: 6),
                       Text(
                         definition,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : const Color(0xFF0F172A).withAlpha(180),
                           fontSize: 12,
                           height: 1.4,
                         ),
