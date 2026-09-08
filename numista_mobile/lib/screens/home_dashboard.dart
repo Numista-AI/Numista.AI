@@ -1551,12 +1551,21 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.325',
-    date: '2026-09-07',
+    version: 'v4.326',
+    date: '2026-09-08',
     description: 'Scan Enhancements & Platform Updates',
     isLatest: true,
     changes: [
-      'Scan: full system check v4.324 and update SCAN_REPORT.md',
+      'Scan: full system check v4.326 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.325',
+    date: '2026-09-07',
+    description: 'Theme Enhancements & Light Mode Overhaul',
+    isLatest: false,
+    changes: [
+      'Set Light theme as default and converted 40+ screens and widgets to theme-aware styling',
     ],
   ),
   _Release(

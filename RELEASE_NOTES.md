@@ -327,6 +327,17 @@
 
 
 
+
+## v4.326 — 2026-09-08
+**Scan Enhancements & Platform Updates**
+
+- Scan: full system check v4.326 and update SCAN_REPORT.md
+
+## v4.325 — 2026-09-07
+**Theme Enhancements & Light Mode Overhaul**
+
+- Set Light theme as default and converted 40+ screens and widgets to theme-aware styling
+
 ## v4.324 — 2026-09-07
 **Scan Enhancements & Platform Updates**
 

@@ -117,6 +117,34 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         });
   }
 
+  /// Busts the 60s coin cache, fetches fresh from Firestore server,
+  /// and triggers a FutureBuilder rebuild. Awaitable — callers should
+  /// await before allowing PDF export.
+  ///
+  /// Call this after every successful ownership-write on this screen
+  /// (currently: [_addSelectedCoins]). Do not copy-paste the invalidation
+  /// logic — add new callers here.
+  Future<void> _invalidateAndRefetchCoins() async {
+    final fresh = FirebaseFirestore.instance
+        .collection(AuthService.coinsPath)
+        .limit(2000)
+        .get(const GetOptions(source: Source.server))
+        .then((snap) {
+          _cachedCoinDocs = snap.docs;
+          _cacheTimestamp = DateTime.now();
+          return snap.docs;
+        });
+    // Assign inside setState so FutureBuilder sees the new future.
+    if (mounted) {
+      setState(() {
+        _cachedCoinDocs = null;
+        _cacheTimestamp = null;
+        _coinsFuture = fresh;
+      });
+    }
+    // Await completion so callers know docs are ready before export.
+    await fresh;
+  }
 
   Future<void> _preloadPdfAssets() async {
     if (_assetsPreloaded) return;
@@ -1727,7 +1755,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           ),
         );
         _tryAdvanceMorganCoinsCommitted();
-        setState(() { _selectedToAdd.clear(); });
+        _selectedToAdd.clear();
+        // Bust the 60s coin cache and await a server-sourced re-read
+        // so any subsequent PDF export uses the fresh inventory.
+        await _invalidateAndRefetchCoins();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
