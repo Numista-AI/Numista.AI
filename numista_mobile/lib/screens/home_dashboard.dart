@@ -1551,10 +1551,31 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.328',
+    date: '2026-09-08',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE',
+      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Scan: full system check v4.326 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.327',
+    date: '2026-09-08',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Scan: full system check v4.326 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
     version: 'v4.326',
     date: '2026-09-08',
     description: 'Scan Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Scan: full system check v4.326 and update SCAN_REPORT.md',
     ],
