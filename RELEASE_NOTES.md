@@ -330,6 +330,22 @@
 
 
 
+
+
+## v4.330 — 2026-09-09
+**Checklist Enhancements & Platform Updates**
+
+- Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE
+- Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF
+- Scan: full system check v4.326 and update SCAN_REPORT.md
+
+## v4.329 — 2026-09-08
+**Checklist Enhancements & Platform Updates**
+
+- Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE
+- Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF
+- Scan: full system check v4.326 and update SCAN_REPORT.md
+
 ## v4.328 — 2026-09-08
 **Checklist Enhancements & Platform Updates**
 
