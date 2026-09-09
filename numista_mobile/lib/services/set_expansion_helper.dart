@@ -76,6 +76,7 @@ ExpansionResult expandCollection(
 
       // Parent row
       allItems.add({
+        ...d, // Preserve all Firestore fields (program_id, Strike Type, Variety, etc.)
         'coin_id': docId,
         'year': _getField(d, ['Year', 'year']),
         'denomination': _getField(d, ['Denomination', 'denomination']),
@@ -122,6 +123,7 @@ ExpansionResult expandCollection(
         }
 
         allItems.add({
+          ...Map<String, dynamic>.from(child), // Full parity: program_id, Strike Type, Variety, variety_id, Metal Content etc.
           'coin_id': '${docId}__set_coin_$idx',
           'year': childYear,
           'denomination': childDenom,
@@ -134,14 +136,6 @@ ExpansionResult expandCollection(
               _getField(child, ['Theme/Subject', 'theme_subject']),
           'program_series':
               _getField(child, ['Program/Series', 'program_series']),
-          // ── Option B: finish / metal pass-through ─────────────────────
-          'strike_type':   _getField(child, ['Strike Type', 'strike_type']),
-          'Strike Type':   _getField(child, ['Strike Type', 'strike_type']),
-          'metal_content': _getField(child, ['Metal Content', 'metal_content',
-                                             'Composition', 'composition']),
-          'Metal Content': _getField(child, ['Metal Content', 'metal_content',
-                                             'Composition', 'composition']),
-          // ── End Option B ──────────────────────────────────────────────
           'ai_estimated_value': _getField(
               child, ['AI Estimated Value', 'ai_estimated_value'],
               defaultVal: '\$0.00'),
@@ -156,6 +150,7 @@ ExpansionResult expandCollection(
     } else {
       // Regular coin / paper_currency / medal / other
       allItems.add({
+        ...d, // Preserve all Firestore fields (program_id, Strike Type, Variety, variety_id, etc.)
         'coin_id': docId,
         'year': _getField(d, ['Year', 'year']),
         'denomination': _getField(d, ['Denomination', 'denomination']),
