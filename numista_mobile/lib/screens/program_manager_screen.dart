@@ -1466,8 +1466,22 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
       if (personalized) {
         userEmail = AuthService.currentUser?.email ?? 'Authenticated Collector';
-        final rawMaps  = (docs ?? []).map((d) => d.data() as Map<String, dynamic>).toList();
-        final rawIds   = (docs ?? []).map((d) => d.id).toList();
+        // ── HOTFIX PDF_STALE: always read fresh from Firestore server ──────
+        // Do NOT use the `docs` parameter — it may be a stale closure capture
+        // from the FutureBuilder at the time the Print button was rendered
+        // (before the most recent checkoff write landed).
+        final freshSnap = await FirebaseFirestore.instance
+            .collection(AuthService.coinsPath)
+            .limit(2000)
+            .get(const GetOptions(source: Source.server));
+        final freshDocs = freshSnap.docs;
+        // Also refresh the in-memory cache so subsequent non-PDF reads
+        // on this screen are current.
+        _cachedCoinDocs = freshDocs;
+        _cacheTimestamp = DateTime.now();
+
+        final rawMaps  = freshDocs.map((d) => d.data()).toList();
+        final rawIds   = freshDocs.map((d) => d.id).toList();
         final expanded = expandCollection(rawMaps, rawIds);
         inventoryMap = SlotResolver.resolveProgramInventory(
           program: program,
