@@ -301,19 +301,27 @@ class SlotResolver {
   static String _deriveCoinFamily(String progSeries, String themeSub) {
     final ps = progSeries.toLowerCase();
     final th = themeSub.toLowerCase();
-    if (ps.contains('american buffalo') || ps.contains('buffalo gold')) { return 'buffalo'; }
-    if (ps.contains('american silver eagle') || ps.contains('silver eagle')) { return 'ase'; }
-    if (ps.contains('american gold eagle') || ps.contains('gold eagle')) { return 'age'; }
-    if (ps.contains('peace dollar')) { return 'peace'; }
-    if (ps.contains('morgan dollar') || ps.contains('morgan silver')) { return 'morgan'; }
-    if (ps.contains('american innovation') || ps.contains('innovation dollar')) {
+    // Order preserved: buffalo → ase → age → peace → morgan → innovation → trump
+    if (ps.contains('american buffalo') || ps.contains('buffalo gold') ||
+        th.contains('buffalo')) { return 'buffalo'; }
+    if (ps.contains('american silver eagle') || ps.contains('silver eagle') ||
+        th.contains('silver eagle')) { return 'ase'; }
+    if (ps.contains('american gold eagle') || ps.contains('gold eagle') ||
+        th.contains('gold eagle')) { return 'age'; }
+    if (ps.contains('peace dollar') || ps.contains('peace silver') ||
+        th.contains('peace')) { return 'peace'; }
+    if (ps.contains('morgan dollar') || ps.contains('morgan silver') ||
+        th.contains('morgan')) { return 'morgan'; }
+    if (ps.contains('american innovation') || ps.contains('innovation dollar') ||
+        th.contains('innovation')) {
       if (th.contains('iowa'))       { return 'innovation:iowa'; }
       if (th.contains('wisconsin'))  { return 'innovation:wisconsin'; }
       if (th.contains('california')) { return 'innovation:california'; }
       if (th.contains('minnesota'))  { return 'innovation:minnesota'; }
       return ''; // No state → no tick
     }
-    if (ps.contains('trump') || ps.contains('semiquincentennial president')) { return 'trump'; }
+    if (ps.contains('trump') || ps.contains('semiquincentennial president') ||
+        th.contains('trump')) { return 'trump'; }
     return '';
   }
 

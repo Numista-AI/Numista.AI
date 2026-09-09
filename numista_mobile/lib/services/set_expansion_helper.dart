@@ -76,7 +76,14 @@ ExpansionResult expandCollection(
 
       // Parent row
       allItems.add({
-        ...d, // Preserve all Firestore fields (program_id, Strike Type, Variety, etc.)
+        // Re-type Firestore-web Map<String,Object?> → Map<String,dynamic> explicitly.
+        ...Map<String, dynamic>.from(d),
+        // Explicitly bind critical matcher fields — do not rely on spread alone
+        // (Firestore-web JS interop may not surface Object? keys as String lookups).
+        'program_id':  d['program_id']?.toString()  ?? '',
+        'Strike Type': d['Strike Type']?.toString() ?? d['strike_type']?.toString() ?? '',
+        'Variety':     d['Variety']?.toString()     ?? d['variety']?.toString()     ?? '',
+        'variety_id':  d['variety_id']?.toString()  ?? '',
         'coin_id': docId,
         'year': _getField(d, ['Year', 'year']),
         'denomination': _getField(d, ['Denomination', 'denomination']),
@@ -150,7 +157,14 @@ ExpansionResult expandCollection(
     } else {
       // Regular coin / paper_currency / medal / other
       allItems.add({
-        ...d, // Preserve all Firestore fields (program_id, Strike Type, Variety, variety_id, etc.)
+        // Re-type Firestore-web Map<String,Object?> → Map<String,dynamic> explicitly.
+        ...Map<String, dynamic>.from(d),
+        // Explicitly bind critical matcher fields — do not rely on spread alone
+        // (Firestore-web JS interop may not surface Object? keys as String lookups).
+        'program_id':  d['program_id']?.toString()  ?? '',
+        'Strike Type': d['Strike Type']?.toString() ?? d['strike_type']?.toString() ?? '',
+        'Variety':     d['Variety']?.toString()     ?? d['variety']?.toString()     ?? '',
+        'variety_id':  d['variety_id']?.toString()  ?? '',
         'coin_id': docId,
         'year': _getField(d, ['Year', 'year']),
         'denomination': _getField(d, ['Denomination', 'denomination']),

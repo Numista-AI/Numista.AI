@@ -14,6 +14,8 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/services/set_expansion_helper.dart';
+import 'package:numista_ai/utils/slot_resolver.dart';
+import 'package:numista_ai/models/program_model.dart';
 
 void main() {
   // ── Regular coin branch ───────────────────────────────────────────────────
@@ -163,12 +165,144 @@ void main() {
       expect(child['Variety'], equals('Reverse Proof'));
     });
 
+
     test('set child preserves variety_id', () {
       expect(child['variety_id'], equals('P-REVERSE-PROOF'));
     });
 
     test('set child from_set points to parent', () {
       expect(child['from_set'], equals('doc_set_child'));
+    });
+  });
+
+  // ── MF3: E2E Ownership — Gate0-shaped grokbot docs → isMatch + matchesVariety ─
+
+  group('e2e ownership — Gate0 grokbot docs reach SlotResolver', () {
+    // Mirrors exact Gate0 Firestore fields for grokbot's 9 docs.
+    // program_id, Strike Type, Variety, variety_id must survive expandCollection
+    // so SlotResolver.isMatch fast path lights the slot.
+
+    CoinProgram _program(List<ProgramCoin> coins) => CoinProgram(
+      id: '2026_semiquincentennial_collectibles',
+      url: '',
+      name: '2026 America250 - Numismatic Collectibles',
+      years: '2026',
+      category: 'Collectible Programs',
+      coins: coins,
+      mintMarkLocations: 'MIXED',
+    );
+
+    ProgramCoin _slot(String id, String name, String family, String varietyId) =>
+        ProgramCoin(
+          id: id,
+          name: name,
+          year: '2026',
+          productFamily: family,
+          varieties: [ChecklistVariety(id: varietyId, label: varietyId)],
+        );
+
+    final slotMorganRP = _slot('2026_morgan_reverse_proof',
+        '2026 Morgan Silver Dollar Reverse Proof', 'morgan', 'P-REVERSE-PROOF');
+    final slotPeaceRP  = _slot('2026_peace_silver_dollar_reverse_proof',
+        '2026 Peace Silver Dollar Reverse Proof', 'peace', 'P-REVERSE-PROOF');
+    final slotMorganEU = _slot('2026_morgan_silver_dollar_enhanced_uncirculated',
+        '2026 Morgan Silver Dollar Enhanced Uncirculated', 'morgan', 'EU');
+    final slotPeaceEU  = _slot('2026_peace_silver_dollar_enhanced_uncirculated',
+        '2026 Peace Silver Dollar Enhanced Uncirculated', 'peace', 'EU');
+
+    // Gate0-shaped grokbot coin docs (verbatim from Firestore dump, 9 Sep 2026)
+    final grokbotMorganRP = <String, dynamic>{
+      'program_id': '2026_semiquincentennial_collectibles',
+      'Strike Type': 'Reverse Proof',
+      'Variety': 'Reverse Proof',
+      'variety_id': 'P-REVERSE-PROOF',
+      'Theme/Subject': '2026 Morgan Silver Dollar Reverse Proof',
+      'Program/Series': '2026 America250 - Numismatic Collectibles',
+      'Year': '2026',
+      'Mint Mark': '',
+      'Denomination': 'Dollar',
+    };
+    final grokbotPeaceRP = <String, dynamic>{
+      'program_id': '2026_semiquincentennial_collectibles',
+      'Strike Type': 'Reverse Proof',
+      'Variety': 'Reverse Proof',
+      'variety_id': 'P-REVERSE-PROOF',
+      'Theme/Subject': '2026 Peace Silver Dollar Reverse Proof',
+      'Program/Series': '2026 America250 - Numismatic Collectibles',
+      'Year': '2026',
+      'Mint Mark': '',
+      'Denomination': 'Dollar',
+    };
+    final grokbotMorganEU = <String, dynamic>{
+      'program_id': '2026_semiquincentennial_collectibles',
+      'Strike Type': 'Enhanced Uncirculated',
+      'Variety': 'Enhanced Uncirculated',
+      'variety_id': 'EU',
+      'Theme/Subject': '2026 Morgan Silver Dollar Enhanced Uncirculated',
+      'Program/Series': '2026 America250 - Numismatic Collectibles',
+      'Year': '2026',
+      'Mint Mark': '',
+      'Denomination': 'Dollar',
+    };
+    final grokbotPeaceEU = <String, dynamic>{
+      'program_id': '2026_semiquincentennial_collectibles',
+      'Strike Type': 'Enhanced Uncirculated',
+      'Variety': 'Enhanced Uncirculated',
+      'variety_id': 'EU',
+      'Theme/Subject': '2026 Peace Silver Dollar Enhanced Uncirculated',
+      'Program/Series': '2026 America250 - Numismatic Collectibles',
+      'Year': '2026',
+      'Mint Mark': '',
+      'Denomination': 'Dollar',
+    };
+
+    test('Morgan RP coin → isMatch Morgan RP slot', () {
+      final res = expandCollection([grokbotMorganRP], ['doc_morgan_rp']);
+      final item = res.allItems.first;
+      final prog = _program([slotMorganRP]);
+      expect(SlotResolver.isMatch(item, prog, slotMorganRP), isTrue,
+          reason: 'Morgan RP coin must match Morgan RP slot after field fix');
+    });
+
+    test('Peace RP coin → isMatch Peace RP slot', () {
+      final res = expandCollection([grokbotPeaceRP], ['doc_peace_rp']);
+      final item = res.allItems.first;
+      final prog = _program([slotPeaceRP]);
+      expect(SlotResolver.isMatch(item, prog, slotPeaceRP), isTrue,
+          reason: 'Peace RP coin must match Peace RP slot');
+    });
+
+    test('Morgan EU coin → isMatch Morgan EU slot', () {
+      final res = expandCollection([grokbotMorganEU], ['doc_morgan_eu']);
+      final item = res.allItems.first;
+      final prog = _program([slotMorganEU]);
+      expect(SlotResolver.isMatch(item, prog, slotMorganEU), isTrue,
+          reason: 'Morgan EU coin must match Morgan EU slot');
+    });
+
+    test('Peace EU coin → isMatch Peace EU slot', () {
+      final res = expandCollection([grokbotPeaceEU], ['doc_peace_eu']);
+      final item = res.allItems.first;
+      final prog = _program([slotPeaceEU]);
+      expect(SlotResolver.isMatch(item, prog, slotPeaceEU), isTrue,
+          reason: 'Peace EU coin must match Peace EU slot');
+    });
+
+    test('Non-program coin does NOT match Numismatic slot', () {
+      // A regular circulating coin with no program_id and unrelated theme
+      // should not match any Numismatic Collectibles slot.
+      final regularCoin = <String, dynamic>{
+        'Theme/Subject': '2026 Lincoln Cent',
+        'Program/Series': 'Lincoln Cent',
+        'Year': '2026',
+        'Mint Mark': 'P',
+        'Denomination': 'Cent',
+      };
+      final res = expandCollection([regularCoin], ['doc_lincoln']);
+      final item = res.allItems.first;
+      final prog = _program([slotMorganRP]);
+      expect(SlotResolver.isMatch(item, prog, slotMorganRP), isFalse,
+          reason: 'Lincoln cent must not match Morgan RP slot');
     });
   });
 }
