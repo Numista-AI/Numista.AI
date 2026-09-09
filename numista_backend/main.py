@@ -6671,13 +6671,59 @@ def collection_count(authorization: str = Header(None), user_email: str = ""):
 
 # ── Checklist write callable ──────────────────────────────────────────────────
 
+def _derive_strike_fields(variety_id: str) -> dict:
+    """
+    Maps a checklist variety_id to the Strike Type and Variety strings that
+    SlotResolver.matchesVariety() reads to derive isProof, isReverseProof, and
+    isEnhancedUnc.  Both fields must be present for Numismatic Collectibles slots
+    (Proof, Reverse Proof, Enhanced Unc, Congratulations) to light on the checklist
+    and in the PDF.
+
+    Returns a dict with keys 'Strike Type' and 'Variety'.
+    """
+    vid = (variety_id or "").upper()
+
+    # Reverse Proof — any mint (P-REVERSE-PROOF, S-REVERSE-PROOF, W-REVERSE-PROOF, REVERSE-PROOF)
+    if "REVERSE" in vid:
+        return {"Strike Type": "Reverse Proof", "Variety": "Reverse Proof"}
+
+    # Enhanced Uncirculated — EU (Morgan/Peace, no mark), W-EU (ASE/AGE West Point)
+    if vid in ("EU", "W-EU"):
+        return {"Strike Type": "Enhanced Uncirculated", "Variety": "Enhanced Uncirculated"}
+
+    # Congratulations Set Proof — Philadelphia (P-PROOF-CONG)
+    if "CONG" in vid:
+        return {"Strike Type": "Proof", "Variety": "Congratulations Set"}
+
+    # Silver — S-SILVER (BU silver), S-SILVER-PROOF
+    if "SILVER" in vid:
+        if "PROOF" in vid:
+            return {"Strike Type": "Proof", "Variety": "Silver Proof"}
+        return {"Strike Type": "Uncirculated", "Variety": "Silver"}
+
+    # Any remaining PROOF variant (W-PROOF, S-PROOF, P-PROOF, PROOF)
+    if "PROOF" in vid:
+        return {"Strike Type": "Proof", "Variety": "Proof"}
+
+    # SMS
+    if vid == "SMS":
+        return {"Strike Type": "SMS", "Variety": "SMS"}
+
+    # July 4th Privy
+    if "PRIVY" in vid:
+        return {"Strike Type": "Uncirculated", "Variety": "July 4th Privy Mark"}
+
+    # Default — standard Uncirculated (P-UNC, D-UNC, W-UNC, bare P, D, W, S, CC, O)
+    return {"Strike Type": "Uncirculated", "Variety": "Uncirculated"}
+
+
 class ChecklistSlot(BaseModel):
     """One slot selected in the Program Manager checklist."""
     coin_name:   str            # Display name / Theme/Subject
     year:        str            # e.g. "1964"
     mint_mark:   str = ""       # e.g. "D", "S", "" for P/no mark
     denomination: str = ""      # e.g. "50c"
-    variety_id:  str = ""       # e.g. "P", "D", "S-PROOF" — aspirational for v1
+    variety_id:  str = ""       # e.g. "P-REVERSE-PROOF", "EU", "W-PROOF"
 
 class ChecklistAddRequest(BaseModel):
     idempotency_key: str        # UUID generated once per button press on the client
@@ -6771,6 +6817,14 @@ def checklist_add_coins(req: ChecklistAddRequest):
 
     for slot in req.slots:
         doc_ref = coins_ref.document(str(uuid.uuid4()))
+
+        # Derive Strike Type + Variety from variety_id so SlotResolver.matchesVariety()
+        # can evaluate isProof / isReverseProof / isEnhancedUnc correctly.
+        # MF1-B: if the Flutter client sent mint_mark="EU" (finish token, not a mint),
+        # normalise to "" — slot_resolver EU gate requires mintMark=='W'||mintMark.isEmpty.
+        strike_fields = _derive_strike_fields(slot.variety_id)
+        normalized_mint = "" if slot.mint_mark == "EU" else slot.mint_mark
+
         batch.set(doc_ref, {
             # Identity fields — program_id is mandatory on all new checklist writes
             'program_id':     req.program_id,          # snake_case, exact
@@ -6779,8 +6833,13 @@ def checklist_add_coins(req: ChecklistAddRequest):
             # Slot fields
             'Theme/Subject':  slot.coin_name,
             'Year':           slot.year,
-            'Mint Mark':      slot.mint_mark,
+            'Mint Mark':      normalized_mint,          # "EU" normalised to "" (MF1-B)
             'Denomination':   slot.denomination,
+            'variety_id':     slot.variety_id,          # persisted for future audit/migration
+
+            # Strike / finish — required by SlotResolver.matchesVariety()
+            'Strike Type':    strike_fields['Strike Type'],
+            'Variety':        strike_fields['Variety'],
 
             # Default state fields
             'Condition':              'Ungraded',
