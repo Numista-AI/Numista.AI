@@ -1701,10 +1701,16 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       // Single-letter IDs (D, S, W, O, CC) are mint marks.
       // Compound IDs starting with a mint letter (S-PROOF, S-SILVER-PROOF, D-T1) → first segment.
       // P and empty string → no mint mark on the coin face.
+      // EU and RP are finish tokens (Enhanced Uncirculated, Reverse Proof), NOT mint marks —
+      // exclude them so variety_id="EU" doesn't produce Mint Mark="EU", which breaks
+      // slot_resolver.dart's EU gate (requires mintMark=='W'||mintMark.isEmpty).
       String parsedMint = '';
       if (varietyId.isNotEmpty && varietyId != 'P') {
         final firstSegment = varietyId.split('-').first;
-        if (RegExp(r'^[A-Z]{1,2}$').hasMatch(firstSegment) && firstSegment != 'P') {
+        if (RegExp(r'^[A-Z]{1,2}$').hasMatch(firstSegment) &&
+            firstSegment != 'P' &&
+            firstSegment != 'EU' &&
+            firstSegment != 'RP') {
           parsedMint = firstSegment;
         }
       }
