@@ -1966,6 +1966,14 @@ async def process_invoice(
           each coin by year, mint mark, and denomination. Example for "1971-1978 Ike Set Unc & Proof":
           set_contents should list 1971-P, 1971-D, 1972-P, 1972-D ... through 1978.
 
+          CRITICAL: The 2026 US Mint Uncirculated Coin Set (item 26RJ) contains EXACTLY 20 coins
+          (10 per card, Philadelphia P and Denver D). It does NOT include any USMC/Marine Corps
+          commemoratives, medals, or "250 Years" coins. Do NOT conflate "250th Anniversary"
+          (Semiquincentennial) with the Marine Corps 250th Anniversary program — they are separate
+          products. The 26RJ set contains: Lincoln cent, Jefferson nickel, Emerging Liberty dime,
+          5 Semiquincentennial quarters (Mayflower, Revolutionary War, Declaration, Constitution,
+          Gettysburg), Enduring Liberty half dollar, and Native American dollar — per card.
+
         Return ONLY a JSON list of objects. Every object MUST include item_type.
         Schema (all fields apply to coins; use relevant fields for other types):
         [
