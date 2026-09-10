@@ -339,6 +339,100 @@
 
 
 
+
+
+
+
+
+
+
+
+## v4.345 — 2026-09-10
+**Images Enhancements & Platform Updates**
+
+- Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution
+- Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild
+- Import: normalize before dupe queries, dual-read fallback, migration script
+- Cards: year sort groups by theme/subject so same-design P/D coins are adjacent
+- Cards+import: reverse image priority, All-tab cached docs, CSV field normalization
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+
+## v4.344 — 2026-09-10
+**Scripts Enhancements & Platform Updates**
+
+- Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild
+- Import: normalize before dupe queries, dual-read fallback, migration script
+- Cards: year sort groups by theme/subject so same-design P/D coins are adjacent
+- Cards+import: reverse image priority, All-tab cached docs, CSV field normalization
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+
+## v4.343 — 2026-09-10
+**Import Enhancements & Platform Updates**
+
+- Import: normalize before dupe queries, dual-read fallback, migration script
+- Cards: year sort groups by theme/subject so same-design P/D coins are adjacent
+- Cards+import: reverse image priority, All-tab cached docs, CSV field normalization
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+
+## v4.342 — 2026-09-10
+**Cards Enhancements & Platform Updates**
+
+- Cards: year sort groups by theme/subject so same-design P/D coins are adjacent
+- Cards+import: reverse image priority, All-tab cached docs, CSV field normalization
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+
+## v4.341 — 2026-09-10
+**Cards+import Enhancements & Platform Updates**
+
+- Cards+import: reverse image priority, All-tab cached docs, CSV field normalization
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+
+## v4.340 — 2026-09-10
+**Export Enhancements & Platform Updates**
+
+- Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+
+## v4.339 — 2026-09-10
+**Export Enhancements & Platform Updates**
+
+- Export: resolve JSON download silent no-op â€” Timestamp serialization + web download
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+
+## v4.338 — 2026-09-10
+**Qc Enhancements & Platform Updates**
+
+- Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling
+- Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)
+- Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children
+- Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path
+- Programs: add set_expansion_helper regression tests for field preservation
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+
 ## v4.337 — 2026-09-09
 **Catalog Enhancements & Platform Updates**
 
