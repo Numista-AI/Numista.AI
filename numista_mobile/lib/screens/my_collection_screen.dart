@@ -1358,7 +1358,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       future: ValuationModeService.isAdvancedMode(),
                       builder: (context, modeSnap) {
                         final advanced = modeSnap.data ?? false;
-                        final coinsDocs = coinsSnap.data?.docs ?? [];
+                        // Use _cachedCoinsDocs (same data source as Coins tab)
+                        // instead of coinsSnap which races stream assignment on first mount
+                        final coinsDocs = _cachedCoinsDocs;
                         final currencyDocs = currencySnap.data?.docs ?? [];
                         final worldDocs = worldSnap.data ?? [];
 
@@ -5674,7 +5676,7 @@ class _CollectionCardImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final obv = _cleanUrl(data[_F.imageObverse]);
     final rev = _cleanUrl(data[_F.imageReverse]);
-    final directUrl = obv.isNotEmpty ? obv : rev;
+    final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)
 
     if (directUrl.isNotEmpty) {
       return _buildCoinImage(directUrl);
@@ -5696,9 +5698,9 @@ class _CollectionCardImage extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         final ref = snapshot.data;
-        final refUrl = (ref?.obverseUrl?.isNotEmpty == true)
-            ? ref!.obverseUrl!
-            : (ref?.reverseUrl?.isNotEmpty == true ? ref!.reverseUrl! : '');
+        final refUrl = (ref?.reverseUrl?.isNotEmpty == true)
+            ? ref!.reverseUrl!
+            : (ref?.obverseUrl?.isNotEmpty == true ? ref!.obverseUrl! : '');
 
         if (refUrl.isNotEmpty) {
           return _buildCoinImage(refUrl);

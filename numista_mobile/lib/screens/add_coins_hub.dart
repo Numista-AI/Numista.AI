@@ -3918,6 +3918,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     int count = 0;
                     for (final r in rawRows) {
                       final itemData = {
+                        // PascalCase keys matching _F.* UI constants
+                        'Year': getValue(r, selectedYearHeader),
+                        'Mint Mark': getValue(r, selectedMintHeader),
+                        'Denomination': getValue(r, selectedDenomHeader),
+                        'Condition': getValue(r, selectedGradeHeader),
+                        'Cost': getValue(r, selectedCostHeader),
+                        'Variety': getValue(r, selectedVarietyHeader),
+                        // Legacy lowercase keys for backward compat
                         'year': getValue(r, selectedYearHeader),
                         'mint_mark': getValue(r, selectedMintHeader),
                         'denomination': getValue(r, selectedDenomHeader),

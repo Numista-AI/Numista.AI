@@ -2959,6 +2959,26 @@ async def commit_reviews(request: CommitReviewsRequest):
                     skipped_count += 1
                     batch_op_count += 1
                 else:
+                    # ── Field-name normalization (CSV import writes lowercase;
+                    # UI / Cards / sort reads PascalCase _F.* constants) ──────
+                    _FIELD_MAP = {
+                        'year': 'Year',
+                        'mint_mark': 'Mint Mark',
+                        'denomination': 'Denomination',
+                        'condition': 'Condition',
+                        'cost_basis': 'Cost',
+                        'cost': 'Cost',
+                        'purchase_cost': 'Cost',
+                        'variety': 'Variety',
+                        'theme_subject': 'Theme/Subject',
+                        'program_series': 'Program/Series',
+                        'storage_location': 'Storage Location',
+                        'certification_number': 'Certification Number',
+                    }
+                    for lc_key, canonical in _FIELD_MAP.items():
+                        if lc_key in data and canonical not in data:
+                            data[canonical] = data[lc_key]
+
                     # Legal System of Record Golden Schema defaults
                     if not data.get('Condition'):
                         data['Condition'] = 'Unspecified / Raw'
