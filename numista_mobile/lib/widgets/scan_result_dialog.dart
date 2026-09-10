@@ -28,8 +28,6 @@ class ScanResultDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final text = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subtext = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
 
     final confidence = result.pageConfidence;
@@ -323,7 +321,6 @@ class _StatCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final text = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtext = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final bg = isDark ? const Color(0xFF0F172A) : Colors.white;
 
     return Expanded(
       child: Container(

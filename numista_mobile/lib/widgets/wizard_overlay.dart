@@ -73,9 +73,6 @@ class _WizardOverlayState extends State<WizardOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
-
     return ValueListenableBuilder<WizardState?>(
       valueListenable: WizardService.state,
       builder: (context, wizardState, _) {
@@ -373,9 +370,6 @@ class _WizardNavPulseState extends State<WizardNavPulse>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
-
     if (!widget.active) return widget.child;
 
     return AnimatedBuilder(

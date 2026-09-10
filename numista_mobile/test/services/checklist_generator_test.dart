@@ -110,7 +110,7 @@ void main() {
       expect(washingtonP.quantity, equals(2));
       expect(washingtonP.primaryGrade, equals('MS-65'));
       expect(washingtonP.primaryService, equals('PCGS'));
-      expect(washingtonP.formattedNotes, contains('QTY: 2 | MS-65 PCGS, +1 other'));
+      expect(washingtonP.formattedNotes, equals('MS-65 PCGS + 1 others'));
 
       final washingtonD = inventory['test_presidential_washington_D-UNC'];
       expect(washingtonD, isNotNull);
