@@ -17,6 +17,7 @@ Safety rails:
 """
 
 import argparse
+import os
 import sys
 
 import firebase_admin
@@ -24,6 +25,9 @@ from firebase_admin import credentials, firestore
 
 # ── Hard-coded safety rail ──
 TARGET_EMAIL = "grokbot@numista.ai"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SA_KEY_PATH = os.path.join(SCRIPT_DIR, "..", "serviceAccountKey.json")
+PROJECT_ID = "studio-9101802118-8c9a8"
 
 FIELD_MAP = {
     "year": "Year",
@@ -47,9 +51,13 @@ def main():
     parser.add_argument("--stats", action="store_true", help="Rebuild collection_stats after migration")
     args = parser.parse_args()
 
-    # Initialize Firebase
+    # Initialize Firebase (same pattern as create_grokbot_account.py)
     if not firebase_admin._apps:
-        firebase_admin.initialize_app()
+        if os.path.exists(SA_KEY_PATH):
+            cred = credentials.Certificate(SA_KEY_PATH)
+            firebase_admin.initialize_app(cred, {"projectId": PROJECT_ID})
+        else:
+            firebase_admin.initialize_app(options={"projectId": PROJECT_ID})
     db = firestore.client()
 
     user_ref = db.collection("users").document(TARGET_EMAIL)
@@ -110,13 +118,13 @@ def main():
             print(f"  {s}")
 
     if args.write:
-        print(f"\n✅ WROTE {migrated_count} doc updates to Firestore.")
+        print(f"\n[OK] WROTE {migrated_count} doc updates to Firestore.")
     else:
-        print(f"\n🔍 DRY-RUN complete. Use --write to apply changes.")
+        print(f"\n[DRY-RUN] complete. Use --write to apply changes.")
 
     # Rebuild collection_stats if requested
     if args.write and args.stats:
-        print("\n── Rebuilding collection_stats ──")
+        print("\n-- Rebuilding collection_stats --")
         stats_ref = user_ref.collection("metadata").document("collection_stats")
         coins_snap = list(coins_ref.stream())
         coin_count = 0
@@ -151,7 +159,7 @@ def main():
         print(f"  coin_count:   {coin_count}")
         print(f"  supply_count: {supply_count}")
         print(f"  est_value:    ${est_value:.2f}")
-        print("  ✅ collection_stats rebuilt.")
+        print("  [OK] collection_stats rebuilt.")
 
 
 if __name__ == "__main__":
