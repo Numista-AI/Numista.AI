@@ -553,7 +553,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       // ── Year ───────────────────────────────────────────────────────────────
       case _F.year:
         final raw = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-        return double.tryParse(raw) ?? 0.0;
+        final yearNum = double.tryParse(raw) ?? 0.0;
+        // Composite key: Year | Theme/Subject | Mint Mark
+        // Groups same-year same-design coins (e.g. 1999 NJ-P next to 1999 NJ-D)
+        final theme = m[_F.themeSubject]?.toString().toLowerCase() ?? '';
+        final mint = m[_F.mintMark]?.toString().toLowerCase() ?? '';
+        return '${yearNum.toStringAsFixed(4).padLeft(10, '0')}|$theme|$mint';
 
       // ── Default: plain text (alphabetical) ─────────────────────────────────
       default:
