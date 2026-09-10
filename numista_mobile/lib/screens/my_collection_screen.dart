@@ -552,12 +552,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
       // ── Year ───────────────────────────────────────────────────────────────
       case _F.year:
-        final raw = m[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+        // Dual-read: PascalCase 'Year' first, then lowercase 'year' fallback
+        final raw = (m[_F.year] ?? m['year'])?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
         final yearNum = double.tryParse(raw) ?? 0.0;
         // Composite key: Year | Theme/Subject | Mint Mark
         // Groups same-year same-design coins (e.g. 1999 NJ-P next to 1999 NJ-D)
-        final theme = m[_F.themeSubject]?.toString().toLowerCase() ?? '';
-        final mint = m[_F.mintMark]?.toString().toLowerCase() ?? '';
+        final theme = (m[_F.themeSubject] ?? m['theme_subject'])?.toString().toLowerCase() ?? '';
+        final mint = (m[_F.mintMark] ?? m['mint_mark'])?.toString().toLowerCase() ?? '';
         return '${yearNum.toStringAsFixed(4).padLeft(10, '0')}|$theme|$mint';
 
       // ── Default: plain text (alphabetical) ─────────────────────────────────
@@ -5687,11 +5688,12 @@ class _CollectionCardImage extends StatelessWidget {
       return _buildCoinImage(directUrl);
     }
 
-    final year = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final mint = data[_F.mintMark]?.toString().trim() ?? '';
-    final denom = data[_F.denomination]?.toString() ?? '';
-    final series = data[_F.programSeries]?.toString() ?? '';
-    final subject = data[_F.themeSubject]?.toString() ?? '';
+    // Dual-read: PascalCase first, lowercase fallback for unmigrated CSV docs
+    final year = (data[_F.year] ?? data['year'])?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
+    final mint = (data[_F.mintMark] ?? data['mint_mark'])?.toString().trim() ?? '';
+    final denom = (data[_F.denomination] ?? data['denomination'])?.toString() ?? '';
+    final series = (data[_F.programSeries] ?? data['program_series'])?.toString() ?? '';
+    final subject = (data[_F.themeSubject] ?? data['theme_subject'])?.toString() ?? '';
 
     return FutureBuilder<CoinImageResult>(
       future: CoinImageService.fetchReferenceImages(
