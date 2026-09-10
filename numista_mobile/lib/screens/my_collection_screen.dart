@@ -2880,9 +2880,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final theme = _rowField(m, 'theme_subject', _F.themeSubject);
         
         final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
+        final label = theme.isNotEmpty ? theme : denom;
+        final themeStartsYear = label.toLowerCase().startsWith(year.toLowerCase()) ||
+            (yearMint.isNotEmpty && label.toLowerCase().startsWith(yearMint.toLowerCase()));
         final displayTitle = crw.isVirtualChild
-            ? '↳ $yearMint ${theme.isNotEmpty ? theme : denom}'.trim()
-            : '$yearMint ${theme.isNotEmpty ? theme : denom}'.trim();
+            ? '↳ ${themeStartsYear ? label : '$yearMint $label'}'.trim()
+            : (themeStartsYear ? label : '$yearMint $label').trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);
         final valBid = _parseNumber(m['greysheetBid']);
