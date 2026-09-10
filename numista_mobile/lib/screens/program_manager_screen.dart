@@ -310,7 +310,6 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return StreamBuilder<Map<String, List<CoinProgram>>>(
       stream: ReferenceService.getGroupedProgramsStream(),
       builder: (context, refSnapshot) {

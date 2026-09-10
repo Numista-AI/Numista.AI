@@ -1952,7 +1952,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showCollectorMemoryDialog(Map<String, dynamic> initialProfile) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final gradeOptions = [
       'Unset',
       'PO-01', 'FR-02', 'AG-03', 'G-04', 'VG-08', 'F-12', 'VF-20', 'VF-30',

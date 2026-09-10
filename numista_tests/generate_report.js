@@ -13,7 +13,7 @@ const REPORTS_DIR = path.join(__dirname, 'reports');
 const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots');
 const SCAN_REPORT_FILE = path.join(__dirname, '..', 'SCAN_REPORT.md');
 
-let results = { suites: [], stats: { expected: 146, unexpected: 0, flaky: 0, skipped: 1 } };
+let results = { suites: [], stats: { expected: 0, unexpected: 0, flaky: 0, skipped: 0 } };
 if (fs.existsSync(RESULTS_FILE)) {
   try {
     let raw = fs.readFileSync(RESULTS_FILE, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
@@ -350,11 +350,11 @@ ${gcpGreysheetCheck}
 
 ## Test Logs & Environment Isolation Summary
 * **Backend Pytest Unit Suite:** ${pytestSummary}
-* **Frontend Playwright E2E Suite:** ${passed}/${totalTests} passed (${skipped} skipped gracefully)
+* **Frontend Playwright ${totalTests <= 10 ? 'Smoke' : 'E2E'} Suite:** ${passed}/${totalTests} passed${totalTests <= 10 ? ' (auth.setup + homepage smoke only)' : ''} (${skipped} skipped gracefully)
 * **Test Infrastructure Fixes (2026-08-07):**
   * \`12-estate-management.spec.js\` T02: Replaced fixed 4s wait with \`waitForLoadState('networkidle')\` + Flutter canvas settle
   * \`05-navigation.spec.js\` T09: Replaced hardcoded pixel coordinate with role-based selector for Phase 2 layout compatibility
-* **Test Isolation:** Enforced. E2E tests target \`ericdcman@gmail.com\` / Demo Suite with zero production Firestore mutation.
+* **Test Isolation:** Enforced. E2E tests target \`grokbot@numista.ai\` (QC bot account) with zero production Firestore mutation. See \`numista_qc/SUITE_MANIFEST.json\` for forbidden accounts.
 
 ---
 
