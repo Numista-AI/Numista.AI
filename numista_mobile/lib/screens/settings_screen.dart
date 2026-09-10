@@ -211,17 +211,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             context,
             icon: Icons.download_for_offline_outlined,
             title: 'Export Collection (JSON / CSV)',
-            description: 'Download your full collection in schemaVersion: 1 JSON (with spot price baseline) or CSV format.',
+            description: 'Download your full collection backup (JSON). Includes coins, currency, sets, valuations, checklist progress, and estate data.',
             actionLabel: 'Download JSON',
             onAction: () async {
               if (!GuestSeedService.canDownload) {
                 _showCreateAccountDialog(context);
               } else {
-                await BackupExportService.exportJsonDownload();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Collection JSON exported successfully!')),
-                  );
+                try {
+                  await BackupExportService.exportJsonDownload();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Collection JSON exported successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('[SettingsScreen] JSON export failed: $e');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Export failed: ${e.toString().split('\n').first}'),
+                        backgroundColor: Colors.red.shade700,
+                      ),
+                    );
+                  }
                 }
               }
             },

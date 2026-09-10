@@ -11,40 +11,111 @@ import 'auth_service.dart';
 class BackupExportService {
   BackupExportService._();
 
-  /// Generates schemaVersion: 1 JSON export string.
+  /// Generates schemaVersion: 2 full-fidelity JSON export bundle.
+  /// Includes coins, currency, world items, transfers, estate, and preferences.
   static Future<Map<String, dynamic>> generateExportPayload() async {
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? 'guest@numista.ai';
+    final fs = FirebaseFirestore.instance;
 
-    List<Map<String, dynamic>> coins = [];
-
-    if (!AuthService.isGuest && user?.email != null) {
+    // Helper: query a subcollection under the user doc and return list of maps
+    Future<List<Map<String, dynamic>>> fetchCollection(String subcollection) async {
+      final List<Map<String, dynamic>> results = [];
       try {
-        final snap = await FirebaseFirestore.instance
-            .collection(AuthService.coinsPath)
-            .get();
+        final snap = await fs.doc(AuthService.userDocPath).collection(subcollection).get();
         for (final doc in snap.docs) {
-          final data = doc.data();
-          coins.add({'_id': doc.id, ...data});
+          results.add({'_id': doc.id, ...doc.data()});
         }
       } catch (e) {
-        debugPrint('[BackupExportService] Error fetching coins: $e');
+        debugPrint('[BackupExportService] Error fetching $subcollection: $e');
       }
+      return results;
     }
 
+    // Helper: fetch a single document
+    Future<Map<String, dynamic>?> fetchSingleDoc(String subcollection, String docId) async {
+      try {
+        final docSnap = await fs.doc(AuthService.userDocPath).collection(subcollection).doc(docId).get();
+        if (docSnap.exists && docSnap.data() != null) {
+          return {'_id': docSnap.id, ...docSnap.data()!};
+        }
+      } catch (e) {
+        debugPrint('[BackupExportService] Error fetching $subcollection/$docId: $e');
+      }
+      return null;
+    }
+
+    if (AuthService.isGuest || user == null) {
+      return {
+        'schemaVersion': 2,
+        'exported_at': DateTime.now().toUtc().toIso8601String(),
+        'user_email': email,
+        'collections': {'coins': [], 'currency': [], 'world_items': [], 'transferred_coins': [], 'transferred_currency': []},
+        'estate': {'profile': null, 'coin_data': []},
+        'preferences': {'program_preferences': [], 'beta_checklist': null},
+        'metadata': {'coin_count': 0, 'currency_count': 0, 'world_item_count': 0, 'set_count': 0},
+      };
+    }
+
+    // Fetch all collections in parallel for speed
+    final results = await Future.wait([
+      fetchCollection('coins'),              // 0
+      fetchCollection('currency'),           // 1
+      fetchCollection('world_items'),        // 2
+      fetchCollection('transferred_coins'),  // 3
+      fetchCollection('transferred_currency'), // 4
+      fetchCollection('estate_data'),        // 5
+      fetchCollection('program_preferences'), // 6
+    ]);
+
+    final coins = results[0];
+    final currency = results[1];
+    final worldItems = results[2];
+    final transferredCoins = results[3];
+    final transferredCurrency = results[4];
+    final estateData = results[5];
+    final programPrefs = results[6];
+
+    // Single docs
+    final estateProfile = await fetchSingleDoc('estate_profile', 'data');
+    final betaChecklist = await fetchSingleDoc('settings', 'beta_checklist');
+
+    // Count sets for metadata
+    final setCount = coins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
+
     final payload = {
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'user_email': email,
-      'item_count': coins.length,
-      'spot_price_baseline': {
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
-        'silver_per_oz': 31.50,
-        'gold_per_oz': 2450.00,
-        'platinum_per_oz': 980.00,
-        'currency': 'USD',
+      'app_version': '4.339',
+      'collections': {
+        'coins': coins,
+        'currency': currency,
+        'world_items': worldItems,
+        'transferred_coins': transferredCoins,
+        'transferred_currency': transferredCurrency,
       },
+      'estate': {
+        'profile': estateProfile,
+        'coin_data': estateData,
+      },
+      'preferences': {
+        'program_preferences': programPrefs,
+        'beta_checklist': betaChecklist,
+      },
+      'metadata': {
+        'coin_count': coins.length,
+        'currency_count': currency.length,
+        'world_item_count': worldItems.length,
+        'transferred_coin_count': transferredCoins.length,
+        'transferred_currency_count': transferredCurrency.length,
+        'set_count': setCount,
+        'estate_data_count': estateData.length,
+        'program_preference_count': programPrefs.length,
+      },
+      // Legacy compat: flat 'coins' key for schemaVersion: 1 consumers
       'coins': coins,
+      'item_count': coins.length,
     };
 
     return payload;
@@ -53,7 +124,12 @@ class BackupExportService {
   /// Triggers JSON file download in browser or web target.
   static Future<void> exportJsonDownload() async {
     final payload = await generateExportPayload();
-    final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+    final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
+      if (object is Timestamp) return object.toDate().toIso8601String();
+      if (object is DateTime) return object.toIso8601String();
+      return object.toString();
+    });
+    final jsonStr = jsonEncoder.convert(payload);
     final filename = 'numista_collection_backup_${DateTime.now().millisecondsSinceEpoch}.json';
 
     if (kIsWeb) {
@@ -135,11 +211,18 @@ class BackupExportService {
       final url = web.URL.createObjectURL(blob);
       final anchor = web.HTMLAnchorElement()
         ..href = url
-        ..download = filename;
+        ..download = filename
+        ..style.display = 'none';
+      web.document.body?.appendChild(anchor);
       anchor.click();
-      web.URL.revokeObjectURL(url);
+      web.document.body?.removeChild(anchor);
+      // Give browser download manager ample time (5s) to acquire the blob stream
+      Future.delayed(const Duration(seconds: 5), () {
+        web.URL.revokeObjectURL(url);
+      });
     } catch (e) {
       debugPrint('[BackupExportService] Web download error: $e');
+      rethrow;
     }
   }
 }
