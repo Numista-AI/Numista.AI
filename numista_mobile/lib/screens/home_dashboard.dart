@@ -1551,10 +1551,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.336',
+    version: 'v4.337',
     date: '2026-09-09',
     description: 'Catalog Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children',
+      'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
+      'Programs: add set_expansion_helper regression tests for field preservation',
+      'Programs: preserve program_id, Strike Type, Variety in expandCollection',
+      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Scan: full system check v4.337 and update SCAN_REPORT.md',
+    ],
+  ),
+  _Release(
+    version: 'v4.336',
+    date: '2026-09-09',
+    description: 'Catalog Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children',
       'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
