@@ -95,7 +95,12 @@ class _LoginScreenState extends State<LoginScreen>
         return;
       }
     } else {
-      if (credential.length < 8) {
+      // Smart detect: 6-digit all-numeric input in password mode = collector meant PIN.
+      final looksLikePin = credential.length == 6 && int.tryParse(credential) != null;
+      if (looksLikePin) {
+        // Heal UI mode so retry failures show PIN UX, not password hints.
+        setState(() => _usePasswordSignIn = false);
+      } else if (credential.length < 8) {
         setState(() => _error = 'Password must be at least 8 characters.');
         return;
       }
@@ -103,7 +108,10 @@ class _LoginScreenState extends State<LoginScreen>
     GuestSeedService.deactivateBrowseDemo();
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.signIn(email, credential);
-    if (mounted) setState(() { _loading = false; _error = result.error; });
+    if (mounted) {
+      setState(() { _loading = false; _error = result.error; });
+      if (result.error == null) TextInput.finishAutofillContext(shouldSave: true);
+    }
   }
 
   Future<void> _createAccount() async {
@@ -122,7 +130,12 @@ class _LoginScreenState extends State<LoginScreen>
         return;
       }
     } else {
-      if (credential.length < 8) {
+      // Smart detect: 6-digit all-numeric input in password mode = collector meant PIN.
+      final looksLikePin = credential.length == 6 && int.tryParse(credential) != null;
+      if (looksLikePin) {
+        // Heal UI mode so retry failures show PIN UX, not password hints.
+        setState(() => _usePasswordCreate = false);
+      } else if (credential.length < 8) {
         setState(() => _error = 'Password must be at least 8 characters.');
         return;
       }
@@ -134,7 +147,10 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.createAccount(
         email, name.isEmpty ? email.split('@').first : name, credential);
-    if (mounted) setState(() { _loading = false; _error = result.error; });
+    if (mounted) {
+      setState(() { _loading = false; _error = result.error; });
+      if (result.error == null) TextInput.finishAutofillContext(shouldSave: true);
+    }
   }
 
   Future<void> _googleSignIn() async {
@@ -492,12 +508,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildSignInTab() {
     return SingleChildScrollView(
-      child: Column(
+      child: AutofillGroup(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _label('Email Address'),
           const SizedBox(height: 6),
-          _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
+          _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
           const SizedBox(height: 16),
           // ── Credential label row ──────────────────────────────────────────
           Row(
@@ -527,7 +544,11 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               onPressed: () => setState(() {
                 _usePasswordSignIn = !_usePasswordSignIn;
-                _pinCtrl.clear();
+                // Preserve typed text. When switching TO PIN mode, strip non-digits and truncate to 6.
+                if (!_usePasswordSignIn) {
+                  final digits = _pinCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+                  _pinCtrl.text = digits.length > 6 ? digits.substring(0, 6) : digits;
+                }
                 _error = null;
               }),
               child: Text(
@@ -540,12 +561,14 @@ class _LoginScreenState extends State<LoginScreen>
           _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildCreateTab() {
     return SingleChildScrollView(
-      child: Column(
+      child: AutofillGroup(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _label('Your Name (optional)'),
@@ -554,7 +577,7 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 12),
           _label('Email Address'),
           const SizedBox(height: 6),
-          _textField(controller: _emailCreateCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
+          _textField(controller: _emailCreateCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
           const SizedBox(height: 12),
           _label(_usePasswordCreate ? 'Choose a Password' : 'Choose a 6-Digit PIN'),
           const SizedBox(height: 6),
@@ -579,7 +602,11 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               onPressed: () => setState(() {
                 _usePasswordCreate = !_usePasswordCreate;
-                _pinCreateCtrl.clear();
+                // Preserve typed text. When switching TO PIN mode, strip non-digits and truncate to 6.
+                if (!_usePasswordCreate) {
+                  final digits = _pinCreateCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+                  _pinCreateCtrl.text = digits.length > 6 ? digits.substring(0, 6) : digits;
+                }
                 _error = null;
               }),
               child: Text(
@@ -662,6 +689,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
         ],
       ),
+      ),
     );
   }
 
@@ -696,10 +724,11 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _label(String text) => Text(text,
       style: const TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.5));
 
-  Widget _textField({required TextEditingController controller, required String hint, TextInputType? keyboardType}) =>
+  Widget _textField({required TextEditingController controller, required String hint, TextInputType? keyboardType, List<String>? autofillHints}) =>
       TextField(
         controller: controller,
         keyboardType: keyboardType,
+        autofillHints: autofillHints,
         style: const TextStyle(color: _text, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
@@ -719,6 +748,7 @@ class _LoginScreenState extends State<LoginScreen>
         maxLength: 6,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        autofillHints: const [AutofillHints.password],
         style: const TextStyle(color: _text, fontSize: 20, letterSpacing: 8),
         textAlign: TextAlign.center,
         decoration: InputDecoration(
@@ -791,6 +821,7 @@ class _LoginScreenState extends State<LoginScreen>
       TextField(
         controller: ctrl,
         obscureText: !visible,
+        autofillHints: const [AutofillHints.password],
         style: const TextStyle(color: _text, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Min. 8 characters',
