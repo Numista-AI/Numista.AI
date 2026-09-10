@@ -217,11 +217,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (!GuestSeedService.canDownload) {
                 _showCreateAccountDialog(context);
               } else {
-                await BackupExportService.exportJsonDownload();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Collection JSON exported successfully!')),
-                  );
+                try {
+                  await BackupExportService.exportJsonDownload();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Collection JSON exported successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('[SettingsScreen] JSON export failed: $e');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Export failed: ${e.toString().split('\n').first}'),
+                        backgroundColor: Colors.red.shade700,
+                      ),
+                    );
+                  }
                 }
               }
             },

@@ -53,7 +53,12 @@ class BackupExportService {
   /// Triggers JSON file download in browser or web target.
   static Future<void> exportJsonDownload() async {
     final payload = await generateExportPayload();
-    final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+    final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
+      if (object is Timestamp) return object.toDate().toIso8601String();
+      if (object is DateTime) return object.toIso8601String();
+      return object.toString();
+    });
+    final jsonStr = jsonEncoder.convert(payload);
     final filename = 'numista_collection_backup_${DateTime.now().millisecondsSinceEpoch}.json';
 
     if (kIsWeb) {
@@ -135,11 +140,18 @@ class BackupExportService {
       final url = web.URL.createObjectURL(blob);
       final anchor = web.HTMLAnchorElement()
         ..href = url
-        ..download = filename;
+        ..download = filename
+        ..style.display = 'none';
+      web.document.body?.appendChild(anchor);
       anchor.click();
-      web.URL.revokeObjectURL(url);
+      web.document.body?.removeChild(anchor);
+      // Give browser download manager ample time (5s) to acquire the blob stream
+      Future.delayed(const Duration(seconds: 5), () {
+        web.URL.revokeObjectURL(url);
+      });
     } catch (e) {
       debugPrint('[BackupExportService] Web download error: $e');
+      rethrow;
     }
   }
 }
