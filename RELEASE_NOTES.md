@@ -332,6 +332,68 @@
 
 
 
+
+
+
+
+
+
+
+## v4.337 — 2026-09-09
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children
+- Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path
+- Programs: add set_expansion_helper regression tests for field preservation
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.337 and update SCAN_REPORT.md
+
+## v4.336 — 2026-09-09
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children
+- Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path
+- Programs: add set_expansion_helper regression tests for field preservation
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
+## v4.335 — 2026-09-09
+**Programs Enhancements & Platform Updates**
+
+- Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path
+- Programs: add set_expansion_helper regression tests for field preservation
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
+## v4.334 — 2026-09-09
+**Programs Enhancements & Platform Updates**
+
+- Programs: add set_expansion_helper regression tests for field preservation
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
+## v4.333 — 2026-09-09
+**Programs Enhancements & Platform Updates**
+
+- Programs: preserve program_id, Strike Type, Variety in expandCollection
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
+## v4.332 — 2026-09-09
+**Checklist Enhancements & Platform Updates**
+
+- Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
+## v4.331 — 2026-09-09
+**Scan Enhancements & Platform Updates**
+
+- Scan: full system check v4.330 and update SCAN_REPORT.md
+
 ## v4.330 — 2026-09-09
 **Checklist Enhancements & Platform Updates**
 
