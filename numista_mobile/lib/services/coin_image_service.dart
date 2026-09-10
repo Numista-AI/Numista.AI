@@ -26,6 +26,9 @@ class CoinImageService {
     'commemorative',
     'uncirculated-sets',
     'semiquincentennial',
+    // Generic programs — subject resolution still useful for fallback
+    'dollar',
+    'quarter',
   };
 
   /// Maps subject names (states, presidents, women) to canonical slugs.
@@ -319,17 +322,57 @@ class CoinImageService {
     'commemorative':           'commemorative',
   };
 
-  /// Resolve a coin's denomination + series fields to a canonical program slug.
-  static String? _resolveProgram(String? denomination, String? series) {
-    // Prefer the series name (more specific), fall back to denomination
+  /// Resolve a coin's denomination + series + subject fields to a canonical
+  /// program slug. Subject is checked first so that Morgan vs Peace (both
+  /// "Dollar" denomination) resolve correctly.
+  static String? _resolveProgram(
+      String? denomination, String? series, {String? subject}) {
+    // --- Priority 0: inspect Theme/Subject for specific program hints -------
+    // This resolves e.g. "2026 Peace Silver Dollar Reverse Proof" → peace-dollar
+    // and "2026 Morgan Silver Dollar Reverse Proof" → morgan-dollar, even when
+    // denomination is just "Dollar".
+    if (subject != null && subject.trim().isNotEmpty) {
+      final subj = subject.trim().toLowerCase();
+      // Morgan / Peace disambiguation
+      if (subj.contains('morgan')) return 'morgan-dollar';
+      if (subj.contains('peace')) return 'peace-dollar';
+      // Semiquincentennial / America250 coins
+      if (subj.contains('semiquincentennial') ||
+          subj.contains('america250') ||
+          subj.contains('250th anniversary')) {
+        return 'semiquincentennial';
+      }
+      // Mayflower, Gettysburg, etc. — America250 quarter designs
+      const america250Subjects = [
+        'mayflower', 'gettysburg', 'declaration of independence',
+        'u.s. constitution', 'bill of rights', 'emerging liberty',
+      ];
+      for (final a250 in america250Subjects) {
+        if (subj.contains(a250)) return 'semiquincentennial';
+      }
+    }
+
+    // --- Priority 1: exact match on series, then denomination ---------------
     for (final raw in [series, denomination]) {
       if (raw == null || raw.trim().isEmpty) continue;
       final key = raw.trim().toLowerCase();
-      // Exact match first
       if (_programMap.containsKey(key)) return _programMap[key];
-      // Partial match
-      for (final entry in _programMap.entries) {
-        if (key.contains(entry.key) || entry.key.contains(key)) {
+    }
+
+    // --- Priority 2: word-boundary partial match ----------------------------
+    // Sort entries by descending key length so "lincoln cent" matches before
+    // "cent", and "semiquincentennial" matches before "cent".
+    // Uses word-boundary regex to prevent "cent" matching inside
+    // "semiquincentennial" or "25 Cents".
+    final sortedEntries = _programMap.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+    for (final raw in [series, denomination]) {
+      if (raw == null || raw.trim().isEmpty) continue;
+      final key = raw.trim().toLowerCase();
+      for (final entry in sortedEntries) {
+        // Word-boundary match: entry.key must appear as a whole word in key
+        final pattern = RegExp(r'\b' + RegExp.escape(entry.key) + r'\b');
+        if (pattern.hasMatch(key)) {
           return entry.value;
         }
       }
@@ -455,7 +498,7 @@ class CoinImageService {
     String? subject,   // Theme/Subject field — e.g. 'New Jersey' for state quarters
   }) async {
     try {
-      final program = _resolveProgram(denomination, series);
+      final program = _resolveProgram(denomination, series, subject: subject);
       if (program == null) return const CoinImageResult();
 
       // Resolve subject slug (e.g. 'New Jersey' -> 'new-jersey')

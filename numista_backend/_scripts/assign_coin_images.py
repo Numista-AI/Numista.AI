@@ -175,15 +175,37 @@ def score_match(entry: dict, year_s: str, search_tokens: set, series_lower: str)
     return score
 
 
-def find_best_match(year, series, denom, index: list[dict]) -> tuple[str | None, str | None]:
-    """Return (obverse_url, reverse_url) best matches."""
+def find_best_match(year, series, denom, index: list[dict],
+                    subject: str | None = None) -> tuple[str | None, str | None]:
+    """Return (obverse_url, reverse_url) best matches.
+    
+    For series coins (ATB, AWQ, State Quarters), subject tokens MUST appear
+    in the filename. No subject match → no URL (honest placeholder > wrong art).
+    """
     year_s  = str(year).strip() if year else ''
     s_lower = (series or '').lower()
     d_lower = (denom  or '').lower()
+    subj_lower = (subject or '').lower()
 
-    search = set(re.split(r'[-_\s/,]+', f'{s_lower} {d_lower}'))
+    # Include subject tokens in search for better matching
+    search = set(re.split(r'[-_\s/,]+', f'{s_lower} {d_lower} {subj_lower}'))
     search = {t for t in search if len(t) >= 3
               and t not in ('the','and','for','set','coin','unc','proof','all','series')}
+
+    # Identify series programs that require subject-specific matching
+    _SERIES_PROGRAMS = {
+        'america-the-beautiful', 'american-women-quarters', '50-state-quarters',
+        'state-quarters', 'presidential-dollars', 'american-innovation',
+    }
+    is_series = any(sp in s_lower.replace(' ', '-') for sp in _SERIES_PROGRAMS)
+
+    # Extract subject-specific tokens for mandatory matching on series coins
+    subject_tokens = set()
+    if subj_lower:
+        subject_tokens = set(re.split(r'[-_\s/,]+', subj_lower))
+        subject_tokens = {t for t in subject_tokens if len(t) >= 3
+                          and t not in ('the','and','for','set','coin','national','park',
+                                       'quarter','quarters','dollar','dollars')}
 
     best_obv_score = 0.0
     best_rev_score = 0.0
@@ -194,6 +216,12 @@ def find_best_match(year, series, denom, index: list[dict]) -> tuple[str | None,
         sc = score_match(entry, year_s, search, s_lower)
         if sc < 1.5:
             continue
+
+        # For series coins: require at least one subject token in filename
+        if is_series and subject_tokens:
+            fn_lower = entry.get('filename', '').lower()
+            if not any(st in fn_lower for st in subject_tokens):
+                continue  # Skip: wrong subject for this series coin
 
         if entry['side'] in ('obverse', 'unknown'):
             if sc > best_obv_score:
