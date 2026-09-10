@@ -211,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             context,
             icon: Icons.download_for_offline_outlined,
             title: 'Export Collection (JSON / CSV)',
-            description: 'Download your full collection in schemaVersion: 1 JSON (with spot price baseline) or CSV format.',
+            description: 'Download your full collection backup (JSON). Includes coins, currency, sets, valuations, checklist progress, and estate data.',
             actionLabel: 'Download JSON',
             onAction: () async {
               if (!GuestSeedService.canDownload) {
