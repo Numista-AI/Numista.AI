@@ -1551,10 +1551,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.348',
+    date: '2026-09-11',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.347)',
+    ],
+  ),
+  _Release(
     version: 'v4.347',
     date: '2026-09-11',
     description: 'Images Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
       'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
