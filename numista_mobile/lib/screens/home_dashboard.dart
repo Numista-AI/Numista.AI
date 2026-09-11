@@ -1551,10 +1551,42 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.347',
+    date: '2026-09-11',
+    description: 'Images Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
+      'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
+      'Import: normalize before dupe queries, dual-read fallback, migration script',
+      'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
+      'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
+      'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
+      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
+      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+    ],
+  ),
+  _Release(
+    version: 'v4.346',
+    date: '2026-09-10',
+    description: 'Images Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
+      'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
+      'Import: normalize before dupe queries, dual-read fallback, migration script',
+      'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
+      'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
+      'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
+      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
+      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+    ],
+  ),
+  _Release(
     version: 'v4.345',
     date: '2026-09-10',
     description: 'Images Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
       'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
