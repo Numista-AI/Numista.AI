@@ -70,7 +70,7 @@ def main():
                 project=PROJECT_ID,
                 location="us-central1"
             )
-            primary_model = "gemini-2.5-flash"
+            primary_model = "gemini-3.8-flash"
             print(f"  Gemini client ready (model: {primary_model})", flush=True)
         except Exception as e:
             print(f"  WARNING: Gemini init failed: {e}", flush=True)
