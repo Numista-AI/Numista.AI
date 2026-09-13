@@ -520,7 +520,12 @@ class CoinImageService {
       // supply the OBVERSE (e.g. shared Washington portrait is fine).
       // This prevents "stealing" another coin's reverse design
       // (e.g. Maya Angelou reverse showing for Anna May Wong).
-      final bool hasSubject = subjectSlug != null && subjectSlug.isNotEmpty;
+      // MF-V6-FIX1: Also activate steal-guard when program is a known subject-program
+      // (e.g. american-women-quarters, america-the-beautiful). This blocks generic
+      // obverse/reverse images (Angelou split photo, Perry's Victory, Lincoln penny)
+      // even when the Theme/Subject Firestore field is missing or "None".
+      final bool hasSubject = (subjectSlug != null && subjectSlug.isNotEmpty)
+          || _subjectPrograms.contains(program);
 
       // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
       debugPrint('[CIS] fetchReferenceImages: year=$year mint=$mint denom=$denomination series=$series subject=$subject');
@@ -602,6 +607,11 @@ class CoinImageService {
 
   @visibleForTesting
   static Set<String> get testSubjectPrograms => _subjectPrograms;
+
+  @visibleForTesting
+  static bool testHasSubject(String? subjectSlug, String? program) =>
+      (subjectSlug != null && subjectSlug.isNotEmpty) ||
+      _subjectPrograms.contains(program);
 }
 
 /// Result object for a coin image lookup.

@@ -4078,10 +4078,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // When no user photo exists, try to fetch a reference image from GCS index
     if (!hasAny) {
-      final year  = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-      final mint  = data[_F.mintMark]?.toString().trim() ?? '';
-      final denom = data[_F.denomination]?.toString() ?? '';
-      final series = data[_F.programSeries]?.toString() ?? '';
+      final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+      final mint  = _rowField(data, 'mint_mark', _F.mintMark);
+      final denom = _rowField(data, 'denomination', _F.denomination);
+      final series = _rowField(data, 'program_series', _F.programSeries);
+      final subject = _rowField(data, 'theme_subject', _F.themeSubject);
 
       return FutureBuilder<CoinImageResult>(
         future: CoinImageService.fetchReferenceImages(
@@ -4089,9 +4090,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           mint:         mint.isEmpty ? null : mint,
           denomination: denom.isEmpty ? null : denom,
           series:       series.isEmpty ? null : series,
-          subject:      (data[_F.themeSubject]?.toString() ?? '').isEmpty
-              ? null
-              : data[_F.themeSubject]?.toString(),
+          subject:      subject.isEmpty ? null : subject,
         ),
         builder: (context, snap) {
           final ref = snap.data;
@@ -5715,11 +5714,18 @@ class _CollectionCardImage extends StatelessWidget {
     }
 
     // Dual-read: PascalCase first, lowercase fallback for unmigrated CSV docs
-    final year = (data[_F.year] ?? data['year'])?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final mint = (data[_F.mintMark] ?? data['mint_mark'])?.toString().trim() ?? '';
-    final denom = (data[_F.denomination] ?? data['denomination'])?.toString() ?? '';
-    final series = (data[_F.programSeries] ?? data['program_series'])?.toString() ?? '';
-    final subject = (data[_F.themeSubject] ?? data['theme_subject'])?.toString() ?? '';
+    String dualRead(String snakeKey, String legacyKey) {
+      final s = data[snakeKey]?.toString();
+      if (s != null && s.trim().isNotEmpty && s.trim() != 'None' && s.trim() != 'null') return s.trim();
+      final l = data[legacyKey]?.toString();
+      if (l != null && l.trim().isNotEmpty && l.trim() != 'None' && l.trim() != 'null') return l.trim();
+      return '';
+    }
+    final year = dualRead('year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+    final mint = dualRead('mint_mark', _F.mintMark);
+    final denom = dualRead('denomination', _F.denomination);
+    final series = dualRead('program_series', _F.programSeries);
+    final subject = dualRead('theme_subject', _F.themeSubject);
 
     return FutureBuilder<CoinImageResult>(
       future: CoinImageService.fetchReferenceImages(
