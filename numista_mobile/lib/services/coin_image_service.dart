@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 
 /// Looks up reference coin images from the Firestore coin_image_index collection,
 /// which is built by build_image_index.py from the GCS buckets:
@@ -522,6 +522,11 @@ class CoinImageService {
       // (e.g. Maya Angelou reverse showing for Anna May Wong).
       final bool hasSubject = subjectSlug != null && subjectSlug.isNotEmpty;
 
+      // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
+      debugPrint('[CIS] fetchReferenceImages: year=$year mint=$mint denom=$denomination series=$series subject=$subject');
+      debugPrint('[CIS]   → program=$program subjectSlug=$subjectSlug hasSubject=$hasSubject');
+      debugPrint('[CIS]   → bases=${bases.join(', ')}');
+
       for (final base in bases) {
         final needsObv = bestObvUrl == null;
         final needsRev = bestRevUrl == null;
@@ -529,7 +534,7 @@ class CoinImageService {
 
         final isSubjectBase = subjectSlug != null && base.contains(subjectSlug);
 
-        if (needsObv) {
+        if (needsObv && (!hasSubject || isSubjectBase)) {
           final obvDoc = await db.collection(_collection)
               .doc('${base}_obverse').get();
           if (obvDoc.exists) {
@@ -561,6 +566,8 @@ class CoinImageService {
       }
 
       if (bestObvUrl != null || bestRevUrl != null) {
+        // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
+        debugPrint('[CIS]   → RESULT revUrl=${bestRevUrl ?? "null"} key=$bestKey');
         return CoinImageResult(
           obverseUrl:  bestObvUrl,
           reverseUrl:  bestRevUrl,

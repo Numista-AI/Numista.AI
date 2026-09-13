@@ -397,4 +397,109 @@ void main() {
       expect(year, equals('2026'));
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GROUP 7: v4 — _rowField 'None' string guard
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  group('_rowField v4 None guard', () {
+    // Updated _rowField with None/null string guard
+    String rowField(Map<String, dynamic> data, String snakeKey, String legacyKey) {
+      final s = data[snakeKey]?.toString();
+      if (s != null && s.trim().isNotEmpty && s.trim() != 'None' && s.trim() != 'null') return s.trim();
+      final l = data[legacyKey]?.toString();
+      if (l != null && l.trim().isNotEmpty && l.trim() != 'None' && l.trim() != 'null') return l.trim();
+      return '';
+    }
+
+    test('literal "None" string is treated as empty → PascalCase wins', () {
+      final data = <String, dynamic>{
+        'theme_subject': 'None',
+        'Theme/Subject': 'Anna May Wong',
+      };
+      expect(rowField(data, 'theme_subject', 'Theme/Subject'),
+          equals('Anna May Wong'));
+    });
+
+    test('literal "null" string is treated as empty → PascalCase wins', () {
+      final data = <String, dynamic>{
+        'theme_subject': 'null',
+        'Theme/Subject': 'Wilma Mankiller',
+      };
+      expect(rowField(data, 'theme_subject', 'Theme/Subject'),
+          equals('Wilma Mankiller'));
+    });
+
+    test('"None" in both keys → empty string', () {
+      final data = <String, dynamic>{
+        'theme_subject': 'None',
+        'Theme/Subject': 'None',
+      };
+      expect(rowField(data, 'theme_subject', 'Theme/Subject'), equals(''));
+    });
+
+    test('valid snake_case value is NOT affected by guard', () {
+      final data = <String, dynamic>{
+        'theme_subject': 'Anna May Wong',
+        'Theme/Subject': 'Something Else',
+      };
+      expect(rowField(data, 'theme_subject', 'Theme/Subject'),
+          equals('Anna May Wong'));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GROUP 8: v4 — normalizeDenom bake-in
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  group('normalizeDenom v4 bake-in', () {
+    // Replicate the fixed _normalizeDenom logic
+    String normalizeDenom(String raw) {
+      final s = raw.toLowerCase().trim();
+      if (s == '25 cents' || s == '25c' || s == '25 cent') return 'Quarter';
+      if (s.contains('quarter') || s.contains('25c')) return 'Quarter';
+      if (s.contains('cent') || s.contains('penny') || s.contains('1c')) return 'Cent';
+      if (s.contains('nickel') || s.contains('5c')) return 'Nickel';
+      if (s.contains('dime') || s.contains('10c')) return 'Dime';
+      if (s.contains('half') || s.contains('50c')) return 'Half Dollar';
+      if (s.contains('dollar') || s.contains('\$1')) return 'Dollar';
+      return raw;
+    }
+
+    test('"25 Cents" → Quarter (not Cent)', () {
+      expect(normalizeDenom('25 Cents'), equals('Quarter'));
+    });
+
+    test('"25 cents" → Quarter', () {
+      expect(normalizeDenom('25 cents'), equals('Quarter'));
+    });
+
+    test('"25c" → Quarter', () {
+      expect(normalizeDenom('25c'), equals('Quarter'));
+    });
+
+    test('"Quarter" → Quarter', () {
+      expect(normalizeDenom('Quarter'), equals('Quarter'));
+    });
+
+    test('"Cent" → Cent (not affected by 25-cent fix)', () {
+      expect(normalizeDenom('Cent'), equals('Cent'));
+    });
+
+    test('"1 Cent" → Cent', () {
+      expect(normalizeDenom('1 Cent'), equals('Cent'));
+    });
+
+    test('"Penny" → Cent', () {
+      expect(normalizeDenom('Penny'), equals('Cent'));
+    });
+
+    test('"Dollar" → Dollar', () {
+      expect(normalizeDenom('Dollar'), equals('Dollar'));
+    });
+
+    test('"Half Dollar" → Half Dollar', () {
+      expect(normalizeDenom('Half Dollar'), equals('Half Dollar'));
+    });
+  });
 }

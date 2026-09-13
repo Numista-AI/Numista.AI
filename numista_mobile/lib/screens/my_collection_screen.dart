@@ -655,11 +655,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // ---------------------------------------------------------------------------
 
   /// Dual-key field getter: tries snake_case first, then legacy PascalCase.
+  /// Treats literal 'None' / 'null' strings (Python serialization artifacts)
+  /// as empty so the fallback key can supply the real value.
   static String _rowField(Map<String, dynamic> data, String snakeKey, String legacyKey) {
     final s = data[snakeKey]?.toString();
-    if (s != null && s.trim().isNotEmpty) return s.trim();
+    if (s != null && s.trim().isNotEmpty && s.trim() != 'None' && s.trim() != 'null') return s.trim();
     final l = data[legacyKey]?.toString();
-    if (l != null && l.trim().isNotEmpty) return l.trim();
+    if (l != null && l.trim().isNotEmpty && l.trim() != 'None' && l.trim() != 'null') return l.trim();
     return '';
   }
 
@@ -3396,7 +3398,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 final hasRefObv = refObvUrl.isNotEmpty;
                                 final hasRefRev = refRevUrl.isNotEmpty;
                                 final hasRef    = hasRefObv || hasRefRev;
-                                final refUrl    = _vaultShowObverse
+                                // MF-V4-2: Auto-flip to reverse for series coins
+                                // when obverse is blank but reverse exists. Mirrors
+                                // Cards behavior so the distinctive design shows first.
+                                final showObverse = _vaultShowObverse
+                                    && (hasRefObv || !hasRefRev);
+                                final refUrl    = showObverse
                                     ? (hasRefObv ? refObvUrl : '')
                                     : (hasRefRev ? refRevUrl : '');
                                 final hasRefActive = refUrl.isNotEmpty;
@@ -3424,12 +3431,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      _vaultToggleButton('Obverse', showObv, hasRefObv, () {
+                                      _vaultToggleButton('Obverse', showObverse, hasRefObv, () {
                                         setState(() => _vaultShowObverse = true);
                                         setDlg(() {});
                                       }),
                                       SizedBox(width: 8),
-                                      _vaultToggleButton('Reverse', !showObv, hasRefRev, () {
+                                      _vaultToggleButton('Reverse', !showObverse, hasRefRev, () {
                                         setState(() => _vaultShowObverse = false);
                                         setDlg(() {});
                                       }),
@@ -3442,7 +3449,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                     child: GestureDetector(
                                       onTap: hasRefActive
                                           ? () => _showImageLightbox(refUrl,
-                                                label: showObv ? 'Obverse' : 'Reverse',
+                                                label: showObverse ? 'Obverse' : 'Reverse',
                                                 isMicroscope: false)
                                           : null,
                                       child: ClipRRect(
@@ -3454,7 +3461,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                                       ? child
                                                       : Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
                                                   errorBuilder: (ctx, err, st) => _vaultPlaceholder(
-                                                      showObv ? 'Obverse' : 'Reverse', isError: true),
+                                                      showObverse ? 'Obverse' : 'Reverse', isError: true),
                                                 ),
                                                 Positioned(bottom: 8, right: 8,
                                                   child: Container(
@@ -3470,7 +3477,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                               ])
                                             : snap.connectionState == ConnectionState.waiting
                                                 ? Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2))
-                                                : _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse'),
+                                                : _vaultPlaceholder(showObverse ? 'Obverse' : 'Reverse'),
                                       ),
                                     ),
                                   ),

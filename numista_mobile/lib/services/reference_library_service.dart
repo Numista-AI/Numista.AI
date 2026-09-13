@@ -189,10 +189,13 @@ class ReferenceLibraryService {
   /// upload script (e.g. "quarter", "dime", "half dollar", etc.).
   static String _normalizeDenom(String raw) {
     final s = raw.toLowerCase().trim();
+    // 25-cent variants MUST come before the generic 'cent' check,
+    // otherwise '25 cents' matches 'cent' and returns Cent (wrong).
+    if (s == '25 cents' || s == '25c' || s == '25 cent') return 'Quarter';
+    if (s.contains('quarter') || s.contains('25c'))                         return 'Quarter';
     if (s.contains('cent')    || s.contains('penny') || s.contains('1c'))  return 'Cent';
     if (s.contains('nickel')  || s.contains('5c'))                          return 'Nickel';
     if (s.contains('dime')    || s.contains('10c'))                         return 'Dime';
-    if (s.contains('quarter') || s.contains('25c'))                         return 'Quarter';
     if (s.contains('half')    || s.contains('50c'))                         return 'Half Dollar';
     if (s.contains('dollar') || s.contains('\$1'))                           return 'Dollar';
     return raw; // pass through unknown denominations unchanged
