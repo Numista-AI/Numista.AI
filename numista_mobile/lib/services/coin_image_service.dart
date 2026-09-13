@@ -520,7 +520,8 @@ class CoinImageService {
       // supply the OBVERSE (e.g. shared Washington portrait is fine).
       // This prevents "stealing" another coin's reverse design
       // (e.g. Maya Angelou reverse showing for Anna May Wong).
-      final bool hasSubject = subjectSlug != null && subjectSlug.isNotEmpty;
+      final bool hasSubject = (subjectSlug != null && subjectSlug.isNotEmpty)
+          || _subjectPrograms.contains(program);
 
       // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
       debugPrint('[CIS] fetchReferenceImages: year=$year mint=$mint denom=$denomination series=$series subject=$subject');
