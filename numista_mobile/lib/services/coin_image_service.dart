@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// Looks up reference coin images from the Firestore coin_image_index collection,
 /// which is built by build_image_index.py from the GCS buckets:
@@ -573,6 +574,27 @@ class CoinImageService {
     }
     return const CoinImageResult();
   }
+
+  // ── @visibleForTesting wrappers ──────────────────────────────────────────
+  // Thin wrappers exposing pure-logic statics for MF7 regression tests.
+  // These do NOT hit Firestore — only the deterministic resolver/slug logic.
+
+  @visibleForTesting
+  static String? testResolveProgram(
+      String? denomination, String? series, {String? subject}) =>
+      _resolveProgram(denomination, series, subject: subject);
+
+  @visibleForTesting
+  static String? testResolveSubject(String? subject, String? program) =>
+      _resolveSubject(subject, program);
+
+  @visibleForTesting
+  static List<String> testCandidateBases(
+      String year, String? mint, String? program, {String? subject}) =>
+      _candidateBases(year, mint, program, subject: subject);
+
+  @visibleForTesting
+  static Set<String> get testSubjectPrograms => _subjectPrograms;
 }
 
 /// Result object for a coin image lookup.

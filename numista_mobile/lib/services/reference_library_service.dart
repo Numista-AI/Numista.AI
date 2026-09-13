@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// A single image entry from the `reference_library` Firestore collection.
 class ReferenceImage {
@@ -199,4 +200,13 @@ class ReferenceLibraryService {
 
   /// Clears the in-memory cache (call on sign-out if needed).
   static void clearCache() => _cache.clear();
+
+  // ── @visibleForTesting wrappers ──────────────────────────────────────────
+  // Expose pure-logic statics for MF7 regression tests (no Firestore).
+
+  @visibleForTesting
+  static String testToSlug(String? subject) => _toSlug(subject);
+
+  @visibleForTesting
+  static String testNormalizeDenom(String raw) => _normalizeDenom(raw);
 }
