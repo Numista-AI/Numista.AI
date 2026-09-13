@@ -353,6 +353,19 @@
 
 
 
+
+## v4.352 — 2026-09-13
+**Image-match Enhancements & Platform Updates**
+
+- Image-match: v6 hasSubject extends to _subjectPrograms for program-level steal-guard
+- Image-match: v6 program-level steal-guard + unified _rowField on all paths
+- Image-match: v4 obverse+reverse steal-guard + normalizeDenom + Inspector auto-flip
+- Images: MF7 regression tests â€” 36 tests covering v2/v3 image-match fixes
+- Images: v3 P0 image match â€” subject-filter Similar carousel + honest placeholders
+- Images: P0 image match v2 â€” steal-guard, America250 namespace, cents fix
+- Sync release notes and version bump v4.350
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)
+
 ## v4.351 — 2026-09-13
 **Audit Enhancements & Platform Updates**
 
