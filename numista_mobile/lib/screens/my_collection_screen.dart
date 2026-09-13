@@ -3302,12 +3302,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             year:         year,
             mint:         mint.isEmpty ? null : mint,
             denomination: denom.isEmpty ? null : denom,
-            series:       (data[_F.programSeries]?.toString() ?? '').isEmpty
+            series:       _rowField(data, 'program_series', _F.programSeries).isEmpty
                 ? null
-                : data[_F.programSeries]?.toString(),
-            subject:      (data[_F.themeSubject]?.toString() ?? '').isEmpty
+                : _rowField(data, 'program_series', _F.programSeries),
+            subject:      _rowField(data, 'theme_subject', _F.themeSubject).isEmpty
                 ? null
-                : data[_F.themeSubject]?.toString(),
+                : _rowField(data, 'theme_subject', _F.themeSubject),
           );
     // refFuture passed into FutureBuilder below
 
@@ -3397,8 +3397,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 final hasRefRev = refRevUrl.isNotEmpty;
                                 final hasRef    = hasRefObv || hasRefRev;
                                 final refUrl    = _vaultShowObverse
-                                    ? (hasRefObv ? refObvUrl : refRevUrl)
-                                    : (hasRefRev ? refRevUrl : refObvUrl);
+                                    ? (hasRefObv ? refObvUrl : '')
+                                    : (hasRefRev ? refRevUrl : '');
                                 final hasRefActive = refUrl.isNotEmpty;
 
                                 return Column(children: [
@@ -4864,13 +4864,20 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final year    = int.tryParse(yearRaw.replaceAll(RegExp(r'\.0$'), ''));
     if (denom.isEmpty) return;
 
+    // MF-V3-2: dual-read subject + series so the carousel can filter
+    final theme  = _rowField(data, 'theme_subject', _F.themeSubject);
+    final series = _rowField(data, 'program_series', _F.programSeries);
+
     setState(() {
       _loadingInspectorSimilar = true;
       _inspectorSimilar = [];
     });
 
     final imgs = await ReferenceLibraryService.fetchSimilar(
-        denomination: denom, year: year);
+        denomination: denom,
+        year: year,
+        subject: theme.isEmpty ? null : theme,
+        series: series.isEmpty ? null : series);
     if (mounted) {
       setState(() {
         _inspectorSimilar = imgs;
@@ -5717,9 +5724,15 @@ class _CollectionCardImage extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         final ref = snapshot.data;
+        // MF-V3-3: When subject is known and reverse is null (steal-guard
+        // correctly blocked a generic reverse), show placeholder instead of
+        // falling back to generic obverse. Keeps obverse fallback for coins
+        // without a subject (e.g. generic Morgan/Peace).
         final refUrl = (ref?.reverseUrl?.isNotEmpty == true)
             ? ref!.reverseUrl!
-            : (ref?.obverseUrl?.isNotEmpty == true ? ref!.obverseUrl! : '');
+            : (subject.isEmpty && ref?.obverseUrl?.isNotEmpty == true)
+                ? ref!.obverseUrl!
+                : '';
 
         if (refUrl.isNotEmpty) {
           return _buildCoinImage(refUrl);

@@ -75,15 +75,23 @@ class ReferenceLibraryService {
   ///
   /// [denomination] — e.g. "Quarter", "Dime". Case-insensitive prefix match.
   /// [year]         — the target year (can be null / 0 for unknown).
+  /// [subject]      — optional Theme/Subject (e.g. "Anna May Wong").
+  ///                  When non-empty, results are filtered client-side on
+  ///                  filename/URL containing the subject slug. If no match,
+  ///                  returns an empty list (honest blank > wrong coin).
+  /// [series]       — optional Program/Series (e.g. "American Women Quarters").
   ///
   /// Returns an empty list if Firestore is unreachable.
   static Future<List<ReferenceImage>> fetchSimilar({
     required String denomination,
     required int? year,
+    String? subject,
+    String? series,
   }) async {
     final normDenom = _normalizeDenom(denomination);
     final targetYear = year ?? 0;
-    final cacheKey = '$normDenom|$targetYear';
+    final subjectSlug = _toSlug(subject);
+    final cacheKey = '$normDenom|$targetYear|$subjectSlug';
 
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
 
@@ -118,10 +126,29 @@ class ReferenceLibraryService {
             .get();
       }
 
-      final images = snap.docs
+      var images = snap.docs
           .map((d) => ReferenceImage.fromDoc(d))
           .where((img) => img.gcsUrl.isNotEmpty)
           .toList();
+
+      // MF-V3-1 CLIENT-SIDE SUBJECT FILTER:
+      // The reference_library collection has NO theme_subject field.
+      // Filter on filename/gcs_url containing the subject slug.
+      // If subject is known and NO filename matches, return EMPTY (honest blank).
+      if (subjectSlug.isNotEmpty) {
+        final filtered = images.where((img) {
+          final fn = img.gcsUrl.toLowerCase();
+          return fn.contains(subjectSlug);
+        }).toList();
+        if (filtered.isNotEmpty) {
+          images = filtered;
+        } else {
+          // Subject known but no matching images — return honest blank
+          // rather than showing a different coin's design.
+          _cache[cacheKey] = [];
+          return [];
+        }
+      }
 
       // Sort by year proximity
       if (targetYear > 0) {
@@ -143,6 +170,17 @@ class ReferenceLibraryService {
       // Graceful failure — don't surface errors to the user
       return [];
     }
+  }
+
+  /// Converts a subject string to a lowercase slug for filename matching.
+  /// e.g. "Anna May Wong" -> "anna_may_wong", "Mount Rushmore" -> "mount_rushmore"
+  static String _toSlug(String? subject) {
+    if (subject == null || subject.trim().isEmpty) return '';
+    return subject
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
   }
 
   // ── Denomination normalizer ───────────────────────────────────────────────
