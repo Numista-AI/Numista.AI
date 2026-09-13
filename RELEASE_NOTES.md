@@ -350,6 +350,13 @@
 
 
 
+
+## v4.349 — 2026-09-12
+**Audit Enhancements & Platform Updates**
+
+- Sync release notes and version bump v4.348
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)
+
 ## v4.348 — 2026-09-11
 **Audit Enhancements & Platform Updates**
 
