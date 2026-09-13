@@ -1551,10 +1551,28 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.351',
+    date: '2026-09-13',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
+    ],
+  ),
+  _Release(
+    version: 'v4.350',
+    date: '2026-09-13',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
+    ],
+  ),
+  _Release(
     version: 'v4.349',
     date: '2026-09-12',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Sync release notes and version bump v4.348',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
