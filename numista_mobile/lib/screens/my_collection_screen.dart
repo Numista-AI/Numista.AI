@@ -656,7 +656,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   /// Dual-key field getter: tries snake_case first, then legacy PascalCase.
   static String _rowField(Map<String, dynamic> data, String snakeKey, String legacyKey) {
-    return data[snakeKey]?.toString() ?? data[legacyKey]?.toString() ?? '';
+    final s = data[snakeKey]?.toString();
+    if (s != null && s.trim().isNotEmpty) return s.trim();
+    final l = data[legacyKey]?.toString();
+    if (l != null && l.trim().isNotEmpty) return l.trim();
+    return '';
   }
 
   /// Map from snake_case helper keys to PascalCase _F constants.
@@ -2871,7 +2875,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final crw = docs[index];
         final m = crw.data;
         
-        final year = _rowField(m, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+        final year = _rowField(m, 'year', _F.year).replaceAll(RegExp(r'\.0+$'), '');
         final mint = _rowField(m, 'mint_mark', _F.mintMark);
         final denom = _rowField(m, 'denomination', _F.denomination);
         final series = _rowField(m, 'program_series', _F.programSeries);
@@ -2880,11 +2884,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final theme = _rowField(m, 'theme_subject', _F.themeSubject);
         
         final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
-        final label = theme.isNotEmpty ? theme : denom;
+        var label = theme.isNotEmpty ? theme : denom;
+        // Strip doubled year from Theme if present (e.g. "2026 2026 Morgan..." -> "2026 Morgan...")
+        if (year.isNotEmpty) {
+          final doubledYear = RegExp(r'^(' + RegExp.escape(year) + r')\s+\1\b');
+          label = label.replaceFirst(doubledYear, year);
+        }
         final themeStartsYear = label.toLowerCase().startsWith(year.toLowerCase()) ||
             (yearMint.isNotEmpty && label.toLowerCase().startsWith(yearMint.toLowerCase()));
         final displayTitle = crw.isVirtualChild
-            ? '↳ ${themeStartsYear ? label : '$yearMint $label'}'.trim()
+            ? '\u21b3 ${themeStartsYear ? label : '$yearMint $label'}'.trim()
             : (themeStartsYear ? label : '$yearMint $label').trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);

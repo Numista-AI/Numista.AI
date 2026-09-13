@@ -195,7 +195,6 @@ class CoinImageService {
     'penny':                   'lincoln-cent',
     'pennies':                 'lincoln-cent',
     'cent':                    'lincoln-cent',
-    'cents':                   'lincoln-cent',
     'one cent':                'lincoln-cent',
     'lincoln cent':            'lincoln-cent',
     'lincoln cents':           'lincoln-cent',
@@ -230,6 +229,7 @@ class CoinImageService {
     'quarter dollar':          'quarter',
     'quarter dollar dollar':   'quarter',
     '25c':                     'quarter',
+    '25 cents':                'quarter',
     'state quarter':           '50-state-quarters',
     'state quarters':          '50-state-quarters',
     '50 state quarters':       '50-state-quarters',
@@ -239,14 +239,18 @@ class CoinImageService {
     'american women quarters': 'american-women-quarters',
     'american innovation':     'american-innovation',
     'washington quarter':      'quarter',
+    // Semiquincentennial / America250 — mapped to 'quarter' to align with
+    // coin_image_index keys (e.g. 2026_mayflower-compact_quarter_reverse).
+    'semiquincentennial':      'quarter',
+    'semiquincentennial quarter': 'quarter',
+    'semiquincentennial quarters': 'quarter',
+    'united states semiquincentennial (250th anniversary)': 'quarter',
     'washington quarters':     'quarter',
-    // Sets & Semiquincentennial
+    // Sets
     'uncirculated sets':       'uncirculated-sets',
     'uncirculated set':        'uncirculated-sets',
     'mint set':                'uncirculated-sets',
     'mint sets':               'uncirculated-sets',
-    'semiquincentennial':      'semiquincentennial',
-    'united states semiquincentennial (250th anniversary)': 'semiquincentennial',
     // Half dollars
     'half dollar':             'kennedy-half-dollar',
     'half dollars':            'kennedy-half-dollar',
@@ -333,23 +337,14 @@ class CoinImageService {
     // denomination is just "Dollar".
     if (subject != null && subject.trim().isNotEmpty) {
       final subj = subject.trim().toLowerCase();
-      // Morgan / Peace disambiguation
+      // Morgan / Peace disambiguation — both have Denomination '$1' or 'Dollar'
+      // but need different program slugs for index lookup.
       if (subj.contains('morgan')) return 'morgan-dollar';
       if (subj.contains('peace')) return 'peace-dollar';
-      // Semiquincentennial / America250 coins
-      if (subj.contains('semiquincentennial') ||
-          subj.contains('america250') ||
-          subj.contains('250th anniversary')) {
-        return 'semiquincentennial';
-      }
-      // Mayflower, Gettysburg, etc. — America250 quarter designs
-      const america250Subjects = [
-        'mayflower', 'gettysburg', 'declaration of independence',
-        'u.s. constitution', 'bill of rights', 'emerging liberty',
-      ];
-      for (final a250 in america250Subjects) {
-        if (subj.contains(a250)) return 'semiquincentennial';
-      }
+      // NOTE: Semiquincentennial / America250 / Mayflower are NOT handled here.
+      // They resolve via Priority 1 _programMap ('semiquincentennial quarter' ->
+      // 'quarter') so that candidate keys align with the coin_image_index
+      // (e.g. 2026_mayflower-compact_quarter_reverse).
     }
 
     // --- Priority 1: exact match on series, then denomination ---------------
@@ -518,10 +513,20 @@ class CoinImageService {
       String? bestLabel;
       String? bestKey;
 
+      // MF1 STEAL-GUARD: When a subject slug is resolved, the REVERSE image
+      // must come from a candidate base that contains the subject slug.
+      // Generic bases (year+program, expandFallbacks, design_*) may only
+      // supply the OBVERSE (e.g. shared Washington portrait is fine).
+      // This prevents "stealing" another coin's reverse design
+      // (e.g. Maya Angelou reverse showing for Anna May Wong).
+      final bool hasSubject = subjectSlug != null && subjectSlug.isNotEmpty;
+
       for (final base in bases) {
         final needsObv = bestObvUrl == null;
         final needsRev = bestRevUrl == null;
         if (!needsObv && !needsRev) break; // both sides resolved
+
+        final isSubjectBase = subjectSlug != null && base.contains(subjectSlug);
 
         if (needsObv) {
           final obvDoc = await db.collection(_collection)
@@ -537,7 +542,9 @@ class CoinImageService {
           }
         }
 
-        if (needsRev) {
+        // STEAL-GUARD: only accept reverse from subject-containing bases
+        // when a subject is known. Generic reverse = honest placeholder.
+        if (needsRev && (!hasSubject || isSubjectBase)) {
           final revDoc = await db.collection(_collection)
               .doc('${base}_reverse').get();
           if (revDoc.exists) {
