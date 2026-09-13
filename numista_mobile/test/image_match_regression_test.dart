@@ -540,4 +540,59 @@ void main() {
       expect(bases, isNotEmpty);
     });
   });
+
+  // ─── Group 9 — hasSubject via _subjectPrograms (MF-V6-FIX1) ─────────────
+  // Verifies that steal-guard activates via program membership when
+  // Theme/Subject is missing or "None" in Firestore.
+  group('hasSubject via _subjectPrograms (MF-V6)', () {
+    test('AWQ program with null slug → hasSubject true', () {
+      expect(
+        CoinImageService.testHasSubject(null, 'american-women-quarters'),
+        isTrue,
+      );
+    });
+
+    test('ATB program with null slug → hasSubject true', () {
+      expect(
+        CoinImageService.testHasSubject(null, 'america-the-beautiful'),
+        isTrue,
+      );
+    });
+
+    test('quarter program with null slug → hasSubject true', () {
+      expect(
+        CoinImageService.testHasSubject(null, 'quarter'),
+        isTrue,
+      );
+    });
+
+    test('AWQ program with known slug → hasSubject true', () {
+      expect(
+        CoinImageService.testHasSubject('anna-may-wong', 'american-women-quarters'),
+        isTrue,
+      );
+    });
+
+    test('morgan-dollar program with null slug → hasSubject FALSE (non-subject-program)', () {
+      expect(
+        CoinImageService.testHasSubject(null, 'morgan-dollar'),
+        isFalse,
+      );
+    });
+
+    test('null program with null slug → hasSubject FALSE', () {
+      expect(
+        CoinImageService.testHasSubject(null, null),
+        isFalse,
+      );
+    });
+
+    test('empty slug string with AWQ program → hasSubject true', () {
+      expect(
+        CoinImageService.testHasSubject('', 'american-women-quarters'),
+        isTrue,
+      );
+    });
+  });
 }
+
