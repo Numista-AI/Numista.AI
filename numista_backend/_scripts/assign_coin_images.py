@@ -292,7 +292,9 @@ def main():
         denom  = d.get('Denomination', '')    or ''
         ref_no = d.get('Personal Ref #', '')  or ''
 
-        obv_url, rev_url = find_best_match(year, series, denom, index)
+        subject = d.get('theme_subject') or d.get('Theme/Subject') or ''
+
+        obv_url, rev_url = find_best_match(year, series, denom, index, subject=subject)
 
         if obv_url:
             matched += 1
