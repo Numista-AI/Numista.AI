@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 
 /// Looks up reference coin images from the Firestore coin_image_index collection,
 /// which is built by build_image_index.py from the GCS buckets:
@@ -521,6 +522,11 @@ class CoinImageService {
       // (e.g. Maya Angelou reverse showing for Anna May Wong).
       final bool hasSubject = subjectSlug != null && subjectSlug.isNotEmpty;
 
+      // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
+      debugPrint('[CIS] fetchReferenceImages: year=$year mint=$mint denom=$denomination series=$series subject=$subject');
+      debugPrint('[CIS]   → program=$program subjectSlug=$subjectSlug hasSubject=$hasSubject');
+      debugPrint('[CIS]   → bases=${bases.join(', ')}');
+
       for (final base in bases) {
         final needsObv = bestObvUrl == null;
         final needsRev = bestRevUrl == null;
@@ -528,7 +534,7 @@ class CoinImageService {
 
         final isSubjectBase = subjectSlug != null && base.contains(subjectSlug);
 
-        if (needsObv) {
+        if (needsObv && (!hasSubject || isSubjectBase)) {
           final obvDoc = await db.collection(_collection)
               .doc('${base}_obverse').get();
           if (obvDoc.exists) {
@@ -560,6 +566,8 @@ class CoinImageService {
       }
 
       if (bestObvUrl != null || bestRevUrl != null) {
+        // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
+        debugPrint('[CIS]   → RESULT revUrl=${bestRevUrl ?? "null"} key=$bestKey');
         return CoinImageResult(
           obverseUrl:  bestObvUrl,
           reverseUrl:  bestRevUrl,
@@ -573,6 +581,27 @@ class CoinImageService {
     }
     return const CoinImageResult();
   }
+
+  // ── @visibleForTesting wrappers ──────────────────────────────────────────
+  // Thin wrappers exposing pure-logic statics for MF7 regression tests.
+  // These do NOT hit Firestore — only the deterministic resolver/slug logic.
+
+  @visibleForTesting
+  static String? testResolveProgram(
+      String? denomination, String? series, {String? subject}) =>
+      _resolveProgram(denomination, series, subject: subject);
+
+  @visibleForTesting
+  static String? testResolveSubject(String? subject, String? program) =>
+      _resolveSubject(subject, program);
+
+  @visibleForTesting
+  static List<String> testCandidateBases(
+      String year, String? mint, String? program, {String? subject}) =>
+      _candidateBases(year, mint, program, subject: subject);
+
+  @visibleForTesting
+  static Set<String> get testSubjectPrograms => _subjectPrograms;
 }
 
 /// Result object for a coin image lookup.
