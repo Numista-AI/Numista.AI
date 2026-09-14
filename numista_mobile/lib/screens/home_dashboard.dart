@@ -1551,10 +1551,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.355',
+    date: '2026-09-14',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.354)',
+    ],
+  ),
+  _Release(
     version: 'v4.354',
     date: '2026-09-14',
     description: 'System Audit & Platform Verification',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.354)',
       'Backend Pytest: 303/303 unit tests passing (100% pass rate)',
