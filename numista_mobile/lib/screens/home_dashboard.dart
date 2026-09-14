@@ -1551,10 +1551,41 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.354',
+    date: '2026-09-14',
+    description: 'System Audit & Platform Verification',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.354)',
+      'Backend Pytest: 303/303 unit tests passing (100% pass rate)',
+      'Frontend Flutter: 370/370 unit tests passing (100% pass rate)',
+      'Dart Analyzer: 0 errors, 0 warnings across lib/',
+      'Playwright Smoke: 8/8 passed under grokbot@numista.ai test account',
+      'Live Cloud Run & Web App Probes: 7/7 endpoints verified healthy',
+      'Model Policy: 100% compliant with 2026 Gemini GA models',
+    ],
+  ),
+  _Release(
+    version: 'v4.353',
+    date: '2026-09-13',
+    description: 'Image-match Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Image-match: v6 hasSubject extends to _subjectPrograms for program-level steal-guard',
+      'Image-match: v6 program-level steal-guard + unified _rowField on all paths',
+      'Image-match: v4 obverse+reverse steal-guard + normalizeDenom + Inspector auto-flip',
+      'Images: MF7 regression tests â€” 36 tests covering v2/v3 image-match fixes',
+      'Images: v3 P0 image match â€” subject-filter Similar carousel + honest placeholders',
+      'Images: P0 image match v2 â€” steal-guard, America250 namespace, cents fix',
+      'Sync release notes and version bump v4.350',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
+    ],
+  ),
+  _Release(
     version: 'v4.352',
     date: '2026-09-13',
     description: 'Image-match Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Image-match: v6 hasSubject extends to _subjectPrograms for program-level steal-guard',
       'Image-match: v6 program-level steal-guard + unified _rowField on all paths',

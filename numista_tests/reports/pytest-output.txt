@@ -1,1 +1,126 @@
-============================ 303 passed in 24.76s =============================
+============================= test session starts =============================
+
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
+
+rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
+
+configfile: pytest.ini
+
+plugins: anyio-4.13.0
+
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+
+[rag] Embedding client initialised (location=global)
+
+collected 303 items
+
+
+
+numista_backend\tests\test_active_learning_queue.py ..
+
+numista_backend\tests\test_auth_security.py [32mINFO   [0m [main] [5118a2a2] GET / -> 200 (150ms)
+
+.[33mWARNING[0m [main] [6fb7ad56] GET /api/spot_prices -> 200 (9379ms)
+
+.[32mINFO   [0m [main] [1da89b87] GET /api/v1/family/subaccounts -> 200 (13ms)
+
+.[32mINFO   [0m [main] [6d6d9b5a] POST /api/collection/clear -> 401 (6ms)
+
+.[32mINFO   [0m [main] [e1a23785] POST /api/stripe/create-checkout-session -> 401 (4ms)
+
+.[32mINFO   [0m [main] [6d29ba9a] POST /api/stripe/create-customer-portal -> 401 (3ms)
+
+.[31mERROR  [0m [main] [0a033ec4] POST /api/stripe/create-checkout-session -> 502 (7ms)
+
+.[32mINFO   [0m [main] [be45d40a] POST /api/stripe/webhook -> 400 (6ms)
+
+.
+
+numista_backend\tests\test_awq_intake_parser.py .......................................
+
+numista_backend\tests\test_beta_estate_pipeline.py ...
+
+numista_backend\tests\test_catalog_slot_counts.py ..............
+
+numista_backend\tests\test_checklist_historical_matcher.py ............
+
+numista_backend\tests\test_checklist_parser.py ...........
+
+numista_backend\tests\test_coa_parser.py ....
+
+numista_backend\tests\test_collector_profile.py .
+
+numista_backend\tests\test_deal_spotter.py ..[32mINFO   [0m [main] [61053457] GET /api/wishlist/deals/test@numista.ai -> 200 (4ms)
+
+[32mINFO   [0m [main] [085fafa2] POST /api/wishlist/deals/check -> 200 (6ms)
+
+.
+
+numista_backend\tests\test_few_shot_service.py ..
+
+numista_backend\tests\test_financials_phase3.py ...........................................
+
+numista_backend\tests\test_greysheet.py [32mINFO   [0m [main] [dc5853fe] POST /api/greysheet/resolve -> 200 (3ms)
+
+.[32mINFO   [0m [main] [3a4c5ca5] POST /api/greysheet/resolve -> 200 (3ms)
+
+.[32mINFO   [0m [main] [ef3360d3] GET /api/greysheet/pricing/429 -> 200 (18ms)
+
+.[32mINFO   [0m [main] [775c9676] GET /api/greysheet/deals -> 200 (3ms)
+
+[32mINFO   [0m [main] [64b4cb6a] POST /api/greysheet/deals/refresh -> 200 (4ms)
+
+.[32mINFO   [0m [main] [b62f8f46] POST /api/portfolio/snapshot/daily -> 200 (8ms)
+
+..[32mINFO   [0m [main] [cb7616ee] GET /api/greysheet/quota -> 200 (7ms)
+
+..
+
+numista_backend\tests\test_import_worker_integration.py .
+
+numista_backend\tests\test_ingestion.py [32mINFO   [0m [main] [c92ec657] GET /api/ingestion/jobs -> 200 (2ms)
+
+.[32mINFO   [0m [main] [652a95b3] POST /api/ingestion/batch_async -> 200 (5ms)
+
+[32mINFO   [0m [main] [77cff18a] GET /api/ingestion/status/job_cb58ae77 -> 200 (2ms)
+
+.
+
+numista_backend\tests\test_invoice_fixtures.py ..
+
+numista_backend\tests\test_missing_images_csv.py ...
+
+numista_backend\tests\test_notes_parser.py .............
+
+numista_backend\tests\test_proxy_bandwidth.py .....
+
+numista_backend\tests\test_repair_26rj_ghosts.py ...................................
+
+numista_backend\tests\test_series_manifest_sync.py ....................
+
+numista_backend\tests\test_set_pricing_extended.py .........................................
+
+numista_backend\tests\test_transfer.py ....
+
+numista_backend\tests\test_us_mint_invoice_enrichment.py ......
+
+numista_backend\tests\test_valuations.py ......
+
+numista_backend\tests\test_vector_rag.py ..[rag] generate_embedding: OK dim=3
+
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+
+[rag] build_rag_prompt_context called, query len=13
+
+[rag] generate_embedding: OK dim=3
+
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+
+.
+
+numista_backend\tests\test_verifiers.py ............
+
+
+
+============================ 303 passed in 29.93s =============================
+
