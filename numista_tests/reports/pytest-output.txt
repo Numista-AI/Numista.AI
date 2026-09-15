@@ -1,1 +1,45 @@
-============================ 303 passed in 24.76s =============================
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 303 items
+
+tests\test_active_learning_queue.py ..                                   [  0%]
+tests\test_auth_security.py ........                                     [  3%]
+tests\test_awq_intake_parser.py .......................................  [ 16%]
+tests\test_beta_estate_pipeline.py ...                                   [ 17%]
+tests\test_catalog_slot_counts.py ..............                         [ 21%]
+tests\test_checklist_historical_matcher.py ............                  [ 25%]
+tests\test_checklist_parser.py ...........                               [ 29%]
+tests\test_coa_parser.py ....                                            [ 30%]
+tests\test_collector_profile.py .                                        [ 31%]
+tests\test_deal_spotter.py ...                                           [ 32%]
+tests\test_few_shot_service.py ..                                        [ 32%]
+tests\test_financials_phase3.py ........................................ [ 45%]
+...                                                                      [ 46%]
+tests\test_greysheet.py ........                                         [ 49%]
+tests\test_import_worker_integration.py .                                [ 49%]
+tests\test_ingestion.py ..                                               [ 50%]
+tests\test_invoice_fixtures.py ..                                        [ 51%]
+tests\test_missing_images_csv.py ...                                     [ 52%]
+tests\test_notes_parser.py .............                                 [ 56%]
+tests\test_proxy_bandwidth.py .....                                      [ 58%]
+tests\test_repair_26rj_ghosts.py ...................................     [ 69%]
+tests\test_series_manifest_sync.py ....................                  [ 76%]
+tests\test_set_pricing_extended.py ..................................... [ 88%]
+....                                                                     [ 89%]
+tests\test_transfer.py ....                                              [ 91%]
+tests\test_us_mint_invoice_enrichment.py ......                          [ 93%]
+tests\test_valuations.py ......                                          [ 95%]
+tests\test_vector_rag.py ...                                             [ 96%]
+tests\test_verifiers.py ............                                     [100%]
+
+============================== warnings summary ===============================
+..\..\..\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: 224 warnings
+  C:\Users\ericd\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+===================== 303 passed, 224 warnings in 35.24s ======================
