@@ -32,22 +32,14 @@ def _read_spreadsheet_bytes(contents: bytes, filename: str) -> pd.DataFrame:
     else:
         return pd.read_csv(io.BytesIO(contents))
 
+from services.denomination_normalizer import normalize_denomination, infer_denomination_from_program
+
 def _normalize_us_denomination(denom: str) -> str:
-    """Pre-deduplication US Mint denomination normalization (fails open for non-US coins)."""
-    d = denom.strip().lower()
-    if d in ["penny", "lincoln cent", "1c", "1¢", "wheatie", "cent"]:
-        return "Cent"
-    elif d in ["nickel", "jefferson nickel", "5c", "5¢", "five cents"]:
-        return "Five Cents"
-    elif d in ["dime", "roosevelt dime", "10c", "10¢"]:
-        return "Dime"
-    elif d in ["quarter", "washington quarter", "25c", "25¢", "quarter dollar"]:
-        return "Quarter Dollar"
-    elif d in ["half dollar", "half", "50c", "50¢", "jfk half"]:
-        return "Half Dollar"
-    elif d in ["dollar", "dollar coin", "morgan", "peace", "$1"]:
-        return "Dollar"
-    return denom.strip()  # Fail open for non-US world coins
+    """Pre-deduplication US Mint denomination normalization (fails open for non-US coins).
+    Maintains 100% backward-compatibility for master E2E test scripts.
+    """
+    canon, _, _ = normalize_denomination(denom)
+    return canon
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -160,9 +152,23 @@ async def import_spreadsheet(
 
         # Denomination Pre-Normalization
         raw_denom = norm_coin.get("denomination") or norm_coin.get("denom") or ""
-        canon_denom = _normalize_us_denomination(raw_denom) if raw_denom else ""
+        country = norm_coin.get("country")
+        item_type = norm_coin.get("item_type")
+        canon_denom, was_corrected, orig_denom = normalize_denomination(raw_denom, country=country, item_type=item_type)
+        
+        # If missing or placeholder, infer from Program/Series
+        if not canon_denom or canon_denom.lower() in ["denomination missing?", "unknown", "missing"]:
+            prog = norm_coin.get("program_series") or norm_coin.get("program") or ""
+            inferred = infer_denomination_from_program(prog)
+            if inferred:
+                canon_denom = inferred
+                norm_coin["denom_inferred"] = True
+                
         if canon_denom:
             norm_coin["denomination"] = canon_denom
+            if was_corrected:
+                norm_coin["denom_corrected"] = True
+                norm_coin["original_denomination"] = orig_denom
 
         cert = str(norm_coin.get("cert_number") or norm_coin.get("cert") or "").strip().lower()
         year = str(norm_coin.get("year") or "").strip()

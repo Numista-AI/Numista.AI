@@ -259,21 +259,44 @@ class StorageService {
   // ── _normaliseDenom ───────────────────────────────────────────────────────
   // Convert raw spreadsheet denomination values to matchable word forms.
   // Firestore may store "1" (the number) for any dollar coin, or "$0.25" etc.
+  // GI-NOM-01: aligns with canonical denominations and colloquial filename keywords.
   String _normaliseDenom(String denom) {
-    switch (denom.trim()) {
-      case '1': return 'Dollar';
+    switch (denom.trim().toLowerCase()) {
+      case '1':
+      case r'$1':
+      case r'$1.00':
+      case '1.00':
+      case 'dollar':
+        return 'Dollar';
       case '0.5':
-      case '\$0.50':
-      case '0.50':  return 'HalfDollar';
+      case '0.50':
+      case r'$0.50':
+      case 'half':
+      case 'halfdollar':
+      case 'half dollar':
+        return 'Half Dollar';
       case '0.25':
-      case '\$0.25': return 'Quarter';
+      case r'$0.25':
+      case 'quarter':
+      case 'quarter dollar':
+        return 'Quarter Dollar';
+      case '0.1':
       case '0.10':
-      case '\$0.10': return 'Dime';
+      case r'$0.10':
+      case 'dime':
+        return 'Dime';
       case '0.05':
-      case '\$0.05': return 'Nickel';
+      case r'$0.05':
+      case 'nickel':
+      case 'five cents':
+        return 'Five Cents Nickel';
       case '0.01':
-      case '\$0.01': return 'Penny';
-      default:       return denom; // Already a word (e.g. "Dollar", "Dime")
+      case r'$0.01':
+      case 'penny':
+      case 'cent':
+        return 'Cent Penny';
+      default:
+        return denom; // Already a word (e.g. "Dollar", "Dime")
     }
   }
 

@@ -989,16 +989,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   static const _kCoins = [
     // (denomination, programSeries, themeSubject, metalContent)
     // Source: US Mint product description (exact 2026 Uncirculated Coin Set contents)
-    ('1 Cent',    'Lincoln Cent',                  '1776~2026 Bicentennial',                   'Copper-Plated Zinc'),
-    ('5 Cents',   'Jefferson Nickel',              '1776~2026 Bicentennial',                   'Cupro-Nickel'),
-    ('10 Cents',  'Emerging Liberty Dime',         'Liberty — first time since 1945',          'Cupro-Nickel'),
-    ('50 Cents',  'Enduring Liberty Half Dollar',  'Statue of Liberty — replaces Kennedy 2026 only', 'Cupro-Nickel'),
-    ('25 Cents',  'Semiquincentennial Quarter',    'Mayflower Compact',                        'Cupro-Nickel'),
-    ('25 Cents',  'Semiquincentennial Quarter',    'Revolutionary War',                        'Cupro-Nickel'),
-    ('25 Cents',  'Semiquincentennial Quarter',    'Declaration of Independence',              'Cupro-Nickel'),
-    ('25 Cents',  'Semiquincentennial Quarter',    'U.S. Constitution',                        'Cupro-Nickel'),
-    ('25 Cents',  'Semiquincentennial Quarter',    'Gettysburg Address',                       'Cupro-Nickel'),
-    ('1 Dollar',  'Native American Dollar',        'Polly Cooper / Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
+    ('Cent',           'Lincoln Cent',                  '1776~2026 Bicentennial',                   'Copper-Plated Zinc'),
+    ('Five Cents',     'Jefferson Nickel',              '1776~2026 Bicentennial',                   'Cupro-Nickel'),
+    ('Dime',           'Emerging Liberty Dime',         'Liberty — first time since 1945',          'Cupro-Nickel'),
+    ('Half Dollar',    'Enduring Liberty Half Dollar',  'Statue of Liberty — replaces Kennedy 2026 only', 'Cupro-Nickel'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter',    'Mayflower Compact',                        'Cupro-Nickel'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter',    'Revolutionary War',                        'Cupro-Nickel'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter',    'Declaration of Independence',              'Cupro-Nickel'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter',    'U.S. Constitution',                        'Cupro-Nickel'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter',    'Gettysburg Address',                       'Cupro-Nickel'),
+    ('Dollar',         'Native American Dollar',        'Polly Cooper / Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
   ];
 
   // Template: 2026 US Mint Silver Proof Set — Q2-LOCK 2026-08-24
@@ -1010,16 +1010,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   static const _kProofMint            = 'S'; // Silver Proof Set = San Francisco Mint only
   static const _kProofCoins = [
     // (denomination, programSeries, themeSubject, metalContent)
-    ('1 Cent',    'Lincoln Cent',               '1776~2026 Bicentennial',                       'Copper-Plated Zinc'),
-    ('5 Cents',   'Jefferson Nickel',           '1776~2026 Bicentennial',                       'Cupro-Nickel'),
-    ('10 Cents',  'Emerging Liberty Dime',      'Emerging Liberty',                             '99.9% Silver'),
-    ('25 Cents',  'Semiquincentennial Quarter', 'Mayflower Compact',                            '99.9% Silver'),
-    ('25 Cents',  'Semiquincentennial Quarter', 'Revolutionary War',                            '99.9% Silver'),
-    ('25 Cents',  'Semiquincentennial Quarter', 'Declaration of Independence',                  '99.9% Silver'),
-    ('25 Cents',  'Semiquincentennial Quarter', 'U.S. Constitution',                            '99.9% Silver'),
-    ('25 Cents',  'Semiquincentennial Quarter', 'Gettysburg Address',                           '99.9% Silver'),
-    ('50 Cents',  'Enduring Liberty Half Dollar','Statue of Liberty',                           '99.9% Silver'),
-    ('1 Dollar',  'Native American Dollar',     'Polly Cooper - Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
+    ('Cent',           'Lincoln Cent',               '1776~2026 Bicentennial',                       'Copper-Plated Zinc'),
+    ('Five Cents',     'Jefferson Nickel',           '1776~2026 Bicentennial',                       'Cupro-Nickel'),
+    ('Dime',           'Emerging Liberty Dime',      'Emerging Liberty',                             '99.9% Silver'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter', 'Mayflower Compact',                            '99.9% Silver'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter', 'Revolutionary War',                            '99.9% Silver'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter', 'Declaration of Independence',                  '99.9% Silver'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter', 'U.S. Constitution',                            '99.9% Silver'),
+    ('Quarter Dollar', 'Semiquincentennial Quarter', 'Gettysburg Address',                           '99.9% Silver'),
+    ('Half Dollar',    'Enduring Liberty Half Dollar','Statue of Liberty',                           '99.9% Silver'),
+    ('Dollar',         'Native American Dollar',     'Polly Cooper - Oneida Allies at Valley Forge', 'Manganese-Brass Clad Copper'),
   ];
 
   Widget _buildMintSetTab() {

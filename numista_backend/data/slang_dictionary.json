@@ -3,83 +3,83 @@
   "description": "Expanded numismatic terminology and colloquial slang mapping dictionary for Numista.AI ingestion pipeline",
   "denomination_slang": {
     "wheatie": {
-      "denomination": "1 Cent",
+      "denomination": "Cent",
       "series": "Lincoln Wheat Cent",
       "canonical_country": "United States"
     },
     "wheat penny": {
-      "denomination": "1 Cent",
+      "denomination": "Cent",
       "series": "Lincoln Wheat Cent",
       "canonical_country": "United States"
     },
     "steelie": {
-      "denomination": "1 Cent",
+      "denomination": "Cent",
       "series": "Lincoln Steel Cent",
       "year": 1943,
       "canonical_country": "United States"
     },
     "indian head": {
-      "denomination": "1 Cent",
+      "denomination": "Cent",
       "series": "Indian Head Cent",
       "canonical_country": "United States"
     },
     "v nickel": {
-      "denomination": "5 Cents",
+      "denomination": "Five Cents",
       "series": "Liberty Head Nickel",
       "canonical_country": "United States"
     },
     "buffalo": {
-      "denomination": "5 Cents",
+      "denomination": "Five Cents",
       "series": "Buffalo Nickel",
       "canonical_country": "United States"
     },
     "walker": {
-      "denomination": "50 Cents",
+      "denomination": "Half Dollar",
       "series": "Walking Liberty Half Dollar",
       "canonical_country": "United States"
     },
     "walking liberty": {
-      "denomination": "50 Cents",
+      "denomination": "Half Dollar",
       "series": "Walking Liberty Half Dollar",
       "canonical_country": "United States"
     },
     "franklin": {
-      "denomination": "50 Cents",
+      "denomination": "Half Dollar",
       "series": "Franklin Half Dollar",
       "canonical_country": "United States"
     },
     "morgan": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Morgan Dollar",
       "canonical_country": "United States"
     },
     "peace": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Peace Dollar",
       "canonical_country": "United States"
     },
     "ike": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Eisenhower Dollar",
       "canonical_country": "United States"
     },
     "susan b": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Susan B. Anthony Dollar",
       "canonical_country": "United States"
     },
     "sba": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Susan B. Anthony Dollar",
       "canonical_country": "United States"
     },
     "standing liberty": {
-      "denomination": "25 Cents",
+      "denomination": "Quarter Dollar",
       "series": "Standing Liberty Quarter",
       "canonical_country": "United States"
     },
     "standing lib": {
-      "denomination": "25 Cents",
+      "denomination": "Quarter Dollar",
       "series": "Standing Liberty Quarter",
       "canonical_country": "United States"
     },
@@ -89,17 +89,17 @@
       "canonical_country": "United States"
     },
     "barber dime": {
-      "denomination": "10 Cents",
+      "denomination": "Dime",
       "series": "Barber Dime",
       "canonical_country": "United States"
     },
     "barber quarter": {
-      "denomination": "25 Cents",
+      "denomination": "Quarter Dollar",
       "series": "Barber Quarter",
       "canonical_country": "United States"
     },
     "barber half": {
-      "denomination": "50 Cents",
+      "denomination": "Half Dollar",
       "series": "Barber Half Dollar",
       "canonical_country": "United States"
     },
@@ -114,57 +114,57 @@
       "canonical_country": "United States"
     },
     "trade": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Trade Dollar",
       "canonical_country": "United States"
     },
     "trade dollar": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "Trade Dollar",
       "canonical_country": "United States"
     },
     "mercury": {
-      "denomination": "10 Cents",
+      "denomination": "Dime",
       "series": "Mercury Dime",
       "canonical_country": "United States"
     },
     "merc": {
-      "denomination": "10 Cents",
+      "denomination": "Dime",
       "series": "Mercury Dime",
       "canonical_country": "United States"
     },
     "saint": {
-      "denomination": "$20",
+      "denomination": "Double Eagle",
       "series": "Saint-Gaudens Double Eagle",
       "canonical_country": "United States"
     },
     "st gaudens": {
-      "denomination": "$20",
+      "denomination": "Double Eagle",
       "series": "Saint-Gaudens Double Eagle",
       "canonical_country": "United States"
     },
     "double eagle": {
-      "denomination": "$20",
+      "denomination": "Double Eagle",
       "series": "Double Eagle",
       "canonical_country": "United States"
     },
     "half eagle": {
-      "denomination": "$5",
+      "denomination": "Half Eagle",
       "series": "Half Eagle",
       "canonical_country": "United States"
     },
     "quarter eagle": {
-      "denomination": "$2.50",
+      "denomination": "Quarter Eagle",
       "series": "Quarter Eagle",
       "canonical_country": "United States"
     },
     "ase": {
-      "denomination": "$1",
+      "denomination": "Dollar",
       "series": "American Silver Eagle",
       "canonical_country": "United States"
     },
     "age": {
-      "denomination": "$50",
+      "denomination": "Fifty Dollars",
       "series": "American Gold Eagle",
       "canonical_country": "United States"
     }
