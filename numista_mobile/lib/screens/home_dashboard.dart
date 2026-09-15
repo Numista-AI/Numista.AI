@@ -1551,10 +1551,40 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.359',
+    date: '2026-09-15',
+    description: 'Catalog Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Catalog: formal US Mint denomination nomenclature (GI-NOM-01)',
+      'Web: add static terms.html and /privacy /terms hosting rewrites',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.356)',
+    ],
+  ),
+  _Release(
+    version: 'v4.358',
+    date: '2026-09-15',
+    description: 'Web Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Web: add static terms.html and /privacy /terms hosting rewrites',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.356)',
+    ],
+  ),
+  _Release(
+    version: 'v4.357',
+    date: '2026-09-15',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.356)',
+    ],
+  ),
+  _Release(
     version: 'v4.356',
     date: '2026-09-15',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.356)',
     ],
