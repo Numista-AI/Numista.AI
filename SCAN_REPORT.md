@@ -1,21 +1,21 @@
-# SCAN REPORT: Numista.AI System Audit (v4.354)
+# SCAN REPORT: Numista.AI System Audit (v4.356)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [303 passed, 0 failed in 29.93s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` clean], 370/370 Flutter unit tests passed [100% pass rate in 19.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 39.9s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-09-14
+* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [303 passed, 0 failed in 35.24s], 0 Dart compilation errors and 0 warnings [clean analyzer: flutter analyze lib clean in 24.4s], 370/370 Flutter unit tests passed [100% pass rate in 14.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 48.1s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
+* **Scan Date:** 2026-09-15
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.354, Mobile/Web Frontend v4.354 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.356, Mobile/Web Frontend v4.356 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
 ## Critical Errors & Warnings Summary
 * **Fatal Backend Errors:** 0
-* **Dart / Flutter Compilation Errors & Warnings:** 0 (0 errors, 0 warnings; `dart analyze lib` clean)
+* **Dart / Flutter Compilation Errors & Warnings:** 0 (0 errors, 0 warnings; `flutter analyze lib` clean in 24.4s)
 * **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; `batch_greysheet_direct.py` aligned to `gemini-3.8-flash`)
 * **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (7/7 endpoints healthy)
-* **Backend Pytest Suite:** 303 passed, 0 failed in 29.93s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 39.9s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
-* **Flutter Unit Suite:** 370 passed, 0 failed in 19.0s (100% pass rate; 0 failures)
+* **Backend Pytest Suite:** 303 passed, 0 failed in 35.24s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
+* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 48.1s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
+* **Flutter Unit Suite:** 370 passed, 0 failed in 14.0s (100% pass rate; 0 failures)
 * **26RJ Catalog & Ghost Repair Status:** Verified active (Commit `135141cc` resolved 26RJ 20-coin count, corrected 8 Firestore `coin_image_index` URLs from USMC to 26RJ, removed ghost children, and added anti-hallucination guardrail to `main.py`).
 * **Checklist Stale PDF Hotfix Status:** Verified active (`HOTFIX PDF_STALE` in `ca35eece` and `PDF_STALE_AFTER_CHECKOFF` in `43c8aa02` enforce server-side `.get(GetOptions(source: Source.server))` and coin cache invalidation)
 * **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 security hardening active. **Dependabot: 0 open alerts** (pyarrow #67 dismissed as inaccurate — already at 23.0.1; xlsx alerts #1/#2/#45/#46 dismissed as not_used — legacy internal tooling not exposed to user data).
@@ -56,7 +56,7 @@
 * **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/api/greysheet/config` ➔ `200 OK` (Status: active, Tier: Basic, Fallback rate: 0%)
   * `/api/greysheet/pricing/1001` ➔ `200 OK` (Ground-truth pricing payload resolved from Firestore cache for 1834 1c Large 8 Large Stars Medium Letters MS RB)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,334.70, Silver: $63.32, Platinum: $1,767.80, Palladium: $1,279.70)
+  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,325.30, Silver: $63.69, Platinum: $1,774.00, Palladium: $1,307.00)
   * `/api/template` ➔ `200 OK` (CSV Template headers validated)
   * `/api/transfer/passport-pdf/dummy` ➔ `404 Not Found` (Route active, dummy ID rejected as expected)
   * `/api/transfer/initiate` ➔ `422 Unprocessable Entity` on empty POST (FastAPI schema validation active)
@@ -99,7 +99,7 @@
   * Estate and Lateral Transfer systems (`estate_routes.py`, `attorney_routes.py`, `main.py`)
   * PCGS, news, payment, support, and admin routes (`pcgs_routes.py`, `news_routes.py`, `payment_routes.py`, `support_routes.py`, `affiliate_routes.py`, `grade_review_routes.py`, `import_routes.py`, `subaccount_routes.py`, `telemetry_routes.py`, `sandbox_routes.py`)
 * **Route Parity Baseline:** `route_snapshot_baseline.json` maintained for automated regression detection.
-* **Frontend Dart Analysis:** `dart analyze lib` executed with 0 compilation errors and 0 warnings (`No issues found!`).
+* **Frontend Dart Analysis:** `flutter analyze lib` executed with 0 compilation errors and 0 warnings (`No issues found! (ran in 24.4s)`).
 
 ---
 
@@ -112,10 +112,10 @@
 ---
 
 ## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `303 passed, 0 failed in 29.93s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
-* **Frontend Dart Analyzer:** `Analyzing lib... No issues found!` (0 errors, 0 warnings).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 39.9s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `370 passed, 0 failed in 19.0s` (100% pass rate; 0 failures).
+* **Backend Pytest Suite:** `303 passed, 0 failed in 35.24s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
+* **Frontend Dart Analyzer:** `Analyzing lib... No issues found! (ran in 24.4s)` (0 errors, 0 warnings).
+* **Frontend Playwright Smoke Suite:** `8/8 passed in 48.1s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
+* **Frontend Flutter Unit Suite:** `370 passed, 0 failed in 14.0s` (100% pass rate; 0 failures).
 * **Layer 3 Data Health Probes:** `7/7 endpoints healthy` (Homepage: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 404 sentinel, Transfer Initiate: 422 validation sentinel).
 * **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
 
@@ -123,5 +123,5 @@
 
 ## Recommended Pre-Launch Action Items
 1. **Playwright Account Alignment Confirmed:** `numista_tests/.env` now successfully defaults to `grokbot@numista.ai` (QC bot account), resolving prior isolation warnings.
-2. **Pytest Deprecation Cleanups:** Address upstream Pydantic V2 config key (`fields`) and Google Auth SDK ADC user quota warnings in test environments before Python 3.15.
+2. **Pytest Deprecation Cleanups:** Address upstream FastAPI/asyncio deprecation warnings in test environments (`asyncio.iscoroutinefunction` slated for removal in Python 3.16).
 3. **Skill Maintenance:** Keep `.agents/skills/project-scanner/SKILL.md` aligned with current backend Cloud Run endpoints and newly registered coin programs.
