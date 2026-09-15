@@ -1,0 +1,90 @@
+{
+  "version": "1.0-SEP2026",
+  "us_circulating": {
+    "Cent": {
+      "face_value_cents": 1,
+      "colloquial": ["penny", "pennies", "one cent", "1 cent", "1c", "1¢", "lincoln cent", "wheatie", "cent"]
+    },
+    "Five Cents": {
+      "face_value_cents": 5,
+      "colloquial": ["nickel", "nickels", "nickles", "5 cents", "5c", "5¢", "five cent", "five cents", "jefferson nickel", "buffalo nickel"]
+    },
+    "Dime": {
+      "face_value_cents": 10,
+      "colloquial": ["10c", "10¢", "ten cents", "10 cents", "roosevelt dime", "mercury dime", "dime"]
+    },
+    "Quarter Dollar": {
+      "face_value_cents": 25,
+      "colloquial": ["quarter", "quarters", "25c", "25¢", "25 cents", "washington quarter", "state quarter", "quarter dollar"]
+    },
+    "Half Dollar": {
+      "face_value_cents": 50,
+      "colloquial": ["half", "halves", "50c", "50¢", "50 cents", "jfk half", "kennedy half", "walking liberty half", "franklin half", "half dollar"]
+    },
+    "Dollar": {
+      "face_value_cents": 100,
+      "colloquial": ["dollar coin", "$1", "buck", "1 dollar", "silver dollar", "morgan dollar", "peace dollar", "eisenhower dollar", "sacagawea dollar", "presidential dollar", "native american dollar", "american innovation dollar", "dollar"]
+    }
+  },
+  "us_historical": {
+    "Half Cent": { "face_value_cents": 0.5, "colloquial": ["half cent", "halfcent"] },
+    "Two Cents": { "face_value_cents": 2, "colloquial": ["two cent", "two cents", "2 cents", "2c"] },
+    "Three Cents": { "face_value_cents": 3, "colloquial": ["three cent", "three cents", "3 cents", "3c", "trime"] },
+    "Twenty Cents": { "face_value_cents": 20, "colloquial": ["twenty cent", "twenty cents", "20 cents", "20c"] },
+    "Gold Dollar": { "face_value_cents": 100, "colloquial": ["gold dollar"] },
+    "Quarter Eagle": { "face_value_cents": 250, "colloquial": ["quarter eagle", "$2.50", "2.50 gold"] },
+    "Three Dollars": { "face_value_cents": 300, "colloquial": ["three dollar", "three dollars", "$3 gold"] },
+    "Half Eagle": { "face_value_cents": 500, "colloquial": ["half eagle", "$5 gold", "five dollars", "five dollars (half eagle)"] },
+    "Eagle": { "face_value_cents": 1000, "colloquial": ["eagle", "$10 gold", "ten dollars"] },
+    "Double Eagle": { "face_value_cents": 2000, "colloquial": ["double eagle", "$20 gold", "twenty dollars"] }
+  },
+  "strip_suffixes": [
+    "(25c)", "(50c)", "(10c)", "(5c)", "(1c)",
+    "(25¢)", "(50¢)", "(10¢)", "(5¢)", "(1¢)",
+    "(25 cents)", "(50 cents)", "(10 cents)", "(5 cents)", "(1 cent)"
+  ],
+  "strip_doubled_words": [
+    ["quarter dollar dollar", "Quarter Dollar"],
+    ["dollar dollar", "Dollar"],
+    ["cent cent", "Cent"],
+    ["dime dime", "Dime"]
+  ],
+  "program_inference": {
+    "50 state quarters": "Quarter Dollar",
+    "state quarters": "Quarter Dollar",
+    "america the beautiful": "Quarter Dollar",
+    "national park quarter": "Quarter Dollar",
+    "american women quarter": "Quarter Dollar",
+    "washington quarter": "Quarter Dollar",
+    "standing liberty quarter": "Quarter Dollar",
+    "barber quarter": "Quarter Dollar",
+    "liberty seated quarter": "Quarter Dollar",
+    "kennedy half dollar": "Half Dollar",
+    "franklin half dollar": "Half Dollar",
+    "walking liberty half dollar": "Half Dollar",
+    "barber half dollar": "Half Dollar",
+    "liberty seated half dollar": "Half Dollar",
+    "roosevelt dime": "Dime",
+    "mercury dime": "Dime",
+    "barber dime": "Dime",
+    "liberty seated dime": "Dime",
+    "jefferson nickel": "Five Cents",
+    "buffalo nickel": "Five Cents",
+    "liberty head nickel": "Five Cents",
+    "lincoln cent": "Cent",
+    "lincoln memorial cent": "Cent",
+    "lincoln wheat cent": "Cent",
+    "lincoln shield cent": "Cent",
+    "indian head cent": "Cent",
+    "flying eagle cent": "Cent",
+    "morgan dollar": "Dollar",
+    "peace dollar": "Dollar",
+    "eisenhower dollar": "Dollar",
+    "susan b. anthony dollar": "Dollar",
+    "sacagawea dollar": "Dollar",
+    "presidential dollar": "Dollar",
+    "native american dollar": "Dollar",
+    "american innovation dollar": "Dollar",
+    "american silver eagle": "Dollar"
+  }
+}

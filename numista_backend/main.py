@@ -5004,6 +5004,10 @@ async def identify_coin_photo(
     raw_c = pass1.get("country", "")
     norm_c, is_frn, rev_need = _normalize_country_metadata(raw_c)
 
+    from services.denomination_normalizer import normalize_denomination
+    raw_denom_input = override_denom or final_denom
+    norm_denom, was_corrected, orig_denom = normalize_denomination(raw_denom_input, country=norm_c, item_type="coin")
+
     ai_coin = {
         "Year":           override_year    or final_year,
         "Country":        norm_c or "United States",
@@ -5011,7 +5015,9 @@ async def identify_coin_photo(
         "is_foreign":     is_frn,
         "review_needed":  rev_need,
         "country_normalized_at": datetime.now(timezone.utc).isoformat(),
-        "Denomination":   override_denom   or final_denom,
+        "Denomination":   norm_denom,
+        "denom_corrected": was_corrected,
+        "original_denomination": orig_denom,
         "Program/Series": resolved_series,
         "Theme/Subject":  resolved_theme,
         "Mint Mark":      override_mint    or pass1.get("mint_mark", ""),

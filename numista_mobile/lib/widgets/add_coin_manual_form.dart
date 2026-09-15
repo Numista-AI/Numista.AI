@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../constants/denomination_canon.dart';
 
 class AddCoinManualForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSubmit;
@@ -68,7 +69,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             const SizedBox(width: 12),
             Expanded(child: _buildMintMarkField(context)),
             const SizedBox(width: 12),
-            Expanded(flex: 2, child: _buildField(context, 'Denomination', 'e.g. \$1, 25c')),
+            Expanded(flex: 2, child: _buildField(context, 'Denomination', 'e.g. Quarter Dollar, Dime, Cent')),
           ]),
           const SizedBox(height: 12),
           _buildField(context, 'Program/Series', 'e.g. Morgan Silver Dollar'),
@@ -136,6 +137,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       _formKey.currentState!.save();
       // Ensure mint mark is always uppercase
       _formData['Mint Mark'] = (_formData['Mint Mark'] as String).toUpperCase();
+      // GI-NOM-01: Normalize manual entry to formal US Mint denomination
+      final rawDenom = _formData['Denomination'] as String? ?? '';
+      _formData['Denomination'] = DenominationCanon.normalize(rawDenom);
       widget.onSubmit(_formData);
     }
   }
