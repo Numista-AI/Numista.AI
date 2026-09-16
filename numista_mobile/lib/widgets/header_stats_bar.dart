@@ -73,6 +73,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
 
     // Completeness: coins with ANY price estimate (AI Estimated Value, Bid, or CPG)
     int estimatedCount = 0;
+    int pendingCount = 0;
 
     double usdFaceSum = 0.0;
     int worldTenderCount = 0;
@@ -103,8 +104,14 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
       // Completeness: has ANY estimate
       final rawAi = m['AI Estimated Value'] ?? m['ai_estimated_value'];
       final aiVal = _parseNumber(rawAi);
-      if (aiVal > 0 || bidVal > 0 || cpgVal > 0) {
+      final valueStatus = m['ai_value_status']?.toString() ?? '';
+      final isPending = valueStatus == 'pending' || 
+          rawAi?.toString() == 'Pending' ||
+          rawAi?.toString() == '\$0.50';
+      if (!isPending && (aiVal > 0 || bidVal > 0 || cpgVal > 0)) {
         estimatedCount++;
+      } else if (isPending) {
+        pendingCount++;
       }
 
       // Face Value (Strictly US Legal Tender)
@@ -182,6 +189,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
           retailSum: retailGuideSum,
           retailCount: retailGuideCount,
           estimatedCount: estimatedCount,
+          pendingCount: pendingCount,
           totalDocs: widget.docs.length,
           cardBg: cardBg,
           borderCol: borderCol,
@@ -297,6 +305,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
     required double retailSum,
     required int retailCount,
     required int estimatedCount,
+    required int pendingCount,
     required int totalDocs,
     required Color cardBg,
     required Color borderCol,
@@ -347,7 +356,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      '$estimatedCount/$totalDocs',
+                      pendingCount > 0 ? '$estimatedCount/$totalDocs ($pendingCount pending)' : '$estimatedCount/$totalDocs',
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,

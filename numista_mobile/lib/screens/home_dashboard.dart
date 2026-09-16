@@ -22,6 +22,8 @@ import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
 import '../widgets/beta_welcome_dialog.dart';
 import 'ai_chat_screen.dart';
+import '../services/upcoming_releases_service.dart';
+import 'upcoming_releases_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
@@ -360,8 +362,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
             Map<String, double> programValues = {};
 
             // 1. Process Coins collection
+            int pendingValueCount = 0;
             for (final data in coins) {
               final valStr = data['ai_estimated_value'] ?? data['AI Estimated Value'];
+              final valueStatus = data['ai_value_status']?.toString() ?? '';
+              final isPending = valueStatus == 'pending' || 
+                  valStr?.toString() == 'Pending' ||
+                  valStr?.toString() == '\$0.50';
+
+              if (isPending) {
+                pendingValueCount++;
+              }
+
               final coinValue = _parseCurrency(valStr);
 
               // Melt Value
@@ -384,10 +396,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final isMedal = itemType.contains('medal') || prog.contains('medal') || desc.contains('medal') || theme.contains('medal');
               final isCurrency = itemType == 'paper_currency';
 
-              if (isMedal) {
-                medalsVal += finalVal;
-              } else if (isCurrency) {
-                currencyVal += finalVal;
+              if (!isPending) {
+                if (isMedal) {
+                  medalsVal += finalVal;
+                } else if (isCurrency) {
+                  currencyVal += finalVal;
+                }
               }
 
               // Greysheet fields
@@ -399,16 +413,20 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
               final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
 
-              cpgTotal += finalCpg;
-              bidTotal += finalBid;
-              askTotal += finalAsk;
+              if (!isPending) {
+                cpgTotal += finalCpg;
+                bidTotal += finalBid;
+                askTotal += finalAsk;
+              }
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
               faceValue       += _computeFaceValue(data['Denomination']?.toString() ?? '');
 
               // Track per-program value for the bar chart
-              final program = data['Program/Series']?.toString() ?? 'Other';
-              programValues[program] = (programValues[program] ?? 0) + finalCpg;
+              if (!isPending) {
+                final program = data['Program/Series']?.toString() ?? 'Other';
+                programValues[program] = (programValues[program] ?? 0) + finalCpg;
+              }
             }
 
             // 2. Process Currency collection
@@ -629,7 +647,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           future: ValuationModeService.isAdvancedMode(),
                           builder: (context, modeSnap) {
                             final advanced = modeSnap.data ?? false;
-                            return _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced),
+                                if (pendingValueCount > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      '($pendingValueCount item(s) pending valuation)',
+                                      style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
+                                    ),
+                                  ),
+                              ],
+                            );
                           },
                         ),
                       ),
@@ -886,6 +918,112 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   // ── System Updates & Release Notes ────────────────────────
                   _ReleaseNotesPanel(),
                   const SizedBox(height: 24),
+
+                  // ── Upcoming Mint Releases ────────────────────────
+                  FutureBuilder<List<UpcomingRelease>>(
+                    future: UpcomingReleasesService.fetchUpcoming(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+                      final releases = snapshot.data!.take(3).toList();
+                      final isDark = Theme.of(context).brightness == Brightness.dark;
+                      final cardBg = isDark ? const Color(0xFF1E2937) : Colors.white;
+                      final textCol = isDark ? Colors.white : const Color(0xFF1E293B);
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.new_releases_outlined, size: 15, color: Color(0xFFF63366)),
+                              const SizedBox(width: 6),
+                              const Text('UPCOMING MINT RELEASES',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF64748B),
+                                      letterSpacing: 0.5)),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingReleasesScreen())),
+                                child: const Text('See All →', style: TextStyle(fontSize: 12, color: Color(0xFFF63366))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 140,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: releases.length,
+                              itemBuilder: (ctx, i) {
+                                final r = releases[i];
+                                return GestureDetector(
+                                  onTap: () => launchUrl(Uri.parse(r.productUrl)),
+                                  child: Container(
+                                    width: 250,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: cardBg,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: isDark ? const Color(0xFF2A3045) : const Color(0xFFE2E6E9)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.03),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            if (r.imageUrl != null)
+                                              CachedNetworkImage(
+                                                imageUrl: r.imageUrl!,
+                                                width: 32,
+                                                height: 32,
+                                                fit: BoxFit.cover,
+                                                errorWidget: (c, u, e) => const Icon(Icons.image_not_supported, size: 24),
+                                              )
+                                            else
+                                              const Icon(Icons.image_not_supported, size: 32),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                r.status,
+                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: r.status == 'Available' ? Colors.green : Colors.amber),
+                                              ),
+                                            ),
+                                            Text(r.price, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                                          ],
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          r.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textCol),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Releases: ${r.releaseDate}',
+                                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      );
+                    }
+                  ),
 
                   // ── Market Intel / News feed (bottom) ─────────────────────
                   Row(
