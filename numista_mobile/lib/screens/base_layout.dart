@@ -43,6 +43,7 @@ import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
 import 'coin_detail_screen.dart';
+import 'upcoming_releases_screen.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -417,6 +418,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const MintErrorLibraryScreen();
       case 'Glossary Academy':
         return const GlossaryAcademyScreen();
+      case 'Upcoming Releases':
+        return const UpcomingReleasesScreen();
       default:
         return const _UnderConstruction();
     }
@@ -439,6 +442,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'Settings & Backup':
       case 'Our Team':
       case 'Customer Service':
+      case 'Upcoming Releases':
       default:
         maxWidth = 1280.0;
         break;
@@ -748,6 +752,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           active: ws?.step.targetRoute == 'Coin Programs',
                           child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
                         ),
+                        _buildNavItem('Upcoming Releases', icon: Icons.new_releases_outlined),
 
                         if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'MY COLLECTION'),
                         WizardNavPulse(

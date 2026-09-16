@@ -35,6 +35,7 @@ import '../widgets/header_stats_bar.dart';
 import '../services/set_expansion_helper.dart';
 import '../models/collection_row.dart';
 import '../constants.dart';
+import '../constants/denomination_canon.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -852,6 +853,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Phase 3: Search filter (both PascalCase _F keys and snake_case helper keys)
     if (_searchQuery.isEmpty) return originFiltered;
+    final trimmedQuery = _searchQuery.trim();
+    final denomCanonical = DenominationCanon.colloquialMap[trimmedQuery];
     return originFiltered.where((row) {
       final m = row.data;
       return [
@@ -867,7 +870,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         _F.meltValue,
         _F.aiValue, 'ai_estimated_value',
         _F.storageLocation, 'storage_location',
-      ].any((k) => (m[k]?.toString().toLowerCase() ?? '').contains(_searchQuery));
+      ].any((k) {
+        final val = (m[k]?.toString().toLowerCase() ?? '');
+        if (val.contains(_searchQuery)) return true;
+        if (denomCanonical != null &&
+            (k == _F.denomination || k == 'denomination')) {
+          return val.contains(denomCanonical.toLowerCase());
+        }
+        return false;
+      });
     }).toList();
   }
 
@@ -964,11 +975,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }).toList();
 
     if (_searchQuery.isEmpty) return originFiltered;
+    final trimmedQuery = _searchQuery.trim();
+    final denomCanonical = DenominationCanon.colloquialMap[trimmedQuery];
     return originFiltered.where((doc) {
       final m = (doc.data() as Map<String, dynamic>?) ?? {};
       return [
         _F.year,
-        _F.denomination,
+        _F.denomination, 'denomination',
         _F.mintMark,
         _F.country,
         _F.programSeries,
@@ -979,7 +992,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         _F.meltValue,
         _F.aiValue,
         _F.storageLocation,
-      ].any((k) => (m[k]?.toString().toLowerCase() ?? '').contains(_searchQuery));
+      ].any((k) {
+        final val = (m[k]?.toString().toLowerCase() ?? '');
+        if (val.contains(_searchQuery)) return true;
+        if (denomCanonical != null &&
+            (k == _F.denomination || k == 'denomination')) {
+          return val.contains(denomCanonical.toLowerCase());
+        }
+        return false;
+      });
     }).toList();
   }
 

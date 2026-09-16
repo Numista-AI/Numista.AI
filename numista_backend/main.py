@@ -2376,12 +2376,13 @@ def execute_add_coin(
             "recorded_by": "Morgan AI Assistant"
         }
 
-        est_value_num = 0.50
+        est_value_num = None  # No value until confirmed — NEVER use fake prices
         gsid_val = None
         bid_val = None
         ask_val = None
+        ai_value_status = "pending"
 
-        # Synchronous Greysheet resolution with 1000ms hard timeout
+        # 1. Synchronous Greysheet resolution with 1000ms hard timeout
         try:
             from services.greysheet_service import GreysheetService
             gs_service = GreysheetService(db=db)
@@ -2401,11 +2402,35 @@ def execute_add_coin(
                 if cpg_val and cpg_val > 0:
                     est_value_num = float(cpg_val)
                     val_source = "Greysheet Production API"
+                    ai_value_status = "valued"
         except Exception as gs_err:
             logger.warning(f"Greysheet 1000ms timeout/error: {gs_err}")
-            val_source = "Local Catalog Baseline"
 
-        formatted_ai_val = f"${est_value_num:.2f}" if est_value_num else "$0.00"
+        # 2. Fallback: US Mint Issue Price (for current-year US Mint products)
+        if est_value_num is None:
+            try:
+                from services.usmint_releases_scraper import get_mint_issue_price
+                mint_price = get_mint_issue_price(
+                    db=db,
+                    year=str(year),
+                    denomination=norm_denom,
+                    mint_mark=clean_mint,
+                    theme=theme_subj,
+                )
+                if mint_price and mint_price > 0:
+                    est_value_num = mint_price
+                    val_source = "US Mint Issue Price"
+                    ai_value_status = "valued"
+            except Exception as mp_err:
+                logger.warning(f"US Mint issue price lookup failed: {mp_err}")
+
+        # 3. Honest "Pending" — never a fake $0.50
+        if est_value_num is None:
+            formatted_ai_val = "Pending"
+            ai_value_status = "pending"
+            val_source = "Awaiting Valuation"
+        else:
+            formatted_ai_val = f"${est_value_num:.2f}"
 
         # Duplicate check in Firestore
         col_ref = db.collection('users').document(user_email).collection('coins')
@@ -2450,6 +2475,7 @@ def execute_add_coin(
             "greysheet_bid": bid_val,
             "greysheet_ask": ask_val,
             "valuation_source": val_source,
+            "ai_value_status": ai_value_status,
             "valuation_updated_at": datetime.now(timezone.utc).isoformat(),
             "last_modified_by": "Morgan AI Assistant",
             "Source": "Morgan AI Assistant Chat",
@@ -8286,6 +8312,60 @@ async def update_usmint_cookies(data: CookieUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── US Mint Upcoming Releases API ─────────────────────────────────────────────
+
+@app.get("/api/mint-releases/upcoming")
+def get_upcoming_mint_releases():
+    """
+    Returns products with status in [Coming Soon, Available, Pre-Order].
+    Sorted by release_date ascending (soonest first).
+    """
+    try:
+        from services.usmint_releases_scraper import get_upcoming_products
+        products = get_upcoming_products(db)
+        return {
+            "products": products,
+            "total": len(products),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/mint-releases/all")
+def get_all_mint_releases():
+    """
+    Returns ALL products from the US Mint catalog (including Sold Out).
+    """
+    try:
+        from services.usmint_releases_scraper import get_all_products
+        products = get_all_products(db)
+        return {
+            "products": products,
+            "total": len(products),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/cron/sync-mint-releases")
+def trigger_sync_mint_releases():
+    """
+    Cloud Scheduler trigger: syncs US Mint product catalog to Firestore.
+    Called daily at 6:00 AM UTC (2:00 AM ET).
+    """
+    try:
+        from services.usmint_releases_scraper import sync_upcoming_releases
+        report = sync_upcoming_releases(db)
+        return {
+            "status": "completed",
+            "report": report,
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/config/release-lock")
 def release_scraper_lock():

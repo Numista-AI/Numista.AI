@@ -143,6 +143,16 @@ def infer_denomination_from_program(program_str: Optional[str]) -> Optional[str]
     return None
 
 
+CANONICAL_US_CIRCULATING: List[str] = ["Cent", "Five Cents", "Dime", "Quarter Dollar", "Half Dollar", "Dollar"]
+
+
+def is_valid_us_denomination(denom: Optional[str]) -> bool:
+    """Checks whether a denomination string is in the canonical active US circulating list."""
+    if not denom:
+        return False
+    return denom.strip() in CANONICAL_US_CIRCULATING
+
+
 def get_canonical_us_denominations() -> List[str]:
     """Returns the ordered list of primary active US circulating denominations."""
-    return ["Cent", "Five Cents", "Dime", "Quarter Dollar", "Half Dollar", "Dollar"]
+    return list(CANONICAL_US_CIRCULATING)

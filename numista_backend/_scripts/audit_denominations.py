@@ -29,6 +29,7 @@ from firebase_admin import credentials, firestore
 from services.denomination_normalizer import (
     normalize_denomination,
     infer_denomination_from_program,
+    get_canonical_us_denominations,
     is_valid_us_denomination,
     CANONICAL_US_CIRCULATING,
 )
@@ -91,18 +92,18 @@ def audit_user_denominations(db, user_id: str, apply: bool = False):
         year = data.get("Year") or data.get("year") or ""
         item_type = data.get("item_type") or "coin"
 
-        norm = normalize_denomination(raw_denom, item_type=item_type)
+        canonical, was_corrected, original = normalize_denomination(raw_denom, item_type=item_type)
         was_inferred = False
 
-        if norm["needs_inference"] and program:
+        if (not canonical or canonical.strip().lower() in ["denomination missing?", "unknown", "missing"]) and program:
             inferred = infer_denomination_from_program(program)
             if inferred:
-                norm["canonical"] = inferred
-                norm["normalized"] = inferred
+                canonical = inferred
+                was_corrected = True
                 was_inferred = True
 
         raw_str = str(raw_denom).strip()
-        target_denom = norm["canonical"]
+        target_denom = canonical
 
         if not raw_str:
             blank_count += 1
