@@ -361,6 +361,14 @@
 
 
 
+
+## v4.360 — 2026-09-16
+**Catalog Enhancements & Platform Updates**
+
+- Catalog: formal US Mint denomination nomenclature (GI-NOM-01)
+- Web: add static terms.html and /privacy /terms hosting rewrites
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.360)
+
 ## v4.359 — 2026-09-15
 **Catalog Enhancements & Platform Updates**
 

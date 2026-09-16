@@ -2,8 +2,7 @@
 platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
-plugins: anyio-4.12.1, asyncio-1.4.0
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+plugins: anyio-4.13.0
 collected 303 items
 
 tests\test_active_learning_queue.py ..                                   [  0%]
@@ -36,10 +35,4 @@ tests\test_valuations.py ......                                          [ 95%]
 tests\test_vector_rag.py ...                                             [ 96%]
 tests\test_verifiers.py ............                                     [100%]
 
-============================== warnings summary ===============================
-..\..\..\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: 224 warnings
-  C:\Users\ericd\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
-    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-===================== 303 passed, 224 warnings in 35.24s ======================
+============================ 303 passed in 27.65s =============================
