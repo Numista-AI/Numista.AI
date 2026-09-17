@@ -362,6 +362,14 @@
 
 
 
+
+## v4.361 — 2026-09-17
+**Mint-releases Enhancements & Platform Updates**
+
+- Mint-releases: add Upcoming US Mint Releases page + eliminate fake .50 valuation fallback
+- Catalog: collection search denomination aliases & audit script (GI-NOM-01 MF1+MF2)
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.360)
+
 ## v4.360 — 2026-09-16
 **Catalog Enhancements & Platform Updates**
 
