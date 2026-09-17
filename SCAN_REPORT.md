@@ -1,23 +1,24 @@
-# SCAN REPORT: Numista.AI System Audit (v4.360)
+# SCAN REPORT: Numista.AI System Audit (v4.361)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [303 passed, 0 failed in 27.65s], 0 Dart compilation errors and 0 warnings [clean analyzer: flutter analyze lib clean in 275.9s], 370/370 Flutter unit tests passed [100% pass rate in 12.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 42.9s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-09-16
+* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [303 passed, 0 failed in 19.02s], 0 Dart compilation errors and 0 warnings [clean analyzer: flutter analyze lib clean in 284.6s], 370/370 Flutter unit tests passed [100% pass rate in 7.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 38.7s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
+* **Scan Date:** 2026-09-17
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.360, Mobile/Web Frontend v4.360 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.361, Mobile/Web Frontend v4.361 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
 ## Critical Errors & Warnings Summary
 * **Fatal Backend Errors:** 0
-* **Dart / Flutter Compilation Errors & Warnings:** 0 (0 errors, 0 warnings; `flutter analyze lib` clean in 275.9s)
+* **Dart / Flutter Compilation Errors & Warnings:** 0 (0 errors, 0 warnings; `flutter analyze lib` clean in 284.6s)
 * **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; `batch_greysheet_direct.py` aligned to `gemini-3.8-flash`)
 * **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (7/7 endpoints healthy)
-* **Backend Pytest Suite:** 303 passed, 0 failed in 27.65s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 42.9s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
-* **Flutter Unit Suite:** 370 passed, 0 failed in 12.0s (100% pass rate; 0 failures)
+* **Backend Pytest Suite:** 303 passed, 0 failed in 19.02s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
+* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 38.7s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
+* **Flutter Unit Suite:** 370 passed, 0 failed in 7.0s (100% pass rate; 0 failures)
+* **Upcoming US Mint Releases & Valuation Fallback (v4.361):** Verified active (Commit `9fa3e380` added Upcoming US Mint Releases page, dual-source scraper with delta detection, eliminated .50 fake valuation fallback in favor of official US Mint Issue Price, and added `ai_value_status` field).
 * **26RJ Catalog & Ghost Repair Status:** Verified active (Commit `135141cc` resolved 26RJ 20-coin count, corrected 8 Firestore `coin_image_index` URLs from USMC to 26RJ, removed ghost children, and added anti-hallucination guardrail to `main.py`).
-* **Checklist Stale PDF Hotfix Status:** Verified active (`HOTFIX PDF_STALE` in `ca35eece` and `PDF_STALE_AFTER_CHECKOFF` in `43c8aa02` enforce server-side `.get(GetOptions(source: Source.server))` and coin cache invalidation)
+* **Checklist Stale PDF Hotfix Status:** Verified active (`HOTFIX PDF_STALE` in `ca35eece` and `PDF_STALE_AFTER_CHECKOFF` in `43c8aa02` enforce server-side `.get(GetOptions(source: Source.server))` and coin cache invalidation).
 * **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 security hardening active. **Dependabot: 0 open alerts** (pyarrow #67 dismissed as inaccurate — already at 23.0.1; xlsx alerts #1/#2/#45/#46 dismissed as not_used — legacy internal tooling not exposed to user data).
 
 ---
@@ -56,7 +57,7 @@
 * **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/api/greysheet/config` ➔ `200 OK` (Status: active, Tier: Basic, Fallback rate: 0%)
   * `/api/greysheet/pricing/1001` ➔ `200 OK` (Ground-truth pricing payload resolved from Firestore cache for 1834 1c Large 8 Large Stars Medium Letters MS RB)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,391.00, Silver: $65.26, Platinum: $1,790.20, Palladium: $1,326.50)
+  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,363.90, Silver: $64.59, Platinum: $1,787.70, Palladium: $1,305.00)
   * `/api/template` ➔ `200 OK` (CSV Template headers validated)
   * `/api/transfer/passport-pdf/dummy` ➔ `404 Not Found` (Route active, dummy ID rejected as expected)
   * `/api/transfer/initiate` ➔ `422 Unprocessable Entity` on empty POST (FastAPI schema validation active)
@@ -68,6 +69,12 @@
 ---
 
 ## Core Features & Pipeline Audit
+* **Upcoming US Mint Releases & Valuation Fallback System (v4.361):**
+  * `services/usmint_releases_scraper.py`: Dual-source scraper with delta detection, changelog tracking, and official `get_mint_issue_price()` fallback.
+  * `screens/upcoming_releases_screen.dart`: Release catalog with hero card, filters, sorting, and status badges.
+  * `services/upcoming_releases_service.dart`: API fetch + SharedPreferences caching + fallback data.
+  * `_scripts/remediate_fake_valuations.py`: Remediation migration fixing existing .50 fake valuations.
+  * Valuation Fallback Hardening: Removed .50 hardcoded valuation fallback from `main.py`; replaced with US Mint Issue Price and `ai_value_status` field.
 * **Vector RAG (Phase 4 Semantic Search):** Active. Wired into `/api/deep_dive` and `/api/ai/chat` for high-precision numismatic retrieval against canonical catalogs.
 * **Asset Transfer & Secure Passport System:** Verified. Lateral Transfer API routes (`/api/transfer/...`) and Secure Passport schema endpoints active in `main.py` and `services/transfer_service.py`.
 * **Estate Management System:** Verified. Tokenized attorney portal (`/api/v1/estate/...`), dynamic snapshot generation, token revocation, and 256 KB chunked streaming active in `routes/estate_routes.py` and `routes/attorney_routes.py`.
@@ -99,7 +106,7 @@
   * Estate and Lateral Transfer systems (`estate_routes.py`, `attorney_routes.py`, `main.py`)
   * PCGS, news, payment, support, and admin routes (`pcgs_routes.py`, `news_routes.py`, `payment_routes.py`, `support_routes.py`, `affiliate_routes.py`, `grade_review_routes.py`, `import_routes.py`, `subaccount_routes.py`, `telemetry_routes.py`, `sandbox_routes.py`)
 * **Route Parity Baseline:** `route_snapshot_baseline.json` maintained for automated regression detection.
-* **Frontend Dart Analysis:** `flutter analyze lib` executed with 0 compilation errors and 0 warnings (`No issues found! (ran in 275.9s)`).
+* **Frontend Dart Analysis:** `flutter analyze lib` executed with 0 compilation errors and 0 warnings (`No issues found! (ran in 284.6s)`).
 
 ---
 
@@ -112,10 +119,10 @@
 ---
 
 ## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `303 passed, 0 failed in 27.65s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
-* **Frontend Dart Analyzer:** `Analyzing lib... No issues found! (ran in 275.9s)` (0 errors, 0 warnings).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 42.9s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `370 passed, 0 failed in 12.0s` (100% pass rate; 0 failures).
+* **Backend Pytest Suite:** `303 passed, 0 failed in 19.02s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
+* **Frontend Dart Analyzer:** `Analyzing lib... No issues found! (ran in 284.6s)` (0 errors, 0 warnings).
+* **Frontend Playwright Smoke Suite:** `8/8 passed in 38.7s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
+* **Frontend Flutter Unit Suite:** `370 passed, 0 failed in 7.0s` (100% pass rate; 0 failures).
 * **Layer 3 Data Health Probes:** `7/7 endpoints healthy` (Homepage: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 404 sentinel, Transfer Initiate: 422 validation sentinel).
 * **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
 
