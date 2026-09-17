@@ -363,6 +363,12 @@
 
 
 
+
+## v4.362 — 2026-09-17
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.361)
+
 ## v4.361 — 2026-09-17
 **Mint-releases Enhancements & Platform Updates**
 

@@ -1689,10 +1689,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.362',
+    date: '2026-09-17',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.361)',
+    ],
+  ),
+  _Release(
     version: 'v4.361',
     date: '2026-09-17',
     description: 'Mint-releases Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Mint-releases: add Upcoming US Mint Releases page + eliminate fake .50 valuation fallback',
       'Catalog: collection search denomination aliases & audit script (GI-NOM-01 MF1+MF2)',
