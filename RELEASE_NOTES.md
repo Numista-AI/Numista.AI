@@ -365,6 +365,12 @@
 
 
 
+
+## v4.364 — 2026-09-24
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)
+
 ## v4.363 — 2026-09-24
 **Audit & System Integrity Updates**
 

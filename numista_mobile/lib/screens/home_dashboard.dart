@@ -1689,10 +1689,19 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.364',
+    date: '2026-09-24',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
     version: 'v4.363',
     date: '2026-09-24',
     description: 'Audit & System Integrity Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
       'Assets: sync Business Card Logos & search.htm assets (df5a47b1)',
