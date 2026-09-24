@@ -364,6 +364,13 @@
 
 
 
+
+## v4.363 — 2026-09-24
+**Audit & System Integrity Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)
+- Assets: sync Business Card Logos & search.htm assets (df5a47b1)
+
 ## v4.362 — 2026-09-17
 **Audit Enhancements & Platform Updates**
 
