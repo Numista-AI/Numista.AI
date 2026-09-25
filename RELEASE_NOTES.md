@@ -367,6 +367,13 @@
 
 
 
+
+## v4.366 — 2026-09-24
+**Release Enhancements & Platform Updates**
+
+- Release: bump release notes to v4.364
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)
+
 ## v4.365 — 2026-09-24
 **Release Enhancements & Platform Updates**
 

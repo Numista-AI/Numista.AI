@@ -1689,10 +1689,20 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.365',
+    version: 'v4.366',
     date: '2026-09-24',
     description: 'Release Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.365',
+    date: '2026-09-24',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
     changes: [
       'Release: bump release notes to v4.364',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
