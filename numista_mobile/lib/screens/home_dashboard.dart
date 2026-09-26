@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.373',
+    date: '2026-09-26',
+    description: 'Review-hub Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH',
+      'Release: bump version to v4.372',
+      'Mint-releases: update walkthrough with test verification results',
+      'Mint-releases: add automated test suites and harden migration/seed scripts',
+      'Release: bump version to v4.369',
+      'Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)',
+      'Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)',
+      'Release: bump version to v4.367',
+    ],
+  ),
+  _Release(
     version: 'v4.372',
     date: '2026-09-26',
     description: 'Mint-releases Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Mint-releases: update walkthrough with test verification results',
       'Mint-releases: add automated test suites and harden migration/seed scripts',
