@@ -13,6 +13,7 @@ import '../models/coin_model.dart';
 import '../models/program_model.dart';
 import '../widgets/common/ref_image_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/beta_checklist_service.dart';
 import 'deals_screen.dart';
 
 class WishlistScreen extends StatefulWidget {
@@ -142,6 +143,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final shareUrl = data['share_url'] as String;
+        BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
 
         if (context.mounted) {
           showDialog(

@@ -8,6 +8,7 @@ import '../services/morgan_prefs.dart';
 import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
 import '../widgets/morgan_settings_panel.dart';
+import '../services/beta_checklist_service.dart';
 import '../constants.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -273,6 +274,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
         replyText = data['response'] ?? 'No response.';
         if (data['action_payload'] != null) {
           actionPayloadJson = jsonEncode(data['action_payload']);
+        }
+        if (data is Map &&
+            data['error'] == null &&
+            replyText.trim().isNotEmpty &&
+            replyText != 'No response.') {
+          BetaChecklistService.autoCompleteTask('task_18_ai_chat');
         }
       } else {
         replyText = 'Error ${response.statusCode}: please try again.';

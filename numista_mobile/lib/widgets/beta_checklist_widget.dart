@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/beta_checklist_service.dart';
 
-class BetaChecklistWidget extends StatelessWidget {
+class BetaChecklistWidget extends StatefulWidget {
   const BetaChecklistWidget({super.key});
 
   static void showChecklistModal(BuildContext context) {
@@ -14,6 +15,49 @@ class BetaChecklistWidget extends StatelessWidget {
         return const BetaChecklistModal();
       },
     );
+  }
+
+  @override
+  State<BetaChecklistWidget> createState() => _BetaChecklistWidgetState();
+}
+
+class _BetaChecklistWidgetState extends State<BetaChecklistWidget> {
+  StreamSubscription<BetaChecklistEvent>? _eventSub;
+  final Set<String> _displayedToastTaskIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _eventSub = BetaChecklistService.onTaskCompleted.listen((event) {
+      if (!mounted) return;
+      if (_displayedToastTaskIds.add(event.taskId)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF1E293B),
+            duration: const Duration(seconds: 4),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.greenAccent, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Beta Checklist: "${event.taskTitle}" completed! (+1)',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -59,7 +103,7 @@ class BetaChecklistWidget extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-          onPressed: () => showChecklistModal(context),
+          onPressed: () => BetaChecklistWidget.showChecklistModal(context),
         );
       },
     );

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'beta_checklist_service.dart';
 import '../constants/feedback_constants.dart';
 import '../constants.dart' show kApiBaseUrl;
 
@@ -266,7 +267,11 @@ class BetaFeedbackService {
   ) async {
     try {
       final data = await _call({'mode': 'SUBMIT', ...payload.toJson()});
-      return SubmitResult.fromJson(data);
+      final result = SubmitResult.fromJson(data);
+      if (result.status != 'error') {
+        BetaChecklistService.autoCompleteTask('task_20_overall_feedback');
+      }
+      return result;
     } catch (e) {
       debugPrint('BetaFeedbackService.submitMorganFeedback error: $e');
       rethrow; // caller handles offline queue

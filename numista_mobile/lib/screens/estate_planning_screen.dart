@@ -11,6 +11,7 @@ import '../services/estate_profile_service.dart';
 import '../services/estate_data_service.dart';
 import '../services/estate_report_service.dart';
 import '../services/estate_fiduciary_service.dart';
+import '../services/beta_checklist_service.dart';
 import '../services/valuation_mode_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1751,6 +1752,25 @@ class _GenerateTabState extends State<_GenerateTab> {
       final filename =
           'estate_report_${_mode}_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf';
       await EstateReportService.openPdf(result.pdfBytes, filename);
+
+      final exportId = result.reportId.isNotEmpty
+          ? result.reportId
+          : DateTime.now().millisecondsSinceEpoch.toString();
+      final evidencePath = 'users/${widget.uid}/estate_exports/$exportId';
+      try {
+        await FirebaseFirestore.instance.doc(evidencePath).set({
+          'export_id': exportId,
+          'mode': _mode,
+          'filename': filename,
+          'generated_at': FieldValue.serverTimestamp(),
+        });
+        await BetaChecklistService.autoCompleteTask(
+          'task_16_estate_report',
+          evidenceDocPath: evidencePath,
+        );
+      } catch (e) {
+        debugPrint('[EstatePlanning] Failed to record export receipt: $e');
+      }
 
       if (mounted) {
         setState(() => _generating = false);
