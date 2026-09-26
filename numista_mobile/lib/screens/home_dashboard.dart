@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.374',
+    date: '2026-09-26',
+    description: 'Sets Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)',
+      'Release: bump version to v4.373',
+      'Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH',
+      'Release: bump version to v4.372',
+      'Mint-releases: update walkthrough with test verification results',
+      'Mint-releases: add automated test suites and harden migration/seed scripts',
+      'Release: bump version to v4.369',
+      'Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)',
+    ],
+  ),
+  _Release(
     version: 'v4.373',
     date: '2026-09-26',
     description: 'Review-hub Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH',
       'Release: bump version to v4.372',

@@ -375,6 +375,19 @@
 
 
 
+
+## v4.374 — 2026-09-26
+**Sets Enhancements & Platform Updates**
+
+- Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)
+- Release: bump version to v4.373
+- Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH
+- Release: bump version to v4.372
+- Mint-releases: update walkthrough with test verification results
+- Mint-releases: add automated test suites and harden migration/seed scripts
+- Release: bump version to v4.369
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+
 ## v4.373 — 2026-09-26
 **Review-hub Enhancements & Platform Updates**
 
