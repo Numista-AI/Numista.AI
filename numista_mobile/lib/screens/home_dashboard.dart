@@ -1691,10 +1691,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.369',
+    date: '2026-09-26',
+    description: 'Walkthrough Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)',
+      'Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)',
+      'Release: bump version to v4.367',
+      'Checklist: auto-detect beta progress & harden EPN query syntax',
+    ],
+  ),
+  _Release(
     version: 'v4.368',
     date: '2026-09-26',
     description: 'Deps Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)',
       'Release: bump version to v4.367',
