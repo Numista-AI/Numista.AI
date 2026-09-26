@@ -283,6 +283,43 @@ def fetch_image_bytes(url: str, max_size: tuple = (80, 80)) -> bytes | None:
         return None
 
 
+def fetch_owner_photo_bytes(storage_path: str, max_size: tuple = (120, 120)) -> bytes | None:
+    """
+    Fetch an owner photo from Firebase Storage by storage path (Admin SDK).
+
+    Uses the storage path directly rather than a tokenized download URL,
+    so reports remain valid even if the URL token rotates (CoS L5).
+
+    Returns None on any failure — never raises.
+    """
+    if not storage_path:
+        return None
+    try:
+        from google.cloud import storage as gcs
+        client = gcs.Client()
+        # Default bucket from environment or project
+        bucket_name = os.environ.get(
+            'FIREBASE_STORAGE_BUCKET',
+            'numista-uploads-studio-9101802118-8c9a8.firebasestorage.app'
+        )
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(storage_path)
+        if not blob.exists():
+            return None
+        content = blob.download_as_bytes(timeout=10)
+        if len(content) < 100:
+            return None
+        img = PILImage.open(BytesIO(content))
+        img = img.convert('RGB')
+        img.thumbnail(max_size, PILImage.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format='JPEG', quality=82)
+        return buf.getvalue()
+    except Exception as e:
+        log.warning('Failed to fetch owner photo from storage path %s: %s', storage_path, e)
+        return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE TEMPLATES (header/footer canvas callbacks)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -920,17 +957,31 @@ def _build_coin_rows(coins: list, st: dict, fetch_photos: bool) -> list:
         photo_cell = ''
 
         if fetch_photos:
-            url = (
-                coin.get('image_url', '') or
-                coin.get('Image URL', '') or
-                coin.get('photo_url', '')
-            )
-            img_bytes = fetch_image_bytes(url) if url else None
-            if img_bytes:
-                try:
-                    photo_cell = Image(BytesIO(img_bytes), width=THUMB_W, height=THUMB_H)
-                except Exception:
-                    photo_cell = ''
+            # For set items, prioritize owner photos (fetched by storage_path, not URL)
+            is_set = coin.get('is_set') or coin.get('item_type') == 'set'
+            owner_photos = coin.get('owner_photos') or []
+            if is_set and owner_photos:
+                # Fetch first owner photo by storage_path (CoS L5: server-side, not URL)
+                first_photo = owner_photos[0] if isinstance(owner_photos[0], dict) else {}
+                sp = first_photo.get('storage_path', '')
+                img_bytes = fetch_owner_photo_bytes(sp) if sp else None
+                if img_bytes:
+                    try:
+                        photo_cell = Image(BytesIO(img_bytes), width=THUMB_W, height=THUMB_H)
+                    except Exception:
+                        photo_cell = ''
+            else:
+                url = (
+                    coin.get('image_url', '') or
+                    coin.get('Image URL', '') or
+                    coin.get('photo_url', '')
+                )
+                img_bytes = fetch_image_bytes(url) if url else None
+                if img_bytes:
+                    try:
+                        photo_cell = Image(BytesIO(img_bytes), width=THUMB_W, height=THUMB_H)
+                    except Exception:
+                        photo_cell = ''
 
         def _v(key1, key2='', fallback=''):
             return str(coin.get(key1, coin.get(key2, fallback)) or fallback)

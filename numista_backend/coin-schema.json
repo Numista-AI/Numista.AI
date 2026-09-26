@@ -173,6 +173,23 @@
             "type": ["string", "null"],
             "default": null,
             "description": "Canonical US Mint product SKU or catalog ID (e.g., 'USM-2026-UNC')."
+        },
+        "owner_photos": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "url": { "type": "string", "format": "uri" },
+                    "storage_path": { "type": "string" },
+                    "original_storage_path": { "type": "string" },
+                    "caption": { "type": "string", "maxLength": 500 },
+                    "uploaded_at": { "type": "string", "format": "date-time" },
+                    "uploaded_by": { "type": "string", "enum": ["manual_upload", "morgan"] }
+                },
+                "required": ["id", "url", "storage_path", "uploaded_at"]
+            },
+            "description": "User's own photos of the physical set/holder. For estate and provenance."
         }
     }
 }

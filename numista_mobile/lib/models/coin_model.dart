@@ -35,6 +35,10 @@ class CoinModel {
   final String? memberOf;          // sub-group label, e.g. "Philadelphia Mint"
   final bool inOriginalPackaging;  // true = coins kept in original US Mint packaging
   
+  /// Owner photos attached to a set (estate/provenance).
+  /// Each entry: {id, url, storage_path, original_storage_path, caption, uploaded_at, uploaded_by}
+  final List<Map<String, dynamic>> ownerPhotos;
+  
   // Internal tracking
   final String aiEstimatedValue;
   final String meltValue;
@@ -109,6 +113,7 @@ class CoinModel {
     this.parentSetId,
     this.memberOf,
     this.inOriginalPackaging = false,
+    this.ownerPhotos = const [],
     this.source = '',
     this.sourceFile = '',
     this.binderDocId = '',
@@ -223,6 +228,9 @@ class CoinModel {
       parentSetId: data['parent_set_id']?.toString(),
       memberOf: data['member_of']?.toString(),
       inOriginalPackaging: data['in_original_packaging'] as bool? ?? false,
+      ownerPhotos: (data['owner_photos'] as List<dynamic>?)
+          ?.map((e) => Map<String, dynamic>.from(e as Map))
+          .toList() ?? [],
       provenanceLedger: data['provenanceLedger'] as List<dynamic>? ?? [],
       transferStatus: data['transferStatus']?.toString() ?? data['transfer_status']?.toString() ?? 'none',
       transferId: data['transferId']?.toString() ?? data['transfer_id']?.toString() ?? '',
@@ -271,6 +279,7 @@ class CoinModel {
       'parent_set_id': parentSetId,
       'member_of': memberOf,
       'in_original_packaging': inOriginalPackaging,
+      'owner_photos': ownerPhotos,
       'provenanceLedger': provenanceLedger,
       'transferStatus': transferStatus,
       'transferId': transferId,
