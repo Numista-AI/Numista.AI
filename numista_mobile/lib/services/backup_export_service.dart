@@ -145,7 +145,7 @@ class BackupExportService {
     final List coins = payload['coins'] as List;
 
     final StringBuffer csv = StringBuffer();
-    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Cost,AI Estimated Value,Certification Number,Storage Location,Added');
+    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Cost,AI Estimated Value,Certification Number,Storage Location,Owner Photo URLs,Added');
 
     for (final c in coins) {
       final map = c as Map<String, dynamic>;
@@ -160,6 +160,7 @@ class BackupExportService {
         _cleanCsvCell(map['AI Estimated Value']),
         _cleanCsvCell(map['Certification Number']),
         _cleanCsvCell(map['Storage Location']),
+        _cleanCsvCell(_extractOwnerPhotoUrls(map)),
         _cleanCsvCell(map['Added']),
       ].join(','));
     }
@@ -197,6 +198,17 @@ class BackupExportService {
     }
   }
 
+
+  /// Extracts owner photo URLs from a coin/set map as a semicolon-delimited string.
+  /// Returns empty string for non-set coins or sets without owner photos.
+  static String _extractOwnerPhotoUrls(Map<String, dynamic> map) {
+    final photos = map['owner_photos'];
+    if (photos == null || photos is! List || photos.isEmpty) return '';
+    return photos
+        .map((p) => (p is Map ? p['url'] ?? '' : '').toString())
+        .where((url) => url.isNotEmpty)
+        .join('; ');
+  }
 
   static String _cleanCsvCell(dynamic val) {
     if (val == null) return '""';

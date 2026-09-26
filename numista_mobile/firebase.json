@@ -45,7 +45,31 @@
         "destination": "/terms.html"
       },
       {
-        "source": "**",
+        "source": "/",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/index.html",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/wishlist",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/wishlist/**",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/attorney_portal",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/claim",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/claim/**",
         "destination": "/index.html"
       }
     ],

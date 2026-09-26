@@ -71,22 +71,43 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$173.00",
         "retailer": "United States Mint",
     },
-    "26XH": {
-        "title": "2026 Morgan Silver Dollar (Uncirculated)",
-        "formal_name": "Morgan Silver Dollar 2026 Uncirculated Coin",
+    "26XE": {
+        "title": "2026 Morgan Silver Dollar (Enhanced Uncirculated)",
+        "formal_name": "Morgan Silver Dollar 2026 Enhanced Uncirculated Coin",
         "year": 2026,
-        "mint_mark": "",
-        "mint_facility": "Philadelphia (P)",
+        "mint_mark": "",  # Struck at West Point without mint mark
+        "mint_facility": "West Point (no mint mark)",
         "denomination": "Morgan Dollar",
         "program_series": "Morgan and Peace Silver Dollars",
-        "theme_subject": "Morgan Dollar Uncirculated",
-        "strike_type": "Uncirculated",
-        "condition": "Uncirculated",
-        "metal_content": "99.9% Silver",
+        "theme_subject": "Morgan Dollar Enhanced Uncirculated (Liberty Bell 250 Privy, 1776~2026)",
+        "variety": "Liberty Bell 250 Privy, 1776~2026 Dual Date",
+        "strike_type": "Enhanced Uncirculated",
+        "condition": "Enhanced Uncirculated",
+        "metal_content": "99.9% Silver (0.859 oz ASW)",
         "purity": 0.999,
-        "weight_grams": 31.103,
-        "issue_price": "$91.00",
+        "weight_grams": 26.73,
+        "issue_price": "$169.00",
         "retailer": "United States Mint",
+        "mintage_limit": 250000,
+    },
+    "26XH": {
+        "title": "2026 Peace Silver Dollar (Enhanced Uncirculated)",
+        "formal_name": "Peace Silver Dollar 2026 Enhanced Uncirculated Coin",
+        "year": 2026,
+        "mint_mark": "",  # Struck at West Point without mint mark
+        "mint_facility": "West Point (no mint mark)",
+        "denomination": "Peace Dollar",
+        "program_series": "Morgan and Peace Silver Dollars",
+        "theme_subject": "Peace Dollar Enhanced Uncirculated (Liberty Bell 250 Privy, 1776~2026)",
+        "variety": "Liberty Bell 250 Privy, 1776~2026 Dual Date",
+        "strike_type": "Enhanced Uncirculated",
+        "condition": "Enhanced Uncirculated",
+        "metal_content": "99.9% Silver (0.859 oz ASW)",
+        "purity": 0.999,
+        "weight_grams": 26.73,
+        "issue_price": "$169.00",
+        "retailer": "United States Mint",
+        "mintage_limit": 250000,
     },
     "26XJ": {
         "title": "2026 Peace Silver Dollar (Uncirculated)",
@@ -192,6 +213,9 @@ US_MINT_TRUNCATION_MAP: Dict[str, str] = {
     r"\bRev Proof\b": "Reverse Proof",
     r"\bUncirc\b": "Uncirculated",
     r"\bUncircula\b": "Uncirculated",
+    r"\bEnhanced Un\b": "Enhanced Uncirculated",
+    r"\bEnh Uncirc\b": "Enhanced Uncirculated",
+    r"\bEnh Uncirculated\b": "Enhanced Uncirculated",
     r"\bPrf\b": "Proof",
     r"\bProof Set\b": "Proof Set",
     r"\bSilv\b": "Silver",
@@ -290,7 +314,15 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         if not item.get("Theme/Subject") or item.get("Theme/Subject") in ("Coin", "Dollar", "Rever"):
             item["Theme/Subject"] = catalog_match["theme_subject"]
 
-        # If mint facility is Philadelphia without mint mark, record note if helpful
+        # Variety refinement (e.g. Privy mark, dual date)
+        if catalog_match.get("variety") and not item.get("Variety"):
+            item["Variety"] = catalog_match["variety"]
+
+        # Weight in grams (for accurate ASW calculation)
+        if catalog_match.get("weight_grams") and not item.get("weight_grams"):
+            item["weight_grams"] = catalog_match["weight_grams"]
+
+        # If mint facility is recorded, note in Personal Notes if not already present
         facility = catalog_match.get("mint_facility", "")
         if facility:
             existing_notes = str(item.get("Personal Notes") or "").strip()

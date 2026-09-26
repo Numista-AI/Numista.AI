@@ -33,6 +33,7 @@ import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
 import '../widgets/header_stats_bar.dart';
 import '../services/set_expansion_helper.dart';
+import '../services/set_grouping_service.dart';
 import '../models/collection_row.dart';
 import '../constants.dart';
 import '../constants/denomination_canon.dart';
@@ -2757,6 +2758,39 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             () => _onDeepDive(crw.id, m)),
                         if (canMutate) _iconBtn(Icons.delete_outline, 'Delete',
                             () => _onDelete(crw.id, m)),
+                        // "Group as set" for loose coins not already in a set
+                        if (canMutate
+                            && m['is_set'] != true && m['isSet'] != true
+                            && (m['parent_set_id'] == null || m['parent_set_id'].toString().isEmpty))
+                          _iconBtn(Icons.create_new_folder_outlined, 'Group as Set', () => _showGroupAsSetDialog(crw.id, m)),
+                        if (canMutate && (m['is_set'] == true || m['isSet'] == true))
+                          _iconBtn(Icons.link_off, 'Ungroup', () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Ungroup Set'),
+                                content: const Text('Are you sure you want to ungroup this set? The child coins will remain in your collection.'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ungroup')),
+                                ],
+                              ),
+                            );
+                            if (confirm != true) return;
+                            try {
+                              await SetGroupingService.ungroupSet(
+                                parentSetDocId: crw.id,
+                                deleteOwnerPhotos: true,
+                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Set ungrouped successfully.')));
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error ungrouping set: $e'), backgroundColor: Colors.red));
+                              }
+                            }
+                          }),
                       ],
                     ),
                   ),
@@ -2997,6 +3031,41 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  if (m['parent_set_id'] != null && m['parent_set_id'].toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: InkWell(
+                        onTap: () {
+                          final parentId = m['parent_set_id'].toString();
+                          final parentDoc = _cachedCoinsDocs.where((d) => d.id == parentId).firstOrNull;
+                          if (parentDoc != null) {
+                            _showCoinInspectorDialog(parentDoc.id, parentDoc.data());
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC9A227).withAlpha(30),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFC9A227).withAlpha(60)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.folder_open, size: 12, color: Color(0xFFC9A227)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Part of set',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: const Color(0xFFC9A227).withAlpha(200),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   Text(
                     displayTitle,
                     maxLines: 1,
@@ -3987,6 +4056,167 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
+  /// Shows a dialog to group the current coin with other loose coins as a set.
+  /// Finds coins with the same Year + Mint Mark and presents them as candidates.
+  Future<void> _showGroupAsSetDialog(String coinId, Map<String, dynamic> data) async {
+    final year = (data['Year'] ?? data['year'] ?? '').toString();
+    final mint = (data['Mint Mark'] ?? data['mint_mark'] ?? '').toString();
+    final defaultTitle = '$year${mint.isNotEmpty ? '-$mint' : ''} Year Set';
+
+    // Find candidate coins: same year+mint, not in a set, not a set themselves
+    final candidates = <Map<String, dynamic>>[];
+    final userEmail = AuthService.userEmail;
+
+    final snap = await FirebaseFirestore.instance
+        .collection('users').doc(userEmail).collection('coins')
+        .where('Year', isEqualTo: year)
+        .get();
+
+    for (final doc in snap.docs) {
+      final d = doc.data();
+      if (doc.id == coinId) continue; // skip current coin
+      if (d['is_set'] == true) continue; // skip existing sets
+      if (d['parent_set_id'] != null && d['parent_set_id'].toString().isNotEmpty) continue;
+      final docMint = (d['Mint Mark'] ?? d['mint_mark'] ?? '').toString();
+      if (mint.isNotEmpty && docMint != mint) continue; // match mint mark if provided
+      candidates.add({...d, '_doc_id': doc.id});
+    }
+
+    if (!mounted) return;
+
+    // Show dialog with candidates
+    final nameCtrl = TextEditingController(text: defaultTitle);
+    final selected = <String>{coinId}; // pre-select the current coin
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          title: const Text('Group as Set', style: TextStyle(color: Colors.white)),
+          content: SizedBox(
+            width: 360,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Set Name',
+                      labelStyle: TextStyle(color: Colors.white54),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFC9A227)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Select coins to include (${selected.length} selected):',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  // Current coin (always selected)
+                  CheckboxListTile(
+                    dense: true,
+                    value: true,
+                    onChanged: null, // can't deselect the source coin
+                    activeColor: const Color(0xFFC9A227),
+                    title: Text(
+                      '${data['Denomination'] ?? ''} — ${data['Theme/Subject'] ?? data['Program/Series'] ?? ''}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    subtitle: Text(
+                      '$year ${mint.isNotEmpty ? mint : ''}  (this coin)',
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ),
+                  // Candidate coins
+                  ...candidates.map((c) {
+                    final cId = c['_doc_id'] as String;
+                    return CheckboxListTile(
+                      dense: true,
+                      value: selected.contains(cId),
+                      activeColor: const Color(0xFFC9A227),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          if (val == true) {
+                            selected.add(cId);
+                          } else {
+                            selected.remove(cId);
+                          }
+                        });
+                      },
+                      title: Text(
+                        '${c['Denomination'] ?? ''} — ${c['Theme/Subject'] ?? c['Program/Series'] ?? ''}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      subtitle: Text(
+                        '$year ${(c['Mint Mark'] ?? c['mint_mark'] ?? '').toString()}',
+                        style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
+                    );
+                  }),
+                  if (candidates.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'No other loose coins found with the same year/mint.',
+                        style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: selected.length >= 2 ? () => Navigator.pop(ctx, true) : null,
+              child: Text(
+                'Create Set (${selected.length} coins)',
+                style: TextStyle(
+                  color: selected.length >= 2 ? const Color(0xFFC9A227) : Colors.white24,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != true || !mounted) return;
+
+    try {
+      await SetGroupingService.linkCoinsAsSet(
+        coinIds: selected.toList(),
+        setTitle: nameCtrl.text.trim().isNotEmpty ? nameCtrl.text.trim() : defaultTitle,
+        year: year.isNotEmpty ? year : null,
+        mintMark: mint.isNotEmpty ? mint : null,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Created "${nameCtrl.text.trim()}" with ${selected.length} coins.'),
+            backgroundColor: const Color(0xFF1A5D2A),
+          ),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating set: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _onDelete(String id, Map<String, dynamic> data) {
     showDialog(
       context: context,
@@ -4957,35 +5187,162 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // Shown in the inspector whenever the selected coin has a 'set_id' field
-  // (populated by the ingestion pipeline). Falls back silently if not a set.
   Widget _buildCoinSetSection(Map<String, dynamic> data) {
-    // Invoice-imported sets store all coin data in set_contents directly.
-    // Use SetContentsPanel for these — no additional Firestore lookup needed.
     final rawContents = data['set_contents'];
+    Widget? setContentsWidget;
     if (rawContents is List && rawContents.isNotEmpty) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(0, 4, 0, 0),
+      setContentsWidget = Padding(
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
         child: SetContentsPanel(data: data),
       );
     }
 
-    // Pre-cataloged sets (e.g. Jamul Sovereign, Birth Year) use set_id
-    // to look up coin_set_index in Firestore.
     final setId = data['set_id'] as String?;
-    if (setId == null || setId.isEmpty) return SizedBox.shrink();
+    if (setContentsWidget == null && setId != null && setId.isNotEmpty) {
+      setContentsWidget = Padding(
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Divider(color: _border),
+            const SizedBox(height: 16),
+            CoinSetViewer(setId: setId),
+          ],
+        ),
+      );
+    }
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(0, 16, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    final isSet = data['is_set'] == true || data['isSet'] == true;
+
+    if (setContentsWidget == null && !isSet) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (setContentsWidget != null) setContentsWidget,
+        if (isSet) ...[
+          const SizedBox(height: 16),
           Divider(color: _border),
-          SizedBox(height: 16),
-          CoinSetViewer(setId: setId),
+          const SizedBox(height: 16),
+          Text('Set Photos', style: TextStyle(fontWeight: FontWeight.bold, color: _text, fontSize: 16)),
+          const SizedBox(height: 8),
+          if (data['owner_photos'] != null && (data['owner_photos'] as List).isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: (data['owner_photos'] as List).map((p) {
+                return Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    image: DecorationImage(
+                      image: NetworkImage(p['url'] ?? ''),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add_a_photo, size: 16),
+            label: const Text('Upload Set Photo'),
+            onPressed: () => _uploadSetOwnerPhoto(data),
+          ),
         ],
-      ),
+      ],
     );
+  }
+
+  Future<void> _uploadSetOwnerPhoto(Map<String, dynamic> data) async {
+    final coinId = _selectedCoinId;
+    if (coinId == null) return;
+    
+    final bool isMobile = !identical(0, 0.0) ? false : (Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS);
+    Uint8List? bytes;
+    String ext = 'jpg';
+    
+    if (isMobile) {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (_) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Take Photo'), onTap: () => Navigator.pop(context, ImageSource.camera)),
+            ListTile(leading: const Icon(Icons.photo_library),  title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
+          ]),
+        ),
+      );
+      if (source == null) return;
+      final picked = await ImagePicker().pickImage(source: source, imageQuality: 90, maxWidth: 2000);
+      if (picked == null) return;
+      bytes = await picked.readAsBytes();
+      ext = picked.path.split('.').last.toLowerCase();
+    } else {
+      final result = await FilePicker.pickFiles(type: FileType.image, withData: true, allowMultiple: false);
+      if (result == null || result.files.isEmpty) return;
+      bytes = result.files.first.bytes;
+      ext = result.files.first.extension?.toLowerCase() ?? 'jpg';
+    }
+    
+    if (bytes == null) return;
+    
+    final photoId = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    final userEmail = AuthService.userEmail;
+    
+    try {
+      final refCompressed = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_$photoId.$ext');
+      await refCompressed.putData(bytes, SettableMetadata(contentType: 'image/$ext'));
+      final compressedUrl = await refCompressed.getDownloadURL();
+      
+      final refOriginal = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_${photoId}_original.$ext');
+      await refOriginal.putData(bytes, SettableMetadata(contentType: 'image/$ext'));
+      final originalUrl = await refOriginal.getDownloadURL();
+      
+      String caption = '';
+      await showDialog(
+        context: context,
+        builder: (ctx) {
+          final ctrl = TextEditingController();
+          return AlertDialog(
+            title: const Text('Add a Caption (Optional)'),
+            content: TextField(controller: ctrl, decoration: const InputDecoration(hintText: 'Enter caption...')),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Skip')),
+              TextButton(onPressed: () {
+                caption = ctrl.text.trim();
+                Navigator.pop(ctx);
+              }, child: const Text('Save')),
+            ],
+          );
+        }
+      );
+      
+      final photoMap = {
+        'id': photoId,
+        'url': compressedUrl,
+        'original_url': originalUrl,
+        'caption': caption,
+        'uploaded_at': DateTime.now().toIso8601String(),
+      };
+      
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final docRef = FirebaseFirestore.instance.collection(AuthService.coinsPath).doc(coinId);
+        final snapshot = await tx.get(docRef);
+        if (!snapshot.exists) return;
+        List<dynamic> photos = snapshot.data()?['owner_photos'] ?? [];
+        photos.add(photoMap);
+        tx.update(docRef, {'owner_photos': photos});
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo uploaded successfully'), backgroundColor: Colors.green));
+        setState(() {}); 
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red));
+      }
+    }
   }
 
   // --- Similar Coins widget for the inspector ------------------------------

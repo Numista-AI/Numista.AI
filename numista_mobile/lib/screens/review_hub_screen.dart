@@ -550,6 +550,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       'Retailer Invoice #':      TextEditingController(text: data['Retailer Invoice #']?.toString() ?? ''),
       'Retailer Item No.':       TextEditingController(text: data['Retailer Item No.']?.toString() ?? ''),
       'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
+      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['qty'] ?? '1').toString()),
     };
 
     bool isSaving = false;
@@ -559,6 +560,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
           Widget field(String key, String label, IconData icon,
               {TextInputType keyboardType = TextInputType.text,
               TextCapitalization capitalization = TextCapitalization.none}) {
@@ -566,15 +569,27 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               padding: const EdgeInsets.only(bottom: 14),
               child: TextField(
                 controller: controllers[key],
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 14,
+                ),
                 keyboardType: keyboardType,
                 textCapitalization: capitalization,
                 decoration: InputDecoration(
-                  prefixIcon: Icon(icon, color: Colors.white38, size: 18),
+                  prefixIcon: Icon(
+                    icon,
+                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                    size: 18,
+                  ),
                   labelText: label,
-                  labelStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                  labelStyle: TextStyle(
+                    color: isDark ? Colors.white38 : const Color(0xFF64748B),
+                    fontSize: 13,
+                  ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: Colors.white12),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -582,7 +597,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   filled: true,
-                  fillColor: Colors.white.withAlpha(8),
+                  fillColor: isDark ? Colors.white.withAlpha(8) : const Color(0xFFF8FAFC),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 ),
               ),
@@ -791,9 +806,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                           sectionHeader('PURCHASE'),
                           Row(children: [
                             Expanded(child: field('Purchase Cost', 'Purchase Cost', Icons.attach_money,
-                                keyboardType: TextInputType.number)),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true))),
                             const SizedBox(width: 12),
+                            Expanded(child: field('Quantity', 'Quantity (QTY)', Icons.numbers,
+                                keyboardType: TextInputType.number)),
+                          ]),
+                          Row(children: [
                             Expanded(child: field('Purchase Date', 'Purchase Date', Icons.calendar_month_outlined)),
+                            const SizedBox(width: 12),
+                            Expanded(child: field('Storage Location', 'Storage Location', Icons.inventory_2_outlined)),
                           ]),
                           field('Retailer/Website', 'Retailer / Website', Icons.storefront_outlined),
                           Row(children: [
@@ -801,7 +822,6 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             const SizedBox(width: 12),
                             Expanded(child: field('Retailer Item No.', 'Item #', Icons.tag)),
                           ]),
-                          field('Storage Location', 'Storage Location', Icons.inventory_2_outlined),
                           const SizedBox(height: 8),
                         ],
                       ),
@@ -835,6 +855,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 controllers.forEach((key, ctrl) {
                                   if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
                                 });
+                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
+                                final rawQty = controllers['Quantity']?.text.trim() ?? '';
+                                final parsedQty = int.tryParse(rawQty);
+                                final cleanQty = (parsedQty != null && parsedQty > 0) ? parsedQty : 1;
+                                updates['Quantity'] = cleanQty;
+                                controllers['Quantity']?.text = cleanQty.toString();
+
                                 // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
                                 final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
                                 final ry = (updates['Year'] as String? ?? '').trim();
@@ -890,6 +917,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 controllers.forEach((key, ctrl) {
                                   if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
                                 });
+                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
+                                final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
+                                final parsedQty2 = int.tryParse(rawQty2);
+                                final cleanQty2 = (parsedQty2 != null && parsedQty2 > 0) ? parsedQty2 : 1;
+                                updates['Quantity'] = cleanQty2;
+                                controllers['Quantity']?.text = cleanQty2.toString();
+
                                 // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
                                 final ymRe2 = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
                                 final ry2 = (updates['Year'] as String? ?? '').trim();

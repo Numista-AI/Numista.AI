@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -420,6 +421,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       'Year': _coin.year,
       'Mint Mark': _coin.mintMark,
       'Denomination': _coin.denomination,
+      'Quantity': _coin.quantity.isEmpty ? '1' : _coin.quantity,
       'Program/Series': _coin.programSeries,
       'Theme/Subject': _coin.themeSubject,
       'Variety': _coin.variety,
@@ -447,6 +449,15 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       final fsKey = _fieldToFirestore(key);
       if (fsKey != null) updates[fsKey] = ctrl.text;
     });
+
+    // ── Sanitize Quantity (CoS M2: positive integer, fallback to 1 on blank/invalid) ──
+    if (updates.containsKey('Quantity')) {
+      final rawQty = (updates['Quantity'] as String? ?? '').trim();
+      final parsedQty = int.tryParse(rawQty);
+      final cleanQty = (parsedQty != null && parsedQty > 0) ? parsedQty : 1;
+      updates['Quantity'] = cleanQty;
+      _editCtrl['Quantity']?.text = cleanQty.toString();
+    }
 
     // ── Auto-split combined Year+Mint (e.g. "2006D" typed into Year field) ────
     final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
@@ -515,6 +526,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       'Purchase Date': 'Purchase Date',
       'Retailer/Website': 'Retailer/Website',
       'Storage Location': 'Storage Location',
+      'Quantity': 'Quantity',
       'Personal Notes': 'Personal Notes I',
     };
     return map[label];
@@ -726,6 +738,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                   mode: LaunchMode.externalApplication)
               : null,
           onDelete: _confirmDelete,
+          onRefresh: widget.onEdited,
         ),
         // Tab bar
         Container(
@@ -848,6 +861,7 @@ class _HeroHeader extends StatelessWidget {
   final Future<void> Function()? onPcgs;
   final VoidCallback onDelete;
   final VoidCallback? onVerifyManually;
+  final VoidCallback? onRefresh;
 
   const _HeroHeader({
     required this.coin,
@@ -860,6 +874,7 @@ class _HeroHeader extends StatelessWidget {
     this.onPcgs,
     required this.onDelete,
     this.onVerifyManually,
+    this.onRefresh,
   });
 
   @override
@@ -877,17 +892,10 @@ class _HeroHeader extends StatelessWidget {
         children: [
           // Close + title row
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Coin images or Set icon
             if (isSetItem)
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: _kDark(context),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFC9A227).withAlpha(80)),
-                ),
-                child: const Icon(Icons.folder_open, color: Color(0xFFC9A227), size: 48),
+              _OwnerPhotoHero(
+                coin: coin,
+                onPhotoAdded: () => onRefresh?.call(),
               )
             else
               _CoinImagePair(coin: coin),
@@ -4084,5 +4092,372 @@ Color _errorRarityColor(String rarity) {
     case 'Rare':      return const Color(0xFFF63366);
     case 'Uncommon':  return const Color(0xFF4C8CDA);
     default:          return const Color(0xFF5A5C69);
+  }
+}
+
+/// Owner photo hero area for set detail view.
+/// Shows owner photos if available, or folder icon with camera badge if not.
+class _OwnerPhotoHero extends StatelessWidget {
+  final CoinModel coin;
+  final VoidCallback? onPhotoAdded;
+
+  const _OwnerPhotoHero({required this.coin, this.onPhotoAdded});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhotos = coin.ownerPhotos.isNotEmpty;
+    final primaryPhoto = hasPhotos ? coin.ownerPhotos.first : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Hero image or folder icon
+        GestureDetector(
+          onTap: hasPhotos
+              ? () => _showPhotoGallery(context)
+              : () => _addOwnerPhoto(context),
+          onLongPress: hasPhotos ? () => _showPhotoOptions(context, primaryPhoto!) : null,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFFC9A227).withAlpha(80),
+              ),
+            ),
+            child: hasPhotos
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.network(
+                      primaryPhoto!['url'] as String,
+                      fit: BoxFit.cover,
+                      width: 120,
+                      height: 120,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image,
+                        color: Color(0xFFC9A227),
+                        size: 48,
+                      ),
+                    ),
+                  )
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(Icons.folder_open, color: Color(0xFFC9A227), size: 48),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC9A227),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.add_a_photo, color: Colors.black, size: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        // Photo count indicator
+        if (coin.ownerPhotos.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                coin.ownerPhotos.length,
+                (i) => Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: i == 0
+                        ? const Color(0xFFC9A227)
+                        : const Color(0xFFC9A227).withAlpha(80),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        // Caption
+        if (primaryPhoto != null && (primaryPhoto['caption'] as String?)?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              primaryPhoto['caption'] as String,
+              style: TextStyle(
+                color: Colors.white.withAlpha(180),
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        // Storage Location or nudge
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: coin.storageLocation.isNotEmpty
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.pin_drop, color: Color(0xFFC9A227), size: 14),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        coin.storageLocation,
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(200),
+                          fontSize: 12,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  'Add where this is stored',
+                  style: TextStyle(
+                    color: const Color(0xFFC9A227).withAlpha(150),
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 4),
+        // Label
+        Text(
+          hasPhotos ? 'Your Photo' : '',
+          style: TextStyle(
+            color: Colors.white.withAlpha(120),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPhotoGallery(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            PageView.builder(
+              itemCount: coin.ownerPhotos.length,
+              itemBuilder: (_, i) {
+                final photo = coin.ownerPhotos[i];
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          photo['url'] as String,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if ((photo['caption'] as String?)?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          photo['caption'] as String,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addOwnerPhoto(BuildContext context) async {
+    // Delegate to the owner photo upload flow in my_collection_screen
+    // This is handled by the parent widget's callback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Use the "+ Add Your Photo" button on the set view to upload a photo.'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showPhotoOptions(BuildContext context, Map<String, dynamic> photo) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Color(0xFFC9A227)),
+              title: const Text('View All Photos', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showPhotoGallery(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Color(0xFFC9A227)),
+              title: const Text('Edit Caption', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _editCaption(context, photo);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('Delete Photo', style: TextStyle(color: Colors.redAccent)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _deletePhoto(context, photo);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editCaption(BuildContext context, Map<String, dynamic> photo) async {
+    final controller = TextEditingController(text: photo['caption'] as String? ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Edit Caption', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.white),
+          maxLength: 500,
+          decoration: const InputDecoration(
+            hintText: 'e.g. Front of holder',
+            hintStyle: TextStyle(color: Colors.white38),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFC9A227)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Save', style: TextStyle(color: Color(0xFFC9A227))),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    await _updateCaptionInFirestore(photo['id'] as String, result);
+    onPhotoAdded?.call();
+  }
+
+  Future<void> _updateCaptionInFirestore(String photoId, String newCaption) async {
+    try {
+      final userEmail = AuthService.userEmail;
+      final docRef = FirebaseFirestore.instance
+          .collection('users').doc(userEmail).collection('coins').doc(coin.id);
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final snap = await tx.get(docRef);
+        if (!snap.exists) return;
+        final photos = List<Map<String, dynamic>>.from(
+          (snap.data()!['owner_photos'] as List<dynamic>? ?? [])
+              .map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+        final idx = photos.indexWhere((p) => p['id'] == photoId);
+        if (idx == -1) return;
+        photos[idx]['caption'] = newCaption;
+        tx.update(docRef, {'owner_photos': photos});
+      });
+    } catch (e) {
+      debugPrint('[_OwnerPhotoHero] Caption update error: $e');
+    }
+  }
+
+  Future<void> _deletePhoto(BuildContext context, Map<String, dynamic> photo) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Delete Photo?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This will permanently delete this owner photo.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final userEmail = AuthService.userEmail;
+      // Delete Storage files
+      final storagePath = photo['storage_path'] as String?;
+      if (storagePath != null && storagePath.isNotEmpty) {
+        try { await FirebaseStorage.instance.ref(storagePath).delete(); } catch (_) {}
+      }
+      final originalPath = photo['original_storage_path'] as String?;
+      if (originalPath != null && originalPath.isNotEmpty) {
+        try { await FirebaseStorage.instance.ref(originalPath).delete(); } catch (_) {}
+      }
+      // Remove from Firestore via transaction
+      final docRef = FirebaseFirestore.instance
+          .collection('users').doc(userEmail).collection('coins').doc(coin.id);
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final snap = await tx.get(docRef);
+        if (!snap.exists) return;
+        final photos = List<Map<String, dynamic>>.from(
+          (snap.data()!['owner_photos'] as List<dynamic>? ?? [])
+              .map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+        photos.removeWhere((p) => p['id'] == photo['id']);
+        tx.update(docRef, {'owner_photos': photos});
+      });
+      onPhotoAdded?.call();
+    } catch (e) {
+      debugPrint('[_OwnerPhotoHero] Delete error: $e');
+    }
   }
 }

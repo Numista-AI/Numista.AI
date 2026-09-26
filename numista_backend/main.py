@@ -1936,6 +1936,9 @@ async def process_invoice(
           6. Description & Finish Resolution:
              - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
              - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
+             - "Morgan Silver Enhanced Un" (Item 26XE) -> Year: 2026, Denomination: "Morgan Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Enhanced Uncirculated", Condition: "Enhanced Uncirculated", Variety: "Liberty Bell 250 Privy, 1776~2026 Dual Date", Metal Content: "99.9% Silver (0.859 oz ASW)".
+          7. Quantity Extraction:
+             - Extract the quantity shipped from the "Ship" column (e.g. "2") or "Quantity Shipped" section into the "Quantity" field (integer, default 1).
 
         ITEM TYPE CLASSIFICATION -- set item_type for every record:
           "coin"           -> individual coin, bullion coin, or token
@@ -2958,6 +2961,8 @@ async def commit_reviews(request: CommitReviewsRequest):
                     'program_series': 'Program/Series',
                     'storage_location': 'Storage Location',
                     'certification_number': 'Certification Number',
+                    'quantity': 'Quantity',
+                    'qty': 'Quantity',
                 }
                 for lc_key, canonical in _FIELD_MAP.items():
                     if lc_key in data and canonical not in data:

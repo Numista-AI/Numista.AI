@@ -9,6 +9,7 @@ import 'screens/base_layout.dart';
 import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
+import 'screens/not_found_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
@@ -84,6 +85,45 @@ Future<void> main() async {
       return;
     }
   }
+  // ── Unknown-path guard (Soft-404 fix) ─────────────────────────────────────
+  // Firebase Hosting now returns a real HTTP 404 for garbage URLs.
+  // This guard handles the rare case where a valid-looking but unknown path
+  // is navigated to *inside* the Flutter app (e.g. a stale bookmark that was
+  // once real).
+  //
+  // Known real paths served by this app shell:
+  //   /               — root / home
+  //   /wishlist/**    — public wishlist deep links
+  //   /attorney_portal — attorney/estate portal (caught above)
+  //   /claim          — Phase-2 reservation (L5: routes to home, NOT NotFoundScreen)
+  //   /claim/**       — Phase-2 reservation (same)
+  //
+  // Any other non-empty path not in this set shows NotFoundScreen.
+  // Hash-fragment URLs (e.g. /#/claim?...) have uri.path == '/' — they pass
+  // through to the normal app flow correctly.
+  final path = uri.path;
+  final isKnownPath = path.isEmpty ||
+      path == '/' ||
+      path == '/index.html' ||
+      path.startsWith('/wishlist') ||
+      path.startsWith('/attorney_portal') ||
+      path.startsWith('/attorney') ||
+      path.startsWith('/claim') || // L5: reserved — falls through to home, not NotFoundScreen
+      path.startsWith('/privacy') ||
+      path.startsWith('/terms') ||
+      path.startsWith('/add_coins') ||
+      path.startsWith('/scraper_dashboard') ||
+      path.startsWith('/api/');
+
+  if (!isKnownPath) {
+    runApp(MaterialApp(
+      title: 'Numista.AI',
+      debugShowCheckedModeBanner: false,
+      home: NotFoundScreen(attemptedPath: path),
+    ));
+    return;
+  }
+
   // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
   if (uri.queryParameters.containsKey('route') && uri.queryParameters['route']!.isNotEmpty) {
     WelcomeScreen.pendingRoute = uri.queryParameters['route'];
