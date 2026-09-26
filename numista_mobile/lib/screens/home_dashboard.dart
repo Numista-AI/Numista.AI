@@ -1692,9 +1692,20 @@ class _Release {
 const _versionHistory = <_Release>[
   _Release(
     version: 'v4.367',
+    date: '2026-09-26',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Checklist: auto-detect beta progress & harden EPN query syntax',
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.367',
     date: '2026-09-25',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: bump release notes to v4.364',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',

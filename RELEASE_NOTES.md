@@ -368,6 +368,14 @@
 
 
 
+
+## v4.367 — 2026-09-26
+**Checklist Enhancements & Platform Updates**
+
+- Checklist: auto-detect beta progress & harden EPN query syntax
+- Release: bump release notes to v4.364
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)
+
 ## v4.366 — 2026-09-24
 **Release Enhancements & Platform Updates**
 
