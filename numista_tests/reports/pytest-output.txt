@@ -3,36 +3,61 @@ platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
 plugins: anyio-4.13.0
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+[rag] Embedding client initialised (location=global)
 collected 303 items
 
-tests\test_active_learning_queue.py ..                                   [  0%]
-tests\test_auth_security.py ........                                     [  3%]
-tests\test_awq_intake_parser.py .......................................  [ 16%]
-tests\test_beta_estate_pipeline.py ...                                   [ 17%]
-tests\test_catalog_slot_counts.py ..............                         [ 21%]
-tests\test_checklist_historical_matcher.py ............                  [ 25%]
-tests\test_checklist_parser.py ...........                               [ 29%]
-tests\test_coa_parser.py ....                                            [ 30%]
-tests\test_collector_profile.py .                                        [ 31%]
-tests\test_deal_spotter.py ...                                           [ 32%]
-tests\test_few_shot_service.py ..                                        [ 32%]
-tests\test_financials_phase3.py ........................................ [ 45%]
-...                                                                      [ 46%]
-tests\test_greysheet.py ........                                         [ 49%]
-tests\test_import_worker_integration.py .                                [ 49%]
-tests\test_ingestion.py ..                                               [ 50%]
-tests\test_invoice_fixtures.py ..                                        [ 51%]
-tests\test_missing_images_csv.py ...                                     [ 52%]
-tests\test_notes_parser.py .............                                 [ 56%]
-tests\test_proxy_bandwidth.py .....                                      [ 58%]
-tests\test_repair_26rj_ghosts.py ...................................     [ 69%]
-tests\test_series_manifest_sync.py ....................                  [ 76%]
-tests\test_set_pricing_extended.py ..................................... [ 88%]
-....                                                                     [ 89%]
-tests\test_transfer.py ....                                              [ 91%]
-tests\test_us_mint_invoice_enrichment.py ......                          [ 93%]
-tests\test_valuations.py ......                                          [ 95%]
-tests\test_vector_rag.py ...                                             [ 96%]
-tests\test_verifiers.py ............                                     [100%]
+tests\test_active_learning_queue.py ..
+tests\test_auth_security.py [32mINFO   [0m [main] [9e3c64e2] GET / -> 200 (96ms)
+.[33mWARNING[0m [main] [9ca3080e] GET /api/spot_prices -> 200 (8036ms)
+.[32mINFO   [0m [main] [d442d1b6] GET /api/v1/family/subaccounts -> 200 (15ms)
+.[32mINFO   [0m [main] [14a61f6c] POST /api/collection/clear -> 401 (6ms)
+.[32mINFO   [0m [main] [4df9099a] POST /api/stripe/create-checkout-session -> 401 (2ms)
+.[32mINFO   [0m [main] [a80e0bf4] POST /api/stripe/create-customer-portal -> 401 (2ms)
+.[31mERROR  [0m [main] [f35a8e3f] POST /api/stripe/create-checkout-session -> 502 (6ms)
+.[32mINFO   [0m [main] [fe6d61cc] POST /api/stripe/webhook -> 400 (3ms)
+.
+tests\test_awq_intake_parser.py .......................................
+tests\test_beta_estate_pipeline.py ...
+tests\test_catalog_slot_counts.py ..............
+tests\test_checklist_historical_matcher.py ............
+tests\test_checklist_parser.py ...........
+tests\test_coa_parser.py ....
+tests\test_collector_profile.py .
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [4b9d7ef0] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
+[32mINFO   [0m [main] [a71091c6] POST /api/wishlist/deals/check -> 200 (3ms)
+.
+tests\test_few_shot_service.py ..
+tests\test_financials_phase3.py ...........................................
+tests\test_greysheet.py [32mINFO   [0m [main] [1bb2acae] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [f2b419c1] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [e2f70424] GET /api/greysheet/pricing/429 -> 200 (23ms)
+.[32mINFO   [0m [main] [3762cef1] GET /api/greysheet/deals -> 200 (2ms)
+[32mINFO   [0m [main] [1d33c971] POST /api/greysheet/deals/refresh -> 200 (2ms)
+.[32mINFO   [0m [main] [2fcb5544] POST /api/portfolio/snapshot/daily -> 200 (5ms)
+..[32mINFO   [0m [main] [85b092b3] GET /api/greysheet/quota -> 200 (5ms)
+..
+tests\test_import_worker_integration.py .
+tests\test_ingestion.py [32mINFO   [0m [main] [ce8c346e] GET /api/ingestion/jobs -> 200 (2ms)
+.[32mINFO   [0m [main] [e3237001] POST /api/ingestion/batch_async -> 200 (3ms)
+[32mINFO   [0m [main] [fcfe3d72] GET /api/ingestion/status/job_a088ea23 -> 200 (2ms)
+.
+tests\test_invoice_fixtures.py ..
+tests\test_missing_images_csv.py ...
+tests\test_notes_parser.py .............
+tests\test_proxy_bandwidth.py .....
+tests\test_repair_26rj_ghosts.py ...................................
+tests\test_series_manifest_sync.py ....................
+tests\test_set_pricing_extended.py .........................................
+tests\test_transfer.py ....
+tests\test_us_mint_invoice_enrichment.py ......
+tests\test_valuations.py ......
+tests\test_vector_rag.py ..[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+[rag] build_rag_prompt_context called, query len=13
+[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+.
+tests\test_verifiers.py ............
 
-============================ 303 passed in 19.02s =============================
+============================ 303 passed in 22.27s =============================

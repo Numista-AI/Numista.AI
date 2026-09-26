@@ -20,6 +20,7 @@ import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
+import '../services/beta_checklist_service.dart';
 import '../widgets/beta_welcome_dialog.dart';
 import 'ai_chat_screen.dart';
 import '../services/upcoming_releases_service.dart';
@@ -163,6 +164,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     BatchValuationService.instance.restoreFromFirestore();
     // Auto-prompt Beta Welcome Dialog for new or uninitiated testers
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      BetaChecklistService.syncExistingAccountProgress();
       if (await BetaWelcomeDialog.shouldAutoShow()) {
         if (mounted) BetaWelcomeDialog.show(context);
       }
@@ -1689,10 +1691,70 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.367',
+    date: '2026-09-26',
+    description: 'Checklist Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Checklist: auto-detect beta progress & harden EPN query syntax',
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.367',
+    date: '2026-09-25',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.366',
+    date: '2026-09-24',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.365',
+    date: '2026-09-24',
+    description: 'Release Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Release: bump release notes to v4.364',
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.364',
+    date: '2026-09-24',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+    ],
+  ),
+  _Release(
+    version: 'v4.363',
+    date: '2026-09-24',
+    description: 'Audit & System Integrity Updates',
+    isLatest: false,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.363)',
+      'Assets: sync Business Card Logos & search.htm assets (df5a47b1)',
+    ],
+  ),
+  _Release(
     version: 'v4.362',
     date: '2026-09-17',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.361)',
     ],

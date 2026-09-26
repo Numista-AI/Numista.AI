@@ -16,6 +16,7 @@ import '../services/wishlist_service.dart';
 import '../models/coin_model.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
+import '../services/beta_checklist_service.dart';
 import '../widgets/roll_entry_dialog.dart';
 import '../widgets/morgan_guide_flow.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -212,6 +213,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   void _showSuccessDialog(int totalItems) {
     if (!mounted) return;
+    if (totalItems > 0) {
+      BetaChecklistService.autoCompleteTask('task_5_invoice_pdf');
+    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -812,6 +816,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   onPressed: () async {
                     final result = await showRollEntryDialog(context);
                     if (!mounted || result == null) return;
+                    if (result.coinsAdded > 0) {
+                      BetaChecklistService.autoCompleteTask('task_7_roll_batch');
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('✅  ${result.coinsAdded} coin${result.coinsAdded == 1 ? '' : 's'} added to your collection!'),
                       backgroundColor: const Color(0xFF22C55E),
@@ -1588,6 +1595,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   setState(() => _isProcessing = true);
 
                   try {
+                    final country = (data['Country'] ?? 'United States').toString().trim().toLowerCase();
+                    final isForeign = country.isNotEmpty &&
+                        country != 'united states' &&
+                        country != 'us' &&
+                        country != 'usa';
+
                     // ── Build Firestore document from form data ──────────────
                     final coinDoc = <String, dynamic>{
                       'Year':              data['Year'] ?? '',
@@ -1601,6 +1614,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       'Quantity':          int.tryParse(data['Quantity'] ?? '1') ?? 1,
                       'Storage Location':  data['Storage Location'] ?? '',
                       'Country':           data['Country'] ?? 'United States',
+                      'is_foreign':        isForeign || data['is_foreign'] == true,
                       'source':            'manual',
                       'Added':             FieldValue.serverTimestamp(),
                       // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
@@ -1612,6 +1626,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     await FirebaseFirestore.instance
                         .collection(AuthService.coinsPath)
                         .add(coinDoc);
+
+                    BetaChecklistService.autoCompleteTask('task_3_manual_entry');
+                    if (isForeign || data['is_foreign'] == true) {
+                      BetaChecklistService.autoCompleteTask('task_13_world_items');
+                    }
 
                     if (!mounted) return;
 
@@ -2900,6 +2919,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final cert = _parseCertNumber(_pcgsSingleCtrl.text.trim());
       final mapped = PcgsImportService.mapToFirestoreSchema(_pcgsLookupResult!, certNo: cert);
       await FirebaseFirestore.instance.collection(AuthService.coinsPath).add(mapped);
+      BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
       if (!mounted) return;
       setState(() {
         _pcgsSingleAdding  = false;
@@ -3941,6 +3961,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                           .collection('review_queue')
                           .add(itemData);
                       count++;
+                    }
+                    if (count > 0) {
+                      BetaChecklistService.autoCompleteTask('task_4_csv_upload');
                     }
                     if (mounted) {
                       messenger.showSnackBar(SnackBar(

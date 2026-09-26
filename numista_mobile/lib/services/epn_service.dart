@@ -208,16 +208,19 @@ class EpnService {
     String? customId,
     String itemType = 'coin',
   }) {
-    String searchTerms = query.trim();
-    if (isKeyDateOrHighValue(searchTerms, estimatedValue: estimatedValue)) {
-      if (itemType == 'currency') {
-        searchTerms = "$searchTerms (PMG, 'PCGS Banknote')";
-      } else {
-        searchTerms = "$searchTerms (PCGS, NGC, CAC)";
-      }
+    // 1. Strip all existing parenthetical expressions (removes catalog notes, dates, and malformed grader groups)
+    String cleaned = query.replaceAll(RegExp(r'\([^)]*\)'), ' ');
+
+    // 2. Remove invalid punctuation and quotes while preserving numismatic hyphens
+    cleaned = cleaned.replaceAll(RegExp(r'''['"\[\],]'''), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // 3. Append high-value grader tokens without wrapping parentheses (prevents eBay boolean syntax error)
+    if (isKeyDateOrHighValue(cleaned, estimatedValue: estimatedValue)) {
+      final token = itemType == 'currency' ? 'PMG PCGS' : 'PCGS NGC CAC';
+      cleaned = '$cleaned $token';
     }
 
-    final encodedQuery = Uri.encodeComponent(searchTerms);
+    final encodedQuery = Uri.encodeComponent(cleaned);
     final customIdParam = (customId != null && customId.isNotEmpty)
         ? '&customid=${Uri.encodeComponent(customId)}'
         : '&customid=numista_wishlist';
