@@ -1,37 +1,108 @@
-# Walkthrough — Aug 15 Audit Review & Flutter Lint Remediation
+# Walkthrough — Upcoming US Mint Releases & Valuation Integrity
 
-## Overview
-Aug 15 morning audit: ALL CLEAR. Yesterday's suites 18–21 `enterDemo()` fix confirmed working — all 141/145 active tests passing. Session focused on SCAN_REPORT sync and Flutter lint remediation.
+## Overview & Execution Summary
 
-## SCAN_REPORT Updated to v4.89
-- Corrected version number (was showing v4.1, now v4.89)
-- Corrected Dependabot count (was showing 160, correct number is 127 / 89 high)
-- Added Flutter analyze results (0 errors, 48 info/lint warnings)
-- Added System of Record v4.0.0 to Core Features section
-- Updated test counts (69 Pytest, 141 E2E)
+- **Branch:** `dev`
+- **Commits:**
+  - `9fa3e380`: `feat(mint-releases): add Upcoming US Mint Releases page + eliminate fake $0.50 valuation fallback`
+  - `ea71ed50`: `test(mint-releases): add automated test suites and harden migration/seed scripts`
+- **Remote Status:** Confirmed pushed to `origin/dev`.
+- **Target Platform:** Flutter Desktop Web / Mobile + FastAPI Backend.
 
-## Flutter Lint Remediation — `use_build_context_synchronously`
-**13–15 warnings** across 8 files fixed. These are the highest-risk lint category: using a `BuildContext` after an `await` can cause runtime exceptions if the widget is disposed while the async operation is in flight.
+---
 
-**Fix pattern used:**
-- For `'guarded by unrelated mounted check'` variant: extract context-dependent values (e.g. `final nav = Navigator.of(context)`) **before** the `await`, then use the saved reference after.
-- For plain unguarded variant: add `if (!mounted) return;` immediately before the first context usage after any `await`.
+## 1. Verified Systems & Automated Test Suites
 
-**Files fixed:**
-- `numista_mobile/lib/screens/add_coins_hub.dart`
-- `numista_mobile/lib/screens/admin_feedback_screen.dart`
-- `numista_mobile/lib/screens/coa_inspector_screen.dart`
-- `numista_mobile/lib/screens/estate_planning_screen.dart`
-- `numista_mobile/lib/screens/family_settings_screen.dart`
-- `numista_mobile/lib/screens/lateral_transfer_screen.dart`
-- `numista_mobile/lib/screens/review_hub_screen.dart`
-- `numista_mobile/lib/screens/transfer_inbox_screen.dart`
-- `numista_mobile/lib/widgets/beta_feedback_widget.dart`
+### A. Scraper & Catalog Service Tests (`test_usmint_releases_scraper.py`)
+Executed command:
+```bash
+pytest numista_backend/tests/test_usmint_releases_scraper.py -v
+```
+**Results:** 9/9 tests passed (Exit code 0):
+- `test_parse_price_valid`: Parses clean prices (`$169.00`, `$1,250.50`, `5740`, `$24.95`).
+- `test_parse_price_invalid_and_empty`: Safely handles `"TBD"`, `"N/A"`, `"PENDING"`, `""`, and `None`.
+- `test_badge_to_status`: Canonical status mapping for `New`, `Coming Soon`, `Pre-Order`, `Sold Out`.
+- `test_load_local_catalog`: Confirmed loading 74 verified items from `usmint_2026_catalog.json`.
+- `test_normalize_product`: Proper Firestore schema projection.
+- `test_detect_changes`: Change delta identification (price, badge, status).
+- `test_get_mint_issue_price_exact_item`: Exact item number retrieval from Firestore.
+- `test_get_mint_issue_price_fuzzy_search`: Fuzzy theme/denomination fallback match.
+- `test_get_mint_issue_price_ignores_non_20xx`: Ignores non-current year items.
 
-## Outstanding Items
-| Item | Priority | Notes |
-|---|---|---|
-| Flutter deprecated_member_use (5) | Low | `activeColor`, `dataRowHeight`, `value` → deferred |
-| Flutter cosmetic lint (25+) | Low | unnecessary_underscores, use_super_parameters, etc. → deferred |
-| 127 Dependabot alerts | Medium | Deferred to pre-launch security session |
-| Merge `dev → main` | Owner decision | 22 CVE fixes in `dev` not yet on `main` |
+### B. Valuation Integrity Tests (`test_valuation_integrity.py`)
+Executed command:
+```bash
+pytest numista_backend/tests/test_valuation_integrity.py -v
+```
+**Results:** 4/4 tests passed (Exit code 0):
+- `test_add_coin_valuation_integrity_greysheet_hit`: Greysheet `cpg_retail` takes precedence.
+- `test_add_coin_valuation_integrity_fallback_to_mint_price`: US Mint issue price used when Greysheet fails.
+- `test_add_coin_valuation_integrity_honest_pending`: Both fail -> status is `"pending"`, value is `None`/`"Pending"`, never `$0.50`.
+- `test_remediation_detection_logic`: Accurately distinguishes fake `$0.50` baseline placeholders from legitimate values.
+
+### C. Flutter Service Tests (`upcoming_releases_service_test.dart`)
+Executed command:
+```bash
+flutter test test/services/upcoming_releases_service_test.dart
+```
+**Results:** 4/4 tests passed (Exit code 0):
+- Model `fromJson` parses all 14 fields including specifications and limits.
+- Model `toJson` serializes cleanly.
+- Model defaults missing optional fields cleanly.
+- Fallback service returns verified 2026 US Mint products on network failure/offline.
+
+### D. Flutter Widget Tests (`upcoming_releases_screen_test.dart`)
+Executed command:
+```bash
+flutter test test/upcoming_releases_screen_test.dart
+```
+**Results:** 1/1 widget test passed (Exit code 0):
+- AppBar title renders.
+- Filter ChoiceChips (`All`, `Coming Soon`, `Available`, `Sold Out`) render and interact.
+- Hero card and list view render product data.
+
+### E. Frontend Static Analysis
+Executed command:
+```bash
+flutter analyze --no-fatal-infos
+```
+**Results:** 0 errors, 0 warnings in new/modified codebase.
+
+---
+
+## 2. Dry-Run Migration & Seeding Verification
+
+### A. Seed Script (`seed_upcoming_releases.py --dry-run`)
+- Verified reading all 74 items from `usmint_2026_catalog.json`.
+- Verified credentials fallback via `serviceAccountKey.json`.
+- Verified enrichment via `us_mint_catalog_service.py`.
+
+### B. Valuation Remediation Script (`remediate_fake_valuations.py --dry-run`)
+- Scanned 5,486 total coins across 15 real Firestore users.
+- Accurately identified 24 coins with fake `$0.50` baseline valuations.
+- Confirmed remediation path -> updates to honest `"Pending"` (or US Mint Issue Price once seeded).
+- 0 execution errors.
+
+---
+
+## 3. Files Created & Modified
+
+### Backend:
+- [`numista_backend/services/usmint_releases_scraper.py`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/services/usmint_releases_scraper.py)
+- [`numista_backend/main.py`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/main.py)
+- [`numista_backend/_scripts/remediate_fake_valuations.py`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/_scripts/remediate_fake_valuations.py)
+- [`numista_backend/tests/test_usmint_releases_scraper.py`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/tests/test_usmint_releases_scraper.py)
+- [`numista_backend/tests/test_valuation_integrity.py`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_backend/tests/test_valuation_integrity.py)
+
+### Frontend:
+- [`numista_mobile/lib/services/upcoming_releases_service.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/services/upcoming_releases_service.dart)
+- [`numista_mobile/lib/screens/upcoming_releases_screen.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/upcoming_releases_screen.dart)
+- [`numista_mobile/lib/screens/home_dashboard.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/home_dashboard.dart)
+- [`numista_mobile/lib/screens/base_layout.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/base_layout.dart)
+- [`numista_mobile/lib/widgets/header_stats_bar.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/widgets/header_stats_bar.dart)
+- [`numista_mobile/test/services/upcoming_releases_service_test.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/services/upcoming_releases_service_test.dart)
+- [`numista_mobile/test/upcoming_releases_screen_test.dart`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/test/upcoming_releases_screen_test.dart)
+
+### Documentation & Seed:
+- [`1 NUMISTA.AI/BETA TEST/Grok Bot/15 SEPT 26/Upcoming US Mint releases/seed_upcoming_releases.py`](file:///c:/Users/ericd/Documents/MyVertexProject/1%20NUMISTA.AI/BETA%20TEST/Grok%20Bot/15%20SEPT%2026/Upcoming%20US%20Mint%20releases/seed_upcoming_releases.py)
+- [`1 NUMISTA.AI/BETA TEST/Grok Bot/15 SEPT 26/Upcoming US Mint releases/README.md`](file:///c:/Users/ericd/Documents/MyVertexProject/1%20NUMISTA.AI/BETA%20TEST/Grok%20Bot/15%20SEPT%2026/Upcoming%20US%20Mint%20releases/README.md)

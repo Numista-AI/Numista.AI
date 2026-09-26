@@ -22,6 +22,10 @@ from datetime import datetime, timezone
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, BACKEND_DIR)
 
+_sa_path = os.path.join(BACKEND_DIR, "serviceAccountKey.json")
+if os.path.exists(_sa_path):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = _sa_path
+
 from google.cloud import firestore
 
 PROJECT_ID = "studio-9101802118-8c9a8"
@@ -171,7 +175,7 @@ def main():
                          "MINT_PRICE" if new_source and "Mint" in new_source else \
                          "PENDING"
                 val_display = f"${new_value:.2f}" if new_value else "Pending"
-                print(f"  [{action}] {coin_desc}: $0.50 → {val_display}")
+                print(f"  [{action}] {coin_desc}: $0.50 -> {val_display}")
             else:
                 try:
                     coins_ref.document(coin_doc.id).update(update)
@@ -180,16 +184,16 @@ def main():
                     logger.error(f"  Failed to update {coin_desc}: {e}")
 
     # Print summary
-    print(f"\n{'═' * 60}")
+    print(f"\n{'=' * 60}")
     print(f"{'[DRY RUN] ' if dry_run else ''}REMEDIATION COMPLETE")
-    print(f"{'═' * 60}")
+    print(f"{'=' * 60}")
     print(f"  Total coins scanned:    {stats['total_scanned']}")
     print(f"  Fake $0.50 found:       {stats['fake_050_found']}")
     print(f"  Fixed via Greysheet:    {stats['fixed_greysheet']}")
     print(f"  Fixed via Mint Price:   {stats['fixed_mint_price']}")
     print(f"  Set to Pending:         {stats['set_to_pending']}")
     print(f"  Errors:                 {stats['errors']}")
-    print(f"{'═' * 60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

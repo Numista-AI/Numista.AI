@@ -369,6 +369,56 @@
 
 
 
+
+
+
+
+
+## v4.372 — 2026-09-26
+**Mint-releases Enhancements & Platform Updates**
+
+- Mint-releases: update walkthrough with test verification results
+- Mint-releases: add automated test suites and harden migration/seed scripts
+- Release: bump version to v4.369
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+- Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)
+- Release: bump version to v4.367
+- Checklist: auto-detect beta progress & harden EPN query syntax
+
+## v4.371 — 2026-09-26
+**Mint-releases Enhancements & Platform Updates**
+
+- Mint-releases: add automated test suites and harden migration/seed scripts
+- Release: bump version to v4.369
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+- Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)
+- Release: bump version to v4.367
+- Checklist: auto-detect beta progress & harden EPN query syntax
+
+## v4.370 — 2026-09-26
+**Release Enhancements & Platform Updates**
+
+- Release: bump version to v4.369
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+- Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)
+- Release: bump version to v4.367
+- Checklist: auto-detect beta progress & harden EPN query syntax
+
+## v4.369 — 2026-09-26
+**Walkthrough Enhancements & Platform Updates**
+
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+- Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)
+- Release: bump version to v4.367
+- Checklist: auto-detect beta progress & harden EPN query syntax
+
+## v4.368 — 2026-09-26
+**Deps Enhancements & Platform Updates**
+
+- Deps: bump anyio 4.13.0->4.14.2 and soupsieve 2.8.4->2.9.2 (CVE-2026-63374, CVE-2026-64847, CVE-2026-86000, CVE-2026-85999)
+- Release: bump version to v4.367
+- Checklist: auto-detect beta progress & harden EPN query syntax
+
 ## v4.367 — 2026-09-26
 **Checklist Enhancements & Platform Updates**
 
