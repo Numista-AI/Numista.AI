@@ -420,6 +420,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       'Year': _coin.year,
       'Mint Mark': _coin.mintMark,
       'Denomination': _coin.denomination,
+      'Quantity': _coin.quantity.isEmpty ? '1' : _coin.quantity,
       'Program/Series': _coin.programSeries,
       'Theme/Subject': _coin.themeSubject,
       'Variety': _coin.variety,
@@ -447,6 +448,15 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       final fsKey = _fieldToFirestore(key);
       if (fsKey != null) updates[fsKey] = ctrl.text;
     });
+
+    // ── Sanitize Quantity (CoS M2: positive integer, fallback to 1 on blank/invalid) ──
+    if (updates.containsKey('Quantity')) {
+      final rawQty = (updates['Quantity'] as String? ?? '').trim();
+      final parsedQty = int.tryParse(rawQty);
+      final cleanQty = (parsedQty != null && parsedQty > 0) ? parsedQty : 1;
+      updates['Quantity'] = cleanQty;
+      _editCtrl['Quantity']?.text = cleanQty.toString();
+    }
 
     // ── Auto-split combined Year+Mint (e.g. "2006D" typed into Year field) ────
     final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
@@ -515,6 +525,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       'Purchase Date': 'Purchase Date',
       'Retailer/Website': 'Retailer/Website',
       'Storage Location': 'Storage Location',
+      'Quantity': 'Quantity',
       'Personal Notes': 'Personal Notes I',
     };
     return map[label];
