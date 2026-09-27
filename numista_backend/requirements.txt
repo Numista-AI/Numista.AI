@@ -86,6 +86,7 @@ packaging==26.0
 pandas==3.0.2
 peewee==4.0.4
 Pillow==12.3.0
+pillow-heif==0.16.0
 platformdirs==4.9.4
 pluggy==1.6.0
 proto-plus==1.27.2

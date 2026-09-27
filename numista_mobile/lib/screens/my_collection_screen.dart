@@ -2778,10 +2778,38 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             );
                             if (confirm != true) return;
+
+                            // Gap A (M3): Ask about keeping photos on children
+                            final ownerPhotos = m['owner_photos'] as List<dynamic>?;
+                            bool keepPhotos = true;
+                            if (ownerPhotos != null && ownerPhotos.isNotEmpty) {
+                              final photoChoice = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Keep your photo on each coin?'),
+                                  content: const Text(
+                                    'This set has an owner photo. Would you like to keep a copy of it on each individual coin?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('No, remove photos'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Yes, keep photos'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              keepPhotos = photoChoice ?? true; // Default Yes
+                            }
+
                             try {
                               await SetGroupingService.ungroupSet(
                                 parentSetDocId: crw.id,
-                                deleteOwnerPhotos: true,
+                                deleteOwnerPhotos: !keepPhotos,
+                                preservePhotosOnChildren: keepPhotos,
                               );
                               if (mounted) {
                                 messenger.showSnackBar(const SnackBar(content: Text('Set ungrouped successfully.')));
@@ -5286,17 +5314,36 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
     
     if (bytes == null) return;
+    Uint8List uploadBytes = bytes;
     
+    // HEIC→JPEG conversion via server (M6: route owner-photo upload through conversion)
+    if (ext == 'heic' || ext == 'heif') {
+      try {
+        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+        final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
+        final request = http.MultipartRequest('POST', uri);
+        if (idToken != null) request.headers['Authorization'] = 'Bearer $idToken';
+        request.files.add(http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'));
+        final response = await request.send().timeout(const Duration(seconds: 30));
+        if (response.statusCode == 200 && response.headers['x-converted'] == 'true') {
+          uploadBytes = Uint8List.fromList(await response.stream.toBytes());
+          ext = 'jpg';
+        }
+      } catch (_) {
+        // Conversion failed; upload original HEIC as-is
+      }
+    }
+
     final photoId = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
     final userEmail = AuthService.userEmail;
     
     try {
       final refCompressed = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_$photoId.$ext');
-      await refCompressed.putData(bytes, SettableMetadata(contentType: 'image/$ext'));
+      await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
       final compressedUrl = await refCompressed.getDownloadURL();
       
       final refOriginal = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_${photoId}_original.$ext');
-      await refOriginal.putData(bytes, SettableMetadata(contentType: 'image/$ext'));
+      await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
       final originalUrl = await refOriginal.getDownloadURL();
       
       if (!mounted) return;

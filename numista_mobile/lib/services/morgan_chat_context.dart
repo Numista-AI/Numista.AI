@@ -116,27 +116,24 @@ INSTRUCTIONS & CONSTRAINTS:
   // ── Human-readable opening message ───────────────────────────────────────
   String get openingMessage {
     if (isEmpty) {
-      return "Hi $userName! 👋 I'm Morgan, your personal coin guide. "
+      return "Hi $userName! 👋 I'm Morgan, your AI numismatist. "
           "It looks like your collection is empty — let's fix that! "
-          "Would you like me to walk you through adding your first coin?";
+          "Tap 📎 to add coins from a photo.";
     }
 
-    final profitStr = profit >= 0
-        ? '📈 up \$${profit.toStringAsFixed(2)}'
-        : '📉 down \$${profit.abs().toStringAsFixed(2)}';
-    final topCoin = topCoinsByValue.isNotEmpty
-        ? topCoinsByValue.first.split(' — ').first
-        : 'some interesting pieces';
+    // Format portfolio value with commas
+    final valStr = portfolioValue >= 1
+        ? '\$${portfolioValue.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}'
+        : '\$${portfolioValue.toStringAsFixed(2)}';
 
-    return "Hi $userName! 👋 I've been looking at your collection — "
-        "you've got **$totalCoins coins** worth about **\$${portfolioValue.toStringAsFixed(2)}** "
-        "and you're $profitStr from what you paid. "
-        "Your most valuable piece is **$topCoin**. "
-        "What would you like to know?";
+    return "Hi $userName! 👋 I'm Morgan, your AI numismatist. "
+        "You have $totalCoins coins in your collection "
+        "(estimated value: $valStr). "
+        "How can I help you today? (Tap 📎 to add coins from a photo.)";
   }
 }
 
-// ── Service ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 class MorganChatContextService {
   MorganChatContextService._();

@@ -11,6 +11,9 @@ WORKDIR $APP_HOME
 COPY . ./
 COPY NumisMate_Collection_Template.xlsx .
 
+# Install system dependencies for pillow-heif (HEIC→JPEG conversion)
+RUN apt-get update && apt-get install -y --no-install-recommends libheif-dev && rm -rf /var/lib/apt/lists/*
+
 # Upgrade pip first to ensure the latest resolver handles complex dependency trees correctly.
 RUN pip install --upgrade pip
 

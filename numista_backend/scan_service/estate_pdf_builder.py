@@ -567,6 +567,10 @@ def _toc_page(ctx: dict, st: dict) -> list:
 
     sections += [
         ('Itemized Coin Inventory', '—'),
+    ]
+    if ctx.get('sold_items'):
+        sections.append(('Items Recorded as Sold or Given Away', '—'))
+    sections += [
         ('Coins Requiring Professional Appraisal', '—'),
         ('Step-Up in Basis Analysis', '—'),
     ]
@@ -1160,6 +1164,93 @@ def _coin_table_grouped(coins: list, st: dict) -> list:
         story.append(t)
         story.append(Spacer(1, 10))
 
+    return story
+
+
+def _sold_disposed_section(ctx: dict, st: dict) -> list:
+    """
+    Build section for items recorded as sold or given away (CoS Lock L4).
+    Contains exact required notice:
+    "The owner recorded these items as sold or given away. Dates and details are as the owner entered them. If you find one of these items, it may not have left the collection."
+    """
+    sold_items = ctx.get('sold_items') or []
+    if not sold_items:
+        return []
+
+    story: list = [
+        Paragraph('Items Recorded as Sold or Given Away', st['H1']),
+        HRFlowable(width='100%', thickness=1, color=NAVY, spaceAfter=8),
+        Spacer(1, 4),
+    ]
+
+    notice_text = (
+        'The owner recorded these items as sold or given away. '
+        'Dates and details are as the owner entered them. '
+        'If you find one of these items, it may not have left the collection.'
+    )
+    notice_table = Table([[Paragraph(notice_text, st['WarnText'])]], colWidths=[7.2 * inch])
+    notice_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BOX_WARN_BG),
+        ('BOX', (0, 0), (-1, -1), 1, BOX_WARN_BORD),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(notice_table)
+    story.append(Spacer(1, 10))
+
+    headers = [
+        Paragraph('Item / Description', st['TableHeader']),
+        Paragraph('Date', st['TableHeader']),
+        Paragraph('Venue / Channel', st['TableHeader']),
+        Paragraph('Qty', st['TableHeader']),
+        Paragraph('Sale Price', st['TableHeader']),
+    ]
+    rows = [headers]
+
+    for item in sold_items:
+        title = (
+            item.get('title') or
+            item.get('coin_title') or
+            item.get('name') or
+            item.get('denomination') or
+            'Disposed Item'
+        )
+        date_str = item.get('sale_date') or item.get('transferred_at') or item.get('sold_at') or '—'
+        if 'T' in str(date_str):
+            date_str = str(date_str).split('T')[0]
+        venue = item.get('sales_venue') or item.get('venue') or 'Direct / Outside'
+        qty = str(item.get('sold_qty') or item.get('quantity') or item.get('qty') or 1)
+        price_val = item.get('sale_price_usd') if item.get('sale_price_usd') is not None else item.get('sale_price')
+        if price_val is not None and price_val != '':
+            try:
+                price_str = f'${float(price_val):,.2f}'
+            except (ValueError, TypeError):
+                price_str = str(price_val)
+        else:
+            price_str = '—'
+
+        rows.append([
+            Paragraph(title, st['TableCell']),
+            Paragraph(date_str, st['TableCellCenter']),
+            Paragraph(venue, st['TableCell']),
+            Paragraph(qty, st['TableCellCenter']),
+            Paragraph(price_str, st['TableCellRight']),
+        ])
+
+    table = Table(rows, colWidths=[2.8 * inch, 1.1 * inch, 1.5 * inch, 0.6 * inch, 1.2 * inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), ROW_HEADER),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [WHITE, ROW_ALT]),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 14))
+    story.append(PageBreak())
     return story
 
 
@@ -1950,6 +2041,7 @@ def build_estate_pdf(ctx: dict) -> bytes:
     story += _liquidation_playbook_section(ctx, st)
     story += _division_plan_section(ctx, st)
     story += _coin_table_section(ctx, st)
+    story += _sold_disposed_section(ctx, st)
     story += _appraisal_section(ctx, st)
     story += _stepup_section(ctx, st)
 
@@ -2004,6 +2096,7 @@ def build_estate_pdf(ctx: dict) -> bytes:
     story2 += _liquidation_playbook_section(ctx, st)
     story2 += _division_plan_section(ctx, st)
     story2 += _coin_table_section(ctx, st)
+    story2 += _sold_disposed_section(ctx, st)
     story2 += _appraisal_section(ctx, st)
     story2 += _stepup_section(ctx, st)
 

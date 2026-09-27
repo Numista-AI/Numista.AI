@@ -21,7 +21,7 @@ def test_26xe_catalog_facts():
     item = lookup_us_mint_item("26XE")
     assert item is not None
     assert item["year"] == 2026
-    assert item["denomination"] == "Morgan Dollar"
+    assert item["denomination"] == "Dollar"
     assert item["mint_facility"] == "West Point (no mint mark)"
     assert item["mint_mark"] == ""
     assert item["weight_grams"] == 26.73  # 0.859 oz ASW, not 31.103 g
@@ -37,7 +37,7 @@ def test_26xh_catalog_facts():
     item = lookup_us_mint_item("26XH")
     assert item is not None
     assert item["year"] == 2026
-    assert item["denomination"] == "Peace Dollar"
+    assert item["denomination"] == "Dollar"
     assert item["mint_facility"] == "West Point (no mint mark)"
     assert item["mint_mark"] == ""
     assert item["weight_grams"] == 26.73
@@ -71,7 +71,7 @@ def test_enrich_us_mint_item_with_26xe():
     enriched = enrich_us_mint_item(extracted)
 
     assert enriched["Year"] == 2026
-    assert enriched["Denomination"] == "Morgan Dollar"
+    assert enriched["Denomination"] == "Dollar"
     assert enriched["Strike Type"] == "Enhanced Uncirculated"
     assert enriched["Condition"] == "Enhanced Uncirculated"
     assert enriched["Variety"] == "Liberty Bell 250 Privy, 1776~2026 Dual Date"

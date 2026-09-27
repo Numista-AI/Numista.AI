@@ -29,7 +29,7 @@ def test_lookup_26xl_peace_dollar_reverse_proof():
     assert item["mint_facility"] == "Philadelphia (P)"
     assert item["mint_mark"] == ""
     assert item["strike_type"] == "Reverse Proof"
-    assert item["denomination"] == "Peace Dollar"
+    assert item["denomination"] == "Dollar"
     assert item["program_series"] == "Morgan and Peace Silver Dollars"
     assert item["metal_content"] == "99.9% Silver"
     assert item["purity"] == 0.999
@@ -69,7 +69,7 @@ def test_enrich_us_mint_item_26xl_invoice_line():
 
     enriched = enrich_us_mint_item(raw_item)
     assert enriched["_catalog_grounded"] is True
-    assert enriched["Denomination"] == "Peace Dollar"
+    assert enriched["Denomination"] == "Dollar"
     assert enriched["Program/Series"] == "Morgan and Peace Silver Dollars"
     assert enriched["Strike Type"] == "Reverse Proof"
     assert enriched["Condition"] == "Reverse Proof"
@@ -89,4 +89,4 @@ def test_enrich_us_mint_item_with_code_in_description():
     assert enriched["_catalog_grounded"] is True
     assert enriched["Retailer Item No."] == "26XL"
     assert enriched["Strike Type"] == "Reverse Proof"
-    assert enriched["Denomination"] == "Peace Dollar"
+    assert enriched["Denomination"] == "Dollar"

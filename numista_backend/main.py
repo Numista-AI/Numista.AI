@@ -3480,8 +3480,36 @@ async def dedup_auto_clean(user_email: str = Form(...)):
 # |  These endpoints power the "Add Coins by Holder Image" feature.             |
 # +==============================================================================+
 
-# --- GCS helpers -------------------------------------------------------------
+# --- HEIC Conversion --------------------------------------------------------
 
+def _convert_heic_to_jpeg(raw_bytes: bytes) -> tuple:
+    """Convert HEIC/HEIF to JPEG. Strips GPS EXIF for privacy, keeps orientation.
+    Returns (jpeg_bytes, 'image/jpeg'). If not HEIC, returns input unchanged."""
+    try:
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+    except ImportError:
+        pass  # pillow-heif not installed; fall through
+    from PIL import Image as PILImage
+    from io import BytesIO
+    try:
+        buf_in = BytesIO(raw_bytes)
+        img = PILImage.open(buf_in)
+        if img.format and img.format.upper() in ('HEIF', 'HEIC'):
+            img = img.convert('RGB')
+            # Strip GPS from EXIF for privacy
+            exif_data = img.getexif()
+            for gps_tag in [0x8825]:  # GPSInfo
+                exif_data.pop(gps_tag, None)
+            buf_out = BytesIO()
+            exif_bytes = exif_data.tobytes() if exif_data else b''
+            img.save(buf_out, format='JPEG', quality=90, exif=exif_bytes)
+            return buf_out.getvalue(), 'image/jpeg'
+    except Exception:
+        pass
+    return raw_bytes, None  # Not HEIC or conversion failed; use original
+
+# --- GCS helpers -------------------------------------------------------------
 def _upload_to_gcs(file_bytes: bytes, dest_path: str, content_type: str = "image/jpeg") -> str:
     """
     Uploads bytes to the user-content GCS bucket.
@@ -4897,6 +4925,495 @@ async def identify_coin_photo_preflight():
     from fastapi.responses import Response as FastAPIResponse
     return FastAPIResponse(status_code=200)
 
+@app.post("/api/convert_heic")
+async def convert_heic_endpoint(
+    image: UploadFile = File(...),
+):
+    """Convert HEIC/HEIF image to JPEG. Returns JPEG bytes.
+    If not HEIC, returns original bytes unchanged.
+    Used by Flutter owner-photo upload to convert before Firebase Storage upload."""
+    from fastapi.responses import Response as FastAPIResponse
+    raw_bytes = await image.read()
+    converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
+    if converted_mime:
+        return FastAPIResponse(
+            content=converted_bytes,
+            media_type="image/jpeg",
+            headers={"X-Converted": "true"},
+        )
+    else:
+        return FastAPIResponse(
+            content=raw_bytes,
+            media_type=image.content_type or "image/jpeg",
+            headers={"X-Converted": "false"},
+        )
+
+@app.post("/api/identify_group_photo")
+async def identify_group_photo(
+    user_email: str = Form(...),
+    image: UploadFile = File(...),
+    message: Optional[str] = Form(None),
+):
+    """Identify multiple coins in a single group photo.
+    Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
+    import uuid as _uuid
+    raw_bytes = await image.read()
+    content_type = image.content_type or "image/jpeg"
+    ext = image.filename.rsplit(".", 1)[-1].lower() if image.filename and "." in image.filename else "jpg"
+
+    # HEIC conversion (L2)
+    converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
+    if converted_mime:
+        raw_bytes = converted_bytes
+        content_type = converted_mime
+        ext = "jpg"
+
+    # Upload original group photo to GCS
+    photo_uuid = str(_uuid.uuid4())
+    gcs_path = f"users/{user_email}/group_photos/{photo_uuid}.{ext}"
+    gcs_url = _upload_to_gcs(raw_bytes, gcs_path, content_type)
+
+    # Build Gemini Vision prompt
+    GROUP_PHOTO_PROMPT = """You are a professional numismatist examining a photo uploaded by a collector.
+The photo may contain one or more coins, possibly in a holder, case, sleeve, or set.
+
+YOUR TASKS:
+1. COUNT how many distinct coins are visible.
+2. For each coin, identify: Year, Denomination, Program/Series, Theme/Subject,
+   Mint Mark, Condition, Metal Content.
+3. CONFIDENCE: Rate your confidence for each coin as "high", "medium", or "low".
+4. GROUPING: If the coins appear to be physically together (in a holder, case,
+   plastic sleeve, display card, official mint packaging, etc.), set "appears_grouped": true
+   and suggest a descriptive group name (e.g. "1964-D Year Set", "2024 Silver Proof Set").
+   If only ONE coin is visible, set "appears_grouped": false.
+5. For each coin, provide a bounding box (x_pct, y_pct, w_pct, h_pct as 0.0-1.0
+   percentage of image dimensions) so individual coins can be cropped.
+6. If you cannot identify a coin clearly, still include it with confidence "low"
+   and your best guess.
+
+MINT MARK RULES:
+- Only set mint_mark if you can CLEARLY see it on the coin in the photo.
+- If the photo shows only one side (e.g., all obverses) and the mint mark is on the other side, set:
+  mint_mark: "", mint_mark_visible: false, mint_mark_source: "unknown"
+- If one coin in the group shows a visible mint mark (e.g., a cent showing 'D'), note it but do NOT assume all other coins share that mint mark.
+- NEVER invent or guess a mint mark that is not visible.
+
+GRADE AND STRIKE RULES:
+- Default strike type is "Business Strike".
+- NEVER assign "Proof" unless you see clear evidence: mirror-like fields, frosted devices, proof packaging/case, or a proof set label.
+- NEVER assign a specific numeric Sheldon grade (e.g., MS-65, PR-70) from a photo unless the coin is in a certified holder (PCGS, NGC slab) with the grade visible.
+- For uncertified coins, use descriptive grades only: "Uncirculated", "About Uncirculated", "Extremely Fine", "Fine", "Good", etc.
+- Add a field "grade_source": "visible_on_holder" | "estimated_from_photo" | "unknown"
+- Confidence must NEVER be "high" if the mint mark side was not visible.
+
+IMPORTANT LIMITS:
+- Maximum 20 coins per photo. If you see more than 20, identify only the first 20
+  and set "truncated": true.
+- If you see more than 10 coins, set "large_group_warning": true.
+
+Return ONLY valid JSON — no markdown fences, no commentary:
+{
+  "coins": [
+    {
+      "index": 1,
+      "year": "1964",
+      "denomination": "Half Dollar",
+      "program_series": "Kennedy Half Dollars",
+      "theme_subject": "John F. Kennedy",
+      "mint_mark": "D",
+      "mint_mark_visible": true,
+      "mint_mark_source": "visible_on_coin",
+      "condition": "Uncirculated",
+      "grade_source": "estimated_from_photo",
+      "metal_content": "90% Silver",
+      "confidence": "high",
+      "bbox": {"x_pct": 0.1, "y_pct": 0.2, "w_pct": 0.3, "h_pct": 0.3}
+    }
+  ],
+  "appears_grouped": true,
+  "suggested_group_name": "1964-D Year Set",
+  "coin_count": 5,
+  "truncated": false,
+  "large_group_warning": false
+}"""
+
+    try:
+        image_part = genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type)
+        text_part = genai_types.Part.from_text(text=GROUP_PHOTO_PROMPT)
+
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[image_part, text_part],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                max_output_tokens=16384,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+
+        result_text = response.text.strip()
+        # Strip markdown fences if present
+        if result_text.startswith("```"):
+            result_text = result_text.split("\n", 1)[-1]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3].strip()
+
+        result = json.loads(result_text)
+
+        # Enforce hard cap of 20 coins
+        if len(result.get("coins", [])) > 20:
+            result["coins"] = result["coins"][:20]
+            result["truncated"] = True
+
+        # Add GCS path for owner photo attachment later
+        result["original_photo_gcs_path"] = gcs_path
+        result["original_photo_url"] = gcs_url
+
+        return JSONResponse(content=result)
+
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "error": "vision_parse_error",
+                "message": f"Could not parse Gemini response: {str(e)}",
+                "raw_response": result_text[:2000] if 'result_text' in dir() else "",
+                "coins": [],
+                "coin_count": 0,
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "coins": [], "coin_count": 0}
+        )
+
+
+class GroupCoinItem(BaseModel):
+    year: str
+    denomination: str
+    mint_mark: Optional[str] = None
+    program_series: Optional[str] = None
+    theme_subject: Optional[str] = None
+    condition: Optional[str] = None
+    metal_content: Optional[str] = None
+    variety: Optional[str] = None
+    cost: Optional[str] = None  # Only used if cost_per_coin=True
+
+class CostSplitPreviewRequest(BaseModel):
+    coins: list[GroupCoinItem]
+    cost_total: str  # e.g. "$40.00"
+
+class CommitGroupRequest(BaseModel):
+    user_email: str
+    coins: list[GroupCoinItem]
+    set_title: Optional[str] = None
+    cost_total: Optional[str] = None  # e.g. "$125.00"
+    cost_per_coin: bool = False
+    cost_overrides: Optional[list[str]] = None  # User-edited per-coin costs from confirm step
+    purchase_date: Optional[str] = None
+    where_purchased: Optional[str] = None
+    storage_location: Optional[str] = None
+    original_photo_gcs_path: Optional[str] = None
+    original_photo_url: Optional[str] = None
+
+@app.post("/api/preview_cost_split")
+async def preview_cost_split(request: CostSplitPreviewRequest):
+    """Preview Greysheet value-weighted cost split without writing anything.
+    Returns proposed per-coin costs so the user can review/edit before committing."""
+    import re as _re
+    n = len(request.coins)
+    if n == 0:
+        return JSONResponse(status_code=400, content={"error": "No coins."})
+
+    try:
+        total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+        total_cents = round(float(total_str) * 100)
+    except (ValueError, ZeroDivisionError):
+        return JSONResponse(status_code=400, content={"error": "Invalid cost_total."})
+
+    # Resolve Greysheet values for each coin
+    from services.greysheet_service import GreysheetService
+    try:
+        gs_service = GreysheetService(db=db)
+    except Exception:
+        gs_service = None
+
+    greysheet_values = []
+    for coin in request.coins:
+        bid = 0.0
+        if gs_service:
+            try:
+                result = gs_service.resolve_coin_with_timeout(
+                    year=coin.year,
+                    denom=coin.denomination,
+                    series=coin.program_series or "",
+                    subject=coin.theme_subject or "",
+                    mint=coin.mint_mark or "",
+                    timeout_ms=3000,
+                )
+                if result:
+                    bid = float(result.get("bid") or 0.0)
+            except Exception:
+                bid = 0.0
+        greysheet_values.append(bid)
+
+    total_greysheet = sum(greysheet_values)
+    all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
+
+    split_details = []
+    if all_have_values:
+        split_method = "greysheet_value_weighted"
+        shares = [v / total_greysheet for v in greysheet_values]
+        raw_cents = [share * total_cents for share in shares]
+        int_cents = [int(c) for c in raw_cents]
+        remainder = total_cents - sum(int_cents)
+        max_idx = greysheet_values.index(max(greysheet_values))
+        int_cents[max_idx] += remainder
+
+        for i, coin in enumerate(request.coins):
+            pct = shares[i] * 100
+            split_details.append({
+                "index": i,
+                "denomination": coin.denomination,
+                "year": coin.year,
+                "mint_mark": coin.mint_mark or "",
+                "cost": f"${int_cents[i] / 100:.2f}",
+                "cost_cents": int_cents[i],
+                "share_pct": round(pct, 2),
+                "greysheet_bid": greysheet_values[i],
+            })
+    else:
+        split_method = "even_split"
+        base_cents = total_cents // n
+        remainder = total_cents % n
+        for i, coin in enumerate(request.coins):
+            cents = base_cents + (1 if i < remainder else 0)
+            split_details.append({
+                "index": i,
+                "denomination": coin.denomination,
+                "year": coin.year,
+                "mint_mark": coin.mint_mark or "",
+                "cost": f"${cents / 100:.2f}",
+                "cost_cents": cents,
+                "share_pct": round(100.0 / n, 2),
+                "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
+            })
+
+    return JSONResponse(content={
+        "split_method": split_method,
+        "cost_total": request.cost_total,
+        "total_cents": total_cents,
+        "split_details": split_details,
+    })
+
+@app.post("/api/commit_group_photo")
+async def commit_group_photo(request: CommitGroupRequest):
+    """Commit identified coins from a group photo to the user's collection.
+    Creates individual coin docs only — Flutter client calls SetGroupingService
+    to link them as a set (L8). Returns coin IDs for that purpose.
+    M7: Value-weighted cost split via Greysheet bid values."""
+    import re as _re
+    from datetime import datetime, timezone
+    user_email = request.user_email
+    n = len(request.coins)
+    if n == 0:
+        return JSONResponse(status_code=400, content={"error": "No coins to add."})
+    if n > 20:
+        return JSONResponse(status_code=400, content={"error": "Maximum 20 coins per group."})
+
+    # ── Step 1: Add each coin with $0.00 placeholder cost ──────────────────
+    coin_ids = []
+    results = []
+    for i, coin in enumerate(request.coins):
+        try:
+            result = execute_add_coin(
+                user_email=user_email,
+                year=coin.year,
+                denomination=coin.denomination,
+                mint_mark=coin.mint_mark or "",
+                program_series=coin.program_series or "",
+                theme_subject=coin.theme_subject or "",
+                variety=coin.variety or "",
+                storage_location=request.storage_location or "",
+                condition=coin.condition or "Ungraded / Raw",
+                cost="$0.00",
+                personal_notes="",
+                quantity=1,
+            )
+            coin_id = result.get("coin_id", "")
+            if coin_id:
+                # Update Purchase Date and Where Purchased if provided
+                updates = {}
+                if request.purchase_date:
+                    updates["Purchase Date"] = request.purchase_date
+                if request.where_purchased:
+                    updates["Provenance"] = request.where_purchased
+                if updates:
+                    db.collection(f"users/{user_email}/coins").document(coin_id).update(updates)
+                coin_ids.append(coin_id)
+            results.append({"index": i + 1, "coin_id": coin_id, "status": "added"})
+        except Exception as e:
+            results.append({"index": i + 1, "coin_id": "", "status": "error", "error": str(e)})
+
+    # ── Step 2: Cost split (M7: Greysheet value-weighted) ──────────────────
+    cost_split_details = []
+    split_method = "none"
+    if request.cost_total and not request.cost_per_coin and coin_ids:
+        try:
+            total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+            total_cents = round(float(total_str) * 100)
+            lookup_date = datetime.now(timezone.utc).isoformat()
+
+            # If user provided edited cost overrides from confirm step, use them
+            if request.cost_overrides and len(request.cost_overrides) == len(coin_ids):
+                override_cents = []
+                for ov in request.cost_overrides:
+                    ov_str = _re.sub(r'[^\d.]', '', str(ov))
+                    override_cents.append(round(float(ov_str) * 100))
+                # Validate sum matches total
+                if sum(override_cents) == total_cents:
+                    split_method = "user_edited"
+                    for i, cid in enumerate(coin_ids):
+                        cost_str = f"${override_cents[i] / 100:.2f}"
+                        cost_note = f"Split from {request.cost_total} group price (user-edited)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round((override_cents[i] / total_cents) * 100, 2) if total_cents > 0 else 0,
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                        })
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": override_cents[i] / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
+                # If sum doesn't match, fall through to Greysheet split
+                if split_method == "user_edited":
+                    pass  # skip to end
+                else:
+                    request.cost_overrides = None  # Clear invalid overrides
+
+            # Read back Greysheet bid values for each coin (only if not user-edited)
+            if split_method == "none":
+                greysheet_values = []
+                for cid in coin_ids:
+                    try:
+                        doc = db.collection(f"users/{user_email}/coins").document(cid).get()
+                        bid = float(doc.to_dict().get("greysheet_bid") or 0.0) if doc.exists else 0.0
+                        greysheet_values.append(bid)
+                    except Exception:
+                        greysheet_values.append(0.0)
+
+                total_greysheet = sum(greysheet_values)
+                all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
+
+                if all_have_values:
+                    # M7: Value-weighted split in integer cents
+                    split_method = "greysheet_value_weighted"
+                    shares = [v / total_greysheet for v in greysheet_values]
+                    raw_cents = [share * total_cents for share in shares]
+                    int_cents = [int(c) for c in raw_cents]
+                    remainder = total_cents - sum(int_cents)
+
+                    # Give remainder to highest-value coin
+                    max_idx = greysheet_values.index(max(greysheet_values))
+                    int_cents[max_idx] += remainder
+
+                    for i, cid in enumerate(coin_ids):
+                        cost_str = f"${int_cents[i] / 100:.2f}"
+                        pct = shares[i] * 100
+                        cost_note = f"Split from {request.cost_total} group price ({pct:.1f}% by Greysheet value)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round(pct, 2),
+                            "greysheet_bid": greysheet_values[i],
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                        })
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": int_cents[i] / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_greysheet_bid": greysheet_values[i],
+                                "cost_split_greysheet_date": lookup_date,
+                                "cost_split_share_pct": round(pct, 2),
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
+                else:
+                    # M7 fallback: even split
+                    split_method = "even_split"
+                    n_ids = len(coin_ids)
+                    base_cents = total_cents // n_ids
+                    remainder = total_cents % n_ids
+                    for i, cid in enumerate(coin_ids):
+                        cents = base_cents + (1 if i < remainder else 0)
+                        cost_str = f"${cents / 100:.2f}"
+                        cost_note = f"Split from {request.cost_total} group price (even split: market values unavailable)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round(100.0 / n_ids, 2),
+                            "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                        })
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": cents / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
+
+        except (ValueError, ZeroDivisionError):
+            split_method = "error_fallback"
+    elif request.cost_per_coin:
+        split_method = "per_coin"
+        for i, cid in enumerate(coin_ids):
+            cost_str = request.coins[i].cost or "$0.00" if i < len(request.coins) else "$0.00"
+            try:
+                cost_num = float(_re.sub(r'[^\d.]', '', cost_str))
+                db.collection(f"users/{user_email}/coins").document(cid).update({
+                    "Cost": cost_str,
+                    "Purchase Cost": cost_str,
+                    "cost_basis": cost_num,
+                })
+            except Exception:
+                pass
+
+    # Compute parent set cost fields
+    set_cost = request.cost_total or "$0.00"
+    set_cost_label = f"{set_cost} total / {n} coins" if request.cost_total else ""
+
+    return JSONResponse(content={
+        "coin_ids": coin_ids,
+        "results": results,
+        "set_cost": set_cost,
+        "set_cost_label": set_cost_label,
+        "original_photo_gcs_path": request.original_photo_gcs_path or "",
+        "original_photo_url": request.original_photo_url or "",
+        "success_count": len(coin_ids),
+        "total_count": n,
+        "cost_split_method": split_method,
+        "cost_split_details": cost_split_details,
+    })
+
 
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
@@ -4937,6 +5454,15 @@ async def identify_coin_photo(
     bytes_b      = await image_b.read()
     mime_a       = image_a.content_type or "image/jpeg"
     mime_b       = image_b.content_type or "image/jpeg"
+
+    # HEIC conversion (L2)
+    converted_a, cmime_a = _convert_heic_to_jpeg(bytes_a)
+    if cmime_a:
+        bytes_a, mime_a = converted_a, cmime_a
+
+    converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
+    if cmime_b:
+        bytes_b, mime_b = converted_b, cmime_b
 
     part_a_img   = genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a)
     part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
@@ -9881,6 +10407,7 @@ class InitiateTransferRequest(BaseModel):
     item_ids: List[str]
     recipient_email: Optional[str] = None
     privacy_toggles: Optional[Dict[str, bool]] = None
+    item_quantities: Optional[Dict[str, int]] = None
 
 class ClaimTransferRequest(BaseModel):
     user_id: str
@@ -9891,6 +10418,21 @@ class ClaimTransferRequest(BaseModel):
 class RecallTransferRequest(BaseModel):
     user_id: str
     transfer_id: str
+
+class DirectSaleRequest(BaseModel):
+    user_id: str
+    coin_id: str
+    qty_sold: int
+    sale_price: float
+    fees: float = 0.0
+    sale_date: Optional[str] = None
+    sales_venue: str = "Outside Numista.AI"
+    buyer_reference: Optional[str] = None
+    notes: Optional[str] = None
+
+class UndoSaleRequest(BaseModel):
+    user_id: str
+    sale_archive_id: str
 
 @app.post("/api/transfer/initiate")
 async def api_initiate_transfer(req: InitiateTransferRequest):
@@ -9904,7 +10446,8 @@ async def api_initiate_transfer(req: InitiateTransferRequest):
             user_a_id=req.user_id,
             item_ids=req.item_ids,
             recipient_email=req.recipient_email,
-            privacy_toggles=req.privacy_toggles
+            privacy_toggles=req.privacy_toggles,
+            item_quantities=req.item_quantities
         )
         return {"status": "success", "transfer": result}
     except Exception as e:
@@ -9945,6 +10488,60 @@ async def api_recall_transfer(req: RecallTransferRequest):
         return {"status": "success", "result": result}
     except Exception as e:
         logger.exception("Recall transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/sell-direct")
+async def api_sell_direct(req: DirectSaleRequest):
+    """
+    Mode 3: Records a direct sale outside Numista.AI.
+    """
+    try:
+        from services.transfer_service import record_direct_sale
+        result = record_direct_sale(
+            db=db,
+            user_id=req.user_id,
+            coin_id=req.coin_id,
+            qty_sold=req.qty_sold,
+            sale_price_usd=req.sale_price,
+            fees_usd=req.fees,
+            sale_date=req.sale_date,
+            sales_venue=req.sales_venue,
+            buyer_reference=req.buyer_reference,
+            notes=req.notes
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Direct sale failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/undo-sale")
+async def api_undo_sale(req: UndoSaleRequest):
+    """
+    Mode 3: Undoes a previously recorded direct sale.
+    """
+    try:
+        from services.transfer_service import undo_sale
+        result = undo_sale(
+            db=db,
+            user_id=req.user_id,
+            sale_archive_id=req.sale_archive_id
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Undo sale failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/transfer/sold-items/{user_id}")
+async def api_get_sold_items(user_id: str):
+    """
+    Returns the list of sold/transferred items for user.
+    """
+    try:
+        from services.transfer_service import get_sold_inventory
+        records = get_sold_inventory(db=db, user_id=user_id)
+        return {"status": "success", "user_id": user_id, "sold_items": records}
+    except Exception as e:
+        logger.exception("Get sold items failed")
         raise HTTPException(status_code=400, detail=str(e))
 
 from fastapi.responses import Response
