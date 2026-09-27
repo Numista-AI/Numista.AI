@@ -3215,8 +3215,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Future<void> _runCameraScan() async {
-    if (_camObverseBytes == null || _camReverseBytes == null) {
-      setState(() => _camError = 'Please capture or upload both obverse and reverse images.');
+    if (_camObverseBytes == null && _camReverseBytes == null) {
+      setState(() => _camError = 'Please capture or upload at least one coin image.');
       return;
     }
 
@@ -3243,19 +3243,26 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         return MediaType.parse(mime);
       }
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_a',
-        _camObverseBytes!,
-        filename: _camObverseName ?? 'obverse.jpg',
-        contentType: getMediaType(_camObverseName ?? 'obverse.jpg'),
-      ));
+      final primaryBytes = _camObverseBytes ?? _camReverseBytes!;
+      final primaryName = _camObverseBytes != null
+          ? (_camObverseName ?? 'obverse.jpg')
+          : (_camReverseName ?? 'reverse.jpg');
 
       request.files.add(http.MultipartFile.fromBytes(
-        'image_b',
-        _camReverseBytes!,
-        filename: _camReverseName ?? 'reverse.jpg',
-        contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
+        'image_a',
+        primaryBytes,
+        filename: primaryName,
+        contentType: getMediaType(primaryName),
       ));
+
+      if (_camObverseBytes != null && _camReverseBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'image_b',
+          _camReverseBytes!,
+          filename: _camReverseName ?? 'reverse.jpg',
+          contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
+        ));
+      }
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
       final responseBody = await streamedResponse.stream.bytesToString();
@@ -3623,7 +3630,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ] else if (_camResult == null) ...[
                 Center(
                   child: ElevatedButton.icon(
-                    onPressed: (_camObverseBytes == null || _camReverseBytes == null) ? null : _runCameraScan,
+                    onPressed: (_camObverseBytes == null && _camReverseBytes == null) ? null : _runCameraScan,
                     icon: const Icon(Icons.flash_on_rounded, size: 20),
                     label: const Text('Scan Coin Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
@@ -3635,6 +3642,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 4,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    '💡 Have a set or multiple coins in one photo? Ask Morgan with 📎 for automatic multi-coin detection!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _isDark ? Colors.white60 : const Color(0xFF64748B),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ] else ...[

@@ -274,94 +274,173 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    List<dynamic>? cachedReceipts;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1D27),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.receipt_long_outlined, color: Color(0xFFFFD700), size: 22),
-            SizedBox(width: 10),
-            Text('Paper Trail — Ingested Documents', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1D27),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.receipt_long_outlined, color: Color(0xFFFFD700), size: 22),
+              SizedBox(width: 10),
+              Text('Paper Trail — Ingested Documents', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
+          content: SizedBox(
+            width: 650,
+            child: cachedReceipts != null
+                ? _buildReceiptsList(cachedReceipts!, user, setDlgState)
+                : FutureBuilder<http.Response>(
+                    future: http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}")),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD700))));
+                      }
+                      List<dynamic> receipts = [];
+                      if (snapshot.hasData && snapshot.data!.statusCode == 200) {
+                        try {
+                          final body = jsonDecode(snapshot.data!.body);
+                          receipts = List<dynamic>.from(body['receipts'] ?? []);
+                        } catch (_) {}
+                      }
+                      cachedReceipts = receipts;
+                      return _buildReceiptsList(cachedReceipts!, user, setDlgState);
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close', style: TextStyle(color: Colors.white70)),
+            ),
           ],
         ),
-        content: SizedBox(
-          width: 600,
-          child: FutureBuilder<http.Response>(
-            future: http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}")),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD700))));
-              }
-              List<dynamic> receipts = [];
-              if (snapshot.hasData && snapshot.data!.statusCode == 200) {
-                try {
-                  final body = jsonDecode(snapshot.data!.body);
-                  receipts = body['receipts'] ?? [];
-                } catch (_) {}
-              }
+      ),
+    );
+  }
 
-              if (receipts.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.inventory_2_outlined, color: Colors.white38, size: 40),
-                      SizedBox(height: 12),
-                      Text('No uploaded scans or receipts found for this session.', style: TextStyle(color: Colors.white70)),
-                    ],
-                  ),
-                );
-              }
+  Widget _buildReceiptsList(List<dynamic> receipts, User user, void Function(void Function()) setDlgState) {
+    if (receipts.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.inventory_2_outlined, color: Colors.white38, size: 40),
+            SizedBox(height: 12),
+            Text('No uploaded scans or receipts found for this session.', style: TextStyle(color: Colors.white70)),
+          ],
+        ),
+      );
+    }
 
-              return ListView.separated(
-                shrinkWrap: true,
-                itemCount: receipts.length,
-                separatorBuilder: (context, index) => const Divider(color: Colors.white10),
-                itemBuilder: (context, idx) {
-                  final r = receipts[idx] as Map<String, dynamic>;
-                  final name = r['original_filename'] ?? r['receipt_id'] ?? 'Document ${idx + 1}';
-                  final date = r['invoice_date'] ?? 'Recent';
-                  final linked = (r['linked_coin_ids'] as List?)?.length ?? 0;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.picture_as_pdf, color: Color(0xFF60A5FA), size: 28),
-                    title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                    trailing: TextButton.icon(
-                      onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
-                          if (res.statusCode == 200) {
-                            final data = jsonDecode(res.body);
-                            final url = data['signed_url'] ?? data['url'];
-                            if (url != null) {
-                              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: receipts.length,
+      separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+      itemBuilder: (context, idx) {
+        final r = receipts[idx] as Map<String, dynamic>;
+        final name = r['original_filename'] ?? r['receipt_id'] ?? 'Document ${idx + 1}';
+        final rawDate = r['uploaded_at'] ?? r['invoice_date'];
+        String date = 'Recent';
+        if (rawDate != null && rawDate.toString().isNotEmpty) {
+          try {
+            final dt = DateTime.parse(rawDate.toString()).toLocal();
+            date = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+          } catch (_) {
+            date = rawDate.toString().split('T').first;
+          }
+        }
+        final linked = r['linked_coins_count'] ?? (r['linked_coin_ids'] as List?)?.length ?? 0;
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.picture_as_pdf, color: Color(0xFF60A5FA), size: 28),
+          title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
+                    if (res.statusCode == 200) {
+                      final data = jsonDecode(res.body);
+                      final url = data['signed_url'] ?? data['url'];
+                      if (url != null) {
+                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  } catch (e) {
+                    messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                  }
+                },
+                icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
+                label: const Text('View Scan', style: TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                tooltip: 'Delete Document',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (delCtx) => AlertDialog(
+                      backgroundColor: const Color(0xFF1E293B),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      title: const Text('Delete Document from Paper Trail?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      content: Text('This will remove "$name" from your Paper Trail. Linked coins in your vault will remain intact.', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(delCtx),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                          onPressed: () async {
+                            Navigator.pop(delCtx);
+                            try {
+                              final token = await user.getIdToken();
+                              final res = await http.delete(
+                                Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}"),
+                                headers: {
+                                  if (token != null) 'Authorization': 'Bearer $token',
+                                },
+                              );
+                              if (res.statusCode == 200) {
+                                setDlgState(() {
+                                  receipts.removeAt(idx);
+                                });
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Document deleted from Paper Trail')),
+                                  );
+                                }
+                              } else {
+                                throw Exception('Server returned ${res.statusCode}');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to delete document: $e')),
+                                );
+                              }
                             }
-                          }
-                        } catch (e) {
-                          messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
-                        }
-                      },
-                      icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
-                      label: const Text('View Scan', style: TextStyle(color: Color(0xFFFFD700), fontSize: 12)),
+                          },
+                          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
                     ),
                   );
                 },
-              );
-            },
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: Colors.white70)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -389,6 +389,17 @@
 
 
 
+
+## v4.389 — 2026-09-27
+**Upload Baseline Fixes: Receipts, Sets, Photos & Autofill**
+
+- Receipt processing: US Mint catalog 26SQRP/26SQRD items with $61 unit pricing and fallback quantity extraction (R1, R2)
+- Receipt Paper Trail: Dynamic linked coin count, receipt deletion endpoint and confirmation UI (R3)
+- Coin Sets: Custom set viewing and Group as Set button directly in Collection Card Grid & Inspector (U1, U3)
+- Coin Inspector & Detail: Immediate live photo upload preview and camera badge direct replacement (U4)
+- Scan & Identify: Single-photo upload identification support across API and mobile (U5)
+- Authentication: OTP login field digit sanitization and one-time code autofill hint (S1)
+
 ## v4.388 — 2026-09-27
 **Hotfix Auth, Undo Confirmation, Atomic Sale/Undo, Group Photo 500 (REQ_009 / REQ_010)**
 

@@ -1691,10 +1691,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.389',
+    date: '2026-09-27',
+    description: 'Upload Baseline Fixes: Receipts, Sets, Photos & Autofill',
+    isLatest: true,
+    changes: [
+      'Receipt processing: US Mint catalog 26SQRP/26SQRD items with \$61 unit pricing and fallback quantity extraction (R1, R2)',
+      'Receipt Paper Trail: Dynamic linked coin count, receipt deletion endpoint and confirmation UI (R3)',
+      'Coin Sets: Custom set viewing and Group as Set button directly in Collection Card Grid & Inspector (U1, U3)',
+      'Coin Inspector & Detail: Immediate live photo upload preview and camera badge direct replacement (U4)',
+      'Scan & Identify: Single-photo upload identification support across API and mobile (U5)',
+      'Authentication: OTP login field digit sanitization and one-time code autofill hint (S1)',
+    ],
+  ),
+  _Release(
     version: 'v4.388',
     date: '2026-09-27',
     description: 'Hotfix Auth, Undo Confirmation, Atomic Sale/Undo (REQ_009)',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: Bearer token auth required on group photo and sell endpoints (MF2, SF5)',
       'Safety: Undo All confirmation dialog and in-flight guard (MF1)',

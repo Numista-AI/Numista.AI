@@ -1844,6 +1844,24 @@ async def process_invoice(
                 if _ym:
                     it['Year'] = _ym.group(1)
                     it['Mint Mark'] = _ym.group(2).upper()
+            # Quantity heuristic: extract qty from notes or description if Quantity <= 1
+            curr_qty = it.get('Quantity')
+            try:
+                curr_qty_int = int(curr_qty) if curr_qty is not None else 1
+            except (ValueError, TypeError):
+                curr_qty_int = 1
+            if curr_qty_int <= 1:
+                notes_str = str(it.get('Personal Notes', '') or '')
+                desc_str = str(it.get('Original Description from source', '') or '')
+                qty_match = _re.search(r'\b(?:qty|quantity)[\s:]*([0-9]+)\b', f"{notes_str} {desc_str}", _re.IGNORECASE)
+                if qty_match:
+                    extracted_qty = int(qty_match.group(1))
+                    if extracted_qty > 0:
+                        it['Quantity'] = extracted_qty
+                else:
+                    it['Quantity'] = curr_qty_int
+            else:
+                it['Quantity'] = curr_qty_int
             # Deterministically enrich US Mint catalog items (e.g. 26XL, 26EA, 26XM, 26XH)
             try:
                 enrich_us_mint_item(it)
@@ -1927,17 +1945,18 @@ async def process_invoice(
           When analyzing a United States Mint Packing Slip / Invoice:
           1. Header Fingerprints: "UNITED STATES MINT", "www.usmint.gov", "1-800-USA-Mint (1-800-872-6468)", or "Fulfillment Center Returns Processing".
           2. Retailer: Set "Retailer/Website" to "United States Mint".
-          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN") to "Retailer Item No.".
+          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN", "26SQRP", "26SQRD", "26XE") to "Retailer Item No.".
           4. Order # & Tracking:
              - Extract the "Order #:" (e.g. "USM23436235", "USM23339673") or Order Number at bottom (e.g. "33231525") to "Retailer Invoice #".
              - Extract the "Tracking#:" (e.g. "9200190358255308656043") if present and place it in "Personal Notes".
           5. Pricing Separation:
-             - The "Cost" field MUST be the coin item "Unit Price" / "Price" (e.g. "$173.00"), NOT the grand total with S&H.
-             - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95") as line item coin cost.
+             - The "Cost" field MUST be the coin item "Unit Price" / "Price" (e.g. "$173.00", "$61.00", "$169.00"), NEVER the grand total (e.g. "$70.95", "$338.00") or total amount including shipping and handling.
+             - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95", "$70.95") as line item coin cost.
           6. Description & Finish Resolution:
              - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
              - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
              - "Morgan Silver Enhanced Un" (Item 26XE) -> Year: 2026, Denomination: "Morgan Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Enhanced Uncirculated", Condition: "Enhanced Uncirculated", Variety: "Liberty Bell 250 Privy, 1776~2026 Dual Date", Metal Content: "99.9% Silver (0.859 oz ASW)".
+             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP or 26SQRD) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
           7. Quantity Extraction:
              - Extract the quantity shipped from the "Ship" column (e.g. "2") or "Quantity Shipped" section into the "Quantity" field (integer, default 1).
 
@@ -5514,7 +5533,7 @@ async def commit_group_photo(
 async def identify_coin_photo(
     user_email:    str        = Form(...),
     image_a:       UploadFile = File(...),
-    image_b:       UploadFile = File(...),
+    image_b:       Optional[UploadFile] = File(None),
     save_to_collection: bool  = Form(False),
     # Optional user overrides sent from the review screen
     override_year:    Optional[str] = Form(None),
@@ -5529,7 +5548,7 @@ async def identify_coin_photo(
     override_notes:   Optional[str] = Form(None),
 ):
     """
-    Two-pass Gemini AI coin identification from obverse + reverse photos.
+    Two-pass Gemini AI coin identification from obverse + reverse photos (or single photo).
 
     Pass 1  -- Identification: determines which image is obverse/reverse,
               identifies year/denomination/series/mint mark/grade/metal.
@@ -5538,7 +5557,7 @@ async def identify_coin_photo(
 
     When save_to_collection=True, the identified coin (with any user overrides
     applied) is written directly to Firestore under users/{user_email}/coins
-    and both images are uploaded to GCS.
+    and images are uploaded to GCS.
 
     Returns the full coin document as JSON whether or not it was saved.
     """
@@ -5546,33 +5565,46 @@ async def identify_coin_photo(
 
     # -- 1. Read image bytes ---------------------------------------------------
     bytes_a      = await image_a.read()
-    bytes_b      = await image_b.read()
     mime_a       = image_a.content_type or "image/jpeg"
-    mime_b       = image_b.content_type or "image/jpeg"
-
-    # HEIC conversion (L2)
     converted_a, cmime_a = _convert_heic_to_jpeg(bytes_a)
     if cmime_a:
         bytes_a, mime_a = converted_a, cmime_a
 
-    converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
-    if cmime_b:
-        bytes_b, mime_b = converted_b, cmime_b
-
     part_a_img   = genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a)
-    part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
     label_a      = genai_types.Part.from_text(text="[Image A]")
-    label_b      = genai_types.Part.from_text(text="[Image B]")
+
+    single_image_mode = (image_b is None)
+    if not single_image_mode:
+        bytes_b      = await image_b.read()
+        mime_b       = image_b.content_type or "image/jpeg"
+        converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
+        if cmime_b:
+            bytes_b, mime_b = converted_b, cmime_b
+        part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
+        label_b      = genai_types.Part.from_text(text="[Image B]")
+    else:
+        bytes_b = None
+        mime_b = None
+        part_b_img = None
+        label_b = None
 
     # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
-        resp1 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=[
+        if single_image_mode:
+            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The reverse/obverse is unobserved. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side is unobserved."
+            pass1_contents = [
+                label_a, part_a_img,
+                genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT + single_note),
+            ]
+        else:
+            pass1_contents = [
                 label_a, part_a_img,
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
-            ],
+            ]
+        resp1 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=pass1_contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
@@ -5600,13 +5632,20 @@ async def identify_coin_photo(
             grade         = pass1.get("grade", ""),
             metal_content = pass1.get("metal_content", ""),
         )
-        resp2 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=[
+        if single_image_mode:
+            pass2_contents = [
+                label_a, part_a_img,
+                genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
+            ]
+        else:
+            pass2_contents = [
                 label_a, part_a_img,
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=pass2_prompt),
-            ],
+            ]
+        resp2 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=pass2_contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
@@ -5641,11 +5680,17 @@ async def identify_coin_photo(
     full_report += f"\n\n[AI Confidence: {final_conf}]"
 
     # Determine which image is obverse vs reverse
-    obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
-    obv_bytes    = bytes_a if obverse_is_a else bytes_b
-    rev_bytes    = bytes_b if obverse_is_a else bytes_a
-    obv_mime     = mime_a  if obverse_is_a else mime_b
-    rev_mime     = mime_b  if obverse_is_a else mime_a
+    if single_image_mode:
+        obv_bytes = bytes_a
+        rev_bytes = bytes_a
+        obv_mime  = mime_a
+        rev_mime  = mime_a
+    else:
+        obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
+        obv_bytes    = bytes_a if obverse_is_a else bytes_b
+        rev_bytes    = bytes_b if obverse_is_a else bytes_a
+        obv_mime     = mime_a  if obverse_is_a else mime_b
+        rev_mime     = mime_b  if obverse_is_a else mime_a
 
     # Apply user overrides (from review screen)
     resolved_series = _expand_series(override_series or final_series)
@@ -5659,6 +5704,10 @@ async def identify_coin_photo(
     from services.denomination_normalizer import normalize_denomination
     raw_denom_input = override_denom or final_denom
     norm_denom, was_corrected, orig_denom = normalize_denomination(raw_denom_input, country=norm_c, item_type="coin")
+
+    notes = override_notes or pass1.get("personal_notes", "") or ""
+    if single_image_mode:
+        notes = (notes + " [Single photo scan - reverse unobserved]").strip()
 
     ai_coin = {
         "Year":           override_year    or final_year,
@@ -5680,7 +5729,7 @@ async def identify_coin_photo(
         "Numismatic Report":  full_report,
         "Cost":           override_cost    or "$0.00",
         "Storage Location": override_storage or "",
-        "Personal Notes": override_notes   or "",
+        "Personal Notes": notes,
         "Quantity":       1,
         "ai_confidence":  final_conf,
         "is_silver":      pass1.get("is_silver", False),
@@ -5704,17 +5753,20 @@ async def identify_coin_photo(
                 f"users/{user_email}/photo_id/{coin_id}_obverse_{ts}.jpg",
                 obv_mime,
             )
-            gcs_rev_uri = _upload_to_gcs(
-                rev_bytes,
-                f"users/{user_email}/photo_id/{coin_id}_reverse_{ts}.jpg",
-                rev_mime,
-            )
+            if not single_image_mode:
+                gcs_rev_uri = _upload_to_gcs(
+                    rev_bytes,
+                    f"users/{user_email}/photo_id/{coin_id}_reverse_{ts}.jpg",
+                    rev_mime,
+                )
+            else:
+                gcs_rev_uri = gcs_obv_uri
         except Exception as e:
             logger.warning(f"Coin ID GCS upload warning: {e}")
 
         # Build base64 thumbnails for immediate Flutter display
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
-        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+        rev_b64 = (f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()) if not single_image_mode else ""
 
         coin_doc = {
             **ai_coin,
@@ -5731,7 +5783,7 @@ async def identify_coin_photo(
     else:
         # Preview mode -- return b64 images for the Flutter review screen
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
-        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+        rev_b64 = (f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()) if not single_image_mode else ""
 
     return {
         "coin_id":        coin_id,
@@ -7153,19 +7205,83 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 
 @app.get("/api/receipts/{user_email}")
 def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
-    """Return all receipts for a user, optionally filtered by session."""
+    """Return all receipts for a user, dynamically pruning stale linked coin IDs."""
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
         col = col.where("session_id", "==", session_id)
     docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
               .limit(limit).stream()
+
+    # Query active coin IDs and review_queue IDs to prune deleted coins
+    active_ids = set()
+    try:
+        user_ref = db.collection("users").document(user_email)
+        for cd in user_ref.collection("coins").select([]).stream():
+            active_ids.add(cd.id)
+        for rd in user_ref.collection("review_queue").select([]).stream():
+            active_ids.add(rd.id)
+    except Exception as exc:
+        logger.warning(f"Could not fetch active IDs for receipt pruning: {exc}")
+        active_ids = None
+
     results = []
     for d in docs:
         data = d.to_dict()
         data["receipt_id"] = d.id
-        data.pop("uploaded_at", None)
+        uploaded_at = data.get("uploaded_at")
+        if hasattr(uploaded_at, "isoformat"):
+            data["uploaded_at"] = uploaded_at.isoformat()
+        elif uploaded_at is not None:
+            data["uploaded_at"] = str(uploaded_at)
+
+        raw_linked = data.get("linked_coin_ids") or []
+        if active_ids is not None:
+            pruned = [cid for cid in raw_linked if cid in active_ids]
+            data["linked_coin_ids"] = pruned
+            data["linked_coins_count"] = len(pruned)
+        else:
+            data["linked_coins_count"] = len(raw_linked)
         results.append(data)
     return {"receipts": results}
+
+
+# -- DELETE /api/receipts/{user_email}/{receipt_id} ---------------------------
+
+@app.delete("/api/receipts/{user_email}/{receipt_id}")
+async def delete_receipt(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Delete a receipt record from users/{user_email}/receipts/{receipt_id}.
+    Cleans up any GCS storage blob if present.
+    """
+    _authenticate_request(authorization, user_email)
+
+    receipt_ref = db.collection("users").document(user_email).collection("receipts").document(receipt_id)
+    snap = receipt_ref.get()
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    receipt_data = snap.to_dict() or {}
+    gcs_path = receipt_data.get("gcs_path") or ""
+
+    if gcs_path and gcs_client and IMPORT_BUCKET:
+        try:
+            bucket = gcs_client.bucket(IMPORT_BUCKET)
+            prefix = f"gs://{IMPORT_BUCKET}/"
+            blob_name = gcs_path[len(prefix):] if gcs_path.startswith(prefix) else gcs_path
+            blob = bucket.blob(blob_name)
+            if blob.exists():
+                blob.delete()
+                logger.info(f"Deleted receipt blob from GCS: {blob_name}")
+        except Exception as e:
+            logger.warning(f"Could not delete receipt GCS blob {gcs_path}: {e}")
+
+    receipt_ref.delete()
+    logger.info(f"Deleted receipt {receipt_id} for user {user_email}")
+    return {"status": "success", "message": f"Receipt {receipt_id} deleted successfully"}
 
 
 # -- GET /api/receipts/{user_email}/{receipt_id}/view_url ----------------------
