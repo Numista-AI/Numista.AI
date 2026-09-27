@@ -2778,11 +2778,38 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             );
                             if (confirm != true) return;
+
+                            // Gap A (M3): Ask about keeping photos on children
+                            final ownerPhotos = m['owner_photos'] as List<dynamic>?;
+                            bool keepPhotos = true;
+                            if (ownerPhotos != null && ownerPhotos.isNotEmpty) {
+                              final photoChoice = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Keep your photo on each coin?'),
+                                  content: const Text(
+                                    'This set has an owner photo. Would you like to keep a copy of it on each individual coin?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('No, remove photos'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Yes, keep photos'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              keepPhotos = photoChoice ?? true; // Default Yes
+                            }
+
                             try {
                               await SetGroupingService.ungroupSet(
                                 parentSetDocId: crw.id,
-                                deleteOwnerPhotos: true,
-                                preservePhotosOnChildren: true,
+                                deleteOwnerPhotos: !keepPhotos,
+                                preservePhotosOnChildren: keepPhotos,
                               );
                               if (mounted) {
                                 messenger.showSnackBar(const SnackBar(content: Text('Set ungrouped successfully.')));

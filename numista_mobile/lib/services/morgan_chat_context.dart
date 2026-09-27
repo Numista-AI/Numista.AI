@@ -121,8 +121,14 @@ INSTRUCTIONS & CONSTRAINTS:
           "Tap 📎 to add coins from a photo.";
     }
 
+    // Format portfolio value with commas
+    final valStr = portfolioValue >= 1
+        ? '\$${portfolioValue.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}'
+        : '\$${portfolioValue.toStringAsFixed(2)}';
+
     return "Hi $userName! 👋 I'm Morgan, your AI numismatist. "
-        "You have $totalCoins coins in your collection. "
+        "You have $totalCoins coins in your collection "
+        "(estimated value: $valStr). "
         "How can I help you today? (Tap 📎 to add coins from a photo.)";
   }
 }
