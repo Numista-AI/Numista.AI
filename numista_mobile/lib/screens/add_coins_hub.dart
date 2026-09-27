@@ -3324,6 +3324,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       request.fields['user_email'] = AuthService.userEmail;
       request.fields['save_to_collection'] = 'true';
 
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       // Send the overrides edited by the user
       request.fields['override_year'] = _picYear.text.trim();
       request.fields['override_denom'] = _picDenom.text.trim();

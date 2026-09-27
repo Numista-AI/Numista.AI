@@ -1691,10 +1691,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.392',
+    date: '2026-09-27',
+    description: 'Pre-Deploy Security & Catalog Enhancements',
+    isLatest: true,
+    changes: [
+      'Fix: prevent data loss by retaining receipt blob when coins are still linked (MF-1)',
+      'Security: enforce owner-folder check on receipt blob deletions (MF-1)',
+      'Catalog: remove nonexistent 26SQRD and correct 26SQRP mint mark to blank (MF-2)',
+      'Security: add Bearer auth to receipt list, view_url, stream, and identify_coin_photo (REQ_016)',
+      'Fix: index cost overrides by orig_i in commit_group_photo to prevent price shifts on partial failure',
+    ],
+  ),
+  _Release(
     version: 'v4.391',
     date: '2026-09-27',
     description: 'Security Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: pre-validate cost overrides, authenticate appraisal-pdf, restrict CORS, and send Bearer tokens on 401 routes (REQ_015)',
       'Release: sync release notes for v4.390',

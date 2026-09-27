@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -1947,7 +1947,7 @@ async def process_invoice(
           When analyzing a United States Mint Packing Slip / Invoice:
           1. Header Fingerprints: "UNITED STATES MINT", "www.usmint.gov", "1-800-USA-Mint (1-800-872-6468)", or "Fulfillment Center Returns Processing".
           2. Retailer: Set "Retailer/Website" to "United States Mint".
-          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN", "26SQRP", "26SQRD", "26XE") to "Retailer Item No.".
+          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN", "26SQRP", "26XE") to "Retailer Item No.".
           4. Order # & Tracking:
              - Extract the "Order #:" (e.g. "USM23436235", "USM23339673") or Order Number at bottom (e.g. "33231525") to "Retailer Invoice #".
              - Extract the "Tracking#:" (e.g. "9200190358255308656043") if present and place it in "Personal Notes".
@@ -1958,7 +1958,7 @@ async def process_invoice(
              - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
              - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
              - "Morgan Silver Enhanced Un" (Item 26XE) -> Year: 2026, Denomination: "Morgan Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Enhanced Uncirculated", Condition: "Enhanced Uncirculated", Variety: "Liberty Bell 250 Privy, 1776~2026 Dual Date", Metal Content: "99.9% Silver (0.859 oz ASW)".
-             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP or 26SQRD) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
+             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
           7. Quantity Extraction:
              - Extract the quantity shipped from the "Ship" column (e.g. "2") or "Quantity Shipped" section into the "Quantity" field (integer, default 1).
 
@@ -5406,19 +5406,20 @@ async def commit_group_photo(
                 override_cents = prevalidated_override_cents
                 split_method = "user_edited"
                 for idx, (orig_i, cid) in enumerate(added_coins):
-                    cost_str = f"${override_cents[idx] / 100:.2f}"
+                    coin_override_cents = override_cents[orig_i] if orig_i < len(override_cents) else override_cents[idx]
+                    cost_str = f"${coin_override_cents / 100:.2f}"
                     cost_note = f"Split from {request.cost_total} group price (user-edited)"
                     cost_split_details.append({
                         "coin_id": cid,
                         "cost": cost_str,
-                        "share_pct": round((override_cents[idx] / total_cents) * 100, 2) if total_cents > 0 else 0,
+                        "share_pct": round((coin_override_cents / total_cents) * 100, 2) if total_cents > 0 else 0,
                         "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                     })
                     try:
                         db.collection(f"users/{user_email}/coins").document(cid).update({
                             "Cost": cost_str,
                             "Purchase Cost": cost_str,
-                            "cost_basis": override_cents[idx] / 100.0,
+                            "cost_basis": coin_override_cents / 100.0,
                             "cost_notes": cost_note,
                             "cost_split_method": split_method,
                             "cost_split_total": request.cost_total,
@@ -5557,6 +5558,7 @@ async def identify_coin_photo(
     override_cost:    Optional[str] = Form(None),
     override_storage: Optional[str] = Form(None),
     override_notes:   Optional[str] = Form(None),
+    authorization:    Optional[str] = Header(None),
 ):
     """
     Two-pass Gemini AI coin identification from obverse + reverse photos (or single photo).
@@ -5572,6 +5574,10 @@ async def identify_coin_photo(
 
     Returns the full coin document as JSON whether or not it was saved.
     """
+    if save_to_collection:
+        owner_key = _authenticate_request(authorization, user_email)
+        user_email = owner_key
+
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
     # -- 1. Read image bytes ---------------------------------------------------
@@ -7215,8 +7221,16 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 # -- GET /api/receipts/{user_email} --------------------------------------------
 
 @app.get("/api/receipts/{user_email}")
-def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
+def list_receipts(
+    user_email: str,
+    session_id: str = None,
+    limit: int = 100,
+    authorization: Optional[str] = Header(None),
+):
     """Return all receipts for a user, dynamically pruning stale linked coin IDs."""
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
         col = col.where("session_id", "==", session_id)
@@ -7266,9 +7280,11 @@ async def delete_receipt(
 ):
     """
     Delete a receipt record from users/{user_email}/receipts/{receipt_id}.
-    Cleans up any GCS storage blob if present.
+    Cleans up any GCS storage blob if present, but ONLY when zero coins link to it (MF-1).
+    Enforces owner-folder isolation on the storage blob path.
     """
-    _authenticate_request(authorization, user_email)
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
 
     receipt_ref = db.collection("users").document(user_email).collection("receipts").document(receipt_id)
     snap = receipt_ref.get()
@@ -7278,17 +7294,68 @@ async def delete_receipt(
     receipt_data = snap.to_dict() or {}
     gcs_path = receipt_data.get("gcs_path") or ""
 
-    if gcs_path and gcs_client and IMPORT_BUCKET:
+    # Prune linked coins against active user coins and review_queue (MF-1 Data Loss Prevention)
+    raw_linked = receipt_data.get("linked_coin_ids") or []
+    active_linked = []
+    user_ref = db.collection("users").document(user_email)
+    if raw_linked:
+        active_ids = set()
         try:
-            bucket = gcs_client.bucket(IMPORT_BUCKET)
-            prefix = f"gs://{IMPORT_BUCKET}/"
-            blob_name = gcs_path[len(prefix):] if gcs_path.startswith(prefix) else gcs_path
-            blob = bucket.blob(blob_name)
-            if blob.exists():
-                blob.delete()
-                logger.info(f"Deleted receipt blob from GCS: {blob_name}")
-        except Exception as e:
-            logger.warning(f"Could not delete receipt GCS blob {gcs_path}: {e}")
+            for cd in user_ref.collection("coins").select([]).stream():
+                active_ids.add(cd.id)
+            for rd in user_ref.collection("review_queue").select([]).stream():
+                active_ids.add(rd.id)
+            active_linked = [cid for cid in raw_linked if cid in active_ids]
+        except Exception as exc:
+            logger.warning(f"Could not verify active linked coins on receipt delete: {exc}")
+            active_linked = raw_linked
+
+    # Check reverse coin links if linked_coin_ids is empty
+    if not active_linked:
+        try:
+            for _ in user_ref.collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream():
+                active_linked.append("coin_ref")
+                break
+            if not active_linked:
+                for _ in user_ref.collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream():
+                    active_linked.append("rq_ref")
+                    break
+        except Exception as exc:
+            logger.warning(f"Could not check reverse coin receipt_id references: {exc}")
+
+    if gcs_path:
+        # Extract blob_name
+        blob_name = gcs_path
+        if blob_name.startswith("gs://"):
+            parts = blob_name[len("gs://"):].split("/", 1)
+            blob_name = parts[1] if len(parts) > 1 else ""
+
+        # Enforce owner-folder check: blob path must sit under token user's folder or return 403
+        clean_user = user_email.strip().lower()
+        clean_owner = owner_key.strip().lower()
+        expected_prefixes = (
+            f"receipts/{clean_user}/",
+            f"receipts/{clean_owner}/",
+            f"{clean_user}/",
+            f"{clean_owner}/",
+        )
+        if not any(blob_name.lower().startswith(p) for p in expected_prefixes):
+            logger.warning(f"Blob path '{blob_name}' does not match user folder for '{owner_key}'")
+            raise HTTPException(status_code=403, detail="Access denied: storage path outside user folder")
+
+        # Delete blob ONLY when zero coins link to it (MF-1)
+        if len(active_linked) == 0:
+            if gcs_client and IMPORT_BUCKET:
+                try:
+                    bucket = gcs_client.bucket(IMPORT_BUCKET)
+                    blob = bucket.blob(blob_name)
+                    if blob.exists():
+                        blob.delete()
+                        logger.info(f"Deleted receipt blob from GCS: {blob_name}")
+                except Exception as e:
+                    logger.warning(f"Could not delete receipt GCS blob {gcs_path}: {e}")
+        else:
+            logger.info(f"Retained receipt blob {blob_name} because {len(active_linked)} coin(s) still link to receipt {receipt_id}")
 
     receipt_ref.delete()
     logger.info(f"Deleted receipt {receipt_id} for user {user_email}")
@@ -7298,11 +7365,18 @@ async def delete_receipt(
 # -- GET /api/receipts/{user_email}/{receipt_id}/view_url ----------------------
 
 @app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
-def receipt_view_url(user_email: str, receipt_id: str):
+def receipt_view_url(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+):
     """
     Return a reliable streaming URL for viewing original PDF receipt documents inline.
     Looks up receipt metadata across receipts collection, review_queue, and coins.
     """
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
     gcs_path = ""
     original_filename = ""
 
@@ -7340,6 +7414,10 @@ def receipt_view_url(user_email: str, receipt_id: str):
         gcs_path = f"gs://{IMPORT_BUCKET}/{user_email}/imports/raw/{safe_id}.pdf"
 
     stream_url = f"https://numista-backend-568985927038.us-central1.run.app/api/receipts/{user_email}/{receipt_id}/stream"
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split("Bearer ", 1)[1].strip()
+        stream_url += f"?token={token}"
+
     return {
         "receipt_id":      receipt_id,
         "signed_url":      stream_url,
@@ -7349,11 +7427,20 @@ def receipt_view_url(user_email: str, receipt_id: str):
 
 
 @app.get("/api/receipts/{user_email}/{receipt_id}/stream")
-def receipt_stream(user_email: str, receipt_id: str):
+def receipt_stream(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+):
     """
     Direct PDF stream endpoint that reads PDF bytes from GCS using Cloud Run ADC
     and streams directly to the browser for inline PDF viewing.
     """
+    auth_header = authorization or (f"Bearer {token}" if token else None)
+    owner_key = _authenticate_request(auth_header, user_email)
+    user_email = owner_key
+
     gcs_path = ""
 
     rec_snap = db.collection("users").document(user_email)\

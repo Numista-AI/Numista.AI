@@ -112,8 +112,9 @@ def test_list_receipts_pruning_and_date(monkeypatch):
 
     mock_db.collection("users").document.return_value = user_ref
     monkeypatch.setattr(main, "db", mock_db)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
 
-    resp = client.get("/api/receipts/tester@numista.ai")
+    resp = client.get("/api/receipts/tester@numista.ai", headers={"Authorization": "Bearer test-token"})
     assert resp.status_code == 200
     data = resp.json()
     assert "receipts" in data
@@ -125,8 +126,8 @@ def test_list_receipts_pruning_and_date(monkeypatch):
     assert rec["linked_coin_ids"] == ["active_coin_1", "active_coin_3"]
 
 
-def test_delete_receipt_endpoint(monkeypatch):
-    """Verify DELETE /api/receipts/{user_email}/{receipt_id} authenticates and deletes the receipt."""
+def test_delete_receipt_retains_blob_when_coins_linked(monkeypatch):
+    """Verify MF-1: A receipt with linked coins retains its storage blob on delete."""
     monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
 
     mock_db = MagicMock()
@@ -134,21 +135,127 @@ def test_delete_receipt_endpoint(monkeypatch):
     rec_ref = MagicMock()
     rec_snap = MagicMock()
     rec_snap.exists = True
-    rec_snap.to_dict.return_value = {"gcs_path": "receipts/tester@numista.ai/rec_123/original.pdf"}
+    rec_snap.to_dict.return_value = {
+        "gcs_path": "receipts/tester@numista.ai/rec_123/original.pdf",
+        "linked_coin_ids": ["coin_active_1"],
+    }
     rec_ref.get.return_value = rec_snap
 
-    user_ref.collection("receipts").document.return_value = rec_ref
+    # Mock user coins collection showing coin_active_1 is alive
+    mock_cd1 = MagicMock(); mock_cd1.id = "coin_active_1"
+    coins_col = MagicMock()
+    coins_col.select.return_value.stream.return_value = [mock_cd1]
+    user_ref.collection.side_effect = lambda name: {
+        "receipts": MagicMock(document=lambda rid: rec_ref),
+        "coins": coins_col,
+        "review_queue": MagicMock(select=lambda fields: MagicMock(stream=lambda: [])),
+    }.get(name, MagicMock())
+
     mock_db.collection("users").document.return_value = user_ref
     monkeypatch.setattr(main, "db", mock_db)
 
-    # Mock storage client
+    # Mock GCS client and blob
     mock_gcs = MagicMock()
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_blob.exists.return_value = True
+    mock_bucket.blob.return_value = mock_blob
+    mock_gcs.bucket.return_value = mock_bucket
     monkeypatch.setattr(main, "gcs_client", mock_gcs)
+    monkeypatch.setattr(main, "IMPORT_BUCKET", "test-bucket")
 
     resp = client.delete("/api/receipts/tester@numista.ai/rec_123", headers={"Authorization": "Bearer test-token"})
     assert resp.status_code == 200
     assert resp.json()["status"] == "success"
+    # Firestore receipt document must be deleted
     rec_ref.delete.assert_called_once()
+    # BUT GCS blob must NOT be deleted because coins are still linked!
+    mock_blob.delete.assert_not_called()
+
+
+def test_delete_receipt_deletes_blob_when_zero_coins_linked(monkeypatch):
+    """Verify MF-1: A receipt with zero linked coins deletes both Firestore doc and GCS blob."""
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+
+    mock_db = MagicMock()
+    user_ref = MagicMock()
+    rec_ref = MagicMock()
+    rec_snap = MagicMock()
+    rec_snap.exists = True
+    rec_snap.to_dict.return_value = {
+        "gcs_path": "receipts/tester@numista.ai/rec_123/original.pdf",
+        "linked_coin_ids": [],
+    }
+    rec_ref.get.return_value = rec_snap
+
+    user_ref.collection.side_effect = lambda name: {
+        "receipts": MagicMock(document=lambda rid: rec_ref),
+        "coins": MagicMock(
+            select=lambda fields: MagicMock(stream=lambda: []),
+            where=lambda field, op, val: MagicMock(limit=lambda n: MagicMock(stream=lambda: [])),
+        ),
+        "review_queue": MagicMock(
+            select=lambda fields: MagicMock(stream=lambda: []),
+            where=lambda field, op, val: MagicMock(limit=lambda n: MagicMock(stream=lambda: [])),
+        ),
+    }.get(name, MagicMock())
+
+    mock_db.collection("users").document.return_value = user_ref
+    monkeypatch.setattr(main, "db", mock_db)
+
+    # Mock GCS client and blob
+    mock_gcs = MagicMock()
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_blob.exists.return_value = True
+    mock_bucket.blob.return_value = mock_blob
+    mock_gcs.bucket.return_value = mock_bucket
+    monkeypatch.setattr(main, "gcs_client", mock_gcs)
+    monkeypatch.setattr(main, "IMPORT_BUCKET", "test-bucket")
+
+    resp = client.delete("/api/receipts/tester@numista.ai/rec_123", headers={"Authorization": "Bearer test-token"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+    # Both Firestore doc and GCS blob must be deleted
+    rec_ref.delete.assert_called_once()
+    mock_blob.delete.assert_called_once()
+
+
+def test_delete_receipt_rejects_foreign_blob_path(monkeypatch):
+    """Verify MF-1: Attempting to delete a receipt pointing to another user's blob returns 403."""
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+
+    mock_db = MagicMock()
+    user_ref = MagicMock()
+    rec_ref = MagicMock()
+    rec_snap = MagicMock()
+    rec_snap.exists = True
+    # Blob points to victim's folder!
+    rec_snap.to_dict.return_value = {
+        "gcs_path": "receipts/victim@numista.ai/rec_victim/original.pdf",
+        "linked_coin_ids": [],
+    }
+    rec_ref.get.return_value = rec_snap
+
+    user_ref.collection.side_effect = lambda name: {
+        "receipts": MagicMock(document=lambda rid: rec_ref),
+        "coins": MagicMock(
+            select=lambda fields: MagicMock(stream=lambda: []),
+            where=lambda field, op, val: MagicMock(limit=lambda n: MagicMock(stream=lambda: [])),
+        ),
+        "review_queue": MagicMock(
+            select=lambda fields: MagicMock(stream=lambda: []),
+            where=lambda field, op, val: MagicMock(limit=lambda n: MagicMock(stream=lambda: [])),
+        ),
+    }.get(name, MagicMock())
+
+    mock_db.collection("users").document.return_value = user_ref
+    monkeypatch.setattr(main, "db", mock_db)
+
+    resp = client.delete("/api/receipts/tester@numista.ai/rec_123", headers={"Authorization": "Bearer test-token"})
+    assert resp.status_code == 403
+    assert "storage path outside user folder" in resp.json()["detail"]
+    rec_ref.delete.assert_not_called()
 
 
 def test_identify_coin_photo_single_image(monkeypatch):

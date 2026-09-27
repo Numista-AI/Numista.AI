@@ -2581,7 +2581,14 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
         '$apiBase/api/receipts/${Uri.encodeComponent(userEmail)}/$receiptId/view_url',
       );
 
-      final resp = await http.get(url);
+      final user = FirebaseAuth.instance.currentUser;
+      final token = await user?.getIdToken();
+      final resp = await http.get(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final signedUrl = data['signed_url'] as String?;

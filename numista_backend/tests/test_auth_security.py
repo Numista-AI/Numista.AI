@@ -11,6 +11,8 @@ Pytest verification suite testing backend perimeter security:
 import pytest
 import os
 import sys
+import io
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 # Ensure backend root is on Python path
@@ -267,5 +269,122 @@ def test_appraisal_pdf_endpoint_auth(monkeypatch):
         json={"user_email": "victim@example.com"}
     )
     assert resp_forbidden.status_code == 403
+
+
+def test_commit_group_photo_override_indexing_on_partial_failure(monkeypatch):
+    """Verify Should-Fix: A coin failing mid-group does NOT shift later coins' prices."""
+    import main
+    from firebase_admin import auth as fb_auth
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "tester@numista.ai", "uid": "tester_uid"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    # Make coin 0 fail, coin 1 succeed
+    call_count = [0]
+    def fake_add_coin(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise RuntimeError("Simulated failure for coin 0")
+        return {"coin_id": "coin_1_id"}
+
+    monkeypatch.setattr(main, "execute_add_coin", fake_add_coin)
+
+    # Mock Firestore coin update to capture what cost was written to coin 1
+    updated_fields = {}
+    mock_db = MagicMock()
+    mock_doc = MagicMock()
+    def fake_update(fields):
+        updated_fields.update(fields)
+    mock_doc.update.side_effect = fake_update
+    mock_db.collection.return_value.document.return_value = mock_doc
+    monkeypatch.setattr(main, "db", mock_db)
+
+    two_coins = [
+        {"year": "1964", "denomination": "Half Dollar"},
+        {"year": "1964", "denomination": "Quarter"}
+    ]
+
+    resp = client.post(
+        "/api/commit_group_photo",
+        headers={"Authorization": "Bearer valid_token"},
+        json={
+            "user_email": "tester@numista.ai",
+            "coins": two_coins,
+            "cost_total": "$50.00",
+            "cost_overrides": ["$10.00", "$40.00"],
+        },
+    )
+    assert resp.status_code == 200
+    res_data = resp.json()
+    assert res_data["results"][0]["status"] == "error"
+    assert res_data["results"][1]["status"] == "added"
+    assert res_data["cost_split_details"][0]["cost"] == "$40.00", "Coin 1 must receive override_cents[1] ($40.00), not override_cents[0] ($10.00)"
+    assert updated_fields.get("Cost") == "$40.00"
+    assert updated_fields.get("cost_basis") == 40.0
+
+
+def test_identify_coin_photo_auth_checks(monkeypatch):
+    """Verify POST /api/identify_coin_photo requires auth when save_to_collection=True."""
+    from firebase_admin import auth as fb_auth
+
+    dummy_image = io.BytesIO(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00")
+    files = {"image_a": ("obverse.jpg", dummy_image, "image/jpeg")}
+    data = {"user_email": "victim@example.com", "save_to_collection": "true"}
+
+    # 1. Unauthenticated with save_to_collection=true must return 401
+    resp_unauth = client.post("/api/identify_coin_photo", data=data, files=files)
+    assert resp_unauth.status_code == 401
+
+    # 2. Mismatched token must return 403 Forbidden
+    def fake_verify_attacker(token, *args, **kwargs):
+        return {"email": "attacker@example.com", "uid": "attacker_uid"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify_attacker)
+    dummy_image.seek(0)
+    files2 = {"image_a": ("obverse.jpg", dummy_image, "image/jpeg")}
+    resp_forbidden = client.post(
+        "/api/identify_coin_photo",
+        headers={"Authorization": "Bearer token_attacker"},
+        data=data,
+        files=files2,
+    )
+    assert resp_forbidden.status_code == 403
+
+
+def test_receipt_endpoints_auth_checks(monkeypatch):
+    """Verify list_receipts, receipt_view_url, and receipt_stream require auth and reject mismatches."""
+    from firebase_admin import auth as fb_auth
+
+    def fake_verify_attacker(token, *args, **kwargs):
+        return {"email": "attacker@example.com", "uid": "attacker_uid"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify_attacker)
+
+    # 1. list_receipts
+    assert client.get("/api/receipts/victim@example.com").status_code == 401
+    assert client.get(
+        "/api/receipts/victim@example.com",
+        headers={"Authorization": "Bearer token_attacker"}
+    ).status_code == 403
+
+    # 2. receipt_view_url
+    assert client.get("/api/receipts/victim@example.com/rec_123/view_url").status_code == 401
+    assert client.get(
+        "/api/receipts/victim@example.com/rec_123/view_url",
+        headers={"Authorization": "Bearer token_attacker"}
+    ).status_code == 403
+
+    # 3. receipt_stream
+    assert client.get("/api/receipts/victim@example.com/rec_123/stream").status_code == 401
+    assert client.get(
+        "/api/receipts/victim@example.com/rec_123/stream",
+        headers={"Authorization": "Bearer token_attacker"}
+    ).status_code == 403
+    assert client.get(
+        "/api/receipts/victim@example.com/rec_123/stream?token=token_attacker"
+    ).status_code == 403
+
 
 

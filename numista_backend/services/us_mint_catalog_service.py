@@ -160,11 +160,14 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$95.00",
         "retailer": "United States Mint",
     },
+    # Official US Mint: https://catalog.usmint.gov/
+    # Product 26SQRP: 2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll ($61.00)
+    # Note: Circulating $1 coins carry no mint mark on obverse/reverse. 26SQRD does not exist.
     "26SQRP": {
-        "title": "2026-P Semiquincentennial Presidential $1 Coin 25-Coin Roll",
+        "title": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll",
         "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Philadelphia)",
         "year": 2026,
-        "mint_mark": "P",
+        "mint_mark": "",
         "mint_facility": "Philadelphia (P)",
         "denomination": "Dollar",
         "program_series": "Presidential $1 Coins",
@@ -174,21 +177,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
         "issue_price": "$61.00",
         "retailer": "United States Mint",
-    },
-    "26SQRD": {
-        "title": "2026-D Semiquincentennial Presidential $1 Coin 25-Coin Roll",
-        "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Denver)",
-        "year": 2026,
-        "mint_mark": "D",
-        "mint_facility": "Denver (D)",
-        "denomination": "Dollar",
-        "program_series": "Presidential $1 Coins",
-        "theme_subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
-        "strike_type": "Circulating",
-        "condition": "Uncirculated",
-        "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
-        "issue_price": "$61.00",
-        "retailer": "United States Mint",
+        "catalog_url": "https://catalog.usmint.gov/",
     },
 
     # ── 2024 / 2023 Historical Reference Codes ───────────────────────────────
@@ -335,7 +324,7 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         item["Metal Content"] = catalog_match.get("metal_content", "99.9% Silver")
         
         # Mint facility / mark
-        if not item.get("Mint Mark") and catalog_match.get("mint_mark"):
+        if not item.get("Mint Mark") and "mint_mark" in catalog_match:
             item["Mint Mark"] = catalog_match["mint_mark"]
 
         # Retailer normalization

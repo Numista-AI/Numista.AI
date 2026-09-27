@@ -81,26 +81,21 @@ def test_enrich_us_mint_item_with_26xe():
 
 
 def test_26sqrp_catalog_facts():
-    """Verify official US Mint specs for 26SQRP (2026-P Semiquincentennial Presidential $1 25-coin roll)."""
+    """Verify official US Mint specs for 26SQRP (2026 Semiquincentennial Presidential $1 25-coin roll)."""
     item = lookup_us_mint_item("26SQRP")
     assert item is not None
     assert item["year"] == 2026
     assert item["denomination"] == "Dollar"
     assert item["mint_facility"] == "Philadelphia (P)"
-    assert item["mint_mark"] == "P"
+    assert item["mint_mark"] == ""
     assert item["issue_price"] == "$61.00"
     assert "Manganese-Brass" in item["metal_content"]
+    assert item.get("catalog_url") == "https://catalog.usmint.gov/"
 
 
-def test_26sqrd_catalog_facts():
-    """Verify official US Mint specs for 26SQRD (2026-D Semiquincentennial Presidential $1 25-coin roll)."""
-    item = lookup_us_mint_item("26SQRD")
-    assert item is not None
-    assert item["year"] == 2026
-    assert item["denomination"] == "Dollar"
-    assert item["mint_facility"] == "Denver (D)"
-    assert item["mint_mark"] == "D"
-    assert item["issue_price"] == "$61.00"
+def test_26sqrd_does_not_exist():
+    """Verify 26SQRD is removed from catalog because US Mint only offers 26SQRP roll and 26SQBP bag."""
+    assert lookup_us_mint_item("26SQRD") is None
 
 
 def test_enrich_us_mint_item_with_notes_fallback():
@@ -108,13 +103,14 @@ def test_enrich_us_mint_item_with_notes_fallback():
     extracted = {
         "Retailer Item No.": "N/A",
         "Original Description from source": "2026 Presidential $1 Coin",
-        "Personal Notes": "26SQRP Semiquincentennial President P",
+        "Personal Notes": "26SQRP Semiquincentennial President",
         "Cost": "$61.00",
     }
     enriched = enrich_us_mint_item(extracted)
     assert enriched["Retailer Item No."] == "26SQRP"
     assert enriched["Year"] == 2026
     assert enriched["Denomination"] == "Dollar"
-    assert enriched["Mint Mark"] == "P"
+    assert enriched["Mint Mark"] == ""
     assert enriched["_catalog_grounded"] is True
+
 

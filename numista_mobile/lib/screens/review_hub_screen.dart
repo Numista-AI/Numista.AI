@@ -294,7 +294,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             child: cachedReceipts != null
                 ? _buildReceiptsList(cachedReceipts!, user, setDlgState)
                 : FutureBuilder<http.Response>(
-                    future: http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}")),
+                    future: () async {
+                      final token = await user.getIdToken();
+                      return http.get(
+                        Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}"),
+                        headers: {
+                          if (token != null) 'Authorization': 'Bearer $token',
+                        },
+                      );
+                    }(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD700))));
@@ -367,7 +375,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    final res = await http.get(Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"));
+                    final token = await user.getIdToken();
+                    final res = await http.get(
+                      Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"),
+                      headers: {
+                        if (token != null) 'Authorization': 'Bearer $token',
+                      },
+                    );
                     if (res.statusCode == 200) {
                       final data = jsonDecode(res.body);
                       final url = data['signed_url'] ?? data['url'];

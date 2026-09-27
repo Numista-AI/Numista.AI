@@ -392,6 +392,16 @@
 
 
 
+
+## v4.392 — 2026-09-27
+**Pre-Deploy Security & Catalog Enhancements**
+
+- Fix: prevent data loss by retaining receipt blob when coins are still linked (MF-1)
+- Security: enforce owner-folder check on receipt blob deletions (MF-1)
+- Catalog: remove nonexistent 26SQRD and correct 26SQRP mint mark to blank (MF-2)
+- Security: add Bearer auth to receipt list, view_url, stream, and identify_coin_photo (REQ_016)
+- Fix: index cost overrides by orig_i in commit_group_photo to prevent price shifts on partial failure
+
 ## v4.391 — 2026-09-27
 **Security Enhancements & Platform Updates**
 
