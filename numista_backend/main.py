@@ -5324,71 +5324,71 @@ async def commit_group_photo(request: CommitGroupRequest):
                 total_greysheet = sum(greysheet_values)
                 all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
 
-            if all_have_values:
-                # M7: Value-weighted split in integer cents
-                split_method = "greysheet_value_weighted"
-                shares = [v / total_greysheet for v in greysheet_values]
-                raw_cents = [share * total_cents for share in shares]
-                int_cents = [int(c) for c in raw_cents]
-                remainder = total_cents - sum(int_cents)
+                if all_have_values:
+                    # M7: Value-weighted split in integer cents
+                    split_method = "greysheet_value_weighted"
+                    shares = [v / total_greysheet for v in greysheet_values]
+                    raw_cents = [share * total_cents for share in shares]
+                    int_cents = [int(c) for c in raw_cents]
+                    remainder = total_cents - sum(int_cents)
 
-                # Give remainder to highest-value coin
-                max_idx = greysheet_values.index(max(greysheet_values))
-                int_cents[max_idx] += remainder
+                    # Give remainder to highest-value coin
+                    max_idx = greysheet_values.index(max(greysheet_values))
+                    int_cents[max_idx] += remainder
 
-                for i, cid in enumerate(coin_ids):
-                    cost_str = f"${int_cents[i] / 100:.2f}"
-                    pct = shares[i] * 100
-                    cost_note = f"Split from {request.cost_total} group price ({pct:.1f}% by Greysheet value)"
-                    cost_split_details.append({
-                        "coin_id": cid,
-                        "cost": cost_str,
-                        "share_pct": round(pct, 2),
-                        "greysheet_bid": greysheet_values[i],
-                        "denomination": request.coins[i].denomination if i < len(request.coins) else "",
-                    })
-                    try:
-                        db.collection(f"users/{user_email}/coins").document(cid).update({
-                            "Cost": cost_str,
-                            "Purchase Cost": cost_str,
-                            "cost_basis": int_cents[i] / 100.0,
-                            "cost_notes": cost_note,
-                            "cost_split_method": split_method,
-                            "cost_split_greysheet_bid": greysheet_values[i],
-                            "cost_split_greysheet_date": lookup_date,
-                            "cost_split_share_pct": round(pct, 2),
-                            "cost_split_total": request.cost_total,
+                    for i, cid in enumerate(coin_ids):
+                        cost_str = f"${int_cents[i] / 100:.2f}"
+                        pct = shares[i] * 100
+                        cost_note = f"Split from {request.cost_total} group price ({pct:.1f}% by Greysheet value)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round(pct, 2),
+                            "greysheet_bid": greysheet_values[i],
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
                         })
-                    except Exception:
-                        pass
-            else:
-                # M7 fallback: even split
-                split_method = "even_split"
-                n_ids = len(coin_ids)
-                base_cents = total_cents // n_ids
-                remainder = total_cents % n_ids
-                for i, cid in enumerate(coin_ids):
-                    cents = base_cents + (1 if i < remainder else 0)
-                    cost_str = f"${cents / 100:.2f}"
-                    cost_note = f"Split from {request.cost_total} group price (even split: market values unavailable)"
-                    cost_split_details.append({
-                        "coin_id": cid,
-                        "cost": cost_str,
-                        "share_pct": round(100.0 / n_ids, 2),
-                        "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
-                        "denomination": request.coins[i].denomination if i < len(request.coins) else "",
-                    })
-                    try:
-                        db.collection(f"users/{user_email}/coins").document(cid).update({
-                            "Cost": cost_str,
-                            "Purchase Cost": cost_str,
-                            "cost_basis": cents / 100.0,
-                            "cost_notes": cost_note,
-                            "cost_split_method": split_method,
-                            "cost_split_total": request.cost_total,
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": int_cents[i] / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_greysheet_bid": greysheet_values[i],
+                                "cost_split_greysheet_date": lookup_date,
+                                "cost_split_share_pct": round(pct, 2),
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
+                else:
+                    # M7 fallback: even split
+                    split_method = "even_split"
+                    n_ids = len(coin_ids)
+                    base_cents = total_cents // n_ids
+                    remainder = total_cents % n_ids
+                    for i, cid in enumerate(coin_ids):
+                        cents = base_cents + (1 if i < remainder else 0)
+                        cost_str = f"${cents / 100:.2f}"
+                        cost_note = f"Split from {request.cost_total} group price (even split: market values unavailable)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round(100.0 / n_ids, 2),
+                            "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
                         })
-                    except Exception:
-                        pass
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": cents / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
 
         except (ValueError, ZeroDivisionError):
             split_method = "error_fallback"

@@ -385,6 +385,19 @@
 
 
 
+
+## v4.385 — 2026-09-27
+**Release Enhancements & Platform Updates**
+
+- Release: bump version to v4.384
+- Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)
+- Ux: Gap A M3 photo ask + Gap B M5 portfolio value in greeting (REQ_006)
+- Cost: M7 Greysheet value-weighted cost split for group photo sets
+- Morgan: M1-M6 must-fixes for one-photo-add (v1.1)
+- Morgan: one photo AI add with group detection, HEIC conversion, cost fix (Plan v1 + L1-L10)
+- Release: bump version to v4.377
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.376)
+
 ## v4.384 — 2026-09-27
 **Transfer Enhancements & Platform Updates**
 
