@@ -1691,10 +1691,56 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.388',
+    date: '2026-09-27',
+    description: 'Hotfix Auth, Undo Confirmation, Atomic Sale/Undo (REQ_009)',
+    isLatest: true,
+    changes: [
+      'Security: Bearer token auth required on group photo and sell endpoints (MF2, SF5)',
+      'Safety: Undo All confirmation dialog and in-flight guard (MF1)',
+      'Atomics: Firestore batch transactions for sales and undos (MF3)',
+      'Audit: Full-sale undo restores unit cost basis and created_at timestamp (SF1)',
+      'Audit: Direct sale archive sets Quantity to sold_qty (SF7)',
+      'Validation: Strict validation and error messaging on cost split overrides (SF2)',
+    ],
+  ),
+  _Release(
+    version: 'v4.387',
+    date: '2026-09-27',
+    description: 'Cost Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Cost: M7 pre-save cost split confirm + edit dialog (REQ_007)',
+      'Main: clean indentation in commit_group_photo and sync release notes',
+      'Release: bump version to v4.384',
+      'Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)',
+      'Ux: Gap A M3 photo ask + Gap B M5 portfolio value in greeting (REQ_006)',
+      'Cost: M7 Greysheet value-weighted cost split for group photo sets',
+      'Morgan: M1-M6 must-fixes for one-photo-add (v1.1)',
+      'Morgan: one photo AI add with group detection, HEIC conversion, cost fix (Plan v1 + L1-L10)',
+    ],
+  ),
+  _Release(
+    version: 'v4.386',
+    date: '2026-09-27',
+    description: 'Main Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'Main: clean indentation in commit_group_photo and sync release notes',
+      'Release: bump version to v4.384',
+      'Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)',
+      'Ux: Gap A M3 photo ask + Gap B M5 portfolio value in greeting (REQ_006)',
+      'Cost: M7 Greysheet value-weighted cost split for group photo sets',
+      'Morgan: M1-M6 must-fixes for one-photo-add (v1.1)',
+      'Morgan: one photo AI add with group detection, HEIC conversion, cost fix (Plan v1 + L1-L10)',
+      'Release: bump version to v4.377',
+    ],
+  ),
+  _Release(
     version: 'v4.385',
     date: '2026-09-27',
     description: 'Release Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Release: bump version to v4.384',
       'Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)',

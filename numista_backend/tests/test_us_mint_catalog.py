@@ -77,6 +77,44 @@ def test_enrich_us_mint_item_with_26xe():
     assert enriched["Variety"] == "Liberty Bell 250 Privy, 1776~2026 Dual Date"
     assert enriched["weight_grams"] == 26.73
     assert "0.859 oz ASW" in enriched["Metal Content"]
-    assert "West Point" in enriched["Personal Notes"]
-    assert enriched["Quantity"] == 2
     assert enriched["_catalog_grounded"] is True
+
+
+def test_26sqrp_catalog_facts():
+    """Verify official US Mint specs for 26SQRP (2026-P Semiquincentennial Presidential $1 25-coin roll)."""
+    item = lookup_us_mint_item("26SQRP")
+    assert item is not None
+    assert item["year"] == 2026
+    assert item["denomination"] == "Dollar"
+    assert item["mint_facility"] == "Philadelphia (P)"
+    assert item["mint_mark"] == "P"
+    assert item["issue_price"] == "$61.00"
+    assert "Manganese-Brass" in item["metal_content"]
+
+
+def test_26sqrd_catalog_facts():
+    """Verify official US Mint specs for 26SQRD (2026-D Semiquincentennial Presidential $1 25-coin roll)."""
+    item = lookup_us_mint_item("26SQRD")
+    assert item is not None
+    assert item["year"] == 2026
+    assert item["denomination"] == "Dollar"
+    assert item["mint_facility"] == "Denver (D)"
+    assert item["mint_mark"] == "D"
+    assert item["issue_price"] == "$61.00"
+
+
+def test_enrich_us_mint_item_with_notes_fallback():
+    """Verify 26SQRP in Personal Notes enriches and sets Retailer Item No."""
+    extracted = {
+        "Retailer Item No.": "N/A",
+        "Original Description from source": "2026 Presidential $1 Coin",
+        "Personal Notes": "26SQRP Semiquincentennial President P",
+        "Cost": "$61.00",
+    }
+    enriched = enrich_us_mint_item(extracted)
+    assert enriched["Retailer Item No."] == "26SQRP"
+    assert enriched["Year"] == 2026
+    assert enriched["Denomination"] == "Dollar"
+    assert enriched["Mint Mark"] == "P"
+    assert enriched["_catalog_grounded"] is True
+

@@ -160,6 +160,36 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$95.00",
         "retailer": "United States Mint",
     },
+    "26SQRP": {
+        "title": "2026-P Semiquincentennial Presidential $1 Coin 25-Coin Roll",
+        "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Philadelphia)",
+        "year": 2026,
+        "mint_mark": "P",
+        "mint_facility": "Philadelphia (P)",
+        "denomination": "Dollar",
+        "program_series": "Presidential $1 Coins",
+        "theme_subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
+        "strike_type": "Circulating",
+        "condition": "Uncirculated",
+        "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+        "issue_price": "$61.00",
+        "retailer": "United States Mint",
+    },
+    "26SQRD": {
+        "title": "2026-D Semiquincentennial Presidential $1 Coin 25-Coin Roll",
+        "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Denver)",
+        "year": 2026,
+        "mint_mark": "D",
+        "mint_facility": "Denver (D)",
+        "denomination": "Dollar",
+        "program_series": "Presidential $1 Coins",
+        "theme_subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
+        "strike_type": "Circulating",
+        "condition": "Uncirculated",
+        "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+        "issue_price": "$61.00",
+        "retailer": "United States Mint",
+    },
 
     # ── 2024 / 2023 Historical Reference Codes ───────────────────────────────
     "24XL": {
@@ -274,12 +304,14 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
     # Attempt catalog match by item code first
     catalog_match = lookup_us_mint_item(raw_item_no)
 
-    # If item number not present in Retailer Item No, search description for known codes (e.g. 26XL)
-    if not catalog_match and raw_desc:
+    # If item number not present in Retailer Item No, search description and personal notes for known codes (e.g. 26XL, 26SQRP)
+    raw_notes = str(item.get("Personal Notes") or item.get("personalNotes") or "").strip()
+    search_corpus = f"{raw_desc} {raw_notes}".strip()
+    if not catalog_match and search_corpus:
         for code in US_MINT_PRODUCT_CATALOG:
-            if re.search(rf"\b{code}\b", raw_desc, re.IGNORECASE):
+            if re.search(rf"\b{code}\b", search_corpus, re.IGNORECASE):
                 catalog_match = US_MINT_PRODUCT_CATALOG[code]
-                if not raw_item_no:
+                if not raw_item_no or raw_item_no.upper() in ("N/A", "UNKNOWN", "NONE"):
                     item["Retailer Item No."] = code
                 break
 

@@ -124,3 +124,93 @@ def test_stripe_webhook_fail_closed_missing_secret(monkeypatch):
     )
     assert response.status_code == 400
     assert "secret" in response.json()["detail"].lower()
+
+
+def test_unauthenticated_group_photo_and_sell_endpoints_rejected():
+    """Endpoints protected by MF2 and SF5 must return 401 when no Authorization header is provided."""
+    # 1. preview_cost_split
+    resp1 = client.post(
+        "/api/preview_cost_split",
+        json={"coins": [], "cost_total": "$50.00"},
+    )
+    assert resp1.status_code == 401
+
+    # 2. commit_group_photo
+    resp2 = client.post(
+        "/api/commit_group_photo",
+        json={"user_email": "victim@example.com", "coins": []},
+    )
+    assert resp2.status_code == 401
+
+    # 3. sell-direct
+    resp3 = client.post(
+        "/api/transfer/sell-direct",
+        json={
+            "user_id": "victim@example.com",
+            "coin_id": "coin123",
+            "qty_sold": 1,
+            "sale_price": 50.0,
+            "fees": 0.0
+        },
+    )
+    assert resp3.status_code == 401
+
+    # 4. undo-sale
+    resp4 = client.post(
+        "/api/transfer/undo-sale",
+        json={"user_id": "victim@example.com", "sale_archive_id": "sale_123"},
+    )
+    assert resp4.status_code == 401
+
+    # 5. sold-items
+    resp5 = client.get("/api/transfer/sold-items/victim@example.com")
+    assert resp5.status_code == 401
+
+
+def test_mismatched_identity_group_photo_rejected(monkeypatch):
+    """When Authorization header identifies attacker, body email for victim must return 403 Forbidden."""
+    from firebase_admin import auth as fb_auth
+
+    def fake_verify(token, *args, **kwargs):
+        if token == "valid_token_attacker":
+            return {"email": "attacker@example.com", "uid": "attacker_uid"}
+        raise fb_auth.InvalidIdTokenError("Invalid token")
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    resp = client.post(
+        "/api/commit_group_photo",
+        headers={"Authorization": "Bearer valid_token_attacker"},
+        json={
+            "user_email": "victim@example.com",
+            "coins": [{"year": "1921", "denomination": "Dollar"}],
+            "cost_total": "$50.00",
+        },
+    )
+    assert resp.status_code == 403
+    assert "Forbidden" in resp.json()["detail"]
+
+
+def test_invalid_cost_overrides_rejected_sf2(monkeypatch):
+    """Cost overrides that don't match sum or count must return 400 (SF2)."""
+    from firebase_admin import auth as fb_auth
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "tester@numista.ai", "uid": "tester_uid"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    # 1. Sum mismatch
+    resp = client.post(
+        "/api/commit_group_photo",
+        headers={"Authorization": "Bearer valid_token"},
+        json={
+            "user_email": "tester@numista.ai",
+            "coins": [],
+            "cost_total": "$50.00",
+            "cost_overrides": ["$10.00", "$15.00"],
+        },
+    )
+    # Len 0 coins returns 400
+    assert resp.status_code == 400
+
