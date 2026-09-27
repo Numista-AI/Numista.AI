@@ -390,6 +390,19 @@
 
 
 
+
+## v4.390 — 2026-09-27
+**Upload Enhancements & Platform Updates**
+
+- Upload: baseline upload fixes for receipts, sets, photos, and autofill (REQ_008)
+- Security: auth token enforcement, undo-sale guard, atomic transactions, and group-photo CORS 500 (REQ_009 / REQ_010)
+- Cost: M7 pre-save cost split confirm + edit dialog (REQ_007)
+- Main: clean indentation in commit_group_photo and sync release notes
+- Release: bump version to v4.384
+- Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)
+- Ux: Gap A M3 photo ask + Gap B M5 portfolio value in greeting (REQ_006)
+- Cost: M7 Greysheet value-weighted cost split for group photo sets
+
 ## v4.389 — 2026-09-27
 **Upload Baseline Fixes: Receipts, Sets, Photos & Autofill**
 
