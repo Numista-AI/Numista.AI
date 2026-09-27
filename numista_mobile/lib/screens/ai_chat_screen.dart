@@ -1050,54 +1050,63 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
     _scrollToBottom();
 
-    try {
-      if (setId != null) {
-        await SetGroupingService.ungroupSet(parentSetDocId: setId, deleteOwnerPhotos: true);
+    // 1. Ungroup Set (with preservePhotosOnChildren: false to clean up GCS)
+    if (setId != null) {
+      try {
+        await SetGroupingService.ungroupSet(
+          parentSetDocId: setId, 
+          deleteOwnerPhotos: true,
+          preservePhotosOnChildren: false,
+        );
+      } catch (e) {
+        debugPrint('Ungroup set failed or already deleted: $e');
       }
-
-      // Delete individual coin docs (ungroupSet only unlinks, doesn't delete children)
-      final userEmail = AuthService.userEmail;
-      for (final cid in coinIds) {
-        try {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userEmail)
-              .collection('coins')
-              .doc(cid)
-              .delete();
-        } catch (_) {}
-      }
-
-      // Delete the GCS group photo
-      if (photoUrl != null && photoUrl.toString().isNotEmpty) {
-        try {
-          if (photoUrl.startsWith('gs://') || photoUrl.startsWith('http')) {
-            await FirebaseStorage.instance.refFromURL(photoUrl).delete();
-          } else {
-            // It's a storage path like 'users/email/group_photos/uuid.jpg'
-            await FirebaseStorage.instance.ref(photoUrl).delete();
-          }
-        } catch (_) {}
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _messages.removeWhere((m) => m['is_loading'] == true);
-        _messages.add({
-          'role': 'assistant',
-          'content': 'Undo complete. The coins and photo have been removed.',
-        });
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _messages.removeWhere((m) => m['is_loading'] == true);
-        _messages.add({
-          'role': 'assistant',
-          'content': 'Failed to undo: $e',
-        });
-      });
     }
+
+    // 2. Delete individual coin docs
+    final userEmail = AuthService.userEmail;
+    for (final cid in coinIds) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userEmail)
+            .collection('coins')
+            .doc(cid)
+            .delete();
+      } catch (e) {
+        debugPrint('Failed to delete child coin $cid: $e');
+      }
+    }
+
+    // 3. Delete the GCS group photo
+    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+      try {
+        if (photoUrl.startsWith('gs://') || photoUrl.startsWith('http')) {
+          await FirebaseStorage.instance.refFromURL(photoUrl).delete();
+        } else {
+          // It's a storage path like 'users/email/group_photos/uuid.jpg'
+          await FirebaseStorage.instance.ref(photoUrl).delete();
+        }
+      } on FirebaseException catch (e) {
+        if (e.code == 'object-not-found') {
+          debugPrint('Group photo already deleted or not found (treated as success).');
+        } else {
+          debugPrint('FirebaseException deleting group photo: $e');
+        }
+      } catch (e) {
+        debugPrint('Error deleting group photo: $e');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _messages.removeWhere((m) => m['is_loading'] == true);
+      _messages.add({
+        'role': 'assistant',
+        'content': 'Undo complete. Removed ${coinIds.length} coins and the set.',
+      });
+    });
+    _scrollToBottom();
   }
 
   Widget _buildGroupProposalCard(Map<String, dynamic> payload) {
@@ -1176,6 +1185,29 @@ class _AiChatScreenState extends State<AiChatScreen> {
     String storage = '';
     bool enterPerCoin = false;
 
+    final List coins = payload['coins'] ?? [];
+    final bool anyMissingMintMark = coins.any((c) => c['mint_mark_visible'] == false);
+    final visibleMintMarkCoin = coins.cast<Map<String,dynamic>>().firstWhere(
+      (c) => c['mint_mark_visible'] == true && (c['mint_mark'] ?? '').toString().isNotEmpty, 
+      orElse: () => <String, dynamic>{}
+    );
+    final String visibleMm = visibleMintMarkCoin.isNotEmpty ? (visibleMintMarkCoin['mint_mark']?.toString() ?? '') : '';
+    final String visibleDenom = visibleMintMarkCoin.isNotEmpty ? (visibleMintMarkCoin['denomination']?.toString() ?? 'coin') : '';
+    
+    String mintMarkQuestion = "Your photo shows the fronts.";
+    if (visibleMm.isNotEmpty) {
+      String mmName = visibleMm == 'D' ? ' (Denver)' : (visibleMm == 'S' ? ' (San Francisco)' : (visibleMm == 'P' ? ' (Philadelphia)' : (visibleMm == 'W' ? ' (West Point)' : '')));
+      mintMarkQuestion += " The $visibleDenom shows a $visibleMm. Are all ${coins.length} coins $visibleMm$mmName?";
+    } else {
+      mintMarkQuestion += " We couldn't see the mint marks. Are they all the same?";
+    }
+
+    List<String> mmOptions = [];
+    if (visibleMm.isNotEmpty) mmOptions.add('All $visibleMm');
+    mmOptions.add('Let me set each');
+    mmOptions.add('Not sure / Skip');
+    String bulkMintMarkOption = 'Not sure / Skip';
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -1188,6 +1220,34 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (anyMissingMintMark) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(mintMarkQuestion, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            DropdownButton<String>(
+                              value: bulkMintMarkOption,
+                              isExpanded: true,
+                              items: mmOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setDialogState(() => bulkMintMarkOption = val);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     Row(
                       children: [
                         Expanded(
@@ -1241,6 +1301,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
+                    if (bulkMintMarkOption.startsWith('All ') && visibleMm.isNotEmpty) {
+                      for (var c in payload['coins']) {
+                        c['mint_mark'] = visibleMm;
+                      }
+                    }
                     final formDetails = {
                       'price': price,
                       'date': date,

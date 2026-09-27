@@ -99,6 +99,7 @@ class SetGroupingService {
   static Future<void> ungroupSet({
     required String parentSetDocId,
     required bool deleteOwnerPhotos,
+    bool preservePhotosOnChildren = true,
   }) async {
     final userEmail = AuthService.userEmail;
     
@@ -111,11 +112,12 @@ class SetGroupingService {
       throw ArgumentError('Set not found: $parentSetDocId');
     }
     final parentData = parentDoc.data()!;
+    final parentStorageLocation = parentData['Storage Location'] as String?;
+    final parentOwnerPhotos = parentData['owner_photos'] as List<dynamic>? ?? [];
     
-    // Delete owner photos from Storage if requested
-    if (deleteOwnerPhotos) {
-      final ownerPhotos = parentData['owner_photos'] as List<dynamic>? ?? [];
-      for (final photo in ownerPhotos) {
+    // Delete owner photos from Storage if requested and NOT preserving them
+    if (deleteOwnerPhotos && !preservePhotosOnChildren) {
+      for (final photo in parentOwnerPhotos) {
         final photoMap = Map<String, dynamic>.from(photo as Map);
         // Delete compressed copy
         final storagePath = photoMap['storage_path'] as String?;
@@ -134,17 +136,39 @@ class SetGroupingService {
       }
     }
     
-    // Clear parent links on all child coins
+    // Clear parent links on all child coins and optionally preserve data
     final childIds = (parentData['set_contents'] as List<dynamic>? ?? [])
         .map((e) => e.toString())
         .toList();
     
     final batch = FirebaseFirestore.instance.batch();
     for (final childId in childIds) {
-      batch.update(coinsRef.doc(childId), {
+      final childUpdate = <String, dynamic>{
         'parent_set_id': FieldValue.delete(),
         'set_id': FieldValue.delete(),
-      });
+      };
+      
+      if (preservePhotosOnChildren) {
+        // Read child doc to check current state
+        final childDoc = await coinsRef.doc(childId).get();
+        if (childDoc.exists) {
+          final childData = childDoc.data()!;
+          
+          // Preserve Storage Location if child has none
+          final childStorageLocation = childData['Storage Location'] as String?;
+          if ((childStorageLocation == null || childStorageLocation.trim().isEmpty) && 
+              parentStorageLocation != null && parentStorageLocation.trim().isNotEmpty) {
+            childUpdate['Storage Location'] = parentStorageLocation;
+          }
+          
+          // Preserve Photos
+          if (parentOwnerPhotos.isNotEmpty) {
+            childUpdate['owner_photos'] = FieldValue.arrayUnion(parentOwnerPhotos);
+          }
+        }
+      }
+      
+      batch.update(coinsRef.doc(childId), childUpdate);
     }
     
     // Delete the parent set doc

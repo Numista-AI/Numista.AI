@@ -4924,6 +4924,30 @@ async def identify_coin_photo_preflight():
     """
     from fastapi.responses import Response as FastAPIResponse
     return FastAPIResponse(status_code=200)
+
+@app.post("/api/convert_heic")
+async def convert_heic_endpoint(
+    image: UploadFile = File(...),
+):
+    """Convert HEIC/HEIF image to JPEG. Returns JPEG bytes.
+    If not HEIC, returns original bytes unchanged.
+    Used by Flutter owner-photo upload to convert before Firebase Storage upload."""
+    from fastapi.responses import Response as FastAPIResponse
+    raw_bytes = await image.read()
+    converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
+    if converted_mime:
+        return FastAPIResponse(
+            content=converted_bytes,
+            media_type="image/jpeg",
+            headers={"X-Converted": "true"},
+        )
+    else:
+        return FastAPIResponse(
+            content=raw_bytes,
+            media_type=image.content_type or "image/jpeg",
+            headers={"X-Converted": "false"},
+        )
+
 @app.post("/api/identify_group_photo")
 async def identify_group_photo(
     user_email: str = Form(...),
@@ -4956,7 +4980,7 @@ The photo may contain one or more coins, possibly in a holder, case, sleeve, or 
 YOUR TASKS:
 1. COUNT how many distinct coins are visible.
 2. For each coin, identify: Year, Denomination, Program/Series, Theme/Subject,
-   Mint Mark, Condition (Sheldon scale estimate if possible), Metal Content.
+   Mint Mark, Condition, Metal Content.
 3. CONFIDENCE: Rate your confidence for each coin as "high", "medium", or "low".
 4. GROUPING: If the coins appear to be physically together (in a holder, case,
    plastic sleeve, display card, official mint packaging, etc.), set "appears_grouped": true
@@ -4966,6 +4990,21 @@ YOUR TASKS:
    percentage of image dimensions) so individual coins can be cropped.
 6. If you cannot identify a coin clearly, still include it with confidence "low"
    and your best guess.
+
+MINT MARK RULES:
+- Only set mint_mark if you can CLEARLY see it on the coin in the photo.
+- If the photo shows only one side (e.g., all obverses) and the mint mark is on the other side, set:
+  mint_mark: "", mint_mark_visible: false, mint_mark_source: "unknown"
+- If one coin in the group shows a visible mint mark (e.g., a cent showing 'D'), note it but do NOT assume all other coins share that mint mark.
+- NEVER invent or guess a mint mark that is not visible.
+
+GRADE AND STRIKE RULES:
+- Default strike type is "Business Strike".
+- NEVER assign "Proof" unless you see clear evidence: mirror-like fields, frosted devices, proof packaging/case, or a proof set label.
+- NEVER assign a specific numeric Sheldon grade (e.g., MS-65, PR-70) from a photo unless the coin is in a certified holder (PCGS, NGC slab) with the grade visible.
+- For uncertified coins, use descriptive grades only: "Uncirculated", "About Uncirculated", "Extremely Fine", "Fine", "Good", etc.
+- Add a field "grade_source": "visible_on_holder" | "estimated_from_photo" | "unknown"
+- Confidence must NEVER be "high" if the mint mark side was not visible.
 
 IMPORTANT LIMITS:
 - Maximum 20 coins per photo. If you see more than 20, identify only the first 20
@@ -4982,7 +5021,10 @@ Return ONLY valid JSON — no markdown fences, no commentary:
       "program_series": "Kennedy Half Dollars",
       "theme_subject": "John F. Kennedy",
       "mint_mark": "D",
-      "condition": "MS-63",
+      "mint_mark_visible": true,
+      "mint_mark_source": "visible_on_coin",
+      "condition": "Uncirculated",
+      "grade_source": "estimated_from_photo",
       "metal_content": "90% Silver",
       "confidence": "high",
       "bbox": {"x_pct": 0.1, "y_pct": 0.2, "w_pct": 0.3, "h_pct": 0.3}
