@@ -4135,7 +4135,7 @@ class _OwnerPhotoHero extends StatelessWidget {
                       fit: BoxFit.cover,
                       width: 120,
                       height: 120,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, _, _) => const Icon(
                         Icons.broken_image,
                         color: Color(0xFFC9A227),
                         size: 48,
@@ -4265,7 +4265,7 @@ class _OwnerPhotoHero extends StatelessWidget {
                         child: Image.network(
                           photo['url'] as String,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Center(
+                          errorBuilder: (_, _, _) => const Center(
                             child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
                           ),
                         ),

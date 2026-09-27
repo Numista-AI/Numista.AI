@@ -376,6 +376,45 @@
 
 
 
+
+
+
+## v4.377 — 2026-09-27
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.376)
+- Hosting: replace catchall rewrite with route allowlist and custom 404.html
+- Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)
+- Release: bump version to v4.373
+- Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH
+- Release: bump version to v4.372
+- Mint-releases: update walkthrough with test verification results
+- Mint-releases: add automated test suites and harden migration/seed scripts
+
+## v4.376 — 2026-09-26
+**Hosting Enhancements & Platform Updates**
+
+- Hosting: replace catchall rewrite with route allowlist and custom 404.html
+- Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)
+- Release: bump version to v4.373
+- Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH
+- Release: bump version to v4.372
+- Mint-releases: update walkthrough with test verification results
+- Mint-releases: add automated test suites and harden migration/seed scripts
+- Release: bump version to v4.369
+
+## v4.375 — 2026-09-26
+**Sets Enhancements & Platform Updates**
+
+- Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)
+- Release: bump version to v4.373
+- Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH
+- Release: bump version to v4.372
+- Mint-releases: update walkthrough with test verification results
+- Mint-releases: add automated test suites and harden migration/seed scripts
+- Release: bump version to v4.369
+- Walkthrough: sync root walkthrough with beta checklist auto-detection and EPN hardening release (v4.368)
+
 ## v4.374 — 2026-09-26
 **Sets Enhancements & Platform Updates**
 
