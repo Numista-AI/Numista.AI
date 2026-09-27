@@ -1406,11 +1406,33 @@ class _AiChatScreenState extends State<AiChatScreen> {
             });
           }
         }
-        
+        final splitMethod = data['cost_split_method']?.toString() ?? '';
+        final splitDetails = List<Map<String, dynamic>>.from(
+          (data['cost_split_details'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? [],
+        );
+
+        // Build Morgan's cost split summary
+        String costSummary = '';
+        if (splitMethod == 'greysheet_value_weighted' && splitDetails.isNotEmpty) {
+          costSummary = '\n\n📊 Cost split by market value:';
+          for (final d in splitDetails) {
+            final denom = d['denomination'] ?? '';
+            final pct = d['share_pct'] ?? 0.0;
+            final cost = d['cost'] ?? '\$0.00';
+            final bid = d['greysheet_bid'] ?? 0.0;
+            costSummary += '\n  • $denom: $cost (${pct.toStringAsFixed(1)}%, Greysheet \$${bid.toStringAsFixed(2)})';
+          }
+        } else if (splitMethod == 'even_split' && splitDetails.isNotEmpty) {
+          costSummary = '\n\n⚠️ Cost split evenly (market values unavailable):';
+          for (final d in splitDetails) {
+            costSummary += '\n  • ${d['denomination']}: ${d['cost']}';
+          }
+        }
+
         setState(() {
           _messages.add({
             'role': 'assistant',
-            'content': 'Successfully saved ${coinIds.length} coins!',
+            'content': 'Successfully saved ${coinIds.length} coins!$costSummary',
             'action_payload': {
               'action': 'group_photo_success',
               'coin_ids': coinIds,
