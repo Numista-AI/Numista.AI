@@ -191,26 +191,81 @@ def test_mismatched_identity_group_photo_rejected(monkeypatch):
     assert "Forbidden" in resp.json()["detail"]
 
 
-def test_invalid_cost_overrides_rejected_sf2(monkeypatch):
-    """Cost overrides that don't match sum or count must return 400 (SF2)."""
+def test_invalid_cost_overrides_pre_validation_mf_a(monkeypatch):
+    """Cost overrides that don't match sum or count must return 400 BEFORE any coins are written (MF-A)."""
     from firebase_admin import auth as fb_auth
+    import main
 
     def fake_verify(token, *args, **kwargs):
         return {"email": "tester@numista.ai", "uid": "tester_uid"}
 
     monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
 
-    # 1. Sum mismatch
-    resp = client.post(
+    # Track execute_add_coin calls to prove zero coins are written
+    add_coin_calls = []
+    def fake_add_coin(*args, **kwargs):
+        add_coin_calls.append(kwargs)
+        return {"coin_id": "dummy_coin_id"}
+
+    monkeypatch.setattr(main, "execute_add_coin", fake_add_coin)
+
+    two_coins = [
+        {"year": "1964", "denomination": "Half Dollar"},
+        {"year": "1964", "denomination": "Quarter"}
+    ]
+
+    # Case 1: Sum mismatch ($25 vs $50)
+    resp1 = client.post(
         "/api/commit_group_photo",
         headers={"Authorization": "Bearer valid_token"},
         json={
             "user_email": "tester@numista.ai",
-            "coins": [],
+            "coins": two_coins,
             "cost_total": "$50.00",
             "cost_overrides": ["$10.00", "$15.00"],
         },
     )
-    # Len 0 coins returns 400
-    assert resp.status_code == 400
+    assert resp1.status_code == 400
+    assert "does not match total cost" in resp1.json()["error"]
+    assert len(add_coin_calls) == 0, "No coins should be added when override sum is invalid (MF-A)"
+
+    # Case 2: Count mismatch (1 override for 2 coins)
+    resp2 = client.post(
+        "/api/commit_group_photo",
+        headers={"Authorization": "Bearer valid_token"},
+        json={
+            "user_email": "tester@numista.ai",
+            "coins": two_coins,
+            "cost_total": "$50.00",
+            "cost_overrides": ["$50.00"],
+        },
+    )
+    assert resp2.status_code == 400
+    assert "does not match coins count" in resp2.json()["error"]
+    assert len(add_coin_calls) == 0, "No coins should be added when override count is invalid (MF-A)"
+
+
+def test_appraisal_pdf_endpoint_auth(monkeypatch):
+    """Appraisal PDF export must require authentication and reject mismatched identity."""
+    from firebase_admin import auth as fb_auth
+
+    # 1. Unauthenticated request must return 401
+    resp_unauth = client.post(
+        "/api/export/appraisal-pdf",
+        json={"user_email": "victim@example.com"}
+    )
+    assert resp_unauth.status_code == 401
+
+    # 2. Mismatched token must return 403 Forbidden
+    def fake_verify_attacker(token, *args, **kwargs):
+        return {"email": "attacker@example.com", "uid": "attacker_uid"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify_attacker)
+    resp_forbidden = client.post(
+        "/api/export/appraisal-pdf",
+        headers={"Authorization": "Bearer token_attacker"},
+        json={"user_email": "victim@example.com"}
+    )
+    assert resp_forbidden.status_code == 403
+
 

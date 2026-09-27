@@ -45,19 +45,21 @@ except ImportError:
 
 app = FastAPI(title="Numista.AI Backend API")
 
+ALLOWED_ORIGINS = [
+    "https://numista.ai",
+    "https://www.numista.ai",
+    "https://numista-vault.web.app",      # Firebase Hosting (production)
+    "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://numista.ai",
-        "https://www.numista.ai",
-        "https://numista-vault.web.app",      # Firebase Hosting (production)
-        "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5000",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -5022,10 +5024,11 @@ async def identify_group_photo(
 ):
     """Identify multiple coins in a single group photo.
     Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
-    origin = request.headers.get("origin") or "*"
+    req_origin = request.headers.get("origin") or ""
+    cors_origin = req_origin if req_origin in ALLOWED_ORIGINS else ("*" if not req_origin else ALLOWED_ORIGINS[0])
     cors_headers = {
-        "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Credentials": "true" if origin != "*" else "false",
+        "Access-Control-Allow-Origin": cors_origin,
+        "Access-Control-Allow-Credentials": "true" if cors_origin in ALLOWED_ORIGINS else "false",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
     }
@@ -5319,6 +5322,40 @@ async def commit_group_photo(
     if n > 20:
         return JSONResponse(status_code=400, content={"error": "Maximum 20 coins per group."})
 
+    # ── Step 0: Pre-validate Cost Overrides BEFORE any coin or GCS writes (MF-A) ──
+    prevalidated_override_cents = None
+    if request.cost_overrides is not None:
+        if len(request.cost_overrides) != n:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Cost overrides count ({len(request.cost_overrides)}) does not match coins count ({n})."}
+            )
+        prevalidated_override_cents = []
+        for ov in request.cost_overrides:
+            ov_clean = _re.sub(r'[^\d.]', '', str(ov))
+            if not ov_clean:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "Invalid cost override: empty or non-numeric value."}
+                )
+            try:
+                prevalidated_override_cents.append(round(float(ov_clean) * 100))
+            except (ValueError, TypeError):
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Invalid cost override value: {ov}"}
+                )
+
+        if request.cost_total:
+            total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+            if total_str:
+                total_cents_check = round(float(total_str) * 100)
+                if sum(prevalidated_override_cents) != total_cents_check:
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": f"Cost overrides sum (${sum(prevalidated_override_cents)/100:.2f}) does not match total cost (${total_cents_check/100:.2f})."}
+                    )
+
     # ── Step 1: Add each coin with $0.00 placeholder cost ──────────────────
     coin_ids = []
     added_coins = []  # List of (orig_index, coin_id) to maintain indexing integrity (SF3)
@@ -5364,35 +5401,9 @@ async def commit_group_photo(
             total_cents = round(float(total_str) * 100)
             lookup_date = datetime.now(timezone.utc).isoformat()
 
-            # If user provided edited cost overrides from confirm step, validate and use them (SF2)
-            if request.cost_overrides is not None:
-                if len(request.cost_overrides) != len(coin_ids):
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": f"Cost overrides count ({len(request.cost_overrides)}) does not match added coins count ({len(coin_ids)})."}
-                    )
-                override_cents = []
-                for ov in request.cost_overrides:
-                    ov_clean = _re.sub(r'[^\d.]', '', str(ov))
-                    if not ov_clean:
-                        return JSONResponse(
-                            status_code=400,
-                            content={"error": "Invalid cost override: empty or non-numeric value."}
-                        )
-                    try:
-                        override_cents.append(round(float(ov_clean) * 100))
-                    except (ValueError, TypeError):
-                        return JSONResponse(
-                            status_code=400,
-                            content={"error": f"Invalid cost override value: {ov}"}
-                        )
-
-                if sum(override_cents) != total_cents:
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": f"Cost overrides sum (${sum(override_cents)/100:.2f}) does not match total cost (${total_cents/100:.2f})."}
-                    )
-
+            # If user provided edited cost overrides from confirm step, use prevalidated values (SF2 / MF-A)
+            if prevalidated_override_cents is not None:
+                override_cents = prevalidated_override_cents
                 split_method = "user_edited"
                 for idx, (orig_i, cid) in enumerate(added_coins):
                     cost_str = f"${override_cents[idx] / 100:.2f}"
@@ -7398,23 +7409,6 @@ class ClearCollectionRequest(BaseModel):
     # Ignored if present. Identity comes only from the Firebase Bearer token.
     user_email: Optional[str] = None
     pin_code: str = ""    # unused; kept so older clients do not 422
-
-
-def _collection_owner_from_token(user: Dict[str, Any]) -> str:
-    """Firestore users/{id} key matching AuthService.coinsPath.
-
-    Anonymous users are stored under UID. Everyone else under lowercase email.
-    Client-supplied email/uid is never used.
-    """
-    uid = (user.get("uid") or "").strip()
-    email = (user.get("email") or "").strip().lower()
-    firebase = user.get("firebase") or {}
-    is_anonymous = firebase.get("sign_in_provider") == "anonymous"
-    if is_anonymous or not email:
-        if not uid:
-            raise HTTPException(status_code=401, detail="Unable to resolve authenticated identity")
-        return uid
-    return email
 
 
 @app.get("/api/collection/count")
@@ -10796,11 +10790,16 @@ class AppraisalPdfRequest(BaseModel):
     user_email: str
 
 @app.post("/api/export/appraisal-pdf")
-async def api_export_appraisal_pdf(req: AppraisalPdfRequest):
+async def api_export_appraisal_pdf(
+    req: AppraisalPdfRequest,
+    authorization: Optional[str] = Header(None),
+):
     """
     Generates itemized 1-Click Insurance & Estate Appraisal PDF Schedule.
     Returns direct binary bytes for web download and archives background copy to GCS.
     """
+    owner_key = _authenticate_request(authorization, req.user_email)
+    req.user_email = owner_key
     try:
         coins_ref = db.collection('users').document(req.user_email).collection('portfolio').stream()
         items = [c.to_dict() for c in coins_ref]
@@ -10816,19 +10815,22 @@ async def api_export_appraisal_pdf(req: AppraisalPdfRequest):
             "items": items[:50] if items else []
         })
 
-        try:
-            bucket_name = os.environ.get("GCS_BUCKET_NAME", "studio-9101802118-8c9a8-uploads")
-            gcs_path = f"users/{req.user_email}/appraisals/Appraisal_Schedule_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
-            blob = storage_client.bucket(bucket_name).blob(gcs_path)
-            blob.upload_from_string(pdf_bytes, content_type="application/pdf")
-        except Exception as gcs_err:
-            logger.warning(f"GCS appraisal archive warning: {gcs_err}")
+        if gcs_client:
+            try:
+                bucket_name = os.environ.get("GCS_BUCKET_NAME", "studio-9101802118-8c9a8-uploads")
+                gcs_path = f"users/{req.user_email}/appraisals/Appraisal_Schedule_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
+                blob = gcs_client.bucket(bucket_name).blob(gcs_path)
+                blob.upload_from_string(pdf_bytes, content_type="application/pdf")
+            except Exception as gcs_err:
+                logger.warning(f"GCS appraisal archive warning: {gcs_err}")
 
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=Numista_Itemized_Appraisal_Schedule.pdf"}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Appraisal PDF export failed")
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../constants.dart';
 import 'auth_service.dart';
+import 'http_auth_client.dart';
 
 /// A single coin result from the definitive reference library.
 class CoinSearchResult {
@@ -158,7 +158,7 @@ class CoinSearchService {
         },
       );
 
-      final resp = await http.get(uri).timeout(
+      final resp = await HttpAuthClient.get(uri).timeout(
             const Duration(seconds: 15),
             onTimeout: () => throw Exception('Search timed out'),
           );

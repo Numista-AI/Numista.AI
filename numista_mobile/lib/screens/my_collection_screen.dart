@@ -23,6 +23,7 @@ import '../widgets/set_contents_panel.dart';
 import '../widgets/grade_badge_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
@@ -179,7 +180,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       final userEmail = AuthService.userEmail;
       if (userEmail.isEmpty) return;
       
-      final response = await http.get(
+      final response = await HttpAuthClient.get(
         Uri.parse('$kApiBaseUrl/api/collection/completion_stats?user_email=$userEmail')
       );
       if (response.statusCode == 200) {
