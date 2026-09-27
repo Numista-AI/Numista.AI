@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.393',
+    date: '2026-09-27',
+    description: 'Pre-deploy Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Pre-deploy: receipt blob retention, catalog 26SQRD removal, endpoint auth, and override indexing (REQ_016)',
+      'Release: sync release notes for v4.391',
+      'Security: pre-validate cost overrides, authenticate appraisal-pdf, restrict CORS, and send Bearer tokens on 401 routes (REQ_015)',
+      'Release: sync release notes for v4.390',
+      'Upload: baseline upload fixes for receipts, sets, photos, and autofill (REQ_008)',
+      'Security: auth token enforcement, undo-sale guard, atomic transactions, and group-photo CORS 500 (REQ_009 / REQ_010)',
+      'Cost: M7 pre-save cost split confirm + edit dialog (REQ_007)',
+      'Main: clean indentation in commit_group_photo and sync release notes',
+    ],
+  ),
+  _Release(
     version: 'v4.392',
     date: '2026-09-27',
     description: 'Pre-Deploy Security & Catalog Enhancements',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Fix: prevent data loss by retaining receipt blob when coins are still linked (MF-1)',
       'Security: enforce owner-folder check on receipt blob deletions (MF-1)',
