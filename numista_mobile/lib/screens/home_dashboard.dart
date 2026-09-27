@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.377',
+    date: '2026-09-27',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.376)',
+      'Hosting: replace catchall rewrite with route allowlist and custom 404.html',
+      'Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)',
+      'Release: bump version to v4.373',
+      'Review-hub: theme-adapt edit modal, add first-class quantity editing, and register US Mint 26XE/26XH',
+      'Release: bump version to v4.372',
+      'Mint-releases: update walkthrough with test verification results',
+      'Mint-releases: add automated test suites and harden migration/seed scripts',
+    ],
+  ),
+  _Release(
     version: 'v4.376',
     date: '2026-09-26',
     description: 'Hosting Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Hosting: replace catchall rewrite with route allowlist and custom 404.html',
       'Sets: owner photo on sets + group/ungroup (Plan v1.1 + L8)',
