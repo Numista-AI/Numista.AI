@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.391',
+    date: '2026-09-27',
+    description: 'Security Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Security: pre-validate cost overrides, authenticate appraisal-pdf, restrict CORS, and send Bearer tokens on 401 routes (REQ_015)',
+      'Release: sync release notes for v4.390',
+      'Upload: baseline upload fixes for receipts, sets, photos, and autofill (REQ_008)',
+      'Security: auth token enforcement, undo-sale guard, atomic transactions, and group-photo CORS 500 (REQ_009 / REQ_010)',
+      'Cost: M7 pre-save cost split confirm + edit dialog (REQ_007)',
+      'Main: clean indentation in commit_group_photo and sync release notes',
+      'Release: bump version to v4.384',
+      'Transfer: Phase 1 partial quantity sales, Mode 3, undo, and estate wording (REQ_003)',
+    ],
+  ),
+  _Release(
     version: 'v4.390',
     date: '2026-09-27',
     description: 'Upload Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Upload: baseline upload fixes for receipts, sets, photos, and autofill (REQ_008)',
       'Security: auth token enforcement, undo-sale guard, atomic transactions, and group-photo CORS 500 (REQ_009 / REQ_010)',
