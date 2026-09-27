@@ -24,7 +24,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "year": 2026,
         "mint_mark": "",  # Struck at Philadelphia without mint mark (or (P))
         "mint_facility": "Philadelphia (P)",
-        "denomination": "Peace Dollar",
+        "denomination": "Dollar",
         "program_series": "Morgan and Peace Silver Dollars",
         "theme_subject": "Peace Dollar Reverse Proof",
         "strike_type": "Reverse Proof",
@@ -42,7 +42,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "year": 2026,
         "mint_mark": "",
         "mint_facility": "Philadelphia (P)",
-        "denomination": "Morgan Dollar",
+        "denomination": "Dollar",
         "program_series": "Morgan and Peace Silver Dollars",
         "theme_subject": "Morgan Dollar Reverse Proof",
         "strike_type": "Reverse Proof",
@@ -77,7 +77,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "year": 2026,
         "mint_mark": "",  # Struck at West Point without mint mark
         "mint_facility": "West Point (no mint mark)",
-        "denomination": "Morgan Dollar",
+        "denomination": "Dollar",
         "program_series": "Morgan and Peace Silver Dollars",
         "theme_subject": "Morgan Dollar Enhanced Uncirculated (Liberty Bell 250 Privy, 1776~2026)",
         "variety": "Liberty Bell 250 Privy, 1776~2026 Dual Date",
@@ -96,7 +96,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "year": 2026,
         "mint_mark": "",  # Struck at West Point without mint mark
         "mint_facility": "West Point (no mint mark)",
-        "denomination": "Peace Dollar",
+        "denomination": "Dollar",
         "program_series": "Morgan and Peace Silver Dollars",
         "theme_subject": "Peace Dollar Enhanced Uncirculated (Liberty Bell 250 Privy, 1776~2026)",
         "variety": "Liberty Bell 250 Privy, 1776~2026 Dual Date",

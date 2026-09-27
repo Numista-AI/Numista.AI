@@ -177,6 +177,34 @@ def fetch_estate_data_overrides(db: firestore.Client, uid: str) -> dict[str, dic
         return {}
 
 
+def fetch_sold_items(db: firestore.Client, uid: str) -> list[dict]:
+    """
+    Fetch sold/transferred items from users/{uid}/transferred_coins and transferred_currency.
+    Strictly excludes voided (undone) and recalled items per CoS Lock L3 & L4.
+    """
+    clean_uid = uid.strip().lower() if "@" in uid else uid.strip()
+    sold_items: list[dict] = []
+    for coll_name in ('transferred_coins', 'transferred_currency'):
+        try:
+            docs = db.collection('users').document(clean_uid).collection(coll_name).stream()
+            for doc in docs:
+                data = doc.to_dict() or {}
+                status = str(data.get('status', '')).lower()
+                transfer_status = str(data.get('transfer_status', '')).lower()
+                if status in ('voided', 'recalled') or transfer_status in ('voided', 'recalled'):
+                    continue
+                data['_doc_id'] = doc.id
+                data['_collection'] = coll_name
+                sold_items.append(data)
+        except Exception as exc:
+            log.warning(f'[estate] Could not fetch {coll_name} for uid={uid}: {exc}')
+
+    def _sort_key(item):
+        return str(item.get('sale_date') or item.get('sold_at') or item.get('transferred_at') or '')
+    sold_items.sort(key=_sort_key, reverse=True)
+    return sold_items
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # COLLECTION ANALYSIS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -737,16 +765,25 @@ async def generate_estate_report(
     # ── Fetch Firestore data (run sync in executor for async compat) ───────────
     loop = asyncio.get_event_loop()
 
-    (partition_coins, display_coins), estate_profile, estate_overrides = await asyncio.gather(
+    custom_sold = report_request.get('sold_items')
+    sold_task = (
+        asyncio.sleep(0, result=custom_sold)
+        if custom_sold is not None
+        else loop.run_in_executor(None, fetch_sold_items, db, uid)
+    )
+
+    (partition_coins, display_coins), estate_profile, estate_overrides, sold_items = await asyncio.gather(
         loop.run_in_executor(None, fetch_coins, db, uid),
         loop.run_in_executor(None, fetch_estate_profile, db, uid),
         loop.run_in_executor(None, fetch_estate_data_overrides, db, uid),
+        sold_task,
     )
 
     log.info(
         f'[estate] Data fetched: {len(display_coins)} display rows, '
         f'{len(partition_coins)} lots, '
-        f'{len(estate_overrides)} overrides for uid={uid}'
+        f'{len(estate_overrides)} overrides, '
+        f'{len(sold_items)} sold items for uid={uid}'
     )
 
     # ── Build financial summary (one summary on display_coins) ─────────────────
@@ -806,6 +843,7 @@ async def generate_estate_report(
         'attorney_portal_url': attorney_portal_url,
         'estate_profile': estate_profile,
         'division_results': division_results,
+        'sold_items': sold_items,
     }
 
     pdf_bytes = await loop.run_in_executor(None, build_estate_pdf, pdf_context)

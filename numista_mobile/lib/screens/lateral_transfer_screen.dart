@@ -31,7 +31,26 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   final TextEditingController _claimTransferIdController = TextEditingController();
   final TextEditingController _claimPinController = TextEditingController();
 
-  String _activeTab = 'send'; // 'send' or 'claim'
+  String _activeTab = 'send'; // 'send', 'sell_outside', 'sold_history', 'claim'
+
+  // Mode 3 Direct Sale Fields
+  final TextEditingController _salePriceController = TextEditingController();
+  final TextEditingController _saleFeesController = TextEditingController(text: '0.00');
+  final TextEditingController _saleDateController = TextEditingController();
+  final TextEditingController _buyerRefController = TextEditingController();
+  final TextEditingController _saleNotesController = TextEditingController();
+  String _salesVenue = 'eBay';
+  CoinModel? _selectedCoinToSell;
+  int _qtyToSell = 1;
+  bool _isSelling = false;
+
+  // Sold Inventory & Undo State (CoS Lock L3)
+  List<Map<String, dynamic>> _soldItems = [];
+  bool _isLoadingSoldItems = false;
+  String? _soldItemsError;
+
+  // Partial transfer quantities (Mode 1 G1)
+  final Map<String, int> _itemTransferQuantities = {};
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _scaffoldBg => _isDark ? const Color(0xFF0F172A) : const Color(0xFFF4F4F2);
@@ -62,11 +81,16 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   void initState() {
     super.initState();
     _activeTab = widget.initialTab;
+    _saleDateController.text = DateTime.now().toIso8601String().substring(0, 10);
     if (widget.itemsToTransfer.isNotEmpty) {
       _allCoins = List.from(widget.itemsToTransfer);
       _selectedCoinIds = _allCoins.map((c) => c.id).toSet();
+      _selectedCoinToSell = _allCoins.first;
     } else {
       _loadInventoryFromFirestore();
+    }
+    if (_activeTab == 'sold_history') {
+      _loadSoldItems();
     }
   }
 
@@ -76,6 +100,11 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     _searchController.dispose();
     _claimTransferIdController.dispose();
     _claimPinController.dispose();
+    _salePriceController.dispose();
+    _saleFeesController.dispose();
+    _saleDateController.dispose();
+    _buyerRefController.dispose();
+    _saleNotesController.dispose();
     super.dispose();
   }
 
@@ -198,6 +227,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         recipientEmail: _recipientEmailController.text.trim().isNotEmpty
             ? _recipientEmailController.text.trim()
             : null,
+        itemQuantities: _itemTransferQuantities.isNotEmpty ? _itemTransferQuantities : null,
         privacyToggles: {
           'hide_cost_basis': _hideCostBasis,
           'hide_private_notes': _hidePrivateNotes,
@@ -292,71 +322,34 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Mode Selector: Send Transfer vs Claim Transfer
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: _cardBg,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _borderCol),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _activeTab = 'send'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _activeTab == 'send' ? const Color(0xFF0284C7) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.send_outlined, color: _activeTab == 'send' ? Colors.white : _textPrimary, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Send Transfer',
-                              style: TextStyle(color: _activeTab == 'send' ? Colors.white : _textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _activeTab = 'claim'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _activeTab == 'claim' ? const Color(0xFF0284C7) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.download_for_offline_outlined, color: _activeTab == 'claim' ? Colors.white : _textPrimary, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Claim / Receive Transfer',
-                              style: TextStyle(color: _activeTab == 'claim' ? Colors.white : _textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            // Mode Selector: 4-Way Operational Modes
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: _cardBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _borderCol),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTabButton('send', Icons.send_outlined, 'Transfer (Mode 1)'),
+                    _buildTabButton('sell_outside', Icons.point_of_sale_outlined, 'Sold Outside (Mode 3)'),
+                    _buildTabButton('sold_history', Icons.history_outlined, 'Sold Inventory & Undo'),
+                    _buildTabButton('claim', Icons.download_for_offline_outlined, 'Claim Transfer'),
+                  ],
+                ),
               ),
             ),
 
             if (_activeTab == 'claim')
               _buildClaimView()
+            else if (_activeTab == 'sell_outside')
+              _buildSoldOutsideView()
+            else if (_activeTab == 'sold_history')
+              _buildSoldHistoryView()
             else
               (_createdTransfer != null ? _buildSuccessView() : _buildInitiationForm()),
           ],
@@ -706,9 +699,64 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                     titleText,
                     style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-                  subtitle: Text(
-                    '${coin.condition} | ${coin.gradingService.isNotEmpty ? coin.gradingService : "Raw"} ${coin.certificationNumber} ${coin.variety}'.trim(),
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${coin.condition} | ${coin.gradingService.isNotEmpty ? coin.gradingService : "Raw"} ${coin.certificationNumber} ${coin.variety}'.trim(),
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                      if (isSelected && (int.tryParse(coin.quantity) ?? 1) > 1) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              'Transfer Qty: ',
+                              style: TextStyle(color: _textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                final current = _itemTransferQuantities[coin.id] ?? 1;
+                                if (current > 1) {
+                                  setState(() => _itemTransferQuantities[coin.id] = current - 1);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(border: Border.all(color: _borderCol), borderRadius: BorderRadius.circular(4)),
+                                child: Icon(Icons.remove, size: 14, color: _textPrimary),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                '${_itemTransferQuantities[coin.id] ?? 1}',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _textPrimary),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                final maxQ = int.tryParse(coin.quantity) ?? 1;
+                                final current = _itemTransferQuantities[coin.id] ?? 1;
+                                if (current < maxQ) {
+                                  setState(() => _itemTransferQuantities[coin.id] = current + 1);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(border: Border.all(color: _borderCol), borderRadius: BorderRadius.circular(4)),
+                                child: Icon(Icons.add, size: 14, color: _textPrimary),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '(of ${coin.quantity} total)',
+                              style: TextStyle(color: _textSecondary, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 );
               },
@@ -1002,6 +1050,798 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
             },
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTabButton(String tabKey, IconData icon, String label) {
+    final isSelected = _activeTab == tabKey;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _activeTab = tabKey);
+        if (tabKey == 'sold_history') {
+          _loadSoldItems();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0284C7) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? Colors.white : _textPrimary, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : _textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _parseCost(String rawCost) {
+    final cleaned = rawCost.replaceAll(RegExp(r'[^\d.]'), '');
+    return double.tryParse(cleaned) ?? 0.0;
+  }
+
+  Future<void> _loadSoldItems() async {
+    final userIdToUse = widget.userId.trim().isNotEmpty
+        ? widget.userId.trim()
+        : AuthService.userEmail;
+    setState(() {
+      _isLoadingSoldItems = true;
+      _soldItemsError = null;
+    });
+    try {
+      final items = await _transferService.getSoldInventory(userIdToUse);
+      setState(() {
+        _soldItems = items;
+        _isLoadingSoldItems = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingSoldItems = false;
+        _soldItemsError = 'Failed to load sold items: $e';
+      });
+    }
+  }
+
+  Future<void> _recordDirectSale() async {
+    if (_selectedCoinToSell == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a coin to sell.'), backgroundColor: Colors.amber),
+      );
+      return;
+    }
+    final price = double.tryParse(_salePriceController.text.trim());
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid gross sale price.'), backgroundColor: Colors.amber),
+      );
+      return;
+    }
+    final fees = double.tryParse(_saleFeesController.text.trim()) ?? 0.0;
+    final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
+
+    setState(() => _isSelling = true);
+    try {
+      final result = await _transferService.recordDirectSale(
+        userId: userIdToUse,
+        coinId: _selectedCoinToSell!.id,
+        qtySold: _qtyToSell,
+        salePriceUsd: price,
+        feesUsd: fees,
+        saleDate: _saleDateController.text.trim().isNotEmpty ? _saleDateController.text.trim() : null,
+        salesVenue: _salesVenue,
+        buyerReference: _buyerRefController.text.trim().isNotEmpty ? _buyerRefController.text.trim() : null,
+        notes: _saleNotesController.text.trim().isNotEmpty ? _saleNotesController.text.trim() : null,
+      );
+
+      setState(() => _isSelling = false);
+      if (!mounted) return;
+
+      final profit = (result['realized_profit'] as num?)?.toDouble() ?? 0.0;
+      final remaining = (result['remaining_qty'] as num?)?.toInt() ?? 0;
+      final profitFormatted = profit >= 0 ? '+\$${profit.toStringAsFixed(2)}' : '-\$${profit.abs().toStringAsFixed(2)}';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: _cardBg,
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, color: Colors.green),
+              const SizedBox(width: 8),
+              Text('Sale Recorded!', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'Successfully recorded sale of $_qtyToSell unit(s) outside Numista.AI.\n\n'
+            '• Realized Profit: $profitFormatted\n'
+            '• Remaining in Vault: $remaining unit(s)\n\n'
+            'Record archived in your private Sold Inventory ledger.',
+            style: TextStyle(color: _textSecondary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _loadInventoryFromFirestore();
+                setState(() {
+                  _selectedCoinToSell = null;
+                  _qtyToSell = 1;
+                  _salePriceController.clear();
+                  _saleFeesController.text = '0.00';
+                  _activeTab = 'sold_history';
+                });
+                _loadSoldItems();
+              },
+              child: const Text('View Sold History', style: TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() => _isSelling = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to record sale: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _undoSale(String archiveId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        title: Text('Undo This Sale?', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will restore the sold quantity back into your active collection vault '
+          'and mark this sale record as voided in your archive (CoS Lock L3).\n\n'
+          'Are you sure you want to undo this sale?',
+          style: TextStyle(color: _textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: _textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade800),
+            child: const Text('Confirm Undo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
+
+    try {
+      final res = await _transferService.undoSale(userId: userIdToUse, saleArchiveId: archiveId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Sale successfully undone!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadSoldItems();
+      _loadInventoryFromFirestore();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to undo sale: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Widget _buildSoldOutsideView() {
+    final coins = _allCoins;
+    final selectedCoin = _selectedCoinToSell;
+    final maxQty = selectedCoin != null ? (int.tryParse(selectedCoin.quantity) ?? 1) : 1;
+
+    final unitCost = selectedCoin != null ? _parseCost(selectedCoin.purchaseCost.isNotEmpty ? selectedCoin.purchaseCost : selectedCoin.purchaseCost) : 0.0;
+    final allocatedCost = unitCost * _qtyToSell;
+    final grossPrice = double.tryParse(_salePriceController.text.trim()) ?? 0.0;
+    final fees = double.tryParse(_saleFeesController.text.trim()) ?? 0.0;
+    final netProceeds = grossPrice - fees;
+    final profit = netProceeds - allocatedCost;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          color: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _borderCol),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.point_of_sale_outlined, color: Color(0xFF0284C7)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mode 3: Sold Outside Numista.AI',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Record a final sale made on eBay, at a coin show, or direct to a dealer. '
+                  'Quantity is decremented immediately, financials are archived in integer cents, '
+                  'and net profit is tracked in your private ledger.',
+                  style: TextStyle(color: _textSecondary, fontSize: 13, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Text('Select Item from Your Vault', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary, fontSize: 14)),
+        const SizedBox(height: 8),
+        if (coins.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: _cardBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: _borderCol)),
+            child: Text('No active inventory items found.', style: TextStyle(color: _textSecondary)),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: _inputFill,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _borderCol),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: selectedCoin?.id,
+                hint: Text('Choose a coin or currency item...', style: TextStyle(color: _textSecondary)),
+                dropdownColor: _cardBg,
+                items: coins.map((c) {
+                  final title = c.year.isNotEmpty
+                      ? '${c.year} ${c.programSeries} ${c.denomination}'
+                      : (c.denomination.isNotEmpty ? c.denomination : 'Item');
+                  final q = int.tryParse(c.quantity) ?? 1;
+                  return DropdownMenuItem<String>(
+                    value: c.id,
+                    child: Text(
+                      '$title (Qty: $q, Cost: ${c.purchaseCost.isNotEmpty ? c.purchaseCost : "\$0.00"})',
+                      style: TextStyle(color: _textPrimary, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val == null) return;
+                  final match = coins.firstWhere((c) => c.id == val);
+                  setState(() {
+                    _selectedCoinToSell = match;
+                    _qtyToSell = 1;
+                  });
+                },
+              ),
+            ),
+          ),
+
+        if (selectedCoin != null) ...[
+          const SizedBox(height: 16),
+
+          Card(
+            color: _cardBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: _borderCol),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      selectedCoin.imageUrlObverse.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.network(
+                                selectedCoin.imageUrlObverse,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.monetization_on, color: Color(0xFF0284C7), size: 40),
+                              ),
+                            )
+                          : const Icon(Icons.monetization_on, color: Color(0xFF0284C7), size: 40),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              selectedCoin.year.isNotEmpty
+                                  ? '${selectedCoin.year} ${selectedCoin.programSeries} ${selectedCoin.denomination}'
+                                  : selectedCoin.denomination,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _textPrimary),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Vault ID: ${selectedCoin.id} | Available: $maxQty unit(s)',
+                              style: TextStyle(fontSize: 12, color: _textSecondary),
+                            ),
+                            Text(
+                              'Unit Cost Basis: \$${unitCost.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 12, color: _textSecondary, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Divider(height: 1, color: _borderCol),
+                  const SizedBox(height: 14),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Quantity to Sell:', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary, fontSize: 13)),
+                          Text('Remaining in vault: ${maxQty - _qtyToSell}', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _inputFill,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _borderCol),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 16),
+                              color: _qtyToSell > 1 ? _textPrimary : Colors.grey,
+                              onPressed: _qtyToSell > 1 ? () => setState(() => _qtyToSell--) : null,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                '$_qtyToSell',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 16),
+                              color: _qtyToSell < maxQty ? _textPrimary : Colors.grey,
+                              onPressed: _qtyToSell < maxQty ? () => setState(() => _qtyToSell++) : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Text('Sale Financials & Venue', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary, fontSize: 14)),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Gross Sale Price (\$)*', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _salePriceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(color: _textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 250.00',
+                        hintStyle: TextStyle(color: _textSecondary.withValues(alpha: 0.6)),
+                        prefixText: '\$ ',
+                        prefixStyle: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
+                        filled: true,
+                        fillColor: _inputFill,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Platform / Shipping Fees (\$)', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _saleFeesController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(color: _textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 15.00',
+                        hintStyle: TextStyle(color: _textSecondary.withValues(alpha: 0.6)),
+                        prefixText: '\$ ',
+                        prefixStyle: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
+                        filled: true,
+                        fillColor: _inputFill,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sale Date', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _saleDateController,
+                      style: TextStyle(color: _textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'YYYY-MM-DD',
+                        hintStyle: TextStyle(color: _textSecondary.withValues(alpha: 0.6)),
+                        filled: true,
+                        fillColor: _inputFill,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sales Venue', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: _inputFill,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _borderCol),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _salesVenue,
+                          dropdownColor: _cardBg,
+                          items: const [
+                            DropdownMenuItem(value: 'eBay', child: Text('eBay')),
+                            DropdownMenuItem(value: 'GreatCollections', child: Text('GreatCollections')),
+                            DropdownMenuItem(value: 'Heritage Auctions', child: Text('Heritage Auctions')),
+                            DropdownMenuItem(value: 'Coin Show / In-Person', child: Text('Coin Show / In-Person')),
+                            DropdownMenuItem(value: 'LCS / Dealer', child: Text('LCS / Dealer')),
+                            DropdownMenuItem(value: 'Private Sale', child: Text('Private Sale')),
+                            DropdownMenuItem(value: 'Other', child: Text('Other')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _salesVenue = val);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: _buyerRefController,
+            style: TextStyle(color: _textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Buyer Reference / Order Number (Optional)',
+              labelStyle: TextStyle(color: _textSecondary),
+              hintText: 'e.g. buyer_id or order #1234',
+              hintStyle: TextStyle(color: _textSecondary.withValues(alpha: 0.6)),
+              filled: true,
+              fillColor: _inputFill,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Card(
+            color: profit >= 0 ? const Color(0xFF064E3B).withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: profit >= 0 ? const Color(0xFF059669) : Colors.redAccent),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Net Profit Preview (Integer-Cents Math)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: profit >= 0 ? const Color(0xFF10B981) : Colors.redAccent,
+                        ),
+                      ),
+                      Text(
+                        profit >= 0 ? '+\$${profit.toStringAsFixed(2)}' : '-\$${profit.abs().toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: profit >= 0 ? const Color(0xFF10B981) : Colors.redAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Divider(height: 1, color: _borderCol),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Allocated Cost Basis ($_qtyToSell × \$${unitCost.toStringAsFixed(2)}):', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                      Text('\$${allocatedCost.toStringAsFixed(2)}', style: TextStyle(color: _textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Net Proceeds (\$${grossPrice.toStringAsFixed(2)} - \$${fees.toStringAsFixed(2)}):', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                      Text('\$${netProceeds.toStringAsFixed(2)}', style: TextStyle(color: _textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _isSelling ? null : _recordDirectSale,
+              icon: _isSelling
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check, color: Colors.white),
+              label: Text(
+                _isSelling ? 'Recording Sale...' : 'Record Sale & Update Vault ($_qtyToSell Unit)',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSoldHistoryView() {
+    if (_isLoadingSoldItems) {
+      return const Padding(
+        padding: EdgeInsets.all(40.0),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF0284C7))),
+      );
+    }
+
+    if (_soldItemsError != null) {
+      return Card(
+        color: _cardBg,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(_soldItemsError!, style: const TextStyle(color: Colors.redAccent)),
+              const SizedBox(height: 10),
+              ElevatedButton(onPressed: _loadSoldItems, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sold & Disposed Inventory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary)),
+                const SizedBox(height: 4),
+                Text('Audit ledger of liquidated assets outside active collection.', style: TextStyle(color: _textSecondary, fontSize: 12)),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF0284C7)),
+              onPressed: _loadSoldItems,
+              tooltip: 'Refresh Sold Items',
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (_soldItems.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: _cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: _borderCol)),
+            child: Column(
+              children: [
+                Icon(Icons.inventory_outlined, size: 48, color: _textSecondary),
+                const SizedBox(height: 10),
+                Text('No items recorded as sold or transferred yet.', style: TextStyle(color: _textSecondary, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _soldItems.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (ctx, idx) {
+              final item = _soldItems[idx];
+              final title = item['title'] ?? item['coin_title'] ?? item['denomination'] ?? 'Item';
+              final dateStr = item['sale_date'] ?? item['sold_at'] ?? item['transferred_at'] ?? '—';
+              final venue = item['sales_venue'] ?? item['venue'] ?? 'Direct';
+              final status = (item['status'] ?? item['transfer_status'] ?? 'sold').toString().toLowerCase();
+              final isVoided = status == 'voided';
+              final qty = item['sold_qty'] ?? item['quantity'] ?? 1;
+              final salePrice = (item['sale_price_usd'] as num?)?.toDouble() ?? (item['sale_price'] as num?)?.toDouble() ?? 0.0;
+              final fees = (item['fees_usd'] as num?)?.toDouble() ?? (item['fees'] as num?)?.toDouble() ?? 0.0;
+              final costBasis = (item['allocated_cost_basis'] as num?)?.toDouble() ?? (item['cost_basis'] as num?)?.toDouble() ?? 0.0;
+              final profit = (item['realized_profit_usd'] as num?)?.toDouble() ?? (item['realized_profit'] as num?)?.toDouble() ?? 0.0;
+              final archiveId = item['doc_id'] ?? item['id'] ?? '';
+
+              return Card(
+                color: _cardBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: isVoided ? Colors.grey.withValues(alpha: 0.3) : _borderCol),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '$title',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isVoided ? _textSecondary : _textPrimary,
+                                decoration: isVoided ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isVoided ? Colors.grey.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isVoided ? 'VOIDED / UNDONE' : 'SOLD',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isVoided ? Colors.grey : Colors.green,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Date: $dateStr | Venue: $venue | Qty: $qty',
+                        style: TextStyle(fontSize: 12, color: _textSecondary),
+                      ),
+                      const SizedBox(height: 10),
+                      Divider(height: 1, color: _borderCol),
+                      const SizedBox(height: 10),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Sale: \$${salePrice.toStringAsFixed(2)}  (Fees: \$${fees.toStringAsFixed(2)})', style: TextStyle(fontSize: 12, color: _textSecondary)),
+                              Text('Cost Basis: \$${costBasis.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: _textSecondary)),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('Realized Profit', style: TextStyle(fontSize: 11, color: _textSecondary)),
+                              Text(
+                                profit >= 0 ? '+\$${profit.toStringAsFixed(2)}' : '-\$${profit.abs().toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: isVoided ? Colors.grey : (profit >= 0 ? const Color(0xFF10B981) : Colors.redAccent),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      if (!isVoided && archiveId.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _undoSale(archiveId),
+                            icon: const Icon(Icons.undo, size: 14, color: Colors.amber),
+                            label: const Text('Undo Sale', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.amber),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }

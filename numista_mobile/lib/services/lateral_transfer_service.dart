@@ -14,6 +14,7 @@ class LateralTransferService {
     required List<String> itemIds,
     String? recipientEmail,
     Map<String, bool>? privacyToggles,
+    Map<String, int>? itemQuantities,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/transfer/initiate'),
@@ -22,6 +23,7 @@ class LateralTransferService {
         'user_id': userId,
         'item_ids': itemIds,
         'recipient_email': recipientEmail,
+        'item_quantities': itemQuantities,
         'privacy_toggles': privacyToggles ?? {
           'hide_cost_basis': true,
           'hide_private_notes': true,
@@ -89,4 +91,78 @@ class LateralTransferService {
   String getPassportPdfUrl(String transferId) {
     return '$baseUrl/api/transfer/passport-pdf/$transferId';
   }
+
+  /// Records a direct sale outside Numista.AI (Mode 3, G1-G3)
+  Future<Map<String, dynamic>> recordDirectSale({
+    required String userId,
+    required String coinId,
+    required int qtySold,
+    required double salePriceUsd,
+    double feesUsd = 0.0,
+    String? saleDate,
+    String salesVenue = 'Direct / Outside',
+    String? buyerReference,
+    String? notes,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/transfer/sell-direct'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': userId,
+        'coin_id': coinId,
+        'qty_sold': qtySold,
+        'sale_price_usd': salePriceUsd,
+        'fees_usd': feesUsd,
+        'sale_date': saleDate,
+        'sales_venue': salesVenue,
+        'buyer_reference': buyerReference,
+        'notes': notes,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to record direct sale: ${response.body}');
+    }
+  }
+
+  /// Undoes a Mode 3 sale, restoring active quantity and marking archive voided (CoS Lock L3)
+  Future<Map<String, dynamic>> undoSale({
+    required String userId,
+    required String saleArchiveId,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/transfer/undo-sale'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': userId,
+        'sale_archive_id': saleArchiveId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to undo sale: ${response.body}');
+    }
+  }
+
+  /// Fetches sold/transferred inventory for a user
+  Future<List<Map<String, dynamic>>> getSoldInventory(String userId) async {
+    final cleanUid = userId.trim().toLowerCase();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/transfer/sold-items/$cleanUid'),
+      headers: {'Accept': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final list = data['items'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } else {
+      throw Exception('Failed to fetch sold items: ${response.body}');
+    }
+  }
 }
+

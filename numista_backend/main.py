@@ -5101,17 +5101,121 @@ class GroupCoinItem(BaseModel):
     variety: Optional[str] = None
     cost: Optional[str] = None  # Only used if cost_per_coin=True
 
+class CostSplitPreviewRequest(BaseModel):
+    coins: list[GroupCoinItem]
+    cost_total: str  # e.g. "$40.00"
+
 class CommitGroupRequest(BaseModel):
     user_email: str
     coins: list[GroupCoinItem]
     set_title: Optional[str] = None
     cost_total: Optional[str] = None  # e.g. "$125.00"
     cost_per_coin: bool = False
+    cost_overrides: Optional[list[str]] = None  # User-edited per-coin costs from confirm step
     purchase_date: Optional[str] = None
     where_purchased: Optional[str] = None
     storage_location: Optional[str] = None
     original_photo_gcs_path: Optional[str] = None
     original_photo_url: Optional[str] = None
+
+@app.post("/api/preview_cost_split")
+async def preview_cost_split(request: CostSplitPreviewRequest):
+    """Preview Greysheet value-weighted cost split without writing anything.
+    Returns proposed per-coin costs so the user can review/edit before committing."""
+    import re as _re
+    n = len(request.coins)
+    if n == 0:
+        return JSONResponse(status_code=400, content={"error": "No coins."})
+
+    try:
+        total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+        total_cents = round(float(total_str) * 100)
+    except (ValueError, ZeroDivisionError):
+        return JSONResponse(status_code=400, content={"error": "Invalid cost_total."})
+
+    # Resolve Greysheet values for each coin
+    from services.greysheet_service import GreysheetService
+    try:
+        gs_service = GreysheetService(db=db)
+    except Exception:
+        gs_service = None
+
+    greysheet_values = []
+    for coin in request.coins:
+        bid = 0.0
+        if gs_service:
+            try:
+                result = gs_service.resolve_coin(
+                    year=coin.year,
+                    denomination=coin.denomination,
+                    mint_mark=coin.mint_mark or "",
+                    series=coin.program_series or "",
+                    variety=coin.variety or "",
+                )
+                if result and result.get("gsid"):
+                    pricing = gs_service.get_pricing(int(result["gsid"]))
+                    if pricing and pricing.get("prices"):
+                        # Find Unc/MS-60 column for consistent basis
+                        for p in pricing["prices"]:
+                            grade_str = str(p.get("Grade", "")).lower()
+                            if "ms-60" in grade_str or "unc" in grade_str or "ms60" in grade_str:
+                                bid = float(p.get("GreyVal") or p.get("GreyVal1") or 0)
+                                break
+                        # Fallback: use first available price
+                        if bid == 0 and pricing["prices"]:
+                            bid = float(pricing["prices"][0].get("GreyVal") or pricing["prices"][0].get("GreyVal1") or 0)
+            except Exception:
+                bid = 0.0
+        greysheet_values.append(bid)
+
+    total_greysheet = sum(greysheet_values)
+    all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
+
+    split_details = []
+    if all_have_values:
+        split_method = "greysheet_value_weighted"
+        shares = [v / total_greysheet for v in greysheet_values]
+        raw_cents = [share * total_cents for share in shares]
+        int_cents = [int(c) for c in raw_cents]
+        remainder = total_cents - sum(int_cents)
+        max_idx = greysheet_values.index(max(greysheet_values))
+        int_cents[max_idx] += remainder
+
+        for i, coin in enumerate(request.coins):
+            pct = shares[i] * 100
+            split_details.append({
+                "index": i,
+                "denomination": coin.denomination,
+                "year": coin.year,
+                "mint_mark": coin.mint_mark or "",
+                "cost": f"${int_cents[i] / 100:.2f}",
+                "cost_cents": int_cents[i],
+                "share_pct": round(pct, 2),
+                "greysheet_bid": greysheet_values[i],
+            })
+    else:
+        split_method = "even_split"
+        base_cents = total_cents // n
+        remainder = total_cents % n
+        for i, coin in enumerate(request.coins):
+            cents = base_cents + (1 if i < remainder else 0)
+            split_details.append({
+                "index": i,
+                "denomination": coin.denomination,
+                "year": coin.year,
+                "mint_mark": coin.mint_mark or "",
+                "cost": f"${cents / 100:.2f}",
+                "cost_cents": cents,
+                "share_pct": round(100.0 / n, 2),
+                "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
+            })
+
+    return JSONResponse(content={
+        "split_method": split_method,
+        "cost_total": request.cost_total,
+        "total_cents": total_cents,
+        "split_details": split_details,
+    })
 
 @app.post("/api/commit_group_photo")
 async def commit_group_photo(request: CommitGroupRequest):
@@ -5171,18 +5275,54 @@ async def commit_group_photo(request: CommitGroupRequest):
             total_cents = round(float(total_str) * 100)
             lookup_date = datetime.now(timezone.utc).isoformat()
 
-            # Read back Greysheet bid values for each coin
-            greysheet_values = []
-            for cid in coin_ids:
-                try:
-                    doc = db.collection(f"users/{user_email}/coins").document(cid).get()
-                    bid = float(doc.to_dict().get("greysheet_bid") or 0.0) if doc.exists else 0.0
-                    greysheet_values.append(bid)
-                except Exception:
-                    greysheet_values.append(0.0)
+            # If user provided edited cost overrides from confirm step, use them
+            if request.cost_overrides and len(request.cost_overrides) == len(coin_ids):
+                override_cents = []
+                for ov in request.cost_overrides:
+                    ov_str = _re.sub(r'[^\d.]', '', str(ov))
+                    override_cents.append(round(float(ov_str) * 100))
+                # Validate sum matches total
+                if sum(override_cents) == total_cents:
+                    split_method = "user_edited"
+                    for i, cid in enumerate(coin_ids):
+                        cost_str = f"${override_cents[i] / 100:.2f}"
+                        cost_note = f"Split from {request.cost_total} group price (user-edited)"
+                        cost_split_details.append({
+                            "coin_id": cid,
+                            "cost": cost_str,
+                            "share_pct": round((override_cents[i] / total_cents) * 100, 2) if total_cents > 0 else 0,
+                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                        })
+                        try:
+                            db.collection(f"users/{user_email}/coins").document(cid).update({
+                                "Cost": cost_str,
+                                "Purchase Cost": cost_str,
+                                "cost_basis": override_cents[i] / 100.0,
+                                "cost_notes": cost_note,
+                                "cost_split_method": split_method,
+                                "cost_split_total": request.cost_total,
+                            })
+                        except Exception:
+                            pass
+                # If sum doesn't match, fall through to Greysheet split
+                if split_method == "user_edited":
+                    pass  # skip to end
+                else:
+                    request.cost_overrides = None  # Clear invalid overrides
 
-            total_greysheet = sum(greysheet_values)
-            all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
+            # Read back Greysheet bid values for each coin (only if not user-edited)
+            if split_method == "none":
+                greysheet_values = []
+                for cid in coin_ids:
+                    try:
+                        doc = db.collection(f"users/{user_email}/coins").document(cid).get()
+                        bid = float(doc.to_dict().get("greysheet_bid") or 0.0) if doc.exists else 0.0
+                        greysheet_values.append(bid)
+                    except Exception:
+                        greysheet_values.append(0.0)
+
+                total_greysheet = sum(greysheet_values)
+                all_have_values = all(v > 0 for v in greysheet_values) and total_greysheet > 0
 
             if all_have_values:
                 # M7: Value-weighted split in integer cents
@@ -10276,6 +10416,7 @@ class InitiateTransferRequest(BaseModel):
     item_ids: List[str]
     recipient_email: Optional[str] = None
     privacy_toggles: Optional[Dict[str, bool]] = None
+    item_quantities: Optional[Dict[str, int]] = None
 
 class ClaimTransferRequest(BaseModel):
     user_id: str
@@ -10286,6 +10427,21 @@ class ClaimTransferRequest(BaseModel):
 class RecallTransferRequest(BaseModel):
     user_id: str
     transfer_id: str
+
+class DirectSaleRequest(BaseModel):
+    user_id: str
+    coin_id: str
+    qty_sold: int
+    sale_price: float
+    fees: float = 0.0
+    sale_date: Optional[str] = None
+    sales_venue: str = "Outside Numista.AI"
+    buyer_reference: Optional[str] = None
+    notes: Optional[str] = None
+
+class UndoSaleRequest(BaseModel):
+    user_id: str
+    sale_archive_id: str
 
 @app.post("/api/transfer/initiate")
 async def api_initiate_transfer(req: InitiateTransferRequest):
@@ -10299,7 +10455,8 @@ async def api_initiate_transfer(req: InitiateTransferRequest):
             user_a_id=req.user_id,
             item_ids=req.item_ids,
             recipient_email=req.recipient_email,
-            privacy_toggles=req.privacy_toggles
+            privacy_toggles=req.privacy_toggles,
+            item_quantities=req.item_quantities
         )
         return {"status": "success", "transfer": result}
     except Exception as e:
@@ -10340,6 +10497,60 @@ async def api_recall_transfer(req: RecallTransferRequest):
         return {"status": "success", "result": result}
     except Exception as e:
         logger.exception("Recall transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/sell-direct")
+async def api_sell_direct(req: DirectSaleRequest):
+    """
+    Mode 3: Records a direct sale outside Numista.AI.
+    """
+    try:
+        from services.transfer_service import record_direct_sale
+        result = record_direct_sale(
+            db=db,
+            user_id=req.user_id,
+            coin_id=req.coin_id,
+            qty_sold=req.qty_sold,
+            sale_price_usd=req.sale_price,
+            fees_usd=req.fees,
+            sale_date=req.sale_date,
+            sales_venue=req.sales_venue,
+            buyer_reference=req.buyer_reference,
+            notes=req.notes
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Direct sale failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/undo-sale")
+async def api_undo_sale(req: UndoSaleRequest):
+    """
+    Mode 3: Undoes a previously recorded direct sale.
+    """
+    try:
+        from services.transfer_service import undo_sale
+        result = undo_sale(
+            db=db,
+            user_id=req.user_id,
+            sale_archive_id=req.sale_archive_id
+        )
+        return {"status": "success", "result": result}
+    except Exception as e:
+        logger.exception("Undo sale failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/transfer/sold-items/{user_id}")
+async def api_get_sold_items(user_id: str):
+    """
+    Returns the list of sold/transferred items for user.
+    """
+    try:
+        from services.transfer_service import get_sold_inventory
+        records = get_sold_inventory(db=db, user_id=user_id)
+        return {"status": "success", "user_id": user_id, "sold_items": records}
+    except Exception as e:
+        logger.exception("Get sold items failed")
         raise HTTPException(status_code=400, detail=str(e))
 
 from fastapi.responses import Response
