@@ -1313,7 +1313,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       'storage': storage,
                       'per_coin_price': enterPerCoin,
                     };
-                    _commitGroupPhoto(payload, saveAsSet, defaultSetName, formDetails, skip: false);
+                    // M7: Show cost split confirm before saving
+                    if (price.isNotEmpty && !enterPerCoin) {
+                      _showCostSplitConfirm(payload, saveAsSet, defaultSetName, formDetails);
+                    } else {
+                      _commitGroupPhoto(payload, saveAsSet, defaultSetName, formDetails, skip: false);
+                    }
                   },
                   child: const Text('Save'),
                 ),
@@ -1324,13 +1329,204 @@ class _AiChatScreenState extends State<AiChatScreen> {
       },
     );
   }
+  /// M7: Pre-save cost split confirm + edit dialog
+  Future<void> _showCostSplitConfirm(
+    Map<String, dynamic> payload,
+    bool saveAsSet,
+    String? setName,
+    Map<String, dynamic> formDetails,
+  ) async {
+    final price = formDetails['price']?.toString() ?? '';
+    if (price.isEmpty) {
+      _commitGroupPhoto(payload, saveAsSet, setName, formDetails, skip: false);
+      return;
+    }
+
+    // Show loading
+    setState(() {
+      _messages.add({
+        'role': 'assistant',
+        'content': '📊 Looking up market values for cost split...',
+        'is_loading': true,
+      });
+    });
+    _scrollToBottom();
+
+    try {
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final previewResponse = await http.post(
+        Uri.parse('$kApiBaseUrl/api/preview_cost_split'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: jsonEncode({
+          'coins': (payload['coins'] as List).map((c) => {
+            'year': c['year']?.toString() ?? '',
+            'denomination': c['denomination']?.toString() ?? '',
+            'mint_mark': c['mint_mark']?.toString() ?? '',
+            'program_series': c['program_series']?.toString() ?? '',
+            'variety': c['variety']?.toString() ?? '',
+          }).toList(),
+          'cost_total': price,
+        }),
+      );
+
+      if (!mounted) return;
+      setState(() => _messages.removeWhere((m) => m['is_loading'] == true));
+
+      if (previewResponse.statusCode != 200) {
+        // Preview failed, commit without preview
+        _commitGroupPhoto(payload, saveAsSet, setName, formDetails, skip: false);
+        return;
+      }
+
+      final previewData = jsonDecode(previewResponse.body);
+      final splitDetails = List<Map<String, dynamic>>.from(
+        (previewData['split_details'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? [],
+      );
+      final splitMethod = previewData['split_method']?.toString() ?? 'even_split';
+      final totalCents = previewData['total_cents'] as int? ?? 0;
+
+      if (splitDetails.isEmpty) {
+        _commitGroupPhoto(payload, saveAsSet, setName, formDetails, skip: false);
+        return;
+      }
+
+      // Show confirm + edit dialog
+      final controllers = splitDetails.map((d) {
+        final costStr = (d['cost'] as String? ?? '\$0.00').replaceAll('\$', '');
+        return TextEditingController(text: costStr);
+      }).toList();
+
+      if (!mounted) return;
+      final result = await showDialog<List<String>?>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          String? errorText;
+          return StatefulBuilder(
+            builder: (ctx2, setDialogState) {
+              return AlertDialog(
+                title: Text(splitMethod == 'greysheet_value_weighted'
+                    ? '📊 Cost Split by Market Value'
+                    : '⚠️ Even Cost Split'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        splitMethod == 'greysheet_value_weighted'
+                            ? 'Based on Greysheet bid values. Edit any amount — total must equal $price.'
+                            : 'Market values unavailable. Split evenly. Edit if needed — total must equal $price.',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      ...List.generate(splitDetails.length, (i) {
+                        final d = splitDetails[i];
+                        final denom = d['denomination'] ?? '';
+                        final pct = d['share_pct'] ?? 0.0;
+                        final bid = d['greysheet_bid'] ?? 0.0;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(denom, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    if (bid > 0) Text('Greysheet: \$${bid.toStringAsFixed(2)} (${pct.toStringAsFixed(1)}%)',
+                                        style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 80,
+                                child: TextField(
+                                  controller: controllers[i],
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    prefixText: '\$ ',
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  style: const TextStyle(fontSize: 13),
+                                  onChanged: (_) => setDialogState(() => errorText = null),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      if (errorText != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                        ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, null),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Validate sum
+                      int editedTotal = 0;
+                      for (final c in controllers) {
+                        final val = double.tryParse(c.text.replaceAll(',', '')) ?? 0;
+                        editedTotal += (val * 100).round();
+                      }
+                      if (editedTotal != totalCents) {
+                        setDialogState(() {
+                          final diff = (editedTotal - totalCents) / 100.0;
+                          errorText = 'Total must equal $price (currently \$${(editedTotal / 100).toStringAsFixed(2)}, '
+                              '${diff > 0 ? '+' : ''}\$${diff.toStringAsFixed(2)})';
+                        });
+                        return;
+                      }
+                      Navigator.pop(ctx, controllers.map((c) => '\$${c.text}').toList());
+                    },
+                    child: const Text('Confirm & Save'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      // Dispose controllers
+      for (final c in controllers) {
+        c.dispose();
+      }
+
+      if (result == null) return; // User cancelled
+
+      _commitGroupPhoto(payload, saveAsSet, setName, formDetails, skip: false, costOverrides: result);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _messages.removeWhere((m) => m['is_loading'] == true));
+      }
+      // Fallback: commit without preview
+      _commitGroupPhoto(payload, saveAsSet, setName, formDetails, skip: false);
+    }
+  }
 
   Future<void> _commitGroupPhoto(
     Map<String, dynamic> payload,
     bool saveAsSet,
     String? setName,
     Map<String, dynamic> formDetails, {
-    required bool skip
+    required bool skip,
+    List<String>? costOverrides,
   }) async {
     setState(() {
       _messages.add({
@@ -1344,32 +1540,35 @@ class _AiChatScreenState extends State<AiChatScreen> {
     try {
       final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
       
+      final body = {
+        'user_email': AuthService.userEmail,
+        'coins': (payload['coins'] as List).map((c) => {
+          'year': c['year']?.toString() ?? '',
+          'denomination': c['denomination']?.toString() ?? '',
+          'mint_mark': c['mint_mark']?.toString() ?? '',
+          'program_series': c['program_series']?.toString() ?? '',
+          'theme_subject': c['theme_subject']?.toString() ?? '',
+          'condition': c['condition']?.toString() ?? '',
+          'metal_content': c['metal_content']?.toString() ?? '',
+        }).toList(),
+        'set_title': setName,
+        'cost_total': formDetails['price'] ?? '',
+        'cost_per_coin': formDetails['per_coin_price'] == true,
+        'purchase_date': formDetails['date'] ?? '',
+        'where_purchased': formDetails['where_purchased'] ?? '',
+        'storage_location': formDetails['storage'] ?? '',
+        'original_photo_gcs_path': payload['original_photo_gcs_path'] ?? '',
+        'original_photo_url': payload['original_photo_url'] ?? '',
+      };
+      if (costOverrides != null) body['cost_overrides'] = costOverrides;
+
       final response = await http.post(
         Uri.parse('$kApiBaseUrl/api/commit_group_photo'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
         },
-        body: jsonEncode({
-          'user_email': AuthService.userEmail,
-          'coins': (payload['coins'] as List).map((c) => {
-            'year': c['year']?.toString() ?? '',
-            'denomination': c['denomination']?.toString() ?? '',
-            'mint_mark': c['mint_mark']?.toString() ?? '',
-            'program_series': c['program_series']?.toString() ?? '',
-            'theme_subject': c['theme_subject']?.toString() ?? '',
-            'condition': c['condition']?.toString() ?? '',
-            'metal_content': c['metal_content']?.toString() ?? '',
-          }).toList(),
-          'set_title': setName,
-          'cost_total': formDetails['cost'] ?? '',
-          'cost_per_coin': formDetails['cost_per_coin'] == true,
-          'purchase_date': formDetails['date'] ?? '',
-          'where_purchased': formDetails['where_purchased'] ?? '',
-          'storage_location': formDetails['storage_location'] ?? '',
-          'original_photo_gcs_path': payload['original_photo_gcs_path'] ?? '',
-          'original_photo_url': payload['original_photo_url'] ?? '',
-        }),
+        body: jsonEncode(body),
       );
 
       if (!mounted) return;

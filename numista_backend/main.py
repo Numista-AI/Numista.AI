@@ -5145,25 +5145,16 @@ async def preview_cost_split(request: CostSplitPreviewRequest):
         bid = 0.0
         if gs_service:
             try:
-                result = gs_service.resolve_coin(
+                result = gs_service.resolve_coin_with_timeout(
                     year=coin.year,
-                    denomination=coin.denomination,
-                    mint_mark=coin.mint_mark or "",
+                    denom=coin.denomination,
                     series=coin.program_series or "",
-                    variety=coin.variety or "",
+                    subject=coin.theme_subject or "",
+                    mint=coin.mint_mark or "",
+                    timeout_ms=3000,
                 )
-                if result and result.get("gsid"):
-                    pricing = gs_service.get_pricing(int(result["gsid"]))
-                    if pricing and pricing.get("prices"):
-                        # Find Unc/MS-60 column for consistent basis
-                        for p in pricing["prices"]:
-                            grade_str = str(p.get("Grade", "")).lower()
-                            if "ms-60" in grade_str or "unc" in grade_str or "ms60" in grade_str:
-                                bid = float(p.get("GreyVal") or p.get("GreyVal1") or 0)
-                                break
-                        # Fallback: use first available price
-                        if bid == 0 and pricing["prices"]:
-                            bid = float(pricing["prices"][0].get("GreyVal") or pricing["prices"][0].get("GreyVal1") or 0)
+                if result:
+                    bid = float(result.get("bid") or 0.0)
             except Exception:
                 bid = 0.0
         greysheet_values.append(bid)
