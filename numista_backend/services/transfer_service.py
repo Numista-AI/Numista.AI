@@ -565,18 +565,6 @@ def record_direct_sale(
         "timestamp": now_iso
     })
 
-    # Active record mutation (G1 partial quantity)
-    if qty_to_sell < current_qty:
-        new_qty = current_qty - qty_to_sell
-        coin_ref.update({
-            "Quantity": new_qty,
-            "provenanceLedger": provenance,
-            "updated_at": firestore.SERVER_TIMESTAMP
-        })
-    else:
-        # Full sale: remove from active inventory
-        coin_ref.delete()
-
     # Determine proper archive subcollection
     archive_subcol = "transferred_currency" if active_subcol in ["banknotes", "currency"] else "transferred_coins"
 
@@ -588,8 +576,11 @@ def record_direct_sale(
         "mode": "sold_outside",
         "status": "sold",
         "transfer_status": "sold",
+        "Quantity": qty_to_sell,  # SF7: archive quantity equals sold quantity
         "sold_qty": qty_to_sell,
         "remaining_qty": current_qty - qty_to_sell,
+        "original_cost_basis": float(item_data.get("cost_basis") if item_data.get("cost_basis") is not None else clean_cost_num),  # SF1: preserve unit cost_basis
+        "original_created_at": item_data.get("created_at"),  # SF1: preserve creation timestamp
         "unit_cost_basis_cents": unit_cost_cents,
         "allocated_cost_basis_cents": allocated_cost_basis_cents,
         "cost_basis": allocated_cost_basis_cents / 100.0,
@@ -610,7 +601,34 @@ def record_direct_sale(
         "provenanceLedger": provenance,
     }
 
-    db.collection("users").document(clean_user_id).collection(archive_subcol).document(sale_archive_id).set(archive_doc)
+    archive_ref = db.collection("users").document(clean_user_id).collection(archive_subcol).document(sale_archive_id)
+
+    # MF3: Atomic batch write (write archive + delete/decrement coin in single commit)
+    if hasattr(db, "batch"):
+        batch = db.batch()
+        batch.set(archive_ref, archive_doc)
+        if qty_to_sell < current_qty:
+            new_qty = current_qty - qty_to_sell
+            batch.update(coin_ref, {
+                "Quantity": new_qty,
+                "provenanceLedger": provenance,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            })
+        else:
+            # Full sale: remove from active inventory
+            batch.delete(coin_ref)
+        batch.commit()
+    else:
+        archive_ref.set(archive_doc)
+        if qty_to_sell < current_qty:
+            new_qty = current_qty - qty_to_sell
+            coin_ref.update({
+                "Quantity": new_qty,
+                "provenanceLedger": provenance,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            })
+        else:
+            coin_ref.delete()
 
     return {
         "status": "success",
@@ -677,25 +695,33 @@ def undo_sale(
         "timestamp": now_iso
     }
 
+    # MF3: Atomic batch execution (resurrect/increment coin + void archive in single commit)
+    batch = db.batch() if hasattr(db, "batch") else None
+
     if active_snap.exists:
         active_data = active_snap.to_dict() or {}
         curr_qty = int(active_data.get("Quantity") or active_data.get("qty") or 1)
         restored_qty = curr_qty + sold_qty
         prov = list(active_data.get("provenanceLedger", []))
         prov.append(void_prov_entry)
-        active_ref.update({
+        update_payload = {
             "Quantity": restored_qty,
             "provenanceLedger": prov,
             "updated_at": firestore.SERVER_TIMESTAMP
-        })
+        }
+        if batch:
+            batch.update(active_ref, update_payload)
+        else:
+            active_ref.update(update_payload)
     else:
-        # Full sale was deleted — resurrect original document
+        # Full sale was deleted — resurrect original document (SF1)
         resurrected_data = dict(arch_doc)
         for k in ["id", "original_coin_id", "original_subcollection", "mode", "status", "transfer_status",
                  "sold_qty", "remaining_qty", "unit_cost_basis_cents", "allocated_cost_basis_cents",
                  "sale_price_cents", "sale_price_usd", "fees_cents", "fees_usd", "net_proceeds_cents",
                  "net_proceeds_usd", "realized_profit_cents", "realized_profit_usd", "sale_date",
-                 "sales_venue", "buyer_reference", "sold_at"]:
+                 "sales_venue", "buyer_reference", "sold_at", "voided_at",
+                 "original_cost_basis", "original_created_at"]:
             resurrected_data.pop(k, None)
         prov = list(resurrected_data.get("provenanceLedger", []))
         prov.append(void_prov_entry)
@@ -704,14 +730,35 @@ def undo_sale(
         resurrected_data["transferStatus"] = "none"
         resurrected_data["provenanceLedger"] = prov
         resurrected_data["updated_at"] = firestore.SERVER_TIMESTAMP
-        active_ref.set(resurrected_data)
+
+        # SF1: Restore original unit cost_basis
+        orig_cb = arch_doc.get("original_cost_basis")
+        if orig_cb is not None:
+            resurrected_data["cost_basis"] = float(orig_cb)
+        elif arch_doc.get("unit_cost_basis_cents") is not None:
+            resurrected_data["cost_basis"] = float(arch_doc["unit_cost_basis_cents"]) / 100.0
+
+        # SF1: Restore original created_at
+        orig_created = arch_doc.get("original_created_at")
+        if orig_created is not None:
+            resurrected_data["created_at"] = orig_created
+
+        if batch:
+            batch.set(active_ref, resurrected_data)
+        else:
+            active_ref.set(resurrected_data)
 
     # Mark archive document status = voided (Lock L3)
-    arch_ref.update({
+    void_payload = {
         "status": "voided",
         "transfer_status": "voided",
         "voided_at": now_iso
-    })
+    }
+    if batch:
+        batch.update(arch_ref, void_payload)
+        batch.commit()
+    else:
+        arch_ref.update(void_payload)
 
     return {
         "status": "success",

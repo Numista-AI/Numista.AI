@@ -748,7 +748,15 @@ class _LoginScreenState extends State<LoginScreen>
         maxLength: 6,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        autofillHints: const [AutofillHints.password],
+        autofillHints: const [AutofillHints.password, AutofillHints.oneTimeCode],
+        onChanged: (val) {
+          final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+          if (digits != ctrl.text) {
+            ctrl.text = digits.length > 6 ? digits.substring(0, 6) : digits;
+            ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
+          }
+          if (_error != null) setState(() => _error = null);
+        },
         style: const TextStyle(color: _text, fontSize: 20, letterSpacing: 8),
         textAlign: TextAlign.center,
         decoration: InputDecoration(

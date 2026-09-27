@@ -119,6 +119,31 @@ class FakeTransaction:
         ref.delete()
 
 
+class FakeBatch:
+    def __init__(self, store: dict):
+        self._store = store
+        self._ops = []
+
+    def set(self, ref, data, merge: bool = False):
+        self._ops.append(("set", ref, data, merge))
+
+    def update(self, ref, data):
+        self._ops.append(("update", ref, data))
+
+    def delete(self, ref):
+        self._ops.append(("delete", ref))
+
+    def commit(self):
+        for op in self._ops:
+            if op[0] == "set":
+                op[1].set(op[2], merge=op[3])
+            elif op[0] == "update":
+                op[1].update(op[2])
+            elif op[0] == "delete":
+                op[1].delete()
+        self._ops.clear()
+
+
 class FakeFirestore:
     def __init__(self):
         self._store = {}
@@ -128,6 +153,9 @@ class FakeFirestore:
 
     def transaction(self):
         return FakeTransaction(self._store)
+
+    def batch(self):
+        return FakeBatch(self._store)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -616,3 +644,68 @@ def test_tc12_estate_report_wording_l4():
     assert exact_required_phrase in combined_text
     assert "2026-W Morgan Silver Dollar Proof (26XE)" in combined_text
     assert "1881-S Morgan Dollar (Voided)" not in combined_text
+
+
+def test_tc13_undo_mode3_full_sale_resurrection_sf1_sf7():
+    """
+    TC-13: Full Sale Undo (Resurrection), SF1 (unit cost basis restoration) & SF7 (Quantity in archive).
+    - Checks archive doc sets Quantity == sold_qty (SF7).
+    - Checks full sale removes active coin.
+    - Checks undo resurrects coin with original unit cost_basis (not total allocated) and original created_at (SF1).
+    """
+    db = FakeFirestore()
+    user_id = "grokbot@numista.ai"
+    coin_id = "coin_multi_qty_full_sale"
+    orig_created_at = "2026-01-15T08:30:00Z"
+
+    db.collection("users").document(user_id).collection("coins").document(coin_id).set({
+        "title": "1921 Morgan Silver Dollar",
+        "Quantity": 3,
+        "Cost": "$45.00",
+        "cost_basis": 45.0,
+        "created_at": orig_created_at,
+        "provenanceLedger": []
+    })
+
+    # Record full sale of all 3 units at $60 each ($180 total)
+    sale_res = record_direct_sale(
+        db=db,
+        user_id=user_id,
+        coin_id=coin_id,
+        qty_sold=3,
+        sale_price_usd=180.0,
+        fees_usd=10.0,
+        sales_venue="eBay"
+    )
+    sale_archive_id = sale_res["sale_archive_id"]
+
+    # Active coin should be deleted
+    assert db.collection("users").document(user_id).collection("coins").document(coin_id).get().exists is False
+
+    # Archive document inspection (SF7 & SF1)
+    arch_doc = db.collection("users").document(user_id).collection("transferred_coins").document(sale_archive_id).get().to_dict()
+    assert arch_doc["Quantity"] == 3  # SF7: matches sold_qty, not stale pre-sale count
+    assert arch_doc["sold_qty"] == 3
+    assert arch_doc["cost_basis"] == 135.0  # 3 * $45 allocated cost basis for the sale
+    assert arch_doc["original_cost_basis"] == 45.0  # SF1: stored original unit cost basis
+    assert arch_doc["original_created_at"] == orig_created_at  # SF1: stored original creation timestamp
+
+    # Undo full sale
+    undo_res = undo_sale(db=db, user_id=user_id, sale_archive_id=sale_archive_id)
+    assert undo_res["status"] == "success"
+    assert undo_res["restored_qty"] == 3
+
+    # Active coin must be resurrected with unit cost basis and original created_at
+    resurrected_coin = db.collection("users").document(user_id).collection("coins").document(coin_id).get().to_dict()
+    assert resurrected_coin is not None
+    assert resurrected_coin["Quantity"] == 3
+    assert resurrected_coin["Cost"] == "$45.00"
+    assert resurrected_coin["cost_basis"] == 45.0  # SF1: unit cost, NOT $135
+    assert resurrected_coin["created_at"] == orig_created_at  # SF1: preserved original created_at
+    assert resurrected_coin["transferStatus"] == "none"
+
+    # Archive marked voided
+    arch_updated = db.collection("users").document(user_id).collection("transferred_coins").document(sale_archive_id).get().to_dict()
+    assert arch_updated["status"] == "voided"
+    assert arch_updated["transfer_status"] == "voided"
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoinSetViewer
@@ -123,7 +124,20 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
           .doc(widget.setId)
           .get();
       if (!doc.exists) {
-        setState(() { _error = 'Set not found: ${widget.setId}'; _loading = false; });
+        final user = FirebaseAuth.instance.currentUser;
+        if (user?.email != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user!.email)
+              .collection('coins')
+              .doc(widget.setId)
+              .get();
+          if (userDoc.exists) {
+            setState(() { _error = null; _loading = false; });
+            return;
+          }
+        }
+        setState(() { _error = 'Set not found in catalog: ${widget.setId}'; _loading = false; });
         return;
       }
       setState(() {
@@ -145,12 +159,8 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
         ),
       );
     }
-    if (_error != null) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('⚠ $_error',
-            style: const TextStyle(color: Colors.red, fontSize: 12)),
-      );
+    if (_error != null || _data == null) {
+      return const SizedBox.shrink();
     }
     final data = _data!;
 

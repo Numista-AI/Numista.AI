@@ -71,6 +71,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Uint8List? _pendingPhotoBytes;
   String? _pendingPhotoName;
   bool _isIdentifyingPhoto = false;
+  bool _isUndoingGroup = false;
 
   // ── Morgan colour palette ────────────────────────────────────────────────
   Color get _bg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0B1220) : Color(0xFFF4F4F2);
@@ -1010,10 +1011,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
-                onPressed: () => _undoGroupPhoto(coinIds, isSet ? setId : null, photoUrl),
+                onPressed: _isUndoingGroup ? null : () => _undoGroupPhoto(coinIds, isSet ? setId : null, photoUrl),
                 icon: const Icon(Icons.undo, size: 14, color: Colors.redAccent),
-                label: const Text('Undo All',
-                    style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                label: Text(_isUndoingGroup ? 'Undoing...' : 'Undo All',
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -1041,7 +1042,46 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   Future<void> _undoGroupPhoto(List<String> coinIds, String? setId, String? photoUrl) async {
+    if (_isUndoingGroup) return;
+
+    final count = coinIds.length;
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _surf,
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            const SizedBox(width: 8),
+            Text('Undo Group Add', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'Remove these $count coins and the uploaded photo? This action cannot be undone.',
+          style: TextStyle(color: _textPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: TextStyle(color: _sub)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() {
+      _isUndoingGroup = true;
       _messages.add({
         'role': 'assistant',
         'content': 'Undoing...',
@@ -1050,63 +1090,71 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
     _scrollToBottom();
 
-    // 1. Ungroup Set (with preservePhotosOnChildren: false to clean up GCS)
-    if (setId != null) {
-      try {
-        await SetGroupingService.ungroupSet(
-          parentSetDocId: setId, 
-          deleteOwnerPhotos: true,
-          preservePhotosOnChildren: false,
-        );
-      } catch (e) {
-        debugPrint('Ungroup set failed or already deleted: $e');
-      }
-    }
-
-    // 2. Delete individual coin docs
-    final userEmail = AuthService.userEmail;
-    for (final cid in coinIds) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userEmail)
-            .collection('coins')
-            .doc(cid)
-            .delete();
-      } catch (e) {
-        debugPrint('Failed to delete child coin $cid: $e');
-      }
-    }
-
-    // 3. Delete the GCS group photo
-    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
-      try {
-        if (photoUrl.startsWith('gs://') || photoUrl.startsWith('http')) {
-          await FirebaseStorage.instance.refFromURL(photoUrl).delete();
-        } else {
-          // It's a storage path like 'users/email/group_photos/uuid.jpg'
-          await FirebaseStorage.instance.ref(photoUrl).delete();
+    try {
+      // 1. Ungroup Set (with preservePhotosOnChildren: false to clean up GCS)
+      if (setId != null) {
+        try {
+          await SetGroupingService.ungroupSet(
+            parentSetDocId: setId, 
+            deleteOwnerPhotos: true,
+            preservePhotosOnChildren: false,
+          );
+        } catch (e) {
+          debugPrint('Ungroup set failed or already deleted: $e');
         }
-      } on FirebaseException catch (e) {
-        if (e.code == 'object-not-found') {
-          debugPrint('Group photo already deleted or not found (treated as success).');
-        } else {
-          debugPrint('FirebaseException deleting group photo: $e');
-        }
-      } catch (e) {
-        debugPrint('Error deleting group photo: $e');
       }
-    }
 
-    if (!mounted) return;
-    setState(() {
-      _messages.removeWhere((m) => m['is_loading'] == true);
-      _messages.add({
-        'role': 'assistant',
-        'content': 'Undo complete. Removed ${coinIds.length} coins and the set.',
+      // 2. Delete individual coin docs
+      final userEmail = AuthService.userEmail;
+      for (final cid in coinIds) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userEmail)
+              .collection('coins')
+              .doc(cid)
+              .delete();
+        } catch (e) {
+          debugPrint('Failed to delete child coin $cid: $e');
+        }
+      }
+
+      // 3. Delete the GCS group photo
+      if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+        try {
+          if (photoUrl.startsWith('gs://') || photoUrl.startsWith('http')) {
+            await FirebaseStorage.instance.refFromURL(photoUrl).delete();
+          } else {
+            // It's a storage path like 'users/email/group_photos/uuid.jpg'
+            await FirebaseStorage.instance.ref(photoUrl).delete();
+          }
+        } on FirebaseException catch (e) {
+          if (e.code == 'object-not-found') {
+            debugPrint('Group photo already deleted or not found (treated as success).');
+          } else {
+            debugPrint('FirebaseException deleting group photo: $e');
+          }
+        } catch (e) {
+          debugPrint('Error deleting group photo: $e');
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => m['is_loading'] == true);
+        _messages.add({
+          'role': 'assistant',
+          'content': 'Undo complete. Removed ${coinIds.length} coins and the set.',
+        });
       });
-    });
-    _scrollToBottom();
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUndoingGroup = false;
+        });
+      }
+    }
   }
 
   Widget _buildGroupProposalCard(Map<String, dynamic> payload) {

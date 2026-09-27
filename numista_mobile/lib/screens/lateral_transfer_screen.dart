@@ -43,6 +43,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   CoinModel? _selectedCoinToSell;
   int _qtyToSell = 1;
   bool _isSelling = false;
+  bool _isUndoing = false;
 
   // Sold Inventory & Undo State (CoS Lock L3)
   List<Map<String, dynamic>> _soldItems = [];
@@ -1122,14 +1123,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       );
       return;
     }
-    final price = double.tryParse(_salePriceController.text.trim());
+    final price = double.tryParse(_salePriceController.text.replaceAll(',', '').replaceAll(r'$', '').trim());
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid gross sale price.'), backgroundColor: Colors.amber),
       );
       return;
     }
-    final fees = double.tryParse(_saleFeesController.text.trim()) ?? 0.0;
+    final fees = double.tryParse(_saleFeesController.text.replaceAll(',', '').replaceAll(r'$', '').trim()) ?? 0.0;
     final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
 
     setState(() => _isSelling = true);
@@ -1200,6 +1201,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   }
 
   Future<void> _undoSale(String archiveId) async {
+    if (_isUndoing) return;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1229,6 +1232,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
     final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
 
+    setState(() => _isUndoing = true);
     try {
       final res = await _transferService.undoSale(userId: userIdToUse, saleArchiveId: archiveId);
       if (!mounted) return;
@@ -1245,6 +1249,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to undo sale: $e'), backgroundColor: Colors.red),
       );
+    } finally {
+      if (mounted) setState(() => _isUndoing = false);
     }
   }
 
@@ -1255,8 +1261,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
     final unitCost = selectedCoin != null ? _parseCost(selectedCoin.purchaseCost.isNotEmpty ? selectedCoin.purchaseCost : selectedCoin.purchaseCost) : 0.0;
     final allocatedCost = unitCost * _qtyToSell;
-    final grossPrice = double.tryParse(_salePriceController.text.trim()) ?? 0.0;
-    final fees = double.tryParse(_saleFeesController.text.trim()) ?? 0.0;
+    final grossPrice = double.tryParse(_salePriceController.text.replaceAll(',', '').replaceAll(r'$', '').trim()) ?? 0.0;
+    final fees = double.tryParse(_saleFeesController.text.replaceAll(',', '').replaceAll(r'$', '').trim()) ?? 0.0;
     final netProceeds = grossPrice - fees;
     final profit = netProceeds - allocatedCost;
 
@@ -1457,7 +1463,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Gross Sale Price (\$)*', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(_qtyToSell > 1 ? 'Total received for $_qtyToSell coins (\$)*' : 'Gross Sale Price (\$)*', style: TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     TextField(
                       controller: _salePriceController,
@@ -1826,9 +1832,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: OutlinedButton.icon(
-                            onPressed: () => _undoSale(archiveId),
+                            onPressed: _isUndoing ? null : () => _undoSale(archiveId),
                             icon: const Icon(Icons.undo, size: 14, color: Colors.amber),
-                            label: const Text('Undo Sale', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: Text(_isUndoing ? 'Undoing...' : 'Undo Sale', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.amber),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

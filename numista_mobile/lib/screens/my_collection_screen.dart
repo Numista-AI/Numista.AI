@@ -23,6 +23,7 @@ import '../widgets/set_contents_panel.dart';
 import '../widgets/grade_badge_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
@@ -179,7 +180,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       final userEmail = AuthService.userEmail;
       if (userEmail.isEmpty) return;
       
-      final response = await http.get(
+      final response = await HttpAuthClient.get(
         Uri.parse('$kApiBaseUrl/api/collection/completion_stats?user_email=$userEmail')
       );
       if (response.statusCode == 200) {
@@ -2778,6 +2779,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             );
                             if (confirm != true) return;
+                            if (!context.mounted) return;
 
                             // Gap A (M3): Ask about keeping photos on children
                             final ownerPhotos = m['owner_photos'] as List<dynamic>?;
@@ -2960,6 +2962,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       itemBuilder: (context, index) {
         final crw = docs[index];
         final m = crw.data;
+        final canMutate = crw.snapshot != null;
         
         final year = _rowField(m, 'year', _F.year).replaceAll(RegExp(r'\.0+$'), '');
         final mint = _rowField(m, 'mint_mark', _F.mintMark);
@@ -3035,6 +3038,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         ),
                         // ITEM 6: Amber DEMO badge — shown only on sandbox coins.
                         // is_demo is set server-side; never derive from string heuristics.
+                        if (!crw.isVirtualChild && canMutate && m['is_set'] != true && m['isSet'] != true && (m['parent_set_id'] == null || m['parent_set_id'].toString().isEmpty))
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Material(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(4),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(4),
+                                onTap: () => _showGroupAsSetDialog(crw.id, m),
+                                child: const Tooltip(
+                                  message: 'Group as Set',
+                                  child: Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(Icons.create_new_folder_outlined, size: 16, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         if (m['is_demo'] == true)
                           Positioned(
                             top: 4,
@@ -3437,6 +3460,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       barrierDismissible: true,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDlg) {
+          final canMutate = data['is_virtual'] != true && coinId.isNotEmpty;
           final obvUrl   = data[_F.imageObverse]?.toString() ?? '';
           final revUrl   = data[_F.imageReverse]?.toString() ?? '';
           final hasObv   = obvUrl.isNotEmpty && obvUrl.startsWith('http');
@@ -3486,6 +3510,23 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         ),
                       ),
                       SizedBox(width: 8),
+                    ],
+                    if (canMutate && data['is_set'] != true && data['isSet'] != true && (data['parent_set_id'] == null || data['parent_set_id'].toString().isEmpty)) ...[
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showGroupAsSetDialog(coinId, data);
+                        },
+                        icon: const Icon(Icons.create_new_folder_outlined, size: 15, color: Color(0xFFC9A227)),
+                        label: const Text('Group as Set', style: TextStyle(color: Color(0xFFC9A227), fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFC9A227)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                     ],
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -3615,8 +3656,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       icon: Icons.add_photo_alternate_outlined,
                                       progress: _uploadProgressObverse,
                                       onTap: () async {
-                                        await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
+                                        final newUrl = await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
                                           setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
+                                        if (newUrl != null) {
+                                          data[_F.imageObverse] = newUrl;
+                                          data['image_url_obverse'] = newUrl;
+                                          setState(() {});
+                                          setDlg(() {});
+                                        }
                                       },
                                     )),
                                     SizedBox(width: 8),
@@ -3625,8 +3672,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       icon: Icons.add_photo_alternate_outlined,
                                       progress: _uploadProgressReverse,
                                       onTap: () async {
-                                        await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
+                                        final newUrl = await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
                                           setProgress: (p) { setState(() => _uploadProgressReverse = p); setDlg(() {}); });
+                                        if (newUrl != null) {
+                                          data[_F.imageReverse] = newUrl;
+                                          data['image_url_reverse'] = newUrl;
+                                          setState(() {});
+                                          setDlg(() {});
+                                        }
                                       },
                                     )),
                                   ]),
@@ -3687,8 +3740,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   icon: hasObv ? Icons.refresh : Icons.add_photo_alternate_outlined,
                                   progress: _uploadProgressObverse,
                                   onTap: () async {
-                                    await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
+                                    final newUrl = await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
                                       setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
+                                    if (newUrl != null) {
+                                      data[_F.imageObverse] = newUrl;
+                                      data['image_url_obverse'] = newUrl;
+                                      setState(() {});
+                                      setDlg(() {});
+                                    }
                                   },
                                 )),
                                 SizedBox(width: 8),
@@ -3697,8 +3756,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   icon: hasRev ? Icons.refresh : Icons.add_photo_alternate_outlined,
                                   progress: _uploadProgressReverse,
                                   onTap: () async {
-                                    await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
+                                    final newUrl = await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
                                       setProgress: (p) { setState(() => _uploadProgressReverse = p); setDlg(() {}); });
+                                    if (newUrl != null) {
+                                      data[_F.imageReverse] = newUrl;
+                                      data['image_url_reverse'] = newUrl;
+                                      setState(() {});
+                                      setDlg(() {});
+                                    }
                                   },
                                 )),
                               ]),
@@ -3715,7 +3780,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           _buildPcgsBar(data),
                           SizedBox(height: 20),
                           _buildDetailGrid(data),
-                          _buildCoinSetSection(data),
+                          _buildCoinSetSection(data, onPhotoUploaded: () => setDlg(() {})),
                           _buildRollBanner(data),
                           _buildSimilarCoinsInspector(),
                         ]),
@@ -4849,12 +4914,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   /// Shows a source picker (camera vs. file) then uploads to Firebase Storage.
   /// Firestore is updated with the download URL under the logged-in user's path.
-  Future<void> _onUploadVaultImage({
+  Future<String?> _onUploadVaultImage({
     required String side,        // 'obverse' | 'reverse'
     required String field,       // Firestore field name
     required void Function(double?) setProgress,
   }) async {
-    if (_selectedCoinId == null) return;
+    if (_selectedCoinId == null) return null;
 
     Uint8List? bytes;
     String ext = 'jpg';
@@ -4877,17 +4942,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ]),
         ),
       );
-      if (source == null) return;
+      if (source == null) return null;
       final picked = await ImagePicker().pickImage(source: source, imageQuality: 90, maxWidth: 2000);
-      if (picked == null) return;
+      if (picked == null) return null;
       bytes = await picked.readAsBytes();
       ext   = picked.path.split('.').last.toLowerCase();
     } else {
       final result = await FilePicker.pickFiles(type: FileType.image, withData: true, allowMultiple: false);
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) return null;
       final f = result.files.first;
       bytes = f.bytes;
-      if (bytes == null) return;
+      if (bytes == null) return null;
       ext = f.extension?.toLowerCase() ?? 'jpg';
     }
 
@@ -4957,6 +5022,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           }
         }
       }
+      return url;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -4964,6 +5030,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           backgroundColor: _red,
         ));
       }
+      return null;
     } finally {
       setProgress(null);
     }
@@ -5216,7 +5283,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  Widget _buildCoinSetSection(Map<String, dynamic> data) {
+  Widget _buildCoinSetSection(Map<String, dynamic> data, {VoidCallback? onPhotoUploaded}) {
     final rawContents = data['set_contents'];
     Widget? setContentsWidget;
     if (rawContents is List && rawContents.isNotEmpty) {
@@ -5226,8 +5293,49 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       );
     }
 
+    final isSet = data['is_set'] == true || data['isSet'] == true;
+    final parentSetId = data['parent_set_id'] as String?;
     final setId = data['set_id'] as String?;
-    if (setContentsWidget == null && setId != null && setId.isNotEmpty) {
+
+    // If this is a member coin belonging to a set, render a clean banner instead of calling CoinSetViewer
+    if (!isSet && (parentSetId != null || (setId != null && setId.isNotEmpty))) {
+      final setName = data['parent_set_name'] ?? data['set_name'] ?? 'Custom Coin Set';
+      final targetSetId = parentSetId ?? setId;
+      return Container(
+        margin: const EdgeInsets.only(top: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2563EB).withAlpha(15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF2563EB).withAlpha(60)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.folder_special_outlined, color: Color(0xFF2563EB), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Part of Set', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2563EB), fontSize: 13)),
+                  Text(setName.toString(), style: TextStyle(color: _text.withAlpha(180), fontSize: 12)),
+                ],
+              ),
+            ),
+            if (targetSetId != null && targetSetId.isNotEmpty)
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: const Color(0xFF2563EB)),
+                onPressed: () {
+                  setState(() => _searchQuery = targetSetId);
+                },
+                child: const Text('View Set >', style: TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (isSet && setContentsWidget == null && setId != null && setId.isNotEmpty) {
       setContentsWidget = Padding(
         padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
         child: Column(
@@ -5240,8 +5348,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ),
       );
     }
-
-    final isSet = data['is_set'] == true || data['isSet'] == true;
 
     if (setContentsWidget == null && !isSet) return const SizedBox.shrink();
 
@@ -5276,14 +5382,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ElevatedButton.icon(
             icon: const Icon(Icons.add_a_photo, size: 16),
             label: const Text('Upload Set Photo'),
-            onPressed: () => _uploadSetOwnerPhoto(data),
+            onPressed: () => _uploadSetOwnerPhoto(data, onPhotoUploaded: onPhotoUploaded),
           ),
         ],
       ],
     );
   }
 
-  Future<void> _uploadSetOwnerPhoto(Map<String, dynamic> data) async {
+  Future<void> _uploadSetOwnerPhoto(Map<String, dynamic> data, {VoidCallback? onPhotoUploaded}) async {
     final coinId = _selectedCoinId;
     if (coinId == null) return;
     
@@ -5382,6 +5488,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         photos.add(photoMap);
         tx.update(docRef, {'owner_photos': photos});
       });
+      
+      final currentList = List<dynamic>.from(data['owner_photos'] ?? []);
+      currentList.add(photoMap);
+      data['owner_photos'] = currentList;
+      onPhotoUploaded?.call();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo uploaded successfully'), backgroundColor: Colors.green));

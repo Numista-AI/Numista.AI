@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../models/transfer_model.dart';
+import 'http_auth_client.dart';
 
 class LateralTransferService {
   final String baseUrl;
@@ -104,9 +105,8 @@ class LateralTransferService {
     String? buyerReference,
     String? notes,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/sell-direct'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'coin_id': coinId,
@@ -132,9 +132,8 @@ class LateralTransferService {
     required String userId,
     required String saleArchiveId,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/undo-sale'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'sale_archive_id': saleArchiveId,
@@ -151,14 +150,13 @@ class LateralTransferService {
   /// Fetches sold/transferred inventory for a user
   Future<List<Map<String, dynamic>>> getSoldInventory(String userId) async {
     final cleanUid = userId.trim().toLowerCase();
-    final response = await http.get(
+    final response = await HttpAuthClient.get(
       Uri.parse('$baseUrl/api/transfer/sold-items/$cleanUid'),
-      headers: {'Accept': 'application/json'},
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final list = data['items'] as List<dynamic>? ?? [];
+      final list = (data['sold_items'] ?? data['items']) as List<dynamic>? ?? [];
       return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } else {
       throw Exception('Failed to fetch sold items: ${response.body}');

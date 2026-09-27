@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import yfinance as yf
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -44,19 +45,21 @@ except ImportError:
 
 app = FastAPI(title="Numista.AI Backend API")
 
+ALLOWED_ORIGINS = [
+    "https://numista.ai",
+    "https://www.numista.ai",
+    "https://numista-vault.web.app",      # Firebase Hosting (production)
+    "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://numista.ai",
-        "https://www.numista.ai",
-        "https://numista-vault.web.app",      # Firebase Hosting (production)
-        "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5000",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1843,6 +1846,24 @@ async def process_invoice(
                 if _ym:
                     it['Year'] = _ym.group(1)
                     it['Mint Mark'] = _ym.group(2).upper()
+            # Quantity heuristic: extract qty from notes or description if Quantity <= 1
+            curr_qty = it.get('Quantity')
+            try:
+                curr_qty_int = int(curr_qty) if curr_qty is not None else 1
+            except (ValueError, TypeError):
+                curr_qty_int = 1
+            if curr_qty_int <= 1:
+                notes_str = str(it.get('Personal Notes', '') or '')
+                desc_str = str(it.get('Original Description from source', '') or '')
+                qty_match = _re.search(r'\b(?:qty|quantity)[\s:]*([0-9]+)\b', f"{notes_str} {desc_str}", _re.IGNORECASE)
+                if qty_match:
+                    extracted_qty = int(qty_match.group(1))
+                    if extracted_qty > 0:
+                        it['Quantity'] = extracted_qty
+                else:
+                    it['Quantity'] = curr_qty_int
+            else:
+                it['Quantity'] = curr_qty_int
             # Deterministically enrich US Mint catalog items (e.g. 26XL, 26EA, 26XM, 26XH)
             try:
                 enrich_us_mint_item(it)
@@ -1926,17 +1947,18 @@ async def process_invoice(
           When analyzing a United States Mint Packing Slip / Invoice:
           1. Header Fingerprints: "UNITED STATES MINT", "www.usmint.gov", "1-800-USA-Mint (1-800-872-6468)", or "Fulfillment Center Returns Processing".
           2. Retailer: Set "Retailer/Website" to "United States Mint".
-          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN") to "Retailer Item No.".
+          3. Item # Column: Extract the exact Item # (e.g. "26XL", "26EA", "26XM", "26XH", "26XJ", "26XK", "26XN", "26SQRP", "26XE") to "Retailer Item No.".
           4. Order # & Tracking:
              - Extract the "Order #:" (e.g. "USM23436235", "USM23339673") or Order Number at bottom (e.g. "33231525") to "Retailer Invoice #".
              - Extract the "Tracking#:" (e.g. "9200190358255308656043") if present and place it in "Personal Notes".
           5. Pricing Separation:
-             - The "Cost" field MUST be the coin item "Unit Price" / "Price" (e.g. "$173.00"), NOT the grand total with S&H.
-             - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95") as line item coin cost.
+             - The "Cost" field MUST be the coin item "Unit Price" / "Price" (e.g. "$173.00", "$61.00", "$169.00"), NEVER the grand total (e.g. "$70.95", "$338.00") or total amount including shipping and handling.
+             - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95", "$70.95") as line item coin cost.
           6. Description & Finish Resolution:
              - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
              - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
              - "Morgan Silver Enhanced Un" (Item 26XE) -> Year: 2026, Denomination: "Morgan Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Enhanced Uncirculated", Condition: "Enhanced Uncirculated", Variety: "Liberty Bell 250 Privy, 1776~2026 Dual Date", Metal Content: "99.9% Silver (0.859 oz ASW)".
+             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
           7. Quantity Extraction:
              - Extract the quantity shipped from the "Ship" column (e.g. "2") or "Quantity Shipped" section into the "Quantity" field (integer, default 1).
 
@@ -2642,7 +2664,51 @@ from scan_service.collection_inventory import (
     _DIME_SYNONYMS,
 )
 
+def _collection_owner_from_token(user: Dict[str, Any]) -> str:
+    """Firestore users/{id} key matching AuthService.coinsPath.
 
+    Anonymous users are stored under UID. Everyone else under lowercase email.
+    Client-supplied email/uid is never used.
+    """
+    uid = (user.get("uid") or "").strip()
+    email = (user.get("email") or "").strip().lower()
+    firebase = user.get("firebase") or {}
+    is_anonymous = firebase.get("sign_in_provider") == "anonymous"
+    if is_anonymous or not email:
+        if not uid:
+            raise HTTPException(status_code=401, detail="Unable to resolve authenticated identity")
+        return uid
+    return email
+
+
+def _authenticate_request(authorization: Optional[str], body_email: Optional[str] = None) -> str:
+    """Verify Firebase ID token from Authorization header and return owner key.
+
+    If body_email is supplied, verifies it matches the authenticated identity (or raises 403).
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    id_token = authorization.split("Bearer ", 1)[1].strip()
+    try:
+        decoded_token = fb_auth.verify_id_token(id_token)
+    except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+            fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+        raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token")
+    except Exception as e:
+        logger.error(f"[_authenticate_request] unexpected auth error: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+    owner_key = _collection_owner_from_token(decoded_token)
+    if body_email:
+        clean_body = body_email.strip().lower()
+        token_email = (decoded_token.get("email") or "").strip().lower()
+        token_uid = (decoded_token.get("uid") or "").strip()
+        if clean_body != owner_key and clean_body != token_email and clean_body != token_uid:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Mismatched authenticated identity and requested user_email"
+            )
+    return owner_key
 
 
 @app.post("/api/deep_dive")
@@ -4950,31 +5016,52 @@ async def convert_heic_endpoint(
 
 @app.post("/api/identify_group_photo")
 async def identify_group_photo(
+    request: Request,
     user_email: str = Form(...),
     image: UploadFile = File(...),
     message: Optional[str] = Form(None),
+    authorization: Optional[str] = Header(None),
 ):
     """Identify multiple coins in a single group photo.
     Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
-    import uuid as _uuid
-    raw_bytes = await image.read()
-    content_type = image.content_type or "image/jpeg"
-    ext = image.filename.rsplit(".", 1)[-1].lower() if image.filename and "." in image.filename else "jpg"
+    req_origin = request.headers.get("origin") or ""
+    cors_origin = req_origin if req_origin in ALLOWED_ORIGINS else ("*" if not req_origin else ALLOWED_ORIGINS[0])
+    cors_headers = {
+        "Access-Control-Allow-Origin": cors_origin,
+        "Access-Control-Allow-Credentials": "true" if cors_origin in ALLOWED_ORIGINS else "false",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    }
 
-    # HEIC conversion (L2)
-    converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
-    if converted_mime:
-        raw_bytes = converted_bytes
-        content_type = converted_mime
-        ext = "jpg"
+    try:
+        owner_key = _authenticate_request(authorization, user_email)
+        user_email = owner_key
+        import uuid as _uuid
+        raw_bytes = await image.read()
+        raw_mime = (image.content_type or "image/jpeg").lower().strip()
+        # Normalize non-standard JPEG mime types (REQ_010)
+        content_type = "image/jpeg" if raw_mime in ["image/jpg", "image/pjpeg", "image/jpe"] else raw_mime
+        ext = image.filename.rsplit(".", 1)[-1].lower() if image.filename and "." in image.filename else "jpg"
 
-    # Upload original group photo to GCS
-    photo_uuid = str(_uuid.uuid4())
-    gcs_path = f"users/{user_email}/group_photos/{photo_uuid}.{ext}"
-    gcs_url = _upload_to_gcs(raw_bytes, gcs_path, content_type)
+        # HEIC conversion (L2)
+        converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
+        if converted_mime:
+            raw_bytes = converted_bytes
+            content_type = converted_mime
+            ext = "jpg"
 
-    # Build Gemini Vision prompt
-    GROUP_PHOTO_PROMPT = """You are a professional numismatist examining a photo uploaded by a collector.
+        # Upload original group photo to GCS (tolerating transient GCS error)
+        gcs_path = ""
+        gcs_url = ""
+        try:
+            photo_uuid = str(_uuid.uuid4())
+            gcs_path = f"users/{owner_key}/group_photos/{photo_uuid}.{ext}"
+            gcs_url = _upload_to_gcs(raw_bytes, gcs_path, content_type)
+        except Exception as gcs_err:
+            logger.warning(f"[identify_group_photo] GCS upload error: {gcs_err}")
+
+        # Build Gemini Vision prompt
+        GROUP_PHOTO_PROMPT = """You are a professional numismatist examining a photo uploaded by a collector.
 The photo may contain one or more coins, possibly in a holder, case, sleeve, or set.
 
 YOUR TASKS:
@@ -5037,7 +5124,6 @@ Return ONLY valid JSON — no markdown fences, no commentary:
   "large_group_warning": false
 }"""
 
-    try:
         image_part = genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type)
         text_part = genai_types.Part.from_text(text=GROUP_PHOTO_PROMPT)
 
@@ -5070,11 +5156,14 @@ Return ONLY valid JSON — no markdown fences, no commentary:
         result["original_photo_gcs_path"] = gcs_path
         result["original_photo_url"] = gcs_url
 
-        return JSONResponse(content=result)
+        return JSONResponse(content=result, headers=cors_headers)
 
+    except HTTPException:
+        raise
     except json.JSONDecodeError as e:
         return JSONResponse(
             status_code=200,
+            headers=cors_headers,
             content={
                 "error": "vision_parse_error",
                 "message": f"Could not parse Gemini response: {str(e)}",
@@ -5084,9 +5173,11 @@ Return ONLY valid JSON — no markdown fences, no commentary:
             }
         )
     except Exception as e:
+        logger.exception(f"[identify_group_photo] Error: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e), "coins": [], "coin_count": 0}
+            headers=cors_headers,
+            content={"error": str(e), "message": "Failed to analyze group photo", "coins": [], "coin_count": 0}
         )
 
 
@@ -5119,9 +5210,13 @@ class CommitGroupRequest(BaseModel):
     original_photo_url: Optional[str] = None
 
 @app.post("/api/preview_cost_split")
-async def preview_cost_split(request: CostSplitPreviewRequest):
+async def preview_cost_split(
+    request: CostSplitPreviewRequest,
+    authorization: Optional[str] = Header(None),
+):
     """Preview Greysheet value-weighted cost split without writing anything.
     Returns proposed per-coin costs so the user can review/edit before committing."""
+    _authenticate_request(authorization)
     import re as _re
     n = len(request.coins)
     if n == 0:
@@ -5209,22 +5304,61 @@ async def preview_cost_split(request: CostSplitPreviewRequest):
     })
 
 @app.post("/api/commit_group_photo")
-async def commit_group_photo(request: CommitGroupRequest):
+async def commit_group_photo(
+    request: CommitGroupRequest,
+    authorization: Optional[str] = Header(None),
+):
     """Commit identified coins from a group photo to the user's collection.
     Creates individual coin docs only — Flutter client calls SetGroupingService
     to link them as a set (L8). Returns coin IDs for that purpose.
     M7: Value-weighted cost split via Greysheet bid values."""
+    owner_key = _authenticate_request(authorization, request.user_email)
+    user_email = owner_key
     import re as _re
     from datetime import datetime, timezone
-    user_email = request.user_email
     n = len(request.coins)
     if n == 0:
         return JSONResponse(status_code=400, content={"error": "No coins to add."})
     if n > 20:
         return JSONResponse(status_code=400, content={"error": "Maximum 20 coins per group."})
 
+    # ── Step 0: Pre-validate Cost Overrides BEFORE any coin or GCS writes (MF-A) ──
+    prevalidated_override_cents = None
+    if request.cost_overrides is not None:
+        if len(request.cost_overrides) != n:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Cost overrides count ({len(request.cost_overrides)}) does not match coins count ({n})."}
+            )
+        prevalidated_override_cents = []
+        for ov in request.cost_overrides:
+            ov_clean = _re.sub(r'[^\d.]', '', str(ov))
+            if not ov_clean:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "Invalid cost override: empty or non-numeric value."}
+                )
+            try:
+                prevalidated_override_cents.append(round(float(ov_clean) * 100))
+            except (ValueError, TypeError):
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Invalid cost override value: {ov}"}
+                )
+
+        if request.cost_total:
+            total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+            if total_str:
+                total_cents_check = round(float(total_str) * 100)
+                if sum(prevalidated_override_cents) != total_cents_check:
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": f"Cost overrides sum (${sum(prevalidated_override_cents)/100:.2f}) does not match total cost (${total_cents_check/100:.2f})."}
+                    )
+
     # ── Step 1: Add each coin with $0.00 placeholder cost ──────────────────
     coin_ids = []
+    added_coins = []  # List of (orig_index, coin_id) to maintain indexing integrity (SF3)
     results = []
     for i, coin in enumerate(request.coins):
         try:
@@ -5253,6 +5387,7 @@ async def commit_group_photo(request: CommitGroupRequest):
                 if updates:
                     db.collection(f"users/{user_email}/coins").document(coin_id).update(updates)
                 coin_ids.append(coin_id)
+                added_coins.append((i, coin_id))
             results.append({"index": i + 1, "coin_id": coin_id, "status": "added"})
         except Exception as e:
             results.append({"index": i + 1, "coin_id": "", "status": "error", "error": str(e)})
@@ -5266,40 +5401,31 @@ async def commit_group_photo(request: CommitGroupRequest):
             total_cents = round(float(total_str) * 100)
             lookup_date = datetime.now(timezone.utc).isoformat()
 
-            # If user provided edited cost overrides from confirm step, use them
-            if request.cost_overrides and len(request.cost_overrides) == len(coin_ids):
-                override_cents = []
-                for ov in request.cost_overrides:
-                    ov_str = _re.sub(r'[^\d.]', '', str(ov))
-                    override_cents.append(round(float(ov_str) * 100))
-                # Validate sum matches total
-                if sum(override_cents) == total_cents:
-                    split_method = "user_edited"
-                    for i, cid in enumerate(coin_ids):
-                        cost_str = f"${override_cents[i] / 100:.2f}"
-                        cost_note = f"Split from {request.cost_total} group price (user-edited)"
-                        cost_split_details.append({
-                            "coin_id": cid,
-                            "cost": cost_str,
-                            "share_pct": round((override_cents[i] / total_cents) * 100, 2) if total_cents > 0 else 0,
-                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+            # If user provided edited cost overrides from confirm step, use prevalidated values (SF2 / MF-A)
+            if prevalidated_override_cents is not None:
+                override_cents = prevalidated_override_cents
+                split_method = "user_edited"
+                for idx, (orig_i, cid) in enumerate(added_coins):
+                    coin_override_cents = override_cents[orig_i] if orig_i < len(override_cents) else override_cents[idx]
+                    cost_str = f"${coin_override_cents / 100:.2f}"
+                    cost_note = f"Split from {request.cost_total} group price (user-edited)"
+                    cost_split_details.append({
+                        "coin_id": cid,
+                        "cost": cost_str,
+                        "share_pct": round((coin_override_cents / total_cents) * 100, 2) if total_cents > 0 else 0,
+                        "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
+                    })
+                    try:
+                        db.collection(f"users/{user_email}/coins").document(cid).update({
+                            "Cost": cost_str,
+                            "Purchase Cost": cost_str,
+                            "cost_basis": coin_override_cents / 100.0,
+                            "cost_notes": cost_note,
+                            "cost_split_method": split_method,
+                            "cost_split_total": request.cost_total,
                         })
-                        try:
-                            db.collection(f"users/{user_email}/coins").document(cid).update({
-                                "Cost": cost_str,
-                                "Purchase Cost": cost_str,
-                                "cost_basis": override_cents[i] / 100.0,
-                                "cost_notes": cost_note,
-                                "cost_split_method": split_method,
-                                "cost_split_total": request.cost_total,
-                            })
-                        except Exception:
-                            pass
-                # If sum doesn't match, fall through to Greysheet split
-                if split_method == "user_edited":
-                    pass  # skip to end
-                else:
-                    request.cost_overrides = None  # Clear invalid overrides
+                    except Exception:
+                        pass
 
             # Read back Greysheet bid values for each coin (only if not user-edited)
             if split_method == "none":
@@ -5327,25 +5453,25 @@ async def commit_group_photo(request: CommitGroupRequest):
                     max_idx = greysheet_values.index(max(greysheet_values))
                     int_cents[max_idx] += remainder
 
-                    for i, cid in enumerate(coin_ids):
-                        cost_str = f"${int_cents[i] / 100:.2f}"
-                        pct = shares[i] * 100
+                    for idx, (orig_i, cid) in enumerate(added_coins):
+                        cost_str = f"${int_cents[idx] / 100:.2f}"
+                        pct = shares[idx] * 100
                         cost_note = f"Split from {request.cost_total} group price ({pct:.1f}% by Greysheet value)"
                         cost_split_details.append({
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(pct, 2),
-                            "greysheet_bid": greysheet_values[i],
-                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                            "greysheet_bid": greysheet_values[idx],
+                            "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
                             db.collection(f"users/{user_email}/coins").document(cid).update({
                                 "Cost": cost_str,
                                 "Purchase Cost": cost_str,
-                                "cost_basis": int_cents[i] / 100.0,
+                                "cost_basis": int_cents[idx] / 100.0,
                                 "cost_notes": cost_note,
                                 "cost_split_method": split_method,
-                                "cost_split_greysheet_bid": greysheet_values[i],
+                                "cost_split_greysheet_bid": greysheet_values[idx],
                                 "cost_split_greysheet_date": lookup_date,
                                 "cost_split_share_pct": round(pct, 2),
                                 "cost_split_total": request.cost_total,
@@ -5358,16 +5484,16 @@ async def commit_group_photo(request: CommitGroupRequest):
                     n_ids = len(coin_ids)
                     base_cents = total_cents // n_ids
                     remainder = total_cents % n_ids
-                    for i, cid in enumerate(coin_ids):
-                        cents = base_cents + (1 if i < remainder else 0)
+                    for idx, (orig_i, cid) in enumerate(added_coins):
+                        cents = base_cents + (1 if idx < remainder else 0)
                         cost_str = f"${cents / 100:.2f}"
                         cost_note = f"Split from {request.cost_total} group price (even split: market values unavailable)"
                         cost_split_details.append({
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(100.0 / n_ids, 2),
-                            "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
-                            "denomination": request.coins[i].denomination if i < len(request.coins) else "",
+                            "greysheet_bid": greysheet_values[idx] if idx < len(greysheet_values) else 0.0,
+                            "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
                             db.collection(f"users/{user_email}/coins").document(cid).update({
@@ -5385,8 +5511,8 @@ async def commit_group_photo(request: CommitGroupRequest):
             split_method = "error_fallback"
     elif request.cost_per_coin:
         split_method = "per_coin"
-        for i, cid in enumerate(coin_ids):
-            cost_str = request.coins[i].cost or "$0.00" if i < len(request.coins) else "$0.00"
+        for orig_i, cid in added_coins:
+            cost_str = request.coins[orig_i].cost or "$0.00" if orig_i < len(request.coins) else "$0.00"
             try:
                 cost_num = float(_re.sub(r'[^\d.]', '', cost_str))
                 db.collection(f"users/{user_email}/coins").document(cid).update({
@@ -5419,7 +5545,7 @@ async def commit_group_photo(request: CommitGroupRequest):
 async def identify_coin_photo(
     user_email:    str        = Form(...),
     image_a:       UploadFile = File(...),
-    image_b:       UploadFile = File(...),
+    image_b:       Optional[UploadFile] = File(None),
     save_to_collection: bool  = Form(False),
     # Optional user overrides sent from the review screen
     override_year:    Optional[str] = Form(None),
@@ -5432,9 +5558,10 @@ async def identify_coin_photo(
     override_cost:    Optional[str] = Form(None),
     override_storage: Optional[str] = Form(None),
     override_notes:   Optional[str] = Form(None),
+    authorization:    Optional[str] = Header(None),
 ):
     """
-    Two-pass Gemini AI coin identification from obverse + reverse photos.
+    Two-pass Gemini AI coin identification from obverse + reverse photos (or single photo).
 
     Pass 1  -- Identification: determines which image is obverse/reverse,
               identifies year/denomination/series/mint mark/grade/metal.
@@ -5443,41 +5570,58 @@ async def identify_coin_photo(
 
     When save_to_collection=True, the identified coin (with any user overrides
     applied) is written directly to Firestore under users/{user_email}/coins
-    and both images are uploaded to GCS.
+    and images are uploaded to GCS.
 
     Returns the full coin document as JSON whether or not it was saved.
     """
+    if save_to_collection:
+        owner_key = _authenticate_request(authorization, user_email)
+        user_email = owner_key
+
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
     # -- 1. Read image bytes ---------------------------------------------------
     bytes_a      = await image_a.read()
-    bytes_b      = await image_b.read()
     mime_a       = image_a.content_type or "image/jpeg"
-    mime_b       = image_b.content_type or "image/jpeg"
-
-    # HEIC conversion (L2)
     converted_a, cmime_a = _convert_heic_to_jpeg(bytes_a)
     if cmime_a:
         bytes_a, mime_a = converted_a, cmime_a
 
-    converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
-    if cmime_b:
-        bytes_b, mime_b = converted_b, cmime_b
-
     part_a_img   = genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a)
-    part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
     label_a      = genai_types.Part.from_text(text="[Image A]")
-    label_b      = genai_types.Part.from_text(text="[Image B]")
+
+    single_image_mode = (image_b is None)
+    if not single_image_mode:
+        bytes_b      = await image_b.read()
+        mime_b       = image_b.content_type or "image/jpeg"
+        converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
+        if cmime_b:
+            bytes_b, mime_b = converted_b, cmime_b
+        part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
+        label_b      = genai_types.Part.from_text(text="[Image B]")
+    else:
+        bytes_b = None
+        mime_b = None
+        part_b_img = None
+        label_b = None
 
     # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
-        resp1 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=[
+        if single_image_mode:
+            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The reverse/obverse is unobserved. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side is unobserved."
+            pass1_contents = [
+                label_a, part_a_img,
+                genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT + single_note),
+            ]
+        else:
+            pass1_contents = [
                 label_a, part_a_img,
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
-            ],
+            ]
+        resp1 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=pass1_contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
@@ -5505,13 +5649,20 @@ async def identify_coin_photo(
             grade         = pass1.get("grade", ""),
             metal_content = pass1.get("metal_content", ""),
         )
-        resp2 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=[
+        if single_image_mode:
+            pass2_contents = [
+                label_a, part_a_img,
+                genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
+            ]
+        else:
+            pass2_contents = [
                 label_a, part_a_img,
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=pass2_prompt),
-            ],
+            ]
+        resp2 = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=pass2_contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
@@ -5546,11 +5697,17 @@ async def identify_coin_photo(
     full_report += f"\n\n[AI Confidence: {final_conf}]"
 
     # Determine which image is obverse vs reverse
-    obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
-    obv_bytes    = bytes_a if obverse_is_a else bytes_b
-    rev_bytes    = bytes_b if obverse_is_a else bytes_a
-    obv_mime     = mime_a  if obverse_is_a else mime_b
-    rev_mime     = mime_b  if obverse_is_a else mime_a
+    if single_image_mode:
+        obv_bytes = bytes_a
+        rev_bytes = bytes_a
+        obv_mime  = mime_a
+        rev_mime  = mime_a
+    else:
+        obverse_is_a = str(pass1.get("obverse_image", "A")).upper() == "A"
+        obv_bytes    = bytes_a if obverse_is_a else bytes_b
+        rev_bytes    = bytes_b if obverse_is_a else bytes_a
+        obv_mime     = mime_a  if obverse_is_a else mime_b
+        rev_mime     = mime_b  if obverse_is_a else mime_a
 
     # Apply user overrides (from review screen)
     resolved_series = _expand_series(override_series or final_series)
@@ -5564,6 +5721,10 @@ async def identify_coin_photo(
     from services.denomination_normalizer import normalize_denomination
     raw_denom_input = override_denom or final_denom
     norm_denom, was_corrected, orig_denom = normalize_denomination(raw_denom_input, country=norm_c, item_type="coin")
+
+    notes = override_notes or pass1.get("personal_notes", "") or ""
+    if single_image_mode:
+        notes = (notes + " [Single photo scan - reverse unobserved]").strip()
 
     ai_coin = {
         "Year":           override_year    or final_year,
@@ -5585,7 +5746,7 @@ async def identify_coin_photo(
         "Numismatic Report":  full_report,
         "Cost":           override_cost    or "$0.00",
         "Storage Location": override_storage or "",
-        "Personal Notes": override_notes   or "",
+        "Personal Notes": notes,
         "Quantity":       1,
         "ai_confidence":  final_conf,
         "is_silver":      pass1.get("is_silver", False),
@@ -5609,17 +5770,20 @@ async def identify_coin_photo(
                 f"users/{user_email}/photo_id/{coin_id}_obverse_{ts}.jpg",
                 obv_mime,
             )
-            gcs_rev_uri = _upload_to_gcs(
-                rev_bytes,
-                f"users/{user_email}/photo_id/{coin_id}_reverse_{ts}.jpg",
-                rev_mime,
-            )
+            if not single_image_mode:
+                gcs_rev_uri = _upload_to_gcs(
+                    rev_bytes,
+                    f"users/{user_email}/photo_id/{coin_id}_reverse_{ts}.jpg",
+                    rev_mime,
+                )
+            else:
+                gcs_rev_uri = gcs_obv_uri
         except Exception as e:
             logger.warning(f"Coin ID GCS upload warning: {e}")
 
         # Build base64 thumbnails for immediate Flutter display
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
-        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+        rev_b64 = (f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()) if not single_image_mode else ""
 
         coin_doc = {
             **ai_coin,
@@ -5636,7 +5800,7 @@ async def identify_coin_photo(
     else:
         # Preview mode -- return b64 images for the Flutter review screen
         obv_b64 = f"data:{obv_mime};base64," + base64.b64encode(obv_bytes).decode()
-        rev_b64 = f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()
+        rev_b64 = (f"data:{rev_mime};base64," + base64.b64encode(rev_bytes).decode()) if not single_image_mode else ""
 
     return {
         "coin_id":        coin_id,
@@ -7057,30 +7221,162 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 # -- GET /api/receipts/{user_email} --------------------------------------------
 
 @app.get("/api/receipts/{user_email}")
-def list_receipts(user_email: str, session_id: str = None, limit: int = 100):
-    """Return all receipts for a user, optionally filtered by session."""
+def list_receipts(
+    user_email: str,
+    session_id: str = None,
+    limit: int = 100,
+    authorization: Optional[str] = Header(None),
+):
+    """Return all receipts for a user, dynamically pruning stale linked coin IDs."""
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
         col = col.where("session_id", "==", session_id)
     docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
               .limit(limit).stream()
+
+    # Query active coin IDs and review_queue IDs to prune deleted coins
+    active_ids = set()
+    try:
+        user_ref = db.collection("users").document(user_email)
+        for cd in user_ref.collection("coins").select([]).stream():
+            active_ids.add(cd.id)
+        for rd in user_ref.collection("review_queue").select([]).stream():
+            active_ids.add(rd.id)
+    except Exception as exc:
+        logger.warning(f"Could not fetch active IDs for receipt pruning: {exc}")
+        active_ids = None
+
     results = []
     for d in docs:
         data = d.to_dict()
         data["receipt_id"] = d.id
-        data.pop("uploaded_at", None)
+        uploaded_at = data.get("uploaded_at")
+        if hasattr(uploaded_at, "isoformat"):
+            data["uploaded_at"] = uploaded_at.isoformat()
+        elif uploaded_at is not None:
+            data["uploaded_at"] = str(uploaded_at)
+
+        raw_linked = data.get("linked_coin_ids") or []
+        if active_ids is not None:
+            pruned = [cid for cid in raw_linked if cid in active_ids]
+            data["linked_coin_ids"] = pruned
+            data["linked_coins_count"] = len(pruned)
+        else:
+            data["linked_coins_count"] = len(raw_linked)
         results.append(data)
     return {"receipts": results}
+
+
+# -- DELETE /api/receipts/{user_email}/{receipt_id} ---------------------------
+
+@app.delete("/api/receipts/{user_email}/{receipt_id}")
+async def delete_receipt(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Delete a receipt record from users/{user_email}/receipts/{receipt_id}.
+    Cleans up any GCS storage blob if present, but ONLY when zero coins link to it (MF-1).
+    Enforces owner-folder isolation on the storage blob path.
+    """
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
+    receipt_ref = db.collection("users").document(user_email).collection("receipts").document(receipt_id)
+    snap = receipt_ref.get()
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    receipt_data = snap.to_dict() or {}
+    gcs_path = receipt_data.get("gcs_path") or ""
+
+    # Prune linked coins against active user coins and review_queue (MF-1 Data Loss Prevention)
+    raw_linked = receipt_data.get("linked_coin_ids") or []
+    active_linked = []
+    user_ref = db.collection("users").document(user_email)
+    if raw_linked:
+        active_ids = set()
+        try:
+            for cd in user_ref.collection("coins").select([]).stream():
+                active_ids.add(cd.id)
+            for rd in user_ref.collection("review_queue").select([]).stream():
+                active_ids.add(rd.id)
+            active_linked = [cid for cid in raw_linked if cid in active_ids]
+        except Exception as exc:
+            logger.warning(f"Could not verify active linked coins on receipt delete: {exc}")
+            active_linked = raw_linked
+
+    # Check reverse coin links if linked_coin_ids is empty
+    if not active_linked:
+        try:
+            for _ in user_ref.collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream():
+                active_linked.append("coin_ref")
+                break
+            if not active_linked:
+                for _ in user_ref.collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream():
+                    active_linked.append("rq_ref")
+                    break
+        except Exception as exc:
+            logger.warning(f"Could not check reverse coin receipt_id references: {exc}")
+
+    if gcs_path:
+        # Extract blob_name
+        blob_name = gcs_path
+        if blob_name.startswith("gs://"):
+            parts = blob_name[len("gs://"):].split("/", 1)
+            blob_name = parts[1] if len(parts) > 1 else ""
+
+        # Enforce owner-folder check: blob path must sit under token user's folder or return 403
+        clean_user = user_email.strip().lower()
+        clean_owner = owner_key.strip().lower()
+        expected_prefixes = (
+            f"receipts/{clean_user}/",
+            f"receipts/{clean_owner}/",
+            f"{clean_user}/",
+            f"{clean_owner}/",
+        )
+        if not any(blob_name.lower().startswith(p) for p in expected_prefixes):
+            logger.warning(f"Blob path '{blob_name}' does not match user folder for '{owner_key}'")
+            raise HTTPException(status_code=403, detail="Access denied: storage path outside user folder")
+
+        # Delete blob ONLY when zero coins link to it (MF-1)
+        if len(active_linked) == 0:
+            if gcs_client and IMPORT_BUCKET:
+                try:
+                    bucket = gcs_client.bucket(IMPORT_BUCKET)
+                    blob = bucket.blob(blob_name)
+                    if blob.exists():
+                        blob.delete()
+                        logger.info(f"Deleted receipt blob from GCS: {blob_name}")
+                except Exception as e:
+                    logger.warning(f"Could not delete receipt GCS blob {gcs_path}: {e}")
+        else:
+            logger.info(f"Retained receipt blob {blob_name} because {len(active_linked)} coin(s) still link to receipt {receipt_id}")
+
+    receipt_ref.delete()
+    logger.info(f"Deleted receipt {receipt_id} for user {user_email}")
+    return {"status": "success", "message": f"Receipt {receipt_id} deleted successfully"}
 
 
 # -- GET /api/receipts/{user_email}/{receipt_id}/view_url ----------------------
 
 @app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
-def receipt_view_url(user_email: str, receipt_id: str):
+def receipt_view_url(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+):
     """
     Return a reliable streaming URL for viewing original PDF receipt documents inline.
     Looks up receipt metadata across receipts collection, review_queue, and coins.
     """
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
     gcs_path = ""
     original_filename = ""
 
@@ -7118,6 +7414,10 @@ def receipt_view_url(user_email: str, receipt_id: str):
         gcs_path = f"gs://{IMPORT_BUCKET}/{user_email}/imports/raw/{safe_id}.pdf"
 
     stream_url = f"https://numista-backend-568985927038.us-central1.run.app/api/receipts/{user_email}/{receipt_id}/stream"
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split("Bearer ", 1)[1].strip()
+        stream_url += f"?token={token}"
+
     return {
         "receipt_id":      receipt_id,
         "signed_url":      stream_url,
@@ -7127,11 +7427,20 @@ def receipt_view_url(user_email: str, receipt_id: str):
 
 
 @app.get("/api/receipts/{user_email}/{receipt_id}/stream")
-def receipt_stream(user_email: str, receipt_id: str):
+def receipt_stream(
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+):
     """
     Direct PDF stream endpoint that reads PDF bytes from GCS using Cloud Run ADC
     and streams directly to the browser for inline PDF viewing.
     """
+    auth_header = authorization or (f"Bearer {token}" if token else None)
+    owner_key = _authenticate_request(auth_header, user_email)
+    user_email = owner_key
+
     gcs_path = ""
 
     rec_snap = db.collection("users").document(user_email)\
@@ -7187,23 +7496,6 @@ class ClearCollectionRequest(BaseModel):
     # Ignored if present. Identity comes only from the Firebase Bearer token.
     user_email: Optional[str] = None
     pin_code: str = ""    # unused; kept so older clients do not 422
-
-
-def _collection_owner_from_token(user: Dict[str, Any]) -> str:
-    """Firestore users/{id} key matching AuthService.coinsPath.
-
-    Anonymous users are stored under UID. Everyone else under lowercase email.
-    Client-supplied email/uid is never used.
-    """
-    uid = (user.get("uid") or "").strip()
-    email = (user.get("email") or "").strip().lower()
-    firebase = user.get("firebase") or {}
-    is_anonymous = firebase.get("sign_in_provider") == "anonymous"
-    if is_anonymous or not email:
-        if not uid:
-            raise HTTPException(status_code=401, detail="Unable to resolve authenticated identity")
-        return uid
-    return email
 
 
 @app.get("/api/collection/count")
@@ -10491,10 +10783,12 @@ async def api_recall_transfer(req: RecallTransferRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/sell-direct")
-async def api_sell_direct(req: DirectSaleRequest):
+async def api_sell_direct(req: DirectSaleRequest, authorization: Optional[str] = Header(None)):
     """
     Mode 3: Records a direct sale outside Numista.AI.
     """
+    owner_key = _authenticate_request(authorization, req.user_id)
+    req.user_id = owner_key
     try:
         from services.transfer_service import record_direct_sale
         result = record_direct_sale(
@@ -10515,10 +10809,12 @@ async def api_sell_direct(req: DirectSaleRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/undo-sale")
-async def api_undo_sale(req: UndoSaleRequest):
+async def api_undo_sale(req: UndoSaleRequest, authorization: Optional[str] = Header(None)):
     """
     Mode 3: Undoes a previously recorded direct sale.
     """
+    owner_key = _authenticate_request(authorization, req.user_id)
+    req.user_id = owner_key
     try:
         from services.transfer_service import undo_sale
         result = undo_sale(
@@ -10532,10 +10828,12 @@ async def api_undo_sale(req: UndoSaleRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/transfer/sold-items/{user_id}")
-async def api_get_sold_items(user_id: str):
+async def api_get_sold_items(user_id: str, authorization: Optional[str] = Header(None)):
     """
     Returns the list of sold/transferred items for user.
     """
+    owner_key = _authenticate_request(authorization, user_id)
+    user_id = owner_key
     try:
         from services.transfer_service import get_sold_inventory
         records = get_sold_inventory(db=db, user_id=user_id)
@@ -10579,11 +10877,16 @@ class AppraisalPdfRequest(BaseModel):
     user_email: str
 
 @app.post("/api/export/appraisal-pdf")
-async def api_export_appraisal_pdf(req: AppraisalPdfRequest):
+async def api_export_appraisal_pdf(
+    req: AppraisalPdfRequest,
+    authorization: Optional[str] = Header(None),
+):
     """
     Generates itemized 1-Click Insurance & Estate Appraisal PDF Schedule.
     Returns direct binary bytes for web download and archives background copy to GCS.
     """
+    owner_key = _authenticate_request(authorization, req.user_email)
+    req.user_email = owner_key
     try:
         coins_ref = db.collection('users').document(req.user_email).collection('portfolio').stream()
         items = [c.to_dict() for c in coins_ref]
@@ -10599,19 +10902,22 @@ async def api_export_appraisal_pdf(req: AppraisalPdfRequest):
             "items": items[:50] if items else []
         })
 
-        try:
-            bucket_name = os.environ.get("GCS_BUCKET_NAME", "studio-9101802118-8c9a8-uploads")
-            gcs_path = f"users/{req.user_email}/appraisals/Appraisal_Schedule_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
-            blob = storage_client.bucket(bucket_name).blob(gcs_path)
-            blob.upload_from_string(pdf_bytes, content_type="application/pdf")
-        except Exception as gcs_err:
-            logger.warning(f"GCS appraisal archive warning: {gcs_err}")
+        if gcs_client:
+            try:
+                bucket_name = os.environ.get("GCS_BUCKET_NAME", "studio-9101802118-8c9a8-uploads")
+                gcs_path = f"users/{req.user_email}/appraisals/Appraisal_Schedule_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}.pdf"
+                blob = gcs_client.bucket(bucket_name).blob(gcs_path)
+                blob.upload_from_string(pdf_bytes, content_type="application/pdf")
+            except Exception as gcs_err:
+                logger.warning(f"GCS appraisal archive warning: {gcs_err}")
 
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=Numista_Itemized_Appraisal_Schedule.pdf"}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Appraisal PDF export failed")
         raise HTTPException(status_code=500, detail=str(e))

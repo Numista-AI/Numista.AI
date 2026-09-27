@@ -23,6 +23,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/coin_model.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
@@ -604,15 +606,15 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       builder: (ctx) => AlertDialog(
         backgroundColor: _kSurface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Verify Manually?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
+        title: Text('Verify Manually?', style: TextStyle(color: _kText(context), fontWeight: FontWeight.bold)),
+        content: Text(
           'This will submit the coin to the Human AI Trainer Review Board for manual verification by a numismatic expert.\n\nContinue?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: _kSubtext(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: _kSubtext(context))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -808,13 +810,13 @@ Write in an engaging, authoritative style like a respected numismatic reference.
           child: Row(children: [
             const Icon(Icons.edit, color: _kBrand, size: 18),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text('Edit Coin', style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                color: _kText(context), fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             TextButton(
               onPressed: () => setState(() => _inEditMode = false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child: Text('Cancel', style: TextStyle(color: _kSubtext(context))),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
@@ -2579,7 +2581,14 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
         '$apiBase/api/receipts/${Uri.encodeComponent(userEmail)}/$receiptId/view_url',
       );
 
-      final resp = await http.get(url);
+      final user = FirebaseAuth.instance.currentUser;
+      final token = await user?.getIdToken();
+      final resp = await http.get(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final signedUrl = data['signed_url'] as String?;
@@ -4299,14 +4308,106 @@ class _OwnerPhotoHero extends StatelessWidget {
   }
 
   Future<void> _addOwnerPhoto(BuildContext context) async {
-    // Delegate to the owner photo upload flow in my_collection_screen
-    // This is handled by the parent widget's callback
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Use the "+ Add Your Photo" button on the set view to upload a photo.'),
-        duration: Duration(seconds: 3),
-      ),
-    );
+    final bool isMobile = !identical(0, 0.0)
+        ? false
+        : (Theme.of(context).platform == TargetPlatform.android ||
+            Theme.of(context).platform == TargetPlatform.iOS);
+    Uint8List? bytes;
+    String ext = 'jpg';
+
+    if (isMobile) {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (_) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ]),
+        ),
+      );
+      if (source == null) return;
+      final picked = await ImagePicker().pickImage(source: source, imageQuality: 90, maxWidth: 2000);
+      if (picked == null) return;
+      bytes = await picked.readAsBytes();
+      ext = picked.path.split('.').last.toLowerCase();
+    } else {
+      final result = await FilePicker.pickFiles(type: FileType.image, withData: true, allowMultiple: false);
+      if (result == null || result.files.isEmpty) return;
+      bytes = result.files.first.bytes;
+      ext = result.files.first.extension?.toLowerCase() ?? 'jpg';
+    }
+
+    if (bytes == null) return;
+    Uint8List uploadBytes = bytes;
+
+    // HEIC conversion if needed
+    if (ext == 'heic' || ext == 'heif') {
+      try {
+        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+        final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
+        final request = http.MultipartRequest('POST', uri);
+        if (idToken != null) request.headers['Authorization'] = 'Bearer $idToken';
+        request.files.add(http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'));
+        final response = await request.send().timeout(const Duration(seconds: 30));
+        if (response.statusCode == 200 && response.headers['x-converted'] == 'true') {
+          uploadBytes = Uint8List.fromList(await response.stream.toBytes());
+          ext = 'jpg';
+        }
+      } catch (_) {}
+    }
+
+    final photoId = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    final userEmail = AuthService.userEmail;
+
+    try {
+      final refCompressed = FirebaseStorage.instance
+          .ref('users/$userEmail/coins/${coin.id}/owner_photo_$photoId.$ext');
+      await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
+      final compressedUrl = await refCompressed.getDownloadURL();
+
+      final refOriginal = FirebaseStorage.instance
+          .ref('users/$userEmail/coins/${coin.id}/owner_photo_${photoId}_original.$ext');
+      await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
+      final originalUrl = await refOriginal.getDownloadURL();
+
+      final photoMap = {
+        'id': photoId,
+        'url': compressedUrl,
+        'original_url': originalUrl,
+        'caption': '',
+        'uploaded_at': DateTime.now().toIso8601String(),
+      };
+
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final docRef = FirebaseFirestore.instance.collection(AuthService.coinsPath).doc(coin.id);
+        final snapshot = await tx.get(docRef);
+        if (!snapshot.exists) return;
+        List<dynamic> photos = snapshot.data()?['owner_photos'] ?? [];
+        photos.add(photoMap);
+        tx.update(docRef, {'owner_photos': photos});
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo uploaded successfully!'), backgroundColor: Colors.green),
+        );
+      }
+      onPhotoAdded?.call();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _showPhotoOptions(BuildContext context, Map<String, dynamic> photo) {
