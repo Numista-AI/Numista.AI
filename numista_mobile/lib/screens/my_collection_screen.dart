@@ -2765,6 +2765,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           _iconBtn(Icons.create_new_folder_outlined, 'Group as Set', () => _showGroupAsSetDialog(crw.id, m)),
                         if (canMutate && (m['is_set'] == true || m['isSet'] == true))
                           _iconBtn(Icons.link_off, 'Ungroup', () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
@@ -2783,11 +2784,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 deleteOwnerPhotos: true,
                               );
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Set ungrouped successfully.')));
+                                messenger.showSnackBar(const SnackBar(content: Text('Set ungrouped successfully.')));
                               }
                             } catch (e) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error ungrouping set: $e'), backgroundColor: Colors.red));
+                                messenger.showSnackBar(SnackBar(content: Text('Error ungrouping set: $e'), backgroundColor: Colors.red));
                               }
                             }
                           }),
@@ -5219,7 +5220,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (setContentsWidget != null) setContentsWidget,
+        ?setContentsWidget,
         if (isSet) ...[
           const SizedBox(height: 16),
           Divider(color: _border),
@@ -5298,6 +5299,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       await refOriginal.putData(bytes, SettableMetadata(contentType: 'image/$ext'));
       final originalUrl = await refOriginal.getDownloadURL();
       
+      if (!mounted) return;
       String caption = '';
       await showDialog(
         context: context,
