@@ -3480,8 +3480,36 @@ async def dedup_auto_clean(user_email: str = Form(...)):
 # |  These endpoints power the "Add Coins by Holder Image" feature.             |
 # +==============================================================================+
 
-# --- GCS helpers -------------------------------------------------------------
+# --- HEIC Conversion --------------------------------------------------------
 
+def _convert_heic_to_jpeg(raw_bytes: bytes) -> tuple:
+    """Convert HEIC/HEIF to JPEG. Strips GPS EXIF for privacy, keeps orientation.
+    Returns (jpeg_bytes, 'image/jpeg'). If not HEIC, returns input unchanged."""
+    try:
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+    except ImportError:
+        pass  # pillow-heif not installed; fall through
+    from PIL import Image as PILImage
+    from io import BytesIO
+    try:
+        buf_in = BytesIO(raw_bytes)
+        img = PILImage.open(buf_in)
+        if img.format and img.format.upper() in ('HEIF', 'HEIC'):
+            img = img.convert('RGB')
+            # Strip GPS from EXIF for privacy
+            exif_data = img.getexif()
+            for gps_tag in [0x8825]:  # GPSInfo
+                exif_data.pop(gps_tag, None)
+            buf_out = BytesIO()
+            exif_bytes = exif_data.tobytes() if exif_data else b''
+            img.save(buf_out, format='JPEG', quality=90, exif=exif_bytes)
+            return buf_out.getvalue(), 'image/jpeg'
+    except Exception:
+        pass
+    return raw_bytes, None  # Not HEIC or conversion failed; use original
+
+# --- GCS helpers -------------------------------------------------------------
 def _upload_to_gcs(file_bytes: bytes, dest_path: str, content_type: str = "image/jpeg") -> str:
     """
     Uploads bytes to the user-content GCS bucket.
@@ -4896,6 +4924,236 @@ async def identify_coin_photo_preflight():
     """
     from fastapi.responses import Response as FastAPIResponse
     return FastAPIResponse(status_code=200)
+@app.post("/api/identify_group_photo")
+async def identify_group_photo(
+    user_email: str = Form(...),
+    image: UploadFile = File(...),
+    message: Optional[str] = Form(None),
+):
+    """Identify multiple coins in a single group photo.
+    Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
+    import uuid as _uuid
+    raw_bytes = await image.read()
+    content_type = image.content_type or "image/jpeg"
+    ext = image.filename.rsplit(".", 1)[-1].lower() if image.filename and "." in image.filename else "jpg"
+
+    # HEIC conversion (L2)
+    converted_bytes, converted_mime = _convert_heic_to_jpeg(raw_bytes)
+    if converted_mime:
+        raw_bytes = converted_bytes
+        content_type = converted_mime
+        ext = "jpg"
+
+    # Upload original group photo to GCS
+    photo_uuid = str(_uuid.uuid4())
+    gcs_path = f"users/{user_email}/group_photos/{photo_uuid}.{ext}"
+    gcs_url = _upload_to_gcs(raw_bytes, gcs_path, content_type)
+
+    # Build Gemini Vision prompt
+    GROUP_PHOTO_PROMPT = """You are a professional numismatist examining a photo uploaded by a collector.
+The photo may contain one or more coins, possibly in a holder, case, sleeve, or set.
+
+YOUR TASKS:
+1. COUNT how many distinct coins are visible.
+2. For each coin, identify: Year, Denomination, Program/Series, Theme/Subject,
+   Mint Mark, Condition (Sheldon scale estimate if possible), Metal Content.
+3. CONFIDENCE: Rate your confidence for each coin as "high", "medium", or "low".
+4. GROUPING: If the coins appear to be physically together (in a holder, case,
+   plastic sleeve, display card, official mint packaging, etc.), set "appears_grouped": true
+   and suggest a descriptive group name (e.g. "1964-D Year Set", "2024 Silver Proof Set").
+   If only ONE coin is visible, set "appears_grouped": false.
+5. For each coin, provide a bounding box (x_pct, y_pct, w_pct, h_pct as 0.0-1.0
+   percentage of image dimensions) so individual coins can be cropped.
+6. If you cannot identify a coin clearly, still include it with confidence "low"
+   and your best guess.
+
+IMPORTANT LIMITS:
+- Maximum 20 coins per photo. If you see more than 20, identify only the first 20
+  and set "truncated": true.
+- If you see more than 10 coins, set "large_group_warning": true.
+
+Return ONLY valid JSON — no markdown fences, no commentary:
+{
+  "coins": [
+    {
+      "index": 1,
+      "year": "1964",
+      "denomination": "Half Dollar",
+      "program_series": "Kennedy Half Dollars",
+      "theme_subject": "John F. Kennedy",
+      "mint_mark": "D",
+      "condition": "MS-63",
+      "metal_content": "90% Silver",
+      "confidence": "high",
+      "bbox": {"x_pct": 0.1, "y_pct": 0.2, "w_pct": 0.3, "h_pct": 0.3}
+    }
+  ],
+  "appears_grouped": true,
+  "suggested_group_name": "1964-D Year Set",
+  "coin_count": 5,
+  "truncated": false,
+  "large_group_warning": false
+}"""
+
+    try:
+        image_part = genai_types.Part.from_bytes(data=raw_bytes, mime_type=content_type)
+        text_part = genai_types.Part.from_text(text=GROUP_PHOTO_PROMPT)
+
+        response = genai_client.models.generate_content(
+            model=PRIMARY_MODEL,
+            contents=[image_part, text_part],
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                max_output_tokens=16384,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+
+        result_text = response.text.strip()
+        # Strip markdown fences if present
+        if result_text.startswith("```"):
+            result_text = result_text.split("\n", 1)[-1]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3].strip()
+
+        result = json.loads(result_text)
+
+        # Enforce hard cap of 20 coins
+        if len(result.get("coins", [])) > 20:
+            result["coins"] = result["coins"][:20]
+            result["truncated"] = True
+
+        # Add GCS path for owner photo attachment later
+        result["original_photo_gcs_path"] = gcs_path
+        result["original_photo_url"] = gcs_url
+
+        return JSONResponse(content=result)
+
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "error": "vision_parse_error",
+                "message": f"Could not parse Gemini response: {str(e)}",
+                "raw_response": result_text[:2000] if 'result_text' in dir() else "",
+                "coins": [],
+                "coin_count": 0,
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "coins": [], "coin_count": 0}
+        )
+
+
+class GroupCoinItem(BaseModel):
+    year: str
+    denomination: str
+    mint_mark: Optional[str] = None
+    program_series: Optional[str] = None
+    theme_subject: Optional[str] = None
+    condition: Optional[str] = None
+    metal_content: Optional[str] = None
+    variety: Optional[str] = None
+    cost: Optional[str] = None  # Only used if cost_per_coin=True
+
+class CommitGroupRequest(BaseModel):
+    user_email: str
+    coins: list[GroupCoinItem]
+    set_title: Optional[str] = None
+    cost_total: Optional[str] = None  # e.g. "$125.00"
+    cost_per_coin: bool = False
+    purchase_date: Optional[str] = None
+    where_purchased: Optional[str] = None
+    storage_location: Optional[str] = None
+    original_photo_gcs_path: Optional[str] = None
+    original_photo_url: Optional[str] = None
+
+@app.post("/api/commit_group_photo")
+async def commit_group_photo(request: CommitGroupRequest):
+    """Commit identified coins from a group photo to the user's collection.
+    Creates individual coin docs only — Flutter client calls SetGroupingService
+    to link them as a set (L8). Returns coin IDs for that purpose."""
+    import re as _re
+    user_email = request.user_email
+    n = len(request.coins)
+    if n == 0:
+        return JSONResponse(status_code=400, content={"error": "No coins to add."})
+    if n > 20:
+        return JSONResponse(status_code=400, content={"error": "Maximum 20 coins per group."})
+
+    # Cost split (L3)
+    per_coin_costs = []
+    cost_notes = ""
+    if request.cost_total and not request.cost_per_coin:
+        try:
+            total_str = _re.sub(r'[^\d.]', '', request.cost_total)
+            total_cents = round(float(total_str) * 100)
+            base_cents = total_cents // n
+            remainder = total_cents % n
+            for i in range(n):
+                cents = base_cents + (remainder if i == 0 else 0)
+                per_coin_costs.append(f"${cents / 100:.2f}")
+            cost_notes = f"Split from {request.cost_total} group price"
+        except (ValueError, ZeroDivisionError):
+            per_coin_costs = [request.cost_total] * n
+    elif request.cost_per_coin:
+        per_coin_costs = [c.cost or "$0.00" for c in request.coins]
+    else:
+        per_coin_costs = ["$0.00"] * n
+
+    # Add each coin
+    coin_ids = []
+    results = []
+    for i, coin in enumerate(request.coins):
+        try:
+            result = execute_add_coin(
+                user_email=user_email,
+                year=coin.year,
+                denomination=coin.denomination,
+                mint_mark=coin.mint_mark or "",
+                program_series=coin.program_series or "",
+                theme_subject=coin.theme_subject or "",
+                variety=coin.variety or "",
+                storage_location=request.storage_location or "",
+                condition=coin.condition or "Ungraded / Raw",
+                cost=per_coin_costs[i],
+                personal_notes=cost_notes,
+                quantity=1,
+            )
+            # Update Purchase Date and Where Purchased if provided
+            coin_id = result.get("coin_id", "")
+            if coin_id:
+                updates = {}
+                if request.purchase_date:
+                    updates["Purchase Date"] = request.purchase_date
+                if request.where_purchased:
+                    updates["Provenance"] = request.where_purchased
+                if cost_notes:
+                    updates["cost_notes"] = cost_notes
+                if updates:
+                    db.collection(f"users/{user_email}/coins").document(coin_id).update(updates)
+                coin_ids.append(coin_id)
+            results.append({"index": i + 1, "coin_id": coin_id, "status": "added"})
+        except Exception as e:
+            results.append({"index": i + 1, "coin_id": "", "status": "error", "error": str(e)})
+
+    # Compute parent set cost fields
+    set_cost = request.cost_total or "$0.00"
+    set_cost_label = f"{set_cost} total / {n} coins" if request.cost_total else ""
+
+    return JSONResponse(content={
+        "coin_ids": coin_ids,
+        "results": results,
+        "set_cost": set_cost,
+        "set_cost_label": set_cost_label,
+        "original_photo_gcs_path": request.original_photo_gcs_path or "",
+        "original_photo_url": request.original_photo_url or "",
+        "success_count": len(coin_ids),
+        "total_count": n,
+    })
 
 
 @app.post("/api/identify_coin_photo")
@@ -4937,6 +5195,15 @@ async def identify_coin_photo(
     bytes_b      = await image_b.read()
     mime_a       = image_a.content_type or "image/jpeg"
     mime_b       = image_b.content_type or "image/jpeg"
+
+    # HEIC conversion (L2)
+    converted_a, cmime_a = _convert_heic_to_jpeg(bytes_a)
+    if cmime_a:
+        bytes_a, mime_a = converted_a, cmime_a
+
+    converted_b, cmime_b = _convert_heic_to_jpeg(bytes_b)
+    if cmime_b:
+        bytes_b, mime_b = converted_b, cmime_b
 
     part_a_img   = genai_types.Part.from_bytes(data=bytes_a, mime_type=mime_a)
     part_b_img   = genai_types.Part.from_bytes(data=bytes_b, mime_type=mime_b)
