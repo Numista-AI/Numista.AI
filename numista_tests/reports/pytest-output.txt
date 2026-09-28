@@ -3,39 +3,102 @@ platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
 plugins: anyio-4.14.2
-collected 320 items
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+[rag] Embedding client initialised (location=global)
+collected 349 items
 
-tests\test_active_learning_queue.py ..                                   [  0%]
-tests\test_auth_security.py ........                                     [  3%]
-tests\test_awq_intake_parser.py .......................................  [ 15%]
-tests\test_beta_estate_pipeline.py ...                                   [ 16%]
-tests\test_catalog_slot_counts.py ..............                         [ 20%]
-tests\test_checklist_historical_matcher.py ............                  [ 24%]
-tests\test_checklist_parser.py ...........                               [ 27%]
-tests\test_coa_parser.py ....                                            [ 29%]
-tests\test_collector_profile.py .                                        [ 29%]
-tests\test_deal_spotter.py ...                                           [ 30%]
-tests\test_few_shot_service.py ..                                        [ 30%]
-tests\test_financials_phase3.py ........................................ [ 43%]
-...                                                                      [ 44%]
-tests\test_greysheet.py ........                                         [ 46%]
-tests\test_import_worker_integration.py .                                [ 47%]
-tests\test_ingestion.py ..                                               [ 47%]
-tests\test_invoice_fixtures.py ..                                        [ 48%]
-tests\test_missing_images_csv.py ...                                     [ 49%]
-tests\test_notes_parser.py .............                                 [ 53%]
-tests\test_proxy_bandwidth.py .....                                      [ 55%]
-tests\test_repair_26rj_ghosts.py ...................................     [ 65%]
-tests\test_series_manifest_sync.py ....................                  [ 72%]
-tests\test_set_pricing_extended.py ..................................... [ 83%]
-....                                                                     [ 85%]
-tests\test_transfer.py ....                                              [ 86%]
-tests\test_us_mint_catalog.py ....                                       [ 87%]
-tests\test_us_mint_invoice_enrichment.py ......                          [ 89%]
-tests\test_usmint_releases_scraper.py .........                          [ 92%]
-tests\test_valuation_integrity.py ....                                   [ 93%]
-tests\test_valuations.py ......                                          [ 95%]
-tests\test_vector_rag.py ...                                             [ 96%]
-tests\test_verifiers.py ............                                     [100%]
+tests\test_active_learning_queue.py ..
+tests\test_auth_security.py [32mINFO   [0m [main] [9631f794] GET / -> 200 (148ms)
+.[33mWARNING[0m [main] [5429800e] GET /api/spot_prices -> 200 (8298ms)
+.[32mINFO   [0m [main] [8c2479b5] GET /api/v1/family/subaccounts -> 200 (37ms)
+.[32mINFO   [0m [main] [ef7fe43f] POST /api/collection/clear -> 401 (3ms)
+.[32mINFO   [0m [main] [e170d0e0] POST /api/stripe/create-checkout-session -> 401 (24ms)
+.[32mINFO   [0m [main] [f38c2945] POST /api/stripe/create-customer-portal -> 401 (2ms)
+.[31mERROR  [0m [main] [85e73e81] POST /api/stripe/create-checkout-session -> 502 (36ms)
+.[32mINFO   [0m [main] [16dbc8cc] POST /api/stripe/webhook -> 400 (4ms)
+.[32mINFO   [0m [main] [4f7fe4d1] POST /api/preview_cost_split -> 401 (4ms)
+[32mINFO   [0m [main] [452286fa] POST /api/commit_group_photo -> 401 (7ms)
+[32mINFO   [0m [main] [d1c2d50a] POST /api/transfer/sell-direct -> 401 (5ms)
+[32mINFO   [0m [main] [fc488839] POST /api/transfer/undo-sale -> 401 (2ms)
+[32mINFO   [0m [main] [05334195] GET /api/transfer/sold-items/victim@example.com -> 401 (2ms)
+.[32mINFO   [0m [main] [33e5ae49] POST /api/commit_group_photo -> 403 (2ms)
+.[32mINFO   [0m [main] [682acd13] POST /api/commit_group_photo -> 400 (2ms)
+[32mINFO   [0m [main] [91e35310] POST /api/commit_group_photo -> 400 (2ms)
+.[32mINFO   [0m [main] [0804786b] POST /api/export/appraisal-pdf -> 401 (3ms)
+[32mINFO   [0m [main] [1bbb14d8] POST /api/export/appraisal-pdf -> 403 (2ms)
+.[32mINFO   [0m [main] [c7275802] POST /api/commit_group_photo -> 200 (2ms)
+.[32mINFO   [0m [main] [df23637b] POST /api/identify_coin_photo -> 401 (7ms)
+[32mINFO   [0m [main] [63c1ef93] POST /api/identify_coin_photo -> 403 (3ms)
+.[32mINFO   [0m [main] [12f14a2f] GET /api/receipts/victim@example.com -> 401 (4ms)
+[32mINFO   [0m [main] [5ccdba19] GET /api/receipts/victim@example.com -> 403 (2ms)
+[32mINFO   [0m [main] [0338e296] GET /api/receipts/victim@example.com/rec_123/view_url -> 401 (4ms)
+[32mINFO   [0m [main] [2547b5ac] GET /api/receipts/victim@example.com/rec_123/view_url -> 403 (3ms)
+[32mINFO   [0m [main] [f550c92f] GET /api/receipts/victim@example.com/rec_123/stream -> 401 (4ms)
+[32mINFO   [0m [main] [d0075fc1] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (3ms)
+[32mINFO   [0m [main] [0dc8e5be] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (3ms)
+.
+tests\test_awq_intake_parser.py .......................................
+tests\test_beta_estate_pipeline.py ...
+tests\test_catalog_slot_counts.py ..............
+tests\test_checklist_historical_matcher.py ............
+tests\test_checklist_parser.py ...........
+tests\test_coa_parser.py ....
+tests\test_collector_profile.py .
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [7fa82843] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
+[32mINFO   [0m [main] [f6677ec8] POST /api/wishlist/deals/check -> 200 (4ms)
+.
+tests\test_few_shot_service.py ..
+tests\test_financials_phase3.py ...........................................
+tests\test_greysheet.py [32mINFO   [0m [main] [265abab9] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [135056ed] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [8eaf48d9] GET /api/greysheet/pricing/429 -> 200 (14ms)
+.[32mINFO   [0m [main] [e7391b4a] GET /api/greysheet/deals -> 200 (2ms)
+[32mINFO   [0m [main] [ac509587] POST /api/greysheet/deals/refresh -> 200 (2ms)
+.[32mINFO   [0m [main] [ff522a01] POST /api/portfolio/snapshot/daily -> 200 (5ms)
+..[32mINFO   [0m [main] [60ce6376] GET /api/greysheet/quota -> 200 (5ms)
+..
+tests\test_identify_group_photo.py .[32mINFO   [0m [main] [62d334a5] POST /api/identify_group_photo -> 200 (7ms)
+.[31mERROR  [0m [main] [20e92dfa] [identify_group_photo] Error: Simulated Gemini API error
+[31mERROR  [0m [main] [20e92dfa] POST /api/identify_group_photo -> 500 (67ms)
+.
+tests\test_import_worker_integration.py .
+tests\test_ingestion.py [32mINFO   [0m [main] [c6c7d5d4] GET /api/ingestion/jobs -> 200 (3ms)
+.[32mINFO   [0m [main] [5ed82246] POST /api/ingestion/batch_async -> 200 (3ms)
+[32mINFO   [0m [main] [3da3eade] GET /api/ingestion/status/job_bebb2590 -> 200 (2ms)
+.
+tests\test_invoice_fixtures.py ..
+tests\test_missing_images_csv.py ...
+tests\test_notes_parser.py .............
+tests\test_proxy_bandwidth.py .....
+tests\test_repair_26rj_ghosts.py ...................................
+tests\test_series_manifest_sync.py ....................
+tests\test_set_pricing_extended.py .........................................
+tests\test_transfer.py ..............
+tests\test_upload_baseline_fixes.py .[32mINFO   [0m [main] [c9f54161] GET /api/receipts/tester@numista.ai -> 200 (5ms)
+.[32mINFO   [0m [main] [6932a370] Retained receipt blob receipts/tester@numista.ai/rec_123/original.pdf because 1 coin(s) still link to receipt rec_123
+[32mINFO   [0m [main] [6932a370] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [6932a370] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (6ms)
+.[32mINFO   [0m [main] [b0e9cb3c] Deleted receipt blob from GCS: receipts/tester@numista.ai/rec_123/original.pdf
+[32mINFO   [0m [main] [b0e9cb3c] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [b0e9cb3c] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (7ms)
+.[33mWARNING[0m [main] [b6f268e9] Blob path 'receipts/victim@numista.ai/rec_victim/original.pdf' does not match user folder for 'tester@numista.ai'
+[32mINFO   [0m [main] [b6f268e9] DELETE /api/receipts/tester@numista.ai/rec_123 -> 403 (6ms)
+.[32mINFO   [0m [main] [11f955fa] Identify coin photo: save=False
+[32mINFO   [0m [main] [11f955fa] Coin ID pass 1: 1964 Half Dollar conf=HIGH
+[32mINFO   [0m [main] [11f955fa] Coin ID pass 2: grade=MS-64 val=$25.00
+[32mINFO   [0m [main] [11f955fa] POST /api/identify_coin_photo -> 200 (24ms)
+.
+tests\test_us_mint_catalog.py .......
+tests\test_us_mint_invoice_enrichment.py ......
+tests\test_usmint_releases_scraper.py .........
+tests\test_valuation_integrity.py ....
+tests\test_valuations.py ......
+tests\test_vector_rag.py ..[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+[rag] build_rag_prompt_context called, query len=13
+[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+.
+tests\test_verifiers.py ............
 
-============================ 320 passed in 25.74s =============================
+============================ 349 passed in 26.38s =============================
