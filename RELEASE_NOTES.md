@@ -394,6 +394,19 @@
 
 
 
+
+## v4.394 — 2026-09-28
+**Audit Enhancements & Platform Updates**
+
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.393)
+- Release: sync release notes for v4.393
+- Pre-deploy: receipt blob retention, catalog 26SQRD removal, endpoint auth, and override indexing (REQ_016)
+- Release: sync release notes for v4.391
+- Security: pre-validate cost overrides, authenticate appraisal-pdf, restrict CORS, and send Bearer tokens on 401 routes (REQ_015)
+- Release: sync release notes for v4.390
+- Upload: baseline upload fixes for receipts, sets, photos, and autofill (REQ_008)
+- Security: auth token enforcement, undo-sale guard, atomic transactions, and group-photo CORS 500 (REQ_009 / REQ_010)
+
 ## v4.393 — 2026-09-27
 **Pre-deploy Enhancements & Platform Updates**
 
