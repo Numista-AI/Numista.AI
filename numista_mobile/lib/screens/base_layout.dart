@@ -38,6 +38,7 @@ import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
 import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
+import '../widgets/auth_gate.dart';
 import '../services/feedback_trigger_observer.dart';
 import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
 import '../widgets/morgan_guide_flow.dart';
@@ -205,7 +206,10 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
 
     // Load eBay credentials from Firestore into SharedPreferences.
-    EpnService.loadFromFirestore();
+    // Skip in demo mode to enforce zero Firestore network reads.
+    if (!widget.isDemoMode && !GuestSeedService.isBrowseDemoMode) {
+      EpnService.loadFromFirestore();
+    }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
     if (!AuthService.isGuest) {
@@ -550,9 +554,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   if (GuestSeedService.isBrowseDemoMode)
                     _DemoBanner(onTryFree: () {
                       GuestSeedService.deactivateBrowseDemo();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
+                      AuthGate.navigateTo(context, initialAuthTab: 1);
                     }),
                   if (AuthService.isGuest) _GuestBanner(),
                   Expanded(child: _buildBody()),
@@ -981,9 +983,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                     if (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                       _DemoBanner(onTryFree: () {
                         GuestSeedService.deactivateBrowseDemo();
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        );
+                        AuthGate.navigateTo(context, initialAuthTab: 1);
                       }),
                     if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
                     Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
@@ -991,9 +991,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                 ),
                 WizardOverlay(
                   onCreateAccount: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
+                    AuthGate.navigateTo(context, initialAuthTab: 1);
                   },
                 ),
                 // Morgan guide panel — floats above screen when a guide is active
@@ -1261,9 +1259,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
         if (ctx.mounted) {
-          Navigator.of(ctx).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
+          AuthGate.navigateTo(ctx);
         }
       } else {
         await AuthService.signOut();

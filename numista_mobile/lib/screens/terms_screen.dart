@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import '../widgets/auth_gate.dart';
 
 class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
@@ -32,9 +32,7 @@ class TermsScreen extends StatelessWidget {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             } else {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+              AuthGate.navigateTo(context);
             }
           },
         ),

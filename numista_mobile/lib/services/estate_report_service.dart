@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -26,18 +27,30 @@ class EstateReportService {
     required String uid,
     required EphemeralReportIdentity identity,
     required String mode, // 'living_inventory' | 'estate_settlement'
+    String? state,
     bool includePhotos = true,
   }) async {
+    final effectiveState = (state != null && state.isNotEmpty)
+        ? state
+        : (identity.state.isNotEmpty ? identity.state : 'NY');
+
     final body = {
       'uid': uid,
       'mode': mode,
+      'state': effectiveState,
       'include_photos': includePhotos,
       ...identity.toJson(),
     };
 
+    final user = FirebaseAuth.instance.currentUser;
+    final token = await user?.getIdToken();
+
     final response = await http.post(
       Uri.parse('$_baseUrl/generate_estate_report'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
       body: jsonEncode(body),
     ).timeout(
       const Duration(seconds: 240),

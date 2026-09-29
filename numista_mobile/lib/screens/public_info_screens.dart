@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'base_layout.dart';
-import 'login_screen.dart';
 import '../services/guest_seed_service.dart';
+import '../widgets/auth_gate.dart';
 
 /// Clean public shell providing branded informational views (/about, /features, /pricing, /faq).
 class PublicInfoShell extends StatelessWidget {
@@ -36,17 +35,13 @@ class PublicInfoShell extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back_rounded, color: _text),
                   tooltip: 'Back to Vault',
                   onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
+                    AuthGate.navigateTo(context);
                   },
                 ),
                 const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
+                    AuthGate.navigateTo(context);
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Row(
@@ -84,11 +79,7 @@ class PublicInfoShell extends StatelessWidget {
                       onPressed: () async {
                         await GuestSeedService.activateBrowseDemo();
                         if (context.mounted) {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const BaseLayout(isDemoMode: true),
-                            ),
-                          );
+                          AuthGate.navigateTo(context, isDemo: true);
                         }
                       },
                       icon: const Icon(Icons.explore_outlined, size: 16, color: _bronze),
@@ -112,11 +103,7 @@ class PublicInfoShell extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(initialTab: 1),
-                          ),
-                        );
+                        AuthGate.navigateTo(context, initialAuthTab: 1);
                       },
                       child: const Text('Join Beta', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     ),
@@ -275,7 +262,7 @@ class _FeaturesView extends StatelessWidget {
           title: 'AI Trainer Review Board',
           status: 'AVAILABLE NOW',
           statusColor: const Color(0xFF059669),
-          desc: 'Community and expert numismatic review board continuously trains and verifies AI identification models.',
+          desc: 'Community and numismatic review board regularly updates and validates AI identification references.',
         ),
         const SizedBox(height: 16),
         _featureItem(
@@ -462,7 +449,7 @@ class _FaqView extends StatelessWidget {
         ),
         _faqTile(
           question: '2. How accurate is AI photo identification?',
-          answer: 'Numista provides AI photo identification based on high-resolution reference coin models and historical data. It is designed as a cataloging and research assistant, and is not a professional third-party grading service (such as PCGS or NGC).',
+          answer: 'Numista provides AI photo identification based on verified reference coin specifications and historical data. It is designed as a cataloging and research assistant, and is not a professional third-party grading service (such as PCGS or NGC).',
         ),
         _faqTile(
           question: '3. Can I export / print an estate report?',
@@ -565,9 +552,7 @@ Widget _actionRow(BuildContext context) {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         onPressed: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen(initialTab: 1)),
-          );
+          AuthGate.navigateTo(context, initialAuthTab: 1);
         },
         icon: const Icon(Icons.rocket_launch_outlined, size: 18),
         label: const Text('Create Free Beta Account', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -582,9 +567,7 @@ Widget _actionRow(BuildContext context) {
         onPressed: () async {
           await GuestSeedService.activateBrowseDemo();
           if (context.mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const BaseLayout(isDemoMode: true)),
-            );
+            AuthGate.navigateTo(context, isDemo: true);
           }
         },
         icon: const Icon(Icons.explore_outlined, size: 18),

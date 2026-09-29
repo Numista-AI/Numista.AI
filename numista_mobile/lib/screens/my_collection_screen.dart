@@ -5986,12 +5986,14 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
       final identity = EphemeralReportIdentity(
         ownerLegalName: ownerName,
         reportDate: intl.DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        state: 'NY',
       );
 
       final result = await EstateReportService.generateReport(
         uid: widget.userEmail,
         identity: identity,
         mode: 'living_inventory',
+        state: 'NY',
         includePhotos: true,
       ).timeout(
         const Duration(seconds: 45),

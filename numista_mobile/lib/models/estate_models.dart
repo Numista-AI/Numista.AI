@@ -162,6 +162,7 @@ class EphemeralReportIdentity {
   final String reportDate;
   final String? dateOfDeath;
   final bool includeContactsInPdf;
+  final String state;
 
   const EphemeralReportIdentity({
     required this.ownerLegalName,
@@ -173,6 +174,7 @@ class EphemeralReportIdentity {
     required this.reportDate,
     this.dateOfDeath,
     this.includeContactsInPdf = true,
+    this.state = 'NY',
   });
 
   Map<String, dynamic> toJson() => {
@@ -188,6 +190,7 @@ class EphemeralReportIdentity {
     'report_date': reportDate,
     'date_of_death': dateOfDeath,
     'include_contacts_in_pdf': includeContactsInPdf,
+    'state': state.isNotEmpty ? state : 'NY',
   };
 }
 

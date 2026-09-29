@@ -6,6 +6,7 @@
   "hosting": {
     "site": "numista-vault",
     "public": "build/web",
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",

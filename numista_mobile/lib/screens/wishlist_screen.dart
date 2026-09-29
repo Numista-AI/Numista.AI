@@ -520,7 +520,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Check live eBay listings and market pricing for your wishlist target coins',
+                        'Check recent eBay sold listings and market pricing for your wishlist target coins',
                         style: TextStyle(fontSize: 12, color: descColor),
                       ),
                     ],

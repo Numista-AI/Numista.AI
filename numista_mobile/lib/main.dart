@@ -3,10 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'screens/base_layout.dart';
-import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
 import 'screens/not_found_screen.dart';
@@ -14,9 +11,9 @@ import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
+import 'widgets/auth_gate.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/public_info_screens.dart';
 
 
 Future<void> main() async {
@@ -242,10 +239,6 @@ class NumistaAIApp extends StatefulWidget {
 }
 
 class _NumistaAIAppState extends State<NumistaAIApp> {
-  /// Set to true after the user dismisses the welcome screen.
-  /// Triggers a rebuild that bypasses the FutureBuilder check.
-  bool _welcomeDone = false;
-
   late bool _isPendingDemo;
   late String? _pendingPublicRoute;
 
@@ -258,20 +251,6 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
       GuestSeedService.activateBrowseDemo();
     }
   }
-
-  /// Cached Future for WelcomeScreen.shouldShow().
-  ///
-  /// IMPORTANT: FutureBuilder resets to ConnectionState.waiting whenever its
-  /// `future` argument changes.  Because the StreamBuilder fires 2-3 rebuilds
-  /// on a single login (Firebase auth can emit the user object more than once),
-  /// passing `WelcomeScreen.shouldShow()` directly creates a NEW Future every
-  /// rebuild — the FutureBuilder never leaves ConnectionState.waiting, so the
-  /// app is stuck on the gray loading spinner forever.
-  ///
-  /// Fix: create the Future once, cache it here, and reuse it for every
-  /// FutureBuilder rebuild that belongs to the same sign-in session.
-  /// Reset to null on sign-out so the next login gets a fresh check.
-  Future<bool>? _shouldShowWelcome;
 
   @override
   Widget build(BuildContext context) {
@@ -373,147 +352,12 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
             );
           },
       // --- Auth Gate ---------------------------------------------------------
-      // StreamBuilder on authStateChanges: shows LoginScreen until Firebase
-      // confirms a signed-in user, then drops into the main app.
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          // Still waiting for Firebase to initialise — show branded splash
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              backgroundColor: const Color(0xFF0B1220),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/logo_owl.png', height: 80,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.account_balance_rounded,
-                                color: Color(0xFFD4A843), size: 64)),
-                    const SizedBox(height: 24),
-                    const Text('Numista.AI',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5)),
-                    const SizedBox(height: 6),
-                    const Text('Your AI Coin Vault',
-                        style: TextStyle(
-                            color: Color(0xFF94A3B8), fontSize: 13)),
-                    const SizedBox(height: 36),
-                    const SizedBox(
-                      width: 28, height: 28,
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF2DD4BF),
-                        strokeWidth: 2.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          // Signed in -> show welcome screen on first launch, then main app
-          if (snapshot.hasData && snapshot.data != null) {
-            // INVARIANT: a real Firebase user must never see demo data.
-            // Step 1: clear + log (runs in ALL build modes including production).
-            if (GuestSeedService.isBrowseDemoMode) {
-              GuestSeedService.deactivateBrowseDemo();
-              debugPrint(
-                  '[AUTH] Demo mode cleared for real user ${snapshot.data!.uid}');
-            }
-            // Step 2: assert postcondition (debug/profile only; stripped in release).
-            // Fires AFTER clearance — if this assert triggers, deactivateBrowseDemo()
-            // has a logic defect, not just a stale flag.
-            assert(!GuestSeedService.isBrowseDemoMode,
-                'INTEGRITY: Browse Demo still active after deactivateBrowseDemo(). '
-                'User: ${snapshot.data!.uid}. deactivateBrowseDemo() has a logic defect.');
-            // If user already dismissed the welcome screen this session,
-            // go straight to the main app without re-checking SharedPrefs.
-            if (_welcomeDone) {
-              return const BaseLayout();
-            }
-
-            // Cache the Future so FutureBuilder doesn't reset to
-            // ConnectionState.waiting on every StreamBuilder rebuild.
-            // Firebase auth fires 2-3 events per login; without caching,
-            // each rebuild swaps in a brand-new Future and the gray spinner
-            // screen persists indefinitely.
-            _shouldShowWelcome ??= WelcomeScreen.shouldShow();
-
-            return FutureBuilder<bool>(
-              future: _shouldShowWelcome,
-              builder: (ctx, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  // Show the same branded dark splash as the Firebase init
-                  // screen so the user never sees a jarring gray flash while
-                  // SharedPreferences reads the "show on startup" preference.
-                  return Scaffold(
-                    backgroundColor: const Color(0xFF0B1220),
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset('assets/logo_owl.png', height: 80,
-                              errorBuilder: (ctx, err, st) => const Icon(
-                                    Icons.account_balance_rounded,
-                                    color: Color(0xFFD4A843), size: 64)),
-                          const SizedBox(height: 24),
-                          const Text('Numista.AI',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5)),
-                          const SizedBox(height: 6),
-                          const Text('Your AI Coin Vault',
-                              style: TextStyle(
-                                  color: Color(0xFF94A3B8), fontSize: 13)),
-                          const SizedBox(height: 36),
-                          const SizedBox(
-                            width: 28, height: 28,
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF2DD4BF),
-                              strokeWidth: 2.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                final showWelcome = snap.data ?? false;
-                if (showWelcome) {
-                  return WelcomeScreen(
-                    onDone: () {
-                      // Trigger a rebuild -- the _welcomeDone flag bypasses the
-                      // FutureBuilder and shows BaseLayout directly.
-                      setState(() => _welcomeDone = true);
-                    },
-                  );
-                }
-                return const BaseLayout();
-              },
-            );
-          }
-
-          // User signed out — reset the cached future so next login is fresh.
-          _shouldShowWelcome = null;
-          _welcomeDone = false;
-
-          // Not signed in -> check if public informational view or demo is requested
-          if (_pendingPublicRoute != null) {
-            return PublicInfoShell(targetRoute: _pendingPublicRoute!);
-          }
-          if (_isPendingDemo || GuestSeedService.isBrowseDemoMode) {
-            return const BaseLayout(isDemoMode: true);
-          }
-
-          // Not signed in -> show the login screen
-          return LoginScreen(initialTab: widget.initialAuthTab);
-        },
+      // StreamBuilder on authStateChanges: handles unauthenticated states,
+      // public routes, demo mode, and transitions to BaseLayout on login.
+      home: AuthGate(
+        isDemo: _isPendingDemo,
+        publicRoute: _pendingPublicRoute,
+        initialAuthTab: widget.initialAuthTab,
       ),
     );
       },

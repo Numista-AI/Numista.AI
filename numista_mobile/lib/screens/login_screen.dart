@@ -7,10 +7,10 @@ import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
-import 'base_layout.dart';
 import 'privacy_screen.dart';
 import 'terms_screen.dart';
 import 'public_info_screens.dart';
+import '../widgets/auth_gate.dart';
 
 class LoginScreen extends StatefulWidget {
   final int initialTab;
@@ -169,9 +169,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (mounted) {
       setState(() => _loading = false);
       // Navigate directly to the app in demo mode (no Firebase auth needed)
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const BaseLayout(isDemoMode: true)),
-      );
+      AuthGate.navigateTo(context, isDemo: true);
     }
   }
 

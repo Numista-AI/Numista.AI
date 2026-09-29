@@ -1738,6 +1738,7 @@ class _GenerateTabState extends State<_GenerateTab> {
         uid: widget.uid,
         identity: identity,
         mode: _mode,
+        state: _profile?.jurisdiction,
         includePhotos: _includePhotos,
       );
 
@@ -3854,6 +3855,7 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
             ? DateFormat('yyyy-MM-dd').format(widget.dateOfDeath!)
             : null,
         includeContactsInPdf: _includeContacts,
+        state: widget.profile.jurisdiction.isNotEmpty ? widget.profile.jurisdiction : 'NY',
       );
       Navigator.pop(context, identity);
     }

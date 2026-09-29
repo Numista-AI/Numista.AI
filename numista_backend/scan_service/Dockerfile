@@ -11,6 +11,8 @@ COPY estate_state_rules.py .
 COPY estate_report_generator.py .
 COPY estate_pdf_builder.py .
 COPY estate_qr_generator.py .
+COPY collection_inventory.py .
+COPY coa_parser_service.py .
 
 ENV PORT=8080
 EXPOSE 8080
