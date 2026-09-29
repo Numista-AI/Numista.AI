@@ -3,7 +3,7 @@ import yfinance as yf
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import List, Optional, Dict, Any
 import os
 import io
@@ -10715,12 +10715,32 @@ class DirectSaleRequest(BaseModel):
     user_id: str
     coin_id: str
     qty_sold: int
-    sale_price: float
-    fees: float = 0.0
+    sale_price: Optional[float] = None
+    sale_price_usd: Optional[float] = None
+    fees: Optional[float] = None
+    fees_usd: Optional[float] = None
     sale_date: Optional[str] = None
     sales_venue: str = "Outside Numista.AI"
     buyer_reference: Optional[str] = None
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_price_and_fees(self):
+        if self.sale_price is None and self.sale_price_usd is None:
+            raise ValueError("sale_price or sale_price_usd is required")
+        if self.sale_price is None:
+            self.sale_price = self.sale_price_usd
+        if self.sale_price_usd is None:
+            self.sale_price_usd = self.sale_price
+
+        if self.fees is None and self.fees_usd is not None:
+            self.fees = self.fees_usd
+        elif self.fees_usd is None and self.fees is not None:
+            self.fees_usd = self.fees
+        elif self.fees is None and self.fees_usd is None:
+            self.fees = 0.0
+            self.fees_usd = 0.0
+        return self
 
 class UndoSaleRequest(BaseModel):
     user_id: str
@@ -10796,8 +10816,8 @@ async def api_sell_direct(req: DirectSaleRequest, authorization: Optional[str] =
             user_id=req.user_id,
             coin_id=req.coin_id,
             qty_sold=req.qty_sold,
-            sale_price_usd=req.sale_price,
-            fees_usd=req.fees,
+            sale_price_usd=float(req.sale_price_usd),
+            fees_usd=float(req.fees_usd),
             sale_date=req.sale_date,
             sales_venue=req.sales_venue,
             buyer_reference=req.buyer_reference,

@@ -1691,10 +1691,21 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.395',
+    date: '2026-09-29',
+    description: 'Sell Mode 3 Payload Alignment & Reliability (REQ_018)',
+    isLatest: true,
+    changes: [
+      'Sell: align Mode 3 direct sale field names between Flutter and backend API to resolve 422 error (REQ_018)',
+      'Backend: support both sale_price_usd and sale_price (and fees_usd/fees) in DirectSaleRequest model',
+      'Tests: add TC-14 API integration test verifying client payload, quantity decrement, and provenance ledger write',
+    ],
+  ),
+  _Release(
     version: 'v4.394',
     date: '2026-09-28',
     description: 'Audit Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.393)',
       'Release: sync release notes for v4.393',
