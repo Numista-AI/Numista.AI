@@ -1691,10 +1691,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.397',
+    date: '2026-09-29',
+    description: 'Paper Trail Receipt Scanning & Document Streaming Fixes (REQ-019)',
+    isLatest: true,
+    changes: [
+      'Paper Trail: resolve blank white page on View Scan by dynamically sniffing and streaming real PDF, JPG, and PNG scans (REQ-019)',
+      'Backend: support gs:// URIs, HTTPS URLs, and relative receipt paths with multi-candidate fallback resolution',
+      'Backend: detect exact MIME types via magic bytes and file extensions to avoid corrupting image receipt rendering',
+      'UI: update Review Hub receipt items with distinct PDF vs Image icons and enhanced error feedback on launch',
+    ],
+  ),
+  _Release(
     version: 'v4.396',
     date: '2026-09-29',
     description: 'Routes Enhancements & Platform Updates',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Routes: wire public front door routes and zero-write demo vault (REQ-023C)',
       'Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)',

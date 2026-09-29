@@ -397,6 +397,14 @@
 
 
 
+## v4.397 — 2026-09-29
+**Paper Trail Receipt Scanning & Document Streaming Fixes (REQ-019)**
+
+- Paper Trail: resolve blank white page on View Scan by dynamically sniffing and streaming real PDF, JPG, and PNG scans (REQ-019)
+- Backend: support gs:// URIs, HTTPS URLs, and relative receipt paths with multi-candidate fallback resolution
+- Backend: detect exact MIME types via magic bytes and file extensions to avoid corrupting image receipt rendering
+- UI: update Review Hub receipt items with distinct PDF vs Image icons and enhanced error feedback on launch
+
 ## v4.396 — 2026-09-29
 **Routes Enhancements & Platform Updates**
 
