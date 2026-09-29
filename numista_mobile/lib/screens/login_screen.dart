@@ -10,9 +10,11 @@ import '../services/guest_seed_service.dart';
 import 'base_layout.dart';
 import 'privacy_screen.dart';
 import 'terms_screen.dart';
+import 'public_info_screens.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final int initialTab;
+  const LoginScreen({super.key, this.initialTab = 0});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -57,7 +59,8 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    final initialIdx = (widget.initialTab >= 0 && widget.initialTab <= 1) ? widget.initialTab : 0;
+    _tabCtrl = TabController(length: 2, vsync: this, initialIndex: initialIdx);
     _tabCtrl.addListener(() {
       if (!_tabCtrl.indexIsChanging) {
         setState(() { _error = null; _successMsg = null; });
@@ -158,17 +161,6 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() { _loading = true; _error = null; });
     final result = await AuthService.signInWithGoogle();
     if (mounted) setState(() { _loading = false; _error = result.error; });
-  }
-
-  Future<void> _signInAsGuest() async {
-    setState(() { _loading = true; _error = null; });
-    final result = await AuthService.signInAsGuest();
-    if (mounted) {
-      setState(() { _loading = false; _error = result.error; });
-      if (result.ok && AuthService.currentUser != null) {
-        await GuestSeedService.seedIfNeeded(AuthService.currentUser!.uid);
-      }
-    }
   }
 
   Future<void> _browseDemo() async {
@@ -485,24 +477,88 @@ class _LoginScreenState extends State<LoginScreen>
         _divider('explore without an account'),
         const SizedBox(height: 16),
 
-        // ── Guest & Demo Streamlined Options ───────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextButton.icon(
-              onPressed: _loading ? null : _browseDemo,
-              icon: const Icon(Icons.search_rounded, size: 16, color: _sub),
-              label: const Text('Browse Demo (Read-Only)', style: TextStyle(color: _sub, fontSize: 13)),
+        // ── Single Primary Demo CTA (Zero-Write, Instant Load) ─────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: Color(0xFF8C7355), width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: const Color(0xFFFBF8F3),
             ),
-            const Text(' • ', style: TextStyle(color: _grey)),
-            TextButton.icon(
-              onPressed: _loading ? null : _signInAsGuest,
-              icon: const Icon(Icons.rocket_launch_outlined, size: 16, color: _blue),
-              label: const Text('Try Guest Mode →', style: TextStyle(color: _blue, fontSize: 13, fontWeight: FontWeight.bold)),
+            onPressed: _loading ? null : _browseDemo,
+            icon: const Icon(Icons.explore_outlined, size: 18, color: Color(0xFF8C7355)),
+            label: const Text(
+              'Explore Demo Vault',
+              style: TextStyle(
+                color: Color(0xFF8C7355),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ],
+          ),
         ),
+
+        const SizedBox(height: 24),
+        _buildPublicFooter(),
       ],
+    );
+  }
+
+  Widget _buildPublicFooter() {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        _footerLink('About', () => _openPublicRoute('/about')),
+        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        _footerLink('Features', () => _openPublicRoute('/features')),
+        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        _footerLink('Pricing', () => _openPublicRoute('/pricing')),
+        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        _footerLink('FAQ', () => _openPublicRoute('/faq')),
+        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        _footerLink('Terms', () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TermsScreen()),
+          );
+        }),
+        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        _footerLink('Privacy', () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _footerLink(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: _sub,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openPublicRoute(String route) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PublicInfoShell(targetRoute: route),
+      ),
     );
   }
 

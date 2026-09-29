@@ -16,6 +16,7 @@ import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
+import 'screens/public_info_screens.dart';
 
 
 Future<void> main() async {
@@ -102,9 +103,22 @@ Future<void> main() async {
   // Hash-fragment URLs (e.g. /#/claim?...) have uri.path == '/' — they pass
   // through to the normal app flow correctly.
   final path = uri.path;
+  final normalizedPath = (path.endsWith('/') && path.length > 1)
+      ? path.substring(0, path.length - 1)
+      : path;
+
   final isKnownPath = path.isEmpty ||
       path == '/' ||
       path == '/index.html' ||
+      normalizedPath == '/about' ||
+      normalizedPath == '/pricing' ||
+      normalizedPath == '/features' ||
+      normalizedPath == '/faq' ||
+      normalizedPath == '/login' ||
+      normalizedPath == '/signup' ||
+      normalizedPath == '/demo' ||
+      normalizedPath == '/app' ||
+      normalizedPath == '/blog' ||
       path.startsWith('/wishlist') ||
       path.startsWith('/attorney_portal') ||
       path.startsWith('/attorney') ||
@@ -122,6 +136,25 @@ Future<void> main() async {
       home: NotFoundScreen(attemptedPath: path),
     ));
     return;
+  }
+
+  // Synchronously parse Front Door URL routes
+  bool isPendingDemo = false;
+  String? pendingPublicRoute;
+  int initialAuthTab = 0;
+
+  if (normalizedPath == '/demo') {
+    isPendingDemo = true;
+  } else if (normalizedPath == '/about' ||
+      normalizedPath == '/features' ||
+      normalizedPath == '/pricing' ||
+      normalizedPath == '/faq' ||
+      normalizedPath == '/blog') {
+    pendingPublicRoute = normalizedPath == '/blog' ? '/about' : normalizedPath;
+  } else if (normalizedPath == '/login') {
+    initialAuthTab = 0;
+  } else if (normalizedPath == '/signup') {
+    initialAuthTab = 1;
   }
 
   // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
@@ -185,11 +218,24 @@ Future<void> main() async {
     return;
   }
 
-  runApp(const NumistaAIApp());
+  runApp(NumistaAIApp(
+    isPendingDemo: isPendingDemo,
+    pendingPublicRoute: pendingPublicRoute,
+    initialAuthTab: initialAuthTab,
+  ));
 }
 
 class NumistaAIApp extends StatefulWidget {
-  const NumistaAIApp({super.key});
+  final bool isPendingDemo;
+  final String? pendingPublicRoute;
+  final int initialAuthTab;
+
+  const NumistaAIApp({
+    super.key,
+    this.isPendingDemo = false,
+    this.pendingPublicRoute,
+    this.initialAuthTab = 0,
+  });
 
   @override
   State<NumistaAIApp> createState() => _NumistaAIAppState();
@@ -199,6 +245,19 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
   /// Set to true after the user dismisses the welcome screen.
   /// Triggers a rebuild that bypasses the FutureBuilder check.
   bool _welcomeDone = false;
+
+  late bool _isPendingDemo;
+  late String? _pendingPublicRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _isPendingDemo = widget.isPendingDemo;
+    _pendingPublicRoute = widget.pendingPublicRoute;
+    if (_isPendingDemo) {
+      GuestSeedService.activateBrowseDemo();
+    }
+  }
 
   /// Cached Future for WelcomeScreen.shouldShow().
   ///
@@ -444,8 +503,16 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
           _shouldShowWelcome = null;
           _welcomeDone = false;
 
+          // Not signed in -> check if public informational view or demo is requested
+          if (_pendingPublicRoute != null) {
+            return PublicInfoShell(targetRoute: _pendingPublicRoute!);
+          }
+          if (_isPendingDemo || GuestSeedService.isBrowseDemoMode) {
+            return const BaseLayout(isDemoMode: true);
+          }
+
           // Not signed in -> show the login screen
-          return const LoginScreen();
+          return LoginScreen(initialTab: widget.initialAuthTab);
         },
       ),
     );

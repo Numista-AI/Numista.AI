@@ -17,6 +17,16 @@
         "source": "https://www.numista.ai/**",
         "destination": "https://numista.ai/:splat",
         "type": 301
+      },
+      {
+        "source": "/app",
+        "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/blog",
+        "destination": "/about",
+        "type": 301
       }
     ],
 
@@ -43,6 +53,34 @@
       {
         "source": "/terms",
         "destination": "/terms.html"
+      },
+      {
+        "source": "/about",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/pricing",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/features",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/faq",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/login",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/signup",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/demo",
+        "destination": "/index.html"
       },
       {
         "source": "/",

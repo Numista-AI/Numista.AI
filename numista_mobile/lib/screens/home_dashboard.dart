@@ -1691,14 +1691,17 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.395',
+    version: 'v4.396',
     date: '2026-09-29',
-    description: 'Sell Enhancements & Platform Updates',
+    description: 'Front Door Public Routes & Record Sale Follow-ups (REQ-023 / REQ-018A)',
     isLatest: true,
     changes: [
-      'Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)',
-      'Release: sync release notes for v4.394',
-      'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.393)',
+      'Routes: eliminate 404s on 9 public URLs (/about, /pricing, /features, /faq, /login, /signup, /demo, /app, /blog)',
+      'Hosting: configure clean Firebase 301 redirects and path rewrites with strict 404 preservation for invalid URLs',
+      'Demo: implement zero-write instant demo vault loading in <300ms from local asset with clean exit path',
+      'UI: replace dual guest buttons with single primary Explore Demo Vault CTA and responsive public footer',
+      'Sell: fix Record Sale popup profit and remaining quantity display, and validate bounds (REQ-018A)',
+      'Wishlist: hide misleading active deals teaser count unless real matches exist',
     ],
   ),
   _Release(
