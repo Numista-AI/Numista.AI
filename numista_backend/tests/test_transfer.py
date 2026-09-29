@@ -14,9 +14,6 @@ scan_service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 if scan_service_dir not in sys.path:
     sys.path.append(scan_service_dir)
 
-import pytest
-import secrets
-from unittest.mock import MagicMock
 from services.transfer_service import (
     sanitize_item_payload,
     initiate_transfer,
@@ -24,10 +21,9 @@ from services.transfer_service import (
     recall_transfer,
     record_direct_sale,
     undo_sale,
-    get_sold_inventory,
 )
 from services.passport_pdf_generator import generate_passport_pdf, format_financial_details
-from services.feature_registry import registry, register_feature, FeatureDescriptor
+from services.feature_registry import registry, register_feature
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -745,15 +741,17 @@ def test_tc14_sell_direct_client_payload_integration(monkeypatch):
 
     client = TestClient(main.app)
 
-    # 1. Post EXACT Flutter client payload (sale_price_usd / fees_usd)
+    # 1. Post EXACT shipped Flutter client 4-key payload
     client_payload = {
         "user_id": user_id,
         "coin_id": coin_id,
         "qty_sold": 1,
+        "sale_price": 200.0,
         "sale_price_usd": 200.0,
+        "fees": 0.0,
         "fees_usd": 0.0,
         "sale_date": "2026-09-28",
-        "sales_venue": "Direct / Outside",
+        "sales_venue": "eBay",
         "buyer_reference": None,
         "notes": "Field Tester sale verification"
     }
@@ -782,7 +780,7 @@ def test_tc14_sell_direct_client_payload_integration(monkeypatch):
     assert arch["status"] == "sold"
     assert arch["sale_price_cents"] == 20000
 
-    # 2. Test legacy payload with sale_price and fees
+    # 2. Test legacy payload with sale_price and fees only
     coin_id_2 = "coin_legacy_test_18"
     db.collection("users").document(user_id).collection("coins").document(coin_id_2).set({
         "title": "1921 Peace Dollar",
@@ -806,7 +804,52 @@ def test_tc14_sell_direct_client_payload_integration(monkeypatch):
     assert resp2.status_code == 200
     assert resp2.json()["status"] == "success"
 
-    # 3. Test missing both prices returns 422
+    # 3. Test new-names-only payload (sale_price_usd and fees_usd)
+    new_names_payload = {
+        "user_id": user_id,
+        "coin_id": coin_id_2,
+        "qty_sold": 1,
+        "sale_price_usd": 85.0,
+        "fees_usd": 2.5
+    }
+    resp_new = client.post(
+        "/api/transfer/sell-direct",
+        json=new_names_payload,
+        headers={"Authorization": "Bearer fake_token"}
+    )
+    assert resp_new.status_code == 200
+    assert resp_new.json()["status"] == "success"
+
+    # 4. Test conflicting prices returns 422
+    conflict_payload = {
+        "user_id": user_id,
+        "coin_id": coin_id_2,
+        "qty_sold": 1,
+        "sale_price": 100.0,
+        "sale_price_usd": 200.0
+    }
+    resp_conflict = client.post(
+        "/api/transfer/sell-direct",
+        json=conflict_payload,
+        headers={"Authorization": "Bearer fake_token"}
+    )
+    assert resp_conflict.status_code == 422
+
+    # 5. Test negative price returns 422
+    neg_payload = {
+        "user_id": user_id,
+        "coin_id": coin_id_2,
+        "qty_sold": 1,
+        "sale_price_usd": -50.0
+    }
+    resp_neg = client.post(
+        "/api/transfer/sell-direct",
+        json=neg_payload,
+        headers={"Authorization": "Bearer fake_token"}
+    )
+    assert resp_neg.status_code == 422
+
+    # 6. Test missing both prices returns 422
     invalid_payload = {
         "user_id": user_id,
         "coin_id": coin_id_2,

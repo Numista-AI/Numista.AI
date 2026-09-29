@@ -10728,18 +10728,32 @@ class DirectSaleRequest(BaseModel):
     def validate_price_and_fees(self):
         if self.sale_price is None and self.sale_price_usd is None:
             raise ValueError("sale_price or sale_price_usd is required")
-        if self.sale_price is None:
+
+        if self.sale_price is not None and self.sale_price_usd is not None:
+            if abs(float(self.sale_price) - float(self.sale_price_usd)) > 0.001:
+                raise ValueError("Conflicting values provided for sale_price and sale_price_usd")
+        elif self.sale_price is None:
             self.sale_price = self.sale_price_usd
-        if self.sale_price_usd is None:
+        elif self.sale_price_usd is None:
             self.sale_price_usd = self.sale_price
 
-        if self.fees is None and self.fees_usd is not None:
+        if float(self.sale_price_usd) <= 0:
+            raise ValueError("sale_price must be greater than zero")
+
+        if self.fees is not None and self.fees_usd is not None:
+            if abs(float(self.fees) - float(self.fees_usd)) > 0.001:
+                raise ValueError("Conflicting values provided for fees and fees_usd")
+        elif self.fees is None and self.fees_usd is not None:
             self.fees = self.fees_usd
         elif self.fees_usd is None and self.fees is not None:
             self.fees_usd = self.fees
         elif self.fees is None and self.fees_usd is None:
             self.fees = 0.0
             self.fees_usd = 0.0
+
+        if float(self.fees_usd) < 0:
+            raise ValueError("fees cannot be negative")
+
         return self
 
 class UndoSaleRequest(BaseModel):

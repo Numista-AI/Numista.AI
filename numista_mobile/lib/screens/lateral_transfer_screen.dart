@@ -1150,8 +1150,13 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       setState(() => _isSelling = false);
       if (!mounted) return;
 
-      final profit = (result['realized_profit'] as num?)?.toDouble() ?? 0.0;
-      final remaining = (result['remaining_qty'] as num?)?.toInt() ?? 0;
+      final innerResult = result['result'] as Map<String, dynamic>?;
+      final profit = (innerResult?['realized_profit'] as num?)?.toDouble() ??
+          (result['realized_profit'] as num?)?.toDouble() ??
+          0.0;
+      final remaining = (innerResult?['remaining_qty'] as num?)?.toInt() ??
+          (result['remaining_qty'] as num?)?.toInt() ??
+          0;
       final profitFormatted = profit >= 0 ? '+\$${profit.toStringAsFixed(2)}' : '-\$${profit.abs().toStringAsFixed(2)}';
 
       showDialog(
@@ -1238,7 +1243,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'Sale successfully undone!'),
+          content: Text(res['result']?['message'] ?? res['message'] ?? 'Sale successfully undone!'),
           backgroundColor: Colors.green,
         ),
       );
