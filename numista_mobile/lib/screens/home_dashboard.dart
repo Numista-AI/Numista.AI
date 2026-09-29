@@ -1693,8 +1693,20 @@ const _versionHistory = <_Release>[
   _Release(
     version: 'v4.396',
     date: '2026-09-29',
-    description: 'Front Door Public Routes & Record Sale Follow-ups (REQ-023 / REQ-018A)',
+    description: 'Routes Enhancements & Platform Updates',
     isLatest: true,
+    changes: [
+      'Routes: wire public front door routes and zero-write demo vault (REQ-023C)',
+      'Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)',
+      'Sync release notes for v4.395 (REQ-018)',
+      'Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)',
+    ],
+  ),
+  _Release(
+    version: 'v4.396',
+    date: '2026-09-29',
+    description: 'Front Door Public Routes & Record Sale Follow-ups (REQ-023 / REQ-018A)',
+    isLatest: false,
     changes: [
       'Routes: eliminate 404s on 9 public URLs (/about, /pricing, /features, /faq, /login, /signup, /demo, /app, /blog)',
       'Hosting: configure clean Firebase 301 redirects and path rewrites with strict 404 preservation for invalid URLs',

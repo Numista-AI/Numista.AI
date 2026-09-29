@@ -396,6 +396,15 @@
 
 
 
+
+## v4.396 — 2026-09-29
+**Routes Enhancements & Platform Updates**
+
+- Routes: wire public front door routes and zero-write demo vault (REQ-023C)
+- Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)
+- Sync release notes for v4.395 (REQ-018)
+- Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)
+
 ## v4.395 — 2026-09-29
 **Sell Enhancements & Platform Updates**
 
