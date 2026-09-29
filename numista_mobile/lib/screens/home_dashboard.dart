@@ -1691,10 +1691,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.398',
+    date: '2026-09-29',
+    description: 'Receipts Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Receipts: resolve blank white page by dynamically streaming PDF and JPG scans (REQ-019)',
+      'Sync release notes for v4.396 (REQ-023C / REQ-018A)',
+      'Routes: wire public front door routes and zero-write demo vault (REQ-023C)',
+      'Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)',
+      'Sync release notes for v4.395 (REQ-018)',
+      'Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)',
+    ],
+  ),
+  _Release(
     version: 'v4.397',
     date: '2026-09-29',
     description: 'Paper Trail Receipt Scanning & Document Streaming Fixes (REQ-019)',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Paper Trail: resolve blank white page on View Scan by dynamically sniffing and streaming real PDF, JPG, and PNG scans (REQ-019)',
       'Backend: support gs:// URIs, HTTPS URLs, and relative receipt paths with multi-candidate fallback resolution',

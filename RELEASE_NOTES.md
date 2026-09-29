@@ -397,6 +397,17 @@
 
 
 
+
+## v4.398 — 2026-09-29
+**Receipts Enhancements & Platform Updates**
+
+- Receipts: resolve blank white page by dynamically streaming PDF and JPG scans (REQ-019)
+- Sync release notes for v4.396 (REQ-023C / REQ-018A)
+- Routes: wire public front door routes and zero-write demo vault (REQ-023C)
+- Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)
+- Sync release notes for v4.395 (REQ-018)
+- Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)
+
 ## v4.397 — 2026-09-29
 **Paper Trail Receipt Scanning & Document Streaming Fixes (REQ-019)**
 
