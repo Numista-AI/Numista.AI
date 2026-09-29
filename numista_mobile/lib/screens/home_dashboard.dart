@@ -1691,10 +1691,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
-    version: 'v4.398',
+    version: 'v4.399',
     date: '2026-09-29',
     description: 'Front Door Reliability & Session Flow Architecture',
     isLatest: true,
+    changes: [
+      'Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation',
+      'Security: enforce zero Firestore network reads in demo mode for credential isolation',
+      'SEO: restore and validate XML sitemap structure for search index compliance',
+      'UI: tone down feature claims and synchronize dashboard versioning with platform release',
+      'Estate: resolve CORS and authentication headers for estate report generation',
+    ],
+  ),
+  _Release(
+    version: 'v4.398',
+    date: '2026-09-29',
+    description: 'Front Door Reliability & Session Flow Architecture',
+    isLatest: false,
     changes: [
       'Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation',
       'Security: enforce zero Firestore network reads in demo mode for credential isolation',

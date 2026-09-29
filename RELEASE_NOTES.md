@@ -398,6 +398,16 @@
 
 
 
+
+## v4.399 — 2026-09-29
+**Front Door Reliability & Session Flow Architecture**
+
+- Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation
+- Security: enforce zero Firestore network reads in demo mode for credential isolation
+- SEO: restore and validate XML sitemap structure for search index compliance
+- UI: tone down feature claims and synchronize dashboard versioning with platform release
+- Estate: resolve CORS and authentication headers for estate report generation
+
 ## v4.398 — 2026-09-29
 **Receipts Enhancements & Platform Updates**
 
