@@ -395,6 +395,14 @@
 
 
 
+
+## v4.395 — 2026-09-29
+**Sell Enhancements & Platform Updates**
+
+- Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)
+- Release: sync release notes for v4.394
+- Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.393)
+
 ## v4.394 — 2026-09-28
 **Audit Enhancements & Platform Updates**
 
