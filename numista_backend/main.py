@@ -10589,10 +10589,16 @@ async def get_cac_status():
 
 
 @app.get("/api/ebay/search")
-async def search_ebay_deals(q: str = "Morgan Silver Dollar MS64 NGC", limit: int = 5):
+async def search_ebay_deals(
+    q: str = "Morgan Silver Dollar MS64 NGC",
+    limit: int = 5,
+    authorization: Optional[str] = Header(None),
+):
     """
     Queries eBay Browse API to spot arbitrage/deals compared to Greysheet.
+    Requires Firebase Bearer authentication.
     """
+    _authenticate_request(authorization, None)
     try:
         # We reuse the token retrieval logic from the ebay_market_enrichment script.
         # Set defaults if not present

@@ -387,4 +387,27 @@ def test_receipt_endpoints_auth_checks(monkeypatch):
     ).status_code == 403
 
 
+def test_ebay_search_auth(monkeypatch):
+    """Verify /api/ebay/search requires Firebase Bearer auth and rejects unauthed requests."""
+    from firebase_admin import auth as fb_auth
+
+    # 1. Unauthenticated request -> 401
+    resp_unauth = client.get("/api/ebay/search?q=Morgan")
+    assert resp_unauth.status_code == 401
+    assert "Authorization header" in resp_unauth.json()["detail"]
+
+    # 2. Invalid token format -> 401
+    resp_invalid = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Basic 12345"})
+    assert resp_invalid.status_code == 401
+
+    # 3. Authenticated request with valid token -> 200
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+    resp_auth = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_auth.status_code == 200
+
+
+
 
