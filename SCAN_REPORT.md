@@ -1,10 +1,10 @@
-# SCAN REPORT: Numista.AI System Audit (v4.393)
+# SCAN REPORT: Numista.AI System Audit (v4.399)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS WITH WARNINGS** (System audit completed with a 100% backend unit pass rate [349 passed, 0 failed in 26.38s], 0 Dart compilation errors and 5 non-fatal info/deprecation warnings [clean analyzer: `dart analyze lib` exit 0 in 118.0s], 396/396 Flutter unit tests passed [100% pass rate in 16.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 45.7s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-09-28
+* **Status:** 🟢 **PASS WITH WARNINGS** (System audit completed with a 100% backend unit pass rate [362 passed, 0 failed in 17.16s], 0 Dart compilation errors and 5 non-fatal info/deprecation warnings [clean analyzer: `dart analyze lib` exit 0], 396/396 Flutter unit tests passed [100% pass rate in 15.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 43.8s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
+* **Scan Date:** 2026-09-30
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.393, Mobile/Web Frontend v4.393 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.399, Mobile/Web Frontend v4.399 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 
@@ -13,12 +13,15 @@
 * **Dart / Flutter Compilation Errors & Warnings:** 0 errors, 5 non-fatal warnings/infos (`dart analyze lib` exit 0; deprecation & string interpolation info in `ai_chat_screen.dart`)
 * **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; 100% 2026 GA compliance)
 * **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (7/7 endpoints healthy)
-* **Backend Pytest Suite:** 349 passed, 0 failed in 26.38s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 45.7s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
-* **Flutter Unit Suite:** 396 passed, 0 failed in 16.0s (100% pass rate; 0 failures)
+* **Backend Pytest Suite:** 362 passed, 0 failed in 17.16s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
+* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 43.8s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
+* **Flutter Unit Suite:** 396 passed, 0 failed in 15.0s (100% pass rate; 0 failures)
+* **Front Door & Session Reliability (v4.399):** Verified active (Resolved sign-in dead ends across public entrypoints, zero-read Firestore isolation in demo mode, XML sitemap validation, and CORS/Bearer auth on `/generate_estate_report` [REQ-023D / REQ-020]).
+* **Paper Trail Receipt Scanning & Streaming (v4.397–v4.398):** Verified active (Resolved blank page on View Scan by dynamic detection and streaming of PDF, JPG, and PNG scans; support for gs://, HTTPS, and relative receipt paths [REQ-019]).
+* **Lateral Transfer & Record Sale Bounds (v4.395–v4.398):** Verified active (Sell-direct validation, Mode 3 payload alignment, and public front-door zero-write vault [REQ-018 / REQ-018A / REQ-023C]).
 * **Pre-Deploy Security & Data Loss Prevention (v4.392–v4.393):** Verified active (Blob retention when coins link to receipts [MF-1], owner-folder path validation on receipt deletions, catalog 26SQRD removal [MF-2], and cost override orig_i indexing).
 * **Security & Auth Token Hardening (v4.390–v4.391):** Verified active (Bearer auth on receipt list/view/stream, identify_coin_photo, appraisal-pdf export, and pre-validation of cost split overrides [REQ_015 / REQ_016]).
-* **Sets Management & Owner Photos (v4.375–v4.376):** Verified active (Commit `40f8939e` enabled owner photos on sets and atomic group/ungroup capability via `SetGroupingService`).
+* **Sets Management & Owner Photos (v4.375–v4.376):** Verified active (Owner photos on sets and atomic group/ungroup capability via `SetGroupingService`).
 * **Hosting Hardening & Route Allowlist (v4.376):** Verified active (Strict route allowlist and standalone custom `404.html` fallback).
 * **Upcoming US Mint Releases & Valuation Fallback (v4.361–v4.370):** Verified active (Automated test suites, migration seed hardening, and official US Mint Issue Price fallback with `ai_value_status` field).
 * **26RJ Catalog & Ghost Repair Status:** Verified active (26RJ 20-coin count, 8 Firestore `coin_image_index` URLs aligned, ghost children eliminated, anti-hallucination guardrail active in `main.py`).
@@ -61,7 +64,7 @@
 * **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/api/greysheet/config` ➔ `200 OK` (Status: active, Tier: Basic, Fallback rate: 0%)
   * `/api/greysheet/pricing/1001` ➔ `200 OK` (Ground-truth pricing payload resolved from Firestore cache for 1834 1c Large 8 Large Stars Medium Letters MS RB)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,183.10, Silver: $61.65, Platinum: $1,748.50, Palladium: $1,227.00)
+  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,213.20, Silver: $61.01, Platinum: $1,730.30, Palladium: $1,223.50)
   * `/api/template` ➔ `200 OK` (CSV Template headers validated)
   * `/api/transfer/passport-pdf/dummy` ➔ `404 Not Found` (Route active, dummy ID rejected as expected)
   * `/api/transfer/initiate` ➔ `422 Unprocessable Entity` on empty POST (FastAPI schema validation active)
@@ -73,6 +76,17 @@
 ---
 
 ## Core Features & Pipeline Audit
+* **Front Door & Session Reliability (v4.399):**
+  * Resolved sign-in dead ends across `/pricing`, `/features`, `/roadmap`, demo mode, and account creation.
+  * Demo Mode Isolation: Enforced zero Firestore network reads in guest demo mode (`vault_service.dart`).
+  * SEO & Discovery: Restored and validated canonical XML sitemap (`/sitemap.xml`) referencing clean URLs.
+  * Estate Reporting: Enforced Bearer auth and CORS options preflight headers on `/generate_estate_report`.
+* **Paper Trail Receipt Scanning & Streaming (v4.397–v4.398):**
+  * Fixed blank white screen bug on View Scan by dynamic detection and streaming of PDF, JPG, and PNG scans (REQ-019).
+  * Backend multi-candidate file resolver handles gs:// URIs, HTTPS URLs, and relative storage paths.
+* **Sell & Lateral Transfer System (v4.395–v4.398):**
+  * Validated Mode 3 Record Sale payload parameters (`sale_price`, `buyer_email`, `notes`) and bounds checks (REQ-018 / REQ-018A).
+  * Direct sale and undo sale endpoints hardened with auth token verification.
 * **Pre-Deploy Security & Data Loss Prevention (v4.392–v4.393):**
   * Receipt blob retention: Prevents storage orphan leaks and premature deletion when active coin records still link to `receipt_id` (MF-1).
   * Storage path security: Strict owner-folder verification on GCS blob deletions (`receipts/{user_id}/...`) preventing cross-user path traversal.
@@ -138,10 +152,10 @@
 ---
 
 ## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `349 passed, 0 failed in 26.38s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
+* **Backend Pytest Suite:** `362 passed, 0 failed in 17.16s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
 * **Frontend Dart Analyzer:** `Analyzing lib... 5 issues found (0 errors, 5 non-fatal info/deprecation warnings)` (Exit code 0).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 45.7s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `396 passed, 0 failed in 16.0s` (100% pass rate; 0 failures).
+* **Frontend Playwright Smoke Suite:** `8/8 passed in 43.8s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
+* **Frontend Flutter Unit Suite:** `396 passed, 0 failed in 15.0s` (100% pass rate; 0 failures).
 * **Layer 3 Data Health Probes:** `7/7 endpoints healthy` (Homepage: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 404 sentinel, Transfer Initiate: 422 validation sentinel).
 * **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
 
