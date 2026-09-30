@@ -1691,10 +1691,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.400',
+    date: '2026-09-30',
+    description: 'Security Hardening & Platform Protection',
+    isLatest: true,
+    changes: [
+      'Security: enforce Bearer token authentication and cross-user validation on scan service',
+      'Security: restrict scan service CORS to exact allowed origins',
+      'Security: purge client secret from app and tighten Firestore rules on config/ebay',
+      'Storage: pin receipt streaming bucket and enforce owner check before download',
+      'Navigation: resolve sign-in dead ends across mobile wizard and guest flows',
+      'Estate: prompt user for legal state jurisdiction and prevent silent NY fallback',
+    ],
+  ),
+  _Release(
     version: 'v4.399',
     date: '2026-09-29',
     description: 'Front Door Reliability & Session Flow Architecture',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation',
       'Security: enforce zero Firestore network reads in demo mode for credential isolation',
