@@ -467,7 +467,7 @@ class _LoginScreenState extends State<LoginScreen>
         Center(
           child: TextButton(
             onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-            child: Text('Forgot your PIN or password?', style: TextStyle(color: _grey, fontSize: 13)),
+            child: Text('Forgot your PIN?', style: TextStyle(color: _grey, fontSize: 13)),
           ),
         ),
 
@@ -571,16 +571,7 @@ class _LoginScreenState extends State<LoginScreen>
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
           const SizedBox(height: 16),
           // ── Credential label row ──────────────────────────────────────────
-          Row(
-            children: [
-              Expanded(child: _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN')),
-              if (!_usePasswordSignIn)
-                const Text(
-                  'Instead of a password',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-            ],
-          ),
+          _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN'),
           const SizedBox(height: 6),
           // ── Credential input — PIN or password ───────────────────────────
           _usePasswordSignIn
@@ -588,12 +579,14 @@ class _LoginScreenState extends State<LoginScreen>
                   () => setState(() => _pinSignInVisible = !_pinSignInVisible))
               : _pinField(_pinCtrl, _pinSignInVisible,
                   () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
-          // ── Mode toggle link ──────────────────────────────────────────────
-          Align(
-            alignment: Alignment.centerRight,
+          const SizedBox(height: 16),
+          _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
+          const SizedBox(height: 10),
+          // ── Mode toggle link (small bottom link) ──────────────────────────
+          Center(
             child: TextButton(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () => setState(() {
@@ -606,13 +599,11 @@ class _LoginScreenState extends State<LoginScreen>
                 _error = null;
               }),
               child: Text(
-                _usePasswordSignIn ? 'Use 6-digit PIN instead' : 'Use password instead',
+                _usePasswordSignIn ? 'Sign in with 6-digit PIN' : 'Older account? Sign in with password',
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
         ],
       ),
       ),
