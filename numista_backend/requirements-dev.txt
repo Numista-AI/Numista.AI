@@ -81,7 +81,7 @@ tenacity==9.1.0
 click==8.1.9
 
 # ── Database ──────────────────────────────────────────────────────────────────
-peewee==4.0.4
+peewee==4.1.1
 
 # ── Virtualisation (for local Playwright headless) ────────────────────────────
 PyVirtualDisplay==3.0
