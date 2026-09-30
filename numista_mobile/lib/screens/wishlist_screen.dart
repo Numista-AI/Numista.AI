@@ -919,10 +919,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             future: EpnService.fetchEbayResults(coin),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-                );
+                return const SizedBox.shrink();
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const SizedBox.shrink();
@@ -933,7 +930,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 children: [
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Live Listings on eBay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                    child: Text('Reference Listings on eBay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                   ),
                   SizedBox(
                     height: 120,

@@ -125,7 +125,7 @@ class _DealsScreenState extends State<DealsScreen> {
                 children: [
                   CircularProgressIndicator(color: Color(0xFFF63366)),
                   SizedBox(height: 16),
-                  Text('Scanning eBay Partner Network for wishlist items...', style: TextStyle(color: Colors.grey)),
+                  Text('Scanning for wishlist deals...', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             )
@@ -165,7 +165,7 @@ class _DealsScreenState extends State<DealsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Add slabbed coins to your Wishlist to scan live eBay listings automatically!',
+                              'Add coins to your Wishlist to track market deals and price drops.',
                               style: TextStyle(color: descColor.withValues(alpha: 0.7), fontSize: 11),
                               textAlign: TextAlign.center,
                             ),
