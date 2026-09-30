@@ -3,7 +3,7 @@ import yfinance as yf
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, BackgroundTasks, Depends, Header, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import List, Optional, Dict, Any
 import os
 import io
@@ -7364,19 +7364,8 @@ async def delete_receipt(
 
 # -- GET /api/receipts/{user_email}/{receipt_id}/view_url ----------------------
 
-@app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
-def receipt_view_url(
-    user_email: str,
-    receipt_id: str,
-    authorization: Optional[str] = Header(None),
-):
-    """
-    Return a reliable streaming URL for viewing original PDF receipt documents inline.
-    Looks up receipt metadata across receipts collection, review_queue, and coins.
-    """
-    owner_key = _authenticate_request(authorization, user_email)
-    user_email = owner_key
-
+def _get_receipt_metadata(user_email: str, receipt_id: str) -> tuple:
+    """Helper to look up receipt metadata across receipts collection, review_queue, and coins."""
     gcs_path = ""
     original_filename = ""
 
@@ -7384,18 +7373,19 @@ def receipt_view_url(
     rec_snap = db.collection("users").document(user_email)\
                  .collection("receipts").document(receipt_id).get()
     if rec_snap.exists:
-        data = rec_snap.to_dict()
+        data = rec_snap.to_dict() or {}
         gcs_path = data.get("gcs_path", "")
-        original_filename = data.get("original_filename", "")
+        original_filename = data.get("original_filename") or data.get("filename") or ""
 
     # 2. Try review_queue
     if not gcs_path:
         rq_docs = db.collection("users").document(user_email)\
                     .collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream()
         for d in rq_docs:
-            data = d.to_dict()
-            gcs_path = data.get("gcs_path", "")
-            original_filename = data.get("source_file", "")
+            data = d.to_dict() or {}
+            pt = data.get("paper_trail") or {}
+            gcs_path = pt.get("gcs_path") or data.get("gcs_path", "")
+            original_filename = pt.get("receipt_filename") or data.get("source_file") or data.get("filename") or ""
             break
 
     # 3. Try coins collection
@@ -7403,17 +7393,169 @@ def receipt_view_url(
         coin_docs = db.collection("users").document(user_email)\
                       .collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream()
         for d in coin_docs:
-            data = d.to_dict()
+            data = d.to_dict() or {}
             pt = data.get("paper_trail") or {}
             gcs_path = pt.get("gcs_path") or data.get("gcs_path", "")
-            original_filename = pt.get("receipt_filename") or data.get("source_file", "")
+            original_filename = pt.get("receipt_filename") or data.get("source_file") or data.get("filename") or ""
             break
 
-    if not gcs_path or not gcs_path.startswith("gs://"):
-        safe_id = receipt_id.replace("rec_", "")
-        gcs_path = f"gs://{IMPORT_BUCKET}/{user_email}/imports/raw/{safe_id}.pdf"
+    return gcs_path, original_filename
 
-    stream_url = f"https://numista-backend-568985927038.us-central1.run.app/api/receipts/{user_email}/{receipt_id}/stream"
+
+def _detect_receipt_mime(file_bytes: bytes, filename: str = "", blob_name: str = "", blob_ct: Optional[str] = None) -> tuple:
+    """
+    Detect exact MIME type and file extension using magic bytes, extension fallback,
+    and GCS content_type. Guarantees that JPG/PNG/WebP/PDF are never misclassified as PDF.
+    """
+    if file_bytes.startswith(b"%PDF"):
+        return "application/pdf", "pdf"
+    if file_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg", "jpg"
+    if file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png", "png"
+    if file_bytes.startswith(b"RIFF") and len(file_bytes) >= 12 and file_bytes[8:12] == b"WEBP":
+        return "image/webp", "webp"
+    if file_bytes.startswith(b"GIF87a") or file_bytes.startswith(b"GIF89a"):
+        return "image/gif", "gif"
+
+    # Fallback to extension
+    check_name = filename or blob_name or ""
+    ext = check_name.rsplit(".", 1)[-1].lower() if "." in check_name else ""
+    ext_map = {
+        "pdf": ("application/pdf", "pdf"),
+        "jpg": ("image/jpeg", "jpg"),
+        "jpeg": ("image/jpeg", "jpg"),
+        "png": ("image/png", "png"),
+        "webp": ("image/webp", "webp"),
+        "gif": ("image/gif", "gif"),
+        "bmp": ("image/bmp", "bmp"),
+        "tif": ("image/tiff", "tif"),
+        "tiff": ("image/tiff", "tiff"),
+    }
+    if ext in ext_map:
+        return ext_map[ext]
+
+    # Fallback to blob content type
+    if blob_ct and "/" in blob_ct:
+        ct_clean = blob_ct.lower().strip()
+        if "pdf" in ct_clean:
+            return "application/pdf", "pdf"
+        if "jpeg" in ct_clean or "jpg" in ct_clean:
+            return "image/jpeg", "jpg"
+        if "png" in ct_clean:
+            return "image/png", "png"
+        if "webp" in ct_clean:
+            return "image/webp", "webp"
+        return ct_clean, ct_clean.split("/")[-1]
+
+    return "application/pdf", "pdf"
+
+
+def _resolve_receipt_blob(user_email: str, receipt_id: str, gcs_path: str):
+    """
+    Locate and download receipt bytes from GCS. Supports gs:// URIs, https:// URLs,
+    and relative paths, with automatic fallback candidate checks.
+    """
+    import urllib.parse
+    bucket_name = IMPORT_BUCKET
+    blob_name = ""
+
+    if gcs_path:
+        if gcs_path.startswith("gs://"):
+            parts = gcs_path[len("gs://"):].split("/", 1)
+            bucket_name = parts[0]
+            blob_name = parts[1] if len(parts) > 1 else ""
+        elif gcs_path.startswith("http://") or gcs_path.startswith("https://"):
+            parsed = urllib.parse.urlparse(gcs_path)
+            path_clean = parsed.path.lstrip("/")
+            if "/" in path_clean:
+                bucket_name, blob_name = path_clean.split("/", 1)
+            else:
+                blob_name = path_clean
+        else:
+            blob_name = gcs_path.lstrip("/")
+
+    if not gcs_client:
+        raise HTTPException(status_code=500, detail="GCS client is not configured")
+
+    bucket = gcs_client.bucket(bucket_name)
+    file_bytes = None
+    blob_ct = None
+
+    if blob_name:
+        try:
+            b = bucket.blob(blob_name)
+            file_bytes = b.download_as_bytes()
+            blob_ct = getattr(b, "content_type", None)
+        except Exception:
+            file_bytes = None
+
+    if file_bytes is None:
+        safe_id = receipt_id.replace("rec_", "")
+        candidates = [
+            f"receipts/{user_email}/{receipt_id}/original.pdf",
+            f"receipts/{user_email}/{receipt_id}/original.jpg",
+            f"receipts/{user_email}/{receipt_id}/original.jpeg",
+            f"receipts/{user_email}/{receipt_id}/original.png",
+            f"receipts/{user_email}/{receipt_id}/original.webp",
+            f"{user_email}/imports/raw/{safe_id}.pdf",
+            f"{user_email}/imports/raw/{safe_id}.jpg",
+            f"{user_email}/imports/raw/{safe_id}.jpeg",
+            f"{user_email}/imports/raw/{safe_id}.png",
+        ]
+        for cand in candidates:
+            try:
+                b = bucket.blob(cand)
+                file_bytes = b.download_as_bytes()
+                blob_name = cand
+                blob_ct = getattr(b, "content_type", None)
+                break
+            except Exception:
+                continue
+
+    if file_bytes is None:
+        raise HTTPException(status_code=404, detail=f"Receipt scan document not found for {receipt_id}")
+
+    return file_bytes, blob_name, blob_ct
+
+
+@app.get("/api/receipts/{user_email}/{receipt_id}/view_url")
+def receipt_view_url(
+    request: Request,
+    user_email: str,
+    receipt_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Return a reliable streaming URL for viewing original PDF, JPG, or PNG receipt documents inline.
+    Looks up receipt metadata across receipts collection, review_queue, and coins.
+    """
+    owner_key = _authenticate_request(authorization, user_email)
+    user_email = owner_key
+
+    gcs_path, original_filename = _get_receipt_metadata(user_email, receipt_id)
+
+    # Sniff file extension from metadata or gcs_path
+    ext = ""
+    if original_filename and "." in original_filename:
+        ext = original_filename.rsplit(".", 1)[-1].lower()
+    elif gcs_path and "." in gcs_path:
+        ext = gcs_path.rsplit(".", 1)[-1].lower()
+
+    if not original_filename:
+        original_filename = f"{receipt_id}.{ext or 'pdf'}"
+
+    # Determine base host: in pytest or local dev, use request.base_url; in Cloud Run, fallback
+    base_url = "https://numista-backend-568985927038.us-central1.run.app"
+    if request:
+        try:
+            req_base = str(request.base_url).rstrip("/")
+            if req_base and ("localhost" in req_base or "127.0.0.1" in req_base or "testserver" in req_base):
+                base_url = req_base
+        except Exception:
+            pass
+
+    stream_url = f"{base_url}/api/receipts/{user_email}/{receipt_id}/stream"
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split("Bearer ", 1)[1].strip()
         stream_url += f"?token={token}"
@@ -7421,7 +7563,8 @@ def receipt_view_url(
     return {
         "receipt_id":      receipt_id,
         "signed_url":      stream_url,
-        "filename":        original_filename or f"{receipt_id}.pdf",
+        "filename":        original_filename,
+        "file_type":       ext or "pdf",
         "expires_seconds": 86400,
     }
 
@@ -7434,53 +7577,50 @@ def receipt_stream(
     token: Optional[str] = Query(None),
 ):
     """
-    Direct PDF stream endpoint that reads PDF bytes from GCS using Cloud Run ADC
-    and streams directly to the browser for inline PDF viewing.
+    Direct document stream endpoint that reads receipt bytes (PDF, JPG, PNG, etc.)
+    from GCS using Cloud Run ADC and streams directly to the browser with accurate MIME headers.
     """
+    from fastapi.responses import Response
+
     auth_header = authorization or (f"Bearer {token}" if token else None)
     owner_key = _authenticate_request(auth_header, user_email)
     user_email = owner_key
 
-    gcs_path = ""
+    gcs_path, original_filename = _get_receipt_metadata(user_email, receipt_id)
 
-    rec_snap = db.collection("users").document(user_email)\
-                 .collection("receipts").document(receipt_id).get()
-    if rec_snap.exists:
-        gcs_path = rec_snap.to_dict().get("gcs_path", "")
+    # Locate and download blob bytes
+    file_bytes, blob_name, blob_ct = _resolve_receipt_blob(user_email, receipt_id, gcs_path)
 
-    if not gcs_path:
-        rq_docs = db.collection("users").document(user_email)\
-                    .collection("review_queue").where("receipt_id", "==", receipt_id).limit(1).stream()
-        for d in rq_docs:
-            gcs_path = d.to_dict().get("gcs_path", "")
-            break
+    # Enforce owner-folder check on blob_name
+    clean_user = user_email.strip().lower()
+    clean_owner = owner_key.strip().lower()
+    expected_prefixes = (
+        f"receipts/{clean_user}/",
+        f"receipts/{clean_owner}/",
+        f"{clean_user}/",
+        f"{clean_owner}/",
+    )
+    if blob_name and not any(blob_name.lower().startswith(p) for p in expected_prefixes):
+        logger.warning(f"Blob path '{blob_name}' does not match user folder for '{owner_key}'")
+        raise HTTPException(status_code=403, detail="Access denied: storage path outside user folder")
 
-    if not gcs_path:
-        coin_docs = db.collection("users").document(user_email)\
-                      .collection("coins").where("receipt_id", "==", receipt_id).limit(1).stream()
-        for d in coin_docs:
-            data = d.to_dict()
-            pt = data.get("paper_trail") or {}
-            gcs_path = pt.get("gcs_path") or data.get("gcs_path", "")
-            break
+    # Detect MIME type and extension
+    media_type, download_ext = _detect_receipt_mime(file_bytes, original_filename, blob_name, blob_ct)
 
-    if not gcs_path or not gcs_path.startswith("gs://"):
-        raise HTTPException(status_code=404, detail=f"Receipt PDF path not found for {receipt_id}")
+    if original_filename and "." in original_filename:
+        out_filename = original_filename
+    else:
+        out_filename = f"{receipt_id}.{download_ext}"
 
-    try:
-        path_part = gcs_path[len("gs://"):]
-        bucket_name, blob_name = path_part.split("/", 1)
-        bucket = gcs_client.bucket(bucket_name)
-        blob   = bucket.blob(blob_name)
-        file_bytes = blob.download_as_bytes()
-        return Response(
-            content=file_bytes,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"inline; filename=\"{receipt_id}.pdf\""}
-        )
-    except Exception as e:
-        logger.exception(f"Error streaming receipt PDF {receipt_id} for {user_email}")
-        raise HTTPException(status_code=500, detail=f"Failed to stream receipt PDF: {str(e)}")
+    headers = {
+        "Content-Disposition": f'inline; filename="{out_filename}"',
+        "Cache-Control": "private, max-age=3600",
+    }
+    return Response(
+        content=file_bytes,
+        media_type=media_type,
+        headers=headers,
+    )
 
 
 
@@ -10715,12 +10855,46 @@ class DirectSaleRequest(BaseModel):
     user_id: str
     coin_id: str
     qty_sold: int
-    sale_price: float
-    fees: float = 0.0
+    sale_price: Optional[float] = None
+    sale_price_usd: Optional[float] = None
+    fees: Optional[float] = None
+    fees_usd: Optional[float] = None
     sale_date: Optional[str] = None
     sales_venue: str = "Outside Numista.AI"
     buyer_reference: Optional[str] = None
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_price_and_fees(self):
+        if self.sale_price is None and self.sale_price_usd is None:
+            raise ValueError("sale_price or sale_price_usd is required")
+
+        if self.sale_price is not None and self.sale_price_usd is not None:
+            if abs(float(self.sale_price) - float(self.sale_price_usd)) > 0.001:
+                raise ValueError("Conflicting values provided for sale_price and sale_price_usd")
+        elif self.sale_price is None:
+            self.sale_price = self.sale_price_usd
+        elif self.sale_price_usd is None:
+            self.sale_price_usd = self.sale_price
+
+        if float(self.sale_price_usd) <= 0:
+            raise ValueError("sale_price must be greater than zero")
+
+        if self.fees is not None and self.fees_usd is not None:
+            if abs(float(self.fees) - float(self.fees_usd)) > 0.001:
+                raise ValueError("Conflicting values provided for fees and fees_usd")
+        elif self.fees is None and self.fees_usd is not None:
+            self.fees = self.fees_usd
+        elif self.fees_usd is None and self.fees is not None:
+            self.fees_usd = self.fees
+        elif self.fees is None and self.fees_usd is None:
+            self.fees = 0.0
+            self.fees_usd = 0.0
+
+        if float(self.fees_usd) < 0:
+            raise ValueError("fees cannot be negative")
+
+        return self
 
 class UndoSaleRequest(BaseModel):
     user_id: str
@@ -10796,8 +10970,8 @@ async def api_sell_direct(req: DirectSaleRequest, authorization: Optional[str] =
             user_id=req.user_id,
             coin_id=req.coin_id,
             qty_sold=req.qty_sold,
-            sale_price_usd=req.sale_price,
-            fees_usd=req.fees,
+            sale_price_usd=float(req.sale_price_usd),
+            fees_usd=float(req.fees_usd),
             sale_date=req.sale_date,
             sales_venue=req.sales_venue,
             buyer_reference=req.buyer_reference,

@@ -38,6 +38,7 @@ import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
 import '../models/coin_model.dart';
 import '../widgets/beta_feedback_widget.dart';
+import '../widgets/auth_gate.dart';
 import '../services/feedback_trigger_observer.dart';
 import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
 import '../widgets/morgan_guide_flow.dart';
@@ -205,7 +206,10 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
 
     // Load eBay credentials from Firestore into SharedPreferences.
-    EpnService.loadFromFirestore();
+    // Skip in demo mode to enforce zero Firestore network reads.
+    if (!widget.isDemoMode && !GuestSeedService.isBrowseDemoMode) {
+      EpnService.loadFromFirestore();
+    }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
     if (!AuthService.isGuest) {
@@ -550,9 +554,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   if (GuestSeedService.isBrowseDemoMode)
                     _DemoBanner(onTryFree: () {
                       GuestSeedService.deactivateBrowseDemo();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
+                      AuthGate.navigateTo(context, initialAuthTab: 1);
                     }),
                   if (AuthService.isGuest) _GuestBanner(),
                   Expanded(child: _buildBody()),
@@ -947,7 +949,9 @@ class _BaseLayoutState extends State<BaseLayout> {
                         ),
                         icon: const Icon(Icons.logout, size: 14),
                         label: Text(
-                          AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
+                          (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
+                              ? 'Exit Demo'
+                              : (AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
                           style: const TextStyle(fontSize: 11),
                         ),
                         onPressed: () => _confirmSignOut(context),
@@ -956,7 +960,9 @@ class _BaseLayoutState extends State<BaseLayout> {
                   ),
                 ] else ...[
                   Tooltip(
-                    message: AuthService.isGuest ? 'Exit Guest' : 'Sign Out',
+                    message: (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
+                        ? 'Exit Demo'
+                        : (AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
                     child: IconButton(
                       icon: const Icon(Icons.logout, size: 18),
                       onPressed: () => _confirmSignOut(context),
@@ -977,9 +983,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                     if (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                       _DemoBanner(onTryFree: () {
                         GuestSeedService.deactivateBrowseDemo();
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        );
+                        AuthGate.navigateTo(context, initialAuthTab: 1);
                       }),
                     if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
                     Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
@@ -987,9 +991,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                 ),
                 WizardOverlay(
                   onCreateAccount: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
+                    AuthGate.navigateTo(context, initialAuthTab: 1);
                   },
                 ),
                 // Morgan guide panel — floats above screen when a guide is active
@@ -1227,14 +1229,17 @@ class _BaseLayoutState extends State<BaseLayout> {
   // ─── Sign-out confirmation ────────────────────────────────────────────────
   Future<void> _confirmSignOut(BuildContext ctx) async {
     final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    final isDemo = widget.isDemoMode || GuestSeedService.isBrowseDemoMode;
     final confirm = await showDialog<bool>(
       context: ctx,
       builder: (dctx) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF1A1D27) : Colors.white,
-        title: Text('Sign Out',
+        title: Text(isDemo ? 'Exit Demo Vault' : 'Sign Out',
             style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A))),
         content: Text(
-            'Are you sure you want to sign out of your vault?',
+            isDemo
+                ? 'Are you sure you want to exit the demo vault and return to the login screen?'
+                : 'Are you sure you want to sign out of your vault?',
             style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF475569))),
         actions: [
           TextButton(
@@ -1244,13 +1249,22 @@ class _BaseLayoutState extends State<BaseLayout> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dctx, true),
-            child: const Text('Sign Out',
-                style: TextStyle(color: Color(0xFFF63366))),
+            child: Text(isDemo ? 'Exit Demo' : 'Sign Out',
+                style: const TextStyle(color: Color(0xFFF63366))),
           ),
         ],
       ),
     );
-    if (confirm == true) await AuthService.signOut();
+    if (confirm == true) {
+      if (isDemo) {
+        GuestSeedService.deactivateBrowseDemo();
+        if (ctx.mounted) {
+          AuthGate.navigateTo(ctx);
+        }
+      } else {
+        await AuthService.signOut();
+      }
+    }
     // The StreamBuilder in main.dart automatically redirects to LoginScreen
   }
 }

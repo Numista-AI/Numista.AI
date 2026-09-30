@@ -50,10 +50,88 @@ from google import genai
 from google.genai import types
 from google.cloud import firestore
 from estate_state_rules import STATE_RULES
+import firebase_admin
+from firebase_admin import auth as fb_auth
+
+if not firebase_admin._apps:
+    try:
+        firebase_admin.initialize_app()
+    except Exception:
+        pass
 
 app = Flask(__name__)
 
-# ── Rate limiting — protects the unauthenticated endpoint from API abuse ────────
+# ── Allowed Origins (mirrors main backend configuration) ─────────────────────────
+ALLOWED_ORIGINS = [
+    "https://numista.ai",
+    "https://www.numista.ai",
+    "https://numista-vault.web.app",
+    "https://numista-vault.firebaseapp.com",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+
+@app.before_request
+def handle_preflight():
+    """Handle CORS OPTIONS preflight requests for all endpoints."""
+    if request.method == "OPTIONS":
+        response = make_response()
+        origin = request.headers.get("Origin", "")
+        if origin in ALLOWED_ORIGINS or (origin and ("numista" in origin or "localhost" in origin or "127.0.0.1" in origin)):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        elif not origin:
+            response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS[0]
+        else:
+            response.headers["Access-Control-Allow-Origin"] = origin
+
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+        response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+
+
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS response headers to all outgoing responses."""
+    origin = request.headers.get("Origin", "")
+    if origin in ALLOWED_ORIGINS or (origin and ("numista" in origin or "localhost" in origin or "127.0.0.1" in origin)):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    elif not origin:
+        response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS[0]
+    else:
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+    response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
+    return response
+
+
+def _authenticate_request(req):
+    """Verify Firebase ID token from Authorization header and return authenticated user email/uid.
+    Returns None if missing, expired, or invalid.
+    """
+    auth_header = req.headers.get("Authorization", "")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split("Bearer ", 1)[1].strip()
+    try:
+        decoded = fb_auth.verify_id_token(token)
+        owner = (decoded.get("email") or decoded.get("uid") or "").strip().lower()
+        return owner
+    except Exception as e:
+        app.logger.warning(f"[_authenticate_request] Token verification failed: {e}")
+        return None
+
+
+# ── Rate limiting — protects endpoints from API abuse ───────────────────────────
 # Uses in-memory storage (suitable for single Cloud Run instance).
 # Limits: 10 scans/min and 5 estate reports/min per client IP.
 limiter = Limiter(
@@ -271,9 +349,11 @@ def write_to_firestore(user_id: str, program_id: str, coins: dict) -> int:
     return wishlist_added
 
 
-@app.route("/scan_checklist", methods=["POST"])
+@app.route("/scan_checklist", methods=["POST", "OPTIONS"])
 @limiter.limit("10 per minute")
 def scan_checklist():
+    if request.method == "OPTIONS":
+        return make_response()
     # ── Parse request ─────────────────────────────────────────────────────────
     if "image" not in request.files:
         abort(400, "Missing 'image' in multipart body")
@@ -346,7 +426,7 @@ def health():
 
 # ── Estate Report Endpoint ─────────────────────────────────────────────────────
 
-@app.route("/generate_estate_report", methods=["POST"])
+@app.route("/generate_estate_report", methods=["POST", "OPTIONS"])
 @limiter.limit("5 per minute")
 def generate_estate_report():
     """
@@ -355,32 +435,39 @@ def generate_estate_report():
     Generates a professional numismatic estate planning PDF report.
     Reads coin data from Firestore, calls Gemini for narrative, builds PDF.
 
-    Required JSON body fields: uid, mode, state, owner_name, report_date
-    Optional: attorney_name, attorney_email, executor_name, date_of_death,
-              include_photos, beneficiaries
+    Required JSON body fields: mode, owner_name, report_date (state optional, defaults to 'NY')
+    Security: Requires Authorization Bearer token; uid derived securely from token.
 
     Returns the PDF as application/pdf on success.
     Stores report metadata in Firestore at users/{uid}/estate_reports/{report_id}.
     Optionally uploads PDF to GCS if ESTATE_REPORTS_BUCKET env var is set.
     """
+    if request.method == "OPTIONS":
+        return make_response()
+
     import logging as _logging
     log = _logging.getLogger(__name__)
 
+    # ── Authenticate request (Security: derive uid from verified token) ────────
+    auth_user = _authenticate_request(request)
+    if not auth_user:
+        return jsonify({'error': 'Unauthorized: Valid Firebase Bearer token is required.'}), 401
+
+    uid = auth_user
+
     # ── Parse JSON body ────────────────────────────────────────────────────────
     body = request.get_json(force=True, silent=True)
-    if not body:
+    if body is None or not isinstance(body, dict):
         return jsonify({'error': 'Request body must be valid JSON'}), 400
 
     # ── Validate required fields ───────────────────────────────────────────────
-    uid        = (body.get('uid') or '').strip()
-    mode       = (body.get('mode') or '').strip()
-    state      = (body.get('state') or '').strip().upper()
-    owner_name = (body.get('owner_name') or '').strip()
+    mode        = (body.get('mode') or '').strip()
+    state       = (body.get('state') or 'NY').strip().upper()
+    owner_name  = (body.get('owner_name') or '').strip()
     report_date = (body.get('report_date') or '').strip()
 
     missing = [f for f, v in [
-        ('uid', uid), ('mode', mode), ('state', state),
-        ('owner_name', owner_name), ('report_date', report_date),
+        ('mode', mode), ('owner_name', owner_name), ('report_date', report_date),
     ] if not v]
     if missing:
         return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
@@ -391,9 +478,7 @@ def generate_estate_report():
         }), 400
 
     if state not in STATE_RULES:
-        return jsonify({
-            'error': f'Unsupported state "{state}". Supported: {", ".join(sorted(STATE_RULES.keys()))}'
-        }), 400
+        state = 'NY'  # Safe fallback to NY if state code is unrecognized
 
     if mode == 'estate_settlement' and not body.get('date_of_death'):
         return jsonify({
@@ -488,7 +573,7 @@ def generate_estate_report():
     return response
 
 
-@app.route("/initialize_estate_upgrade", methods=["POST"])
+@app.route("/initialize_estate_upgrade", methods=["POST", "OPTIONS"])
 @limiter.limit("10 per minute")
 def initialize_estate_upgrade():
     """
@@ -498,11 +583,18 @@ def initialize_estate_upgrade():
     user upgrades to the Premium Estate Suite. Automatically issues Document
     Register #1 (NUM-DOC-YYYY-00001) for the Initial Estate Baseline Lock.
     """
+    if request.method == "OPTIONS":
+        return make_response()
+
     import logging as _logging
     log = _logging.getLogger(__name__)
 
     body = request.get_json(force=True, silent=True) or {}
     uid = (body.get('uid') or '').strip()
+    auth_user = _authenticate_request(request)
+    if auth_user:
+        uid = auth_user
+
     if not uid:
         return jsonify({'error': 'uid is required'}), 400
 

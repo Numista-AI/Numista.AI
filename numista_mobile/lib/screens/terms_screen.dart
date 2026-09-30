@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/auth_gate.dart';
 
 class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
@@ -27,7 +28,13 @@ class TermsScreen extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: _text),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              AuthGate.navigateTo(context);
+            }
+          },
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),

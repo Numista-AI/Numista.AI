@@ -363,9 +363,22 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
           }
         }
         final linked = r['linked_coins_count'] ?? (r['linked_coin_ids'] as List?)?.length ?? 0;
+        final isPdf = name.toLowerCase().endsWith('.pdf');
+        final isImg = name.toLowerCase().endsWith('.jpg') ||
+            name.toLowerCase().endsWith('.jpeg') ||
+            name.toLowerCase().endsWith('.png') ||
+            name.toLowerCase().endsWith('.webp');
         return ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.picture_as_pdf, color: Color(0xFF60A5FA), size: 28),
+          leading: Icon(
+            isPdf
+                ? Icons.picture_as_pdf
+                : (isImg ? Icons.image_outlined : Icons.description_outlined),
+            color: isPdf
+                ? const Color(0xFF60A5FA)
+                : (isImg ? const Color(0xFF34D399) : const Color(0xFFA78BFA)),
+            size: 28,
+          ),
           title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
           subtitle: Text('Ingested: $date • Linked: $linked coins', style: const TextStyle(color: Colors.white54, fontSize: 12)),
           trailing: Row(
@@ -385,9 +398,18 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     if (res.statusCode == 200) {
                       final data = jsonDecode(res.body);
                       final url = data['signed_url'] ?? data['url'];
-                      if (url != null) {
-                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      if (url != null && url.toString().isNotEmpty) {
+                        final uri = Uri.parse(url.toString());
+                        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        if (!launched) {
+                          await launchUrl(uri, mode: LaunchMode.platformDefault);
+                        }
+                      } else {
+                        messenger.showSnackBar(const SnackBar(content: Text('Document URL not available')));
                       }
+                    } else {
+                      final msg = res.body.isNotEmpty ? ': ${res.body}' : '';
+                      messenger.showSnackBar(SnackBar(content: Text('Could not open document (HTTP ${res.statusCode})$msg')));
                     }
                   } catch (e) {
                     messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));

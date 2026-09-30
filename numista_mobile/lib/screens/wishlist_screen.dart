@@ -516,23 +516,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               color: headerColor,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F9D58).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              '2 Active Deals',
-                              style: TextStyle(color: Color(0xFF0F9D58), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '1881-S Morgan & 1909-S VDB listed 22% below wholesale bid',
+                        'Check recent eBay sold listings and market pricing for your wishlist target coins',
                         style: TextStyle(fontSize: 12, color: descColor),
                       ),
                     ],
