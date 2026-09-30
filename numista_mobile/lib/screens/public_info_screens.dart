@@ -243,10 +243,10 @@ class _FeaturesView extends StatelessWidget {
         const SizedBox(height: 16),
         _featureItem(
           icon: Icons.open_in_new_rounded,
-          title: 'eBay Sold Listings Integration',
+          title: 'eBay Sold Listings Search',
           status: 'AVAILABLE NOW',
           statusColor: const Color(0xFF059669),
-          desc: 'One-tap link to recent eBay sold listings for any coin in your collection.',
+          desc: 'One-tap link to search recent eBay sold listings for any coin in your collection.',
         ),
         const SizedBox(height: 16),
         _featureItem(

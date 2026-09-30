@@ -346,9 +346,8 @@ class _LoginScreenState extends State<LoginScreen>
             ...const [
               ('🤖', 'AI-estimated values for every coin in your collection'),
               ('📊', 'Organize thousands of coins instantly'),
-              ('🔬', 'Microscope scanner for precision grading'),
-              ('📋', 'Estate planning reports in seconds'),
-              ('🎁', 'Smart wishlists & eBay price tracking'),
+              ('📋', 'Estate documentation, reports, and lateral transfer'),
+              ('💬', 'Morgan AI numismatic assistant — research any coin'),
               ('🧑‍🏫', 'Human AI Trainer Review Board — community-powered accuracy'),
             ].map((f) => Padding(
               padding: const EdgeInsets.only(bottom: 14),

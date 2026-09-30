@@ -21,5 +21,5 @@ const String kScanServiceUrl =
 const String kAppPublicDomain = 'numista.ai';
 
 // App display version shown in the UI and About dialog
-const String kAppVersion = 'v4.402';
+const String kAppVersion = 'v4.403';
 

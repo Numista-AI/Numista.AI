@@ -1691,10 +1691,24 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.403',
+    date: '2026-09-30',
+    description: 'Auth Hardening Continued & Front-Door Accuracy',
+    isLatest: true,
+    changes: [
+      'Security: grade review stats, queue, and submit now require a sign-in token',
+      'Security: admin grade review dashboard requires an admin-level token; non-admin callers are blocked',
+      'Security: deal finder stub routes now require a sign-in token',
+      'Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages',
+      'Accuracy: pubspec version updated to match the in-app display version',
+      'Navigation: /signin, /forgot, and /reset now redirect to the sign-in screen',
+    ],
+  ),
+  _Release(
     version: 'v4.402',
     date: '2026-09-30',
     description: 'Transfer Security & Auth Hardening',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: transfer routes now require a valid sign-in token — unauthenticated requests are rejected',
       'Security: transfer identity is verified by the server; the request body cannot override it',
@@ -7295,7 +7309,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Greysheet Market Valuation Integration: real-time CDN bid/ask prices, CPG retail attribution, and daily portfolio snapshot sync.',
-      'Automated Arbitrage Deal Finder & Wishlist EPN matcher: spot underpriced coins and affiliate matches instantly.',
+      'Wishlist Feature: track wanted coins with a dedicated Wishlist screen.',
       'Bulk Upload Template: streamlined CSV/Excel ingestion template for uploading collections in bulk.',
       'Financials & Melt Valuation Card: live melt calculations for gold, silver, platinum, and palladium spot prices.',
       'Scraper Resilience Pass: TLS fingerprint bypass (curl_cffi) and direct candidates routing for US Mint, PCGS, and NGC sources.',

@@ -400,6 +400,16 @@
 
 
 
+## v4.403 — 2026-09-30
+**Auth Hardening Continued & Front-Door Accuracy**
+
+- Security: grade review stats, queue, and submit now require a valid sign-in token
+- Security: admin grade review dashboard requires an admin-level token; non-admin callers are rejected
+- Security: deal finder stub routes now require a sign-in token
+- Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages
+- Accuracy: pubspec version updated to match the in-app display version
+- Navigation: /signin, /forgot, and /reset now redirect to the sign-in screen
+
 ## v4.402 — 2026-09-30
 **Transfer Security & Auth Hardening**
 

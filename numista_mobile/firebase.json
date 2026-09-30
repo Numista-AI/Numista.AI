@@ -28,6 +28,21 @@
         "source": "/blog",
         "destination": "/about",
         "type": 301
+      },
+      {
+        "source": "/signin",
+        "destination": "/login",
+        "type": 301
+      },
+      {
+        "source": "/forgot",
+        "destination": "/login",
+        "type": 301
+      },
+      {
+        "source": "/reset",
+        "destination": "/login",
+        "type": 301
       }
     ],
 
