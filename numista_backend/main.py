@@ -10962,15 +10962,23 @@ class UndoSaleRequest(BaseModel):
     sale_archive_id: str
 
 @app.post("/api/transfer/initiate")
-async def api_initiate_transfer(req: InitiateTransferRequest):
+async def api_initiate_transfer(
+    req: InitiateTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Initiates a lateral property transfer with server-side privacy sanitization.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    # uid always comes from token — never from the request body
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import initiate_transfer
         result = initiate_transfer(
             db=db,
-            user_a_id=req.user_id,
+            user_a_id=token_uid,
             item_ids=req.item_ids,
             recipient_email=req.recipient_email,
             privacy_toggles=req.privacy_toggles,
@@ -10982,15 +10990,22 @@ async def api_initiate_transfer(req: InitiateTransferRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/claim")
-async def api_claim_transfer(req: ClaimTransferRequest):
+async def api_claim_transfer(
+    req: ClaimTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Claims a pending lateral transfer, creating item(s) in recipient's vault.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import claim_transfer
         result = claim_transfer(
             db=db,
-            user_b_id=req.user_id,
+            user_b_id=token_uid,
             transfer_id=req.transfer_id,
             claim_pin=req.claim_pin,
             selected_item_ids=req.selected_item_ids
@@ -11001,15 +11016,22 @@ async def api_claim_transfer(req: ClaimTransferRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/recall")
-async def api_recall_transfer(req: RecallTransferRequest):
+async def api_recall_transfer(
+    req: RecallTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Recalls an unclaimed pending transfer.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import recall_transfer
         result = recall_transfer(
             db=db,
-            user_a_id=req.user_id,
+            user_a_id=token_uid,
             transfer_id=req.transfer_id
         )
         return {"status": "success", "result": result}

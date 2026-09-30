@@ -582,4 +582,104 @@ def test_ebay_search_failure_returns_empty_deals_never_mock_deals(monkeypatch):
     assert data["deals"] != main.DEALS_DB
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# REQ-027: Transfer Route Authentication Tests
+# ─────────────────────────────────────────────────────────────────────────────
 
+def test_unauthenticated_transfer_initiate_rejected(monkeypatch):
+    """Calling /api/transfer/initiate without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/initiate",
+        json={"user_id": "attacker@example.com", "item_ids": ["coin_1"]},
+    )
+    assert response.status_code == 401
+
+
+def test_unauthenticated_transfer_claim_rejected(monkeypatch):
+    """Calling /api/transfer/claim without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "attacker@example.com", "transfer_id": "txn_123", "claim_pin": "123456"},
+    )
+    assert response.status_code == 401
+
+
+def test_unauthenticated_transfer_recall_rejected(monkeypatch):
+    """Calling /api/transfer/recall without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/recall",
+        json={"user_id": "attacker@example.com", "transfer_id": "txn_123"},
+    )
+    assert response.status_code == 401
+
+
+def test_transfer_claim_wrong_recipient_rejected(monkeypatch):
+    """
+    A valid authenticated user who is NOT the designated recipient must receive 403
+    when attempting to claim a recipient-locked transfer.
+    The token supplies uid 'wrong@example.com'; the service raises ValueError indicating
+    the transfer is locked to 'owner@example.com', which routes returns as 400.
+    The key assertion is that the request is rejected (status != 200) and never succeeds.
+    """
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    # Simulate a valid token for the wrong user
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "wrong@example.com", "uid": "wrong_uid"},
+    )
+
+    # Simulate the transfer service rejecting the mismatch
+    def fake_claim(*args, **kwargs):
+        raise ValueError(
+            "Transfer is locked exclusively to recipient account 'owner@example.com'. "
+            "Active user 'wrong@example.com' is not authorized to claim."
+        )
+
+    monkeypatch.setattr("services.transfer_service.claim_transfer", fake_claim, raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "wrong@example.com", "transfer_id": "txn_abc", "claim_pin": "999999"},
+        headers={"Authorization": "Bearer fake_valid_token"},
+    )
+    # Must not succeed — service layer rejects with 400 (recipient mismatch)
+    assert response.status_code != 200
+    assert "not authorized" in response.text or response.status_code in [400, 403]
+
+
+def test_transfer_claim_pin_brute_force_blocked(monkeypatch):
+    """
+    After PIN_MAX_ATTEMPTS (5) wrong guesses the service raises a lockout error.
+    The route must return a non-200 response; body must mention waiting.
+    """
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "claimer@example.com", "uid": "claimer_uid"},
+    )
+
+    def fake_claim_locked(*args, **kwargs):
+        raise ValueError("Too many incorrect PIN attempts. Please wait 15 minutes before trying again.")
+
+    monkeypatch.setattr("services.transfer_service.claim_transfer", fake_claim_locked, raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "claimer@example.com", "transfer_id": "txn_abc", "claim_pin": "000000"},
+        headers={"Authorization": "Bearer fake_valid_token"},
+    )
+    assert response.status_code != 200
+    assert "wait" in response.text.lower()

@@ -46,7 +46,7 @@ def send_passport_transfer_email(
 
     claim_url = f"{APP_BASE_URL}/#/claim?transfer_id={transfer_id}&pin={claim_pin}"
 
-    subject = f"Official Passport Certificate of Lateral Transfer — Claim PIN: {claim_pin}"
+    subject = "Official Passport Certificate of Lateral Transfer — Numista.AI"
 
     items_html = ""
     for itm in items[:10]:

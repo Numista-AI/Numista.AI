@@ -405,16 +405,61 @@ def claim_transfer(
     if transfer_data.get("status") != "pending":
         raise ValueError(f"Transfer cannot be claimed (status: {transfer_data.get('status')})")
 
+    # ── PIN brute-force lockout ──────────────────────────────────────────────
+    # After 5 wrong attempts the transfer document is soft-locked for 15 minutes.
+    PIN_MAX_ATTEMPTS = 5
+    PIN_LOCKOUT_MINUTES = 15
+
+    pin_fail_count = int(transfer_data.get("pin_fail_count", 0))
+    pin_locked_until_str = transfer_data.get("pin_locked_until")
+    now = _get_utc_now()
+
+    if pin_locked_until_str:
+        try:
+            locked_until = datetime.fromisoformat(pin_locked_until_str)
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
+            if now < locked_until:
+                raise ValueError(
+                    "Too many incorrect PIN attempts. Please wait 15 minutes before trying again."
+                )
+            else:
+                # Lockout period has expired — reset counters
+                pin_fail_count = 0
+                transfer_ref.update({"pin_fail_count": 0, "pin_locked_until": firestore.DELETE_FIELD})
+        except ValueError as ve:
+            if "Too many incorrect" in str(ve):
+                raise
+            pass  # fromisoformat parse error — ignore and proceed
+
     stored_pin = str(transfer_data.get("claim_pin") or "").strip()
     if stored_pin != clean_pin:
+        pin_fail_count += 1
+        update_data: Dict[str, Any] = {"pin_fail_count": pin_fail_count}
+        if pin_fail_count >= PIN_MAX_ATTEMPTS:
+            update_data["pin_locked_until"] = (
+                now + timedelta(minutes=PIN_LOCKOUT_MINUTES)
+            ).isoformat()
+            transfer_ref.update(update_data)
+            raise ValueError(
+                "Too many incorrect PIN attempts. Please wait 15 minutes before trying again."
+            )
+        transfer_ref.update(update_data)
         raise ValueError("Invalid claim PIN code")
 
-    # Recipient Authorization Locking
+    # Recipient Authorization Locking — always enforced when a locked email is set
     locked_email = transfer_data.get("recipient_email")
     if locked_email and locked_email.strip():
         clean_locked = locked_email.strip().lower()
-        if "@" in clean_user_b_id and clean_user_b_id != clean_locked:
-            raise ValueError(f"Transfer is locked exclusively to recipient account '{clean_locked}'. Active user '{clean_user_b_id}' is not authorized to claim.")
+        if clean_user_b_id != clean_locked:
+            raise ValueError(
+                f"Transfer is locked exclusively to recipient account '{clean_locked}'. "
+                f"Active user '{clean_user_b_id}' is not authorized to claim."
+            )
+
+    # Successful auth — clear any accumulated failure count before committing the claim
+    if pin_fail_count > 0:
+        transfer_ref.update({"pin_fail_count": 0})
 
     # Execute inside atomic Firestore transaction
     transaction = db.transaction()
