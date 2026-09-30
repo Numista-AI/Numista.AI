@@ -5998,7 +5998,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
           setState(() {
             _isLoading = false;
             _needsStateSelection = true;
-            _selectedState = (jur != null && _supportedStates.contains(jur)) ? jur : 'NY';
+            _selectedState = null;
           });
         }
       }
@@ -6007,7 +6007,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
         setState(() {
           _isLoading = false;
           _needsStateSelection = true;
-          _selectedState = 'NY';
+          _selectedState = null;
         });
       }
     }
@@ -6099,6 +6099,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
               DropdownButtonFormField<String>(
                 // ignore: deprecated_member_use
                 value: _selectedState,
+                hint: Text('Select state...', style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF94A3B8))),
                 dropdownColor: bgCard,
                 decoration: InputDecoration(
                   labelText: 'State / Jurisdiction',
@@ -6114,12 +6115,14 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),
                 onChanged: (val) {
-                  if (val != null) setState(() => _selectedState = val);
+                  setState(() => _selectedState = val);
                 },
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () => _generate(_selectedState ?? 'NY'),
+                onPressed: _selectedState != null
+                    ? () => _generate(_selectedState!)
+                    : null,
                 icon: const Icon(Icons.picture_as_pdf, size: 18),
                 label: const Text('Generate Report'),
                 style: ElevatedButton.styleFrom(backgroundColor: pink, foregroundColor: Colors.white),
