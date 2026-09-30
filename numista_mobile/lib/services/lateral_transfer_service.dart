@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../models/transfer_model.dart';
 import 'http_auth_client.dart';
@@ -17,9 +16,8 @@ class LateralTransferService {
     Map<String, bool>? privacyToggles,
     Map<String, int>? itemQuantities,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/initiate'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'item_ids': itemIds,
@@ -49,9 +47,8 @@ class LateralTransferService {
     required String claimPin,
     List<String>? selectedItemIds,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/claim'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'transfer_id': transferId,
@@ -72,9 +69,8 @@ class LateralTransferService {
     required String userId,
     required String transferId,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/recall'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'transfer_id': transferId,

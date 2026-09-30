@@ -77,13 +77,14 @@ class AuthService {
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ─── Sign In with Email + PIN ─────────────────────────────────────────────
-  static Future<AuthResult> signIn(String email, String pin) async {
+  static Future<AuthResult> signIn(String email, String pin,
+      {bool passwordMode = false}) async {
     try {
       await _auth.signInWithEmailAndPassword(
           email: email.trim().toLowerCase(), password: pin.trim());
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
-      return AuthResult.failure(_friendlyError(e.code));
+      return AuthResult.failure(_friendlyError(e.code, passwordMode: passwordMode));
     }
   }
 

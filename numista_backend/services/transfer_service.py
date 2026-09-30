@@ -405,6 +405,17 @@ def claim_transfer(
     if transfer_data.get("status") != "pending":
         raise ValueError(f"Transfer cannot be claimed (status: {transfer_data.get('status')})")
 
+    # ── Recipient Authorization Guard — FIRST, before PIN checks ────────────
+    # A non-recipient cannot burn the 5 PIN tries and lock out the real recipient.
+    locked_email = transfer_data.get("recipient_email")
+    if locked_email and locked_email.strip():
+        clean_locked = locked_email.strip().lower()
+        if clean_user_b_id != clean_locked:
+            raise ValueError(
+                "This transfer is locked to a different account. "
+                "Please sign in with the correct recipient account."
+            )
+
     # ── PIN brute-force lockout ──────────────────────────────────────────────
     # After 5 wrong attempts the transfer document is soft-locked for 15 minutes.
     PIN_MAX_ATTEMPTS = 5
@@ -434,9 +445,10 @@ def claim_transfer(
 
     stored_pin = str(transfer_data.get("claim_pin") or "").strip()
     if stored_pin != clean_pin:
-        pin_fail_count += 1
-        update_data: Dict[str, Any] = {"pin_fail_count": pin_fail_count}
-        if pin_fail_count >= PIN_MAX_ATTEMPTS:
+        # Atomic increment so concurrent wrong guesses can't race past the threshold
+        new_count = pin_fail_count + 1
+        update_data: Dict[str, Any] = {"pin_fail_count": firestore.Increment(1)}
+        if new_count >= PIN_MAX_ATTEMPTS:
             update_data["pin_locked_until"] = (
                 now + timedelta(minutes=PIN_LOCKOUT_MINUTES)
             ).isoformat()
@@ -447,17 +459,7 @@ def claim_transfer(
         transfer_ref.update(update_data)
         raise ValueError("Invalid claim PIN code")
 
-    # Recipient Authorization Locking — always enforced when a locked email is set
-    locked_email = transfer_data.get("recipient_email")
-    if locked_email and locked_email.strip():
-        clean_locked = locked_email.strip().lower()
-        if clean_user_b_id != clean_locked:
-            raise ValueError(
-                f"Transfer is locked exclusively to recipient account '{clean_locked}'. "
-                f"Active user '{clean_user_b_id}' is not authorized to claim."
-            )
-
-    # Successful auth — clear any accumulated failure count before committing the claim
+    # Successful auth — clear any accumulated failure count
     if pin_fail_count > 0:
         transfer_ref.update({"pin_fail_count": 0})
 

@@ -110,7 +110,8 @@ class _LoginScreenState extends State<LoginScreen>
     }
     GuestSeedService.deactivateBrowseDemo();
     setState(() { _loading = true; _error = null; });
-    final result = await AuthService.signIn(email, credential);
+    final result = await AuthService.signIn(email, credential,
+        passwordMode: _usePasswordSignIn);
     if (mounted) {
       setState(() { _loading = false; _error = result.error; });
       if (result.error == null) TextInput.finishAutofillContext(shouldSave: true);

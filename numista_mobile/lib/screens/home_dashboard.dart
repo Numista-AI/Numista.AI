@@ -1715,8 +1715,8 @@ const _versionHistory = <_Release>[
       'Security: recipient-locked transfers can only be claimed by the designated account',
       'Security: repeated wrong claim-PIN attempts trigger a 15-minute lockout on the transfer',
       'Privacy: claim PIN removed from the transfer email subject line',
-      'Auth: sign-in lockout message softened to \"a few minutes\" rather than a specific time',
-      'Auth: sign-up \"account already exists\" message is softer and more helpful',
+      'Auth: sign-in lockout message softened to \'a few minutes\' rather than a specific time',
+      'Auth: sign-up \'account already exists\' message is softer and more helpful',
     ],
   ),
   _Release(
