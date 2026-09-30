@@ -55,7 +55,7 @@ def send_passport_transfer_email(
         items_html += f"<li style='margin-bottom: 4px;'><b>{title}</b> ({cond})</li>"
 
     if item_count > 10:
-        items_html += f"<li><i>...and {item_count - 10} more items</i></li>"
+        items_html += "<li><i>...and more items</i></li>"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -66,7 +66,7 @@ def send_passport_transfer_email(
         <h2 style="color: #0284C7; margin-top: 0;">NUMISTA.AI • PASSPORT PROTOCOL</h2>
         <h3 style="color: #FFFFFF; margin-bottom: 8px;">Passport Certificate of Lateral Transfer</h3>
         <p style="color: #CBD5E1; font-size: 14px;">
-          You have received a lateral property transfer of <b>{item_count} item(s)</b> from <b>{sender_id}</b>.
+          You have received a lateral property transfer from <b>{sender_id}</b>.
         </p>
 
         <div style="background-color: #0F172A; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #334155;">

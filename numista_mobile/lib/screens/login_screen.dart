@@ -743,10 +743,10 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Reset Your PIN or Password',
+        const Text('Reset Your 6-Digit PIN',
             style: TextStyle(color: _text, fontSize: 26, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text("Enter your account email address. We'll send a reset link from auth@numista.ai directly to your Inbox.",
+        const Text("Enter your account email address. We'll send a PIN reset link from auth@numista.ai directly to your Inbox.",
             style: TextStyle(color: _sub, fontSize: 14)),
         const SizedBox(height: 32),
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
@@ -755,7 +755,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         _textField(controller: _resetEmailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 24),
-        _primaryButton(label: _loading ? 'Sending…' : 'Send Reset Link', onTap: _loading ? null : _sendResetLink),
+        _primaryButton(label: _loading ? 'Sending…' : 'Send PIN Reset Link', onTap: _loading ? null : _sendResetLink),
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => setState(() { _showResetForm = false; _error = null; _successMsg = null; }),

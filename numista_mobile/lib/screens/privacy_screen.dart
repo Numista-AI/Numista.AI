@@ -92,7 +92,7 @@ class PrivacyScreen extends StatelessWidget {
                     ),
                     _BulletPoint(
                       boldText: 'Account & Profile: ',
-                      text: 'We utilize Firebase Authentication to securely manage your account via email, optional alias, and a password or 6-digit security PIN.',
+                      text: 'We utilize Firebase Authentication to securely manage your account via email, optional alias, and a 6-digit security PIN.',
                     ),
                     _BulletPoint(
                       boldText: 'Coin Collection Data: ',
