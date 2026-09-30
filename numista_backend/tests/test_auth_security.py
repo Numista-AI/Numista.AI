@@ -389,8 +389,6 @@ def test_receipt_endpoints_auth_checks(monkeypatch):
 
 def test_ebay_search_auth(monkeypatch):
     """Verify /api/ebay/search requires Firebase Bearer auth and rejects unauthed requests."""
-    from firebase_admin import auth as fb_auth
-
     # 1. Unauthenticated request -> 401
     resp_unauth = client.get("/api/ebay/search?q=Morgan")
     assert resp_unauth.status_code == 401
@@ -400,13 +398,65 @@ def test_ebay_search_auth(monkeypatch):
     resp_invalid = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Basic 12345"})
     assert resp_invalid.status_code == 401
 
-    # 3. Authenticated request with valid token -> 200
+
+def test_ebay_token_code_and_fail_closed(monkeypatch):
+    """Verify eBay token code works when env vars are set, and fails closed (503) when missing (REQ-023G)."""
+    from firebase_admin import auth as fb_auth
+    from main import _get_ebay_access_token
+    from fastapi import HTTPException
+    import json
+
     def fake_verify(token, *args, **kwargs):
         return {"email": "user@example.com", "uid": "user_123"}
 
     monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
-    resp_auth = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
-    assert resp_auth.status_code == 200
+
+    # 1. Missing EBAY_CERT_ID -> fail closed with 503 (no Firestore fallback)
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.delenv("EBAY_CERT_ID", raising=False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        _get_ebay_access_token()
+    assert exc_info.value.status_code == 503
+    assert "missing credentials" in exc_info.value.detail
+
+    resp_503 = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_503.status_code == 503
+    assert "missing credentials" in resp_503.json()["detail"]
+
+    # 2. Missing EBAY_APP_ID -> fail closed with 503
+    monkeypatch.delenv("EBAY_APP_ID", raising=False)
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+
+    with pytest.raises(HTTPException) as exc_info:
+        _get_ebay_access_token()
+    assert exc_info.value.status_code == 503
+
+    resp_503_app = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_503_app.status_code == 503
+
+    # 3. Both env vars set -> token code works successfully
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_secret_value")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return json.dumps({"access_token": "v1_oauth_live_token", "expires_in": 7200}).encode()
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=10: FakeResponse())
+
+    token = _get_ebay_access_token()
+    assert token == "v1_oauth_live_token"
+
+    # Search endpoint succeeds with 200
+    resp_200 = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_200.status_code == 200
+
 
 
 
