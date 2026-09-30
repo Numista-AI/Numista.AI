@@ -167,6 +167,49 @@ def test_generate_estate_report_state_validation(client):
         assert "Unsupported or unrecognized state" in resp_unknown.get_json().get("error", "")
 
 
+def test_generate_estate_report_validation_400s(client):
+    """Verify 400 errors for missing fields, invalid mode, and estate_settlement without date_of_death (REQ-023F)."""
+    with patch.object(scan_main.fb_auth, "verify_id_token", return_value={"email": "tester@numista.ai", "uid": "uid123"}):
+        auth_header = {"Authorization": "Bearer valid-token", "Content-Type": "application/json"}
+
+        # 1. Missing required fields (e.g. owner_name and report_date missing)
+        resp_missing = client.post(
+            "/generate_estate_report",
+            headers=auth_header,
+            data=json.dumps({"mode": "living_inventory", "state": "NY"}),
+        )
+        assert resp_missing.status_code == 400
+        assert "Missing required fields" in resp_missing.get_json().get("error", "")
+
+        # 2. Invalid mode (mode not living_inventory or estate_settlement)
+        resp_invalid_mode = client.post(
+            "/generate_estate_report",
+            headers=auth_header,
+            data=json.dumps({
+                "mode": "unsupported_mode",
+                "state": "NY",
+                "owner_name": "Test Collector",
+                "report_date": "2026-09-30",
+            }),
+        )
+        assert resp_invalid_mode.status_code == 400
+        assert "Invalid mode" in resp_invalid_mode.get_json().get("error", "")
+
+        # 3. Estate settlement mode without date_of_death
+        resp_no_dod = client.post(
+            "/generate_estate_report",
+            headers=auth_header,
+            data=json.dumps({
+                "mode": "estate_settlement",
+                "state": "NY",
+                "owner_name": "Late Collector",
+                "report_date": "2026-09-30",
+            }),
+        )
+        assert resp_no_dod.status_code == 400
+        assert "date_of_death is required" in resp_no_dod.get_json().get("error", "")
+
+
 def test_initialize_estate_upgrade_security(client):
     """Verify /initialize_estate_upgrade requires Bearer auth and enforces UID matching (M1)."""
     # 1. Unauthenticated -> 401

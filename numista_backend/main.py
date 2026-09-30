@@ -10588,67 +10588,106 @@ async def get_cac_status():
     }
 
 
+def _get_ebay_access_token() -> str:
+    """Fetch eBay OAuth access token using client credentials from environment variables.
+
+    Reads EBAY_CERT_ID exclusively from os.environ (mounted via Secret Manager).
+    Reads EBAY_APP_ID from os.environ, falling back to config/ebay.app_id via Admin SDK.
+    Never reads cert_id from Firestore.
+    Fails closed with HTTPException 503 if credentials are missing or OAuth fails.
+    Never logs secret values.
+    """
+    ebay_cert_id = os.environ.get("EBAY_CERT_ID")
+    if not ebay_cert_id:
+        raise HTTPException(
+            status_code=503,
+            detail="eBay integration service is not configured (missing credentials)",
+        )
+
+    ebay_app_id = os.environ.get("EBAY_APP_ID")
+    if not ebay_app_id and db is not None:
+        try:
+            cfg_doc = db.collection("config").document("ebay").get()
+            if cfg_doc.exists:
+                cfg_data = cfg_doc.to_dict() or {}
+                ebay_app_id = cfg_data.get("app_id")
+        except Exception as e:
+            logger.warning(f"[_get_ebay_access_token] Could not load app_id from config/ebay: {type(e).__name__}")
+
+    if not ebay_app_id:
+        raise HTTPException(
+            status_code=503,
+            detail="eBay integration service is not configured (missing credentials)",
+        )
+
+    import base64, urllib.request, urllib.parse
+    cred = base64.b64encode(f"{ebay_app_id}:{ebay_cert_id}".encode()).decode()
+    data = urllib.parse.urlencode({
+        "grant_type": "client_credentials",
+        "scope": "https://api.ebay.com/oauth/api_scope",
+    }).encode()
+
+    token_req = urllib.request.Request(
+        "https://api.ebay.com/identity/v1/oauth2/token",
+        data=data,
+        headers={
+            "Authorization": f"Basic {cred}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(token_req, timeout=10) as r:
+            resp = json.loads(r.read())
+            access_token = resp.get("access_token")
+            if not access_token:
+                raise ValueError("No access_token returned by eBay identity service")
+            return access_token
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[_get_ebay_access_token] OAuth token request failed: {type(e).__name__}")
+        raise HTTPException(
+            status_code=503,
+            detail="eBay OAuth authentication failed",
+        )
+
+
 @app.get("/api/ebay/search")
-async def search_ebay_deals(q: str = "Morgan Silver Dollar MS64 NGC", limit: int = 5):
+async def search_ebay_deals(
+    q: str = "Morgan Silver Dollar MS64 NGC",
+    limit: int = 5,
+    authorization: Optional[str] = Header(None),
+):
     """
     Queries eBay Browse API to spot arbitrage/deals compared to Greysheet.
+    Requires Firebase Bearer authentication.
+    Fails closed (503) if EBAY_APP_ID or EBAY_CERT_ID is not configured or if OAuth fails.
+    Returns honest empty list if search returns no matches or errors. Never returns mock DEALS_DB.
     """
+    _authenticate_request(authorization, None)
+    access_token = _get_ebay_access_token()
+
     try:
-        # We reuse the token retrieval logic from the ebay_market_enrichment script.
-        # Set defaults if not present
-        ebay_app_id = os.environ.get("EBAY_APP_ID")
-        ebay_cert_id = os.environ.get("EBAY_CERT_ID")
-        if not ebay_app_id or not ebay_cert_id:
-            raise ValueError("EBAY_APP_ID and EBAY_CERT_ID environment variables must be set")
-        
-        # Identity token request
-        import base64, urllib.request, urllib.parse
-        cred = base64.b64encode(f"{ebay_app_id}:{ebay_cert_id}".encode()).decode()
-        data = urllib.parse.urlencode({
-            "grant_type": "client_credentials",
-            "scope": "https://api.ebay.com/oauth/api_scope"
-        }).encode()
-        
-        token_req = urllib.request.Request(
-            "https://api.ebay.com/identity/v1/oauth2/token", data=data,
-            headers={
-                "Authorization": f"Basic {cred}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            method="POST"
-        )
-        
-        # Execute query
-        try:
-            with urllib.request.urlopen(token_req, timeout=10) as r:
-                resp = json.loads(r.read())
-                access_token = resp["access_token"]
-        except Exception:
-            # Return dummy/mock response on authentication failure to allow play under test conditions
-            access_token = "MOCK_TOKEN"
-            
-        if access_token == "MOCK_TOKEN":
-            # Gracefully fallback to DEALS_DB format
-            return {"deals": DEALS_DB}
-            
-        # Call eBay Search
+        import urllib.request, urllib.parse
         params = urllib.parse.urlencode({
             "q": q,
             "category_ids": "253",  # Numismatics
             "limit": limit,
-            "sort": "price"
+            "sort": "price",
         })
         search_req = urllib.request.Request(
             f"https://api.ebay.com/buy/browse/v1/item_summary/search?{params}",
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-                "Accept": "application/json"
-            }
+                "Accept": "application/json",
+            },
         )
         with urllib.request.urlopen(search_req, timeout=10) as r:
             search_res = json.loads(r.read())
-            
+
         summaries = search_res.get("itemSummaries", [])
         deals = []
         for s in summaries:
@@ -10665,13 +10704,14 @@ async def search_ebay_deals(q: str = "Morgan Silver Dollar MS64 NGC", limit: int
                 "grade": "MS64",
                 "greysheet_bid": 95.00,
                 "net_margin": 95.00 - price_val - shipping_val,
-                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0
+                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0,
             })
-        return {"deals": deals if deals else DEALS_DB}
+        return {"deals": deals}
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("eBay deals error")
-        # Soft fallback to DEALS_DB
-        return {"deals": DEALS_DB}
+        logger.warning(f"[search_ebay_deals] eBay Browse search request failed: {type(e).__name__}")
+        return {"deals": []}
 
 
 @app.get("/api/portfolio/snapshot")

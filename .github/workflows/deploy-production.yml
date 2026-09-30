@@ -153,6 +153,7 @@ jobs:
             --image us-central1-docker.pkg.dev/studio-9101802118-8c9a8/cloud-run-source-deploy/numista-backend:latest \
             --region us-central1 \
             --project studio-9101802118-8c9a8 \
+            --update-secrets=EBAY_CERT_ID=EBAY_CERT_ID:latest \
             --min-instances 1 \
             --quiet
 

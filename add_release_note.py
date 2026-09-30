@@ -58,9 +58,15 @@ def suggest_next_version(current: str) -> str:
         return f"{m.group(1)}{int(m.group(2)) + 1}{m.group(3)}"
     return current + ".1"
 
+def clean_req_tags(text: str) -> str:
+    """Strip REQ tags from bullet text to avoid leaking internal task identifiers."""
+    t = re.sub(r"\s*\(REQ[-_][^)]+\)", "", text, flags=re.IGNORECASE)
+    t = re.sub(r"\bREQ[-_]\w+\b", "", t, flags=re.IGNORECASE)
+    return re.sub(r"\s{2,}", " ", t).strip()
+
 def build_dart_entry(version: str, dt: str, description: str, changes: list[str]) -> str:
     """Return a _Release(...) Dart block string."""
-    escaped = [c.replace("'", "\\'") for c in changes]
+    escaped = [clean_req_tags(c).replace("'", "\\'") for c in changes if clean_req_tags(c)]
     bullets  = "\n".join(f"      '{c}'," for c in escaped)
     return (
         f"  _Release(\n"
@@ -76,7 +82,8 @@ def build_dart_entry(version: str, dt: str, description: str, changes: list[str]
 
 def build_md_entry(version: str, dt: str, description: str, changes: list[str]) -> str:
     """Return a markdown ## block for RELEASE_NOTES.md."""
-    bullets = "\n".join(f"- {c}" for c in changes)
+    cleaned = [clean_req_tags(c) for c in changes if clean_req_tags(c)]
+    bullets = "\n".join(f"- {c}" for c in cleaned)
     return (
         f"## {version} — {dt}\n"
         f"**{description}**\n\n"

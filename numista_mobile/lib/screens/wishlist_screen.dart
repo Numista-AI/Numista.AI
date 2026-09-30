@@ -14,7 +14,7 @@ import '../models/program_model.dart';
 import '../widgets/common/ref_image_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/beta_checklist_service.dart';
-import 'deals_screen.dart';
+// import 'deals_screen.dart'; // Temporarily unused while Deal Spotter is hidden (REQ-023H)
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -458,81 +458,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildArbitrageDealsCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final headerColor = isDark ? Colors.white : const Color(0xFF31333F);
-    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DealsScreen()),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F9D58).withAlpha(20),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.shopping_bag_outlined,
-                      color: Color(0xFF0F9D58), size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Wishlist Deal Spotter',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: headerColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Check recent eBay sold listings and market pricing for your wishlist target coins',
-                        style: TextStyle(fontSize: 12, color: descColor),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: Color(0xFFF63366)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    // Hidden until eBay results are wired to secure server lookup (REQ-023H)
+    return const SizedBox.shrink();
   }
 
   @override
@@ -919,10 +846,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             future: EpnService.fetchEbayResults(coin),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-                );
+                return const SizedBox.shrink();
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const SizedBox.shrink();
@@ -933,7 +857,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 children: [
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Live Listings on eBay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                    child: Text('Reference Listings on eBay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                   ),
                   SizedBox(
                     height: 120,

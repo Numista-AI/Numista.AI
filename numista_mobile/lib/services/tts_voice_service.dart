@@ -17,6 +17,7 @@ class TtsVoiceService {
   static String? get currentlySpeakingText => _currentlySpeakingText;
   static double get speechRate => _speechRate;
   static bool get autoPlay => _autoPlay;
+  static bool get isSupported => kIsWeb;
 
   static void setAutoPlay(bool value) {
     _autoPlay = value;

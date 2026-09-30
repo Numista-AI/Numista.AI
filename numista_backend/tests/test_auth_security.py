@@ -387,4 +387,199 @@ def test_receipt_endpoints_auth_checks(monkeypatch):
     ).status_code == 403
 
 
+def test_ebay_search_auth(monkeypatch):
+    """Verify /api/ebay/search requires Firebase Bearer auth and rejects unauthed requests."""
+    # 1. Unauthenticated request -> 401
+    resp_unauth = client.get("/api/ebay/search?q=Morgan")
+    assert resp_unauth.status_code == 401
+    assert "Authorization header" in resp_unauth.json()["detail"]
+
+    # 2. Invalid token format -> 401
+    resp_invalid = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Basic 12345"})
+    assert resp_invalid.status_code == 401
+
+
+def test_ebay_token_code_and_fail_closed(monkeypatch):
+    """Verify eBay token code works when env vars are set, and fails closed (503) when missing (REQ-023G)."""
+    from firebase_admin import auth as fb_auth
+    from main import _get_ebay_access_token
+    from fastapi import HTTPException
+    import json
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    # 1. Missing EBAY_CERT_ID -> fail closed with 503 (no Firestore fallback)
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.delenv("EBAY_CERT_ID", raising=False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        _get_ebay_access_token()
+    assert exc_info.value.status_code == 503
+    assert "missing credentials" in exc_info.value.detail
+
+    resp_503 = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_503.status_code == 503
+    assert "missing credentials" in resp_503.json()["detail"]
+
+    # 2. Missing EBAY_APP_ID in both env and Firestore -> fail closed with 503
+    import main
+    from unittest.mock import MagicMock
+    monkeypatch.delenv("EBAY_APP_ID", raising=False)
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+    mock_empty_db = MagicMock()
+    mock_empty_doc = MagicMock()
+    mock_empty_doc.exists = False
+    mock_empty_db.collection.return_value.document.return_value.get.return_value = mock_empty_doc
+    monkeypatch.setattr(main, "db", mock_empty_db)
+
+    with pytest.raises(HTTPException) as exc_info:
+        _get_ebay_access_token()
+    assert exc_info.value.status_code == 503
+
+    resp_503_app = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_503_app.status_code == 503
+
+    # 3. Both env vars set -> token code works successfully
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_secret_value")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return json.dumps({"access_token": "v1_oauth_live_token", "expires_in": 7200}).encode()
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=10: FakeResponse())
+
+    token = _get_ebay_access_token()
+    assert token == "v1_oauth_live_token"
+
+    # Search endpoint succeeds with 200
+    resp_200 = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp_200.status_code == 200
+
+
+def test_ebay_app_id_firestore_fallback(monkeypatch):
+    """Verify EBAY_APP_ID falls back to config/ebay doc in Firestore if missing from env (REQ-023H Item 2)."""
+    import main
+    from main import _get_ebay_access_token
+    from unittest.mock import MagicMock
+    import json
+
+    monkeypatch.delenv("EBAY_APP_ID", raising=False)
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_value")
+
+    # Mock Firestore db doc
+    mock_db = MagicMock()
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {"app_id": "firestore_app_id_123", "cert_id": "SHOULD_NOT_BE_READ"}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    monkeypatch.setattr(main, "db", mock_db)
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return json.dumps({"access_token": "firestore_oauth_token", "expires_in": 7200}).encode()
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=10: FakeResponse())
+
+    token = _get_ebay_access_token()
+    assert token == "firestore_oauth_token"
+    mock_db.collection.assert_called_with("config")
+    mock_db.collection().document.assert_called_with("ebay")
+
+
+def test_ebay_cert_id_never_falls_back_to_firestore(monkeypatch):
+    """Verify EBAY_CERT_ID is never read from Firestore even if present in config/ebay doc (REQ-023H Item 2)."""
+    import main
+    from main import _get_ebay_access_token
+    from unittest.mock import MagicMock
+    from fastapi import HTTPException
+
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.delenv("EBAY_CERT_ID", raising=False)
+
+    mock_db = MagicMock()
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {"cert_id": "firestore_cert_id"}
+    mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
+    monkeypatch.setattr(main, "db", mock_db)
+
+    with pytest.raises(HTTPException) as exc_info:
+        _get_ebay_access_token()
+    assert exc_info.value.status_code == 503
+    assert "missing credentials" in exc_info.value.detail
+
+
+def test_ebay_oauth_failure_returns_503(monkeypatch):
+    """Verify eBay OAuth failure returns 503 and never falls back to mock token (REQ-023H Item 3)."""
+    from firebase_admin import auth as fb_auth
+    import urllib.request
+    from urllib.error import URLError
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+
+    def fail_urlopen(req, timeout=10):
+        raise URLError("Connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", fail_urlopen)
+
+    resp = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == "eBay OAuth authentication failed"
+
+
+def test_ebay_search_failure_returns_empty_deals_never_mock_deals(monkeypatch):
+    """Verify eBay Browse search failure returns 200 with empty list, never mock DEALS_DB (REQ-023H Item 3)."""
+    import main
+    from firebase_admin import auth as fb_auth
+    import urllib.request
+    import json
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+
+    class FakeOAuthResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return json.dumps({"access_token": "valid_token", "expires_in": 7200}).encode()
+
+    def fake_urlopen(req, timeout=10):
+        url = getattr(req, "full_url", str(req))
+        if "api.ebay.com/identity" in url:
+            return FakeOAuthResponse()
+        raise RuntimeError("eBay browse API error")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    resp = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == {"deals": []}
+    assert data["deals"] != main.DEALS_DB
+
+
 

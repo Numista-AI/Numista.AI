@@ -962,10 +962,8 @@ class _AddToWishlistDialog extends StatefulWidget {
 }
 
 class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
-  bool _loading = true;
   List<Map<String, dynamic>> _ebayResults = [];
   final TextEditingController _priceCtrl = TextEditingController(text: '\$0.00');
-  String? _error;
 
   @override
   void initState() {
@@ -1010,18 +1008,13 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
 
       setState(() {
         _ebayResults = results;
-        _loading = false;
         if (count > 0) {
           final avg = sum / count;
           _priceCtrl.text = '\$${avg.toStringAsFixed(2)}';
         }
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = e.toString();
-      });
+    } catch (_) {
+      // Non-fatal if eBay market lookup is unavailable
     }
   }
 
@@ -1102,32 +1095,9 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (_loading) ...[
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: CircularProgressIndicator(color: Color(0xFFF63366)),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    'Fetching live eBay market value...',
-                    style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B), fontSize: 12),
-                  ),
-                ),
-              ] else if (_error != null) ...[
-                Text(
-                  'Error fetching eBay prices: $_error',
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                ),
-              ] else if (_ebayResults.isEmpty) ...[
-                Text(
-                  'No active listings found on eBay. Target price defaulted.',
-                  style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ] else ...[
+              if (_ebayResults.isNotEmpty) ...[
                 const Text(
-                  'Live Reference Listings on eBay:',
+                  'Reference Listings on eBay:',
                   style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -1181,6 +1151,33 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
                   ),
                 ),
               ],
+              InkWell(
+                onTap: () async {
+                  final query = '${widget.result.coinYear} ${widget.result.denomination} ${widget.result.mintMarks} ${widget.result.coinName}'.trim();
+                  final url = EpnService.buildSearchUrlFromQuery(query);
+                  if (await canLaunchUrl(Uri.parse(url))) {
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.open_in_new, size: 13, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Search eBay for current prices',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
