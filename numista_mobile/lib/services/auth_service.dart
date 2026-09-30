@@ -161,25 +161,27 @@ class AuthService {
   // ─── Human-friendly Firebase error messages ───────────────────────────────
   static String friendlyError(String code) => _friendlyError(code);
 
-  static String _friendlyError(String code) {
+  static String _friendlyError(String code, {bool passwordMode = false}) {
     switch (code) {
       case 'user-not-found':
       case 'wrong-password':
       case 'invalid-credential':
       case 'invalid-login-credentials':
-        return 'Incorrect email or PIN.';
+        return passwordMode
+            ? 'Incorrect email or password.'
+            : 'Incorrect email or PIN.';
       case 'email-already-in-use':
-        return 'An account already exists with that email.';
+        return 'An account with that email already exists. Try signing in instead.';
       case 'weak-password':
         return 'PIN must be exactly 6 digits.';
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'too-many-requests':
-        return 'Too many tries. Please wait 15 minutes or use Forgot your PIN.';
+        return 'Too many tries. Please wait a few minutes, or use Forgot your PIN.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
       default:
-        return 'Something went wrong. Please try again. ($code)';
+        return 'Something went wrong. Please try again.';
     }
   }
 }

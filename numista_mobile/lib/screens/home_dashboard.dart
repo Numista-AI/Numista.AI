@@ -1691,15 +1691,30 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.402',
+    date: '2026-09-30',
+    description: 'Transfer Security & Auth Hardening',
+    isLatest: true,
+    changes: [
+      'Security: transfer routes now require a valid sign-in token — unauthenticated requests are rejected',
+      'Security: transfer identity is verified by the server; the request body cannot override it',
+      'Security: recipient-locked transfers can only be claimed by the designated account',
+      'Security: repeated wrong claim-PIN attempts trigger a 15-minute lockout on the transfer',
+      'Privacy: claim PIN removed from the transfer email subject line',
+      'Auth: sign-in lockout message softened to \"a few minutes\" rather than a specific time',
+      'Auth: sign-up \"account already exists\" message is softer and more helpful',
+    ],
+  ),
+  _Release(
     version: 'v4.401',
     date: '2026-09-30',
     description: 'PIN Authentication Experience & Account Protection',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Auth: prioritize 6-digit PIN sign-in flow and streamline credential entry',
       'Auth: remove legacy password badge and relocate older account password option',
-      'Security: enforce generic error messages to eliminate account enumeration',
-      'Security: apply friendly 15-minute lockout notice on repeated failed attempts',
+      'Security: sign-in and reset messages no longer reveal whether an account exists',
+      'Security: repeated failed sign-in attempts trigger a brief cooldown with a friendly notice',
       'Privacy: sanitize lateral transfer notifications to omit coin counts',
     ],
   ),
