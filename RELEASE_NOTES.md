@@ -400,6 +400,15 @@
 
 
 
+## v4.401 — 2026-09-30
+**PIN Authentication Experience & Account Protection**
+
+- Auth: prioritize 6-digit PIN sign-in flow and streamline credential entry
+- Auth: remove legacy password badge and relocate older account password option
+- Security: enforce generic error messages to eliminate account enumeration
+- Security: apply friendly 15-minute lockout notice on repeated failed attempts
+- Privacy: sanitize lateral transfer notifications to omit coin counts
+
 ## v4.400 — 2026-09-30
 **Security Hardening & Platform Protection**
 

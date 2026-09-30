@@ -1691,10 +1691,23 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.401',
+    date: '2026-09-30',
+    description: 'PIN Authentication Experience & Account Protection',
+    isLatest: true,
+    changes: [
+      'Auth: prioritize 6-digit PIN sign-in flow and streamline credential entry',
+      'Auth: remove legacy password badge and relocate older account password option',
+      'Security: enforce generic error messages to eliminate account enumeration',
+      'Security: apply friendly 15-minute lockout notice on repeated failed attempts',
+      'Privacy: sanitize lateral transfer notifications to omit coin counts',
+    ],
+  ),
+  _Release(
     version: 'v4.400',
     date: '2026-09-30',
     description: 'Security Hardening & Platform Protection',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: enforce Bearer token authentication and cross-user validation on scan service',
       'Security: restrict scan service CORS to exact allowed origins',
