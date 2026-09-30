@@ -913,6 +913,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     ),
                     InkWell(
                       onTap: () {
+                        if (!TtsVoiceService.isSupported) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Voice playback is not available on mobile yet.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
                         TtsVoiceService.toggleSpeak(content, onStateChange: () {
                           if (mounted) setState(() {});
                         });
