@@ -10591,13 +10591,30 @@ async def get_cac_status():
 def _get_ebay_access_token() -> str:
     """Fetch eBay OAuth access token using client credentials from environment variables.
 
-    Reads EBAY_APP_ID and EBAY_CERT_ID exclusively from os.environ (mounted via Secret Manager).
-    Fails closed with HTTPException 503 if credentials are missing (no Firestore fallback).
+    Reads EBAY_CERT_ID exclusively from os.environ (mounted via Secret Manager).
+    Reads EBAY_APP_ID from os.environ, falling back to config/ebay.app_id via Admin SDK.
+    Never reads cert_id from Firestore.
+    Fails closed with HTTPException 503 if credentials are missing or OAuth fails.
     Never logs secret values.
     """
-    ebay_app_id = os.environ.get("EBAY_APP_ID")
     ebay_cert_id = os.environ.get("EBAY_CERT_ID")
-    if not ebay_app_id or not ebay_cert_id:
+    if not ebay_cert_id:
+        raise HTTPException(
+            status_code=503,
+            detail="eBay integration service is not configured (missing credentials)",
+        )
+
+    ebay_app_id = os.environ.get("EBAY_APP_ID")
+    if not ebay_app_id and db is not None:
+        try:
+            cfg_doc = db.collection("config").document("ebay").get()
+            if cfg_doc.exists:
+                cfg_data = cfg_doc.to_dict() or {}
+                ebay_app_id = cfg_data.get("app_id")
+        except Exception as e:
+            logger.warning(f"[_get_ebay_access_token] Could not load app_id from config/ebay: {type(e).__name__}")
+
+    if not ebay_app_id:
         raise HTTPException(
             status_code=503,
             detail="eBay integration service is not configured (missing credentials)",
