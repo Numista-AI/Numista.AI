@@ -523,3 +523,63 @@ def test_ebay_cert_id_never_falls_back_to_firestore(monkeypatch):
     assert "missing credentials" in exc_info.value.detail
 
 
+def test_ebay_oauth_failure_returns_503(monkeypatch):
+    """Verify eBay OAuth failure returns 503 and never falls back to mock token (REQ-023H Item 3)."""
+    from firebase_admin import auth as fb_auth
+    import urllib.request
+    from urllib.error import URLError
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+
+    def fail_urlopen(req, timeout=10):
+        raise URLError("Connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", fail_urlopen)
+
+    resp = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == "eBay OAuth authentication failed"
+
+
+def test_ebay_search_failure_returns_empty_deals_never_mock_deals(monkeypatch):
+    """Verify eBay Browse search failure returns 200 with empty list, never mock DEALS_DB (REQ-023H Item 3)."""
+    import main
+    from firebase_admin import auth as fb_auth
+    import urllib.request
+    import json
+
+    def fake_verify(token, *args, **kwargs):
+        return {"email": "user@example.com", "uid": "user_123"}
+    monkeypatch.setattr(fb_auth, "verify_id_token", fake_verify)
+
+    monkeypatch.setenv("EBAY_APP_ID", "test_app_id")
+    monkeypatch.setenv("EBAY_CERT_ID", "test_cert_id")
+
+    class FakeOAuthResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return json.dumps({"access_token": "valid_token", "expires_in": 7200}).encode()
+
+    def fake_urlopen(req, timeout=10):
+        url = getattr(req, "full_url", str(req))
+        if "api.ebay.com/identity" in url:
+            return FakeOAuthResponse()
+        raise RuntimeError("eBay browse API error")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    resp = client.get("/api/ebay/search?q=Morgan", headers={"Authorization": "Bearer valid_token"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == {"deals": []}
+    assert data["deals"] != main.DEALS_DB
+
+
+

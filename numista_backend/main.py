@@ -10640,10 +10640,18 @@ def _get_ebay_access_token() -> str:
     try:
         with urllib.request.urlopen(token_req, timeout=10) as r:
             resp = json.loads(r.read())
-            return resp.get("access_token", "MOCK_TOKEN")
+            access_token = resp.get("access_token")
+            if not access_token:
+                raise ValueError("No access_token returned by eBay identity service")
+            return access_token
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"[_get_ebay_access_token] OAuth token request failed: {type(e).__name__}")
-        return "MOCK_TOKEN"
+        logger.error(f"[_get_ebay_access_token] OAuth token request failed: {type(e).__name__}")
+        raise HTTPException(
+            status_code=503,
+            detail="eBay OAuth authentication failed",
+        )
 
 
 @app.get("/api/ebay/search")
@@ -10655,14 +10663,11 @@ async def search_ebay_deals(
     """
     Queries eBay Browse API to spot arbitrage/deals compared to Greysheet.
     Requires Firebase Bearer authentication.
-    Fails closed (503) if EBAY_APP_ID or EBAY_CERT_ID is not configured.
+    Fails closed (503) if EBAY_APP_ID or EBAY_CERT_ID is not configured or if OAuth fails.
+    Returns honest empty list if search returns no matches or errors. Never returns mock DEALS_DB.
     """
     _authenticate_request(authorization, None)
     access_token = _get_ebay_access_token()
-
-    if access_token == "MOCK_TOKEN":
-        # Gracefully fallback to DEALS_DB format in mock / test conditions
-        return {"deals": DEALS_DB}
 
     try:
         import urllib.request, urllib.parse
@@ -10701,10 +10706,12 @@ async def search_ebay_deals(
                 "net_margin": 95.00 - price_val - shipping_val,
                 "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0,
             })
-        return {"deals": deals if deals else DEALS_DB}
+        return {"deals": deals}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"[search_ebay_deals] eBay Browse search request failed: {type(e).__name__}")
-        return {"deals": DEALS_DB}
+        return {"deals": []}
 
 
 @app.get("/api/portfolio/snapshot")
