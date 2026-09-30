@@ -1,10 +1,10 @@
-# SCAN REPORT: Numista.AI System Audit (v4.399)
+# SCAN REPORT: Numista.AI System Audit (v4.400)
 
 ## Executive Summary
 * **Status:** 🟢 **PASS WITH WARNINGS** (System audit completed with a 100% backend unit pass rate [362 passed, 0 failed in 17.16s], 0 Dart compilation errors and 5 non-fatal info/deprecation warnings [clean analyzer: `dart analyze lib` exit 0], 396/396 Flutter unit tests passed [100% pass rate in 15.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 43.8s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
 * **Scan Date:** 2026-09-30
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.399, Mobile/Web Frontend v4.399 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+* **Versions Scanned:** Backend v4.400, Mobile/Web Frontend v4.400 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
 ---
 

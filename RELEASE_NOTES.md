@@ -399,6 +399,19 @@
 
 
 
+
+## v4.400 — 2026-09-30
+**Audit Enhancements & Platform Updates**
+
+- Audit: generate 360-degree system scan report v4.399
+- Release: sync release notes and version header to v4.399
+- Front-door: resolve sign-in dead ends, validate sitemap, and enforce demo isolation (REQ-023D / REQ-020)
+- Release: sync release notes for v4.398
+- Receipts: resolve blank white page by dynamically streaming PDF and JPG scans (REQ-019)
+- Sync release notes for v4.396 (REQ-023C / REQ-018A)
+- Routes: wire public front door routes and zero-write demo vault (REQ-023C)
+- Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)
+
 ## v4.399 — 2026-09-29
 **Front Door Reliability & Session Flow Architecture**
 

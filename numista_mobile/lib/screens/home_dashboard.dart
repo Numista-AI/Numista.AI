@@ -1691,10 +1691,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.400',
+    date: '2026-09-30',
+    description: 'Audit Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Audit: generate 360-degree system scan report v4.399',
+      'Release: sync release notes and version header to v4.399',
+      'Front-door: resolve sign-in dead ends, validate sitemap, and enforce demo isolation (REQ-023D / REQ-020)',
+      'Release: sync release notes for v4.398',
+      'Receipts: resolve blank white page by dynamically streaming PDF and JPG scans (REQ-019)',
+      'Sync release notes for v4.396 (REQ-023C / REQ-018A)',
+      'Routes: wire public front door routes and zero-write demo vault (REQ-023C)',
+      'Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)',
+    ],
+  ),
+  _Release(
     version: 'v4.399',
     date: '2026-09-29',
     description: 'Front Door Reliability & Session Flow Architecture',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation',
       'Security: enforce zero Firestore network reads in demo mode for credential isolation',
