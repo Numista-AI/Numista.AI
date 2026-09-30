@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
-import 'dart:js_interop';
+import 'tts_voice_stub.dart'
+    if (dart.library.js_interop) 'tts_voice_web.dart' as tts_impl;
 
 /// Cross-platform Text-to-Speech service prioritizing Web & Desktop Web synthesis.
 /// Uses Web Speech API (window.speechSynthesis) on Web and provides full rate/pitch control.
@@ -33,49 +33,28 @@ class TtsVoiceService {
 
     await stop();
 
-    if (kIsWeb) {
-      try {
-        final synth = web.window.speechSynthesis;
-        final utterance = web.SpeechSynthesisUtterance(cleanText);
-        utterance.rate = _speechRate;
-        utterance.pitch = _pitch;
-        utterance.lang = 'en-US';
+    _isPlaying = true;
+    _currentlySpeakingText = text;
 
-        _isPlaying = true;
-        _currentlySpeakingText = text;
-
-        // Callback when utterance ends
-        utterance.onend = ((web.Event e) {
-          _isPlaying = false;
-          _currentlySpeakingText = null;
-          if (onComplete != null) onComplete();
-        }).toJS;
-
-        utterance.onerror = ((web.Event e) {
-          _isPlaying = false;
-          _currentlySpeakingText = null;
-        }).toJS;
-
-        synth.speak(utterance);
-      } catch (e) {
-        debugPrint('[TtsVoiceService] Web Speech API error: $e');
+    tts_impl.webSpeak(
+      cleanText,
+      _speechRate,
+      _pitch,
+      () {
         _isPlaying = false;
         _currentlySpeakingText = null;
-      }
-    } else {
-      debugPrint('[TtsVoiceService] Non-web TTS platform fallback log: $cleanText');
-    }
+        if (onComplete != null) onComplete();
+      },
+      () {
+        _isPlaying = false;
+        _currentlySpeakingText = null;
+      },
+    );
   }
 
   /// Stops current speech playback.
   static Future<void> stop() async {
-    if (kIsWeb) {
-      try {
-        web.window.speechSynthesis.cancel();
-      } catch (e) {
-        debugPrint('[TtsVoiceService] Error cancelling speech: $e');
-      }
-    }
+    tts_impl.webStop();
     _isPlaying = false;
     _currentlySpeakingText = null;
   }

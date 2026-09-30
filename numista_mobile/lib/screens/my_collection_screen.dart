@@ -29,6 +29,7 @@ import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/estate_report_service.dart';
+import '../services/estate_profile_service.dart';
 import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
@@ -5966,18 +5967,56 @@ class _GenerateReportDialog extends StatefulWidget {
 
 class _GenerateReportDialogState extends State<_GenerateReportDialog> {
   bool _isLoading = true;
+  bool _needsStateSelection = false;
+  String? _selectedState;
   String? _error;
   EstateReportResult? _result;
+
+  static const _supportedStates = ['NY', 'NC', 'NJ', 'FL', 'CA', 'TX', 'SC'];
 
   @override
   void initState() {
     super.initState();
-    _startGeneration();
+    _checkJurisdictionAndStart();
   }
 
-  Future<void> _startGeneration() async {
+  Future<void> _checkJurisdictionAndStart() async {
     setState(() {
       _isLoading = true;
+      _needsStateSelection = false;
+      _error = null;
+    });
+
+    try {
+      final profile = await EstateProfileService.getProfile(widget.userEmail);
+      final jur = profile?.jurisdiction.trim().toUpperCase();
+      if (jur != null && jur.isNotEmpty && _supportedStates.contains(jur)) {
+        _selectedState = jur;
+        await _generate(jur);
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _needsStateSelection = true;
+            _selectedState = (jur != null && _supportedStates.contains(jur)) ? jur : 'NY';
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _needsStateSelection = true;
+          _selectedState = 'NY';
+        });
+      }
+    }
+  }
+
+  Future<void> _generate(String state) async {
+    setState(() {
+      _isLoading = true;
+      _needsStateSelection = false;
       _error = null;
     });
 
@@ -5986,14 +6025,14 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
       final identity = EphemeralReportIdentity(
         ownerLegalName: ownerName,
         reportDate: intl.DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        state: 'NY',
+        state: state,
       );
 
       final result = await EstateReportService.generateReport(
         uid: widget.userEmail,
         identity: identity,
         mode: 'living_inventory',
-        state: 'NY',
+        state: state,
         includePhotos: true,
       ).timeout(
         const Duration(seconds: 45),
@@ -6051,6 +6090,40 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                   ),
                 ),
               ),
+            ] else if (_needsStateSelection) ...[
+              Text(
+                'Please select your legal jurisdiction for estate tax and probate calculations:',
+                style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
+                value: _selectedState,
+                dropdownColor: bgCard,
+                decoration: InputDecoration(
+                  labelText: 'State / Jurisdiction',
+                  labelStyle: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF5A5C69)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade400),
+                  ),
+                ),
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
+                items: _supportedStates
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedState = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _generate(_selectedState ?? 'NY'),
+                icon: const Icon(Icons.picture_as_pdf, size: 18),
+                label: const Text('Generate Report'),
+                style: ElevatedButton.styleFrom(backgroundColor: pink, foregroundColor: Colors.white),
+              ),
             ] else if (_error != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -6099,7 +6172,13 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
       actions: [
         if (_error != null)
           TextButton(
-            onPressed: _startGeneration,
+            onPressed: () {
+              if (_selectedState != null) {
+                _generate(_selectedState!);
+              } else {
+                _checkJurisdictionAndStart();
+              }
+            },
             child: const Text('Retry', style: TextStyle(color: pink)),
           ),
         TextButton(

@@ -31,7 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _campIdController = TextEditingController();
   final _mkridController = TextEditingController();
   final _appIdController = TextEditingController();
-  final _certIdController = TextEditingController();
   bool _isLoading = true;
   bool _dedupRunning = false;
   Map<String, dynamic>? _dedupResults;
@@ -99,7 +98,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _campIdController.text = settings['campaignId'] ?? '';
       _mkridController.text = settings['rotationId'] ?? '';
       _appIdController.text = settings['appId'] ?? '';
-      _certIdController.text = settings['certId'] ?? '';
       _isLoading = false;
     });
   }
@@ -109,7 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _campIdController.text.trim(),
       _mkridController.text.trim(),
       appId: _appIdController.text.trim(),
-      certId: _certIdController.text.trim(),
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,7 +120,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _campIdController.dispose();
     _mkridController.dispose();
     _appIdController.dispose();
-    _certIdController.dispose();
     super.dispose();
   }
 
@@ -380,21 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     border: const OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _certIdController,
-                  obscureText: true,
-                  style: TextStyle(color: headerColor),
-                  decoration: InputDecoration(
-                    labelText: 'Cert ID (Client Secret)',
-                    labelStyle: TextStyle(color: descColor),
-                    hintText: 'PRD-118f0640b6a9-...',
-                    hintStyle: TextStyle(color: descColor.withAlpha(120)),
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: borderColor)),
-                    focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1565C0))),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
+
                 const SizedBox(height: 12),
                 InkWell(
                   onTap: () => launchUrl(Uri.parse('https://developer.ebay.com/my/keys')),

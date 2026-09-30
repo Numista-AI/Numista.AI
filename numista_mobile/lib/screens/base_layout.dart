@@ -20,7 +20,6 @@ import 'add_coins_hub.dart';
 import 'wishlist_screen.dart';
 import 'estate_planning_screen.dart';
 import 'human_ai_trainer_screen.dart';
-import 'login_screen.dart';
 import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
 import 'admin_grade_flags_screen.dart';
@@ -563,9 +562,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             ),
             WizardOverlay(
               onCreateAccount: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
+                AuthGate.navigateTo(context, initialAuthTab: 1);
               },
             ),
             // Morgan guide panel — floats above screen when a guide is active
@@ -1265,7 +1262,7 @@ class _BaseLayoutState extends State<BaseLayout> {
         await AuthService.signOut();
       }
     }
-    // The StreamBuilder in main.dart automatically redirects to LoginScreen
+    // The StreamBuilder in AuthGate automatically redirects to LoginScreen upon signOut
   }
 }
 
@@ -1390,9 +1387,7 @@ class _GuestBanner extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           OutlinedButton(
-            onPressed: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            ),
+            onPressed: () => AuthGate.navigateTo(context, initialAuthTab: 1),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white54),

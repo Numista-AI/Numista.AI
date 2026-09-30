@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:web/web.dart' as web;
+import 'backup_export_stub.dart'
+    if (dart.library.js_interop) 'backup_export_web.dart' as dl_impl;
 import 'auth_service.dart';
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
@@ -217,24 +217,6 @@ class BackupExportService {
   }
 
   static void _triggerWebDownload(String content, String filename, String mimeType) {
-    try {
-      final bytes = utf8.encode(content);
-      final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: mimeType));
-      final url = web.URL.createObjectURL(blob);
-      final anchor = web.HTMLAnchorElement()
-        ..href = url
-        ..download = filename
-        ..style.display = 'none';
-      web.document.body?.appendChild(anchor);
-      anchor.click();
-      web.document.body?.removeChild(anchor);
-      // Give browser download manager ample time (5s) to acquire the blob stream
-      Future.delayed(const Duration(seconds: 5), () {
-        web.URL.revokeObjectURL(url);
-      });
-    } catch (e) {
-      debugPrint('[BackupExportService] Web download error: $e');
-      rethrow;
-    }
+    dl_impl.triggerWebDownload(content, filename, mimeType);
   }
 }

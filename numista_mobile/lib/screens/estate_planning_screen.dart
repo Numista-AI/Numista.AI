@@ -3855,7 +3855,7 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
             ? DateFormat('yyyy-MM-dd').format(widget.dateOfDeath!)
             : null,
         includeContactsInPdf: _includeContacts,
-        state: widget.profile.jurisdiction.isNotEmpty ? widget.profile.jurisdiction : 'NY',
+        state: widget.profile.jurisdiction,
       );
       Navigator.pop(context, identity);
     }
