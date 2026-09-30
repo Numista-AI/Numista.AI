@@ -7455,21 +7455,21 @@ def _resolve_receipt_blob(user_email: str, receipt_id: str, gcs_path: str):
     """
     Locate and download receipt bytes from GCS. Supports gs:// URIs, https:// URLs,
     and relative paths, with automatic fallback candidate checks.
+    Enforces bucket pinning to IMPORT_BUCKET and owner-prefix validation before download.
     """
     import urllib.parse
-    bucket_name = IMPORT_BUCKET
     blob_name = ""
 
     if gcs_path:
         if gcs_path.startswith("gs://"):
             parts = gcs_path[len("gs://"):].split("/", 1)
-            bucket_name = parts[0]
+            # Bucket in URI is intentionally ignored; storage is pinned to IMPORT_BUCKET
             blob_name = parts[1] if len(parts) > 1 else ""
         elif gcs_path.startswith("http://") or gcs_path.startswith("https://"):
             parsed = urllib.parse.urlparse(gcs_path)
             path_clean = parsed.path.lstrip("/")
             if "/" in path_clean:
-                bucket_name, blob_name = path_clean.split("/", 1)
+                _, blob_name = path_clean.split("/", 1)
             else:
                 blob_name = path_clean
         else:
@@ -7478,15 +7478,28 @@ def _resolve_receipt_blob(user_email: str, receipt_id: str, gcs_path: str):
     if not gcs_client:
         raise HTTPException(status_code=500, detail="GCS client is not configured")
 
-    bucket = gcs_client.bucket(bucket_name)
+    # Pin bucket access exclusively to IMPORT_BUCKET (user content bucket)
+    bucket = gcs_client.bucket(IMPORT_BUCKET)
     file_bytes = None
     blob_ct = None
 
+    clean_user = user_email.strip().lower()
+    expected_prefixes = (
+        f"receipts/{clean_user}/",
+        f"{clean_user}/",
+    )
+
     if blob_name:
+        # Enforce owner-folder check BEFORE downloading bytes
+        if not any(blob_name.lower().startswith(p) for p in expected_prefixes):
+            logger.warning(f"Blob path '{blob_name}' does not match user folder for '{user_email}'")
+            raise HTTPException(status_code=403, detail="Access denied: storage path outside user folder")
         try:
             b = bucket.blob(blob_name)
             file_bytes = b.download_as_bytes()
             blob_ct = getattr(b, "content_type", None)
+        except HTTPException:
+            raise
         except Exception:
             file_bytes = None
 
@@ -7530,6 +7543,7 @@ def receipt_view_url(
     Return a reliable streaming URL for viewing original PDF, JPG, or PNG receipt documents inline.
     Looks up receipt metadata across receipts collection, review_queue, and coins.
     """
+    import urllib.parse
     owner_key = _authenticate_request(authorization, user_email)
     user_email = owner_key
 
@@ -7555,7 +7569,9 @@ def receipt_view_url(
         except Exception:
             pass
 
-    stream_url = f"{base_url}/api/receipts/{user_email}/{receipt_id}/stream"
+    quoted_user = urllib.parse.quote(user_email, safe='@')
+    quoted_id = urllib.parse.quote(receipt_id, safe='')
+    stream_url = f"{base_url}/api/receipts/{quoted_user}/{quoted_id}/stream"
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split("Bearer ", 1)[1].strip()
         stream_url += f"?token={token}"
@@ -7580,6 +7596,7 @@ def receipt_stream(
     Direct document stream endpoint that reads receipt bytes (PDF, JPG, PNG, etc.)
     from GCS using Cloud Run ADC and streams directly to the browser with accurate MIME headers.
     """
+    import urllib.parse
     from fastapi.responses import Response
 
     auth_header = authorization or (f"Bearer {token}" if token else None)
@@ -7612,8 +7629,12 @@ def receipt_stream(
     else:
         out_filename = f"{receipt_id}.{download_ext}"
 
+    # Strip quotes, CR, and LF for standard quoted-string filename parameter; add RFC 5987 filename*
+    clean_ascii_filename = out_filename.replace('"', '').replace('\r', '').replace('\n', '').strip()
+    encoded_filename = urllib.parse.quote(out_filename, safe='')
+
     headers = {
-        "Content-Disposition": f'inline; filename="{out_filename}"',
+        "Content-Disposition": f'inline; filename="{clean_ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}',
         "Cache-Control": "private, max-age=3600",
     }
     return Response(
