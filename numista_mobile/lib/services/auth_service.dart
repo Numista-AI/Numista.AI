@@ -128,8 +128,13 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
       return AuthResult.success(
-          message: 'Reset email sent to ${email.trim()}. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
+          message: 'If an account exists for ${email.trim()}, a PIN reset link has been sent. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        // Enforce zero account enumeration even if Firebase enumeration protection is disabled
+        return AuthResult.success(
+            message: 'If an account exists for ${email.trim()}, a PIN reset link has been sent. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
+      }
       return AuthResult.failure(_friendlyError(e.code));
     }
   }
@@ -154,13 +159,15 @@ class AuthService {
   static Future<void> signOut() => _auth.signOut();
 
   // ─── Human-friendly Firebase error messages ───────────────────────────────
+  static String friendlyError(String code) => _friendlyError(code);
+
   static String _friendlyError(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'No account found with that email.';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Incorrect email or PIN. Please try again.';
+      case 'invalid-login-credentials':
+        return 'Incorrect email or PIN.';
       case 'email-already-in-use':
         return 'An account already exists with that email.';
       case 'weak-password':
@@ -168,7 +175,7 @@ class AuthService {
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'too-many-requests':
-        return 'Too many failed attempts. Please wait a moment and try again.';
+        return 'Too many tries. Please wait 15 minutes or use Forgot your PIN.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
       default:
