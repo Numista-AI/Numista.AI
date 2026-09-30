@@ -21,6 +21,15 @@ from pathlib import Path
 
 import add_release_note as arn
 
+def get_k_app_version() -> str:
+    """Extract kAppVersion constant from numista_mobile/lib/constants.dart."""
+    constants_file = Path(__file__).parent / "numista_mobile" / "lib" / "constants.dart"
+    if not constants_file.exists():
+        return ""
+    text = constants_file.read_text(encoding="utf-8")
+    m = re.search(r"const\s+String\s+kAppVersion\s*=\s*['\"]([^'\"]+)['\"];", text)
+    return m.group(1).strip() if m else ""
+
 def get_last_release_info() -> tuple[str, str]:
     """Extract (last_version, last_date) from RELEASE_NOTES.md."""
     if not arn.RELEASE_NOTES.exists():
@@ -62,7 +71,12 @@ def get_commits_since_last_release(since_date: str) -> list[str]:
                 flags=re.IGNORECASE
             )
             cleaned = re.sub(r"^(feat|fix|refactor|docs|style|perf|test|chore):\s*", "", cleaned, flags=re.IGNORECASE)
-            
+
+            # Strip any REQ tags (e.g. (REQ-023H), (REQ_016), REQ-023H) so they never leak into release notes
+            cleaned = re.sub(r"\s*\(REQ[-_][^)]+\)", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"\bREQ[-_]\w+\b", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+
             if cleaned:
                 cleaned = cleaned[0].upper() + cleaned[1:]
                 if cleaned not in bullets:
@@ -75,15 +89,23 @@ def get_commits_since_last_release(since_date: str) -> list[str]:
 
 def main():
     last_version, last_date = get_last_release_info()
+    k_app_version = get_k_app_version()
     today = date.today().isoformat()
     force = "--force" in sys.argv
     
+    # If kAppVersion already has a release notes entry, skip auto-generation (REQ-023H)
+    if not force and k_app_version:
+        release_notes_text = arn.RELEASE_NOTES.read_text(encoding="utf-8") if arn.RELEASE_NOTES.exists() else ""
+        if re.search(rf"^##\s+{re.escape(k_app_version)}\b", release_notes_text, re.MULTILINE):
+            print(f"Skipping auto-generation: {k_app_version} already has a release notes entry.")
+            return
+
     commits = get_commits_since_last_release(last_date)
     if not commits and not force:
         print(f"No new commits found since last release ({last_version} on {last_date}).")
         return
 
-    new_version = arn.suggest_next_version(last_version)
+    new_version = k_app_version if (k_app_version and k_app_version != last_version) else arn.suggest_next_version(last_version)
     
     # Title from first feature scope or generic title
     title = "System Performance & Feature Updates"
