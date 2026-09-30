@@ -1706,18 +1706,6 @@ const _versionHistory = <_Release>[
   _Release(
     version: 'v4.398',
     date: '2026-09-29',
-    description: 'Front Door Reliability & Session Flow Architecture',
-    isLatest: false,
-    changes: [
-      'Navigation: resolve sign-in dead ends across public pages, demo mode, and account creation',
-      'Security: enforce zero Firestore network reads in demo mode for credential isolation',
-      'SEO: restore and validate XML sitemap structure for search index compliance',
-      'UI: tone down feature claims and synchronize dashboard versioning with platform release',
-    ],
-  ),
-  _Release(
-    version: 'v4.397',
-    date: '2026-09-29',
     description: 'Paper Trail Receipt Scanning & Document Streaming Fixes',
     isLatest: false,
     changes: [

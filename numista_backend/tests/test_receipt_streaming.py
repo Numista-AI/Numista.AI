@@ -9,7 +9,6 @@ Regression and unit tests for REQ_019:
 - User isolation security enforcement
 """
 
-import pytest
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
@@ -21,7 +20,6 @@ import main
 from main import (
     app,
     _detect_receipt_mime,
-    _get_receipt_metadata,
 )
 
 client = TestClient(app)
@@ -208,6 +206,92 @@ def test_receipt_stream_user_isolation(monkeypatch):
     resp = client.get("/api/receipts/tester@numista.ai/rec_stolen/stream", headers={"Authorization": "Bearer test-token"})
     assert resp.status_code == 403
     assert "Access denied" in resp.json()["detail"]
+    mock_blob.download_as_bytes.assert_not_called()
+
+
+def test_receipt_stream_bucket_pinned_to_import_bucket(monkeypatch):
+    """Verify that foreign buckets in gcs_path are ignored and storage client is pinned to IMPORT_BUCKET."""
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+
+    mock_db = MagicMock()
+    user_ref = MagicMock()
+    rec_doc = MagicMock()
+    rec_doc.exists = True
+    rec_doc.to_dict.return_value = {
+        "original_filename": "invoice.pdf",
+        "gcs_path": "gs://attacker-bucket/tester@numista.ai/imports/invoice.pdf",
+    }
+    user_ref.collection.return_value.document.return_value.get.return_value = rec_doc
+    mock_db.collection.return_value.document.return_value = user_ref
+    monkeypatch.setattr(main, "db", mock_db)
+
+    mock_gcs = MagicMock()
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_blob.download_as_bytes.return_value = b"%PDF-1.4..."
+    mock_blob.name = "tester@numista.ai/imports/invoice.pdf"
+    mock_bucket.blob.return_value = mock_blob
+    mock_gcs.bucket.return_value = mock_bucket
+    monkeypatch.setattr(main, "gcs_client", mock_gcs)
+
+    resp = client.get("/api/receipts/tester@numista.ai/rec_bucket_test/stream", headers={"Authorization": "Bearer test-token"})
+    assert resp.status_code == 200
+    # Must query IMPORT_BUCKET, not attacker-bucket
+    mock_gcs.bucket.assert_called_with(main.IMPORT_BUCKET)
+
+
+def test_receipt_stream_content_disposition_sanitization(monkeypatch):
+    """Verify that Content-Disposition header is properly sanitized when filename contains quotes or special chars."""
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+
+    mock_db = MagicMock()
+    user_ref = MagicMock()
+    rec_doc = MagicMock()
+    rec_doc.exists = True
+    rec_doc.to_dict.return_value = {
+        "original_filename": 'invoice"special.pdf',
+        "gcs_path": "gs://numista-uploads-studio-9101802118-8c9a8/tester@numista.ai/imports/inv.pdf",
+    }
+    user_ref.collection.return_value.document.return_value.get.return_value = rec_doc
+    mock_db.collection.return_value.document.return_value = user_ref
+    monkeypatch.setattr(main, "db", mock_db)
+
+    mock_gcs = MagicMock()
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_blob.download_as_bytes.return_value = b"%PDF-1.4..."
+    mock_blob.name = "tester@numista.ai/imports/inv.pdf"
+    mock_bucket.blob.return_value = mock_blob
+    mock_gcs.bucket.return_value = mock_bucket
+    monkeypatch.setattr(main, "gcs_client", mock_gcs)
+
+    resp = client.get("/api/receipts/tester@numista.ai/rec_hdr/stream", headers={"Authorization": "Bearer test-token"})
+    assert resp.status_code == 200
+    cd = resp.headers.get("content-disposition", "")
+    assert 'filename="invoicespecial.pdf"' in cd
+    assert "filename*=UTF-8''invoice%22special.pdf" in cd
+
+
+def test_receipt_view_url_encodes_plus_email(monkeypatch):
+    """Verify that user_email with plus signs is URL-encoded in signed_url."""
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+
+    mock_db = MagicMock()
+    user_ref = MagicMock()
+    rec_doc = MagicMock()
+    rec_doc.exists = True
+    rec_doc.to_dict.return_value = {
+        "original_filename": "invoice.pdf",
+        "gcs_path": "gs://bucket/user+tag@numista.ai/imports/invoice.pdf",
+    }
+    user_ref.collection.return_value.document.return_value.get.return_value = rec_doc
+    mock_db.collection.return_value.document.return_value = user_ref
+    monkeypatch.setattr(main, "db", mock_db)
+
+    resp = client.get("/api/receipts/user+tag@numista.ai/rec_123/view_url", headers={"Authorization": "Bearer test-token"})
+    assert resp.status_code == 200
+    signed_url = resp.json()["signed_url"]
+    assert "user%2Btag@numista.ai" in signed_url
 
 
 def test_receipt_stream_not_found(monkeypatch):

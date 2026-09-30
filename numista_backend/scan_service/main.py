@@ -56,8 +56,9 @@ from firebase_admin import auth as fb_auth
 if not firebase_admin._apps:
     try:
         firebase_admin.initialize_app()
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.error(f"[FATAL] Failed to initialize firebase_admin: {e}", exc_info=True)
 
 app = Flask(__name__)
 
@@ -81,41 +82,46 @@ def handle_preflight():
     if request.method == "OPTIONS":
         response = make_response()
         origin = request.headers.get("Origin", "")
-        if origin in ALLOWED_ORIGINS or (origin and ("numista" in origin or "localhost" in origin or "127.0.0.1" in origin)):
+        if origin in ALLOWED_ORIGINS:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+            response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
+            response.headers["Access-Control-Max-Age"] = "86400"
+            return response
         elif not origin:
             response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS[0]
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+            response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
+            return response
         else:
-            response.headers["Access-Control-Allow-Origin"] = origin
-
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
-        response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        return response
+            # Reject disallowed origins without reflection
+            return response, 403
 
 
 @app.after_request
 def add_cors_headers(response):
     """Add CORS response headers to all outgoing responses."""
     origin = request.headers.get("Origin", "")
-    if origin in ALLOWED_ORIGINS or (origin and ("numista" in origin or "localhost" in origin or "127.0.0.1" in origin)):
+    if origin in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+        response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
     elif not origin:
         response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGINS[0]
-    else:
-        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
+        response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
 
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept"
-    response.headers["Access-Control-Expose-Headers"] = "X-Report-Id, X-Total-Coins, X-Total-FMV, Content-Disposition"
     return response
 
 
 def _authenticate_request(req):
-    """Verify Firebase ID token from Authorization header and return authenticated user email/uid.
+    """Verify Firebase ID token from Authorization header and return dict with user email and uid.
     Returns None if missing, expired, or invalid.
     """
     auth_header = req.headers.get("Authorization", "")
@@ -124,11 +130,31 @@ def _authenticate_request(req):
     token = auth_header.split("Bearer ", 1)[1].strip()
     try:
         decoded = fb_auth.verify_id_token(token)
-        owner = (decoded.get("email") or decoded.get("uid") or "").strip().lower()
-        return owner
+        email = (decoded.get("email") or "").strip().lower()
+        uid = (decoded.get("uid") or "").strip()
+        primary_id = email or uid
+        return {
+            "email": email,
+            "uid": uid,
+            "primary_id": primary_id,
+        }
     except Exception as e:
         app.logger.warning(f"[_authenticate_request] Token verification failed: {e}")
         return None
+
+
+def _is_uid_match(auth_info, requested_uid):
+    """Check if requested_uid matches the authenticated user's email, uid, or primary_id."""
+    if not requested_uid:
+        return True
+    req_clean = requested_uid.strip().lower()
+    allowed = {
+        (auth_info.get("primary_id") or "").lower(),
+        (auth_info.get("email") or "").lower(),
+        (auth_info.get("uid") or "").lower(),
+    }
+    allowed.discard("")
+    return req_clean in allowed
 
 
 # ── Rate limiting — protects endpoints from API abuse ───────────────────────────
@@ -354,14 +380,25 @@ def write_to_firestore(user_id: str, program_id: str, coins: dict) -> int:
 def scan_checklist():
     if request.method == "OPTIONS":
         return make_response()
+
+    # ── Authenticate request (Security: Bearer token required) ───────────────
+    auth_user = _authenticate_request(request)
+    if not auth_user:
+        abort(401, "Unauthorized: Valid Firebase Bearer token is required.")
+
     # ── Parse request ─────────────────────────────────────────────────────────
     if "image" not in request.files:
         abort(400, "Missing 'image' in multipart body")
     image_file  = request.files["image"]
     program_id  = request.form.get("program_id")
-    user_id     = request.form.get("user_id")
-    if not program_id or not user_id:
+    form_user_id = request.form.get("user_id")
+    if not program_id or not form_user_id:
         abort(400, "Missing 'program_id' or 'user_id'")
+
+    if form_user_id and not _is_uid_match(auth_user, form_user_id):
+        abort(403, f"Forbidden: Authenticated user '{auth_user['primary_id']}' cannot access data for '{form_user_id}'")
+
+    user_id = auth_user["primary_id"]
 
     image_bytes = image_file.read()
     mime_type   = image_file.content_type or "image/jpeg"
@@ -453,21 +490,25 @@ def generate_estate_report():
     if not auth_user:
         return jsonify({'error': 'Unauthorized: Valid Firebase Bearer token is required.'}), 401
 
-    uid = auth_user
-
     # ── Parse JSON body ────────────────────────────────────────────────────────
     body = request.get_json(force=True, silent=True)
     if body is None or not isinstance(body, dict):
         return jsonify({'error': 'Request body must be valid JSON'}), 400
 
+    body_uid = (body.get('uid') or '').strip()
+    if body_uid and not _is_uid_match(auth_user, body_uid):
+        return jsonify({'error': f"Forbidden: Authenticated user '{auth_user['primary_id']}' cannot access data for '{body_uid}'"}), 403
+
+    uid = auth_user["primary_id"]
+
     # ── Validate required fields ───────────────────────────────────────────────
     mode        = (body.get('mode') or '').strip()
-    state       = (body.get('state') or 'NY').strip().upper()
+    state       = (body.get('state') or '').strip().upper()
     owner_name  = (body.get('owner_name') or '').strip()
     report_date = (body.get('report_date') or '').strip()
 
     missing = [f for f, v in [
-        ('mode', mode), ('owner_name', owner_name), ('report_date', report_date),
+        ('mode', mode), ('state', state), ('owner_name', owner_name), ('report_date', report_date),
     ] if not v]
     if missing:
         return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
@@ -478,7 +519,9 @@ def generate_estate_report():
         }), 400
 
     if state not in STATE_RULES:
-        state = 'NY'  # Safe fallback to NY if state code is unrecognized
+        return jsonify({
+            'error': f'Unsupported or unrecognized state "{state}". Please provide a valid 2-letter US state code.'
+        }), 400
 
     if mode == 'estate_settlement' and not body.get('date_of_death'):
         return jsonify({
@@ -589,14 +632,16 @@ def initialize_estate_upgrade():
     import logging as _logging
     log = _logging.getLogger(__name__)
 
-    body = request.get_json(force=True, silent=True) or {}
-    uid = (body.get('uid') or '').strip()
     auth_user = _authenticate_request(request)
-    if auth_user:
-        uid = auth_user
+    if not auth_user:
+        return jsonify({'error': 'Unauthorized: Valid Firebase Bearer token is required.'}), 401
 
-    if not uid:
-        return jsonify({'error': 'uid is required'}), 400
+    body = request.get_json(force=True, silent=True) or {}
+    body_uid = (body.get('uid') or '').strip()
+    if body_uid and not _is_uid_match(auth_user, body_uid):
+        return jsonify({'error': f"Forbidden: Authenticated user '{auth_user['primary_id']}' cannot access data for '{body_uid}'"}), 403
+
+    uid = auth_user["primary_id"]
 
     try:
         coins_ref = db.collection('users').document(uid).collection('coins').stream()

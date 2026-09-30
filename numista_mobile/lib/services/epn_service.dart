@@ -9,18 +9,16 @@ class EpnService {
   static const String _keyCampId = 'epn_campaign_id';
   static const String _keyMkrid  = 'epn_rotation_id';
   static const String _keyAppId  = 'ebay_app_id';
-  static const String _keyCertId = 'ebay_cert_id';
 
   // ── Numista.AI EPN Credentials ─────────────────────────────────────────────
-  // Defaults are empty; real values are loaded from Firestore /config/ebay
-  // at startup via loadFromFirestore(). This keeps secrets out of client code.
+  // Defaults are empty; non-secret campaign parameters are loaded from Firestore /config/ebay
+  // at startup via loadFromFirestore(). Client never reads or stores secrets.
   static const String _defaultCampId = '5339148752'; // public campaign ID (non-secret)
   static const String _defaultMkrid  = '711-53200-19255-0'; // eBay US marketplace
   static const String _defaultAppId  = ''; // loaded from Firestore at startup
-  static const String _defaultCertId = ''; // loaded from Firestore at startup
 
   // ── Load credentials from Firestore /config/ebay ───────────────────────────
-  // Call once at app startup (BaseLayout.initState). Credentials are stored
+  // Call once at app startup (BaseLayout.initState). Non-secret parameters are stored
   // in SharedPreferences for subsequent requests within the session.
   static Future<void> loadFromFirestore() async {
     try {
@@ -32,13 +30,13 @@ class EpnService {
       final data = doc.data()!;
       final prefs = await SharedPreferences.getInstance();
       final appId  = data['app_id']  as String? ?? '';
-      final certId = data['cert_id'] as String? ?? '';
       final campId = data['campaign_id'] as String? ?? _defaultCampId;
       final mkrid  = data['rotation_id'] as String? ?? _defaultMkrid;
       if (appId.isNotEmpty)  await prefs.setString(_keyAppId,  appId);
-      if (certId.isNotEmpty) await prefs.setString(_keyCertId, certId);
       if (campId.isNotEmpty) await prefs.setString(_keyCampId, campId);
       if (mkrid.isNotEmpty)  await prefs.setString(_keyMkrid,  mkrid);
+      // Ensure any legacy client-cached cert_id is purged
+      await prefs.remove('ebay_cert_id');
       debugPrint('[EPN] Credentials loaded from Firestore');
     } catch (e) {
       debugPrint('[EPN] Failed to load credentials from Firestore: $e');
@@ -48,12 +46,12 @@ class EpnService {
   // ── Settings persistence ────────────────────────────────────────────────────
 
   static Future<void> saveSettings(
-      String campId, String mkrid, {String? appId, String? certId}) async {
+      String campId, String mkrid, {String? appId}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyCampId, campId);
     await prefs.setString(_keyMkrid,  mkrid);
-    if (appId  != null) await prefs.setString(_keyAppId,  appId);
-    if (certId != null) await prefs.setString(_keyCertId, certId);
+    if (appId != null) await prefs.setString(_keyAppId, appId);
+    await prefs.remove('ebay_cert_id');
   }
 
   static Future<Map<String, String>> getSettings() async {
@@ -62,43 +60,14 @@ class EpnService {
       'campaignId': prefs.getString(_keyCampId) ?? _defaultCampId,
       'rotationId': prefs.getString(_keyMkrid)  ?? _defaultMkrid,
       'appId':      prefs.getString(_keyAppId)  ?? _defaultAppId,
-      'certId':     prefs.getString(_keyCertId) ?? _defaultCertId,
     };
   }
 
   // ── OAuth token (eBay Browse API) ──────────────────────────────────────────
 
   static Future<String?> _getAccessToken() async {
-    final settings = await getSettings();
-    final appId  = settings['appId']!;
-    final certId = settings['certId']!;
-
-    if (appId.isEmpty || certId.isEmpty) return null;
-
-    final credentials = base64Encode(utf8.encode('$appId:$certId'));
-
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.ebay.com/identity/v1/oauth2/token'),
-        headers: {
-          'Content-Type':  'application/x-www-form-urlencoded',
-          'Authorization': 'Basic $credentials',
-        },
-        body: {
-          'grant_type': 'client_credentials',
-          'scope': 'https://api.ebay.com/oauth/api_scope',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['access_token'] as String?;
-      } else {
-        debugPrint('eBay OAuth ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('eBay OAuth Error: $e');
-    }
+    // Client-side OAuth secret handling is decommissioned for security (REQ-023E M4).
+    // All requests requiring eBay client credentials route through backend services.
     return null;
   }
 

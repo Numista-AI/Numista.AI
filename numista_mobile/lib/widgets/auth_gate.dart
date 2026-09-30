@@ -16,12 +16,14 @@ class AuthGate extends StatefulWidget {
   final bool isDemo;
   final String? publicRoute;
   final int initialAuthTab;
+  final Stream<User?>? authStream;
 
   const AuthGate({
     super.key,
     this.isDemo = false,
     this.publicRoute,
     this.initialAuthTab = 0,
+    this.authStream,
   });
 
   /// Navigates to [AuthGate] and purges all previous routes from the stack.
@@ -33,6 +35,7 @@ class AuthGate extends StatefulWidget {
     bool isDemo = false,
     String? publicRoute,
     int initialAuthTab = 0,
+    Stream<User?>? authStream,
   }) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
@@ -40,6 +43,7 @@ class AuthGate extends StatefulWidget {
           isDemo: isDemo,
           publicRoute: publicRoute,
           initialAuthTab: initialAuthTab,
+          authStream: authStream,
         ),
       ),
       (route) => false,
@@ -65,7 +69,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: widget.authStream ?? FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         // Still waiting for Firebase to initialise — show branded splash
         if (snapshot.connectionState == ConnectionState.waiting) {

@@ -399,6 +399,7 @@
 
 
 
+
 ## v4.399 — 2026-09-29
 **Front Door Reliability & Session Flow Architecture**
 
@@ -409,25 +410,15 @@
 - Estate: resolve CORS and authentication headers for estate report generation
 
 ## v4.398 — 2026-09-29
-**Receipts Enhancements & Platform Updates**
+**Paper Trail Receipt Scanning & Document Streaming Fixes**
 
-- Receipts: resolve blank white page by dynamically streaming PDF and JPG scans (REQ-019)
-- Sync release notes for v4.396 (REQ-023C / REQ-018A)
-- Routes: wire public front door routes and zero-write demo vault (REQ-023C)
-- Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)
-- Sync release notes for v4.395 (REQ-018)
-- Sell: resolve Mode 3 Record Sale 422 payload mismatch and add API integration test (REQ-018)
-
-## v4.397 — 2026-09-29
-**Paper Trail Receipt Scanning & Document Streaming Fixes (REQ-019)**
-
-- Paper Trail: resolve blank white page on View Scan by dynamically sniffing and streaming real PDF, JPG, and PNG scans (REQ-019)
+- Paper Trail: resolve blank white page on View Scan by dynamically sniffing and streaming real PDF, JPG, and PNG scans
 - Backend: support gs:// URIs, HTTPS URLs, and relative receipt paths with multi-candidate fallback resolution
 - Backend: detect exact MIME types via magic bytes and file extensions to avoid corrupting image receipt rendering
 - UI: update Review Hub receipt items with distinct PDF vs Image icons and enhanced error feedback on launch
 
 ## v4.396 — 2026-09-29
-**Routes Enhancements & Platform Updates**
+**Front Door Public Routes & Record Sale Follow-ups**
 
 - Routes: wire public front door routes and zero-write demo vault (REQ-023C)
 - Transfer: resolve record sale follow-ups and validate bounds (REQ-018A)
