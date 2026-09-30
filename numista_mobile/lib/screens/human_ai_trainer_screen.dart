@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -167,10 +168,12 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
 
   Future<void> _loadStats() async {
     _loadImageStats();
-    final email = Uri.encodeComponent(AuthService.userEmail);
     try {
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null) return;
+      final authHeaders = {'Authorization': 'Bearer $idToken'};
       final results = await Future.wait([
-        http.get(Uri.parse('$_apiUrl/api/grade_review/stats?user_email=$email')),
+        http.get(Uri.parse('$_apiUrl/api/grade_review/stats'), headers: authHeaders),
         http.get(Uri.parse('$_apiUrl/api/nicknames/stats')),
       ]);
       if (!mounted) return;
@@ -362,9 +365,11 @@ class _GradeReviewTabState extends State<_GradeReviewTab>
   Future<void> _load() async {
     setState(() { _loading = true; _error = ''; });
     try {
-      final email = Uri.encodeComponent(AuthService.userEmail);
-      final res = await http.get(Uri.parse(
-          '$_apiUrl/api/grade_review/queue?user_email=$email&limit=30'));
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null) { setState(() { _loading = false; _error = 'Not signed in.'; }); return; }
+      final res = await http.get(
+          Uri.parse('$_apiUrl/api/grade_review/queue?limit=30'),
+          headers: {'Authorization': 'Bearer $idToken'});
       if (res.statusCode == 200 && mounted) {
         final data  = jsonDecode(res.body);
         final items = (data['results'] as List)

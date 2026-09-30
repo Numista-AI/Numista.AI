@@ -84,7 +84,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
-from routes.deps import get_current_user
+from routes.deps import get_current_user, require_admin_user
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -1641,7 +1641,7 @@ LOW_CONFIDENCE_THRESHOLD = 0.85 # Grade review endpoints extracted to routes/gra
 # --- Admin: Grade Flag Dashboard ---------------------------------------------
 
 @app.get("/api/admin/grade_flags")
-def admin_grade_flags(resolved: bool = False, limit: int = 100):
+def admin_grade_flags(resolved: bool = False, limit: int = 100, _admin: dict = Depends(require_admin_user)):
     """
     Returns all coins flagged for admin grade review.
     resolved=false (default) -> open flags only.
@@ -1722,16 +1722,17 @@ def admin_grade_flags(resolved: bool = False, limit: int = 100):
 @app.post("/api/admin/grade_flags/{flag_id}/resolve")
 async def resolve_grade_flag(
     flag_id:        str,
-    admin_email:    str = Form(...),
     decision:       str = Form(...),   # 'accept_community' | 'keep_ai'
     resolved_grade: str = Form(''),
     notes:          str = Form(''),
+    admin_user:     dict = Depends(require_admin_user),
 ):
     """
-    Admin resolves a flagged coin grade.
-    decision='accept_community' -> updates coin Condition to community_grade
+    Admin resolves a flagged coin grade. Requires admin token.
+    admin_email sourced from Firebase token — form field ignored.
     decision='keep_ai'          -> keeps existing AI grade, marks flag resolved
     """
+    admin_email = admin_user.get("email") or admin_user.get("uid") or "admin"
     flag_ref = db.collection('admin_grade_flags').document(flag_id)
     flag_doc = flag_ref.get()
     if not flag_doc.exists:
@@ -10129,11 +10130,12 @@ DEALS_DB = [
 ]
 
 @app.get("/api/greysheet/deals")
-async def get_arbitrage_deals():
+async def get_arbitrage_deals(_current_user: dict = Depends(get_current_user)):
+    # NOTE: DEALS_DB is stub data — real eBay arbitrage is pending EPN re-integration.
     return {"deals": DEALS_DB}
 
 @app.post("/api/greysheet/deals/refresh")
-async def refresh_arbitrage_deals():
+async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user)):
     import random
     new_deals = [
         {

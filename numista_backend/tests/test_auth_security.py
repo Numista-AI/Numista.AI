@@ -683,3 +683,66 @@ def test_transfer_claim_pin_brute_force_blocked(monkeypatch):
     )
     assert response.status_code != 200
     assert "wait" in response.text.lower()
+
+
+# ─── REQ_027B: Grade Review / Admin / Deals Auth ──────────────────────────────
+
+def test_grade_review_stats_requires_auth(monkeypatch):
+    """GET /api/grade_review/stats must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/grade_review/stats")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated grade_review/stats, got {response.status_code}")
+
+
+def test_grade_review_queue_requires_auth(monkeypatch):
+    """GET /api/grade_review/queue must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/grade_review/queue")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated grade_review/queue, got {response.status_code}")
+
+
+def test_admin_grade_flags_requires_auth(monkeypatch):
+    """GET /api/admin/grade_flags must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/admin/grade_flags")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated admin/grade_flags, got {response.status_code}")
+
+
+def test_admin_grade_flags_non_admin_rejected(monkeypatch):
+    """GET /api/admin/grade_flags must return 403 for a valid non-admin user."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "regular@example.com", "uid": "regular_uid", "admin": False},
+    )
+    response = client.get(
+        "/api/admin/grade_flags",
+        headers={"Authorization": "Bearer fake_regular_token"},
+    )
+    assert response.status_code == 403, (
+        f"Expected 403 for non-admin caller on admin/grade_flags, got {response.status_code}")
+
+
+def test_greysheet_deals_requires_auth(monkeypatch):
+    """GET /api/greysheet/deals must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/greysheet/deals")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated greysheet/deals, got {response.status_code}")
+
+
+def test_greysheet_deals_refresh_requires_auth(monkeypatch):
+    """POST /api/greysheet/deals/refresh must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.post("/api/greysheet/deals/refresh")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated greysheet/deals/refresh, got {response.status_code}")
