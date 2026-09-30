@@ -109,11 +109,17 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
-    // ── Config (PCGS token, NewsAPI key, etc.) ────────────────────────────────
-    // Read access needed by the Flutter client to fetch the platform PCGS token.
+    // ── Config (PCGS token, NewsAPI key, eBay public config, etc.) ─────────────
+    // Read access needed by the Flutter client to fetch non-sensitive platform config.
+    // Client secrets (e.g. cert_id) are strictly prohibited and unreadable (REQ-023E M4).
     // Write access restricted to admin (backend service account bypasses rules).
+    match /config/ebay {
+      allow read: if isAuthenticated() && !('cert_id' in resource.data);
+      allow write: if false;  // backend service account only
+    }
+
     match /config/{document=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (!('cert_id' in resource.data));
       allow write: if false;  // backend service account only
     }
 
