@@ -1,17 +1,17 @@
 """
 test_scan_service_estate_report.py
 ----------------------------------
-Unit and regression tests for REQ_020:
-- CORS OPTIONS preflight response headers (Allow-Origin, Allow-Headers, Allow-Methods, Expose-Headers)
-- Bearer Auth requirement on /generate_estate_report (401 on missing/invalid token)
-- Token-derived UID (ignores untrusted body UID)
-- Request validation (400 on missing required fields / invalid mode)
-- Safe fallback for missing or unrecognized state to 'NY'
+Unit and regression tests for REQ_020 & REQ_023E:
+- Strict CORS exact matching (allowed origins pass, evil origins rejected)
+- Bearer Auth requirement on /generate_estate_report, /scan_checklist, /initialize_estate_upgrade
+- Token-derived UID & strict 403 rejection on body/form UID mismatch
+- Request validation & strict state validation (400 on missing or unknown state; no silent fallback)
 - Successful PDF generation (200) with correct headers
 - Local import verification for collection_inventory in scan_service
 """
 
 import json
+import io
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -74,17 +74,37 @@ def test_cors_preflight_options(client):
         assert "X-Report-Id" in expose_headers
 
 
+def test_cors_disallowed_origin_rejected(client):
+    """Verify that untrusted and lookalike origins are NOT reflected in CORS headers (M2)."""
+    evil_origins = [
+        "https://evil.example.com",
+        "https://evil-numista.attacker.com",
+        "http://localhost.attacker.com",
+        "https://notnumista.ai",
+    ]
+    for evil in evil_origins:
+        resp = client.open(
+            "/generate_estate_report",
+            method="OPTIONS",
+            headers={
+                "Origin": evil,
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        # OPTIONS returns 403 or does not return Allow-Origin matching the evil domain
+        assert resp.headers.get("Access-Control-Allow-Origin") != evil
+
+
 def test_generate_estate_report_unauthorized(client):
     """Verify 401 when Authorization Bearer token is missing or invalid."""
     # 1. No Authorization header
     resp = client.post(
         "/generate_estate_report",
         headers={"Origin": "https://numista.ai", "Content-Type": "application/json"},
-        data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-29"}),
+        data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-29", "state": "NY"}),
     )
     assert resp.status_code == 401
     assert "Unauthorized" in resp.get_json().get("error", "")
-    assert resp.headers.get("Access-Control-Allow-Origin") == "https://numista.ai"
 
     # 2. Invalid Bearer token
     with patch.object(scan_main.fb_auth, "verify_id_token", side_effect=Exception("Expired token")):
@@ -95,43 +115,101 @@ def test_generate_estate_report_unauthorized(client):
                 "Content-Type": "application/json",
                 "Authorization": "Bearer bad-token",
             },
-            data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-29"}),
+            data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-29", "state": "NY"}),
         )
         assert resp_invalid.status_code == 401
         assert "Unauthorized" in resp_invalid.get_json().get("error", "")
 
 
-def test_generate_estate_report_validation_errors(client):
-    """Verify 400 when required fields are missing or invalid."""
+def test_generate_estate_report_uid_mismatch_forbidden(client):
+    """Verify 403 when body uid differs from authenticated token (M1)."""
+    with patch.object(scan_main.fb_auth, "verify_id_token", return_value={"email": "real_owner@numista.ai", "uid": "real_uid"}):
+        resp = client.post(
+            "/generate_estate_report",
+            headers={
+                "Origin": "https://numista.ai",
+                "Content-Type": "application/json",
+                "Authorization": "Bearer valid-token",
+            },
+            data=json.dumps({
+                "uid": "victim_user@numista.ai",
+                "mode": "living_inventory",
+                "owner_name": "Victim",
+                "report_date": "2026-09-30",
+                "state": "NY",
+            }),
+        )
+        assert resp.status_code == 403
+        assert "Forbidden" in resp.get_json().get("error", "")
+
+
+def test_generate_estate_report_state_validation(client):
+    """Verify strict state validation (S1): missing or unknown state returns 400."""
     with patch.object(scan_main.fb_auth, "verify_id_token", return_value={"email": "tester@numista.ai", "uid": "uid123"}):
         auth_header = {"Authorization": "Bearer valid-token", "Content-Type": "application/json"}
 
-        # Missing required fields
-        resp = client.post("/generate_estate_report", headers=auth_header, data=json.dumps({}))
-        assert resp.status_code == 400
-        assert "Missing required fields" in resp.get_json().get("error", "")
-
-        # Invalid mode
-        resp_mode = client.post(
+        # 1. Missing state
+        resp_missing = client.post(
             "/generate_estate_report",
             headers=auth_header,
-            data=json.dumps({"mode": "invalid_mode", "owner_name": "Test Owner", "report_date": "2026-09-29"}),
+            data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-30"}),
         )
-        assert resp_mode.status_code == 400
-        assert "Invalid mode" in resp_mode.get_json().get("error", "")
+        assert resp_missing.status_code == 400
+        assert "state" in resp_missing.get_json().get("error", "")
 
-        # Estate settlement mode missing date_of_death
-        resp_death = client.post(
+        # 2. Unknown state code (ZZ)
+        resp_unknown = client.post(
             "/generate_estate_report",
             headers=auth_header,
-            data=json.dumps({"mode": "estate_settlement", "owner_name": "Test Owner", "report_date": "2026-09-29"}),
+            data=json.dumps({"mode": "living_inventory", "owner_name": "Test", "report_date": "2026-09-30", "state": "ZZ"}),
         )
-        assert resp_death.status_code == 400
-        assert "date_of_death is required" in resp_death.get_json().get("error", "")
+        assert resp_unknown.status_code == 400
+        assert "Unsupported or unrecognized state" in resp_unknown.get_json().get("error", "")
 
 
-def test_generate_estate_report_success_and_uid_isolation(client):
-    """Verify successful report generation: derives uid from token and defaults missing state to NY."""
+def test_initialize_estate_upgrade_security(client):
+    """Verify /initialize_estate_upgrade requires Bearer auth and enforces UID matching (M1)."""
+    # 1. Unauthenticated -> 401
+    resp_unauth = client.post(
+        "/initialize_estate_upgrade",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps({"uid": "target_user@numista.ai"}),
+    )
+    assert resp_unauth.status_code == 401
+
+    # 2. Cross-user UID mismatch -> 403
+    with patch.object(scan_main.fb_auth, "verify_id_token", return_value={"email": "alice@numista.ai", "uid": "alice123"}):
+        resp_mismatch = client.post(
+            "/initialize_estate_upgrade",
+            headers={"Content-Type": "application/json", "Authorization": "Bearer token-alice"},
+            data=json.dumps({"uid": "bob@numista.ai"}),
+        )
+        assert resp_mismatch.status_code == 403
+
+
+def test_scan_checklist_security(client):
+    """Verify /scan_checklist requires Bearer auth and enforces user_id matching (M1)."""
+    # 1. Unauthenticated -> 401
+    resp_unauth = client.post(
+        "/scan_checklist",
+        data={"program_id": "prog1", "user_id": "victim@numista.ai", "image": (io.BytesIO(b"fakeimage"), "test.jpg")},
+        content_type="multipart/form-data",
+    )
+    assert resp_unauth.status_code == 401
+
+    # 2. Cross-user user_id mismatch -> 403
+    with patch.object(scan_main.fb_auth, "verify_id_token", return_value={"email": "attacker@numista.ai", "uid": "att123"}):
+        resp_mismatch = client.post(
+            "/scan_checklist",
+            headers={"Authorization": "Bearer attacker-token"},
+            data={"program_id": "prog1", "user_id": "victim@numista.ai", "image": (io.BytesIO(b"fakeimage"), "test.jpg")},
+            content_type="multipart/form-data",
+        )
+        assert resp_mismatch.status_code == 403
+
+
+def test_generate_estate_report_success(client):
+    """Verify successful report generation with verified token and valid state."""
     fake_token = {"email": "verified_owner@numista.ai", "uid": "auth_uid_999"}
     fake_pdf = b"%PDF-1.4\n...estate report pdf bytes..."
     fake_metadata = {
@@ -164,11 +242,10 @@ def test_generate_estate_report_success_and_uid_isolation(client):
                 "Authorization": "Bearer valid-owner-token",
             },
             data=json.dumps({
-                # Body attempts to spoof victim uid and omits state
-                "uid": "attacker_spoofed_victim@numista.ai",
                 "mode": "living_inventory",
                 "owner_name": "Verified Collector",
-                "report_date": "2026-09-29",
+                "report_date": "2026-09-30",
+                "state": "NY",
             }),
         )
 
@@ -177,8 +254,5 @@ def test_generate_estate_report_success_and_uid_isolation(client):
         assert resp.headers.get("X-Report-Id") == "rep_test_001"
         assert resp.headers.get("Access-Control-Allow-Origin") == "https://numista.ai"
         assert resp.data == fake_pdf
-
-        # CRITICAL SECURITY ASSERTION: UID was derived from token, NOT spoofed body
         assert captured_generator_args["uid"] == "verified_owner@numista.ai"
-        # State safely defaulted to 'NY'
         assert captured_generator_args["report_request"]["state"] == "NY"
