@@ -12,17 +12,20 @@ class AuthService {
 
   static bool get isGuest => _auth.currentUser?.isAnonymous == true;
 
+  /// Pure helper — testable without Firebase. Used by isBetaTester getter.
+  static bool isBetaFor({required DateTime? creationUtc, required bool isAnonymous}) {
+    if (isAnonymous) return false;
+    if (creationUtc == null) return false;
+    return creationUtc.isBefore(DateTime.utc(2026, 11, 26, 5));
+  }
+
   static bool get isBetaTester {
     final user = _auth.currentUser;
     if (user == null) return false;
-    // Anonymous users are never beta testers.
     if (user.isAnonymous) return false;
-    // Beta tester = signed-in account created BEFORE 2026-11-26T05:00:00Z
-    // (= 25 Nov 2026 at 11:59:59 PM ET, when the Facebook ad goes live at midnight).
-    // This is per-account and permanent — it never expires for qualifying accounts.
     final creationTime = user.metadata.creationTime;
     if (creationTime == null) return false;
-    final betaCutoff = DateTime.utc(2026, 11, 26, 5); // exclusive upper bound
+    final betaCutoff = DateTime.utc(2026, 11, 26, 5);
     return creationTime.isBefore(betaCutoff);
   }
 

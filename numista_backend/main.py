@@ -11121,12 +11121,15 @@ async def api_get_passport_pdf(
         transfer_data = transfer_doc.to_dict() or {}
 
         # Authorization: only sender or locked recipient may access the PDF
-        caller_email = (current_user.get("email") or "").strip().lower()
-        sender_id = str(transfer_data.get("user_a_id") or "").strip().lower()
-        recipient_email = str(transfer_data.get("recipient_email") or "").strip().lower()
-        is_sender = caller_email == sender_id
+        caller_uid   = (current_user.get('uid') or current_user.get('user_id') or '').strip()
+        caller_email = (current_user.get('email') or '').strip().lower()
+        sender_uid   = str(transfer_data.get('user_a_id') or '').strip()
+        recipient_email = str(transfer_data.get('recipient_email') or '').strip().lower()
+        claimer_uid  = str(transfer_data.get('user_b_id') or '').strip()
+        is_sender    = caller_uid and caller_uid == sender_uid
+        is_claimer   = claimer_uid and caller_uid == claimer_uid
         is_recipient = recipient_email and caller_email == recipient_email
-        if not (is_sender or is_recipient):
+        if not (is_sender or is_claimer or is_recipient):
             raise HTTPException(
                 status_code=403,
                 detail="Only the sender or recipient may access this document.",

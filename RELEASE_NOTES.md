@@ -400,15 +400,16 @@
 
 
 
-## v4.403 — 2026-09-30
-**Auth Hardening Continued & Front-Door Accuracy**
+## v4.403 — 2026-10-01
+**Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix**
 
-- Security: grade review stats, queue, and submit now require a valid sign-in token
-- Security: admin grade review dashboard requires an admin-level token; non-admin callers are rejected
-- Security: deal finder stub routes now require a sign-in token
+- Security: grade review submit now requires a sign-in token — the server reads the user from the token
+- Security: the admin grade review dashboard now requires an admin-level token; others receive 403
+- Security: the admin claim is now the only way to gain admin access — the email allowlist has been removed
+- Security: the transfer Certificate of Transfer PDF can only be downloaded by the sender or recipient
+- Security: Stripe billing portal now reads your account from the sign-in token, not a URL parameter
+- Beta: "Founding Beta" status is now per-account and permanent for accounts created before 26 Nov 2026
 - Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages
-- Accuracy: pubspec version updated to match the in-app display version
-- Navigation: /signin, /forgot, and /reset now redirect to the sign-in screen
 
 ## v4.402 — 2026-09-30
 **Transfer Security & Auth Hardening**

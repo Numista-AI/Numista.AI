@@ -141,6 +141,16 @@ def get_user_tier(user_profile: dict) -> str:
         return "family_estate"
     if user_profile.get("beta_tester"):
         return "family_estate"  # permanent — do NOT check beta_access_expires
+
+    # Also grant beta tier if account was created before the Facebook ad launch (1795669200000 ms epoch)
+    creation_ts = user_profile.get('creation_timestamp')
+    if creation_ts is not None:
+        try:
+            if int(creation_ts) < 1795669200000:
+                return 'family_estate'
+        except (ValueError, TypeError):
+            pass
+
     tier = user_profile.get("stripe_tier") or user_profile.get("tier")
     if tier:
         return str(tier).lower().strip()

@@ -1004,3 +1004,25 @@ def test_tc17_pin_success_clears_fail_count():
         db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=real_pin
     )
     assert claim_res["status"] == "claimed"
+def test_tc15b_intruder_wrong_pins_do_not_burn_lockout():
+    db = FakeFirestore()
+    sender_id = 'sender@numista.ai'
+    real_recipient = 'real@numista.ai'
+    intruder = 'intruder@numista.ai'
+    coin_id = 'coin_tc15b'
+    db.collection('users').document(sender_id).collection('coins').document(coin_id).set({'title': 'coin', 'Quantity': 1})
+    init_res = initiate_transfer(db=db, user_a_id=sender_id, item_ids=[coin_id], recipient_email=real_recipient)
+    transfer_id = init_res['transfer_id']
+    real_pin = init_res['claim_pin']
+    wrong_pin = '000000'
+    for _ in range(5):
+        try:
+            claim_transfer(db=db, user_b_id=intruder, transfer_id=transfer_id, claim_pin=wrong_pin)
+            assert False
+        except ValueError as e:
+            assert 'locked to a different account' in str(e).lower() or 'correct recipient account' in str(e).lower()
+    try:
+        res = claim_transfer(db=db, user_b_id=real_recipient, transfer_id=transfer_id, claim_pin=real_pin)
+        assert res['status'] == 'completed'
+    except ValueError:
+        assert False

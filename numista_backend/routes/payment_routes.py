@@ -44,7 +44,8 @@ async def api_stripe_checkout(
         raise HTTPException(status_code=502, detail="Stripe is not configured")
 
     try:
-        user_uid = getattr(req, "user_uid", None) or getattr(req, "uid", None) or req.user_email
+        user_uid = _user.get("uid") or _user.get("user_id") or ""
+        user_email = (_user.get("email") or "").strip().lower()
         tier = req.tier.lower()
         unit_amount = 2900 if tier in ["estate", "family_estate"] else 499
         interval = "year" if tier in ["estate", "family_estate"] else "month"
@@ -52,7 +53,7 @@ async def api_stripe_checkout(
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             mode='subscription',
-            customer_email=req.user_email,
+            customer_email=user_email,
             client_reference_id=user_uid,
             allow_promotion_codes=True,
             line_items=[{

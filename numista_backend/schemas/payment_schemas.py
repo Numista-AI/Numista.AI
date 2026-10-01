@@ -6,5 +6,5 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class StripeCheckoutRequest(BaseModel):
-    user_email: str
+    user_email: Optional[str] = None
     tier: str  # 'pro' or 'estate'
