@@ -85,8 +85,17 @@ class LateralTransferService {
   }
 
   /// Gets Passport PDF download URL
-  String getPassportPdfUrl(String transferId) {
-    return '$baseUrl/api/transfer/passport-pdf/$transferId';
+  /// Fetches the Certificate of Transfer PDF bytes via authenticated request.
+  /// The plain URL approach is replaced because the route now requires a Bearer token.
+  Future<List<int>> fetchCertificatePdfBytes(String transferId) async {
+    final response = await HttpAuthClient.get(
+      Uri.parse('$baseUrl/api/transfer/passport-pdf/$transferId'),
+    );
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    } else {
+      throw Exception('Failed to fetch Certificate PDF: ${response.statusCode} ${response.body}');
+    }
   }
 
   /// Records a direct sale outside Numista.AI (Mode 3, G1-G3)

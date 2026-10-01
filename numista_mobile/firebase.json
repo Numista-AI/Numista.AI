@@ -36,12 +36,12 @@
       },
       {
         "source": "/forgot",
-        "destination": "/login",
+        "destination": "/reset-password",
         "type": 301
       },
       {
         "source": "/reset",
-        "destination": "/login",
+        "destination": "/reset-password",
         "type": 301
       }
     ],
@@ -88,6 +88,10 @@
       },
       {
         "source": "/login",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/reset-password",
         "destination": "/index.html"
       },
       {

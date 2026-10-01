@@ -9,7 +9,7 @@ from datetime import datetime as _dt
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Form, Depends
 from google.cloud import firestore
-from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest
+from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest, GradeReviewSubmitRequest
 from routes.deps import db, logger, get_current_user_email, get_current_user, require_admin_user
 
 router = APIRouter(prefix="/api", tags=["Human AI Trainer & Community Grade Reviews"])
@@ -87,18 +87,20 @@ def grade_review_queue(
 
 @router.post("/grade_review/submit")
 async def submit_grade_review(
-    coin_id:         str = Form(...),
-    action:          str = Form(...),
-    suggested_grade: str = Form(''),
-    rating:          int = Form(...),
-    notes:           str = Form(''),
-    current_user:    dict = Depends(get_current_user),
+    payload: GradeReviewSubmitRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Record a grade review on one of the authenticated user's own coins.
     If 2/3+ of reviews disagree with the AI grade, flagged for admin review.
     user_email is sourced from the Firebase token — body field is ignored.
     """
+    coin_id         = payload.coin_id
+    action          = payload.action
+    suggested_grade = payload.suggested_grade or ''
+    rating          = payload.rating
+    notes           = payload.notes or ''
+
     user_email = current_user.get("email") or current_user.get("uid") or ""
     if not 1 <= rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")

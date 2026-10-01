@@ -11104,26 +11104,43 @@ async def api_get_sold_items(user_id: str, authorization: Optional[str] = Header
 from fastapi.responses import Response
 
 @app.get("/api/transfer/passport-pdf/{transfer_id}")
-async def api_get_passport_pdf(transfer_id: str):
+async def api_get_passport_pdf(
+    transfer_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
-    Generates and downloads the official dual-format Passport PDF (8.5x11" + 3x5").
+    Generates and downloads the official dual-format Certificate of Transfer PDF.
+    Caller must be authenticated as the sender OR the locked recipient.
     """
     try:
         from services.passport_pdf_generator import generate_passport_pdf
         transfer_doc = db.collection("transfers").document(transfer_id).get()
         if not transfer_doc.exists:
             raise HTTPException(status_code=404, detail="Transfer not found")
-        
+
         transfer_data = transfer_doc.to_dict() or {}
+
+        # Authorization: only sender or locked recipient may access the PDF
+        caller_email = (current_user.get("email") or "").strip().lower()
+        sender_id = str(transfer_data.get("user_a_id") or "").strip().lower()
+        recipient_email = str(transfer_data.get("recipient_email") or "").strip().lower()
+        is_sender = caller_email == sender_id
+        is_recipient = recipient_email and caller_email == recipient_email
+        if not (is_sender or is_recipient):
+            raise HTTPException(
+                status_code=403,
+                detail="Only the sender or recipient may access this document.",
+            )
+
         items = transfer_data.get("items", [])
         if not items:
-            raise HTTPException(status_code=400, detail="Cannot generate passport PDF for a transfer with 0 items.")
-        
+            raise HTTPException(status_code=400, detail="Cannot generate PDF for a transfer with 0 items.")
+
         pdf_bytes = generate_passport_pdf(transfer_data)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=passport_{transfer_id}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename=certificate_{transfer_id}.pdf"}
         )
     except HTTPException:
         raise

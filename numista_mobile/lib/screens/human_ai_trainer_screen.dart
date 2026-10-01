@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/http_auth_client.dart';
 import '../constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/coin_model.dart';
@@ -506,16 +507,15 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
     }
     setState(() => _submitting = true);
     try {
-      final res = await http.post(
+      final res = await HttpAuthClient.post(
         Uri.parse('$_apiUrl/api/grade_review/submit'),
-        body: {
-          'user_email':      AuthService.userEmail,
+        body: jsonEncode({
           'coin_id':         widget.coin.coinId,
           'action':          action,
           'suggested_grade': action == 'corrected' ? _suggestedGrade : '',
-          'rating':          _rating.toString(),
+          'rating':          _rating,
           'notes':           _notesCtrl.text.trim(),
-        },
+        }),
       );
       if (res.statusCode == 200 && mounted) {
         final data = jsonDecode(res.body);

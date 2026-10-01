@@ -16,3 +16,11 @@ class GradeReviewSubmission(BaseModel):
     coin_id: str
     submitted_grade: str
     notes: Optional[str] = ""
+
+class GradeReviewSubmitRequest(BaseModel):
+    """JSON body for POST /api/grade_review/submit sent by HttpAuthClient."""
+    coin_id: str
+    action: str                          # 'confirmed' | 'corrected'
+    suggested_grade: Optional[str] = ""
+    rating: int = Field(..., ge=1, le=5)
+    notes: Optional[str] = ""

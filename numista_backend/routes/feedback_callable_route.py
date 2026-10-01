@@ -545,9 +545,8 @@ async def _handle_admin_resolve(
     req: CallableRequest,
     user: Dict[str, Any],
 ) -> Dict[str, Any]:
-    # Verify isAdmin claim or admin email (matches deps.py pattern)
-    is_admin = user.get("admin") is True or user.get("email") in ["admin@numista.ai", "eric@numista.ai"]
-    if not is_admin:
+    # Verify admin custom claim only — email allowlist removed (see deps.py require_admin_user)
+    if user.get("admin") is not True:
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     if not req.doc_id:
