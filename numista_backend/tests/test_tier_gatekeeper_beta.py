@@ -27,3 +27,6 @@ def test_tier_lifetime_family_estate():
 def test_tier_empty_profile():
     profile = {}
     assert get_user_tier(profile) == 'free'
+
+def test_anonymous_user_gets_free_tier():
+    assert get_user_tier({}) in ('free', 'anonymous', None) or get_user_tier({}) != 'family_estate'

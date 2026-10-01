@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
+import '../services/grade_flag_service.dart';
 
 const _apiUrl = kApiBaseUrl;
 
@@ -338,20 +339,17 @@ class _FlagCardState extends State<_FlagCard> {
   Future<void> _resolve(String decision) async {
     setState(() => _submitting = true);
     try {
-      final res = await HttpAuthClient.post(
-        Uri.parse('$_apiUrl/api/admin/grade_flags/${widget.flag.flagId}/resolve'),
-        body: jsonEncode({
-          'decision':       decision,
-          'resolved_grade': _overrideGrade,
-          'notes':          '',
-        }),
+      final success = await GradeFlagService.resolveFlag(
+        widget.flag.flagId,
+        decision,
+        '',
+        resolvedGrade: _overrideGrade,
       );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(data['message'] ?? 'Resolved.'),
-          backgroundColor: const Color(0xFF16A34A),
-          duration: const Duration(seconds: 4),
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Resolved.'),
+          backgroundColor: Color(0xFF16A34A),
+          duration: Duration(seconds: 4),
         ));
         widget.onResolved(widget.flag.flagId);
       } else {

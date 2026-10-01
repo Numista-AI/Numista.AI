@@ -43,7 +43,9 @@ def test_stripe_checkout_idor():
     """Token for user A with body user_email=B → session uses A's identity."""
     app.dependency_overrides[get_current_user] = _make_user('uidA', 'userA@numista.ai')
     try:
-        with patch('routes.payment_routes.stripe.checkout.Session.create') as mock_create:
+        with patch('routes.payment_routes.stripe.api_key', 'sk_test_dummy'), \
+             patch('routes.payment_routes.load_stripe_keys', return_value={'secret_key': 'sk_test_dummy'}), \
+             patch('routes.payment_routes.stripe.checkout.Session.create') as mock_create:
             mock_session = MagicMock()
             mock_session.url = 'https://checkout.stripe.com/pay/mock'
             mock_session.id = 'sess_mock123'
@@ -87,7 +89,9 @@ def test_stripe_portal_idor():
     """Token A + query user_email=B → Customer.list/create called with A's email only."""
     app.dependency_overrides[get_current_user] = _make_user('uidA', 'userA@numista.ai')
     try:
-        with patch('routes.payment_routes.stripe.Customer.list') as mock_list, \
+        with patch('routes.payment_routes.stripe.api_key', 'sk_test_dummy'), \
+             patch('routes.payment_routes.load_stripe_keys', return_value={'secret_key': 'sk_test_dummy'}), \
+             patch('routes.payment_routes.stripe.Customer.list') as mock_list, \
              patch('routes.payment_routes.stripe.Customer.create') as mock_create_cust, \
              patch('routes.payment_routes.stripe.billing_portal.Session.create') as mock_portal, \
              patch('routes.payment_routes.db') as mock_db:
@@ -138,7 +142,7 @@ def test_stripe_portal_no_token():
 PASSPORT_URL = '/api/transfer/passport-pdf/transfer123'
 
 
-def _transfer_doc(user_a_id='senderUID', user_b_id='claimerUID',
+def _transfer_doc(user_a_id='sender@numista.ai', user_b_id='claimer@numista.ai',
                   recipient_email='recipient@numista.ai', items=None):
     """Build a fake Firestore transfer document."""
     mock_doc = MagicMock()
@@ -187,7 +191,7 @@ def test_passport_pdf_sender():
             client = TestClient(app)
             response = client.get(PASSPORT_URL)
             # Must NOT be 403 (auth guard) or 401 — PDF generation may raise other codes
-            assert response.status_code not in (401, 403), \
+            assert response.status_code == 200, \
                 f"Sender got auth-blocked: {response.status_code} {response.text}"
     finally:
         app.dependency_overrides.clear()
@@ -203,7 +207,7 @@ def test_passport_pdf_claimer():
             mock_gen.return_value = b'%PDF-fake'
             client = TestClient(app)
             response = client.get(PASSPORT_URL)
-            assert response.status_code not in (401, 403), \
+            assert response.status_code == 200, \
                 f"Claimer got auth-blocked: {response.status_code} {response.text}"
     finally:
         app.dependency_overrides.clear()
@@ -221,7 +225,7 @@ def test_passport_pdf_recipient_by_email():
             mock_gen.return_value = b'%PDF-fake'
             client = TestClient(app)
             response = client.get(PASSPORT_URL)
-            assert response.status_code not in (401, 403), \
+            assert response.status_code == 200, \
                 f"Recipient got auth-blocked: {response.status_code} {response.text}"
     finally:
         app.dependency_overrides.clear()

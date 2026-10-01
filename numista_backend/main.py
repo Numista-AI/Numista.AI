@@ -11126,8 +11126,8 @@ async def api_get_passport_pdf(
         sender_uid   = str(transfer_data.get('user_a_id') or '').strip()
         recipient_email = str(transfer_data.get('recipient_email') or '').strip().lower()
         claimer_uid  = str(transfer_data.get('user_b_id') or '').strip()
-        is_sender    = caller_uid and caller_uid == sender_uid
-        is_claimer   = claimer_uid and caller_uid == claimer_uid
+        is_sender    = bool(sender_uid) and (caller_email == sender_uid or caller_uid == sender_uid)
+        is_claimer   = bool(claimer_uid) and (caller_email == claimer_uid or caller_uid == claimer_uid)
         is_recipient = recipient_email and caller_email == recipient_email
         if not (is_sender or is_claimer or is_recipient):
             raise HTTPException(

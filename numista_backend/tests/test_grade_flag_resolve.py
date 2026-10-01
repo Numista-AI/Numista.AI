@@ -33,23 +33,17 @@ def _non_admin_user():
         return {'uid': 'userUID', 'email': 'user@numista.ai'}
     return _dep
 
-
-def _require_admin_ok():
+def _unauthed_user():
     async def _dep():
-        return {'uid': 'adminUID', 'email': 'admin@numista.ai', 'admin': True}
-    return _dep
-
-
-def _require_admin_forbidden():
-    async def _dep():
-        raise HTTPException(status_code=403, detail='Admin required')
-    return _dep
-
-
-def _require_admin_unauthed():
-    async def _dep():
+        from fastapi import HTTPException
         raise HTTPException(status_code=401, detail='Unauthorized')
     return _dep
+
+
+
+
+
+
 
 
 RESOLVE_URL = '/api/admin/grade_flags/flag123/resolve'
@@ -60,7 +54,6 @@ VALID_JSON = {'decision': 'accept_ai', 'resolved_grade': '', 'notes': 'Test note
 def test_resolve_flag_admin_success():
     """Admin + JSON body + existing flag → 200."""
     app.dependency_overrides[get_current_user] = _admin_user()
-    app.dependency_overrides[require_admin_user] = _require_admin_ok()
     try:
         with patch('routes.grade_review_routes.db') as mock_db:
             mock_doc = MagicMock()
@@ -86,7 +79,6 @@ def test_resolve_flag_admin_success():
 def test_resolve_flag_not_found():
     """Admin + JSON body + non-existent flag → 404."""
     app.dependency_overrides[get_current_user] = _admin_user()
-    app.dependency_overrides[require_admin_user] = _require_admin_ok()
     try:
         with patch('routes.grade_review_routes.db') as mock_db:
             mock_doc = MagicMock()
@@ -106,7 +98,6 @@ def test_resolve_flag_form_encoded():
     The route uses AdminResolveFlagRequest (Pydantic JSON body) so form data is rejected.
     """
     app.dependency_overrides[get_current_user] = _admin_user()
-    app.dependency_overrides[require_admin_user] = _require_admin_ok()
     try:
         client = TestClient(app)
         response = client.post(
@@ -122,7 +113,6 @@ def test_resolve_flag_form_encoded():
 def test_resolve_flag_non_admin():
     """Valid token but no admin claim → 403."""
     app.dependency_overrides[get_current_user] = _non_admin_user()
-    app.dependency_overrides[require_admin_user] = _require_admin_forbidden()
     try:
         client = TestClient(app)
         response = client.post(RESOLVE_URL, json=VALID_JSON)
@@ -134,8 +124,7 @@ def test_resolve_flag_non_admin():
 
 def test_resolve_flag_no_token():
     """No token at all → 401."""
-    app.dependency_overrides[get_current_user] = _require_admin_unauthed()
-    app.dependency_overrides[require_admin_user] = _require_admin_unauthed()
+    app.dependency_overrides[get_current_user] = _unauthed_user()
     try:
         client = TestClient(app)
         response = client.post(RESOLVE_URL, json=VALID_JSON)

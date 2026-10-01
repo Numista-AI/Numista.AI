@@ -9,7 +9,6 @@ import '../services/morgan_prefs.dart';
 import '../services/guest_seed_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import '../services/http_auth_client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -238,10 +237,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     // Immediately remove from view
     setState(() => _dismissedNewsIds.add(articleId));
     try {
-      await HttpAuthClient.post(
-        Uri.parse('$kApiBaseUrl/api/dismiss_news'),
-        body: jsonEncode({'article_id': articleId}),
-      );
+      await MarketNewsService.dismissNewsItem(articleId);
     } catch (_) {}
   }
 

@@ -6,6 +6,8 @@ import 'package:http/testing.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
 import 'package:numista_ai/services/stripe_service.dart';
 import 'package:numista_ai/services/lateral_transfer_service.dart';
+import 'package:numista_ai/services/market_news_service.dart';
+import 'package:numista_ai/services/grade_flag_service.dart';
 
 /// Bearer Header Integration Tests — MUST 8 (REQ_027F)
 ///
@@ -172,11 +174,8 @@ void main() {
         return http.Response('{"status":"ok"}', 200);
       });
 
-      // Drive the real HttpAuthClient.post with the dismiss_news endpoint pattern
-      await HttpAuthClient.post(
-        Uri.parse('http://localhost/api/dismiss_news'),
-        body: jsonEncode({'article_id': 'news_abc123'}),
-      );
+      // Drive the real MarketNewsService
+      await MarketNewsService.dismissNewsItem('news_abc123');
 
       expect(captured, isNotNull);
       expect(captured!.url.path, contains('dismiss_news'));
@@ -196,14 +195,7 @@ void main() {
         return http.Response('{"message":"Resolved"}', 200);
       });
 
-      await HttpAuthClient.post(
-        Uri.parse('http://localhost/api/admin/grade_flags/flag_xyz/resolve'),
-        body: jsonEncode({
-          'decision': 'accept_ai',
-          'resolved_grade': '',
-          'notes': '',
-        }),
-      );
+      await GradeFlagService.resolveFlag('flag_xyz', 'accept_ai', '');
 
       expect(captured, isNotNull);
       expect(captured!.url.path, contains('grade_flags'));

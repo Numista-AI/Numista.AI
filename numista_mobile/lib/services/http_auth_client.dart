@@ -11,7 +11,9 @@ import 'package:http/http.dart' as http;
 class HttpAuthClient {
   HttpAuthClient._();
 
+  @visibleForTesting
   static Future<String?> Function()? tokenProviderOverride;
+  @visibleForTesting
   static http.Client? httpClientOverride;
 
   /// Retrieve the current Firebase Auth ID Token.
@@ -57,8 +59,13 @@ class HttpAuthClient {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final reqHeaders = await _buildHeaders(headers);
+    final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
-    return c.get(url, headers: reqHeaders).timeout(timeout);
+    try {
+      return await c.get(url, headers: reqHeaders).timeout(timeout);
+    } finally {
+      if (ownClient) c.close();
+    }
   }
 
   /// Send an authenticated POST request.
@@ -70,8 +77,13 @@ class HttpAuthClient {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final reqHeaders = await _buildHeaders(headers);
+    final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
-    return c.post(url, headers: reqHeaders, body: body).timeout(timeout);
+    try {
+      return await c.post(url, headers: reqHeaders, body: body).timeout(timeout);
+    } finally {
+      if (ownClient) c.close();
+    }
   }
 
   /// Send an authenticated PUT request.
@@ -83,8 +95,13 @@ class HttpAuthClient {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final reqHeaders = await _buildHeaders(headers);
+    final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
-    return c.put(url, headers: reqHeaders, body: body).timeout(timeout);
+    try {
+      return await c.put(url, headers: reqHeaders, body: body).timeout(timeout);
+    } finally {
+      if (ownClient) c.close();
+    }
   }
 
   /// Send an authenticated DELETE request.
@@ -96,7 +113,12 @@ class HttpAuthClient {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final reqHeaders = await _buildHeaders(headers);
+    final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
-    return c.delete(url, headers: reqHeaders, body: body).timeout(timeout);
+    try {
+      return await c.delete(url, headers: reqHeaders, body: body).timeout(timeout);
+    } finally {
+      if (ownClient) c.close();
+    }
   }
 }

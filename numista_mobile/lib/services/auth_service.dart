@@ -22,11 +22,10 @@ class AuthService {
   static bool get isBetaTester {
     final user = _auth.currentUser;
     if (user == null) return false;
-    if (user.isAnonymous) return false;
-    final creationTime = user.metadata.creationTime;
-    if (creationTime == null) return false;
-    final betaCutoff = DateTime.utc(2026, 11, 26, 5);
-    return creationTime.isBefore(betaCutoff);
+    return isBetaFor(
+      creationUtc: user.metadata.creationTime?.toUtc(),
+      isAnonymous: user.isAnonymous,
+    );
   }
 
   static String get userEmail {
