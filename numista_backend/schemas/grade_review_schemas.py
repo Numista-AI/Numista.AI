@@ -24,3 +24,9 @@ class GradeReviewSubmitRequest(BaseModel):
     suggested_grade: Optional[str] = ""
     rating: int = Field(..., ge=1, le=5)
     notes: Optional[str] = ""
+
+class AdminResolveFlagRequest(BaseModel):
+    """JSON body for POST /api/admin/grade_flags/{flag_id}/resolve sent by HttpAuthClient."""
+    decision: str                        # 'accept_community' | 'accept_ai' | 'override'
+    resolved_grade: Optional[str] = ""
+    notes: Optional[str] = ""

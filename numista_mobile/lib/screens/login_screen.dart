@@ -14,7 +14,8 @@ import '../widgets/auth_gate.dart';
 
 class LoginScreen extends StatefulWidget {
   final int initialTab;
-  const LoginScreen({super.key, this.initialTab = 0});
+  final bool showResetForm;
+  const LoginScreen({super.key, this.initialTab = 0, this.showResetForm = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _pinCreateVisible = false;   // Show/hide on Create Account tab (independent)
   bool _usePasswordSignIn = false;  // Toggle: PIN vs password on Sign In tab
   bool _usePasswordCreate = false;  // Toggle: PIN vs password on Create Account tab
-  bool _showResetForm    = false;
+  late bool _showResetForm;
   bool _termsAccepted    = false;   // Must be true before Create My Vault button enables
   String? _error;
   String? _successMsg;
@@ -59,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _showResetForm = widget.showResetForm;
     final initialIdx = (widget.initialTab >= 0 && widget.initialTab <= 1) ? widget.initialTab : 0;
     _tabCtrl = TabController(length: 2, vsync: this, initialIndex: initialIdx);
     _tabCtrl.addListener(() {

@@ -1,23 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'http_auth_client.dart';
 
 class StripeService {
   static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
 
   /// Launches Stripe Checkout for Pro ($4.99/mo) or Estate ($29/yr) subscription tiers.
+  /// Sends the Firebase Bearer token — the server reads user identity from the token.
   static Future<bool> launchCheckoutSession({
     required String userEmail,
     required String tier,
   }) async {
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$_baseUrl/api/stripe/create-checkout-session'),
-        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'user_email': userEmail,
           'tier': tier,
+          // user_email kept for backwards compat — server should prefer token
+          'user_email': userEmail,
         }),
       );
 
@@ -40,10 +41,12 @@ class StripeService {
   }
 
   /// Launches Stripe Customer Portal for self-serve payment method and subscription management.
-  static Future<bool> launchCustomerPortal({required String userEmail}) async {
+  /// The server reads the user from the Bearer token — the user_email query param is NOT sent
+  /// to prevent the IDOR where any signed-in user could manage another user's billing.
+  static Future<bool> launchCustomerPortal() async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/stripe/create-customer-portal?user_email=${Uri.encodeComponent(userEmail)}'),
+      final response = await HttpAuthClient.post(
+        Uri.parse('$_baseUrl/api/stripe/create-customer-portal'),
       );
 
       if (response.statusCode == 200) {

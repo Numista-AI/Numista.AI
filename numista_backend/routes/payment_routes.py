@@ -80,17 +80,20 @@ async def api_stripe_checkout(
 
 @router.post("/create-customer-portal")
 async def api_stripe_customer_portal(
-    user_email: str,
-    uid: Optional[str] = None,
-    _user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
     Generates a self-serve Stripe Customer Portal session link for plan management.
-    Requires a valid Firebase ID token. Stripe failures return HTTP 502 — never a mock URL.
+    Requires a valid Firebase ID token. User identity comes from the token only —
+    query/body user_email is intentionally NOT accepted (prevents IDOR).
+    Stripe failures return HTTP 502 — never a mock URL.
     """
     if not stripe.api_key:
         logger.error("Stripe customer portal rejected: secret key is not configured")
         raise HTTPException(status_code=502, detail="Stripe is not configured")
+
+    user_email = (current_user.get("email") or "").strip().lower()
+    uid        = current_user.get("uid") or current_user.get("user_id") or user_email
 
     try:
         target_id = uid or user_email
@@ -99,7 +102,7 @@ async def api_stripe_customer_portal(
         user_doc = user_doc_ref.get()
         if user_doc.exists:
             stripe_customer_id = (user_doc.to_dict() or {}).get("stripe_customer_id")
-        
+
         if not stripe_customer_id:
             existing = stripe.Customer.list(email=user_email, limit=1)
             if existing.data:

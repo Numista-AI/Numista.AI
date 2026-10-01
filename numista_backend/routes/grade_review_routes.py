@@ -9,7 +9,7 @@ from datetime import datetime as _dt
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Form, Depends
 from google.cloud import firestore
-from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest, GradeReviewSubmitRequest
+from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest, GradeReviewSubmitRequest, AdminResolveFlagRequest
 from routes.deps import db, logger, get_current_user_email, get_current_user, require_admin_user
 
 router = APIRouter(prefix="/api", tags=["Human AI Trainer & Community Grade Reviews"])
@@ -325,13 +325,15 @@ def admin_grade_flags(
 
 @router.post("/admin/grade_flags/{flag_id}/resolve")
 async def resolve_grade_flag(
-    flag_id:        str,
-    decision:       str = Form(...),
-    resolved_grade: str = Form(''),
-    notes:          str = Form(''),
-    admin_user:     dict = Depends(require_admin_user),
+    flag_id:    str,
+    payload:    AdminResolveFlagRequest,
+    admin_user: dict = Depends(require_admin_user),
 ):
     """Admin resolves a flagged coin grade. Requires admin token."""
+    decision       = payload.decision
+    resolved_grade = payload.resolved_grade or ''
+    notes          = payload.notes or ''
+
     admin_email = admin_user.get("email") or admin_user.get("uid") or "admin"
     flag_ref = db.collection('admin_grade_flags').document(flag_id)
     flag_doc = flag_ref.get()

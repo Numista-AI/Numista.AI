@@ -9,6 +9,7 @@ import '../services/morgan_prefs.dart';
 import '../services/guest_seed_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import '../services/http_auth_client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -237,13 +238,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     // Immediately remove from view
     setState(() => _dismissedNewsIds.add(articleId));
     try {
-      final userEmail = AuthService.userEmail;
-
-      if (userEmail.isEmpty) return;
-      await http.post(
+      await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/dismiss_news'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_email': userEmail, 'article_id': articleId}),
+        body: jsonEncode({'article_id': articleId}),
       );
     } catch (_) {}
   }
@@ -548,7 +545,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             color: Color(0xFF166534))),
                   ),
                   const SizedBox(height: 12),
-                  // ── Welcome Beta Tester Banner Card ─────────────────────────────────
+                  // ── Welcome Beta Tester Banner Card — shown only to qualifying beta accounts ──
+                  if (AuthService.isBetaTester)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -575,7 +573,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             Flexible(
                               child: Row(
                                 children: [
-                                  const Text('👋 Welcome Beta Tester!',
+                                   const Text('👋 Welcome Beta Tester!',
                                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                                   const SizedBox(width: 8),
                                   Container(
@@ -584,7 +582,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       color: const Color(0xFF166534),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('ACTIVE THROUGH OCT 1',
+                                    child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
                                         style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ),
                                 ],
@@ -1693,23 +1691,16 @@ const _versionHistory = <_Release>[
   _Release(
     version: 'v4.403',
     date: '2026-10-01',
-    description: 'Security & Auth Hardening — Token-Protected Routes',
+    description: 'Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix',
     isLatest: true,
     changes: [
-      'Auth: 6-digit PIN sign-in is now the default experience; password sign-in is still available for older accounts',
-      'Auth: sign-in lockout message now says "a few minutes" rather than a specific countdown',
-      'Auth: sign-up error message is softer when an email address is already registered',
-      'Security: all transfer routes (initiate, claim, recall) now require a valid sign-in token',
-      'Security: transfer identity is verified by the server — the request body cannot claim a different user',
-      'Security: recipient-locked transfers can only be claimed by the account they were locked to',
-      'Security: wrong claim-PIN attempts beyond five trigger a 15-minute lockout on that transfer',
-      'Security: the transfer certificate PDF can only be downloaded by the sender or the recipient',
-      'Privacy: the claim PIN no longer appears in the transfer email subject line',
       'Security: grade review submit now requires a sign-in token — the server reads the user from the token',
-      'Security: the admin grade review dashboard requires an admin-level token; others are blocked',
+      'Security: the admin grade review dashboard now requires an admin-level token; others receive 403',
       'Security: the admin claim is now the only way to gain admin access — the email allowlist has been removed',
+      'Security: the transfer Certificate of Transfer PDF can only be downloaded by the sender or recipient',
+      'Security: Stripe billing portal now reads your account from the sign-in token, not a URL parameter',
+      'Beta: "Founding Beta" status is now per-account and permanent for accounts created before 26 Nov 2026',
       'Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages',
-      'Navigation: /forgot and /reset now redirect to the password-reset screen; /signin goes to sign-in',
     ],
   ),
   _Release(

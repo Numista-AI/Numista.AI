@@ -113,6 +113,7 @@ Future<void> main() async {
       normalizedPath == '/faq' ||
       normalizedPath == '/login' ||
       normalizedPath == '/signup' ||
+      normalizedPath == '/reset-password' ||
       normalizedPath == '/demo' ||
       normalizedPath == '/app' ||
       normalizedPath == '/blog' ||
@@ -139,6 +140,7 @@ Future<void> main() async {
   bool isPendingDemo = false;
   String? pendingPublicRoute;
   int initialAuthTab = 0;
+  bool showResetForm = false;
 
   if (normalizedPath == '/demo') {
     isPendingDemo = true;
@@ -152,6 +154,9 @@ Future<void> main() async {
     initialAuthTab = 0;
   } else if (normalizedPath == '/signup') {
     initialAuthTab = 1;
+  } else if (normalizedPath == '/reset-password') {
+    initialAuthTab = 0;
+    showResetForm = true;
   }
 
   // ── General Route deep-link detection (e.g., ?route=Review%20Hub) ────────────
@@ -219,6 +224,7 @@ Future<void> main() async {
     isPendingDemo: isPendingDemo,
     pendingPublicRoute: pendingPublicRoute,
     initialAuthTab: initialAuthTab,
+    showResetForm: showResetForm,
   ));
 }
 
@@ -226,12 +232,14 @@ class NumistaAIApp extends StatefulWidget {
   final bool isPendingDemo;
   final String? pendingPublicRoute;
   final int initialAuthTab;
+  final bool showResetForm;
 
   const NumistaAIApp({
     super.key,
     this.isPendingDemo = false,
     this.pendingPublicRoute,
     this.initialAuthTab = 0,
+    this.showResetForm = false,
   });
 
   @override
@@ -358,6 +366,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
         isDemo: _isPendingDemo,
         publicRoute: _pendingPublicRoute,
         initialAuthTab: widget.initialAuthTab,
+        showResetForm: widget.showResetForm,
       ),
     );
       },

@@ -491,6 +491,30 @@
   </div>
 </div>
 
+<!-- Firebase JS SDK for auth token on receipt routes -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM",
+    authDomain: "studio-9101802118-8c9a8.firebaseapp.com",
+    projectId: "studio-9101802118-8c9a8",
+    storageBucket: "studio-9101802118-8c9a8.firebasestorage.app",
+    messagingSenderId: "568985927038",
+    appId: "1:568985927038:web:bf2a6f690b59e2148b072f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // Expose a promise that resolves to the current user (or null).
+  // Non-module scripts below await window._fbUserReady to get the user.
+  window._fbUserReady = new Promise(resolve => {
+    onAuthStateChanged(auth, user => resolve(user));
+  });
+</script>
+
 <script>
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? ''
@@ -509,6 +533,22 @@ const USER_EMAIL = getUserEmail();
 let selectedFiles = [];
 let sessionId = null;
 let pollInterval = null;
+
+/**
+ * Returns fetch headers including Authorization: Bearer <token> from Firebase.
+ * Falls back gracefully (no header) if Firebase auth is not ready or user is not signed in.
+ */
+async function getAuthHeader() {
+  try {
+    const user = await (window._fbUserReady || Promise.resolve(null));
+    if (!user) return {};
+    const token = await user.getIdToken();
+    return { 'Authorization': 'Bearer ' + token };
+  } catch (e) {
+    console.warn('[add_coins] getAuthHeader failed:', e);
+    return {};
+  }
+}
 
 function showError(msg) {
   let errBox = document.getElementById('error-banner');
@@ -769,8 +809,10 @@ function showSummary(s) {
 
 async function loadReceipts() {
   try {
+    const authHeader = await getAuthHeader();
     const r = await fetch(
-      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '?session_id=' + sessionId
+      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '?session_id=' + sessionId,
+      { headers: authHeader }
     );
     if (!r.ok) return;
     const data = await r.json();
@@ -830,8 +872,10 @@ async function viewReceipt(receiptId, e) {
   const origText = link.innerHTML;
   link.textContent = 'Loading...';
   try {
+    const authHeader = await getAuthHeader();
     const r = await fetch(
-      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '/' + receiptId + '/view_url'
+      API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '/' + receiptId + '/view_url',
+      { headers: authHeader }
     );
     const data = await r.json();
     if (data.signed_url) window.open(data.signed_url, '_blank');

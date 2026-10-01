@@ -16,6 +16,7 @@ class AuthGate extends StatefulWidget {
   final bool isDemo;
   final String? publicRoute;
   final int initialAuthTab;
+  final bool showResetForm;
   final Stream<User?>? authStream;
 
   const AuthGate({
@@ -23,6 +24,7 @@ class AuthGate extends StatefulWidget {
     this.isDemo = false,
     this.publicRoute,
     this.initialAuthTab = 0,
+    this.showResetForm = false,
     this.authStream,
   });
 
@@ -127,7 +129,7 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         // 3. Otherwise show LoginScreen
-        return LoginScreen(initialTab: widget.initialAuthTab);
+        return LoginScreen(initialTab: widget.initialAuthTab, showResetForm: widget.showResetForm);
       },
     );
   }

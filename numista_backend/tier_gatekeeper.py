@@ -130,13 +130,17 @@ def get_user_profile(user_identifier: str) -> dict:
 
 
 def get_user_tier(user_profile: dict) -> str:
-    """Resolves subscription tier (stripe_tier -> tier -> beta/lifetime flags -> 'free')."""
+    """Resolves subscription tier (stripe_tier -> tier -> beta/lifetime flags -> 'free').
+
+    Beta access NEVER expires on the server — the cutoff (accounts created before
+    2026-11-26T05:00Z) is enforced on the client by account creationTime.
+    The server treats beta_tester=True as permanent family_estate regardless of any
+    beta_access_expires field written by the Aug 2026 backfill script.
+    """
     if user_profile.get("is_lifetime_family_estate") or user_profile.get("is_ai_qc_account"):
         return "family_estate"
     if user_profile.get("beta_tester"):
-        expires = user_profile.get("beta_access_expires")
-        if not expires or expires > datetime.now(timezone.utc).isoformat():
-            return "family_estate"
+        return "family_estate"  # permanent — do NOT check beta_access_expires
     tier = user_profile.get("stripe_tier") or user_profile.get("tier")
     if tier:
         return str(tier).lower().strip()

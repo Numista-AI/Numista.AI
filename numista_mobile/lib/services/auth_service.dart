@@ -15,11 +15,15 @@ class AuthService {
   static bool get isBetaTester {
     final user = _auth.currentUser;
     if (user == null) return false;
-    // Every user defaults to a Beta Tester during testing.
-    // Cutoff: October 1, 2026.
-    final limit = DateTime(2026, 10, 1);
-    if (DateTime.now().isBefore(limit)) return true;
-    return false;
+    // Anonymous users are never beta testers.
+    if (user.isAnonymous) return false;
+    // Beta tester = signed-in account created BEFORE 2026-11-26T05:00:00Z
+    // (= 25 Nov 2026 at 11:59:59 PM ET, when the Facebook ad goes live at midnight).
+    // This is per-account and permanent — it never expires for qualifying accounts.
+    final creationTime = user.metadata.creationTime;
+    if (creationTime == null) return false;
+    final betaCutoff = DateTime.utc(2026, 11, 26, 5); // exclusive upper bound
+    return creationTime.isBefore(betaCutoff);
   }
 
   static String get userEmail {
