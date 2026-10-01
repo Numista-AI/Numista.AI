@@ -1023,6 +1023,6 @@ def test_tc15b_intruder_wrong_pins_do_not_burn_lockout():
             assert 'locked to a different account' in str(e).lower() or 'correct recipient account' in str(e).lower()
     try:
         res = claim_transfer(db=db, user_b_id=real_recipient, transfer_id=transfer_id, claim_pin=real_pin)
-        assert res['status'] == 'completed'
+        assert res['status'] == 'claimed'
     except ValueError:
         assert False
