@@ -1,45 +1,45 @@
-﻿============================= test session starts =============================
-platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
-configfile: pytest.ini
-plugins: anyio-4.14.2
-collected 362 items
-
-tests\test_active_learning_queue.py ..                                   [  0%]
-tests\test_auth_security.py ...............                              [  4%]
-tests\test_awq_intake_parser.py .......................................  [ 15%]
-tests\test_beta_estate_pipeline.py ...                                   [ 16%]
-tests\test_catalog_slot_counts.py ..............                         [ 20%]
-tests\test_checklist_historical_matcher.py ............                  [ 23%]
-tests\test_checklist_parser.py ...........                               [ 26%]
-tests\test_coa_parser.py ....                                            [ 27%]
-tests\test_collector_profile.py .                                        [ 27%]
-tests\test_deal_spotter.py ...                                           [ 28%]
-tests\test_few_shot_service.py ..                                        [ 29%]
-tests\test_financials_phase3.py ........................................ [ 40%]
-...                                                                      [ 41%]
-tests\test_greysheet.py ........                                         [ 43%]
-tests\test_identify_group_photo.py ...                                   [ 44%]
-tests\test_import_worker_integration.py .                                [ 44%]
-tests\test_ingestion.py ..                                               [ 45%]
-tests\test_invoice_fixtures.py ..                                        [ 45%]
-tests\test_missing_images_csv.py ...                                     [ 46%]
-tests\test_notes_parser.py .............                                 [ 50%]
-tests\test_proxy_bandwidth.py .....                                      [ 51%]
-tests\test_receipt_streaming.py .......                                  [ 53%]
-tests\test_repair_26rj_ghosts.py ...................................     [ 62%]
-tests\test_scan_service_estate_report.py .....                           [ 64%]
-tests\test_series_manifest_sync.py ....................                  [ 69%]
-tests\test_set_pricing_extended.py ..................................... [ 80%]
-....                                                                     [ 81%]
-tests\test_transfer.py ...............                                   [ 85%]
-tests\test_upload_baseline_fixes.py ......                               [ 87%]
-tests\test_us_mint_catalog.py .......                                    [ 88%]
-tests\test_us_mint_invoice_enrichment.py ......                          [ 90%]
-tests\test_usmint_releases_scraper.py .........                          [ 93%]
-tests\test_valuation_integrity.py ....                                   [ 94%]
-tests\test_valuations.py ......                                          [ 95%]
-tests\test_vector_rag.py ...                                             [ 96%]
-tests\test_verifiers.py ............                                     [100%]
-
-============================ 362 passed in 17.16s =============================
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
+configfile: pytest.ini
+plugins: anyio-4.14.2
+collected 390 items
+
+tests\test_active_learning_queue.py ..                                   [  0%]
+tests\test_auth_security.py ................................             [  8%]
+tests\test_awq_intake_parser.py .......................................  [ 18%]
+tests\test_beta_estate_pipeline.py ...                                   [ 19%]
+tests\test_catalog_slot_counts.py ..............                         [ 23%]
+tests\test_checklist_historical_matcher.py ............                  [ 26%]
+tests\test_checklist_parser.py ...........                               [ 28%]
+tests\test_coa_parser.py ....                                            [ 30%]
+tests\test_collector_profile.py .                                        [ 30%]
+tests\test_deal_spotter.py ...                                           [ 31%]
+tests\test_few_shot_service.py ..                                        [ 31%]
+tests\test_financials_phase3.py ........................................ [ 41%]
+...                                                                      [ 42%]
+tests\test_greysheet.py ........                                         [ 44%]
+tests\test_identify_group_photo.py ...                                   [ 45%]
+tests\test_import_worker_integration.py .                                [ 45%]
+tests\test_ingestion.py ..                                               [ 46%]
+tests\test_invoice_fixtures.py ..                                        [ 46%]
+tests\test_missing_images_csv.py ...                                     [ 47%]
+tests\test_notes_parser.py .............                                 [ 50%]
+tests\test_proxy_bandwidth.py .....                                      [ 52%]
+tests\test_receipt_streaming.py ..........                               [ 54%]
+tests\test_repair_26rj_ghosts.py ...................................     [ 63%]
+tests\test_scan_service_estate_report.py ..........                      [ 66%]
+tests\test_series_manifest_sync.py ....................                  [ 71%]
+tests\test_set_pricing_extended.py ..................................... [ 80%]
+....                                                                     [ 81%]
+tests\test_transfer.py ..................                                [ 86%]
+tests\test_upload_baseline_fixes.py ......                               [ 87%]
+tests\test_us_mint_catalog.py .......                                    [ 89%]
+tests\test_us_mint_invoice_enrichment.py ......                          [ 91%]
+tests\test_usmint_releases_scraper.py .........                          [ 93%]
+tests\test_valuation_integrity.py ....                                   [ 94%]
+tests\test_valuations.py ......                                          [ 96%]
+tests\test_vector_rag.py ...                                             [ 96%]
+tests\test_verifiers.py ............                                     [100%]
+
+============================ 390 passed in 30.33s =============================
