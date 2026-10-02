@@ -14,7 +14,8 @@ import '../widgets/auth_gate.dart';
 
 class LoginScreen extends StatefulWidget {
   final int initialTab;
-  const LoginScreen({super.key, this.initialTab = 0});
+  final bool showResetForm;
+  const LoginScreen({super.key, this.initialTab = 0, this.showResetForm = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _pinCreateVisible = false;   // Show/hide on Create Account tab (independent)
   bool _usePasswordSignIn = false;  // Toggle: PIN vs password on Sign In tab
   bool _usePasswordCreate = false;  // Toggle: PIN vs password on Create Account tab
-  bool _showResetForm    = false;
+  late bool _showResetForm;
   bool _termsAccepted    = false;   // Must be true before Create My Vault button enables
   String? _error;
   String? _successMsg;
@@ -59,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _showResetForm = widget.showResetForm;
     final initialIdx = (widget.initialTab >= 0 && widget.initialTab <= 1) ? widget.initialTab : 0;
     _tabCtrl = TabController(length: 2, vsync: this, initialIndex: initialIdx);
     _tabCtrl.addListener(() {
@@ -110,7 +112,8 @@ class _LoginScreenState extends State<LoginScreen>
     }
     GuestSeedService.deactivateBrowseDemo();
     setState(() { _loading = true; _error = null; });
-    final result = await AuthService.signIn(email, credential);
+    final result = await AuthService.signIn(email, credential,
+        passwordMode: _usePasswordSignIn);
     if (mounted) {
       setState(() { _loading = false; _error = result.error; });
       if (result.error == null) TextInput.finishAutofillContext(shouldSave: true);
@@ -346,9 +349,8 @@ class _LoginScreenState extends State<LoginScreen>
             ...const [
               ('🤖', 'AI-estimated values for every coin in your collection'),
               ('📊', 'Organize thousands of coins instantly'),
-              ('🔬', 'Microscope scanner for precision grading'),
-              ('📋', 'Estate planning reports in seconds'),
-              ('🎁', 'Smart wishlists & eBay price tracking'),
+              ('📋', 'Estate documentation, reports, and lateral transfer'),
+              ('💬', 'Morgan AI numismatic assistant — research any coin'),
               ('🧑‍🏫', 'Human AI Trainer Review Board — community-powered accuracy'),
             ].map((f) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -467,7 +469,7 @@ class _LoginScreenState extends State<LoginScreen>
         Center(
           child: TextButton(
             onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-            child: Text('Forgot your PIN or password?', style: TextStyle(color: _grey, fontSize: 13)),
+            child: Text('Forgot your PIN?', style: TextStyle(color: _grey, fontSize: 13)),
           ),
         ),
 
@@ -571,16 +573,7 @@ class _LoginScreenState extends State<LoginScreen>
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
           const SizedBox(height: 16),
           // ── Credential label row ──────────────────────────────────────────
-          Row(
-            children: [
-              Expanded(child: _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN')),
-              if (!_usePasswordSignIn)
-                const Text(
-                  'Instead of a password',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-            ],
-          ),
+          _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN'),
           const SizedBox(height: 6),
           // ── Credential input — PIN or password ───────────────────────────
           _usePasswordSignIn
@@ -588,12 +581,14 @@ class _LoginScreenState extends State<LoginScreen>
                   () => setState(() => _pinSignInVisible = !_pinSignInVisible))
               : _pinField(_pinCtrl, _pinSignInVisible,
                   () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
-          // ── Mode toggle link ──────────────────────────────────────────────
-          Align(
-            alignment: Alignment.centerRight,
+          const SizedBox(height: 16),
+          _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
+          const SizedBox(height: 10),
+          // ── Mode toggle link (small bottom link) ──────────────────────────
+          Center(
             child: TextButton(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () => setState(() {
@@ -606,13 +601,11 @@ class _LoginScreenState extends State<LoginScreen>
                 _error = null;
               }),
               child: Text(
-                _usePasswordSignIn ? 'Use 6-digit PIN instead' : 'Use password instead',
+                _usePasswordSignIn ? 'Sign in with 6-digit PIN' : 'Older account? Sign in with password',
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
         ],
       ),
       ),
@@ -752,10 +745,10 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Reset Your PIN or Password',
+        const Text('Reset Your 6-Digit PIN',
             style: TextStyle(color: _text, fontSize: 26, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text("Enter your account email address. We'll send a reset link from auth@numista.ai directly to your Inbox.",
+        const Text("Enter your account email address. We'll send a PIN reset link from auth@numista.ai directly to your Inbox.",
             style: TextStyle(color: _sub, fontSize: 14)),
         const SizedBox(height: 32),
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
@@ -764,7 +757,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         _textField(controller: _resetEmailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 24),
-        _primaryButton(label: _loading ? 'Sending…' : 'Send Reset Link', onTap: _loading ? null : _sendResetLink),
+        _primaryButton(label: _loading ? 'Sending…' : 'Send PIN Reset Link', onTap: _loading ? null : _sendResetLink),
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => setState(() { _showResetForm = false; _error = null; _successMsg = null; }),

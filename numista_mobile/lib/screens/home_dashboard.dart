@@ -237,14 +237,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     // Immediately remove from view
     setState(() => _dismissedNewsIds.add(articleId));
     try {
-      final userEmail = AuthService.userEmail;
-
-      if (userEmail.isEmpty) return;
-      await http.post(
-        Uri.parse('$kApiBaseUrl/api/dismiss_news'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_email': userEmail, 'article_id': articleId}),
-      );
+      await MarketNewsService.dismissNewsItem(articleId);
     } catch (_) {}
   }
 
@@ -548,7 +541,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             color: Color(0xFF166534))),
                   ),
                   const SizedBox(height: 12),
-                  // ── Welcome Beta Tester Banner Card ─────────────────────────────────
+                  // ── Welcome Beta Tester Banner Card — shown only to qualifying beta accounts ──
+                  if (AuthService.isBetaTester)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -575,7 +569,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             Flexible(
                               child: Row(
                                 children: [
-                                  const Text('👋 Welcome Beta Tester!',
+                                   const Text('👋 Welcome Beta Tester!',
                                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                                   const SizedBox(width: 8),
                                   Container(
@@ -584,7 +578,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       color: const Color(0xFF166534),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('ACTIVE THROUGH OCT 1',
+                                    child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
                                         style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ),
                                 ],
@@ -1691,10 +1685,53 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v4.403',
+    date: '2026-10-01',
+    description: 'Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix',
+    isLatest: true,
+    changes: [
+      'Security: grade review submit now requires a sign-in token — the server reads the user from the token',
+      'Security: the admin grade review dashboard now requires an admin-level token; others receive 403',
+      'Security: the admin claim is now the only way to gain admin access — the email allowlist has been removed',
+      'Security: the transfer Certificate of Transfer PDF can only be downloaded by the sender or recipient',
+      'Security: Stripe billing portal now reads your account from the sign-in token, not a URL parameter',
+      'Beta: "Founding Beta" status is now per-account and permanent for accounts created before 26 Nov 2026',
+      'Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages',
+    ],
+  ),
+  _Release(
+    version: 'v4.402',
+    date: '2026-09-30',
+    description: 'Transfer Security & Auth Hardening',
+    isLatest: false,
+    changes: [
+      'Security: transfer routes now require a valid sign-in token — unauthenticated requests are rejected',
+      'Security: transfer identity is verified by the server; the request body cannot override it',
+      'Security: recipient-locked transfers can only be claimed by the designated account',
+      'Security: repeated wrong claim-PIN attempts trigger a 15-minute lockout on the transfer',
+      'Privacy: claim PIN removed from the transfer email subject line',
+      'Auth: sign-in lockout message softened to \'a few minutes\' rather than a specific time',
+      'Auth: sign-up \'account already exists\' message is softer and more helpful',
+    ],
+  ),
+  _Release(
+    version: 'v4.401',
+    date: '2026-09-30',
+    description: 'PIN Authentication Experience & Account Protection',
+    isLatest: false,
+    changes: [
+      'Auth: prioritize 6-digit PIN sign-in flow and streamline credential entry',
+      'Auth: remove legacy password badge and relocate older account password option',
+      'Security: sign-in and reset messages no longer reveal whether an account exists',
+      'Security: repeated failed sign-in attempts trigger a brief cooldown with a friendly notice',
+      'Privacy: sanitize lateral transfer notifications to omit coin counts',
+    ],
+  ),
+  _Release(
     version: 'v4.400',
     date: '2026-09-30',
     description: 'Security Hardening & Platform Protection',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: enforce Bearer token authentication and cross-user validation on scan service',
       'Security: restrict scan service CORS to exact allowed origins',
@@ -7267,7 +7304,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Greysheet Market Valuation Integration: real-time CDN bid/ask prices, CPG retail attribution, and daily portfolio snapshot sync.',
-      'Automated Arbitrage Deal Finder & Wishlist EPN matcher: spot underpriced coins and affiliate matches instantly.',
+      'Wishlist Feature: track wanted coins with a dedicated Wishlist screen.',
       'Bulk Upload Template: streamlined CSV/Excel ingestion template for uploading collections in bulk.',
       'Financials & Melt Valuation Card: live melt calculations for gold, silver, platinum, and palladium spot prices.',
       'Scraper Resilience Pass: TLS fingerprint bypass (curl_cffi) and direct candidates routing for US Mint, PCGS, and NGC sources.',

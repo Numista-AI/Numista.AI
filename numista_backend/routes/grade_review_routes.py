@@ -9,8 +9,8 @@ from datetime import datetime as _dt
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Form, Depends
 from google.cloud import firestore
-from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest
-from routes.deps import db, logger, get_current_user_email
+from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest, GradeReviewSubmitRequest, AdminResolveFlagRequest
+from routes.deps import db, logger, get_current_user_email, get_current_user, require_admin_user
 
 router = APIRouter(prefix="/api", tags=["Human AI Trainer & Community Grade Reviews"])
 
@@ -22,11 +22,16 @@ GRADE_STATS_CACHE: Dict[str, Any] = {}
 GRADE_WRITE_TIMESTAMPS: Dict[str, float] = {}
 
 @router.get("/grade_review/queue")
-def grade_review_queue(user_email: str, limit: int = 30):
+def grade_review_queue(
+    limit: int = 30,
+    current_user: dict = Depends(get_current_user),
+):
     """
-    Returns the user's own AI-graded coins that haven't been reviewed yet,
+    Returns the authenticated user's own AI-graded coins that haven't been reviewed yet,
     sorted by confidence_score ascending (lowest = most urgently needs review).
+    uid/email is sourced exclusively from the Firebase token — query param ignored.
     """
+    user_email = current_user.get("email") or current_user.get("uid") or ""
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
     seen_ids: set = set()
@@ -82,17 +87,21 @@ def grade_review_queue(user_email: str, limit: int = 30):
 
 @router.post("/grade_review/submit")
 async def submit_grade_review(
-    user_email:      str = Form(...),
-    coin_id:         str = Form(...),
-    action:          str = Form(...),
-    suggested_grade: str = Form(''),
-    rating:          int = Form(...),
-    notes:           str = Form(''),
+    payload: GradeReviewSubmitRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """
-    Record a grade review on one of the user's own coins.
+    Record a grade review on one of the authenticated user's own coins.
     If 2/3+ of reviews disagree with the AI grade, flagged for admin review.
+    user_email is sourced from the Firebase token — body field is ignored.
     """
+    coin_id         = payload.coin_id
+    action          = payload.action
+    suggested_grade = payload.suggested_grade or ''
+    rating          = payload.rating
+    notes           = payload.notes or ''
+
+    user_email = current_user.get("email") or current_user.get("uid") or ""
     if not 1 <= rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
     if action not in ('confirmed', 'corrected'):
@@ -240,8 +249,12 @@ async def submit_grade_review(
     }
 
 @router.get("/admin/grade_flags")
-def admin_grade_flags(resolved: bool = False, limit: int = 100):
-    """Returns all coins flagged for admin grade review."""
+def admin_grade_flags(
+    resolved: bool = False,
+    limit: int = 100,
+    _admin: dict = Depends(require_admin_user),
+):
+    """Returns all coins flagged for admin grade review. Requires admin token."""
     try:
         q = (db.collection('admin_grade_flags')
                .where('resolved', '==', resolved)
@@ -312,13 +325,16 @@ def admin_grade_flags(resolved: bool = False, limit: int = 100):
 
 @router.post("/admin/grade_flags/{flag_id}/resolve")
 async def resolve_grade_flag(
-    flag_id:        str,
-    admin_email:    str = Form(...),
-    decision:       str = Form(...),
-    resolved_grade: str = Form(''),
-    notes:          str = Form(''),
+    flag_id:    str,
+    payload:    AdminResolveFlagRequest,
+    admin_user: dict = Depends(require_admin_user),
 ):
-    """Admin resolves a flagged coin grade."""
+    """Admin resolves a flagged coin grade. Requires admin token."""
+    decision       = payload.decision
+    resolved_grade = payload.resolved_grade or ''
+    notes          = payload.notes or ''
+
+    admin_email = admin_user.get("email") or admin_user.get("uid") or "admin"
     flag_ref = db.collection('admin_grade_flags').document(flag_id)
     flag_doc = flag_ref.get()
     if not flag_doc.exists:
@@ -367,8 +383,9 @@ async def resolve_grade_flag(
     }
 
 @router.get("/grade_review/stats")
-def grade_review_stats(user_email: str):
-    """Per-user grade review statistics."""
+def grade_review_stats(current_user: dict = Depends(get_current_user)):
+    """Per-user grade review statistics. uid/email sourced from Firebase token."""
+    user_email = current_user.get("email") or current_user.get("uid") or ""
     now = _time.time()
     last_write = GRADE_WRITE_TIMESTAMPS.get(user_email, 0)
     cache_entry = GRADE_STATS_CACHE.get(user_email)

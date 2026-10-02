@@ -162,13 +162,14 @@ def run_upgrade(commit=False):
             stats['ai_qc'] += 1
 
         else:
-            # Real Beta Tester
-            category = "Real Beta Tester (24-Month Upgrade)"
+            # Real Beta Tester — beta access is permanent (server ignores beta_access_expires)
+            category = "Real Beta Tester (Permanent)"
             payload = {
                 'stripe_tier': 'family_estate',
                 'tier': 'family_estate',
                 'beta_tester': True,
-                'beta_access_expires': expires_24mo_iso,
+                # beta_access_expires intentionally NOT written — beta is permanent on the server.
+                # The client enforces the cutoff via Firebase account creationTime.
                 'updated_at': now_iso,
             }
             stats['real_beta_testers'] += 1

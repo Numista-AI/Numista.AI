@@ -1,6 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../models/transfer_model.dart';
@@ -963,7 +968,6 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
   Widget _buildSuccessView() {
     final transfer = _createdTransfer!;
-    final pdfUrl = _transferService.getPassportPdfUrl(transfer.transferId);
 
     return Column(
       children: [
@@ -975,7 +979,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Share the 6-digit Claim PIN below with the recipient or print the Official Passport PDF.',
+          'Share the 6-digit Claim PIN below with the recipient or download the Certificate of Transfer.',
           textAlign: TextAlign.center,
           style: TextStyle(color: _textSecondary),
         ),
@@ -995,7 +999,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'Passport PDF & PIN emailed to ${transfer.recipientEmail} (Locked to recipient account)',
+                    'Certificate of Transfer & PIN emailed to ${transfer.recipientEmail} (Locked to recipient account)',
                     style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -1039,20 +1043,50 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
             label: const Text(
-              'Download Passport PDF & Invoice Record',
+              'Download Certificate of Transfer',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
             onPressed: () async {
-              final uri = Uri.parse(pdfUrl);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              try {
+                final bytes = await _transferService.fetchCertificatePdfBytes(transfer.transferId);
+                // Open the PDF bytes using the universal_io / printing package or web download
+                // On web: trigger a Blob download; on mobile: save to temp and open with PDF viewer
+                // For now, use the printing package's sharePdf to open the system share sheet
+                // ignore: depend_on_referenced_packages
+                await _openPdfBytes(Uint8List.fromList(bytes), 'certificate_${transfer.transferId}.pdf');
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not download PDF: $e'),
+                        backgroundColor: Colors.red),
+                  );
+                }
               }
             },
           ),
         ),
       ],
     );
+  }
+
+  /// Opens PDF bytes: on web uses the Printing package (opens print dialog / download),
+  /// on mobile saves to a temp file and opens with the system PDF viewer.
+  Future<void> _openPdfBytes(Uint8List bytes, String filename) async {
+    if (kIsWeb) {
+      await Printing.sharePdf(bytes: bytes, filename: filename);
+    } else {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes);
+      final uri = Uri.file(file.path);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: share via the print/share sheet
+        await Printing.sharePdf(bytes: bytes, filename: filename);
+      }
+    }
   }
 
   Widget _buildTabButton(String tabKey, IconData icon, String label) {

@@ -28,6 +28,21 @@
         "source": "/blog",
         "destination": "/about",
         "type": 301
+      },
+      {
+        "source": "/signin",
+        "destination": "/login",
+        "type": 301
+      },
+      {
+        "source": "/forgot",
+        "destination": "/reset-password",
+        "type": 301
+      },
+      {
+        "source": "/reset",
+        "destination": "/reset-password",
+        "type": 301
       }
     ],
 
@@ -73,6 +88,10 @@
       },
       {
         "source": "/login",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/reset-password",
         "destination": "/index.html"
       },
       {

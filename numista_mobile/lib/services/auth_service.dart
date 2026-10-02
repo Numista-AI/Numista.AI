@@ -12,14 +12,20 @@ class AuthService {
 
   static bool get isGuest => _auth.currentUser?.isAnonymous == true;
 
+  /// Pure helper — testable without Firebase. Used by isBetaTester getter.
+  static bool isBetaFor({required DateTime? creationUtc, required bool isAnonymous}) {
+    if (isAnonymous) return false;
+    if (creationUtc == null) return false;
+    return creationUtc.isBefore(DateTime.utc(2026, 11, 26, 5));
+  }
+
   static bool get isBetaTester {
     final user = _auth.currentUser;
     if (user == null) return false;
-    // Every user defaults to a Beta Tester during testing.
-    // Cutoff: October 1, 2026.
-    final limit = DateTime(2026, 10, 1);
-    if (DateTime.now().isBefore(limit)) return true;
-    return false;
+    return isBetaFor(
+      creationUtc: user.metadata.creationTime?.toUtc(),
+      isAnonymous: user.isAnonymous,
+    );
   }
 
   static String get userEmail {
@@ -77,13 +83,14 @@ class AuthService {
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ─── Sign In with Email + PIN ─────────────────────────────────────────────
-  static Future<AuthResult> signIn(String email, String pin) async {
+  static Future<AuthResult> signIn(String email, String pin,
+      {bool passwordMode = false}) async {
     try {
       await _auth.signInWithEmailAndPassword(
           email: email.trim().toLowerCase(), password: pin.trim());
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
-      return AuthResult.failure(_friendlyError(e.code));
+      return AuthResult.failure(_friendlyError(e.code, passwordMode: passwordMode));
     }
   }
 
@@ -128,8 +135,13 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
       return AuthResult.success(
-          message: 'Reset email sent to ${email.trim()}. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
+          message: 'If an account exists for ${email.trim()}, a PIN reset link has been sent. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        // Enforce zero account enumeration even if Firebase enumeration protection is disabled
+        return AuthResult.success(
+            message: 'If an account exists for ${email.trim()}, a PIN reset link has been sent. Check your Inbox (and Spam folder). Email comes from auth@numista.ai.');
+      }
       return AuthResult.failure(_friendlyError(e.code));
     }
   }
@@ -154,25 +166,29 @@ class AuthService {
   static Future<void> signOut() => _auth.signOut();
 
   // ─── Human-friendly Firebase error messages ───────────────────────────────
-  static String _friendlyError(String code) {
+  static String friendlyError(String code) => _friendlyError(code);
+
+  static String _friendlyError(String code, {bool passwordMode = false}) {
     switch (code) {
       case 'user-not-found':
-        return 'No account found with that email.';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Incorrect email or PIN. Please try again.';
+      case 'invalid-login-credentials':
+        return passwordMode
+            ? 'Incorrect email or password.'
+            : 'Incorrect email or PIN.';
       case 'email-already-in-use':
-        return 'An account already exists with that email.';
+        return 'An account with that email already exists. Try signing in instead.';
       case 'weak-password':
         return 'PIN must be exactly 6 digits.';
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'too-many-requests':
-        return 'Too many failed attempts. Please wait a moment and try again.';
+        return 'Too many tries. Please wait a few minutes, or use Forgot your PIN.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
       default:
-        return 'Something went wrong. Please try again. ($code)';
+        return 'Something went wrong. Please try again.';
     }
   }
 }

@@ -316,7 +316,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             morganText = 'I couldn\'t make out any coins in that photo. Could you try a clearer image?';
           } else if (coinCount == 1) {
             final coin = data['coins'][0];
-            morganText = 'I found one coin — a ${coin["year"]}${coin["mint_mark"]?.isNotEmpty == true ? "-" + coin["mint_mark"] : ""} ${coin["denomination"]}. Would you like to add it to your collection?';
+            morganText = 'I found one coin — a ${coin["year"]}${coin["mint_mark"]?.isNotEmpty == true ? "-${coin["mint_mark"]}" : ""} ${coin["denomination"]}. Would you like to add it to your collection?';
           } else if (grouped) {
             morganText = 'I found $coinCount coins in your photo! They look like they\'re together in one holder.\n\nSave as "$groupName"?';
           } else {
@@ -1200,9 +1200,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
           SizedBox(height: 10),
           ...coins.map((c) => Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: Text('• ${c["year"]}${c["mint_mark"]?.isNotEmpty == true ? "-" + c["mint_mark"] : ""} ${c["denomination"]}',
+            child: Text('• ${c["year"]}${c["mint_mark"]?.isNotEmpty == true ? "-${c["mint_mark"]}" : ""} ${c["denomination"]}',
                 style: TextStyle(color: _sub, fontSize: 12)),
-          )).toList(),
+          )),
           SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1281,7 +1281,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
+                          color: Colors.amber.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.amber),
                         ),
@@ -1322,7 +1322,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               Switch(
                                 value: enterPerCoin,
                                 onChanged: (val) => setDialogState(() => enterPerCoin = val),
-                                activeColor: _teal,
+                                activeThumbColor: _teal,
                               ),
                             ],
                           )

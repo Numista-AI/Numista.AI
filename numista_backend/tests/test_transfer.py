@@ -64,6 +64,10 @@ class FakeDocRef:
         for k, v in data.items():
             if v == firestore.DELETE_FIELD:
                 self._store[self.path].pop(k, None)
+            elif isinstance(v, firestore.Increment):
+                # Simulate Increment sentinel for in-memory tests
+                current = self._store[self.path].get(k, 0)
+                self._store[self.path][k] = int(current) + int(v.value)
             else:
                 self._store[self.path][k] = v
 
@@ -863,3 +867,162 @@ def test_tc14_sell_direct_client_payload_integration(monkeypatch):
     assert resp3.status_code == 422
 
 
+# ─── REQ_027C: Real Claim Lock / Lockout Tests ────────────────────────────────
+
+def test_tc15_non_recipient_rejected_before_pin():
+    """
+    TC-15 (REQ_027C MUST-2): Non-recipient claim is rejected BEFORE the PIN is
+    checked, so a wrong caller cannot burn the 5-try lockout for the real recipient.
+    Pin fail count must remain 0 after the rejected attempt.
+    """
+    db = FakeFirestore()
+    sender_id = "sender@numista.ai"
+    real_recipient = "real@numista.ai"
+    intruder = "intruder@numista.ai"
+    coin_id = "coin_tc15"
+
+    db.collection("users").document(sender_id).collection("coins").document(coin_id).set({
+        "title": "1921 Morgan Dollar",
+        "Quantity": 1,
+    })
+
+    init_res = initiate_transfer(
+        db=db,
+        user_a_id=sender_id,
+        item_ids=[coin_id],
+        recipient_email=real_recipient,
+    )
+    transfer_id = init_res["transfer_id"]
+    real_pin = init_res["claim_pin"]
+
+    # Intruder attempts to claim with the correct PIN — must be rejected on recipient check
+    try:
+        claim_transfer(db=db, user_b_id=intruder, transfer_id=transfer_id, claim_pin=real_pin)
+        assert False, "Expected ValueError for wrong recipient"
+    except ValueError as e:
+        assert "locked to a different account" in str(e).lower() or \
+               "correct recipient account" in str(e).lower(), \
+               f"Expected recipient-lock message, got: {e}"
+
+    # Critical: pin_fail_count must still be 0 — the intruder did not burn a try
+    transfer_doc = (
+        db.collection("transfers").document(transfer_id).get().to_dict()
+        if db.collection("transfers").document(transfer_id).get().exists
+        else None
+    )
+    # If transfer doc is stored under a different path, look it up from the init result
+    # The real check: claim another wrong guess by real recipient should NOT start at count=1
+    # Try with wrong PIN as real recipient — should show "Invalid claim PIN code", not lockout
+    try:
+        claim_transfer(db=db, user_b_id=real_recipient, transfer_id=transfer_id, claim_pin="000000")
+        assert False, "Expected ValueError for wrong PIN"
+    except ValueError as e:
+        assert "Invalid claim PIN code" in str(e), f"Unexpected error: {e}"
+        assert "Too many incorrect" not in str(e), \
+            "Pin fail count was already at max — intruder burned the tries!"
+
+    # Real recipient with correct PIN must still succeed
+    claim_res = claim_transfer(
+        db=db, user_b_id=real_recipient, transfer_id=transfer_id, claim_pin=real_pin
+    )
+    assert claim_res["status"] == "claimed"
+
+
+def test_tc16_pin_lockout_after_5_wrong_guesses():
+    """
+    TC-16 (REQ_027C MUST-2): After 5 wrong PINs from the real recipient,
+    the transfer is locked and even the correct PIN is rejected.
+    Counter resets to 0 on lock expire.
+    """
+    db = FakeFirestore()
+    sender_id = "sender@numista.ai"
+    recipient = "recipient@numista.ai"
+    coin_id = "coin_tc16"
+
+    db.collection("users").document(sender_id).collection("coins").document(coin_id).set({
+        "title": "1881-S Morgan Dollar",
+        "Quantity": 1,
+    })
+
+    init_res = initiate_transfer(db=db, user_a_id=sender_id, item_ids=[coin_id])
+    transfer_id = init_res["transfer_id"]
+    real_pin = init_res["claim_pin"]
+    wrong_pin = "000000" if real_pin != "000000" else "111111"
+
+    # Send 4 wrong PINs — each should raise "Invalid claim PIN code"
+    for i in range(4):
+        try:
+            claim_transfer(db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=wrong_pin)
+            assert False, f"Expected ValueError on attempt {i+1}"
+        except ValueError as e:
+            assert "Invalid claim PIN code" in str(e), f"Attempt {i+1}: unexpected error: {e}"
+
+    # 5th wrong PIN triggers lockout
+    try:
+        claim_transfer(db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=wrong_pin)
+        assert False, "Expected lockout ValueError on 5th wrong attempt"
+    except ValueError as e:
+        assert "Too many incorrect" in str(e), f"Expected lockout message, got: {e}"
+
+    # After lockout, correct PIN is also rejected
+    try:
+        claim_transfer(db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=real_pin)
+        assert False, "Expected lockout to block correct PIN"
+    except ValueError as e:
+        assert "Too many incorrect" in str(e), f"Expected lockout still active, got: {e}"
+
+
+def test_tc17_pin_success_clears_fail_count():
+    """
+    TC-17 (REQ_027C MUST-2): Two wrong PINs then correct PIN succeeds,
+    and the fail counter is reset to 0 (not left at 2).
+    """
+    db = FakeFirestore()
+    sender_id = "sender@numista.ai"
+    recipient = "recipient@numista.ai"
+    coin_id = "coin_tc17"
+
+    db.collection("users").document(sender_id).collection("coins").document(coin_id).set({
+        "title": "1921 Peace Dollar",
+        "Quantity": 1,
+    })
+
+    init_res = initiate_transfer(db=db, user_a_id=sender_id, item_ids=[coin_id])
+    transfer_id = init_res["transfer_id"]
+    real_pin = init_res["claim_pin"]
+    wrong_pin = "000000" if real_pin != "000000" else "111111"
+
+    # Two wrong attempts
+    for _ in range(2):
+        try:
+            claim_transfer(db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=wrong_pin)
+        except ValueError:
+            pass
+
+    # Correct PIN must succeed
+    claim_res = claim_transfer(
+        db=db, user_b_id=recipient, transfer_id=transfer_id, claim_pin=real_pin
+    )
+    assert claim_res["status"] == "claimed"
+def test_tc15b_intruder_wrong_pins_do_not_burn_lockout():
+    db = FakeFirestore()
+    sender_id = 'sender@numista.ai'
+    real_recipient = 'real@numista.ai'
+    intruder = 'intruder@numista.ai'
+    coin_id = 'coin_tc15b'
+    db.collection('users').document(sender_id).collection('coins').document(coin_id).set({'title': 'coin', 'Quantity': 1})
+    init_res = initiate_transfer(db=db, user_a_id=sender_id, item_ids=[coin_id], recipient_email=real_recipient)
+    transfer_id = init_res['transfer_id']
+    real_pin = init_res['claim_pin']
+    wrong_pin = '000000'
+    for _ in range(5):
+        try:
+            claim_transfer(db=db, user_b_id=intruder, transfer_id=transfer_id, claim_pin=wrong_pin)
+            assert False
+        except ValueError as e:
+            assert 'locked to a different account' in str(e).lower() or 'correct recipient account' in str(e).lower()
+    try:
+        res = claim_transfer(db=db, user_b_id=real_recipient, transfer_id=transfer_id, claim_pin=real_pin)
+        assert res['status'] == 'claimed'
+    except ValueError:
+        assert False

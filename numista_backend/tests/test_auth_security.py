@@ -582,4 +582,167 @@ def test_ebay_search_failure_returns_empty_deals_never_mock_deals(monkeypatch):
     assert data["deals"] != main.DEALS_DB
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# REQ-027: Transfer Route Authentication Tests
+# ─────────────────────────────────────────────────────────────────────────────
 
+def test_unauthenticated_transfer_initiate_rejected(monkeypatch):
+    """Calling /api/transfer/initiate without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/initiate",
+        json={"user_id": "attacker@example.com", "item_ids": ["coin_1"]},
+    )
+    assert response.status_code == 401
+
+
+def test_unauthenticated_transfer_claim_rejected(monkeypatch):
+    """Calling /api/transfer/claim without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "attacker@example.com", "transfer_id": "txn_123", "claim_pin": "123456"},
+    )
+    assert response.status_code == 401
+
+
+def test_unauthenticated_transfer_recall_rejected(monkeypatch):
+    """Calling /api/transfer/recall without a Bearer token must return 401."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    response = client.post(
+        "/api/transfer/recall",
+        json={"user_id": "attacker@example.com", "transfer_id": "txn_123"},
+    )
+    assert response.status_code == 401
+
+
+def test_transfer_claim_wrong_recipient_rejected(monkeypatch):
+    """
+    A valid authenticated user who is NOT the designated recipient must receive 403
+    when attempting to claim a recipient-locked transfer.
+    The token supplies uid 'wrong@example.com'; the service raises ValueError indicating
+    the transfer is locked to 'owner@example.com', which routes returns as 400.
+    The key assertion is that the request is rejected (status != 200) and never succeeds.
+    """
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    # Simulate a valid token for the wrong user
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "wrong@example.com", "uid": "wrong_uid"},
+    )
+
+    # Simulate the transfer service rejecting the mismatch
+    def fake_claim(*args, **kwargs):
+        raise ValueError(
+            "Transfer is locked exclusively to recipient account 'owner@example.com'. "
+            "Active user 'wrong@example.com' is not authorized to claim."
+        )
+
+    monkeypatch.setattr("services.transfer_service.claim_transfer", fake_claim, raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "wrong@example.com", "transfer_id": "txn_abc", "claim_pin": "999999"},
+        headers={"Authorization": "Bearer fake_valid_token"},
+    )
+    # Must not succeed — service layer rejects with 400 (recipient mismatch)
+    assert response.status_code != 200
+    assert "not authorized" in response.text or response.status_code in [400, 403]
+
+
+def test_transfer_claim_pin_brute_force_blocked(monkeypatch):
+    """
+    After PIN_MAX_ATTEMPTS (5) wrong guesses the service raises a lockout error.
+    The route must return a non-200 response; body must mention waiting.
+    """
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "claimer@example.com", "uid": "claimer_uid"},
+    )
+
+    def fake_claim_locked(*args, **kwargs):
+        raise ValueError("Too many incorrect PIN attempts. Please wait 15 minutes before trying again.")
+
+    monkeypatch.setattr("services.transfer_service.claim_transfer", fake_claim_locked, raising=False)
+
+    response = client.post(
+        "/api/transfer/claim",
+        json={"user_id": "claimer@example.com", "transfer_id": "txn_abc", "claim_pin": "000000"},
+        headers={"Authorization": "Bearer fake_valid_token"},
+    )
+    assert response.status_code != 200
+    assert "wait" in response.text.lower()
+
+
+# ─── REQ_027B: Grade Review / Admin / Deals Auth ──────────────────────────────
+
+def test_grade_review_stats_requires_auth(monkeypatch):
+    """GET /api/grade_review/stats must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/grade_review/stats")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated grade_review/stats, got {response.status_code}")
+
+
+def test_grade_review_queue_requires_auth(monkeypatch):
+    """GET /api/grade_review/queue must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/grade_review/queue")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated grade_review/queue, got {response.status_code}")
+
+
+def test_admin_grade_flags_requires_auth(monkeypatch):
+    """GET /api/admin/grade_flags must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/admin/grade_flags")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated admin/grade_flags, got {response.status_code}")
+
+
+def test_admin_grade_flags_non_admin_rejected(monkeypatch):
+    """GET /api/admin/grade_flags must return 403 for a valid non-admin user."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    monkeypatch.setattr(
+        "routes.deps.firebase_auth.verify_id_token",
+        lambda token: {"email": "regular@example.com", "uid": "regular_uid", "admin": False},
+    )
+    response = client.get(
+        "/api/admin/grade_flags",
+        headers={"Authorization": "Bearer fake_regular_token"},
+    )
+    assert response.status_code == 403, (
+        f"Expected 403 for non-admin caller on admin/grade_flags, got {response.status_code}")
+
+
+def test_greysheet_deals_requires_auth(monkeypatch):
+    """GET /api/greysheet/deals must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.get("/api/greysheet/deals")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated greysheet/deals, got {response.status_code}")
+
+
+def test_greysheet_deals_refresh_requires_auth(monkeypatch):
+    """POST /api/greysheet/deals/refresh must return 401 when no Bearer token is provided."""
+    monkeypatch.setenv("K_SERVICE", "numista-backend-prod")
+    monkeypatch.delenv("ALLOW_UNAUTHENTICATED", raising=False)
+    response = client.post("/api/greysheet/deals/refresh")
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated greysheet/deals/refresh, got {response.status_code}")

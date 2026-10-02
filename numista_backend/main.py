@@ -84,7 +84,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
-from routes.deps import get_current_user
+from routes.deps import get_current_user, require_admin_user
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -1641,7 +1641,7 @@ LOW_CONFIDENCE_THRESHOLD = 0.85 # Grade review endpoints extracted to routes/gra
 # --- Admin: Grade Flag Dashboard ---------------------------------------------
 
 @app.get("/api/admin/grade_flags")
-def admin_grade_flags(resolved: bool = False, limit: int = 100):
+def admin_grade_flags(resolved: bool = False, limit: int = 100, _admin: dict = Depends(require_admin_user)):
     """
     Returns all coins flagged for admin grade review.
     resolved=false (default) -> open flags only.
@@ -1722,16 +1722,17 @@ def admin_grade_flags(resolved: bool = False, limit: int = 100):
 @app.post("/api/admin/grade_flags/{flag_id}/resolve")
 async def resolve_grade_flag(
     flag_id:        str,
-    admin_email:    str = Form(...),
     decision:       str = Form(...),   # 'accept_community' | 'keep_ai'
     resolved_grade: str = Form(''),
     notes:          str = Form(''),
+    admin_user:     dict = Depends(require_admin_user),
 ):
     """
-    Admin resolves a flagged coin grade.
-    decision='accept_community' -> updates coin Condition to community_grade
+    Admin resolves a flagged coin grade. Requires admin token.
+    admin_email sourced from Firebase token — form field ignored.
     decision='keep_ai'          -> keeps existing AI grade, marks flag resolved
     """
+    admin_email = admin_user.get("email") or admin_user.get("uid") or "admin"
     flag_ref = db.collection('admin_grade_flags').document(flag_id)
     flag_doc = flag_ref.get()
     if not flag_doc.exists:
@@ -10129,11 +10130,12 @@ DEALS_DB = [
 ]
 
 @app.get("/api/greysheet/deals")
-async def get_arbitrage_deals():
+async def get_arbitrage_deals(_current_user: dict = Depends(get_current_user)):
+    # NOTE: DEALS_DB is stub data — real eBay arbitrage is pending EPN re-integration.
     return {"deals": DEALS_DB}
 
 @app.post("/api/greysheet/deals/refresh")
-async def refresh_arbitrage_deals():
+async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user)):
     import random
     new_deals = [
         {
@@ -10962,15 +10964,23 @@ class UndoSaleRequest(BaseModel):
     sale_archive_id: str
 
 @app.post("/api/transfer/initiate")
-async def api_initiate_transfer(req: InitiateTransferRequest):
+async def api_initiate_transfer(
+    req: InitiateTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Initiates a lateral property transfer with server-side privacy sanitization.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    # uid always comes from token — never from the request body
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import initiate_transfer
         result = initiate_transfer(
             db=db,
-            user_a_id=req.user_id,
+            user_a_id=token_uid,
             item_ids=req.item_ids,
             recipient_email=req.recipient_email,
             privacy_toggles=req.privacy_toggles,
@@ -10982,15 +10992,22 @@ async def api_initiate_transfer(req: InitiateTransferRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/claim")
-async def api_claim_transfer(req: ClaimTransferRequest):
+async def api_claim_transfer(
+    req: ClaimTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Claims a pending lateral transfer, creating item(s) in recipient's vault.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import claim_transfer
         result = claim_transfer(
             db=db,
-            user_b_id=req.user_id,
+            user_b_id=token_uid,
             transfer_id=req.transfer_id,
             claim_pin=req.claim_pin,
             selected_item_ids=req.selected_item_ids
@@ -11001,15 +11018,22 @@ async def api_claim_transfer(req: ClaimTransferRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/recall")
-async def api_recall_transfer(req: RecallTransferRequest):
+async def api_recall_transfer(
+    req: RecallTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Recalls an unclaimed pending transfer.
+    Identity is taken from the verified Firebase ID token only; req.user_id is ignored.
     """
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
         from services.transfer_service import recall_transfer
         result = recall_transfer(
             db=db,
-            user_a_id=req.user_id,
+            user_a_id=token_uid,
             transfer_id=req.transfer_id
         )
         return {"status": "success", "result": result}
@@ -11080,26 +11104,46 @@ async def api_get_sold_items(user_id: str, authorization: Optional[str] = Header
 from fastapi.responses import Response
 
 @app.get("/api/transfer/passport-pdf/{transfer_id}")
-async def api_get_passport_pdf(transfer_id: str):
+async def api_get_passport_pdf(
+    transfer_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
-    Generates and downloads the official dual-format Passport PDF (8.5x11" + 3x5").
+    Generates and downloads the official dual-format Certificate of Transfer PDF.
+    Caller must be authenticated as the sender OR the locked recipient.
     """
     try:
         from services.passport_pdf_generator import generate_passport_pdf
         transfer_doc = db.collection("transfers").document(transfer_id).get()
         if not transfer_doc.exists:
             raise HTTPException(status_code=404, detail="Transfer not found")
-        
+
         transfer_data = transfer_doc.to_dict() or {}
+
+        # Authorization: only sender or locked recipient may access the PDF
+        caller_uid   = (current_user.get('uid') or current_user.get('user_id') or '').strip()
+        caller_email = (current_user.get('email') or '').strip().lower()
+        sender_uid   = str(transfer_data.get('user_a_id') or '').strip()
+        recipient_email = str(transfer_data.get('recipient_email') or '').strip().lower()
+        claimer_uid  = str(transfer_data.get('user_b_id') or '').strip()
+        is_sender    = bool(sender_uid) and (caller_email == sender_uid or caller_uid == sender_uid)
+        is_claimer   = bool(claimer_uid) and (caller_email == claimer_uid or caller_uid == claimer_uid)
+        is_recipient = recipient_email and caller_email == recipient_email
+        if not (is_sender or is_claimer or is_recipient):
+            raise HTTPException(
+                status_code=403,
+                detail="Only the sender or recipient may access this document.",
+            )
+
         items = transfer_data.get("items", [])
         if not items:
-            raise HTTPException(status_code=400, detail="Cannot generate passport PDF for a transfer with 0 items.")
-        
+            raise HTTPException(status_code=400, detail="Cannot generate PDF for a transfer with 0 items.")
+
         pdf_bytes = generate_passport_pdf(transfer_data)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=passport_{transfer_id}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename=certificate_{transfer_id}.pdf"}
         )
     except HTTPException:
         raise

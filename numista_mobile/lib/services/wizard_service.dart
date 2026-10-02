@@ -103,7 +103,7 @@ const List<WizardStep> _guestSteps = [
     id: 'complete',
     title: "Wishlist & You're All Set! 🎉",
     message:
-        "Track wanted items on your Wishlist with real-time eBay pricing. "
+        "Track wanted coins on your Wishlist. "
         "Feel free to explore your demo collection. When you're ready to track "
         "your real collection, create a free account — your progress comes with you!",
     buttonLabel: "Start Exploring →",

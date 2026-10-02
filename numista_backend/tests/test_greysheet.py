@@ -85,20 +85,15 @@ def test_pricing_endpoint():
     assert isinstance(data["pricing"], list)
 
 def test_deals_endpoints():
-    # Test GET /api/greysheet/deals
+    # Auth guard: /api/greysheet/deals and /api/greysheet/deals/refresh
+    # now require a Firebase Bearer token — unauthenticated callers must receive 401.
     response = client.get("/api/greysheet/deals")
-    assert response.status_code == 200
-    data = response.json()
-    assert "deals" in data
-    assert len(data["deals"]) > 0
-    assert "margin_percent" in data["deals"][0]
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated /api/greysheet/deals, got {response.status_code}")
 
-    # Test POST /api/greysheet/deals/refresh
     response = client.post("/api/greysheet/deals/refresh")
-    assert response.status_code == 200
-    refresh_data = response.json()
-    assert refresh_data["status"] == "success"
-    assert refresh_data["count"] > 0
+    assert response.status_code == 401, (
+        f"Expected 401 for unauthenticated /api/greysheet/deals/refresh, got {response.status_code}")
 
 def test_daily_snapshot_endpoint():
     # Test POST /api/portfolio/snapshot/daily

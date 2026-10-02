@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../models/transfer_model.dart';
 import 'http_auth_client.dart';
@@ -17,9 +16,8 @@ class LateralTransferService {
     Map<String, bool>? privacyToggles,
     Map<String, int>? itemQuantities,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/initiate'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'item_ids': itemIds,
@@ -49,9 +47,8 @@ class LateralTransferService {
     required String claimPin,
     List<String>? selectedItemIds,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/claim'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'transfer_id': transferId,
@@ -72,9 +69,8 @@ class LateralTransferService {
     required String userId,
     required String transferId,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/recall'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'user_id': userId,
         'transfer_id': transferId,
@@ -89,8 +85,17 @@ class LateralTransferService {
   }
 
   /// Gets Passport PDF download URL
-  String getPassportPdfUrl(String transferId) {
-    return '$baseUrl/api/transfer/passport-pdf/$transferId';
+  /// Fetches the Certificate of Transfer PDF bytes via authenticated request.
+  /// The plain URL approach is replaced because the route now requires a Bearer token.
+  Future<List<int>> fetchCertificatePdfBytes(String transferId) async {
+    final response = await HttpAuthClient.get(
+      Uri.parse('$baseUrl/api/transfer/passport-pdf/$transferId'),
+    );
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    } else {
+      throw Exception('Failed to fetch Certificate PDF: ${response.statusCode} ${response.body}');
+    }
   }
 
   /// Records a direct sale outside Numista.AI (Mode 3, G1-G3)

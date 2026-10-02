@@ -79,8 +79,12 @@ async def get_current_user_email(request: Request, user: Dict[str, Any] = Depend
     return email
 
 async def require_admin_user(request: Request, user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
-    """FastAPI dependency requiring custom claim ('admin': True) or designated admin email."""
-    is_admin = user.get("admin") is True or user.get("email") in ["admin@numista.ai", "eric@numista.ai"]
-    if not is_admin:
+    """FastAPI dependency requiring the Firebase custom claim 'admin': True.
+
+    The email allowlist (eric@, admin@) has been intentionally removed — an unverified
+    signup with those addresses would bypass this guard. Admin status is granted only
+    by the bootstrap_admin_claim.py script via the Firebase Admin SDK.
+    """
+    if user.get("admin") is not True:
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return user

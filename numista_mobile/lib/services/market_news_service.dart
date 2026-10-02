@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:numista_ai/constants.dart';
+import 'package:numista_ai/services/http_auth_client.dart';
 
 class MarketNewsArticle {
   final String title;
@@ -97,5 +99,13 @@ class MarketNewsService {
         summary: "Wholesale prices across MS63 to MS66 grades hold steady amid strong collector demand.",
       )
     ];
+  }
+
+  static Future<bool> dismissNewsItem(String articleId) async {
+    final response = await HttpAuthClient.post(
+      Uri.parse('$kApiBaseUrl/api/dismiss_news'),
+      body: jsonEncode({'article_id': articleId}),
+    );
+    return response.statusCode == 200;
   }
 }

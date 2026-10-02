@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../services/auth_service.dart';
+import '../services/http_auth_client.dart';
 import '../constants.dart';
+import '../services/grade_flag_service.dart';
 
 const _apiUrl = kApiBaseUrl;
 
@@ -88,7 +88,7 @@ class _AdminGradeFlagsScreenState extends State<AdminGradeFlagsScreen>
   Future<void> _loadOpen() async {
     setState(() => _loadingOpen = true);
     try {
-      final res = await http.get(
+      final res = await HttpAuthClient.get(
           Uri.parse('$_apiUrl/api/admin/grade_flags?resolved=false&limit=100'));
       if (res.statusCode == 200 && mounted) {
         final data = jsonDecode(res.body);
@@ -108,7 +108,7 @@ class _AdminGradeFlagsScreenState extends State<AdminGradeFlagsScreen>
   Future<void> _loadResolved() async {
     setState(() => _loadingResolved = true);
     try {
-      final res = await http.get(
+      final res = await HttpAuthClient.get(
           Uri.parse('$_apiUrl/api/admin/grade_flags?resolved=true&limit=100'));
       if (res.statusCode == 200 && mounted) {
         final data = jsonDecode(res.body);
@@ -339,21 +339,17 @@ class _FlagCardState extends State<_FlagCard> {
   Future<void> _resolve(String decision) async {
     setState(() => _submitting = true);
     try {
-      final res = await http.post(
-        Uri.parse('$_apiUrl/api/admin/grade_flags/${widget.flag.flagId}/resolve'),
-        body: {
-          'admin_email':    AuthService.userEmail,
-          'decision':       decision,
-          'resolved_grade': _overrideGrade,
-          'notes':          '',
-        },
+      final success = await GradeFlagService.resolveFlag(
+        widget.flag.flagId,
+        decision,
+        '',
+        resolvedGrade: _overrideGrade,
       );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(data['message'] ?? 'Resolved.'),
-          backgroundColor: const Color(0xFF16A34A),
-          duration: const Duration(seconds: 4),
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Resolved.'),
+          backgroundColor: Color(0xFF16A34A),
+          duration: Duration(seconds: 4),
         ));
         widget.onResolved(widget.flag.flagId);
       } else {
