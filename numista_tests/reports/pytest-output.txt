@@ -1,56 +1,161 @@
-============================= test session starts =============================
+﻿============================= test session starts =============================
 platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\ericd\Documents\MyVertexProject\numista_backend
 configfile: pytest.ini
-plugins: anyio-4.12.1, asyncio-1.4.0
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+plugins: anyio-4.14.2
+[32mINFO   [0m [main] [-] Vertex AI Search endpoint registered: GET /api/coin_search
+[rag] Embedding client initialised (location=global)
 collected 412 items
 
-tests\test_active_learning_queue.py ..                                   [  0%]
-tests\test_auth_security.py ................................             [  8%]
-tests\test_awq_intake_parser.py .......................................  [ 17%]
-tests\test_beta_estate_pipeline.py ...                                   [ 18%]
-tests\test_catalog_slot_counts.py ..............                         [ 21%]
-tests\test_checklist_historical_matcher.py ............                  [ 24%]
-tests\test_checklist_parser.py ...........                               [ 27%]
-tests\test_coa_parser.py ....                                            [ 28%]
-tests\test_collector_profile.py .                                        [ 28%]
-tests\test_deal_spotter.py ...                                           [ 29%]
-tests\test_few_shot_service.py ..                                        [ 29%]
-tests\test_financials_phase3.py ........................................ [ 39%]
-...                                                                      [ 40%]
-tests\test_grade_flag_resolve.py .....                                   [ 41%]
-tests\test_greysheet.py ........                                         [ 43%]
-tests\test_identify_group_photo.py ...                                   [ 44%]
-tests\test_import_worker_integration.py .                                [ 44%]
-tests\test_ingestion.py ..                                               [ 44%]
-tests\test_invoice_fixtures.py ..                                        [ 45%]
-tests\test_missing_images_csv.py ...                                     [ 46%]
-tests\test_notes_parser.py .............                                 [ 49%]
-tests\test_proxy_bandwidth.py .....                                      [ 50%]
-tests\test_receipt_streaming.py ..........                               [ 52%]
-tests\test_repair_26rj_ghosts.py ...................................     [ 61%]
-tests\test_scan_service_estate_report.py ..........                      [ 63%]
-tests\test_series_manifest_sync.py ....................                  [ 68%]
-tests\test_set_pricing_extended.py ..................................... [ 77%]
-....                                                                     [ 78%]
-tests\test_stripe_auth.py .........                                      [ 80%]
-tests\test_tier_gatekeeper_beta.py .......                               [ 82%]
-tests\test_transfer.py ...................                               [ 87%]
-tests\test_upload_baseline_fixes.py ......                               [ 88%]
-tests\test_us_mint_catalog.py .......                                    [ 90%]
-tests\test_us_mint_invoice_enrichment.py ......                          [ 91%]
-tests\test_usmint_releases_scraper.py .........                          [ 93%]
-tests\test_valuation_integrity.py ....                                   [ 94%]
-tests\test_valuations.py ......                                          [ 96%]
-tests\test_vector_rag.py ...                                             [ 97%]
-tests\test_verifiers.py ............                                     [100%]
+numista_backend\tests\test_active_learning_queue.py ..
+numista_backend\tests\test_auth_security.py [32mINFO   [0m [main] [aedd9cc6] GET / -> 200 (114ms)
+.[33mWARNING[0m [main] [3f439360] GET /api/spot_prices -> 200 (9051ms)
+.[32mINFO   [0m [main] [e916dc12] GET /api/v1/family/subaccounts -> 200 (29ms)
+.[32mINFO   [0m [main] [c37427a7] POST /api/collection/clear -> 401 (5ms)
+.[32mINFO   [0m [main] [1d7878ff] POST /api/stripe/create-checkout-session -> 401 (25ms)
+.[32mINFO   [0m [main] [ae0998ac] POST /api/stripe/create-customer-portal -> 401 (1ms)
+.[31mERROR  [0m [main] [951c5983] POST /api/stripe/create-checkout-session -> 502 (25ms)
+.[32mINFO   [0m [main] [c8bc3b3f] POST /api/stripe/webhook -> 400 (3ms)
+.[32mINFO   [0m [main] [009f60e8] POST /api/preview_cost_split -> 401 (5ms)
+[32mINFO   [0m [main] [71fc4a41] POST /api/commit_group_photo -> 401 (4ms)
+[32mINFO   [0m [main] [24ede8d6] POST /api/transfer/sell-direct -> 401 (5ms)
+[32mINFO   [0m [main] [a9bd8475] POST /api/transfer/undo-sale -> 401 (3ms)
+[32mINFO   [0m [main] [502318e7] GET /api/transfer/sold-items/victim@example.com -> 401 (2ms)
+.[32mINFO   [0m [main] [fcc8c7af] POST /api/commit_group_photo -> 403 (2ms)
+.[32mINFO   [0m [main] [264d9a86] POST /api/commit_group_photo -> 400 (3ms)
+[32mINFO   [0m [main] [3c8d7ba1] POST /api/commit_group_photo -> 400 (4ms)
+.[32mINFO   [0m [main] [a060fe29] POST /api/export/appraisal-pdf -> 401 (4ms)
+[32mINFO   [0m [main] [9ae64964] POST /api/export/appraisal-pdf -> 403 (2ms)
+.[32mINFO   [0m [main] [250b28ed] POST /api/commit_group_photo -> 200 (3ms)
+.[32mINFO   [0m [main] [38f94339] POST /api/identify_coin_photo -> 401 (11ms)
+[32mINFO   [0m [main] [1f2ce0e8] POST /api/identify_coin_photo -> 403 (4ms)
+.[32mINFO   [0m [main] [6e3923b0] GET /api/receipts/victim@example.com -> 401 (5ms)
+[32mINFO   [0m [main] [05e54927] GET /api/receipts/victim@example.com -> 403 (4ms)
+[32mINFO   [0m [main] [3fffce69] GET /api/receipts/victim@example.com/rec_123/view_url -> 401 (5ms)
+[32mINFO   [0m [main] [5c2cc0b5] GET /api/receipts/victim@example.com/rec_123/view_url -> 403 (3ms)
+[32mINFO   [0m [main] [b360e14a] GET /api/receipts/victim@example.com/rec_123/stream -> 401 (4ms)
+[32mINFO   [0m [main] [a93f0a17] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (3ms)
+[32mINFO   [0m [main] [1791b1a8] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (3ms)
+.[32mINFO   [0m [main] [4117cf17] GET /api/ebay/search -> 401 (2ms)
+[32mINFO   [0m [main] [34b23cc1] GET /api/ebay/search -> 401 (2ms)
+.[31mERROR  [0m [main] [559064f9] GET /api/ebay/search -> 503 (2ms)
+[31mERROR  [0m [main] [03a4b103] GET /api/ebay/search -> 503 (2ms)
+[32mINFO   [0m [main] [70990d81] GET /api/ebay/search -> 200 (1ms)
+...[31mERROR  [0m [main] [6baa8abd] [_get_ebay_access_token] OAuth token request failed: URLError
+[31mERROR  [0m [main] [6baa8abd] GET /api/ebay/search -> 503 (56ms)
+.[33mWARNING[0m [main] [b573562f] [search_ebay_deals] eBay Browse search request failed: RuntimeError
+[32mINFO   [0m [main] [b573562f] GET /api/ebay/search -> 200 (2ms)
+.[32mINFO   [0m [main] [5017a7e0] POST /api/transfer/initiate -> 401 (2ms)
+.[32mINFO   [0m [main] [14af0c02] POST /api/transfer/claim -> 401 (2ms)
+.[32mINFO   [0m [main] [93424369] POST /api/transfer/recall -> 401 (2ms)
+.[31mERROR  [0m [main] [a62a96cf] Claim transfer failed
+[32mINFO   [0m [main] [a62a96cf] POST /api/transfer/claim -> 400 (4ms)
+.[31mERROR  [0m [main] [a6968e18] Claim transfer failed
+[32mINFO   [0m [main] [a6968e18] POST /api/transfer/claim -> 400 (4ms)
+.[32mINFO   [0m [main] [ec78434f] GET /api/grade_review/stats -> 401 (24ms)
+.[32mINFO   [0m [main] [6d02cac3] GET /api/grade_review/queue -> 401 (3ms)
+.[32mINFO   [0m [main] [d6e07720] GET /api/admin/grade_flags -> 401 (2ms)
+.[32mINFO   [0m [main] [2a8540d7] GET /api/admin/grade_flags -> 403 (1ms)
+.[32mINFO   [0m [main] [a94abea0] GET /api/greysheet/deals -> 401 (2ms)
+.[32mINFO   [0m [main] [9a1a15d1] POST /api/greysheet/deals/refresh -> 401 (3ms)
+.
+numista_backend\tests\test_awq_intake_parser.py .......................................
+numista_backend\tests\test_beta_estate_pipeline.py ...
+numista_backend\tests\test_catalog_slot_counts.py ..............
+numista_backend\tests\test_checklist_historical_matcher.py ............
+numista_backend\tests\test_checklist_parser.py ...........
+numista_backend\tests\test_coa_parser.py ....
+numista_backend\tests\test_collector_profile.py .
+numista_backend\tests\test_deal_spotter.py ..[32mINFO   [0m [main] [1c9083ad] GET /api/wishlist/deals/test@numista.ai -> 200 (3ms)
+[32mINFO   [0m [main] [c2018977] POST /api/wishlist/deals/check -> 200 (5ms)
+.
+numista_backend\tests\test_few_shot_service.py ..
+numista_backend\tests\test_financials_phase3.py ...........................................
+numista_backend\tests\test_grade_flag_resolve.py [32mINFO   [0m [main] [cc978712] POST /api/admin/grade_flags/flag123/resolve -> 200 (11ms)
+.[32mINFO   [0m [main] [3ef8ceac] POST /api/admin/grade_flags/missing-flag/resolve -> 404 (3ms)
+.[32mINFO   [0m [main] [c0c20e97] POST /api/admin/grade_flags/flag123/resolve -> 422 (10ms)
+.[32mINFO   [0m [main] [c0e6274c] POST /api/admin/grade_flags/flag123/resolve -> 403 (3ms)
+.[32mINFO   [0m [main] [7f941444] POST /api/admin/grade_flags/flag123/resolve -> 401 (4ms)
+.
+numista_backend\tests\test_greysheet.py [32mINFO   [0m [main] [10391587] POST /api/greysheet/resolve -> 200 (5ms)
+.[32mINFO   [0m [main] [b379f47e] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [2223479a] GET /api/greysheet/pricing/429 -> 200 (18ms)
+.[32mINFO   [0m [main] [ec33f39a] GET /api/greysheet/deals -> 401 (2ms)
+[32mINFO   [0m [main] [a4318c52] POST /api/greysheet/deals/refresh -> 401 (2ms)
+.[32mINFO   [0m [main] [e7d56a8a] POST /api/portfolio/snapshot/daily -> 200 (7ms)
+..[32mINFO   [0m [main] [e1ed4593] GET /api/greysheet/quota -> 200 (6ms)
+..
+numista_backend\tests\test_identify_group_photo.py .[32mINFO   [0m [main] [813df7b3] POST /api/identify_group_photo -> 200 (11ms)
+.[31mERROR  [0m [main] [9c3818b2] [identify_group_photo] Error: Simulated Gemini API error
+[31mERROR  [0m [main] [9c3818b2] POST /api/identify_group_photo -> 500 (88ms)
+.
+numista_backend\tests\test_import_worker_integration.py .
+numista_backend\tests\test_ingestion.py [32mINFO   [0m [main] [9802ab20] GET /api/ingestion/jobs -> 200 (3ms)
+.[32mINFO   [0m [main] [213c04c8] POST /api/ingestion/batch_async -> 200 (5ms)
+[32mINFO   [0m [main] [b5b88ab7] GET /api/ingestion/status/job_048a5a6c -> 200 (2ms)
+.
+numista_backend\tests\test_invoice_fixtures.py ..
+numista_backend\tests\test_missing_images_csv.py ...
+numista_backend\tests\test_notes_parser.py .............
+numista_backend\tests\test_proxy_bandwidth.py .....
+numista_backend\tests\test_receipt_streaming.py ..[32mINFO   [0m [main] [9dc66bad] GET /api/receipts/tester@numista.ai/rec_jpg/view_url -> 200 (3ms)
+[32mINFO   [0m [main] [12a94d0a] GET /api/receipts/tester@numista.ai/rec_pdf/view_url -> 200 (3ms)
+.[32mINFO   [0m [main] [948c0748] GET /api/receipts/tester@numista.ai/rec_jpg_123/stream -> 200 (5ms)
+.[32mINFO   [0m [main] [1d2dbcb0] GET /api/receipts/tester@numista.ai/rec_pdf_456/stream -> 200 (5ms)
+.[33mWARNING[0m [main] [3d14033c] Blob path 'victim@numista.ai/imports/stolen.pdf' does not match user folder for 'tester@numista.ai'
+[32mINFO   [0m [main] [3d14033c] GET /api/receipts/tester@numista.ai/rec_stolen/stream -> 403 (4ms)
+.[32mINFO   [0m [main] [aa9dd4ed] GET /api/receipts/tester@numista.ai/rec_bucket_test/stream -> 200 (5ms)
+.[32mINFO   [0m [main] [df92c408] GET /api/receipts/tester@numista.ai/rec_hdr/stream -> 200 (5ms)
+.[32mINFO   [0m [main] [69034356] GET /api/receipts/user+tag@numista.ai/rec_123/view_url -> 200 (4ms)
+.[32mINFO   [0m [main] [8de6a12b] GET /api/receipts/tester@numista.ai/rec_none/stream -> 404 (5ms)
+.
+numista_backend\tests\test_repair_26rj_ghosts.py ...................................
+numista_backend\tests\test_scan_service_estate_report.py ..........
+numista_backend\tests\test_series_manifest_sync.py ....................
+numista_backend\tests\test_set_pricing_extended.py .........................................
+numista_backend\tests\test_stripe_auth.py [32mINFO   [0m [main] [27fad47a] POST /api/stripe/create-checkout-session -> 200 (2ms)
+.[32mINFO   [0m [main] [c8f7fac9] POST /api/stripe/create-checkout-session -> 401 (1ms)
+.[32mINFO   [0m [main] [5df71e39] POST /api/stripe/create-customer-portal -> 200 (6ms)
+.[32mINFO   [0m [main] [fb7db7d1] POST /api/stripe/create-customer-portal -> 401 (1ms)
+.[32mINFO   [0m [main] [995a7e87] GET /api/transfer/passport-pdf/transfer123 -> 401 (4ms)
+.[32mINFO   [0m [main] [d6bb9dea] GET /api/transfer/passport-pdf/transfer123 -> 403 (3ms)
+.[32mINFO   [0m [main] [df49b2fd] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
+.[32mINFO   [0m [main] [d2bc2f26] GET /api/transfer/passport-pdf/transfer123 -> 200 (3ms)
+.[32mINFO   [0m [main] [a6178890] GET /api/transfer/passport-pdf/transfer123 -> 200 (1ms)
+.
+numista_backend\tests\test_tier_gatekeeper_beta.py .......
+numista_backend\tests\test_transfer.py ..............[32mINFO   [0m [main] [f61c2f24] POST /api/transfer/sell-direct -> 200 (3ms)
+[32mINFO   [0m [main] [6a6d8131] POST /api/transfer/sell-direct -> 200 (2ms)
+[32mINFO   [0m [main] [b73a4d15] POST /api/transfer/sell-direct -> 200 (2ms)
+[32mINFO   [0m [main] [8832ed80] POST /api/transfer/sell-direct -> 422 (4ms)
+[32mINFO   [0m [main] [158ee880] POST /api/transfer/sell-direct -> 422 (2ms)
+[32mINFO   [0m [main] [a6626798] POST /api/transfer/sell-direct -> 422 (3ms)
+.....
+numista_backend\tests\test_upload_baseline_fixes.py .[32mINFO   [0m [main] [4e13ce89] GET /api/receipts/tester@numista.ai -> 200 (10ms)
+.[32mINFO   [0m [main] [6e342f5e] Retained receipt blob receipts/tester@numista.ai/rec_123/original.pdf because 1 coin(s) still link to receipt rec_123
+[32mINFO   [0m [main] [6e342f5e] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [6e342f5e] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (14ms)
+.[32mINFO   [0m [main] [bc8b6595] Deleted receipt blob from GCS: receipts/tester@numista.ai/rec_123/original.pdf
+[32mINFO   [0m [main] [bc8b6595] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [bc8b6595] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (11ms)
+.[33mWARNING[0m [main] [1f11b75c] Blob path 'receipts/victim@numista.ai/rec_victim/original.pdf' does not match user folder for 'tester@numista.ai'
+[32mINFO   [0m [main] [1f11b75c] DELETE /api/receipts/tester@numista.ai/rec_123 -> 403 (7ms)
+.[32mINFO   [0m [main] [0411e726] Identify coin photo: save=False
+[32mINFO   [0m [main] [0411e726] Coin ID pass 1: 1964 Half Dollar conf=HIGH
+[32mINFO   [0m [main] [0411e726] Coin ID pass 2: grade=MS-64 val=$25.00
+[32mINFO   [0m [main] [0411e726] POST /api/identify_coin_photo -> 200 (37ms)
+.
+numista_backend\tests\test_us_mint_catalog.py .......
+numista_backend\tests\test_us_mint_invoice_enrichment.py ......
+numista_backend\tests\test_usmint_releases_scraper.py .........
+numista_backend\tests\test_valuation_integrity.py ....
+numista_backend\tests\test_valuations.py ......
+numista_backend\tests\test_vector_rag.py ..[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+[rag] build_rag_prompt_context called, query len=13
+[rag] generate_embedding: OK dim=3
+[rag] retrieval=cosine_all hits=1 [c1:d=0.0:s=1.0]
+.
+numista_backend\tests\test_verifiers.py ............
 
-============================== warnings summary ===============================
-..\..\..\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: 235 warnings
-  C:\Users\ericd\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:233: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
-    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-===================== 412 passed, 235 warnings in 29.07s ======================
-
+============================ 412 passed in 28.15s =============================
