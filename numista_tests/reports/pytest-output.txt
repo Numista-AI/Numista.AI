@@ -8,56 +8,56 @@ plugins: anyio-4.14.2
 collected 412 items
 
 tests\test_active_learning_queue.py ..
-tests\test_auth_security.py [32mINFO   [0m [main] [e0d877fb] GET / -> 200 (158ms)
-.[33mWARNING[0m [main] [0ef0f06d] GET /api/spot_prices -> 200 (8802ms)
-.[32mINFO   [0m [main] [0cd9f740] GET /api/v1/family/subaccounts -> 200 (29ms)
-.[32mINFO   [0m [main] [eb1e22b5] POST /api/collection/clear -> 401 (3ms)
-.[32mINFO   [0m [main] [4ff55d12] POST /api/stripe/create-checkout-session -> 401 (27ms)
-.[32mINFO   [0m [main] [7036b87b] POST /api/stripe/create-customer-portal -> 401 (2ms)
-.[31mERROR  [0m [main] [788f3052] POST /api/stripe/create-checkout-session -> 502 (29ms)
-.[32mINFO   [0m [main] [fd86984e] POST /api/stripe/webhook -> 400 (3ms)
-.[32mINFO   [0m [main] [6730732f] POST /api/preview_cost_split -> 401 (4ms)
-[32mINFO   [0m [main] [424ee526] POST /api/commit_group_photo -> 401 (6ms)
-[32mINFO   [0m [main] [3154fc63] POST /api/transfer/sell-direct -> 401 (5ms)
-[32mINFO   [0m [main] [84990011] POST /api/transfer/undo-sale -> 401 (3ms)
-[32mINFO   [0m [main] [ebb375c3] GET /api/transfer/sold-items/victim@example.com -> 401 (2ms)
-.[32mINFO   [0m [main] [60180758] POST /api/commit_group_photo -> 403 (2ms)
-.[32mINFO   [0m [main] [27e0136d] POST /api/commit_group_photo -> 400 (2ms)
-[32mINFO   [0m [main] [a991b8c2] POST /api/commit_group_photo -> 400 (2ms)
-.[32mINFO   [0m [main] [fca55a09] POST /api/export/appraisal-pdf -> 401 (3ms)
-[32mINFO   [0m [main] [5a15c75b] POST /api/export/appraisal-pdf -> 403 (2ms)
-.[32mINFO   [0m [main] [0641cb9d] POST /api/commit_group_photo -> 200 (2ms)
-.[32mINFO   [0m [main] [f8f47da8] POST /api/identify_coin_photo -> 401 (7ms)
-[32mINFO   [0m [main] [8e10b491] POST /api/identify_coin_photo -> 403 (3ms)
-.[32mINFO   [0m [main] [7d1d8bd5] GET /api/receipts/victim@example.com -> 401 (3ms)
-[32mINFO   [0m [main] [7240221a] GET /api/receipts/victim@example.com -> 403 (2ms)
-[32mINFO   [0m [main] [f57256e3] GET /api/receipts/victim@example.com/rec_123/view_url -> 401 (3ms)
-[32mINFO   [0m [main] [dd0a2130] GET /api/receipts/victim@example.com/rec_123/view_url -> 403 (2ms)
-[32mINFO   [0m [main] [1393d43e] GET /api/receipts/victim@example.com/rec_123/stream -> 401 (3ms)
-[32mINFO   [0m [main] [5f29a74f] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (2ms)
-[32mINFO   [0m [main] [7fd100ba] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (3ms)
-.[32mINFO   [0m [main] [77de93cc] GET /api/ebay/search -> 401 (2ms)
-[32mINFO   [0m [main] [5f82bf71] GET /api/ebay/search -> 401 (1ms)
-.[31mERROR  [0m [main] [2c40da7c] GET /api/ebay/search -> 503 (1ms)
-[31mERROR  [0m [main] [05a486f5] GET /api/ebay/search -> 503 (2ms)
-[32mINFO   [0m [main] [2c891ee5] GET /api/ebay/search -> 200 (2ms)
-...[31mERROR  [0m [main] [16529ab9] [_get_ebay_access_token] OAuth token request failed: URLError
-[31mERROR  [0m [main] [16529ab9] GET /api/ebay/search -> 503 (3ms)
-.[33mWARNING[0m [main] [d00be344] [search_ebay_deals] eBay Browse search request failed: RuntimeError
-[32mINFO   [0m [main] [d00be344] GET /api/ebay/search -> 200 (3ms)
-.[32mINFO   [0m [main] [4e8ee5e6] POST /api/transfer/initiate -> 401 (3ms)
-.[32mINFO   [0m [main] [231e56e4] POST /api/transfer/claim -> 401 (3ms)
-.[32mINFO   [0m [main] [0fd380cc] POST /api/transfer/recall -> 401 (3ms)
-.[31mERROR  [0m [main] [542e4bb8] Claim transfer failed
-[32mINFO   [0m [main] [542e4bb8] POST /api/transfer/claim -> 400 (4ms)
-.[31mERROR  [0m [main] [2e691efd] Claim transfer failed
-[32mINFO   [0m [main] [2e691efd] POST /api/transfer/claim -> 400 (3ms)
-.[32mINFO   [0m [main] [6cb1f274] GET /api/grade_review/stats -> 401 (21ms)
-.[32mINFO   [0m [main] [d7ef368a] GET /api/grade_review/queue -> 401 (2ms)
-.[32mINFO   [0m [main] [b339b9c6] GET /api/admin/grade_flags -> 401 (2ms)
-.[32mINFO   [0m [main] [d60270b4] GET /api/admin/grade_flags -> 403 (1ms)
-.[32mINFO   [0m [main] [2eea5ef3] GET /api/greysheet/deals -> 401 (3ms)
-.[32mINFO   [0m [main] [d4a5c373] POST /api/greysheet/deals/refresh -> 401 (2ms)
+tests\test_auth_security.py [32mINFO   [0m [main] [c86acef2] GET / -> 200 (138ms)
+.[33mWARNING[0m [main] [f254f52d] GET /api/spot_prices -> 200 (8624ms)
+.[32mINFO   [0m [main] [ecf02876] GET /api/v1/family/subaccounts -> 200 (30ms)
+.[32mINFO   [0m [main] [0de85aab] POST /api/collection/clear -> 401 (4ms)
+.[32mINFO   [0m [main] [8ea64f8c] POST /api/stripe/create-checkout-session -> 401 (29ms)
+.[32mINFO   [0m [main] [1765c548] POST /api/stripe/create-customer-portal -> 401 (2ms)
+.[31mERROR  [0m [main] [07fba0e0] POST /api/stripe/create-checkout-session -> 502 (33ms)
+.[32mINFO   [0m [main] [e20d5e54] POST /api/stripe/webhook -> 400 (3ms)
+.[32mINFO   [0m [main] [411de993] POST /api/preview_cost_split -> 401 (3ms)
+[32mINFO   [0m [main] [adb6a1cc] POST /api/commit_group_photo -> 401 (5ms)
+[32mINFO   [0m [main] [06be4814] POST /api/transfer/sell-direct -> 401 (4ms)
+[32mINFO   [0m [main] [68b62e95] POST /api/transfer/undo-sale -> 401 (2ms)
+[32mINFO   [0m [main] [4ea5d196] GET /api/transfer/sold-items/victim@example.com -> 401 (2ms)
+.[32mINFO   [0m [main] [a0b19ba3] POST /api/commit_group_photo -> 403 (2ms)
+.[32mINFO   [0m [main] [d0096d12] POST /api/commit_group_photo -> 400 (2ms)
+[32mINFO   [0m [main] [d5bbe517] POST /api/commit_group_photo -> 400 (2ms)
+.[32mINFO   [0m [main] [5d80ab25] POST /api/export/appraisal-pdf -> 401 (3ms)
+[32mINFO   [0m [main] [fe5e2a3d] POST /api/export/appraisal-pdf -> 403 (2ms)
+.[32mINFO   [0m [main] [8866a509] POST /api/commit_group_photo -> 200 (2ms)
+.[32mINFO   [0m [main] [4089b7ca] POST /api/identify_coin_photo -> 401 (10ms)
+[32mINFO   [0m [main] [be98cfee] POST /api/identify_coin_photo -> 403 (3ms)
+.[32mINFO   [0m [main] [41b5b97a] GET /api/receipts/victim@example.com -> 401 (5ms)
+[32mINFO   [0m [main] [374217eb] GET /api/receipts/victim@example.com -> 403 (2ms)
+[32mINFO   [0m [main] [8cb9c1f2] GET /api/receipts/victim@example.com/rec_123/view_url -> 401 (3ms)
+[32mINFO   [0m [main] [755c76c3] GET /api/receipts/victim@example.com/rec_123/view_url -> 403 (2ms)
+[32mINFO   [0m [main] [8588f330] GET /api/receipts/victim@example.com/rec_123/stream -> 401 (5ms)
+[32mINFO   [0m [main] [7a64f42a] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (2ms)
+[32mINFO   [0m [main] [66354f2e] GET /api/receipts/victim@example.com/rec_123/stream -> 403 (2ms)
+.[32mINFO   [0m [main] [370e788c] GET /api/ebay/search -> 401 (3ms)
+[32mINFO   [0m [main] [25a5a296] GET /api/ebay/search -> 401 (1ms)
+.[31mERROR  [0m [main] [b58ac055] GET /api/ebay/search -> 503 (1ms)
+[31mERROR  [0m [main] [a4df5c38] GET /api/ebay/search -> 503 (2ms)
+[32mINFO   [0m [main] [9b9e89fc] GET /api/ebay/search -> 200 (2ms)
+...[31mERROR  [0m [main] [48960851] [_get_ebay_access_token] OAuth token request failed: URLError
+[31mERROR  [0m [main] [48960851] GET /api/ebay/search -> 503 (3ms)
+.[33mWARNING[0m [main] [efff9e90] [search_ebay_deals] eBay Browse search request failed: RuntimeError
+[32mINFO   [0m [main] [efff9e90] GET /api/ebay/search -> 200 (2ms)
+.[32mINFO   [0m [main] [335a52e0] POST /api/transfer/initiate -> 401 (2ms)
+.[32mINFO   [0m [main] [f1b4d37a] POST /api/transfer/claim -> 401 (3ms)
+.[32mINFO   [0m [main] [3d5b1de1] POST /api/transfer/recall -> 401 (2ms)
+.[31mERROR  [0m [main] [cb1ef70d] Claim transfer failed
+[32mINFO   [0m [main] [cb1ef70d] POST /api/transfer/claim -> 400 (3ms)
+.[31mERROR  [0m [main] [87d04243] Claim transfer failed
+[32mINFO   [0m [main] [87d04243] POST /api/transfer/claim -> 400 (3ms)
+.[32mINFO   [0m [main] [094ae478] GET /api/grade_review/stats -> 401 (34ms)
+.[32mINFO   [0m [main] [46dd9f5e] GET /api/grade_review/queue -> 401 (2ms)
+.[32mINFO   [0m [main] [be41b51a] GET /api/admin/grade_flags -> 401 (2ms)
+.[32mINFO   [0m [main] [9e48d0a3] GET /api/admin/grade_flags -> 403 (1ms)
+.[32mINFO   [0m [main] [737776fe] GET /api/greysheet/deals -> 401 (1ms)
+.[32mINFO   [0m [main] [043b9127] POST /api/greysheet/deals/refresh -> 401 (2ms)
 .
 tests\test_awq_intake_parser.py .......................................
 tests\test_beta_estate_pipeline.py ...
@@ -66,84 +66,84 @@ tests\test_checklist_historical_matcher.py ............
 tests\test_checklist_parser.py ...........
 tests\test_coa_parser.py ....
 tests\test_collector_profile.py .
-tests\test_deal_spotter.py ..[32mINFO   [0m [main] [41c49f0a] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
-[32mINFO   [0m [main] [2b53ea8c] POST /api/wishlist/deals/check -> 200 (4ms)
+tests\test_deal_spotter.py ..[32mINFO   [0m [main] [650f5da3] GET /api/wishlist/deals/test@numista.ai -> 200 (2ms)
+[32mINFO   [0m [main] [e2d1a7a7] POST /api/wishlist/deals/check -> 200 (3ms)
 .
 tests\test_few_shot_service.py ..
 tests\test_financials_phase3.py ...........................................
-tests\test_grade_flag_resolve.py [32mINFO   [0m [main] [4be46365] POST /api/admin/grade_flags/flag123/resolve -> 200 (5ms)
-.[32mINFO   [0m [main] [b85fb3ef] POST /api/admin/grade_flags/missing-flag/resolve -> 404 (3ms)
-.[32mINFO   [0m [main] [588392e9] POST /api/admin/grade_flags/flag123/resolve -> 422 (5ms)
-.[32mINFO   [0m [main] [8925eb10] POST /api/admin/grade_flags/flag123/resolve -> 403 (3ms)
-.[32mINFO   [0m [main] [c8d4d1a3] POST /api/admin/grade_flags/flag123/resolve -> 401 (2ms)
+tests\test_grade_flag_resolve.py [32mINFO   [0m [main] [4288c5e2] POST /api/admin/grade_flags/flag123/resolve -> 200 (5ms)
+.[32mINFO   [0m [main] [bf34c3b3] POST /api/admin/grade_flags/missing-flag/resolve -> 404 (2ms)
+.[32mINFO   [0m [main] [2fde3da1] POST /api/admin/grade_flags/flag123/resolve -> 422 (10ms)
+.[32mINFO   [0m [main] [b0366697] POST /api/admin/grade_flags/flag123/resolve -> 403 (2ms)
+.[32mINFO   [0m [main] [dc32db4c] POST /api/admin/grade_flags/flag123/resolve -> 401 (2ms)
 .
-tests\test_greysheet.py [32mINFO   [0m [main] [77623efe] POST /api/greysheet/resolve -> 200 (3ms)
-.[32mINFO   [0m [main] [fb813e40] POST /api/greysheet/resolve -> 200 (2ms)
-.[32mINFO   [0m [main] [c0815b5d] GET /api/greysheet/pricing/429 -> 200 (14ms)
-.[32mINFO   [0m [main] [553483c8] GET /api/greysheet/deals -> 401 (2ms)
-[32mINFO   [0m [main] [451535c7] POST /api/greysheet/deals/refresh -> 401 (1ms)
-.[32mINFO   [0m [main] [d611d37e] POST /api/portfolio/snapshot/daily -> 200 (5ms)
-..[32mINFO   [0m [main] [da6c1fc0] GET /api/greysheet/quota -> 200 (5ms)
+tests\test_greysheet.py [32mINFO   [0m [main] [14e6382a] POST /api/greysheet/resolve -> 200 (3ms)
+.[32mINFO   [0m [main] [b1483c72] POST /api/greysheet/resolve -> 200 (2ms)
+.[32mINFO   [0m [main] [aaf25ce3] GET /api/greysheet/pricing/429 -> 200 (11ms)
+.[32mINFO   [0m [main] [bef6a3ff] GET /api/greysheet/deals -> 401 (1ms)
+[32mINFO   [0m [main] [ad173e68] POST /api/greysheet/deals/refresh -> 401 (1ms)
+.[32mINFO   [0m [main] [c82ff6c9] POST /api/portfolio/snapshot/daily -> 200 (5ms)
+..[32mINFO   [0m [main] [435e0452] GET /api/greysheet/quota -> 200 (5ms)
 ..
-tests\test_identify_group_photo.py .[32mINFO   [0m [main] [0d04d003] POST /api/identify_group_photo -> 200 (8ms)
-.[31mERROR  [0m [main] [d54f7cf4] [identify_group_photo] Error: Simulated Gemini API error
-[31mERROR  [0m [main] [d54f7cf4] POST /api/identify_group_photo -> 500 (69ms)
+tests\test_identify_group_photo.py .[32mINFO   [0m [main] [e7fcb7f8] POST /api/identify_group_photo -> 200 (8ms)
+.[31mERROR  [0m [main] [45ddbf9c] [identify_group_photo] Error: Simulated Gemini API error
+[31mERROR  [0m [main] [45ddbf9c] POST /api/identify_group_photo -> 500 (61ms)
 .
 tests\test_import_worker_integration.py .
-tests\test_ingestion.py [32mINFO   [0m [main] [5ce516d8] GET /api/ingestion/jobs -> 200 (2ms)
-.[32mINFO   [0m [main] [5b1697ad] POST /api/ingestion/batch_async -> 200 (4ms)
-[32mINFO   [0m [main] [b5ddcbae] GET /api/ingestion/status/job_327a8b20 -> 200 (1ms)
+tests\test_ingestion.py [32mINFO   [0m [main] [bdc357e7] GET /api/ingestion/jobs -> 200 (2ms)
+.[32mINFO   [0m [main] [6865992b] POST /api/ingestion/batch_async -> 200 (4ms)
+[32mINFO   [0m [main] [68c40176] GET /api/ingestion/status/job_f3ce439a -> 200 (2ms)
 .
 tests\test_invoice_fixtures.py ..
 tests\test_missing_images_csv.py ...
 tests\test_notes_parser.py .............
 tests\test_proxy_bandwidth.py .....
-tests\test_receipt_streaming.py ..[32mINFO   [0m [main] [e27f7ebc] GET /api/receipts/tester@numista.ai/rec_jpg/view_url -> 200 (3ms)
-[32mINFO   [0m [main] [9dc5faaa] GET /api/receipts/tester@numista.ai/rec_pdf/view_url -> 200 (4ms)
-.[32mINFO   [0m [main] [4b1b5385] GET /api/receipts/tester@numista.ai/rec_jpg_123/stream -> 200 (3ms)
-.[32mINFO   [0m [main] [9fc10fc1] GET /api/receipts/tester@numista.ai/rec_pdf_456/stream -> 200 (3ms)
-.[33mWARNING[0m [main] [3f4b6c92] Blob path 'victim@numista.ai/imports/stolen.pdf' does not match user folder for 'tester@numista.ai'
-[32mINFO   [0m [main] [3f4b6c92] GET /api/receipts/tester@numista.ai/rec_stolen/stream -> 403 (4ms)
-.[32mINFO   [0m [main] [abf91171] GET /api/receipts/tester@numista.ai/rec_bucket_test/stream -> 200 (4ms)
-.[32mINFO   [0m [main] [549376c2] GET /api/receipts/tester@numista.ai/rec_hdr/stream -> 200 (4ms)
-.[32mINFO   [0m [main] [55456961] GET /api/receipts/user+tag@numista.ai/rec_123/view_url -> 200 (3ms)
-.[32mINFO   [0m [main] [71c7d3cc] GET /api/receipts/tester@numista.ai/rec_none/stream -> 404 (4ms)
+tests\test_receipt_streaming.py ..[32mINFO   [0m [main] [2bc94795] GET /api/receipts/tester@numista.ai/rec_jpg/view_url -> 200 (3ms)
+[32mINFO   [0m [main] [d4443fbb] GET /api/receipts/tester@numista.ai/rec_pdf/view_url -> 200 (3ms)
+.[32mINFO   [0m [main] [78ecb05c] GET /api/receipts/tester@numista.ai/rec_jpg_123/stream -> 200 (3ms)
+.[32mINFO   [0m [main] [7b571a2d] GET /api/receipts/tester@numista.ai/rec_pdf_456/stream -> 200 (4ms)
+.[33mWARNING[0m [main] [bf797fca] Blob path 'victim@numista.ai/imports/stolen.pdf' does not match user folder for 'tester@numista.ai'
+[32mINFO   [0m [main] [bf797fca] GET /api/receipts/tester@numista.ai/rec_stolen/stream -> 403 (5ms)
+.[32mINFO   [0m [main] [4e62f179] GET /api/receipts/tester@numista.ai/rec_bucket_test/stream -> 200 (4ms)
+.[32mINFO   [0m [main] [0fef935a] GET /api/receipts/tester@numista.ai/rec_hdr/stream -> 200 (4ms)
+.[32mINFO   [0m [main] [c3d3e761] GET /api/receipts/user+tag@numista.ai/rec_123/view_url -> 200 (3ms)
+.[32mINFO   [0m [main] [4b10a823] GET /api/receipts/tester@numista.ai/rec_none/stream -> 404 (5ms)
 .
 tests\test_repair_26rj_ghosts.py ...................................
 tests\test_scan_service_estate_report.py ..........
 tests\test_series_manifest_sync.py ....................
 tests\test_set_pricing_extended.py .........................................
-tests\test_stripe_auth.py [32mINFO   [0m [main] [526367f3] POST /api/stripe/create-checkout-session -> 200 (2ms)
-.[32mINFO   [0m [main] [98739467] POST /api/stripe/create-checkout-session -> 401 (1ms)
-.[32mINFO   [0m [main] [9cfb4321] POST /api/stripe/create-customer-portal -> 200 (4ms)
-.[32mINFO   [0m [main] [74dd3019] POST /api/stripe/create-customer-portal -> 401 (1ms)
-.[32mINFO   [0m [main] [3d6349b0] GET /api/transfer/passport-pdf/transfer123 -> 401 (3ms)
-.[32mINFO   [0m [main] [c6815e04] GET /api/transfer/passport-pdf/transfer123 -> 403 (2ms)
-.[32mINFO   [0m [main] [0246b96a] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
-.[32mINFO   [0m [main] [44f6dd72] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
-.[32mINFO   [0m [main] [5796d99e] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
+tests\test_stripe_auth.py [32mINFO   [0m [main] [e5471aa3] POST /api/stripe/create-checkout-session -> 200 (2ms)
+.[32mINFO   [0m [main] [6f1a1f88] POST /api/stripe/create-checkout-session -> 401 (1ms)
+.[32mINFO   [0m [main] [18045a4c] POST /api/stripe/create-customer-portal -> 200 (4ms)
+.[32mINFO   [0m [main] [82ec6888] POST /api/stripe/create-customer-portal -> 401 (1ms)
+.[32mINFO   [0m [main] [4c1e146b] GET /api/transfer/passport-pdf/transfer123 -> 401 (2ms)
+.[32mINFO   [0m [main] [125ba1e9] GET /api/transfer/passport-pdf/transfer123 -> 403 (2ms)
+.[32mINFO   [0m [main] [5d930392] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
+.[32mINFO   [0m [main] [5633c4e9] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
+.[32mINFO   [0m [main] [4f4e0499] GET /api/transfer/passport-pdf/transfer123 -> 200 (2ms)
 .
 tests\test_tier_gatekeeper_beta.py .......
-tests\test_transfer.py ..............[32mINFO   [0m [main] [2628b968] POST /api/transfer/sell-direct -> 200 (2ms)
-[32mINFO   [0m [main] [56c9deeb] POST /api/transfer/sell-direct -> 200 (2ms)
-[32mINFO   [0m [main] [0cb81f26] POST /api/transfer/sell-direct -> 200 (2ms)
-[32mINFO   [0m [main] [67e37424] POST /api/transfer/sell-direct -> 422 (3ms)
-[32mINFO   [0m [main] [bd0cac49] POST /api/transfer/sell-direct -> 422 (2ms)
-[32mINFO   [0m [main] [7b8bedb0] POST /api/transfer/sell-direct -> 422 (2ms)
+tests\test_transfer.py ..............[32mINFO   [0m [main] [f51cce46] POST /api/transfer/sell-direct -> 200 (3ms)
+[32mINFO   [0m [main] [abd43390] POST /api/transfer/sell-direct -> 200 (2ms)
+[32mINFO   [0m [main] [9f537d49] POST /api/transfer/sell-direct -> 200 (2ms)
+[32mINFO   [0m [main] [598b9d15] POST /api/transfer/sell-direct -> 422 (4ms)
+[32mINFO   [0m [main] [a83e061f] POST /api/transfer/sell-direct -> 422 (2ms)
+[32mINFO   [0m [main] [5c39c99a] POST /api/transfer/sell-direct -> 422 (3ms)
 .....
-tests\test_upload_baseline_fixes.py .[32mINFO   [0m [main] [8f6051ef] GET /api/receipts/tester@numista.ai -> 200 (5ms)
-.[32mINFO   [0m [main] [566866a9] Retained receipt blob receipts/tester@numista.ai/rec_123/original.pdf because 1 coin(s) still link to receipt rec_123
-[32mINFO   [0m [main] [566866a9] Deleted receipt rec_123 for user tester@numista.ai
-[32mINFO   [0m [main] [566866a9] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (7ms)
-.[32mINFO   [0m [main] [ae8d0d2a] Deleted receipt blob from GCS: receipts/tester@numista.ai/rec_123/original.pdf
-[32mINFO   [0m [main] [ae8d0d2a] Deleted receipt rec_123 for user tester@numista.ai
-[32mINFO   [0m [main] [ae8d0d2a] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (7ms)
-.[33mWARNING[0m [main] [05561c61] Blob path 'receipts/victim@numista.ai/rec_victim/original.pdf' does not match user folder for 'tester@numista.ai'
-[32mINFO   [0m [main] [05561c61] DELETE /api/receipts/tester@numista.ai/rec_123 -> 403 (5ms)
-.[32mINFO   [0m [main] [ffec0332] Identify coin photo: save=False
-[32mINFO   [0m [main] [ffec0332] Coin ID pass 1: 1964 Half Dollar conf=HIGH
-[32mINFO   [0m [main] [ffec0332] Coin ID pass 2: grade=MS-64 val=$25.00
-[32mINFO   [0m [main] [ffec0332] POST /api/identify_coin_photo -> 200 (28ms)
+tests\test_upload_baseline_fixes.py .[32mINFO   [0m [main] [a3508341] GET /api/receipts/tester@numista.ai -> 200 (5ms)
+.[32mINFO   [0m [main] [727b4abc] Retained receipt blob receipts/tester@numista.ai/rec_123/original.pdf because 1 coin(s) still link to receipt rec_123
+[32mINFO   [0m [main] [727b4abc] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [727b4abc] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (6ms)
+.[32mINFO   [0m [main] [fc79c849] Deleted receipt blob from GCS: receipts/tester@numista.ai/rec_123/original.pdf
+[32mINFO   [0m [main] [fc79c849] Deleted receipt rec_123 for user tester@numista.ai
+[32mINFO   [0m [main] [fc79c849] DELETE /api/receipts/tester@numista.ai/rec_123 -> 200 (6ms)
+.[33mWARNING[0m [main] [ae281da7] Blob path 'receipts/victim@numista.ai/rec_victim/original.pdf' does not match user folder for 'tester@numista.ai'
+[32mINFO   [0m [main] [ae281da7] DELETE /api/receipts/tester@numista.ai/rec_123 -> 403 (5ms)
+.[32mINFO   [0m [main] [f8d98f1e] Identify coin photo: save=False
+[32mINFO   [0m [main] [f8d98f1e] Coin ID pass 1: 1964 Half Dollar conf=HIGH
+[32mINFO   [0m [main] [f8d98f1e] Coin ID pass 2: grade=MS-64 val=$25.00
+[32mINFO   [0m [main] [f8d98f1e] POST /api/identify_coin_photo -> 200 (27ms)
 .
 tests\test_us_mint_catalog.py .......
 tests\test_us_mint_invoice_enrichment.py ......
@@ -158,4 +158,4 @@ tests\test_vector_rag.py ..[rag] generate_embedding: OK dim=3
 .
 tests\test_verifiers.py ............
 
-============================ 412 passed in 28.59s =============================
+============================ 412 passed in 28.94s =============================
