@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// Apply to all new and updated widgets. Do not hard-code font sizes.
 class NumistaTheme {
   // ── Text sizes ────────────────────────────────────────────────────────
-  static const double textCaption  = 12.0;  // timestamps, hints — use sparingly
+  static const double textCaption  = 14.0;  // captions, timestamps — minimum readable size
   static const double textBodySm   = 14.0;  // secondary labels, sub-text
   static const double textBody     = 16.0;  // standard body (minimum for primary text)
   static const double textLg       = 18.0;  // section labels, button text

@@ -229,3 +229,71 @@ test("DENY: other user reads owner coins", async () => {
     getDoc(doc(db, coinPath("c9")))
   );
 });
+
+// ─── T3b Fix 3: Server-only subcollection write protection ──────────────────
+// These tests verify that the narrowed wildcard rule does NOT allow the
+// client (even the owner) to write to server-only subcollections.
+
+const settingsPath = `users/${ownerEmail}/settings/ui_variant`;
+const estateReportsPath = `users/${ownerEmail}/estate_reports/report_001`;
+const morganLogPath = `users/${ownerEmail}/morgan_action_log/log_001`;
+const trashPath = `users/${ownerEmail}/trash/coin_001`;
+const auditLogPath = `users/${ownerEmail}/audit_log/audit_001`;
+
+test("DENY: owner cannot write to settings/ui_variant (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, settingsPath), { variant: "alt" })
+  );
+});
+
+test("DENY: owner cannot write to estate_reports (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, estateReportsPath), { report: "data" })
+  );
+});
+
+test("DENY: owner cannot write to morgan_action_log (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, morganLogPath), { action: "add", coin_id: "c1" })
+  );
+});
+
+test("DENY: owner cannot write to trash (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, trashPath), { Year: "2026", deleted_by: "client" })
+  );
+});
+
+test("DENY: owner cannot write to audit_log (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, auditLogPath), { event: "login" })
+  );
+});
+
+test("ALLOW: owner can read settings/ui_variant (read-only for owner)", async () => {
+  // Note: this may return permission denied if doc doesn't exist; use assertSucceeds only if emulator allows read on non-existent
+  // This test documents the READ is allowed even though write is denied
+  const db = ownerCtx.firestore();
+  // getDoc on a non-existent document returns empty (not denied) if read is allowed
+  const snap = await getDoc(doc(db, settingsPath));
+  // No exception = read allowed (snap.exists() will be false)
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can still write to coins (writable subcollection)", async () => {
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(doc(db, coinPath("allowed_coin")), {
+      Year: "2026",
+      Denomination: "Dime",
+      is_demo: false,
+      is_demo_cleared: false,
+    })
+  );
+});
+

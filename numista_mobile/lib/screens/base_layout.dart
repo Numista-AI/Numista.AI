@@ -1334,7 +1334,7 @@ class _AltSiteBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
         child: const Text(
           'Alt site variant — Phase A (admin preview)',
-          style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textCaption),
+          style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textBodySm),
           textAlign: TextAlign.center,
         ),
       ),

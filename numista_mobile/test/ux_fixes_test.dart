@@ -37,8 +37,38 @@ void main() {
               'Found hardcoded font sizes below 14 in base_layout: $violations');
     });
 
+    test('no hardcoded fontSize below 14 in login_screen.dart login form section', () {
+      // T3 V2 Fix 3: login form section must use tokens, no raw numbers < 14.
+      // Scope: first ~1000 lines which contain the login, create, reset forms.
+      // The scanner/coin-display widget sections (> line 1000) are exempt — they
+      // have design-specific small sizes that are intentional (chart labels, etc.)
+      File loginFile = File('lib/screens/login_screen.dart');
+      if (!loginFile.existsSync()) {
+        loginFile = File('numista_mobile/lib/screens/login_screen.dart');
+      }
+      expect(loginFile.existsSync(), isTrue,
+          reason: 'login_screen.dart must exist');
+
+      final lines = loginFile.readAsLinesSync();
+      final formLines = lines.take(1000).join('\n');
+      final regex = RegExp(r'fontSize:\s*([0-9]+(?:\.[0-9]+)?)');
+      final matches = regex.allMatches(formLines);
+
+      final violations = <String>[];
+      for (final match in matches) {
+        final val = double.tryParse(match.group(1)!);
+        if (val != null && val < 14.0) {
+          violations.add(match.group(0)!);
+        }
+      }
+      expect(violations, isEmpty,
+          reason:
+              'Found hardcoded font sizes below 14 in login_screen form area: $violations');
+    });
+
     test('NumistaTheme tokens are defined with required constants', () {
-      expect(NumistaTheme.textCaption, 12.0);
+      expect(NumistaTheme.textCaption, 14.0);  // T3 V2 Fix 2: raised from 12 to meet 14px floor
+      expect(NumistaTheme.textCaption, greaterThanOrEqualTo(14.0));  // explicit floor assertion
       expect(NumistaTheme.textBodySm, 14.0);
       expect(NumistaTheme.textBody, 16.0);
       expect(NumistaTheme.textLg, 18.0);

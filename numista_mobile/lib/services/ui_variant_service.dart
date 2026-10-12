@@ -18,9 +18,12 @@ class UiVariantService {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final raw = body['variant'] as String? ?? 'classic';
         _current = raw == 'alt' ? UiVariant.alt : UiVariant.classic;
+      } else {
+        // T3b Fix 4: non-200 → fail safe to classic (do not keep a stale alt variant)
+        _current = UiVariant.classic;
       }
     } catch (_) {
-      _current = UiVariant.classic; // fail safe
+      _current = UiVariant.classic; // exception → fail safe to classic
     }
   }
 
