@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'ui_variant_service.dart';
 
 /// Wraps Firebase Auth for Numista.AI.
 /// PIN authentication uses Firebase email/password where the PIN IS the password.
@@ -88,6 +89,7 @@ class AuthService {
     try {
       await _auth.signInWithEmailAndPassword(
           email: email.trim().toLowerCase(), password: pin.trim());
+      await UiVariantService.refresh();
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code, passwordMode: passwordMode));
@@ -104,6 +106,7 @@ class AuthService {
       if (displayName.trim().isNotEmpty) {
         await cred.user?.updateDisplayName(displayName.trim());
       }
+      await UiVariantService.refresh();
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
@@ -122,6 +125,7 @@ class AuthService {
         final provider = GoogleAuthProvider();
         await _auth.signInWithRedirect(provider);
       }
+      await UiVariantService.refresh();
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
@@ -154,6 +158,7 @@ class AuthService {
   static Future<AuthResult> signInAsGuest() async {
     try {
       await _auth.signInAnonymously();
+      await UiVariantService.refresh();
       return AuthResult.success();
     } on FirebaseAuthException catch (e) {
       return AuthResult.failure(_friendlyError(e.code));
@@ -163,7 +168,10 @@ class AuthService {
   }
 
   // ─── Sign Out ─────────────────────────────────────────────────────────────
-  static Future<void> signOut() => _auth.signOut();
+  static Future<void> signOut() async {
+    UiVariantService.reset();
+    await _auth.signOut();
+  }
 
   // ─── Human-friendly Firebase error messages ───────────────────────────────
   static String friendlyError(String code) => _friendlyError(code);
