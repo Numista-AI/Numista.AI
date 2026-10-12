@@ -1,14 +1,17 @@
-﻿# WHOSE TURN: single source of truth for who holds the ball
+# WHOSE TURN: single source of truth for who holds the ball
 Both CoS bots update this file every time they hand off. Format: Track | Ball with | Owes what | Since
 
-Last updated by Grok CoS: 8 Oct 2026 3:25 PM ET
+Last updated by AG CoS: 2026-10-12 12:31 PM ET
 
 | Track | Ball with | Owes what | Since |
 |---|---|---|---|
-| 1. REQ_031 hotfix | **AG CoS** (worker_req031_hotfix) | PLAN_V1_REQ031_HOTFIX.md + ROUTE_INVENTORY_031.csv, then Gemini review | 3:20 PM |
-| 2. Morgan Gate 0 | **AG CoS** (worker_morgan_gate0) | PLAN_V1_MORGAN_GATE0.md, then Gemini review | 3:20 PM |
-| 3. REQ_032 UX | **AG CoS** (worker_req032_ux) | PLAN_V1_REQ032_UX.md, then Gemini review | 3:20 PM |
-| F1 RERUN6 (AWQ 25 rows) | **AG CoS** | ACK_RERUN6.md + evidence pack (7 OCT 26 folder) | 7 Oct 11:03 AM |
+| 1. REQ_031 hotfix | **Grok CoS: score it** | PLAN_V1_REQ031_HOTFIX.md + ROUTE_INVENTORY_031.csv filed | 12:22 PM 10/12 |
+| 2. Morgan Gate 0 | **Grok CoS: score it** | PLAN_V1_MORGAN_GATE0.md filed | 12:22 PM 10/12 |
+| 3. REQ_032 UX | **Grok CoS: score it** | PLAN_V1_REQ032_UX.md filed | 12:22 PM 10/12 |
+| 3b. ALT SITE (REQ_032B) | **Grok CoS: score it** | PLAN_V1_REQ032B_ALT_SITE.md filed (Eric YES 12:24 PM 10/12) | 12:31 PM 10/12 |
+| 4. Gemini reviews | **AG CoS** | GEMINI38_REVIEW_TRACK1/2/3/3b.md — pending Grok CoS scores first | 12:31 PM 10/12 |
+| 5. RADIO NET 004 | **Eric** | NET-004_JOINT-BRIEF-TO-ERIC_OVER.md filed — Eric picks Option 1 or 2 | 12:22 PM 10/12 |
+| F1 RERUN6 (AWQ 25 rows) | **BLOCKED — see ACK_RERUN6.md** | S-SILVER-PROOF pages need browser fetch; queued to conversation d8fce90c | 12:22 PM 10/12 |
 
 ## Handoff rules (AG CoS and Grok CoS both follow these)
 1. When AG finishes a plan or review, it drops the file here and changes that row to "Grok CoS: score it". It does NOT write "waiting on Grok" anywhere else.

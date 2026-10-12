@@ -1,0 +1,16 @@
+route,method,file:line,auth_status,notes
+/api/v1/rag/query,POST,main.py:167-168,NO_AUTH,No Depends at all — RagQueryRequest has no user field; any caller hits the model
+/api/checklist/add_coins,POST,main.py:7783-7784,BODY_EMAIL,req.user_email comes from ChecklistAddRequest body; no Depends(get_current_user)
+/api/review/commit,POST,main.py:3000-3001,BODY_EMAIL,request.user_email from CommitReviewsRequest body; no token check
+/api/analyze_binder_scan,POST,main.py:3908-3913,BODY_EMAIL,user_email=Form(...); no token dependency
+/api/confirm_binder_scan,POST,main.py:4606+,BODY_EMAIL,request.user_email from body model; no token dependency (inferred from main.py:4623)
+/api/upload_document,POST,scan_routes.py:84-90,BODY_EMAIL,uid=Form(...) and user_email=Form(optional) — no Depends(get_current_user)
+/api/review/resume_session,POST,scan_routes.py:215-216,BODY_UID,request.uid from ResumeSessionRequest body (scan_routes.py:40-42); no token check
+/api/review/abort_session,POST,scan_routes.py:240-241,BODY_UID,request.uid from AbortSessionRequest body (scan_routes.py:35-38); no token check
+/api/review/commit_session,POST,scan_routes.py:273-274,BODY_UID,request.uid from CommitSessionRequest body (scan_routes.py:44-47); no token check
+/api/review/bulk_condition,POST,scan_routes.py:359-360,BODY_UID,request.uid from BulkConditionRequest body (scan_routes.py:50-54); no token check
+/api/review/delete_items,POST,scan_routes.py:430-431,BODY_EMAIL,request.user_email from DeleteReviewItemsRequest body (scan_routes.py:424-426); no token check
+/api/import_spreadsheet,POST,import_routes.py:76-88,BODY_EMAIL,user_email=Form(...) accepted but user_id derived from token at L88-89; PARTIAL — token read but body email also accepted and not validated against token
+/api/v1/import/commit_batch,POST,import_routes.py:234-239,TOKEN_OK,user_id=user.get(uid) from Depends(get_current_user) at L239; body user_id not used for access — TOKEN_OK
+/api/ai/essay,POST,ai_routes.py:237+,TOKEN_OK,uses Depends(get_current_user); user_id from token
+/api/ai/chat,POST,ai_routes.py:76-82,TOKEN_OK_UID_BUG,token verified via get_current_user; BUT user_id=uid key mismatches Firestore email key — cross-user data leak (empty stats)
