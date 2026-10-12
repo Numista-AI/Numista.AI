@@ -2691,20 +2691,30 @@ def propose_add_coin(user_email: str, caller_uid: str, **kwargs) -> dict:
         return {"action": "add_coin", "status": "error", "message": str(e)}
 
 
-def execute_get_coin_details(user_email: str, coin_id: str) -> dict:
-    """Fetches full coin document details on demand with prompt injection protection (G0-7, G0-8)."""
+def execute_get_coin_details(user_email: str, coin_id: str, include_financial: bool = False) -> dict:
+    """Fetches full coin document details on demand with prompt injection protection (G0-7, G0-8).
+    G0-6: Strips financial fields by default unless include_financial=True."""
     try:
         doc = db.collection('users').document(user_email).collection('coins').document(coin_id).get()
         if not doc.exists:
             return {"action": "get_coin_details", "status": "error", "message": "Coin not found in collection."}
         data = doc.to_dict() or {}
-        raw_notes = data.get("Personal Notes") or data.get("personal_notes") or data.get("ocr_text")
-        if raw_notes:
-            safe = wrap_user_data(str(raw_notes))
-            if "Personal Notes" in data:
-                data["Personal Notes"] = safe
-            if "personal_notes" in data:
-                data["personal_notes"] = safe
+
+        # G0-6: Strip financial fields unless value keyword present in query
+        if not include_financial:
+            for financial_key in ("ai_estimated_value", "estimated_value", "cost", "Cost",
+                                  "cost_basis", "Cost Basis", "purchase_price", "Purchase Price",
+                                  "market_value", "P&L", "profit_loss"):
+                data.pop(financial_key, None)
+
+        # G0-7: Wrap ALL note/ocr/description keys in data delimiter (not just named ones)
+        _NOTE_KEYS = ("Personal Notes", "personal_notes", "notes", "ocr_text",
+                      "description", "Description", "raw_utterance", "provenance")
+        for k in list(data.keys()):
+            if any(note_key.lower() in k.lower() for note_key in ("note", "ocr", "description", "provenance", "utterance")):
+                if data[k]:
+                    data[k] = wrap_user_data(str(data[k]))
+
         data["coin_id"] = coin_id
         return {"action": "get_coin_details", "status": "success", "coin_id": coin_id, "coin": data}
     except Exception as e:
@@ -2712,16 +2722,17 @@ def execute_get_coin_details(user_email: str, coin_id: str) -> dict:
         return {"action": "get_coin_details", "status": "error", "message": str(e)}
 
 
-def execute_update_coin(
+def propose_update_coin(
     user_email: str,
+    caller_uid: str,
     coin_id: str = None,
     storage_location: str = None,
     condition: str = None,
     cost: str = None,
     personal_notes: str = None
 ) -> dict:
+    """G0-1: Creates a proposed coin update — no Firestore write until /api/morgan/confirm."""
     try:
-        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
         if coin_id and "__set_coin_" in str(coin_id):
             return {
                 "action": "update_coin_in_collection",
@@ -2751,7 +2762,6 @@ def execute_update_coin(
                     "message": f"You added multiple items recently ({', '.join(names)}). Which specific coin would you like to update?"
                 }
             else:
-                # G0-2: Remove most-recent fallback — ask for clarification
                 return {
                     "action": "update_coin",
                     "status": "ambiguous",
@@ -2767,22 +2777,38 @@ def execute_update_coin(
         if not doc_snap.exists:
             return {"action": "update_coin", "status": "error", "message": "Target coin not found in collection."}
 
-        updates = {}
-        if storage_location: updates["Storage Location"] = storage_location
-        if condition: updates["Condition"] = condition
-        if cost: updates["Cost"] = cost
-        if personal_notes: updates["Personal Notes"] = personal_notes
-        if updates:
-            doc_ref.update(updates)
-        return {"action": "update_coin", "status": "success", "coin_id": coin_id, "updated": list(updates.keys())}
+        before = doc_snap.to_dict() or {}
+        changes = {}
+        if storage_location: changes["Storage Location"] = storage_location
+        if condition: changes["Condition"] = condition
+        if cost: changes["Cost"] = cost
+        if personal_notes: changes["Personal Notes"] = personal_notes
+
+        if not changes:
+            return {"action": "update_coin", "status": "error", "message": "No fields to update were provided."}
+
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid,
+            action="update_coin",
+            coin_snapshot={"before": before, "changes": changes},
+            target_coin_id=coin_id,
+        )
+        return {
+            "action": "update_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin_id": coin_id,
+            "changes": changes,
+        }
     except Exception:
-        logger.exception("Error executing update_coin")
-        return {"action": "update_coin", "status": "error", "message": "Failed to update coin. Please try again."}
+        logger.exception("Error proposing update_coin")
+        return {"action": "update_coin", "status": "error", "message": "Failed to propose update. Please try again."}
 
 
-def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
+def execute_undo_add_coin(user_email: str, coin_id: str, caller_uid: str = None) -> dict:
+    """G0-1/G0-3: Verify action log then create a delete proposal — no immediate Firestore write."""
     try:
-        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
         if coin_id and "__set_coin_" in str(coin_id):
             return {
                 "action": "undo_add_coin",
@@ -2790,17 +2816,49 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
                 "message": "That coin lives inside a set and cannot be removed individually. "
                            "To manage it, break up the set first from your collection screen."
             }
+        # Verify the coin exists
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
         coin_snap = doc_ref.get()
-        coin_data = coin_snap.to_dict() if coin_snap.exists else {}
+        if not coin_snap.exists:
+            return {"action": "undo_add_coin", "status": "error", "message": "Coin not found in collection."}
 
-        # G0-3: Soft delete — move to trash then delete from coins collection
-        trash_ref = db.collection('users').document(user_email).collection('trash').document(coin_id)
-        trash_ref.set({**coin_data, 'deleted_at': firestore.SERVER_TIMESTAMP, 'deleted_by': 'morgan'})
-        doc_ref.delete()
-        return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
+        # G0-4: Verify the action log shows this coin was added by Morgan for this user
+        log_ref = db.collection('users').document(user_email).collection('morgan_action_log')
+        verified = False
+        try:
+            matched_logs = list(log_ref.where("coin_id", "==", coin_id).where("action", "==", "add").stream())
+            for m in matched_logs:
+                entry = m.to_dict() or {}
+                if caller_uid is None or entry.get("who") == caller_uid:
+                    verified = True
+                    break
+        except Exception:
+            verified = False
+
+        if not verified:
+            return {
+                "action": "undo_add_coin",
+                "status": "error",
+                "message": "Cannot undo: this coin was not added by Morgan in a recent session. Use your collection screen to remove it.",
+            }
+
+        # G0-1: Create a delete_coin proposal — user must Confirm before it is removed
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid or user_email,
+            action="delete_coin",
+            coin_snapshot=coin_snap.to_dict() or {},
+            target_coin_id=coin_id,
+        )
+        return {
+            "action": "undo_add_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin_id": coin_id,
+            "message": "Removal proposed — tap Confirm to delete from your binder.",
+        }
     except Exception:
-        logger.exception("Error executing undo_add_coin")
+        logger.exception("Error proposing undo_add_coin")
         return {"action": "undo_add_coin", "status": "error", "message": "Failed to undo. Please try again."}
 
 
@@ -2964,6 +3022,7 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
         # G0-6: Strip financial data by default unless value keyword is present
         val_keywords = ["worth", "value", "cost", "price", "how much"]
         has_val_keyword = any(kw in request.query.lower() for kw in val_keywords)
+        # TODO REQ-026: also check user privacy_mode setting when built; for now keyword-only gate
 
         col_ref = db.collection('users').document(owner_key).collection('coins')
         docs = col_ref.stream()
@@ -2976,6 +3035,14 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
             f"({inv_stats['expanded']} coins expanded from sets). "
             f"Total Firestore docs: {inv_stats['docs']}."
         )
+
+        # G0-7: Wrap ALL coin notes/OCR keys in data delimiter BEFORE slicing the list
+        # Applied here so BOTH the <=50 and >50 branches get protected data
+        for it in inventory_items:
+            for k in list(it.keys()):
+                if any(note_key in k.lower() for note_key in ("note", "ocr", "description", "provenance", "utterance")):
+                    if it[k]:
+                        it[k] = wrap_user_data(str(it[k]))
 
         # G0-8: Cap inventory at 50 coins maximum. If > 50, send summary instead of full list.
         if not inventory_items:
@@ -2992,12 +3059,8 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
                 f"(Use get_coin_details tool to inspect full document details for any specific coin_id)"
             )
         else:
-            # G0-7: Wrap coin notes and OCR text in hard data delimiter
-            for it in inventory_items:
-                for k in ("Personal Notes", "personal_notes", "notes", "ocr_text"):
-                    if k in it and it[k]:
-                        it[k] = wrap_user_data(str(it[k]))
             context = tally_header + "\n" + json.dumps(inventory_items, default=str)
+
 
         # COUNTING RULES — after inventory JSON
         context += """
@@ -3195,11 +3258,13 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 if c_name == "add_coin_to_collection":
                     action_payload = propose_add_coin(owner_key, caller_uid, **c_args)
                 elif c_name == "update_coin_in_collection":
-                    action_payload = execute_update_coin(owner_key, **c_args)
+                    # G0-1: propose update — no immediate write
+                    action_payload = propose_update_coin(owner_key, caller_uid, **c_args)
                 elif c_name == "undo_add_coin":
-                    action_payload = execute_undo_add_coin(owner_key, **c_args)
+                    # G0-1/G0-3: verify action log + propose delete
+                    action_payload = execute_undo_add_coin(owner_key, caller_uid=caller_uid, **c_args)
                 elif c_name == "get_coin_details":
-                    action_payload = execute_get_coin_details(owner_key, **c_args)
+                    action_payload = execute_get_coin_details(owner_key, include_financial=has_val_keyword, **c_args)
 
             # Second turn to generate Morgan's final response after executing tool
             second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
