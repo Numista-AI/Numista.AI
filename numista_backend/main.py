@@ -84,7 +84,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
-from routes.deps import get_current_user, require_admin_user
+from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
@@ -165,8 +165,12 @@ class RagQueryRequest(BaseModel):
     collection_context: Optional[dict] = None
 
 @app.post("/api/v1/rag/query")
-async def rag_query_endpoint(req: RagQueryRequest):
+async def rag_query_endpoint(req: RagQueryRequest, _user: dict = Depends(get_current_user)):
     """Executes RAG similarity search and generates grounded Morgan AI responses."""
+    uid = (_user.get("uid") or _user.get("user_id") or _user.get("email") or "").strip()
+    is_admin = _user.get("admin") is True
+    if not is_admin:
+        _check_and_increment_rate_cap(uid, "rag_query", 50)
     try:
         import sys
         numista_ai_dir = str(Path(__file__).parent.parent / "numista_ai")
@@ -2998,13 +3002,20 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
         raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
 
 @app.post("/api/review/commit")
-async def commit_reviews(request: CommitReviewsRequest):
+async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(get_current_user)):
     """
     Moves items from review_queue to the primary collection with Duplicate Detection.
     A coin is only a true duplicate if Year, Mint, Denom, Invoice#, and Item# ALL match.
     """
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if request.user_email and request.user_email.strip():
+        if request.user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
     try:
-        user_ref = db.collection('users').document(request.user_email)
+        user_ref = db.collection('users').document(caller_email)
         queue_ref = user_ref.collection('review_queue')
         coins_ref = user_ref.collection('coins')
         
@@ -3239,12 +3250,24 @@ async def keep_set_as_is(request: Request):
 
 
 @app.post("/api/review/bulk_update")
-async def bulk_update_reviews(request: BulkUpdateRequest):
+async def bulk_update_reviews(request: BulkUpdateRequest, _user: dict = Depends(get_current_user)):
     """
     Applies shared metadata to multiple items in the review queue.
     """
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if request.user_email and request.user_email.strip():
+        if request.user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
+    allowed_keys = {"storage_location", "condition", "notes", "status"}
+    for k in (request.updates or {}).keys():
+        if k not in allowed_keys:
+            raise HTTPException(status_code=400, detail=f"Invalid update field: {k}")
+
     try:
-        queue_ref = db.collection('users').document(request.user_email).collection('review_queue')
+        queue_ref = db.collection('users').document(caller_email).collection('review_queue')
         batch = db.batch()
         batch_op_count = 0
         for doc_id in request.review_ids:
@@ -3258,19 +3281,28 @@ async def bulk_update_reviews(request: BulkUpdateRequest):
         if batch_op_count > 0:
             batch.commit()
         return {"status": "success", "message": f"Updated {len(request.review_ids)} items"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/review/delete_items")
-async def delete_review_items(request: DeleteReviewItemsRequest):
+async def delete_review_items(request: DeleteReviewItemsRequest, _user: dict = Depends(get_current_user)):
     """
     Soft-deletes items from review queue by setting status: 'aborted'
     and concurrently records an immutable legal audit log entry in users/{uid}/audit_log
     inside a single atomic batch transaction.
     """
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if request.user_email and request.user_email.strip():
+        if request.user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
     try:
-        user_ref = db.collection('users').document(request.user_email)
+        user_ref = db.collection('users').document(caller_email)
         queue_ref = user_ref.collection('review_queue')
         audit_ref = user_ref.collection('audit_log')
         
@@ -3282,7 +3314,7 @@ async def delete_review_items(request: DeleteReviewItemsRequest):
         log_id = f"aud_del_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
         audit_doc = {
             "log_id": log_id,
-            "uid": request.user_email,
+            "uid": caller_email,
             "action": "review_hub_item_deleted",
             "import_session_id": "review_hub_action",
             "source": "review_hub",
@@ -3301,7 +3333,7 @@ async def delete_review_items(request: DeleteReviewItemsRequest):
             batch.update(doc_ref, {
                 "status": "aborted",
                 "aborted_at": now_ts,
-                "aborted_by": request.user_email,
+                "aborted_by": caller_email,
                 "abort_reason": request.reason or "user_deleted_from_review_hub",
                 "updated_at": now_iso,
             })
@@ -3910,6 +3942,7 @@ async def analyze_binder_scan(
     user_email:   str             = Form(...),
     binder_title: Optional[str]   = Form(None),
     images:       List[UploadFile] = File(...),
+    _user:        dict            = Depends(get_current_user),
 ):
     """
     PHASE 1 -- Main binder scan endpoint.
@@ -3924,6 +3957,17 @@ async def analyze_binder_scan(
     containing only slots that changed from absent -> present since the
     last scan.
     """
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if user_email and user_email.strip():
+        if user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
+    caller_uid = (_user.get('uid') or _user.get('user_id') or caller_email or '').strip()
+    if not _user.get('admin'):
+        _check_and_increment_rate_cap(caller_uid, 'analyze_binder_scan', 10)
+
     if not images:
         raise HTTPException(status_code=400, detail="At least one image is required.")
 
@@ -3939,7 +3983,7 @@ async def analyze_binder_scan(
         # Determine file extension for GCS path
         ext = img_file.filename.rsplit(".", 1)[-1].lower() if "." in img_file.filename else "jpg"
 
-        gcs_path = f"users/{user_email}/binder_scans/{scan_uuid}/page_{idx:02d}.{ext}"
+        gcs_path = f"users/{caller_email}/binder_scans/{scan_uuid}/page_{idx:02d}.{ext}"
         gcs_url  = _upload_to_gcs(raw_bytes, gcs_path, content_type)
         gcs_urls.append(gcs_url)
 
@@ -4004,7 +4048,7 @@ async def analyze_binder_scan(
     try:
         binder_scans_ref = (
             db.collection("users")
-              .document(user_email)
+              .document(caller_email)
               .collection("binder_scans")
         )
         # Look for an existing scan with the same book title
@@ -4604,7 +4648,7 @@ class ConfirmBinderScanRequest(BaseModel):
 
 
 @app.post("/api/confirm_binder_scan")
-async def confirm_binder_scan(request: ConfirmBinderScanRequest):
+async def confirm_binder_scan(request: ConfirmBinderScanRequest, _user: dict = Depends(get_current_user)):
     """
     PHASE 1 -- Confirmation endpoint.
 
@@ -4620,7 +4664,14 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest):
     - Saves the confirmed state back to binder_scans/{binder_doc_id}.coin_slots
       (marks confirmed slots as having coinId references)
     """
-    user_ref    = db.collection("users").document(request.user_email)
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if request.user_email and request.user_email.strip():
+        if request.user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
+    user_ref    = db.collection("users").document(caller_email)
     queue_ref   = user_ref.collection("review_queue")
     coins_ref   = user_ref.collection("coins")
     binder_ref  = user_ref.collection("binder_scans").document(request.binder_doc_id)
@@ -7781,7 +7832,7 @@ class ChecklistAddResponse(BaseModel):
     idempotent_hit:    bool     # True if this key was already processed within TTL
 
 @app.post("/api/checklist/add_coins", response_model=ChecklistAddResponse)
-def checklist_add_coins(req: ChecklistAddRequest):
+def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_current_user)):
     """
     Server-mediated checklist write with idempotency and duplicate detection.
 
@@ -7805,6 +7856,13 @@ def checklist_add_coins(req: ChecklistAddRequest):
 
     NEVER writes to master_coin_programs.json or any catalog collection.
     """
+    caller_email = (_user.get('email') or '').strip().lower()
+    if not caller_email:
+        caller_email = (_user.get('uid') or '').strip()
+    if req.user_email and req.user_email.strip():
+        if req.user_email.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
+
     _KEY_TTL_SECONDS = 60
     idem_ref = db.collection('_idempotency').document(req.idempotency_key)
 
@@ -7836,7 +7894,7 @@ def checklist_add_coins(req: ChecklistAddRequest):
     # slot_id is excluded from the check in v1 because it is not yet persisted.
     duplicate_warning = False
     try:
-        coins_ref = db.collection('users').document(req.user_email).collection('coins')
+        coins_ref = db.collection('users').document(caller_email).collection('coins')
         for slot in req.slots:
             q = (
                 coins_ref
@@ -7853,7 +7911,7 @@ def checklist_add_coins(req: ChecklistAddRequest):
         logger.warning(f"checklist/add_coins: duplicate check error (proceeding): {e}")
 
     # ── 3. Write coin documents ───────────────────────────────────────────────
-    coins_ref = db.collection('users').document(req.user_email).collection('coins')
+    coins_ref = db.collection('users').document(caller_email).collection('coins')
     batch = db.batch()
     coins_written = 0
 
@@ -7898,14 +7956,14 @@ def checklist_add_coins(req: ChecklistAddRequest):
     try:
         batch.commit()
     except Exception as e:
-        logger.exception("checklist/add_coins: batch commit failed", extra={"user_email": req.user_email})
+        logger.exception("checklist/add_coins: batch commit failed", extra={"user_email": caller_email})
         raise HTTPException(status_code=500, detail=f"Failed to write coins: {e}")
 
     # ── 4. Store idempotency key ──────────────────────────────────────────────
     try:
         idem_ref.set({
             'stored_at':       datetime.now(timezone.utc),
-            'user_email':      req.user_email,
+            'user_email':      caller_email,
             'program_id':      req.program_id,
             'coins_written':   coins_written,
             'duplicate_warning': duplicate_warning,
@@ -7916,7 +7974,7 @@ def checklist_add_coins(req: ChecklistAddRequest):
     logger.info(
         "checklist/add_coins: success",
         extra={
-            "user_email": req.user_email,
+            "user_email": caller_email,
             "program_id": req.program_id,
             "coins_written": coins_written,
             "duplicate_warning": duplicate_warning,
