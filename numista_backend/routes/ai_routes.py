@@ -71,6 +71,16 @@ def call_chat_model_with_fallback(system_prompt: str, user_query: str) -> str:
     raise HTTPException(status_code=500, detail=f"Morgan AI completion failed: {last_err}")
 
 
+def _get_user_email(user: Dict[str, Any]) -> str:
+    is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
+            return "dev_guest@numista.ai"
+        raise HTTPException(status_code=401, detail="Authentication token missing user email")
+    return email
+
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.post("/chat")
@@ -79,8 +89,8 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
     Morgan AI Chat completion endpoint with portfolio memory context,
     episodic collector preferences, vector RAG knowledge, & Firestore session persistence.
     """
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
-    user_name = user.get("name") or user.get("email") or "Collector"
+    user_email = _get_user_email(user)
+    user_name = user.get("name") or user_email or "Collector"
     session_id = req.session_id or f"session_{int(datetime.now(timezone.utc).timestamp())}"
     msg_id = req.message_id or f"msg_{int(datetime.now(timezone.utc).timestamp())}"
 
@@ -89,7 +99,7 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 
     # 2. Inject Episodic Collector Memory
     try:
-        profile_context = collector_profile_service.build_profile_prompt_context(user_id)
+        profile_context = collector_profile_service.build_profile_prompt_context(user_email)
         if profile_context:
             system_prompt += profile_context + "\n"
     except Exception as pe:
@@ -104,7 +114,7 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 
     # 4. Inject Portfolio Summary Stats (<15ms latency)
     try:
-        stats_doc = db.collection("users").document(user_id).collection("summary").document("stats").get()
+        stats_doc = db.collection("users").document(user_email).collection("summary").document("stats").get()
         if stats_doc.exists:
             stats = stats_doc.to_dict() or {}
             system_prompt += (
@@ -125,7 +135,7 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 
     # 6. Persist messages to Firestore: users/{userId}/ai_chat_sessions/{sessionId}/messages/{messageId}
     try:
-        session_ref = db.collection("users").document(user_id).collection("ai_chat_sessions").document(session_id)
+        session_ref = db.collection("users").document(user_email).collection("ai_chat_sessions").document(session_id)
         
         # Ensure session parent doc exists
         session_ref.set({
@@ -168,8 +178,8 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 @router.get("/profile")
 async def api_get_collector_profile(user: Dict[str, Any] = Depends(get_current_user)):
     """Retrieve episodic collector preferences for current authenticated user."""
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
-    profile = collector_profile_service.get_collector_profile(user_id)
+    user_email = _get_user_email(user)
+    profile = collector_profile_service.get_collector_profile(user_email)
     return {"status": "success", "profile": profile}
 
 
@@ -180,9 +190,9 @@ async def api_update_collector_profile(
     user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Update collector preferences with strict snake_case validation."""
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    user_email = _get_user_email(user)
     updates = req.model_dump(exclude_unset=True)
-    res = collector_profile_service.update_collector_profile(user_id, updates)
+    res = collector_profile_service.update_collector_profile(user_email, updates)
     if res.get("status") == "error":
         raise HTTPException(status_code=400, detail=res.get("message", "Profile update failed"))
     return res
@@ -193,10 +203,10 @@ async def api_update_collector_profile(
 @router.get("/sessions")
 async def api_list_sessions(user: Dict[str, Any] = Depends(get_current_user)):
     """List active Morgan AI chat sessions for current user."""
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    user_email = _get_user_email(user)
     sessions = []
     try:
-        query = db.collection("users").document(user_id).collection("ai_chat_sessions").where("is_deleted", "!=", True).get()
+        query = db.collection("users").document(user_email).collection("ai_chat_sessions").where("is_deleted", "!=", True).get()
         for doc in query:
             sessions.append(doc.to_dict())
     except Exception as e:
@@ -208,10 +218,10 @@ async def api_list_sessions(user: Dict[str, Any] = Depends(get_current_user)):
 @router.get("/sessions/{session_id}")
 async def api_get_session_messages(session_id: str, user: Dict[str, Any] = Depends(get_current_user)):
     """Get full message history for a specific chat session (capped at last 50 turns)."""
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    user_email = _get_user_email(user)
     messages = []
     try:
-        msgs = db.collection("users").document(user_id).collection("ai_chat_sessions").document(session_id).collection("messages").order_by("timestamp").limit(50).get()
+        msgs = db.collection("users").document(user_email).collection("ai_chat_sessions").document(session_id).collection("messages").order_by("timestamp").limit(50).get()
         for doc in msgs:
             messages.append(doc.to_dict())
     except Exception as e:
@@ -223,9 +233,9 @@ async def api_get_session_messages(session_id: str, user: Dict[str, Any] = Depen
 @router.delete("/sessions/{session_id}")
 async def api_delete_session(session_id: str, user: Dict[str, Any] = Depends(get_current_user)):
     """Soft-delete a Morgan AI chat session."""
-    user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    user_email = _get_user_email(user)
     try:
-        db.collection("users").document(user_id).collection("ai_chat_sessions").document(session_id).set({
+        db.collection("users").document(user_email).collection("ai_chat_sessions").document(session_id).set({
             "is_deleted": True,
             "deleted_at": datetime.now(timezone.utc).isoformat()
         }, merge=True)

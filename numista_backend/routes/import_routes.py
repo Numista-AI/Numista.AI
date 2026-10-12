@@ -14,7 +14,7 @@ from google.cloud import storage as gcs
 
 from schemas.import_schemas import SignedUrlRequest, ImportProcessRequest, ImportStartRequest, CommitBatchRequest
 from services.common import GOLDEN_SCHEMA_MAPPING, normalize_colloquial_header, safe_get_str, normalize_slang_term
-from routes.deps import db, storage_client, logger, get_current_user, PROJECT_ID
+from routes.deps import db, storage_client, logger, get_current_user, PROJECT_ID, _check_and_increment_rate_cap
 
 router = APIRouter(prefix="/api", tags=["Spreadsheet & Document Bulk Ingestion"])
 
@@ -75,7 +75,7 @@ async def get_upload_url(req: SignedUrlRequest, user: Dict[str, Any] = Depends(g
 
 @router.post("/import_spreadsheet")
 async def import_spreadsheet(
-    user_email: str = Form(...),
+    user_email: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     gcs_uri: Optional[str] = Form(None),
     import_name: str = Form(''),
@@ -86,6 +86,8 @@ async def import_spreadsheet(
     Ingests an Excel/CSV file or GCS URI into users/{userId}/staging_area with intra-batch and 3-tier deduplication.
     """
     user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
+    if not user.get("admin"):
+        _check_and_increment_rate_cap(user_id, "import_spreadsheet", 5)
     session_id = import_session_id or f"imp_{uuid.uuid4().hex[:8]}"
 
     # 1. Obtain bytes from GCS or Direct Upload
