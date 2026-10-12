@@ -7,6 +7,7 @@ for all Numista.AI APIRouters.
 
 import os
 import logging
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException, Depends
 from google.cloud import firestore, storage as gcs
@@ -88,3 +89,38 @@ async def require_admin_user(request: Request, user: Dict[str, Any] = Depends(ge
     if user.get("admin") is not True:
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return user
+
+
+def check_and_increment_rate_cap(uid: str, endpoint: str, daily_limit: int, is_admin: bool = False) -> None:
+    """Per-user daily cap helper storing counts in _rate_limits/{uid}/{endpoint}/{YYYY-MM-DD}.
+
+    1. Reads Firestore _rate_limits/{uid}/{endpoint}/{today_date} doc
+    2. If count >= daily_limit: raise HTTPException(429, "Daily limit reached")
+    3. Else: increment count atomically (use Firestore Increment)
+    4. If Firestore read fails: raise HTTPException(429) - fail closed
+    Admin users are exempt.
+    """
+    if is_admin:
+        return
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    clean_uid = str(uid).strip()
+    clean_endpoint = str(endpoint).strip().lstrip("/")
+    doc_ref = db.collection("_rate_limits").document(clean_uid).collection(clean_endpoint).document(today_date)
+    try:
+        snap = doc_ref.get()
+        current_count = 0
+        if snap.exists:
+            data = snap.to_dict() or {}
+            current_count = data.get("count", 0)
+        if current_count >= daily_limit:
+            raise HTTPException(status_code=429, detail="Daily limit reached")
+        doc_ref.set({"count": firestore.Increment(1)}, merge=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Rate cap check failed for {clean_uid}/{clean_endpoint}: {e}")
+        raise HTTPException(status_code=429, detail="Daily limit reached")
+
+
+_check_and_increment_rate_cap = check_and_increment_rate_cap
+

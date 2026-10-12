@@ -21,7 +21,7 @@ from config.ingestion_config import (
     CLASSIFIER_CONFIDENCE_THRESHOLD,
     ACTIVE_IMPORT_STATUSES,
 )
-from routes.deps import db, genai_client, genai_types
+from routes.deps import db, genai_client, genai_types, get_current_user, _check_and_increment_rate_cap
 from services.document_classifier_service import classify_document_bytes
 from services.checklist_parser import extract_checklist_document
 
@@ -88,12 +88,17 @@ async def upload_document(
     file: UploadFile = File(...),
     import_session_id: Optional[str] = Form(""),
     force_reprocess: Optional[bool] = Form(False),
+    _user: dict = Depends(get_current_user),
 ):
     """
     Canonical Multi-Modal Document Upload Gateway.
     Classifies document, enforces SHA-256 deduplication, and routes to specialized
     Checklist vs. Invoice extractors.
     """
+    caller_uid = (_user.get('uid') or _user.get('user_id') or '').strip()
+    if not _user.get('admin'):
+        _check_and_increment_rate_cap(caller_uid, 'upload_document', 20)
+
     contents = await file.read()
     if not contents:
         raise HTTPException(status_code=400, detail="Empty document payload")
@@ -112,7 +117,7 @@ async def upload_document(
     if not force_reprocess:
         try:
             existing_docs = list(
-                db.collection("users").document(uid)
+                db.collection("users").document(caller_uid)
                 .collection("review_queue")
                 .where("doc_hash", "==", doc_hash)
                 .where("status", "in", ACTIVE_IMPORT_STATUSES)
@@ -151,22 +156,22 @@ async def upload_document(
             mime_type=mime_type,
             filename=filename,
             genai_client=genai_client,
-            uid=uid,
+            uid=caller_uid,
             import_session_id=session_id,
             program_hint=program_hint,
         )
 
         items = extraction_result.get("items", [])
-        # Stage extracted items in users/{uid}/review_queue
+        # Stage extracted items in users/{caller_uid}/review_queue
         batch = db.batch()
-        col_ref = db.collection("users").document(uid).collection("review_queue")
+        col_ref = db.collection("users").document(caller_uid).collection("review_queue")
         
         staged_items = []
         is_quarantined = conf < 0.85 or requires_conf
         for item in items:
             doc_id = str(uuid.uuid4())
             item["staging_id"] = doc_id
-            item["uid"] = uid
+            item["uid"] = caller_uid
             item["user_email"] = user_email
             item["confidence_score"] = conf
             item["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -184,8 +189,8 @@ async def upload_document(
             staged_items.append(item)
 
         batch.commit()
-        enforce_review_queue_fifo_cap(uid, max_items=500)
-        logger.info(f"Successfully staged {len(staged_items)} items for user {uid} (session={session_id}, quarantined={is_quarantined})")
+        enforce_review_queue_fifo_cap(caller_uid, max_items=500)
+        logger.info(f"Successfully staged {len(staged_items)} items for user {caller_uid} (session={session_id}, quarantined={is_quarantined})")
 
         return {
             "status": "success",
@@ -213,13 +218,17 @@ async def upload_document(
 
 
 @router.post("/review/resume_session")
-async def resume_session(request: ResumeSessionRequest):
+async def resume_session(request: ResumeSessionRequest, _user: dict = Depends(get_current_user)):
     """
     Resumes an existing review session by retrieving already-staged documents.
     Performs ZERO re-extraction or AI calls.
     """
+    caller_uid = (_user.get('uid') or _user.get('user_id') or '').strip()
+    if request.uid and request.uid.strip() and request.uid.strip() != caller_uid:
+        raise HTTPException(status_code=403, detail="Forbidden: UID mismatch")
+
     try:
-        docs = db.collection("users").document(request.uid)\
+        docs = db.collection("users").document(caller_uid)\
                  .collection("review_queue")\
                  .where("import_session_id", "==", request.import_session_id)\
                  .where("status", "in", ACTIVE_IMPORT_STATUSES)\
@@ -232,20 +241,26 @@ async def resume_session(request: ResumeSessionRequest):
             "items_count": len(items),
             "data": items,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Failed to resume session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/review/abort_session")
-async def abort_session(request: AbortSessionRequest):
+async def abort_session(request: AbortSessionRequest, _user: dict = Depends(get_current_user)):
     """
     Soft-deletes review queue items without physical document deletion.
     Sets status: 'aborted' or 'superseded' to preserve legal SoR auditability.
     """
+    caller_uid = (_user.get('uid') or _user.get('user_id') or '').strip()
+    if request.uid and request.uid.strip() and request.uid.strip() != caller_uid:
+        raise HTTPException(status_code=403, detail="Forbidden: UID mismatch")
+
     try:
         docs = list(
-            db.collection("users").document(request.uid)
+            db.collection("users").document(caller_uid)
             .collection("review_queue")
             .where("import_session_id", "==", request.import_session_id)
             .stream()
@@ -256,7 +271,7 @@ async def abort_session(request: AbortSessionRequest):
             batch.set(doc.reference, {
                 "status": request.target_status or "aborted",
                 "aborted_at": firestore.SERVER_TIMESTAMP,
-                "aborted_by": request.uid
+                "aborted_by": caller_uid
             }, merge=True)
 
         batch.commit()
@@ -265,20 +280,26 @@ async def abort_session(request: AbortSessionRequest):
             "archived_count": len(docs),
             "target_status": request.target_status or "aborted"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Failed to abort session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/review/commit_session")
-async def commit_session(request: CommitSessionRequest):
+async def commit_session(request: CommitSessionRequest, _user: dict = Depends(get_current_user)):
     """
     Atomically commits staged review items to canonical users/{uid}/coins collection
     and writes an immutable audit record to users/{uid}/audit_log/{log_id}.
     """
+    caller_uid = (_user.get('uid') or _user.get('user_id') or '').strip()
+    if request.uid and request.uid.strip() and request.uid.strip() != caller_uid:
+        raise HTTPException(status_code=403, detail="Forbidden: UID mismatch")
+
     try:
         staged_docs = list(
-            db.collection("users").document(request.uid)
+            db.collection("users").document(caller_uid)
             .collection("review_queue")
             .where("import_session_id", "==", request.import_session_id)
             .where("status", "in", ACTIVE_IMPORT_STATUSES)
@@ -288,9 +309,9 @@ async def commit_session(request: CommitSessionRequest):
         if not staged_docs:
             return {"status": "no_items", "message": "No active staged items found for session"}
 
-        coins_col = db.collection("users").document(request.uid).collection("coins")
-        audit_col = db.collection("users").document(request.uid).collection("audit_log")
-        queue_col = db.collection("users").document(request.uid).collection("review_queue")
+        coins_col = db.collection("users").document(caller_uid).collection("coins")
+        audit_col = db.collection("users").document(caller_uid).collection("audit_log")
+        queue_col = db.collection("users").document(caller_uid).collection("review_queue")
 
         batch = db.batch()
         committed_coin_ids = []
@@ -323,7 +344,7 @@ async def commit_session(request: CommitSessionRequest):
         log_id = f"aud_{request.import_session_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
         audit_entry = {
             "log_id": log_id,
-            "uid": request.uid,
+            "uid": caller_uid,
             "action": "session_commit",
             "import_session_id": request.import_session_id,
             "source": "review_hub",
@@ -343,7 +364,7 @@ async def commit_session(request: CommitSessionRequest):
         batch.set(audit_ref, audit_entry)
 
         batch.commit()
-        logger.info(f"Committed {len(committed_coin_ids)} coins to vault for user {request.uid}")
+        logger.info(f"Committed {len(committed_coin_ids)} coins to vault for user {caller_uid}")
 
         return {
             "status": "success",
@@ -351,20 +372,26 @@ async def commit_session(request: CommitSessionRequest):
             "audit_log_id": log_id,
             "coin_ids": committed_coin_ids,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Failed to commit session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/review/bulk_condition")
-async def bulk_condition(request: BulkConditionRequest):
+async def bulk_condition(request: BulkConditionRequest, _user: dict = Depends(get_current_user)):
     """
     Applies a bulk condition update across active staged items in a review session
     and logs an immutable record to users/{uid}/audit_log/{log_id}.
     """
+    caller_uid = (_user.get('uid') or _user.get('user_id') or '').strip()
+    if request.uid and request.uid.strip() and request.uid.strip() != caller_uid:
+        raise HTTPException(status_code=403, detail="Forbidden: UID mismatch")
+
     try:
         staged_docs = list(
-            db.collection("users").document(request.uid)
+            db.collection("users").document(caller_uid)
             .collection("review_queue")
             .where("import_session_id", "==", request.import_session_id)
             .where("status", "in", ACTIVE_IMPORT_STATUSES)
@@ -394,7 +421,7 @@ async def bulk_condition(request: BulkConditionRequest):
             log_id = f"aud_{request.import_session_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
             audit_entry = {
                 "log_id": log_id,
-                "uid": request.uid,
+                "uid": caller_uid,
                 "action": "bulk_condition_update",
                 "import_session_id": request.import_session_id,
                 "source": "review_hub",
@@ -404,7 +431,7 @@ async def bulk_condition(request: BulkConditionRequest):
                 "affected_coin_ids": updated_ids,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
-            audit_ref = db.collection("users").document(request.uid).collection("audit_log").document(log_id)
+            audit_ref = db.collection("users").document(caller_uid).collection("audit_log").document(log_id)
             batch.set(audit_ref, audit_entry)
 
         batch.commit()
@@ -414,68 +441,9 @@ async def bulk_condition(request: BulkConditionRequest):
             "condition": request.condition,
             "affected_coin_ids": updated_ids,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Failed to apply bulk condition: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ── Review Hub: Delete Items ─────────────────────────────────────────────────
-
-class DeleteReviewItemsRequest(BaseModel):
-    user_email: str = Field(..., description="Owner email — used as Firestore doc ID")
-    review_ids: List[str] = Field(..., min_length=1, description="List of review_queue document IDs to delete")
-    reason: str = Field(default="user_deleted", description="Reason code written to audit log")
-
-
-@router.post("/review/delete_items")
-async def delete_review_items(request: DeleteReviewItemsRequest):
-    """
-    Permanently delete one or more review_queue documents for a user.
-    Each deletion is recorded in the users/{uid}/audit_log collection.
-    Called by Review Hub Delete Selected and Delete Single buttons.
-    """
-    try:
-        uid = request.user_email.lower().strip()
-        user_ref = db.collection("users").document(uid)
-        queue_col = user_ref.collection("review_queue")
-        audit_col = user_ref.collection("audit_log")
-
-        deleted_ids: List[str] = []
-        batch = db.batch()
-
-        for review_id in request.review_ids:
-            doc_ref = queue_col.document(review_id)
-            doc = doc_ref.get()
-            if not doc.exists:
-                logger.warning(f"delete_review_items: doc {review_id} not found for {uid}, skipping")
-                continue
-
-            # Capture data for audit before deleting
-            data = doc.to_dict() or {}
-            batch.delete(doc_ref)
-
-            # Audit log entry
-            log_id = f"DEL-{review_id[:8]}-{uuid.uuid4().hex[:6]}"
-            audit_ref = audit_col.document(log_id)
-            batch.set(audit_ref, {
-                "log_id": log_id,
-                "action": "review_queue_delete",
-                "reason": request.reason,
-                "review_id": review_id,
-                "subject": data.get("theme_subject") or data.get("Theme/Subject") or data.get("title") or "unknown",
-                "source_type": data.get("source_type", "unknown"),
-                "deleted_by": uid,
-                "deleted_at": datetime.now(timezone.utc).isoformat(),
-            })
-            deleted_ids.append(review_id)
-
-        batch.commit()
-        logger.info(f"delete_review_items: deleted {len(deleted_ids)} items for {uid} (reason={request.reason})")
-        return {
-            "status": "success",
-            "deleted_count": len(deleted_ids),
-            "deleted_ids": deleted_ids,
-        }
-    except Exception as e:
-        logger.exception(f"Failed to delete review items: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
