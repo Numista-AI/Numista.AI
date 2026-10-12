@@ -5,6 +5,7 @@ import '../screens/base_layout.dart';
 import '../screens/welcome_screen.dart';
 import '../screens/public_info_screens.dart';
 import '../services/guest_seed_service.dart';
+import '../services/ui_variant_service.dart';
 
 /// Top-level authentication and routing gate for Numista.AI.
 ///
@@ -94,7 +95,10 @@ class _AuthGateState extends State<AuthGate> {
             return const BaseLayout();
           }
 
-          _shouldShowWelcome ??= WelcomeScreen.shouldShow();
+          _shouldShowWelcome ??= () async {
+            await UiVariantService.refresh();
+            return WelcomeScreen.shouldShow();
+          }();
 
           return FutureBuilder<bool>(
             future: _shouldShowWelcome,
@@ -114,6 +118,7 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         // User signed out — reset the cached future so next login is fresh.
+        UiVariantService.reset();
         _shouldShowWelcome = null;
         _welcomeDone = false;
 

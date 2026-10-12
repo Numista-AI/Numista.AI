@@ -45,6 +45,8 @@ import '../widgets/morgan_chat_popout.dart';
 import 'coin_detail_screen.dart';
 import 'upcoming_releases_screen.dart';
 import '../theme/numista_theme.dart';
+import '../services/ui_variant_service.dart';
+
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -305,6 +307,19 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
   Widget _buildBody() {
+    // Phase A: alt site variant check
+    if (UiVariantService.current == UiVariant.alt) {
+      // For now Phase A is in place — alt shows a banner indicating alt mode.
+      // Full alt screens are Phase B/C (need Eric's YES).
+      // We insert a thin info banner at the top of Home Dashboard only.
+      if (_activeRoute == 'Home Dashboard') {
+        return _AltSiteBanner(child: _buildBodyForRoute());
+      }
+    }
+    return _buildBodyForRoute();
+  }
+
+  Widget _buildBodyForRoute() {
     switch (_activeRoute) {
       case 'Home Dashboard':
         return HomeDashboard(
@@ -1292,14 +1307,39 @@ class _BaseLayoutState extends State<BaseLayout> {
     if (confirm == true) {
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
+        UiVariantService.reset();
         if (ctx.mounted) {
           AuthGate.navigateTo(ctx);
         }
       } else {
+        UiVariantService.reset();
         await AuthService.signOut();
       }
     }
     // The StreamBuilder in AuthGate automatically redirects to LoginScreen upon signOut
+  }
+}
+
+// ─── Alt Site Variant Banner (Phase A) ──────────────────────────────────────
+class _AltSiteBanner extends StatelessWidget {
+  final Widget child;
+  const _AltSiteBanner({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Container(
+        width: double.infinity,
+        color: const Color(0xFF4338CA),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        child: const Text(
+          'Alt site variant — Phase A (admin preview)',
+          style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textCaption),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      Expanded(child: child),
+    ]);
   }
 }
 

@@ -27,6 +27,13 @@ service cloud.firestore {
       allow write: if false;           // backend SA only
     }
 
+    // ── Settings (ui_variant, etc. — server-only writes via Admin SDK) ─────────
+    match /users/{email}/settings/{doc} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false;  // server-only writes via Admin SDK
+    }
+
+
     // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
     // Each user can only read and write their own subcollections.
     match /users/{email}/{document=**} {

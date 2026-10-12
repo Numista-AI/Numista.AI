@@ -217,6 +217,59 @@ GRADE_STATS_CACHE = {}
 # Structure: {user_email: float}
 GRADE_WRITE_TIMESTAMPS = {}
 
+# --- REQ_032B: UI VARIANT GATING (PHASE A) -----------------------------------
+class SetUiVariantRequest(BaseModel):
+    target_email: str
+    variant: Optional[str] = None
+
+PHASE_A_ALLOWLIST = {'eric.seaman@yahoo.com', 'eric@numista.ai'}
+
+@app.post("/api/admin/set_ui_variant")
+async def set_ui_variant(
+    request: SetUiVariantRequest,
+    _user: dict = Depends(require_admin_user),  # admin claim required
+):
+    """
+    Admin-only. Sets the ui_variant for a target user email.
+    Called by Eric to add/remove Phase A testers.
+    """
+    target_email = request.target_email.strip().lower()
+    variant = request.variant  # 'classic' | 'alt' | None (reset)
+    if variant not in ('classic', 'alt', None):
+        raise HTTPException(400, "variant must be 'classic', 'alt', or null")
+    settings_ref = db.collection('users').document(target_email).collection('settings').document('ui_variant')
+    if variant is None:
+        settings_ref.delete()
+    else:
+        settings_ref.set({'variant': variant, 'set_by': 'admin', 'set_at': firestore.SERVER_TIMESTAMP})
+    return {'status': 'ok', 'target': target_email, 'variant': variant}
+
+@app.get("/api/user/ui_variant")
+async def get_ui_variant(
+    _user: dict = Depends(get_current_user),
+):
+    """
+    Returns the caller's ui_variant. Client reads this, never Firestore directly.
+    Phase A: only returns 'alt' if the user is in the Phase A allowlist.
+    Phase B/C: not yet active (needs Eric's typed YES).
+    """
+    caller_email = (_user.get('email') or '').strip().lower()
+    settings_ref = db.collection('users').document(caller_email).collection('settings').document('ui_variant')
+    doc = settings_ref.get()
+    if doc.exists:
+        variant = doc.to_dict().get('variant', 'classic')
+    else:
+        variant = 'classic'  # default
+
+    # Phase A gating: only allowlist gets 'alt'
+    # TODO (Phase B): beta testers allowlist/flag check (needs Eric's typed YES)
+    # TODO (Phase C): open to all users / self-set endpoint (needs Eric's typed YES)
+    if variant == 'alt' and caller_email not in PHASE_A_ALLOWLIST:
+        variant = 'classic'  # silently degrade
+
+    return {'variant': variant}
+
+
 # --- GEMINI MODEL CONFIGURATION ----------------------------------------------
 # Per official deprecation schedule as of August 14, 2026:
 #
