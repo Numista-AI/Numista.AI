@@ -9,7 +9,7 @@ Commit: `84a1f361` on `dev` (rebased on T1+T2+T3)
 |---|---|---|
 | Backend: `GET /api/user/ui_variant` | Token-authed; reads Firestore setting; Phase A allowlist gating | main.py:220-272 |
 | Backend: `POST /api/admin/set_ui_variant` | Admin-claim only; sets/clears `users/{email}/settings/ui_variant` | main.py:220-272 |
-| Backend: Phase A allowlist | `{'eric.seaman@yahoo.com', 'eric@numista.ai'}` — hardcoded server-side | main.py:247 |
+| Backend: Phase A allowlist | `{'eric.seaman@yahoo.com', 'eric@numista.ai'}` — hardcoded server-side | main.py:225 |
 | Firestore rules | Client write to `settings/ui_variant` blocked (`allow write: if false`) | numista_backend/firestore.rules:30-34, numista_mobile/firestore.rules:92-96 |
 | `UiVariantService` | Fetches from API, falls back to classic on error, `reset()` on sign-out | ui_variant_service.dart:1-28 |
 | Sign-in refresh | `UiVariantService.refresh()` called after all sign-in flows | auth_service.dart:92-167, auth_gate.dart:98-118 |
@@ -27,7 +27,7 @@ Commit: `84a1f361` on `dev` (rebased on T1+T2+T3)
 - Pubspec: 4.403.0+403 (unchanged)
 
 ## Phase gating summary
-- **Phase A** (built): Eric + AJ only; server-enforced allowlist; alt shows a banner, no screen changes yet
+- **Phase A** (built): eric.seaman@yahoo.com + eric@numista.ai only; server-enforced allowlist; alt shows a banner, no screen changes yet
 - **Phase B** (NOT built): beta testers by creation timestamp — needs Eric's typed YES
 - **Phase C** (NOT built): all users — needs Eric's typed YES
 - Client NEVER writes `settings/ui_variant` directly — Firestore rules block it

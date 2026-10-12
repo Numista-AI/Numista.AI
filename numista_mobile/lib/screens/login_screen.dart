@@ -48,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   final List<String> _pinDigits = List.filled(6, '');
   bool _pinBoxVisible = false;
+  final FocusNode _pinKeyboardFocus = FocusNode();
 
   void _onKeypadDigit(String d) {
     final current = _pinCtrl.text;
@@ -113,6 +114,7 @@ class _LoginScreenState extends State<LoginScreen>
     _emailCreateCtrl.dispose();
     _pinCreateCtrl.dispose();
     _resetEmailCtrl.dispose();
+    _pinKeyboardFocus.dispose();
     super.dispose();
   }
 
@@ -294,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                   Text(
                                     'AI-Powered Coin Collection Manager',
-                                    style: TextStyle(color: _sub, fontSize: 12),
+                                    style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm),
                                   ),
                                 ],
                               ),
@@ -536,19 +538,19 @@ class _LoginScreenState extends State<LoginScreen>
       runSpacing: 4,
       children: [
         _footerLink('About', () => _openPublicRoute('/about')),
-        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        const Text('•', style: TextStyle(color: _border, fontSize: NumistaTheme.textBodySm)),
         _footerLink('Features', () => _openPublicRoute('/features')),
-        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        const Text('•', style: TextStyle(color: _border, fontSize: NumistaTheme.textBodySm)),
         _footerLink('Pricing', () => _openPublicRoute('/pricing')),
-        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        const Text('•', style: TextStyle(color: _border, fontSize: NumistaTheme.textBodySm)),
         _footerLink('FAQ', () => _openPublicRoute('/faq')),
-        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        const Text('•', style: TextStyle(color: _border, fontSize: NumistaTheme.textBodySm)),
         _footerLink('Terms', () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const TermsScreen()),
           );
         }),
-        const Text('•', style: TextStyle(color: _border, fontSize: 11)),
+        const Text('•', style: TextStyle(color: _border, fontSize: NumistaTheme.textBodySm)),
         _footerLink('Privacy', () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const PrivacyScreen()),
@@ -568,7 +570,7 @@ class _LoginScreenState extends State<LoginScreen>
           label,
           style: const TextStyle(
             color: _sub,
-            fontSize: 12,
+            fontSize: NumistaTheme.textBodySm,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -603,33 +605,69 @@ class _LoginScreenState extends State<LoginScreen>
                 () => setState(() => _pinSignInVisible = !_pinSignInVisible))
           else ...[
             const SizedBox.shrink(),
-            _PinBoxRow(
-              filled: List.generate(6, (i) => i < _pinCtrl.text.length),
-              digits: _pinDigits,
-              showDigits: _pinBoxVisible,
-            ),
-            const SizedBox(height: 6),
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() => _pinBoxVisible = !_pinBoxVisible),
-                child: Text(
-                  _pinBoxVisible ? 'Hide PIN' : 'Show PIN',
-                  style: const TextStyle(fontSize: NumistaTheme.textBody),
-                ),
-              ),
-            ),
-            _NumKeypad(
-              onDigit: _onKeypadDigit,
-              onBackspace: _onKeypadBackspace,
-            ),
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-                child: const Text('Forgot your PIN?',
-                    style: TextStyle(color: _grey, fontSize: NumistaTheme.textBody)),
+            // T3 Fix 1: KeyboardListener enables physical keyboard digit entry
+            KeyboardListener(
+              focusNode: _pinKeyboardFocus,
+              autofocus: true,
+              onKeyEvent: (event) {
+                if (event is KeyDownEvent) {
+                  final label = event.logicalKey.keyLabel;
+                  if (label.length == 1 && RegExp(r'[0-9]').hasMatch(label)) {
+                    _onKeypadDigit(label);
+                  } else if (event.logicalKey == LogicalKeyboardKey.backspace) {
+                    _onKeypadBackspace();
+                  } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+                             event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+                    if (_pinCtrl.text.length == 6 && !_loading) _signIn();
+                  }
+                }
+              },
+              child: Column(
+                children: [
+                  _PinBoxRow(
+                    filled: List.generate(6, (i) => i < _pinCtrl.text.length),
+                    digits: _pinDigits,
+                    showDigits: _pinBoxVisible,
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => setState(() => _pinBoxVisible = !_pinBoxVisible),
+                      child: Text(
+                        _pinBoxVisible ? 'Hide PIN' : 'Show PIN',
+                        style: const TextStyle(fontSize: NumistaTheme.textBody),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: _NumKeypad(
+                        onDigit: _onKeypadDigit,
+                        onBackspace: _onKeypadBackspace,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+          const SizedBox(height: 16),
+          // Forgot PIN / Reset link — visible in both PIN and password mode
+          Center(
+            child: SizedBox(
+              height: NumistaTheme.tapTarget,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(double.infinity, NumistaTheme.tapTarget),
+                ),
+                onPressed: () => setState(() { _showResetForm = true; _error = null; }),
+                child: const Text('Forgot your PIN?',
+                    style: TextStyle(color: _grey, fontSize: NumistaTheme.textLg)),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 16),
           _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
           const SizedBox(height: 10),
@@ -710,7 +748,7 @@ class _LoginScreenState extends State<LoginScreen>
               }),
               child: Text(
                 _usePasswordCreate ? 'Use 6-digit PIN instead' : 'Use password instead',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: NumistaTheme.textBodySm),
               ),
             ),
           ),
@@ -736,7 +774,7 @@ class _LoginScreenState extends State<LoginScreen>
                       padding: const EdgeInsets.only(top: 10),
                       child: RichText(
                         text: TextSpan(
-                          style: const TextStyle(color: _sub, fontSize: 12, height: 1.4),
+                          style: const TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm, height: 1.4),
                           children: [
                             const TextSpan(text: 'I agree to the Numista.AI '),
                             WidgetSpan(
@@ -747,7 +785,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   );
                                 },
                                 child: const Text('Terms of Use',
-                                    style: TextStyle(color: _blue, fontSize: 12,
+                                    style: TextStyle(color: _blue, fontSize: NumistaTheme.textBodySm,
                                         decoration: TextDecoration.underline)),
                               ),
                             ),
@@ -760,7 +798,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   );
                                 },
                                 child: const Text('Privacy Policy',
-                                    style: TextStyle(color: _blue, fontSize: 12,
+                                    style: TextStyle(color: _blue, fontSize: NumistaTheme.textBodySm,
                                         decoration: TextDecoration.underline)),
                               ),
                             ),
@@ -783,7 +821,7 @@ class _LoginScreenState extends State<LoginScreen>
           if (!_termsAccepted)
             const Text(
               'Please accept the Terms of Use and Privacy Policy above to create your account.',
-              style: TextStyle(color: _grey, fontSize: 11),
+              style: TextStyle(color: _grey, fontSize: NumistaTheme.textBodySm),
               textAlign: TextAlign.center,
             ),
         ],
@@ -821,7 +859,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ─── Widget helpers ───────────────────────────────────────────────────────
   Widget _label(String text) => Text(text,
-      style: const TextStyle(color: _sub, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.5));
+      style: const TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600, letterSpacing: 0.5));
 
   Widget _textField({required TextEditingController controller, required String hint, TextInputType? keyboardType, List<String>? autofillHints}) =>
       TextField(
@@ -908,7 +946,7 @@ class _LoginScreenState extends State<LoginScreen>
         const Expanded(child: Divider(color: _border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(label, style: TextStyle(color: _grey.withAlpha(180), fontSize: 11)),
+          child: Text(label, style: TextStyle(color: _grey.withAlpha(180), fontSize: NumistaTheme.textBodySm)),
         ),
         const Expanded(child: Divider(color: _border)),
       ]);
@@ -920,7 +958,7 @@ class _LoginScreenState extends State<LoginScreen>
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: isError ? const Color(0xFFDC2626).withAlpha(60) : _green.withAlpha(60)),
         ),
-        child: Text(msg, style: TextStyle(color: isError ? const Color(0xFFDC2626) : _green, fontSize: 13)),
+        child: Text(msg, style: TextStyle(color: isError ? const Color(0xFFDC2626) : _green, fontSize: NumistaTheme.textBodySm)),
       );
 
   // ─── Password field (full text, no digit restriction) ────────────────────
