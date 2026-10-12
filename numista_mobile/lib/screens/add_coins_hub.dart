@@ -21,6 +21,7 @@ import '../widgets/roll_entry_dialog.dart';
 import '../widgets/morgan_guide_flow.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
+import '../theme/numista_theme.dart';
 
 
 class AddCoinsHub extends StatefulWidget {
@@ -35,6 +36,7 @@ class AddCoinsHub extends StatefulWidget {
 class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isProcessing = false;
+  bool _showMoreWays = false;
   // ignore: prefer_final_fields
   double _processingProgress = 0;
   // ignore: prefer_final_fields
@@ -108,6 +110,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
     // Priority: batch import → AI photo → manual → PCGS → SKU → roll → world → set.
     if (widget.initialTabName != null) {
+      _showMoreWays = true;
       switch (widget.initialTabName) {
         case 'upload':
           initialIdx = 0;
@@ -183,28 +186,34 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Future<void> _loadSavedPcgsToken() async {
-    // Check for platform token first — if it exists, users need no setup at all.
-    final hasPlatform = await PcgsImportService.hasPlatformToken();
-    if (hasPlatform) {
+    try {
+      // Check for platform token first — if it exists, users need no setup at all.
+      final hasPlatform = await PcgsImportService.hasPlatformToken();
+      if (hasPlatform) {
+        if (mounted) {
+          setState(() {
+            _hasPlatformToken = true;
+            _pcgsTokenSaved   = true;  // enables Verify button immediately
+            _isLoadingToken   = false;
+          });
+        }
+        return;
+      }
+      // No platform token — fall back to checking the user's personal token.
+      final token = await PcgsImportService.getToken();
       if (mounted) {
         setState(() {
-          _hasPlatformToken = true;
-          _pcgsTokenSaved   = true;  // enables Verify button immediately
-          _isLoadingToken   = false;
+          _isLoadingToken = false;
+          if (token != null) {
+            _pcgsTokenCtrl.text = token;
+            _pcgsTokenSaved = true;
+          }
         });
       }
-      return;
-    }
-    // No platform token — fall back to checking the user's personal token.
-    final token = await PcgsImportService.getToken();
-    if (mounted) {
-      setState(() {
-        _isLoadingToken = false;
-        if (token != null) {
-          _pcgsTokenCtrl.text = token;
-          _pcgsTokenSaved = true;
-        }
-      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingToken = false);
+      }
     }
   }
 
@@ -296,23 +305,67 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       children: [
         _buildHeader(context),
         if (!_bannerDismissed) _buildOnboardingBanner(),
-        _buildTabBar(),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              // ITEM 9: Tab order matches priority: upload → camera → manual → pcgs → sku → roll → world → set
-              _buildUploadFilesTab(),
-              _buildCameraScannerTab(),
-              _buildManualEntryTab(),
-              _buildPcgsImportTab(),
-              _buildSkuImportTab(),
-              _buildRollEntryTab(),
-              _buildWorldItemsTab(),
-              _buildMintSetTab(),
-            ],
+        _QuickAddCard(
+          icon: Icons.camera_alt_outlined,
+          label: 'Take a photo',
+          onTap: () {
+            if (widget.onNavigate != null) {
+              widget.onNavigate!('Microscope Scanner');
+            } else {
+              setState(() => _showMoreWays = true);
+              _tabController.animateTo(1);
+            }
+          },
+        ),
+        _QuickAddCard(
+          icon: Icons.keyboard_outlined,
+          label: 'Type it in',
+          onTap: () {
+            setState(() => _showMoreWays = true);
+            _tabController.animateTo(2);
+          },
+        ),
+        _QuickAddCard(
+          icon: Icons.upload_file_outlined,
+          label: 'Upload a list',
+          onTap: () {
+            setState(() => _showMoreWays = true);
+            _tabController.animateTo(0);
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Center(
+            child: TextButton.icon(
+              onPressed: () => setState(() => _showMoreWays = !_showMoreWays),
+              icon: Icon(_showMoreWays ? Icons.expand_less : Icons.expand_more),
+              label: Text(
+                _showMoreWays ? 'Fewer ways to add' : 'More ways to add',
+                style: const TextStyle(fontSize: NumistaTheme.textBody),
+              ),
+            ),
           ),
         ),
+        if (_showMoreWays) ...[
+          _buildTabBar(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // ITEM 9: Tab order matches priority: upload → camera → manual → pcgs → sku → roll → world → set
+                _buildUploadFilesTab(),
+                _buildCameraScannerTab(),
+                _buildManualEntryTab(),
+                _buildPcgsImportTab(),
+                _buildSkuImportTab(),
+                _buildRollEntryTab(),
+                _buildWorldItemsTab(),
+                _buildMintSetTab(),
+              ],
+            ),
+          ),
+        ] else
+          const Spacer(),
         if (_isProcessing) _buildProcessingOverlay(),
       ],
     );
@@ -4033,3 +4086,67 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
 }
+
+/// Full-width quick entry choice card for Add Coins screen.
+class QuickAddCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const QuickAddCard({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 80),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+          ),
+        ),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Icon(icon, size: 32, color: const Color(0xFFF63366)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: NumistaTheme.textLg,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+typedef _QuickAddCard = QuickAddCard;

@@ -11,6 +11,7 @@ import 'privacy_screen.dart';
 import 'terms_screen.dart';
 import 'public_info_screens.dart';
 import '../widgets/auth_gate.dart';
+import '../theme/numista_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   final int initialTab;
@@ -44,6 +45,37 @@ class _LoginScreenState extends State<LoginScreen>
   bool _termsAccepted    = false;   // Must be true before Create My Vault button enables
   String? _error;
   String? _successMsg;
+
+  final List<String> _pinDigits = List.filled(6, '');
+  bool _pinBoxVisible = false;
+
+  void _onKeypadDigit(String d) {
+    final current = _pinCtrl.text;
+    if (current.length < 6) {
+      final next = current + d;
+      _pinCtrl.text = next;
+      setState(() {
+        for (int i = 0; i < 6; i++) {
+          _pinDigits[i] = i < next.length ? next[i] : '';
+        }
+        _error = null;
+      });
+    }
+  }
+
+  void _onKeypadBackspace() {
+    final current = _pinCtrl.text;
+    if (current.isNotEmpty) {
+      final next = current.substring(0, current.length - 1);
+      _pinCtrl.text = next;
+      setState(() {
+        for (int i = 0; i < 6; i++) {
+          _pinDigits[i] = i < next.length ? next[i] : '';
+        }
+        _error = null;
+      });
+    }
+  }
 
   // ─── Colour tokens — light/professional theme ────────────────────────────
   static const _bg       = Color(0xFFF0F2F6); // App body gray
@@ -447,7 +479,7 @@ class _LoginScreenState extends State<LoginScreen>
         AnimatedSize(
           duration: const Duration(milliseconds: 200),
           child: SizedBox(
-            height: _tabCtrl.index == _signInTab ? 280 : 360,
+            height: _tabCtrl.index == _signInTab ? (_usePasswordSignIn ? 280 : 560) : 360,
             child: TabBarView(
               controller: _tabCtrl,
               physics: const NeverScrollableScrollPhysics(),
@@ -462,16 +494,6 @@ class _LoginScreenState extends State<LoginScreen>
 
         // Google Sign-In
         _googleButton(),
-
-
-
-        // Forgot PIN
-        Center(
-          child: TextButton(
-            onPressed: () => setState(() { _showResetForm = true; _error = null; }),
-            child: Text('Forgot your PIN?', style: TextStyle(color: _grey, fontSize: 13)),
-          ),
-        ),
 
         const SizedBox(height: 16),
         _divider('explore without an account'),
@@ -576,11 +598,38 @@ class _LoginScreenState extends State<LoginScreen>
           _label(_usePasswordSignIn ? 'Password' : '6-Digit PIN'),
           const SizedBox(height: 6),
           // ── Credential input — PIN or password ───────────────────────────
-          _usePasswordSignIn
-              ? _passwordField(_pinCtrl, _pinSignInVisible,
-                  () => setState(() => _pinSignInVisible = !_pinSignInVisible))
-              : _pinField(_pinCtrl, _pinSignInVisible,
-                  () => setState(() => _pinSignInVisible = !_pinSignInVisible)),
+          if (_usePasswordSignIn)
+            _passwordField(_pinCtrl, _pinSignInVisible,
+                () => setState(() => _pinSignInVisible = !_pinSignInVisible))
+          else ...[
+            const SizedBox.shrink(),
+            _PinBoxRow(
+              filled: List.generate(6, (i) => i < _pinCtrl.text.length),
+              digits: _pinDigits,
+              showDigits: _pinBoxVisible,
+            ),
+            const SizedBox(height: 6),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _pinBoxVisible = !_pinBoxVisible),
+                child: Text(
+                  _pinBoxVisible ? 'Hide PIN' : 'Show PIN',
+                  style: const TextStyle(fontSize: NumistaTheme.textBody),
+                ),
+              ),
+            ),
+            _NumKeypad(
+              onDigit: _onKeypadDigit,
+              onBackspace: _onKeypadBackspace,
+            ),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() { _showResetForm = true; _error = null; }),
+                child: const Text('Forgot your PIN?',
+                    style: TextStyle(color: _grey, fontSize: NumistaTheme.textBody)),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _primaryButton(label: _loading ? 'Signing in…' : 'Sign In', onTap: _loading ? null : _signIn),
           const SizedBox(height: 10),
@@ -597,12 +646,15 @@ class _LoginScreenState extends State<LoginScreen>
                 if (!_usePasswordSignIn) {
                   final digits = _pinCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
                   _pinCtrl.text = digits.length > 6 ? digits.substring(0, 6) : digits;
+                  for (int i = 0; i < 6; i++) {
+                    _pinDigits[i] = i < _pinCtrl.text.length ? _pinCtrl.text[i] : '';
+                  }
                 }
                 _error = null;
               }),
               child: Text(
                 _usePasswordSignIn ? 'Sign in with 6-digit PIN' : 'Older account? Sign in with password',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: NumistaTheme.textCaption),
               ),
             ),
           ),
@@ -1300,3 +1352,99 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
     );
   }
 }
+
+/// Custom 6-digit PIN entry widget. No TextEditingController glyphs.
+class PinBoxRow extends StatelessWidget {
+  final List<bool> filled;
+  final List<String> digits;
+  final bool showDigits;
+
+  const PinBoxRow({
+    super.key,
+    required this.filled,
+    required this.digits,
+    required this.showDigits,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(6, (i) {
+        return Container(
+          width: 48,
+          height: 52,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.transparent,
+          ),
+          alignment: Alignment.center,
+          child: filled[i]
+              ? (showDigits
+                  ? Text(digits[i],
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700))
+                  : Container(
+                      width: 14,
+                      height: 14,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFF63366),
+                      ),
+                    ))
+              : const SizedBox.shrink(),
+        );
+      }),
+    );
+  }
+}
+
+typedef _PinBoxRow = PinBoxRow;
+
+/// Number keypad (3×4 grid).
+class NumKeypad extends StatelessWidget {
+  final ValueChanged<String> onDigit;
+  final VoidCallback onBackspace;
+
+  const NumKeypad({super.key, required this.onDigit, required this.onBackspace});
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.6,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      children: keys.map((k) {
+        if (k.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.all(4),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: k == '⌫' ? onBackspace : () => onDigit(k),
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(k,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+typedef _NumKeypad = NumKeypad;
