@@ -210,16 +210,51 @@ async def api_morgan_confirm(
             if datetime.now(timezone.utc) > expires_at:
                 raise HTTPException(status_code=410, detail="Proposal has expired")
 
-    # 6. Execute action
+    # 6. Execute action inside a Firestore transaction to prevent double-tap duplicates (G0-1)
     action = prop_data.get("action", "add_coin")
     snapshot = prop_data.get("coin_snapshot") or {}
     target_email = prop_owner_email or caller_email
     coin_col_ref = db.collection("users").document(target_email).collection("coins")
 
+    # Transactional execute: atomically claim proposal then write coin
+    coin_id = None
     before_snapshot = None
     after_snapshot = None
     final_action = "add"
 
+    @firestore.transactional
+    def _run_in_transaction(transaction, prop_ref_inner):
+        """Read-check-mark inside a transaction to prevent race conditions."""
+        fresh_snap = prop_ref_inner.get(transaction=transaction)
+        if not fresh_snap.exists:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+        fresh_data = fresh_snap.to_dict() or {}
+        if fresh_data.get("used") is True:
+            # Already claimed — return existing coin_id (idempotent)
+            return fresh_data.get("coin_id"), True
+        # Claim it atomically
+        transaction.update(prop_ref_inner, {"used": True})
+        return None, False
+
+    try:
+        transaction = db.transaction()
+        existing_coin_id, already_done = _run_in_transaction(transaction, prop_ref)
+    except HTTPException:
+        raise
+    except Exception as tx_err:
+        logger.error(f"Confirm transaction error: {tx_err}")
+        raise HTTPException(status_code=500, detail="Transaction failed — please try again")
+
+    if already_done:
+        return {
+            "status": "success",
+            "message": "Proposal already confirmed",
+            "coin_id": existing_coin_id,
+            "action": action,
+            "idempotent": True,
+        }
+
+    # Transaction claimed — now execute the action (outside transaction for Firestore limits)
     if action in ("add_coin", "add"):
         new_coin_ref = coin_col_ref.document()
         coin_id = new_coin_ref.id
@@ -237,8 +272,10 @@ async def api_morgan_confirm(
         if not target_snap.exists:
             raise HTTPException(status_code=404, detail="Target coin not found in collection")
         before_snapshot = target_snap.to_dict() or {}
-        target_ref.update(snapshot)
-        after_snapshot = {**before_snapshot, **snapshot}
+        # snapshot for edit proposals has structure {"before": {...}, "changes": {...}}
+        changes = snapshot.get("changes") if isinstance(snapshot.get("changes"), dict) else snapshot
+        target_ref.update(changes)
+        after_snapshot = {**before_snapshot, **changes}
         final_action = "edit"
 
     elif action in ("delete_coin", "delete"):
@@ -260,9 +297,9 @@ async def api_morgan_confirm(
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
 
-    # Mark proposal used
+    # Store final coin_id on proposal for idempotency on future calls
     try:
-        prop_ref.set({"used": True, "coin_id": coin_id}, merge=True)
+        prop_ref.set({"coin_id": coin_id}, merge=True)
     except Exception:
         pass
     try:
