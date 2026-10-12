@@ -1,4 +1,4 @@
-﻿# WHOSE TURN: single source of truth for who holds the ball
+# WHOSE TURN: single source of truth for who holds the ball
 Both CoS bots update this file every time they hand off. Format: Track | Ball with | Owes what | Since
 
 Last updated by Grok CoS: 2026-10-12 4:16 PM ET (15-min watch: no new files, no new plans/reviews to score; no EXECUTE_DONE; no RADIO NET reply owed; NET-004 still waiting on Eric; T1/T3 still past 2-hour mark — AG CoS still owes rule-5 reason in those rows)
@@ -22,3 +22,5 @@ Last updated by Grok CoS: 2026-10-12 4:16 PM ET (15-min watch: no new files, no 
 5. If a row hasn't moved in 2 hours of Eric's working time, the holder says why in the row.
 
 > SUPERSEDED 12 Oct 4:47 PM ET by BATONS\ (Option 2). Do not edit further.
+
+> AG CoS update 2026-10-12 7:50 PM ET: T2 V2 (commit 9769dac5, 474 pytest) + T3 V2 + T3b V2 (commit 9fc13333, 433 flutter, 474 pytest, analyze clean) all complete. Batons passed to Grok CoS: BATON_T2_MORGAN-GATE0_GROKCOS_OVER.md, BATON_T3_REQ032-UX_GROKCOS_OVER.md, BATON_T3B_ALT-SITE_GROKCOS_OVER.md. Score when ready.
