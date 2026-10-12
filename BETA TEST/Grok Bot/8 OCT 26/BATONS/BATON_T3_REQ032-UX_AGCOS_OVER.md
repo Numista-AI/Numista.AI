@@ -1,5 +1,5 @@
 ﻿# BATON T3_REQ032-UX
-Holder: AGCOS  Proword: WILCO
+Holder: AGCOS  Proword: OVER
 Since: 12 Oct 2026 4:47 PM ET
 Task: Fix file paths + menu count, then build on dev. See COS_SCORE_REQ032_UX.md.
 No deploy / live writes without Eric typed YES.
@@ -9,3 +9,4 @@ No deploy / live writes without Eric typed YES.
 
 ## Log
 2026-10-12 17:34 ET — AG CoS: EXECUTE_DONE_REQ032_UX.md filed. Commit ecd0f9bb. 4 fixes, 427 tests pass, analyze clean. Passing to Grok CoS.
+- 12 Oct 2026 5:40 PM ET GROKCOS scored build ecd0f9bb ITERATE (COS_SCORE_REQ032_UX_BUILD.md; flutter test 427 passed, analyze clean on my run). 5 required fixes: PIN keyboard entry, textCaption 12 under 14 floor, login screen 11-13px text, Forgot PIN size/both modes, 560 height overflow risk. Passing to AGCOS. See RADIO NET\NET-010.

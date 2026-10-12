@@ -56,3 +56,46 @@ When conversation d8fce90c delivers the Mint page text files to `MORGAN SME DATA
 - Updated row index in this ACK file
 
 Hard holds unchanged. Dev only. No live apply.
+
+---
+
+## RERUN6 COMPLETE
+
+- **Execution Date:** 2026-10-12
+- **Review File:** `MORGAN SME DATABASE\GEMINI38_REVIEW_EVIDENCE_PACK_2026-10-07_RERUN6_AWQ_25ROWS.md`
+- **Verdicts:**
+  - **AGREE:** 25
+  - **DISAGREE:** 0
+  - **UNRESOLVED:** 0
+  - **Total Rows Evaluated:** 25
+
+### Row to Source File Mapping
+
+| Row | Slot ID / Target | Saved Source File | Verdict |
+|---|---|---|---|
+| 2 | Maya Angelou S-SILVER-PROOF | `rerun6_pages/22WS.txt` | AGREE |
+| 4 | Sally Ride S-SILVER-PROOF | `rerun6_pages/22WS.txt` | AGREE |
+| 6 | Wilma Mankiller S-SILVER-PROOF | `rerun6_pages/22WS.txt` | AGREE |
+| 8 | Nina Otero-Warren S-SILVER-PROOF | `rerun6_pages/22WS.txt` | AGREE |
+| 10 | Anna May Wong S-SILVER-PROOF | `rerun6_pages/22WS.txt` | AGREE |
+| 12 | Bessie Coleman S-SILVER-PROOF | `rerun6_pages/23WS.txt` | AGREE |
+| 14 | Edith Kanakaʻole S-SILVER-PROOF | `rerun6_pages/23WS.txt` | AGREE |
+| 16 | Eleanor Roosevelt S-SILVER-PROOF | `rerun6_pages/23WS.txt` | AGREE |
+| 18 | Jovita Idar S-SILVER-PROOF | `rerun6_pages/23WS.txt` | AGREE |
+| 20 | Maria Tallchief S-SILVER-PROOF | `rerun6_pages/23WS.txt` | AGREE |
+| 22 | Dr. Pauli Murray S-SILVER-PROOF | `rerun6_pages/24WS.txt` | AGREE |
+| 24 | Patsy Mink S-SILVER-PROOF | `rerun6_pages/24WS.txt` | AGREE |
+| 26 | Dr. Mary Edwards Walker S-SILVER-PROOF | `rerun6_pages/24WS.txt` | AGREE |
+| 28 | Celia Cruz S-SILVER-PROOF | `rerun6_pages/24WS.txt` | AGREE |
+| 30 | Zitkala-Ša S-SILVER-PROOF | `rerun6_pages/24WS.txt` | AGREE |
+| 32 | Ida B. Wells S-SILVER-PROOF | `rerun6_pages/25WS.txt` | AGREE |
+| 34 | Juliette Gordon Low S-SILVER-PROOF | `rerun6_pages/25WS.txt` | AGREE |
+| 36 | Dr. Vera Rubin S-SILVER-PROOF | `rerun6_pages/25WS.txt` | AGREE |
+| 38 | Stacey Park Milbern S-SILVER-PROOF | `rerun6_pages/25WS.txt` | AGREE |
+| 40 | Althea Gibson S-SILVER-PROOF | `rerun6_pages/25WS.txt` | AGREE |
+| 41 | ALL 20 slots#S (label) | `rerun6_pages/row41_rolls_S.txt` | AGREE |
+| 42 | ALL 20 slots#S-PROOF (label) | `rerun6_pages/row42_clad_proof_25WP.txt` | AGREE |
+| 43 | Stacey Park Milbern name | `rerun6_pages/row43_stacey_milbern.txt` | AGREE |
+| 47 | Zitkala-Ša slug fix | CSV / Mint convention analysis | AGREE |
+| 48 | AWQ total slots arithmetic | Slot list arithmetic (100 - 20 + 20 = 100) | AGREE |
+

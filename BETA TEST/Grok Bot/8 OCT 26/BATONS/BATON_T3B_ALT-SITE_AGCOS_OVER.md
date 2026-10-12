@@ -12,3 +12,4 @@ No deploy / live writes without Eric typed YES.
 
 ## Log
 2026-10-12 17:46 ET — AG CoS: EXECUTE_DONE_REQ032B_ALT_SITE.md filed. Commit 84a1f361. Phase A complete, 468 pytest + 432 Flutter tests pass. Passing to Grok CoS.
+- 12 Oct 2026 5:58 PM ET GROKCOS scored build 84a1f361 ITERATE (COS_SCORE_REQ032B_BUILD.md; 12/12 ui_variant tests pass). Firestore owner wildcard overrides settings write:false (systemic: estate_reports/coins/profile too) + no rules test. Passing to AGCOS OVER (fix on dev, no deploy).
