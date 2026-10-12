@@ -114,16 +114,21 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
 
     # 4. Inject Portfolio Summary Stats (<15ms latency)
     try:
+        val_keywords = ["worth", "value", "cost", "price", "how much"]
+        has_val_keyword = any(kw in (req.query or "").lower() for kw in val_keywords)
         stats_doc = db.collection("users").document(user_email).collection("summary").document("stats").get()
         if stats_doc.exists:
             stats = stats_doc.to_dict() or {}
             system_prompt += (
                 f"Portfolio Summary:\n"
                 f"- Total Coins: {stats.get('total_coins', 0)}\n"
-                f"- Portfolio Market Value: ${stats.get('portfolio_value', 0.0):,.2f}\n"
-                f"- Unrealized P/L: ${stats.get('profit', 0.0):,.2f}\n"
-                f"- Certified Slabs: {stats.get('grade_count', 0)}\n"
             )
+            if has_val_keyword:
+                system_prompt += (
+                    f"- Portfolio Market Value: ${stats.get('portfolio_value', 0.0):,.2f}\n"
+                    f"- Unrealized P/L: ${stats.get('profit', 0.0):,.2f}\n"
+                )
+            system_prompt += f"- Certified Slabs: {stats.get('grade_count', 0)}\n"
     except Exception as e:
         logger.warning(f"Failed to fetch portfolio summary stats for context: {e}")
 

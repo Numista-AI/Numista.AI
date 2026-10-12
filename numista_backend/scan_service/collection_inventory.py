@@ -46,7 +46,7 @@ def is_dime(denom: str) -> bool:
 # Set-Expansion
 # ---------------------------------------------------------------------------
 
-def expand_collection_inventory(docs_iter):
+def expand_collection_inventory(docs_iter, include_financial: bool = False):
     """Expand Firestore coin documents into a flat inventory list.
 
     Set documents (item_type == "set" OR set_contents is a non-empty list)
@@ -57,8 +57,8 @@ def expand_collection_inventory(docs_iter):
 
     inventory_items: list of dicts with canonical snake_case keys:
         coin_id, year, denomination, mint_mark, condition, theme_subject,
-        program_series, ai_estimated_value, cost, item_type, from_set,
-        from_set_name, is_set_parent, fields_incomplete
+        program_series, ai_estimated_value (if include_financial), cost (if include_financial),
+        item_type, from_set, from_set_name, is_set_parent, fields_incomplete
 
     stats_dict: { "docs": int, "sets": int, "expanded": int, "total_items": int }
 
@@ -94,7 +94,7 @@ def expand_collection_inventory(docs_iter):
                                   "Original Description from source", default="Unknown Set")
 
             # Parent set row
-            inventory.append({
+            parent_row = {
                 "coin_id":            doc.id,
                 "year":               _get_field(d, "Year", "year"),
                 "denomination":       _get_field(d, "Denomination", "denomination"),
@@ -102,14 +102,16 @@ def expand_collection_inventory(docs_iter):
                 "condition":          _get_field(d, "Condition", "condition"),
                 "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
                 "program_series":     _get_field(d, "Program/Series", "program_series"),
-                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
                 "item_type":          "set",
                 "from_set":           None,
                 "from_set_name":      None,
                 "is_set_parent":      True,
                 "fields_incomplete":  False,
-            })
+            }
+            if include_financial:
+                parent_row["ai_estimated_value"] = _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00")
+                parent_row["cost"] = _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00")
+            inventory.append(parent_row)
 
             parent_year = _get_field(d, "Year", "year")
             parent_cond = _get_field(d, "Condition", "condition")
@@ -137,7 +139,7 @@ def expand_collection_inventory(docs_iter):
                 if child_item_type in ("set", "multiple", "n/a", ""):
                     child_item_type = "coin"
 
-                inventory.append({
+                child_row = {
                     "coin_id":            f"{doc.id}__set_coin_{idx}",
                     "year":               child_year,
                     "denomination":       child_denom,
@@ -153,18 +155,20 @@ def expand_collection_inventory(docs_iter):
                     "Metal Content":      _get_field(coin, "Metal Content", "metal_content",
                                                      "Composition", "composition"),
                     # ── End Option B ─────────────────────────────────────
-                    "ai_estimated_value": _get_field(coin, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                    "cost":               _get_field(coin, "Cost", "cost", "purchase_cost", default="$0.00"),
                     "item_type":          child_item_type,
                     "from_set":           doc.id,
                     "from_set_name":      set_name,
                     "is_set_parent":      False,
                     "fields_incomplete":  incomplete,
-                })
+                }
+                if include_financial:
+                    child_row["ai_estimated_value"] = _get_field(coin, "AI Estimated Value", "ai_estimated_value", default="$0.00")
+                    child_row["cost"] = _get_field(coin, "Cost", "cost", "purchase_cost", default="$0.00")
+                inventory.append(child_row)
                 expanded_count += 1
         else:
             # Regular coin / paper_currency / medal / other
-            inventory.append({
+            regular_row = {
                 "coin_id":            doc.id,
                 "year":               _get_field(d, "Year", "year"),
                 "denomination":       _get_field(d, "Denomination", "denomination"),
@@ -172,14 +176,16 @@ def expand_collection_inventory(docs_iter):
                 "condition":          _get_field(d, "Condition", "condition"),
                 "theme_subject":      _get_field(d, "Theme/Subject", "theme_subject"),
                 "program_series":     _get_field(d, "Program/Series", "program_series"),
-                "ai_estimated_value": _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00"),
-                "cost":               _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00"),
                 "item_type":          item_type_raw if item_type_raw else "coin",
                 "from_set":           None,
                 "from_set_name":      None,
                 "is_set_parent":      False,
                 "fields_incomplete":  False,
-            })
+            }
+            if include_financial:
+                regular_row["ai_estimated_value"] = _get_field(d, "AI Estimated Value", "ai_estimated_value", default="$0.00")
+                regular_row["cost"] = _get_field(d, "Cost", "cost", "purchase_cost", default="$0.00")
+            inventory.append(regular_row)
 
     stats = {
         "docs": doc_count,

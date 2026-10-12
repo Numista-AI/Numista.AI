@@ -84,8 +84,10 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
+from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
 from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
+app.include_router(morgan_router)
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
 app.include_router(news_router)
@@ -2318,7 +2320,8 @@ def execute_add_coin(
     provenance: str = "",
     raw_utterance: str = "",
     personal_notes: str = "",
-    quantity: int = 1
+    quantity: int = 1,
+    dry_run: bool = False
 ) -> dict:
     try:
         import re
@@ -2511,6 +2514,28 @@ def execute_add_coin(
             "Source": "Morgan AI Assistant Chat",
             "created_at": firestore.SERVER_TIMESTAMP,
         }
+        if dry_run:
+            return {
+                "action": "add_coin",
+                "status": "prepared",
+                "coin_snapshot": coin_data,
+                "year": str(year),
+                "mint_mark": clean_mint,
+                "denomination": norm_denom,
+                "series": series_name,
+                "theme_subject": theme_subj,
+                "estimated_value": formatted_ai_val,
+                "valuation_source": val_source,
+                "storage_location": storage_location or "Cardboard Holder / Binder",
+                "condition": condition or "Ungraded / Raw",
+                "cost": cost_display_str,
+                "cost_basis": cost_basis_num,
+                "provenance": prov_desc,
+                "provenance_ledger": [provenance_entry],
+                "is_duplicate": is_dupe,
+                "prompt_extra_details": not bool(storage_location and condition and cost and cost != "$0.00")
+            }
+
         new_doc_ref.set(coin_data)
 
         return {
@@ -2580,6 +2605,60 @@ def batch_add_coins(user_email: str, coins: list) -> dict:
         return {"action": "add_coin", "status": "error", "message": "Failed to add coin. Please try again."}
 
 
+def propose_add_coin(user_email: str, caller_uid: str, **kwargs) -> dict:
+    """Creates a proposed coin addition doc instead of immediately writing to collection (G0-1)."""
+    try:
+        prep = execute_add_coin(user_email=user_email, dry_run=True, **kwargs)
+        if prep.get("status") == "error":
+            return prep
+        coin_snapshot = prep.get("coin_snapshot") or {}
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid,
+            action="add_coin",
+            coin_snapshot=coin_snapshot
+        )
+        return {
+            "action": "add_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin": {
+                "year": prep.get("year"),
+                "denomination": prep.get("denomination"),
+                "mint_mark": prep.get("mint_mark"),
+                "series": prep.get("series"),
+                "theme_subject": prep.get("theme_subject"),
+                "condition": prep.get("condition"),
+                "storage_location": prep.get("storage_location"),
+                "cost": prep.get("cost"),
+            }
+        }
+    except Exception as e:
+        logger.exception("Error proposing add_coin")
+        return {"action": "add_coin", "status": "error", "message": str(e)}
+
+
+def execute_get_coin_details(user_email: str, coin_id: str) -> dict:
+    """Fetches full coin document details on demand with prompt injection protection (G0-7, G0-8)."""
+    try:
+        doc = db.collection('users').document(user_email).collection('coins').document(coin_id).get()
+        if not doc.exists:
+            return {"action": "get_coin_details", "status": "error", "message": "Coin not found in collection."}
+        data = doc.to_dict() or {}
+        raw_notes = data.get("Personal Notes") or data.get("personal_notes") or data.get("ocr_text")
+        if raw_notes:
+            safe = wrap_user_data(str(raw_notes))
+            if "Personal Notes" in data:
+                data["Personal Notes"] = safe
+            if "personal_notes" in data:
+                data["personal_notes"] = safe
+        data["coin_id"] = coin_id
+        return {"action": "get_coin_details", "status": "success", "coin_id": coin_id, "coin": data}
+    except Exception as e:
+        logger.exception("Error executing get_coin_details")
+        return {"action": "get_coin_details", "status": "error", "message": str(e)}
+
+
 def execute_update_coin(
     user_email: str,
     coin_id: str = None,
@@ -2599,7 +2678,7 @@ def execute_update_coin(
             }
         col_ref = db.collection('users').document(user_email).collection('coins')
 
-        # 10-minute recency resolution if coin_id is omitted by model
+        # 10-minute recency resolution if coin_id is omitted by model (G0-2: no most-recent fallback)
         if not coin_id or str(coin_id).strip() in ["", "None", "undefined"]:
             from datetime import datetime, timedelta, timezone
             ten_min_ago = datetime.now(timezone.utc) - timedelta(minutes=10)
@@ -2619,15 +2698,22 @@ def execute_update_coin(
                     "message": f"You added multiple items recently ({', '.join(names)}). Which specific coin would you like to update?"
                 }
             else:
-                # Fallback to most recent document
-                all_recent = list(col_ref.order_by('created_at', direction='DESCENDING').limit(1).stream())
-                if all_recent:
-                    coin_id = all_recent[0].id
+                # G0-2: Remove most-recent fallback — ask for clarification
+                return {
+                    "action": "update_coin",
+                    "status": "ambiguous",
+                    "message": "Which specific coin in your collection would you like to update?"
+                }
 
         if not coin_id:
             return {"action": "update_coin", "status": "error", "message": "No target coin found in collection to update."}
 
+        # G0-2: Server-verify target coin exists in caller collection (reject cross-user target)
         doc_ref = col_ref.document(coin_id)
+        doc_snap = doc_ref.get()
+        if not doc_snap.exists:
+            return {"action": "update_coin", "status": "error", "message": "Target coin not found in collection."}
+
         updates = {}
         if storage_location: updates["Storage Location"] = storage_location
         if condition: updates["Condition"] = condition
@@ -2652,6 +2738,12 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
                            "To manage it, break up the set first from your collection screen."
             }
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
+        coin_snap = doc_ref.get()
+        coin_data = coin_snap.to_dict() if coin_snap.exists else {}
+
+        # G0-3: Soft delete — move to trash then delete from coins collection
+        trash_ref = db.collection('users').document(user_email).collection('trash').document(coin_id)
+        trash_ref.set({**coin_data, 'deleted_at': firestore.SERVER_TIMESTAMP, 'deleted_by': 'morgan'})
         doc_ref.delete()
         return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
     except Exception:
@@ -2737,6 +2829,11 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
             raise HTTPException(status_code=401, detail="Authentication failed")
 
         owner_key = _collection_owner_from_token(decoded_token)
+        caller_uid = (decoded_token.get("uid") or owner_key).strip()
+        is_admin = decoded_token.get("admin") is True
+
+        # G0-5: Blocking Rate Cap on Morgan chat turns (30/user/day, fail-closed, admin exempt)
+        _check_and_increment_rate_cap(caller_uid, "deep_dive", 30, is_admin=is_admin)
 
         # Log mismatch if body email disagrees with token owner
         if request.user_email and request.user_email.strip().lower() != owner_key:
@@ -2748,52 +2845,108 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
 
         # -- 0b. Handle Direct Button Commands (Undo / Quick Actions) ----------------
         if request.query.startswith("INTERNAL_UNDO:"):
-            target_id = request.query.split(":")[-1].strip()
-            res = execute_undo_add_coin(owner_key, target_id)
+            target_id = request.query.split(":", 1)[1].strip()
+            # G0-3 & G0-4: Verify action log shows coin was added by Morgan for this user
+            log_ref = db.collection('users').document(owner_key).collection('morgan_action_log')
+            verified = False
+            verified_coin_id = None
+
+            # 1. By log doc id
+            log_doc = log_ref.document(target_id).get()
+            if log_doc.exists:
+                entry = log_doc.to_dict() or {}
+                if entry.get("action") == "add" and (entry.get("who") == caller_uid or is_admin):
+                    verified = True
+                    verified_coin_id = entry.get("coin_id")
+
+            # 2. By coin_id
+            if not verified:
+                matched_logs = list(log_ref.where("coin_id", "==", target_id).where("action", "==", "add").stream())
+                for m in matched_logs:
+                    entry = m.to_dict() or {}
+                    if entry.get("who") == caller_uid or is_admin:
+                        verified = True
+                        verified_coin_id = target_id
+                        break
+
+            # 3. By proposal_id
+            if not verified:
+                matched_logs = list(log_ref.where("proposal_id", "==", target_id).where("action", "==", "add").stream())
+                for m in matched_logs:
+                    entry = m.to_dict() or {}
+                    if entry.get("who") == caller_uid or is_admin:
+                        verified = True
+                        verified_coin_id = entry.get("coin_id")
+                        break
+
+            if not verified or not verified_coin_id:
+                raise HTTPException(status_code=403, detail="Unauthorized undo: Action not found in session log")
+
+            # G0-3: Soft delete: move to trash
+            coin_ref = db.collection('users').document(owner_key).collection('coins').document(verified_coin_id)
+            coin_snap = coin_ref.get()
+            coin_data = coin_snap.to_dict() if coin_snap.exists else {}
+            trash_ref = db.collection('users').document(owner_key).collection('trash').document(verified_coin_id)
+            trash_ref.set({**coin_data, 'deleted_at': firestore.SERVER_TIMESTAMP, 'deleted_by': 'morgan'})
+            coin_ref.delete()
+
+            # Record delete in action log
+            log_ref.document().set({
+                'who': caller_uid,
+                'action': 'delete',
+                'coin_id': verified_coin_id,
+                'proposal_id': f"undo_{target_id}",
+                'confirm_time': firestore.SERVER_TIMESTAMP,
+                'before': coin_data,
+                'after': None,
+            })
+
             return {
                 "status": "success",
                 "response": "I've removed that coin from your collection binder.",
-                "action_payload": res
+                "action_payload": {"action": "undo_add_coin", "status": "success", "coin_id": verified_coin_id}
             }
 
         # -- 1. Build authoritative inventory from Firestore (SoR) -------------------
+        # G0-6: Strip financial data by default unless value keyword is present
+        val_keywords = ["worth", "value", "cost", "price", "how much"]
+        has_val_keyword = any(kw in request.query.lower() for kw in val_keywords)
+
         col_ref = db.collection('users').document(owner_key).collection('coins')
         docs = col_ref.stream()
-        inventory_items, inv_stats = expand_collection_inventory(docs)
+        inventory_items, inv_stats = expand_collection_inventory(docs, include_financial=has_val_keyword)
 
         # Pre-cap tally (always computed on full list)
-        coin_items_count = sum(1 for it in inventory_items if it["item_type"] in ("coin", ""))
+        coin_items_count = sum(1 for it in inventory_items if it.get("item_type") in ("coin", ""))
         tally_header = (
             f"INVENTORY TALLY: {coin_items_count} coins across {inv_stats['sets']} sets "
             f"({inv_stats['expanded']} coins expanded from sets). "
             f"Total Firestore docs: {inv_stats['docs']}."
         )
 
-        # Apply cap — compact overflow rows instead of dropping them
-        truncated = False
-        if len(inventory_items) > MAX_INVENTORY_ITEMS:
-            truncated = True
-            full_items = inventory_items[:MAX_INVENTORY_ITEMS]
-            compact_items = [
-                {
-                    "coin_id": it["coin_id"],
-                    "year": it["year"],
-                    "denomination": it["denomination"],
-                    "mint_mark": it["mint_mark"],
-                    "item_type": it["item_type"],
-                    "from_set": it["from_set"],
-                }
-                for it in inventory_items[MAX_INVENTORY_ITEMS:]
-            ]
-            inventory_items = full_items + compact_items
-
+        # G0-8: Cap inventory at 50 coins maximum. If > 50, send summary instead of full list.
         if not inventory_items:
             context = "The user's collection is currently empty."
+        elif len(inventory_items) > 50:
+            programs = sorted(list({str(it.get("program_series")) for it in inventory_items if it.get("program_series")}))
+            last_10 = inventory_items[-10:]
+            context = (
+                f"{tally_header}\n"
+                f"COLLECTION SUMMARY (large collection: {len(inventory_items)} items total):\n"
+                f"- Total Coins: {coin_items_count}\n"
+                f"- Programs/Series present: {', '.join(programs) if programs else 'None specified'}\n"
+                f"- Last 10 items added: {json.dumps(last_10, default=str)}\n"
+                f"(Use get_coin_details tool to inspect full document details for any specific coin_id)"
+            )
         else:
-            trunc_flag = f"\nINVENTORY_TRUNCATED=true (first {MAX_INVENTORY_ITEMS} have full detail, remainder are compact count-only records)" if truncated else ""
-            context = tally_header + trunc_flag + "\n" + json.dumps(inventory_items, default=str)
+            # G0-7: Wrap coin notes and OCR text in hard data delimiter
+            for it in inventory_items:
+                for k in ("Personal Notes", "personal_notes", "notes", "ocr_text"):
+                    if k in it and it[k]:
+                        it[k] = wrap_user_data(str(it[k]))
+            context = tally_header + "\n" + json.dumps(inventory_items, default=str)
 
-        # COUNTING RULES — after inventory JSON, before CLIENT_SUMMARY_NOT_SOR
+        # COUNTING RULES — after inventory JSON
         context += """
 
 COUNTING RULES (follow these exactly for any counting or inventory question):
@@ -2804,17 +2957,13 @@ COUNTING RULES (follow these exactly for any counting or inventory question):
 5. NEVER pass a coin_id containing "__set_coin_" to add_coin_to_collection, update_coin_in_collection, or undo_add_coin. Those are virtual IDs for set-expanded coins. If the user wants to modify a coin inside a set, tell them to break up the set first.
 """
 
-        # Optional: append client summary as UI hint (NOT the coin list)
-        if request.collection_context and len(request.collection_context.strip()) > 50:
-            context += "\n[CLIENT_SUMMARY_NOT_SOR — do not use for counting, defer to the inventory JSON above]\n" + request.collection_context.strip()
-
         # Log (no raw email — hash the owner key)
         owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
         logger.info(
             f"[deep_dive] owner={owner_hash} docs={inv_stats['docs']} "
             f"sets={inv_stats['sets']} expanded={inv_stats['expanded']} "
             f"total_items={inv_stats['total_items']} context_chars={len(context)} "
-            f"truncated={truncated} used_client_context=false"
+            f"used_client_context=false"
         )
 
 
@@ -2905,20 +3054,19 @@ Here is the user's current coin collection data:
 User's Input: {request.query}
 
 CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
-- YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, and `undo_add_coin`.
+- YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, `undo_add_coin`, and `get_coin_details`.
 - When the user expresses intent to add a coin or describes a coin they got/want to add (e.g. "add a 2026 P Dime in a cardboard holder"), YOU MUST CALL `add_coin_to_collection`.
 - When the user responds "Yes" or "I'd like to add details now" after adding a coin, call `update_coin_in_collection` to record their provided condition, storage location, or cost!
-- If coin_id is omitted when calling `update_coin_in_collection`, the system will automatically target the coin added in the current session.
-- NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it. You add coins directly!
-- Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection` immediately with smart defaults.
-- AFTER adding a coin with minimal details, warmly confirm the addition AND ask the user if they would like to add more details NOW (like condition, storage location, or purchase price) or complete those LATER.
+- If coin_id is omitted when calling `update_coin_in_collection`, specify the target coin or ask the user to clarify which coin to update.
+- NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it.
+- Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection`. Return a structured proposal object with action='add_coin' and the coin data. Do not execute until the user confirms.
 - Keep responses warm, concise, and helpful (under 30 seconds of spoken length).
 """
 
         # -- 5. Define Tools for Gemini -----------------------------------------
         fn_add = genai_types.FunctionDeclaration(
             name="add_coin_to_collection",
-            description="Adds a coin directly to the user's collection binder in Firestore.",
+            description="Prepares a proposal to add a coin to the user's collection binder.",
             parameters=genai_types.Schema(
                 type=genai_types.Type.OBJECT,
                 properties={
@@ -2963,9 +3111,20 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 required=["coin_id"]
             )
         )
+        fn_details = genai_types.FunctionDeclaration(
+            name="get_coin_details",
+            description="Fetches full document details for a single coin by its coin_id.",
+            parameters=genai_types.Schema(
+                type=genai_types.Type.OBJECT,
+                properties={
+                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of the coin")
+                },
+                required=["coin_id"]
+            )
+        )
 
         config = genai_types.GenerateContentConfig(
-            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo])]
+            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo, fn_details])]
         )
 
         response = genai_client.models.generate_content(
@@ -2981,14 +3140,16 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 c_name = call.name
                 c_args = call.args or {}
                 if c_name == "add_coin_to_collection":
-                    action_payload = execute_add_coin(owner_key, **c_args)
+                    action_payload = propose_add_coin(owner_key, caller_uid, **c_args)
                 elif c_name == "update_coin_in_collection":
                     action_payload = execute_update_coin(owner_key, **c_args)
                 elif c_name == "undo_add_coin":
                     action_payload = execute_undo_add_coin(owner_key, **c_args)
+                elif c_name == "get_coin_details":
+                    action_payload = execute_get_coin_details(owner_key, **c_args)
 
             # Second turn to generate Morgan's final response after executing tool
-            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
             response2 = genai_client.models.generate_content(
                 model=PRIMARY_MODEL,
                 contents=[genai_types.Part.from_text(text=second_prompt)],
