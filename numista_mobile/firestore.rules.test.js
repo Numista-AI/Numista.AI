@@ -57,7 +57,7 @@ beforeEach(async () => {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const ownerEmail = "testowner@numista.ai";
 const coinPath = (id) => `users/${ownerEmail}/coins/${id}`;
-const profilePath = `users/${ownerEmail}/profile`;
+const profilePath = `users/${ownerEmail}/profile/main`; // 4-segment doc path (collection/doc/collection/doc)
 
 // ─── CREATE rules ──────────────────────────────────────────────────────────────
 
@@ -146,12 +146,16 @@ test("DENY: owner attempts to set is_demo: true on own coin", async () => {
   );
 });
 
-test("DENY: owner attempts to set is_demo: false on update (even false is blocked)", async () => {
-  await seedCoin("c7", { is_demo: false });
+test("DENY: owner attempts to change is_demo from true to false (any value change blocked)", async () => {
+  // Seed via admin with is_demo: true so the update is a real value change (true -> false)
+  // affectedKeys() only fires when a value actually changes — false->false has no diff.
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), coinPath("c7")), {
+      Year: "2021", is_demo: true, is_demo_cleared: false,
+    });
+  });
   const db = ownerCtx.firestore();
   await assertFails(
-    // affectedKeys() triggers on any change to the key, including false -> false
-    // (this test verifies the key is in the blocked set, not just the value)
     updateDoc(doc(db, coinPath("c7")), { is_demo: false, Condition: "AU55" })
   );
 });
@@ -164,59 +168,60 @@ test("DENY: owner attempts to change is_demo_cleared on own coin", async () => {
   );
 });
 
-// ─── PROFILE sandbox_cleared rules ────────────────────────────────────────────
+// ─── Entitlement field rules on users/{email} user doc ────────────────────────
+// NOTE: The old profile subcollection tests (users/{email}/profile) were removed
+// because the app never writes to that subcollection directly. sandbox_cleared,
+// is_lifetime_family_estate, is_ai_qc_account, and beta_tester all live on the
+// users/{email} top-level doc, guarded by _noEntitlementChange() below.
+// The dead match /users/{email}/profile rule was removed from firestore.rules.
 
-async function seedProfile(data = {}) {
+async function seedUserDoc(data = {}) {
   await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
-    await setDoc(doc(adminCtx.firestore(), profilePath), {
-      name: "Test Owner",
+    await setDoc(doc(adminCtx.firestore(), `users/${ownerEmail}`), {
+      display_name: "Test Owner",
       sandbox_cleared: false,
       ...data,
     });
   });
 }
 
-test("ALLOW: owner updates profile display_name (non-protected field)", async () => {
-  await seedProfile();
+test("ALLOW: owner updates display_name on user doc (non-protected field)", async () => {
+  await seedUserDoc();
   const db = ownerCtx.firestore();
   await assertSucceeds(
-    updateDoc(doc(db, profilePath), { display_name: "Eric D." })
+    updateDoc(doc(db, `users/${ownerEmail}`), { display_name: "Eric D." })
   );
 });
 
-test("DENY: owner attempts to change sandbox_cleared on own profile", async () => {
-  await seedProfile();
+test("DENY: owner attempts to change sandbox_cleared on own user doc", async () => {
+  await seedUserDoc();
   const db = ownerCtx.firestore();
   await assertFails(
-    updateDoc(doc(db, profilePath), { sandbox_cleared: true })
+    updateDoc(doc(db, `users/${ownerEmail}`), { sandbox_cleared: true })
   );
 });
 
-// ─── Estate entitlement flag rules (v2.1 B-ADD-1) ────────────────────────────
-// These three flags may only be set by Admin SDK (set_owner_entitlements.py).
-// An owner patching them directly could forge tier access or attorney eligibility.
-
-test("DENY: owner_cannot_self_grant_estate — is_lifetime_family_estate blocked", async () => {
-  await seedProfile();
+test("DENY: owner_cannot_self_grant_estate — is_lifetime_family_estate blocked on user doc", async () => {
+  await seedUserDoc();
   const db = ownerCtx.firestore();
   await assertFails(
-    updateDoc(doc(db, profilePath), { is_lifetime_family_estate: true })
+    updateDoc(doc(db, `users/${ownerEmail}`), { is_lifetime_family_estate: true })
   );
 });
 
-test("DENY: owner_cannot_self_grant_estate — is_ai_qc_account blocked", async () => {
-  await seedProfile();
+test("DENY: owner_cannot_self_grant_estate — is_ai_qc_account blocked on user doc", async () => {
+  await seedUserDoc();
   const db = ownerCtx.firestore();
   await assertFails(
-    updateDoc(doc(db, profilePath), { is_ai_qc_account: true })
+    updateDoc(doc(db, `users/${ownerEmail}`), { is_ai_qc_account: true })
   );
 });
 
-test("DENY: owner_cannot_self_grant_estate — beta_tester blocked", async () => {
-  await seedProfile();
+test("DENY: owner_cannot_self_grant_estate — beta_tester blocked on user doc", async () => {
+  await seedUserDoc();
   const db = ownerCtx.firestore();
   await assertFails(
-    updateDoc(doc(db, profilePath), { beta_tester: true })
+    updateDoc(doc(db, `users/${ownerEmail}`), { beta_tester: true })
   );
 });
 
@@ -301,9 +306,9 @@ test("ALLOW: owner can still write to coins (writable subcollection)", async () 
 // =============================================================================
 // ADDENDUM C — Entitlement field protection on users/{email} (T1B + T3b V3)
 // Tests that owner cannot set tier/stripe_tier/beta_tester on their own user doc.
+// ownerEmail is already declared above (line 58): "testowner@numista.ai"
 // =============================================================================
 
-const ownerEmail = "testowner@numista.ai";
 const userDocPath = `users/${ownerEmail}`;
 
 test("DENY: owner cannot set 'tier' on own user doc (P0 entitlement field)", async () => {

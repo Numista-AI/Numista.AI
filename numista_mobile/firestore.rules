@@ -67,27 +67,11 @@ service cloud.firestore {
                           .hasAny(['is_demo', 'is_demo_cleared']);
     }
 
-    // Profile document: owner may update general fields but NOT sandbox_cleared
-    // or the three estate-entitlement flags.
-    //   - sandbox_cleared: set by POST /api/sandbox/clear (Admin SDK only)
-    //   - is_lifetime_family_estate: set by set_owner_entitlements.py (Admin SDK only)
-    //   - is_ai_qc_account:          set by set_owner_entitlements.py (Admin SDK only)
-    //   - beta_tester:               set by set_owner_entitlements.py (Admin SDK only)
-    // Admin SDK bypasses all rules (standard Firestore behavior).
-    match /users/{email}/profile {
-      allow read:   if isOwner(email);
-      allow create: if isOwner(email);
-      allow delete: if isOwner(email);
-      allow update: if isOwner(email)
-                    && !request.resource.data.diff(resource.data)
-                          .affectedKeys()
-                          .hasAny([
-                            'sandbox_cleared',
-                            'is_lifetime_family_estate',
-                            'is_ai_qc_account',
-                            'beta_tester'
-                          ]);
-    }
+    // NOTE: match /users/{email}/profile was removed (13 Oct 2026).
+    //   The app does not use a profile subcollection directly.
+    //   sandbox_cleared, is_lifetime_family_estate, is_ai_qc_account, and
+    //   beta_tester all live on the users/{email} doc itself and are guarded
+    //   by _serverOnlyKeys() / _noEntitlementChange() below.
 
     // ── Settings (ui_variant, etc. — server-only writes via Admin SDK) ─────────
     match /users/{email}/settings/{doc} {
