@@ -14,3 +14,6 @@ No deploy / live writes without Eric typed YES.
 2026-10-12 19:49 ET â€” AG CoS: All 6 T3b fixes applied in commit 9fc13333 (combined with T3 V2). Firestore wildcard narrowed in both files, emulator tests added, UiVariantService resets to classic on non-200, banner uses textBodySm explicitly, EXECUTE_DONE doc corrected. Passing to Grok CoS to score V2.
 - 12 Oct 2026 8:05 PM ET GROKCOS scored T3b V2 9fc13333 ITERATE (COS_SCORE_REQ032B_BUILD_V2.md). P0 LIVE: users/{email} doc client-writable incl. tier/beta_tester (rules :105-106; :77 profile guard matches nothing). Coins still not excluded from wildcard (:109-111 beats is_demo guards). Emulator suite not run. Backend rules file drift. Passing to AGCOS.
 
+
+## Log
+- 13 Oct 2026 ~10:00 AM ET AG CoS: T3b V3 done. Commit 9a0b20b8. _noEntitlementChange()/_noEntitlementOnCreate() guards on users/{email}; coins+profile excluded from wildcard (rules:126,:131); Addendum C emulator tests added (7 tests, blocked by no Java); UiVariantService fail-safe to classic on non-200; banner textBodySm; backend firestore.rules NOT-DEPLOYED header. 491 pytest + 433 flutter pass. EXECUTE_DONE_REQ032_UX_V3_AND_T3B_V3.md filed. Passing to Grok CoS to score V3.

@@ -1,5 +1,5 @@
-﻿# BATON T1B_REQ031B - DEFAULT-DENY AUTH (URGENT, P0 holes live)
-Holder: AGCOS  Proword: WILCO  Since: 12 Oct 2026 8:06 PM ET
+# BATON T1B_REQ031B - DEFAULT-DENY AUTH (URGENT, P0 holes live)
+Holder: GROKCOS  Proword: OVER  Since: 13 Oct 2026 ~10:00 AM ET
 Source: CR_REQ031_AUTH_ORDER.md (Code Reviewer). 48 write/scan/import/admin routes run with NO token on prod.
 P0: config/greysheet-credentials (main.py:10350), config/usmint-cookies (:9344), dedup_sweep/auto_clean (:3492), estate generate-attorney-link (estate_routes.py:61), family/subaccounts POST/DELETE (subaccount_routes.py:55,:107).
 TASK (top priority, above T2/T3/T3b; dev only):
@@ -12,3 +12,5 @@ Then rename baton to BATON_T1B_REQ031B_GROKCOS_OVER.md. Deploy needs Eric typed 
 - 8:06 PM ET GROKCOS issued.
 
 - 13 Oct 8:31 AM ET GROKCOS: ADD rules fix: firestore.rules users/{email} must block owner writes to tier, stripe_tier, beta_tester (server-only); fix dead /profile guard; RUN emulator tests. Ship with T1B under one Eric YES. Then T2: strip real field names (AI Estimated Value, Purchase Cost, Melt Value, Price Paid) and test with real names. T3: PIN kept after email via keyboard; last 2 fonts <14.
+
+- 13 Oct 2026 ~10:00 AM ET AG CoS: All T1B items done. Commit 9a0b20b8. Middleware live in main.py:172-211; entitlement guard on users/{email} via _noEntitlementChange()/_noEntitlementOnCreate(); coins+profile excluded from wildcard; P0 routes auth-gated; 500→401 fix on identify_group_photo; 491 pytest + 433 flutter pass; analyze clean. EXECUTE_DONE_REQ031B_DEFAULT_DENY.md filed. Emulator blocked by no Java — tests written but unrun. Passing to Grok CoS to score.
