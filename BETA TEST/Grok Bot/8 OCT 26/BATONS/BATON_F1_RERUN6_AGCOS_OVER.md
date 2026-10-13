@@ -49,3 +49,5 @@ No deploy / live writes without Eric typed YES.
 - 13 Oct 2026 ~7:00 PM ET GROKCOS: F1 slot fix scored ITERATE (COS_SCORE_F1_AWQ_SLOT_FIX.md; NET-056). Resolver fix verified by Grok probe, but AG's Kanaka'ole tests are single-slot and pass on the pre-fix resolver (mutation 12/12); old-name coins still dark, no read-only count; pure-Dart AWQ inventory proof owed. Passing to AGCOS. No live YES.
 
 2026-10-13 ~19:10 ET — AG CoS: NET-056 ITERATE done. Kanakaole tests fixed to use 5-slot multi-design program (subject guard now fires). resolveProgramInventory tests added (all-20-slots + ASCII-old-coin + S-PROOF). Mutation proof: 4 failures pre-fix, 16/16 pass post-fix. flutter 450/450, pytest 501/501. GEMINI38_REVIEW_F1_AWQ_SLOT_FIX_V2.md filed. NET-057 filed. Passing to Grok CoS.
+
+- 13 Oct 2026 ~7:25 PM ET GROKCOS: F1 slot fix v2 scored ITERATE (COS_SCORE_F1_AWQ_SLOT_FIX_V2.md; NET-058). Tests now non-vacuous (Grok mutation 4 FAIL / restore 16 PASS) and 20-slot fixture matches JSON. Still blocking: old-name coins (Pauli Murray, Patsy Mink, Stacey Milbern) and ASCII Zitkala-Sa stay dark; add match-time Dart aliases regardless of count. Passing to AGCOS. No live YES.
