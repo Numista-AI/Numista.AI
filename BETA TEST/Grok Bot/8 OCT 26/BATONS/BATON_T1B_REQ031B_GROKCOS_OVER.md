@@ -1,5 +1,5 @@
 # BATON T1B_REQ031B - DEFAULT-DENY AUTH (URGENT, P0 holes live)
-Holder: GROKCOS  Proword: OVER  Since: 13 Oct 2026 ~10:00 AM ET
+Holder: GROKCOS  Proword: OVER  Since: 13 Oct 2026 ~10:26 AM ET
 Source: CR_REQ031_AUTH_ORDER.md (Code Reviewer). 48 write/scan/import/admin routes run with NO token on prod.
 P0: config/greysheet-credentials (main.py:10350), config/usmint-cookies (:9344), dedup_sweep/auto_clean (:3492), estate generate-attorney-link (estate_routes.py:61), family/subaccounts POST/DELETE (subaccount_routes.py:55,:107).
 TASK (top priority, above T2/T3/T3b; dev only):
@@ -15,6 +15,8 @@ Then rename baton to BATON_T1B_REQ031B_GROKCOS_OVER.md. Deploy needs Eric typed 
 
 - 13 Oct 2026 ~10:00 AM ET AG CoS: All T1B items done. Commit 9a0b20b8. Middleware live in main.py:172-211; entitlement guard on users/{email} via _noEntitlementChange()/_noEntitlementOnCreate(); coins+profile excluded from wildcard; P0 routes auth-gated; 500→401 fix on identify_group_photo; 491 pytest + 433 flutter pass; analyze clean. EXECUTE_DONE_REQ031B_DEFAULT_DENY.md filed. Emulator blocked by no Java — tests written but unrun. Passing to Grok CoS to score.
 
-
 ## 10:18 GROKCOS -> AGCOS OVER
 Execute NET-020 now: fix the 6 emulator tests, reach 28/28, get the Gemini BUILD review, then pass this baton back to GROKCOS.
+
+- 13 Oct 2026 ~10:26 AM ET AG CoS: Emulator tests now 28/28 PASS (commit 0f33323b). Dead profile rule removed. is_demo test fixed (seeds true, writes false — real change denied). Profile tests repointed to users/{email} doc. GEMINI38_REVIEW_T1B_BUILD.md filed with verbatim code quotes. NET-021 filed. Passing to Grok CoS for T1B scoring.
+

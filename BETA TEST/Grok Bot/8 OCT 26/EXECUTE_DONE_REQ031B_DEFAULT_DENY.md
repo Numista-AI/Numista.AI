@@ -39,19 +39,24 @@ Branch: dev. No deploy. No live writes. Eric's YES required to deploy.
 - Wildcard subcollection exclusion list includes `'coins'` and `'profile'` (fixes systemic issue from T3b V2 score)
 - `firestore.rules.test.js`: Added Addendum C (7 tests): DENY owner sets tier, DENY owner sets beta_tester, ALLOW owner sets safe field (display_name), DENY owner creates doc with tier, DENY owner sets stripe_tier, DENY owner coin create with is_demo:true, DENY owner coin update with is_demo:true
 
-### 4. Emulator test status — BLOCKED (Java not installed)
-```
-$ java -version
-java : The term 'java' is not recognized as a cmdlet, function, script file, or operable program.
-```
-Firebase Firestore emulator requires Java 11+. Java is not installed on this machine. The emulator tests in `firestore.rules.test.js` are written and correct (the test structure matches `@firebase/rules-unit-testing` v4 API), but they cannot be run without Java.
+### 4. Emulator test status — ✅ 28/28 PASS (commit 0f33323b, 2026-10-13)
 
-**To run emulator tests locally:**
+**Java installed:** OpenJDK 21.0.12.1 (Temurin)
+
+**Emulator run output:**
 ```
-# Install Java 11+ first (e.g., Adoptium OpenJDK)
-npx firebase emulators:exec --only firestore "npx jest firestore.rules.test.js"
+PASS ./firestore.rules.test.js (6.451 s)
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        6.521 s
 ```
-This is a setup constraint, not a code issue. Tests are ready to run once Java is installed.
+
+**Test changes in commit 0f33323b:**
+- is_demo real-change test: now seeds `is_demo: true` via admin, then attempts client write to `false` — DENY correctly fires (affectedKeys sees a real diff)
+- Dead profile subcollection rule removed from `firestore.rules:70-74` (replaced with explanatory comment)
+- 5 profile subcollection tests replaced with user doc tests (testing `sandbox_cleared`, `is_lifetime_family_estate`, `is_ai_qc_account`, `beta_tester` on `users/${ownerEmail}` directly — where these fields actually live)
+- `profilePath` const and `seedProfile()` function removed (dead code, no longer referenced)
+- `profilePath` const was `users/${ownerEmail}/profile/main` (4-segment) but all tests now point to `users/${ownerEmail}` (2-segment user doc)
 
 ### 5. Eric's admin claim status — REPORT ONLY
 Did NOT run `bootstrap_admin_claim.py`. Status unchanged from last session: admin claim verification requires a live Firebase token — this is a runtime check, not a code change. REPORT ONLY as instructed.
@@ -85,6 +90,6 @@ Added `# IMPORTANT: NOT DEPLOYED — numista_backend/firebase.json only has func
 - numista_mobile/package.json (NEW — for emulator test runner)
 
 ## NOT TESTED (this build)
-- Firebase emulator tests: BLOCKED — Java not installed on this machine
+- Firebase emulator tests: ✅ NOW PASSING — 28/28 (commit 0f33323b)
 - Live smoke: not run (T1 live smoke was already PASS per Grok CoS NET-016)
 - Eric's admin claim: REPORT ONLY per instructions
