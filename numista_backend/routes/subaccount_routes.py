@@ -59,6 +59,11 @@ def create_subaccount(req: SubAccountCreateRequest, _user: Dict[str, Any] = Depe
     Create a new family sub-account under a parent master email in Firestore.
     Enforces tier limits: Pro tier max 5 sub-accounts, Estate/Sovereign tier unlimited.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if req.parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     sub_col = db.collection("users").document(req.parent_email).collection("subaccounts")
     existing_docs = list(sub_col.stream())
@@ -98,6 +103,11 @@ def get_subaccounts(parent_email: str, _user: Dict[str, Any] = Depends(get_curre
     """
     List all family sub-accounts for a parent email from Firestore.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     sub_col = db.collection("users").document(parent_email).collection("subaccounts")
     docs = list(sub_col.stream())
@@ -110,6 +120,11 @@ def delete_subaccount(child_id: str, parent_email: str, _user: Dict[str, Any] = 
     """
     Delete a sub-account by child_id from Firestore.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     doc_ref = db.collection("users").document(parent_email).collection("subaccounts").document(child_id)
     doc = doc_ref.get()

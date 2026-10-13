@@ -54,15 +54,15 @@ service cloud.firestore {
     match /users/{email} {
       allow read, write: if isOwner(email);
     }
-    // Subcollections the owner CAN read+write (coins, review_queue, morgan_proposals, etc.)
+    // Subcollections the owner CAN read+write (coins, review_queue, etc.)
     match /users/{email}/{sub}/{docId} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
     }
     // Nested docs within writable subcollections (e.g. coins/{id}/images/{img})
     match /users/{email}/{sub}/{docId}/{rest=**} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
     }
     // Server-only subcollections — owner may read but NOT write (server SA only)
     match /users/{email}/settings/{docId} {
@@ -82,6 +82,26 @@ service cloud.firestore {
       allow write: if false;
     }
     match /users/{email}/audit_log/{docId} {
+      allow read: if isOwner(email);
+      allow write: if false;
+    }
+    match /users/{email}/morgan_proposals/{docId} {
+      allow read: if isOwner(email);
+      allow write: if false;
+    }
+    match /users/{email}/subaccounts/{docId} {
+      allow read: if isOwner(email);
+      allow write: if false;
+    }
+    match /users/{email}/subscription/{docId} {
+      allow read: if isOwner(email);
+      allow write: if false;
+    }
+    match /users/{email}/transferred_coins/{docId} {
+      allow read: if isOwner(email);
+      allow write: if false;
+    }
+    match /users/{email}/transferred_currency/{docId} {
       allow read: if isOwner(email);
       allow write: if false;
     }

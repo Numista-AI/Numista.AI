@@ -108,16 +108,21 @@ def test_deals_endpoints():
         app.dependency_overrides.pop(get_current_user, None)
 
 def test_daily_snapshot_endpoint():
-    # Test POST /api/portfolio/snapshot/daily
-    # We will trigger snapshot for a test user
-    payload = {"user_id": "test_user_snapshot@numista.ai"}
-    response = client.post("/api/portfolio/snapshot/daily", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "success"
-    assert "snapshot" in data
-    assert "totalValue" in data["snapshot"]
-    assert "categories" in data["snapshot"]
+    from routes.deps import require_admin_user
+    app.dependency_overrides[require_admin_user] = lambda: {"uid": "admin_uid", "email": "admin@numista.ai", "admin": True}
+    try:
+        # Test POST /api/portfolio/snapshot/daily
+        # We will trigger snapshot for a test user
+        payload = {"user_id": "test_user_snapshot@numista.ai"}
+        response = client.post("/api/portfolio/snapshot/daily", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "snapshot" in data
+        assert "totalValue" in data["snapshot"]
+        assert "categories" in data["snapshot"]
+    finally:
+        app.dependency_overrides.pop(require_admin_user, None)
 
 def test_advanced_api_level_default(monkeypatch):
     """Verify that GreysheetService requests include apiLevel=advanced."""

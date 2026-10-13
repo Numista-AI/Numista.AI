@@ -4,13 +4,16 @@ test_default_deny_auth.py
 T1B REQ_031B: Default-deny auth middleware acceptance tests.
 
 Verifies that every non-public API route returns HTTP 401 when called
-without an Authorization header, and that the PUBLIC_PATHS allowlist
-still responds (not 401).
+without an Authorization header, and when called with an invalid/garbage token.
+Also verifies that the PUBLIC_PATHS allowlist still responds (not 401),
+CORS preflight passes, and every non-public route either has an auth dependency
+or is in a reviewed handler-auth/non-guarded allowlist.
 
 Tests use FastAPI's TestClient and patch firebase_auth.verify_id_token
 so no real Firebase project is needed.
 """
 
+import re
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -27,8 +30,11 @@ def client():
     import os as _os
     _old_k = _os.environ.get("K_SERVICE")
     _os.environ["K_SERVICE"] = "numista-backend-test-env"
-    # Patch firebase_admin.initialize_app to avoid real credential loading
-    with patch("firebase_admin._apps", {"default": MagicMock()}), \
+    mock_app = MagicMock()
+    mock_fs = MagicMock()
+    with patch("firebase_admin._apps", {"[DEFAULT]": mock_app, "default": mock_app}), \
+         patch("firebase_admin.get_app", return_value=mock_app), \
+         patch("firebase_admin.firestore.client", return_value=mock_fs), \
          patch("firebase_admin.auth.verify_id_token", side_effect=Exception("no token")), \
          patch("firebase_admin.credentials.Certificate", MagicMock()), \
          patch("firebase_admin.initialize_app", MagicMock()), \
@@ -79,6 +85,155 @@ def test_unauthenticated_request_returns_401(client, method, path, body):
     assert resp.status_code == 401, (
         f"{method} {path} returned {resp.status_code} (expected 401). "
         f"Body: {resp.text[:200]}"
+    )
+
+
+def test_all_routes_require_auth_no_token(client):
+    """Walks all routes on app and asserts every non-public route returns 401 when called with no token."""
+    import main as m
+
+    tested = 0
+    for route in m.app.routes:
+        if not hasattr(route, "methods"):
+            continue
+        path = route.path
+        if path in m._PUBLIC_PATHS or m._is_public(path) or path in ["/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"]:
+            continue
+
+        methods = route.methods - {"OPTIONS", "HEAD"}
+        if not methods:
+            continue
+        method = next(iter(methods))
+
+        real_path = re.sub(r'\{[^}]+\}', 'test_param', path)
+        resp = client.request(method, real_path)
+        assert resp.status_code == 401, (
+            f"Expected 401 for unauthenticated request to {method} {real_path} (from route {path}), got {resp.status_code}. "
+            f"Body: {resp.text[:200]}"
+        )
+        tested += 1
+
+    assert tested > 50, f"Expected to test > 50 non-public routes, only tested {tested}"
+
+
+def test_all_routes_require_auth_garbage_token(client):
+    """Walks all routes on app and asserts every non-public route returns 401 when called with Authorization: Bearer garbage."""
+    import main as m
+
+    tested = 0
+    for route in m.app.routes:
+        if not hasattr(route, "methods"):
+            continue
+        path = route.path
+        if path in m._PUBLIC_PATHS or m._is_public(path) or path in ["/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"]:
+            continue
+
+        methods = route.methods - {"OPTIONS", "HEAD"}
+        if not methods:
+            continue
+        method = next(iter(methods))
+
+        real_path = re.sub(r'\{[^}]+\}', 'test_param', path)
+        resp = client.request(method, real_path, headers={"Authorization": "Bearer garbage_invalid_token_12345"})
+        assert resp.status_code == 401, (
+            f"Expected 401 for garbage token request to {method} {real_path} (from route {path}), got {resp.status_code}. "
+            f"Body: {resp.text[:200]}"
+        )
+        tested += 1
+
+    assert tested > 50, f"Expected to test > 50 non-public routes, only tested {tested}"
+
+
+# Reviewed list of routes that do not have get_current_user / require_admin_user
+# in their FastAPI dependency tree, but are protected by handler-auth (_authenticate_request / deep_dive)
+# or are non-guarded routes protected exclusively by the default-deny outer gate.
+REVIEWED_NON_GUARDED_ROUTES = {
+    "/api/analyze/grade-coin",
+    "/api/analyze_checklist",
+    "/api/binder_scans/{user_email}",
+    "/api/binder_scans/{user_email}/{binder_id}",
+    "/api/coin_crop",
+    "/api/collection/count",
+    "/api/commit_group_photo",
+    "/api/convert_heic",
+    "/api/deep_dive",
+    "/api/ebay/search",
+    "/api/epn/normalize-search",
+    "/api/estate/generate-appraisal-url",
+    "/api/estimate_value_general",
+    "/api/estimate_value_text",
+    "/api/export/appraisal-pdf",
+    "/api/greysheet/cac",
+    "/api/greysheet/pricing/{gsid}",
+    "/api/greysheet/quota",
+    "/api/greysheet/refresh",
+    "/api/greysheet/resolve",
+    "/api/identify-world-item",
+    "/api/identify_coin_photo",
+    "/api/identify_group_photo",
+    "/api/import/process",
+    "/api/import/start",
+    "/api/import/status/{session_id}",
+    "/api/import/upload",
+    "/api/ingestion/jobs",
+    "/api/ingestion/status/{job_id}",
+    "/api/nicknames",
+    "/api/nicknames/stats",
+    "/api/nicknames/submit",
+    "/api/nicknames/{doc_id}/vote",
+    "/api/portfolio/snapshot",
+    "/api/preview_cost_split",
+    "/api/process_invoice",
+    "/api/receipts/{user_email}",
+    "/api/receipts/{user_email}/{receipt_id}",
+    "/api/receipts/{user_email}/{receipt_id}/stream",
+    "/api/receipts/{user_email}/{receipt_id}/view_url",
+    "/api/reference/db_update_check",
+    "/api/reference/glossary",
+    "/api/reference/grade/{grade_code}",
+    "/api/reference/search",
+    "/api/review/break_up_set",
+    "/api/review/keep_set_as_is",
+    "/api/stats/gaps",
+    "/api/template",
+    "/api/transfer/sell-direct",
+    "/api/transfer/sold-items/{user_id}",
+    "/api/transfer/undo-sale",
+    "/api/variety/detect",
+    "/api/wishlist/create-share",
+    "/api/wishlist/deals/check",
+    "/api/wishlist/deals/{user_email}",
+}
+
+
+def test_guarded_or_reviewed_routes():
+    """Every non-public route must either have an auth dependency or be explicitly reviewed."""
+    import main as m
+    from routes.deps import get_current_user, require_admin_user
+
+    def has_auth(dep):
+        if dep.call in (get_current_user, require_admin_user):
+            return True
+        for d in dep.dependencies:
+            if has_auth(d):
+                return True
+        return False
+
+    unaccounted_routes = []
+    for route in m.app.routes:
+        if not hasattr(route, "methods"):
+            continue
+        path = route.path
+        if path in m._PUBLIC_PATHS or m._is_public(path) or path in ["/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"]:
+            continue
+
+        is_guarded = hasattr(route, "dependant") and has_auth(route.dependant)
+        if not is_guarded and path not in REVIEWED_NON_GUARDED_ROUTES:
+            unaccounted_routes.append(path)
+
+    assert not unaccounted_routes, (
+        f"Found non-public routes with neither an auth dependency nor entry in REVIEWED_NON_GUARDED_ROUTES: "
+        f"{unaccounted_routes}"
     )
 
 

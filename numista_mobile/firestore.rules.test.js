@@ -244,6 +244,11 @@ const estateReportsPath = `users/${ownerEmail}/estate_reports/report_001`;
 const morganLogPath = `users/${ownerEmail}/morgan_action_log/log_001`;
 const trashPath = `users/${ownerEmail}/trash/coin_001`;
 const auditLogPath = `users/${ownerEmail}/audit_log/audit_001`;
+const morganProposalsPath = `users/${ownerEmail}/morgan_proposals/prop_001`;
+const subaccountsPath = `users/${ownerEmail}/subaccounts/sub_001`;
+const subscriptionPath = `users/${ownerEmail}/subscription/sub_001`;
+const transferredCoinsPath = `users/${ownerEmail}/transferred_coins/tc_001`;
+const transferredCurrencyPath = `users/${ownerEmail}/transferred_currency/tcurr_001`;
 
 test("DENY: owner cannot write to settings/ui_variant (server-only)", async () => {
   const db = ownerCtx.firestore();
@@ -280,6 +285,41 @@ test("DENY: owner cannot write to audit_log (server-only)", async () => {
   );
 });
 
+test("DENY: owner cannot write to morgan_proposals (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, morganProposalsPath), { proposal: "test" })
+  );
+});
+
+test("DENY: owner cannot write to subaccounts (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, subaccountsPath), { role: "sub" })
+  );
+});
+
+test("DENY: owner cannot write to subscription (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, subscriptionPath), { status: "active" })
+  );
+});
+
+test("DENY: owner cannot write to transferred_coins (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, transferredCoinsPath), { coinId: "c1" })
+  );
+});
+
+test("DENY: owner cannot write to transferred_currency (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, transferredCurrencyPath), { currencyId: "cur1" })
+  );
+});
+
 test("ALLOW: owner can read settings/ui_variant (read-only for owner)", async () => {
   // Note: this may return permission denied if doc doesn't exist; use assertSucceeds only if emulator allows read on non-existent
   // This test documents the READ is allowed even though write is denied
@@ -287,6 +327,36 @@ test("ALLOW: owner can read settings/ui_variant (read-only for owner)", async ()
   // getDoc on a non-existent document returns empty (not denied) if read is allowed
   const snap = await getDoc(doc(db, settingsPath));
   // No exception = read allowed (snap.exists() will be false)
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read morgan_proposals (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, morganProposalsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read subaccounts (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, subaccountsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read subscription (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, subscriptionPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read transferred_coins (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, transferredCoinsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read transferred_currency (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, transferredCurrencyPath));
   expect(snap).toBeDefined();
 });
 
