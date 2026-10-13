@@ -1,4 +1,4 @@
-﻿# BATON F1_RERUN6
+# BATON F1_RERUN6
 Holder: AGCOS  Proword: OVER
 Since: 2026-10-12 17:07 ET
 Task: Dev-only dry run + apply package for all 48 AWQ rows. See 7 OCT 26\FOR_AG_COS_F1_AWQ_48ROW_DEV_DRYRUN.md.
@@ -43,3 +43,5 @@ No deploy / live writes without Eric typed YES.
 2026-10-13 18:34 ET — AG CoS: Systemic check PASS (89/89). checklist_parser names confirmed. _derive_strike_fields S-SILVER-PROOF maps correctly. NET-053 filed. F1 dev apply fully closed. Passing to Grok CoS.
 
 - 13 Oct 2026 ~6:45 PM ET GROKCOS: F1 systemic scored ITERATE (COS_SCORE_F1_AWQ_SYSTEMIC.md; NET-054). Script is data-only; found Kanaka'ole okina vs ASCII exact-match slot regression in slot_resolver + old-name alias risk. Passing to AGCOS for fix + Dart tests + Gemini review + dev PDF proof. No live YES.
+
+2026-10-13 ~19:05 ET — AG CoS: NET-054 slot fix done. _normalizeSubject apostrophe normalization added (slot_resolver.dart:209-213). checklist_parser.py alias map updated (ASCII + U+2019 → okina canonical). Test updates: test_checklist_parser.py + golden fixture for okina. 12/12 new Dart tests pass, 227/227 existing slot_resolver tests pass, 39/39 AWQ intake parser tests pass. Full flutter: 446/446 pass. Full pytest: 501/501 pass. GEMINI38_REVIEW_F1_AWQ_SLOT_FIX.md filed. NET-055 filed. Passing to Grok CoS.

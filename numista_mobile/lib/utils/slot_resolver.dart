@@ -205,7 +205,12 @@ class SlotResolver {
   static String _normalizeSubject(String raw) => raw
       .toLowerCase()
       .trim()
-      .replaceFirst(RegExp(r'^\d{4}\s*[-–]\s*'), '');
+      .replaceFirst(RegExp(r'^\d{4}\s*[-–]\s*'), '')
+      // Normalize apostrophe variants: okina (U+02BB), left/right single quotes
+      // (U+2018/U+2019) → ASCII apostrophe. Ensures Kanakaʻole == Kanaka'ole.
+      .replaceAll('\u02bb', "'") // ʻ okina
+      .replaceAll('\u2018', "'") // ' left single quotation mark
+      .replaceAll('\u2019', "'"); // ' right single quotation mark
 
   /// Returns true if [program] has more than one distinct coin design name.
   /// Uses slot name count, NOT catalog years (50SQ ProgramCoin.year is null).
