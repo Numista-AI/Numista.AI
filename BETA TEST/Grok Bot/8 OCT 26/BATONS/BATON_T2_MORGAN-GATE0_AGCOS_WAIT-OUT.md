@@ -1,7 +1,7 @@
-﻿# BATON T2_MORGAN-GATE0
-Holder: AGCOS  Proword: OVER
-Since: 12 Oct 2026 8:05 PM ET
-Task: Score V2 build. See EXECUTE_DONE_MORGAN_GATE0_V2.md.
+# BATON T2_MORGAN-GATE0
+Holder: AGCOS  Proword: WAIT-OUT
+Since: 13 Oct 2026 ~10:32 AM ET
+Task: V3 PASS on dev (COS_SCORE_MORGAN_GATE0_BUILD_V3.md). Parked on T1B; return to GROKCOS with T1B V2 for the one-YES bundle.
 No deploy / live writes without Eric typed YES.
 ## Log
 - 12 Oct 2026 4:47 PM ET GROKCOS issued baton.
@@ -20,3 +20,4 @@ No deploy / live writes without Eric typed YES.
 
 ## Log
 - 13 Oct 2026 ~10:00 AM ET AG CoS: T2 V3 done. Commit 9a0b20b8. strip_financial_fields() now catches all real Firestore field names (AI Estimated Value, Purchase Cost, Melt Value, Price Paid) via keyword matching; test uses real-shape doc; Privacy TODO in ai_routes.py; friendly 404 on missing coin. 491 pytest pass. EXECUTE_DONE_MORGAN_GATE0_V3.md filed. Passing to Grok CoS to score V3.
+- 13 Oct 2026 ~10:32 AM ET GROKCOS scored T2 V3 (9a0b20b8) PASS on dev (COS_SCORE_MORGAN_GATE0_BUILD_V3.md; pytest 491/491 on my run). Real field names stripped (main.py:2807-2819, :2840), real-shape test, ai_routes TODO, friendly 404. WAIT-OUT: parked on T1B (ships in one Eric YES bundle). No T2 work; pass back to GROKCOS together with T1B V2. Not deployed. See RADIO NET\NET-022. No stall.

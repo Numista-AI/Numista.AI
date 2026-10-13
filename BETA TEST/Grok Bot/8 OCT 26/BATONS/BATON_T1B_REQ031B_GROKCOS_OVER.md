@@ -1,5 +1,5 @@
 # BATON T1B_REQ031B - DEFAULT-DENY AUTH (URGENT, P0 holes live)
-Holder: GROKCOS  Proword: OVER  Since: 13 Oct 2026 ~10:26 AM ET
+Holder: GROKCOS  Proword: OVER  Since: 13 Oct 2026 ~2:38 PM ET
 Source: CR_REQ031_AUTH_ORDER.md (Code Reviewer). 48 write/scan/import/admin routes run with NO token on prod.
 P0: config/greysheet-credentials (main.py:10350), config/usmint-cookies (:9344), dedup_sweep/auto_clean (:3492), estate generate-attorney-link (estate_routes.py:61), family/subaccounts POST/DELETE (subaccount_routes.py:55,:107).
 TASK (top priority, above T2/T3/T3b; dev only):
@@ -19,4 +19,12 @@ Then rename baton to BATON_T1B_REQ031B_GROKCOS_OVER.md. Deploy needs Eric typed 
 Execute NET-020 now: fix the 6 emulator tests, reach 28/28, get the Gemini BUILD review, then pass this baton back to GROKCOS.
 
 - 13 Oct 2026 ~10:26 AM ET AG CoS: Emulator tests now 28/28 PASS (commit 0f33323b). Dead profile rule removed. is_demo test fixed (seeds true, writes false — real change denied). Profile tests repointed to users/{email} doc. GEMINI38_REVIEW_T1B_BUILD.md filed with verbatim code quotes. NET-021 filed. Passing to Grok CoS for T1B scoring.
+- 13 Oct 2026 ~10:32 AM ET GROKCOS scored T1B (9a0b20b8 + 0f33323b) ITERATE (COS_SCORE_REQ031B_BUILD.md; pytest 491/491 + emulator 28/28 on my run; rules half PASS). P0: middleware main.py:192-197 passes any non-empty Bearer string; 63 non-public routes have no per-route guard (probe: Bearer x -> 200 on /api/admin/brain/knowledge). Also admin claim missing on brain/cron/config/scraper/greysheet-batch, IDOR on subaccounts + attorney link, acceptance test must walk app.routes incl. garbage token, deep_dive 401/429->500 (:3409), allowlist cleanup (:131, :166). Fold T3b fix 1 + T3 F1-F2 into the same commit. NET-019 = Option A (done in 0f33323b). Passing to AGCOS. See RADIO NET\NET-022. No stall.
 
+- 13 Oct 2026 ~12:38 PM ET GROKCOS STALL: unmoved since ~10:32 AM ET (>=2 working hours). Still AGCOS OVER for T1B V2 (P0: middleware main.py:192-197 accepts any non-empty Bearer; per-route guards, admin claims, IDOR, app.routes acceptance test incl. garbage token, deep_dive :3409; fold T3b fix 1 + T3 F1-F2). See RADIO NET\NET-025.
+
+- 13 Oct 2026 ~1:27 PM ET GROKCOS STALL REFRESH: still unmoved (>=2 working hours). See RADIO NET\NET-026.
+
+- 13 Oct 2026 ~1:55 PM ET GROKCOS: Eric pinged once (AG CoS idle on T1B since ~10:32 AM ET; asked to type 'check radio' to AG). Same stall as NET-025/026; no new stall NET this run (within hourly). No BATON_*_GROKCOS_* to score.
+
+- 13 Oct 2026 ~2:38 PM ET AG CoS: T1B V2 complete (commit 39125bac). Full JWT verify in middleware via verify_firebase_bearer_token(request), cached token in request.state.user, admin claim on 24 endpoints, IDOR checks on subaccounts and attorney link, automated app.routes walk (missing + garbage token 401), deep_dive 500->401, public allowlist cleanup. 494 pytest PASS, flutter analyze clean. Folded T3b V4 and T1 remnant into this commit. EXECUTE_DONE_REQ031B_V2.md and GEMINI38_REVIEW_T1B_V2_BUILD.md filed. Passing to Grok CoS for V2 scoring. OVER
