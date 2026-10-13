@@ -128,7 +128,6 @@ app.include_router(attorney_router)              # ITEM B: attorney portal token
 
 _PUBLIC_PATHS: set = {
     # Stripe webhook — signature-verified inside payment_routes.py
-    "/create-checkout-session",   # intentionally NOT public (requires token)
     "/webhook",                   # Stripe webhook — public, sig-verified inside handler
     "/api/stripe/webhook",        # Stripe webhook — alternate mount path, sig-verified inside
     # Health / status
@@ -163,7 +162,7 @@ def _is_public(path: str) -> bool:
         "/api/greysheet/known-errors/",
         "/api/mint-releases/",
         "/api/estate/attorney-report/",
-        "/api/coin_search",
+        "/api/coin_search/",
     ):
         if path.startswith(pub):
             return True
@@ -188,18 +187,17 @@ async def default_deny_auth_middleware(request: Request, call_next):
     if app.dependency_overrides:
         return await call_next(request)
     # Must carry a valid Firebase Bearer token
+    from routes.deps import verify_firebase_bearer_token
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.split("Bearer ", 1)[1].strip()
         if token:
-            # Quick structural check — full verify happens in get_current_user
-            # We only reject here if there's clearly no token at all.
-            return await call_next(request)
-    # No valid Bearer token — check dev override
-    from routes.deps import verify_firebase_bearer_token
-    decoded = verify_firebase_bearer_token(request)
-    if decoded:
-        return await call_next(request)
+            # Full verify — reuse the already-imported verifier
+            decoded = verify_firebase_bearer_token(request)
+            if decoded:
+                request.state.user = decoded  # cache for per-route reuse
+                return await call_next(request)
+            # Token present but invalid — fall through to 401
     is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
     if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
         return await call_next(request)
@@ -1416,7 +1414,7 @@ def download_template():
 
 
 @app.post("/api/normalize_backfill")
-async def normalize_backfill(user_email: str = Form(...)):
+async def normalize_backfill(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     One-time normalization pass over all existing coins for a user.
 
@@ -3406,6 +3404,8 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 
         return {"status": "success", "response": response.text}
 
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Deep dive error")
         raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
@@ -9521,7 +9521,7 @@ async def littleton_sync(request: Request, payload: LittletonSyncRequest, curren
 
 
 @app.get("/api/cron/campaigns")
-async def get_active_campaigns():
+async def get_active_campaigns(_admin: dict = Depends(require_admin_user)):
     """
     Get the status of active system-wide campaigns.
     """
@@ -9546,7 +9546,7 @@ async def get_active_campaigns():
 
 
 @app.post("/api/cron/scrape-gaps")
-def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request", dry_run: bool = False, priority: str = "all"):
+def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request", dry_run: bool = False, priority: str = "all", _admin: dict = Depends(require_admin_user)):
     """
     Cron endpoint to trigger the web scraper agent. Runs headlessly.
     Saves the markdown run report to a Firestore collection 'scraper_reports'.
@@ -9598,7 +9598,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
 
 
 @app.get("/api/cron/audits")
-def get_weekly_audits(limit: int = 10):
+def get_weekly_audits(limit: int = 10, _admin: dict = Depends(require_admin_user)):
     """
     Get the list of weekly system audits from Firestore.
     """
@@ -9623,7 +9623,7 @@ def get_weekly_audits(limit: int = 10):
 
 
 @app.post("/api/cron/run-audit")
-def trigger_nightly_audit():
+def trigger_nightly_audit(_admin: dict = Depends(require_admin_user)):
     """
     GCP Cloud Scheduler trigger endpoint: runs nightly_data_audit.py and
     auto_resolve_audit.py as background subprocesses and returns immediately.
@@ -9665,7 +9665,7 @@ def trigger_nightly_audit():
 
 
 @app.get("/api/cron/reports")
-def get_scraper_reports(limit: int = 15):
+def get_scraper_reports(limit: int = 15, _admin: dict = Depends(require_admin_user)):
     """
     Get the list of recent scraper reports from Firestore.
     """
@@ -9803,7 +9803,7 @@ def get_all_mint_releases():
 
 
 @app.post("/api/cron/sync-mint-releases")
-def trigger_sync_mint_releases():
+def trigger_sync_mint_releases(_admin: dict = Depends(require_admin_user)):
     """
     Cloud Scheduler trigger: syncs US Mint product catalog to Firestore.
     Called daily at 6:00 AM UTC (2:00 AM ET).
@@ -9820,7 +9820,7 @@ def trigger_sync_mint_releases():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/config/release-lock")
-def release_scraper_lock():
+def release_scraper_lock(_admin: dict = Depends(require_admin_user)):
     """
     Force release the scraper lock in Firestore.
     """
@@ -9840,7 +9840,7 @@ class ScrapeUrlRequest(BaseModel):
 
 
 @app.post("/api/scraper/scrape-url")
-def scrape_url_endpoint(data: ScrapeUrlRequest):
+def scrape_url_endpoint(data: ScrapeUrlRequest, _admin: dict = Depends(require_admin_user)):
     """
     Trigger scraping of a specific URL (e.g. Wikipedia Semiquincentennial page).
     """
@@ -9857,19 +9857,19 @@ def scrape_url_endpoint(data: ScrapeUrlRequest):
 # --- BRAIN ADMIN API ---------------------------------------------------------
 
 @app.get("/api/admin/brain/knowledge")
-async def get_brain_knowledge():
+async def get_brain_knowledge(_admin: dict = Depends(require_admin_user)):
     """Returns all documents absorbed into the Brain's Knowledge Base."""
     docs = db.collection('brain_knowledge_base').order_by('absorbed_at', direction=firestore.Query.DESCENDING).stream()
     return [{"id": d.id, **d.to_dict()} for d in docs]
 
 @app.get("/api/admin/brain/suggestions")
-async def get_brain_suggestions():
+async def get_brain_suggestions(_admin: dict = Depends(require_admin_user)):
     """Returns pending self-healing suggestions from the Brain."""
     docs = db.collection('brain_suggestions').where('status', '==', 'pending').stream()
     return [{"id": d.id, **d.to_dict()} for d in docs]
 
 @app.post("/api/admin/brain/approve")
-async def approve_brain_suggestion(req: BrainSuggestionApprove):
+async def approve_brain_suggestion(req: BrainSuggestionApprove, _admin: dict = Depends(require_admin_user)):
     """Approves or rejects a Brain self-healing suggestion."""
     doc_ref = db.collection('brain_suggestions').document(req.suggestion_id)
     doc = doc_ref.get()
@@ -9894,7 +9894,7 @@ async def approve_brain_suggestion(req: BrainSuggestionApprove):
         return {"status": "rejected"}
 
 @app.post("/api/admin/brain/suggestions/bulk")
-async def bulk_approve_suggestions(req: BrainBulkAction):
+async def bulk_approve_suggestions(req: BrainBulkAction, _admin: dict = Depends(require_admin_user)):
     """Bulk approves or ignores multiple suggestions."""
     batch = db.batch()
     status_val = 'approved' if req.action == 'approved' else 'rejected'
@@ -9910,7 +9910,7 @@ async def bulk_approve_suggestions(req: BrainBulkAction):
     return {"status": f"bulk_{req.action}_complete", "count": len(req.suggestion_ids)}
 
 @app.post("/api/admin/brain/suggestions/rescore")
-async def rescore_unscored_suggestions():
+async def rescore_unscored_suggestions(_admin: dict = Depends(require_admin_user)):
     """
     Re-evaluates all pending suggestions that have no confidence score.
     Sends them to Gemini in a single batch and writes scores back to Firestore.
@@ -9979,7 +9979,7 @@ No markdown, no explanation -- raw JSON only."""
     return {"status": "rescore_complete", "scored": updated, "total": len(unscored)}
 
 @app.post("/api/admin/brain/reprocess")
-async def reprocess_knowledge(req: BrainKnowledgeUpdate):
+async def reprocess_knowledge(req: BrainKnowledgeUpdate, _admin: dict = Depends(require_admin_user)):
     """Triggers a re-process of a document with new instructions."""
     doc_ref = db.collection('brain_knowledge_base').document(req.doc_id)
     doc = doc_ref.get()
@@ -9998,7 +9998,7 @@ async def reprocess_knowledge(req: BrainKnowledgeUpdate):
 
 
 @app.post("/api/admin/brain/sync_canon")
-async def sync_brain_canon_to_gcp():
+async def sync_brain_canon_to_gcp(_admin: dict = Depends(require_admin_user)):
     """
     On-demand sync:
     1. Formats approved/high-confidence Brain docs into Markdown payloads and uploads to GCS.
@@ -10655,7 +10655,7 @@ class DailySnapshotRequest(BaseModel):
     user_id: str
 
 @app.post("/api/portfolio/snapshot/daily")
-async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
+async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dict = Depends(require_admin_user)):
     try:
         from datetime import datetime, timezone
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -10775,7 +10775,7 @@ class BatchActionRequest(BaseModel):
     user_id: str
 
 @app.post("/api/greysheet/batch-resolve")
-async def batch_resolve_greysheet_coins(req: BatchActionRequest):
+async def batch_resolve_greysheet_coins(req: BatchActionRequest, _admin: dict = Depends(require_admin_user)):
     """
     Resolves GSIDs for all coins in a user's inventory that do not have one yet.
     Uses Firestore write batches in chunks of 500 for high efficiency.
@@ -10835,7 +10835,7 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/greysheet/batch-refresh")
-async def batch_refresh_greysheet_prices(req: BatchActionRequest):
+async def batch_refresh_greysheet_prices(req: BatchActionRequest, _admin: dict = Depends(require_admin_user)):
     """
     Refreshes pricing for all coins in a user's inventory that have a GSID.
     Groups coins by unique GSID to minimize network calls, and uses Firestore write batches.
@@ -10994,7 +10994,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
 # --- PLAYWRIGHT SPEC ENDPOINT ALIGNMENTS ------------------------------------------
 
 @app.get("/api/greysheet/config")
-async def get_greysheet_config():
+async def get_greysheet_config(_admin: dict = Depends(require_admin_user)):
     """
     Returns metadata about the active Greysheet integration configuration.
     """
@@ -11026,16 +11026,16 @@ class BatchValuationRequest(BaseModel):
     coin_ids: Optional[List[str]] = None
 
 @app.post("/api/greysheet/batch")
-async def execute_batch_valuation(req: BatchValuationRequest):
+async def execute_batch_valuation(req: BatchValuationRequest, _admin: dict = Depends(require_admin_user)):
     """
     Executes GSID mapping and pricing refresh in a unified batch operation.
     """
     try:
         # Run resolution first
         resolve_req = BatchActionRequest(user_id=req.user_id)
-        resolve_res = await batch_resolve_greysheet_coins(resolve_req)
+        resolve_res = await batch_resolve_greysheet_coins(resolve_req, _admin=_admin)
         # Then refresh pricing
-        refresh_res = await batch_refresh_greysheet_prices(resolve_req)
+        refresh_res = await batch_refresh_greysheet_prices(resolve_req, _admin=_admin)
         return {
             "status": "success",
             "resolution": resolve_res,
@@ -11248,7 +11248,7 @@ class ParallelBatchIngestRequest(BaseModel):
     concurrency_limit: Optional[int] = 4
 
 @app.post("/api/ingestion/batch_async")
-async def start_parallel_batch_ingestion(req: ParallelBatchIngestRequest):
+async def start_parallel_batch_ingestion(req: ParallelBatchIngestRequest, _admin: dict = Depends(require_admin_user)):
     """
     Spawns asynchronous parallel ingestion across multiple coin documents or photo pages.
     """

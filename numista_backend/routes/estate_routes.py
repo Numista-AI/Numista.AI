@@ -48,6 +48,8 @@ def iter_gcs_blob(bucket_name: str, blob_path: str, chunk_size: int = 256 * 1024
         with blob.open("rb") as stream:
             while chunk := stream.read(chunk_size):
                 yield chunk
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[GCS PDF Stream Error] {e}")
         # In local/test fallback if GCS client is unauthenticated
@@ -65,6 +67,8 @@ async def generate_attorney_link(req: GenerateAttorneyLinkRequest, _user: dict =
     in the root collection estate_reports/{token}.
     Returns public URL: numista.ai/#/attorney-portal?token={token}
     """
+    if req.owner_uid != _user.get("uid") and req.owner_uid != _user.get("user_id") and req.owner_uid != _user.get("email") and not _user.get("admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     try:
         token = secrets.token_urlsafe(32)
         now_dt = datetime.datetime.now(timezone.utc)
@@ -130,17 +134,21 @@ async def generate_attorney_link(req: GenerateAttorneyLinkRequest, _user: dict =
             "expires_at": expires_dt.isoformat(),
             "status": "active"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error generating attorney portal link")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/revoke-attorney-link")
-async def revoke_attorney_link(req: RevokeAttorneyLinkRequest):
+async def revoke_attorney_link(req: RevokeAttorneyLinkRequest, _user: dict = Depends(get_current_user)):
     """
     Revokes an active attorney portal link by setting status = 'revoked'.
     Checks that the requesting user matches document owner_uid.
     """
+    if req.owner_uid != _user.get("uid") and req.owner_uid != _user.get("user_id") and req.owner_uid != _user.get("email") and not _user.get("admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     token_ref = db.collection("estate_reports").document(req.token)
     doc = token_ref.get()
     if not doc.exists:
