@@ -3,7 +3,7 @@
 **Track:** F1 AWQ Slot Fix V3 (NET-058 → NET-059)
 **Date:** 2026-10-13
 **Branch:** dev
-**Commit:** (pending — files staged, commit SHA in NET-059)
+**Commit:** `435669c0`
 
 ---
 
