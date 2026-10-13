@@ -124,7 +124,7 @@ def fetch_coins(db: firestore.Client, uid: str) -> tuple[list[dict], list[dict]]
     """
     try:
         docs = db.collection('users').document(uid).collection('coins').stream()
-        inventory, stats = expand_collection_inventory(docs)
+        inventory, stats = expand_collection_inventory(docs, include_financial=True)
 
         # Stamp _doc_id on every row (gate 2: grouping keys on _doc_id)
         for row in inventory:

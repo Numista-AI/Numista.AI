@@ -64,6 +64,8 @@ def verify_firebase_bearer_token(request: Request) -> Optional[Dict[str, Any]]:
 
 async def get_current_user(request: Request) -> Dict[str, Any]:
     """FastAPI dependency requiring a valid Firebase ID Token."""
+    if hasattr(request.state, "user") and request.state.user:
+        return request.state.user
     is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
     decoded = verify_firebase_bearer_token(request)
     if not decoded:

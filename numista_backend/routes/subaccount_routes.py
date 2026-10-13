@@ -5,12 +5,13 @@ Tier limits: Pro = 5 sub-accounts max, Estate/Sovereign/Power User = Unlimited.
 Persists data to Firestore: /users/{parent_email}/subaccounts/{child_id}
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import time
 import logging
 from google.cloud import firestore
+from routes.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,16 @@ def _get_parent_tier(db: firestore.Client, parent_email: str) -> str:
 
 
 @router.post("/subaccounts", response_model=SubAccountResponse)
-def create_subaccount(req: SubAccountCreateRequest):
+def create_subaccount(req: SubAccountCreateRequest, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     Create a new family sub-account under a parent master email in Firestore.
     Enforces tier limits: Pro tier max 5 sub-accounts, Estate/Sovereign tier unlimited.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if req.parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     sub_col = db.collection("users").document(req.parent_email).collection("subaccounts")
     existing_docs = list(sub_col.stream())
@@ -93,10 +99,15 @@ def create_subaccount(req: SubAccountCreateRequest):
 
 
 @router.get("/subaccounts", response_model=List[SubAccountResponse])
-def get_subaccounts(parent_email: str):
+def get_subaccounts(parent_email: str, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     List all family sub-accounts for a parent email from Firestore.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     sub_col = db.collection("users").document(parent_email).collection("subaccounts")
     docs = list(sub_col.stream())
@@ -105,10 +116,15 @@ def get_subaccounts(parent_email: str):
 
 
 @router.delete("/subaccounts/{child_id}")
-def delete_subaccount(child_id: str, parent_email: str):
+def delete_subaccount(child_id: str, parent_email: str, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     Delete a sub-account by child_id from Firestore.
     """
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_admin = _user.get("admin") is True
+    if parent_email.strip().lower() != caller_email and not is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     db = get_db()
     doc_ref = db.collection("users").document(parent_email).collection("subaccounts").document(child_id)
     doc = doc_ref.get()

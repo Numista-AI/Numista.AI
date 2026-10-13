@@ -44,6 +44,9 @@ import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
 import 'coin_detail_screen.dart';
 import 'upcoming_releases_screen.dart';
+import '../theme/numista_theme.dart';
+import '../services/ui_variant_service.dart';
+
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
@@ -304,6 +307,19 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
   Widget _buildBody() {
+    // Phase A: alt site variant check
+    if (UiVariantService.current == UiVariant.alt) {
+      // For now Phase A is in place — alt shows a banner indicating alt mode.
+      // Full alt screens are Phase B/C (need Eric's YES).
+      // We insert a thin info banner at the top of Home Dashboard only.
+      if (_activeRoute == 'Home Dashboard') {
+        return _AltSiteBanner(child: _buildBodyForRoute());
+      }
+    }
+    return _buildBodyForRoute();
+  }
+
+  Widget _buildBodyForRoute() {
     switch (_activeRoute) {
       case 'Home Dashboard':
         return HomeDashboard(
@@ -714,11 +730,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                                   style: TextStyle(
                                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 11)),
+                                      fontSize: NumistaTheme.textBodySm)),
                               Text(email,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      color: Colors.blueAccent, fontSize: 9)),
+                                      color: Colors.blueAccent, fontSize: NumistaTheme.textCaption)),
                             ],
                           ),
                         ),
@@ -748,93 +764,103 @@ class _BaseLayoutState extends State<BaseLayout> {
                       children: [
                         _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
                         WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Coin Programs',
-                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
+                          active: ws?.step.targetRoute == 'My Collection',
+                          child: _buildNavItem('My Collection', icon: Icons.collections_bookmark_outlined),
                         ),
-                        _buildNavItem('Upcoming Releases', icon: Icons.new_releases_outlined),
-
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'MY COLLECTION'),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
-                          child: _buildNavItem('All', icon: Icons.collections_bookmark_outlined, isSubItem: true, subItemKey: 'All'),
-                        ),
-                        _buildNavItem('Coins', icon: Icons.monetization_on_outlined, isSubItem: true, subItemKey: 'Coins'),
-                        _buildNavItem('Currency Collection', icon: Icons.money_outlined, isSubItem: true, subItemKey: 'Currency'),
-                        _buildNavItem('World and Specialty', icon: Icons.public_outlined, isSubItem: true, subItemKey: 'World & Specialty'),
-                        _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
-
-                        const SizedBox(height: 8),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'My Wishlist',
-                          child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
-                        ),
-
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ASSET VAULT & TRANSFERS'),
-                        _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
-                        _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
-                        _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
-                        _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
-
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
                         WizardNavPulse(
                           active: ws?.step.targetRoute == 'Add New Coins',
                           child: _buildNavItem('Add new coins/notes/etc.', icon: Icons.add_circle_outline),
                         ),
-                        _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
-                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                          stream: email.isNotEmpty
-                              ? FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(email)
-                                  .collection('review_queue')
-                                  .snapshots()
-                              : const Stream.empty(),
-                          builder: (context, snapshot) {
-                            final count = snapshot.data?.docs.length ?? 0;
-                            return _buildNavItem('Review Hub',
-                                icon: Icons.fact_check_outlined,
-                                badgeCount: count);
-                          },
+                        WizardNavPulse(
+                          active: ws?.step.targetRoute == 'Coin Programs',
+                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
                         ),
+                        _buildNavMorganButton(),
+                        _MoreSection(
+                          isCollapsed: _isSidebarCollapsed,
+                          children: [
+                            _buildNavItem('Upcoming Releases', icon: Icons.new_releases_outlined),
 
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'AI TRAINING'),
-                        _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
-                        // Admin-only: Grade Flag & Beta Feedback Inbox
-                        if (email == 'jseaman1204@gmail.com' ||
-                            email.endsWith('@numista.ai')) ...[ 
-                          _buildNavItem('Admin Grade Flags',
-                              icon: Icons.admin_panel_settings_outlined),
-                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                            stream: FirebaseFirestore.instance
-                                .collection('beta_feedback')
-                                .where('status', isEqualTo: 'OPEN')
-                                .snapshots(),
-                            builder: (context, snapshot) {
-                              final openCount = snapshot.data?.docs.length ?? 0;
-                              return _buildNavItem(
-                                'Beta Feedback Inbox',
-                                icon: Icons.rate_review_outlined,
-                                badgeCount: openCount,
-                              );
-                            },
-                          ),
-                          _buildNavItem('Admin: Support Portal',
-                              icon: Icons.support_agent_outlined),
-                        ],
+                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'MY COLLECTION'),
+                            WizardNavPulse(
+                              active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
+                              child: _buildNavItem('All', icon: Icons.collections_bookmark_outlined, isSubItem: true, subItemKey: 'All'),
+                            ),
+                            _buildNavItem('Coins', icon: Icons.monetization_on_outlined, isSubItem: true, subItemKey: 'Coins'),
+                            _buildNavItem('Currency Collection', icon: Icons.money_outlined, isSubItem: true, subItemKey: 'Currency'),
+                            _buildNavItem('World and Specialty', icon: Icons.public_outlined, isSubItem: true, subItemKey: 'World & Specialty'),
+                            _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
 
-                        if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
-                        _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
-                        _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
-                        _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
-                        _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
+                            const SizedBox(height: 8),
+                            WizardNavPulse(
+                              active: ws?.step.targetRoute == 'My Wishlist',
+                              child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
+                            ),
 
-                        const SizedBox(height: 8),
-                        _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
-                        const _SidebarDivider(),
-                        _buildNavItem('Our Team', icon: Icons.people_outline),
-                        _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
-                        _buildNavItem('My Tickets', icon: Icons.receipt_long_outlined),
-                        _buildNavItem('🔍 Numista Lookup', icon: Icons.search_outlined),
+                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ASSET VAULT & TRANSFERS'),
+                            _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
+                            _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
+                            _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
+                            _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
+
+                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
+                            _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
+                            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: email.isNotEmpty
+                                  ? FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(email)
+                                      .collection('review_queue')
+                                      .snapshots()
+                                  : const Stream.empty(),
+                              builder: (context, snapshot) {
+                                final count = snapshot.data?.docs.length ?? 0;
+                                return _buildNavItem('Review Hub',
+                                    icon: Icons.fact_check_outlined,
+                                    badgeCount: count);
+                              },
+                            ),
+
+                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'AI TRAINING'),
+                            _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
+                            // Admin-only: Grade Flag & Beta Feedback Inbox
+                            if (email == 'jseaman1204@gmail.com' ||
+                                email.endsWith('@numista.ai')) ...[ 
+                              _buildNavItem('Admin Grade Flags',
+                                  icon: Icons.admin_panel_settings_outlined),
+                              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('beta_feedback')
+                                    .where('status', isEqualTo: 'OPEN')
+                                    .snapshots(),
+                                builder: (context, snapshot) {
+                                  final openCount = snapshot.data?.docs.length ?? 0;
+                                  return _buildNavItem(
+                                    'Beta Feedback Inbox',
+                                    icon: Icons.rate_review_outlined,
+                                    badgeCount: openCount,
+                                  );
+                                },
+                              ),
+                              _buildNavItem('Admin: Support Portal',
+                                  icon: Icons.support_agent_outlined),
+                            ],
+
+                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
+                            _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
+                            _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
+                            _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
+                            _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
+
+                            const SizedBox(height: 8),
+                            _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
+                            const _SidebarDivider(),
+                            _buildNavItem('Our Team', icon: Icons.people_outline),
+                            _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
+                            _buildNavItem('My Tickets', icon: Icons.receipt_long_outlined),
+                            _buildNavItem('🔍 Numista Lookup', icon: Icons.search_outlined),
+                          ],
+                        ),
 
                       ],
                     ),
@@ -874,7 +900,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
                         label: const Text(
                           'Send Beta Feedback',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () {
                           showDialog<String>(
@@ -892,7 +918,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                                         style: TextStyle(fontWeight: FontWeight.w600)),
                                     subtitle: const Text(
                                         'Ratings, suggestions, compliments',
-                                        style: TextStyle(fontSize: 12)),
+                                        style: TextStyle(fontSize: NumistaTheme.textCaption)),
                                     onTap: () => Navigator.pop(ctx, 'feedback'),
                                   ),
                                   const Divider(height: 1),
@@ -903,7 +929,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                                         style: TextStyle(fontWeight: FontWeight.w600)),
                                     subtitle: const Text(
                                         'Opens the support ticket form',
-                                        style: TextStyle(fontSize: 12)),
+                                        style: TextStyle(fontSize: NumistaTheme.textCaption)),
                                     onTap: () => Navigator.pop(ctx, 'ticket'),
                                   ),
                                 ],
@@ -949,7 +975,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                               ? 'Exit Demo'
                               : (AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
-                          style: const TextStyle(fontSize: 11),
+                          style: const TextStyle(fontSize: NumistaTheme.textBodySm),
                         ),
                         onPressed: () => _confirmSignOut(context),
                       ),
@@ -1015,6 +1041,32 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
 
+
+  Widget _buildNavMorganButton() {
+    if (_isSidebarCollapsed) {
+      return Tooltip(
+        message: 'Help & Ask Morgan',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: InkWell(
+            onTap: _showMorganDialog,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              child: Image.asset('assets/logo_owl.png', height: 20),
+            ),
+          ),
+        ),
+      );
+    }
+    return ListTile(
+      leading: Image.asset('assets/logo_owl.png', height: 20),
+      title: const Text('Help & Ask Morgan',
+          style: TextStyle(fontSize: NumistaTheme.textBody)),
+      onTap: _showMorganDialog,
+      selected: false,
+    );
+  }
 
   // ─── Nav item builder ────────────────────────────────────────────────────
   Widget _buildNavItem(String title, {
@@ -1193,7 +1245,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   color: isActive
                       ? (isDark ? Colors.white : const Color(0xFF0F172A))
                       : (isDark ? Colors.white60 : const Color(0xFF475569)),
-                  fontSize: 13,
+                  fontSize: NumistaTheme.textBody,
                   fontWeight:
                       isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
@@ -1211,7 +1263,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   badgeCount.toString(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: NumistaTheme.textCaption,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1255,14 +1307,39 @@ class _BaseLayoutState extends State<BaseLayout> {
     if (confirm == true) {
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
+        UiVariantService.reset();
         if (ctx.mounted) {
           AuthGate.navigateTo(ctx);
         }
       } else {
+        UiVariantService.reset();
         await AuthService.signOut();
       }
     }
     // The StreamBuilder in AuthGate automatically redirects to LoginScreen upon signOut
+  }
+}
+
+// ─── Alt Site Variant Banner (Phase A) ──────────────────────────────────────
+class _AltSiteBanner extends StatelessWidget {
+  final Widget child;
+  const _AltSiteBanner({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Container(
+        width: double.infinity,
+        color: const Color(0xFF4338CA),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        child: const Text(
+          'Alt site variant — Phase A (admin preview)',
+          style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textBodySm),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      Expanded(child: child),
+    ]);
   }
 }
 
@@ -1278,7 +1355,7 @@ class _UnderConstruction extends StatelessWidget {
             SizedBox(height: 16),
             Text('Coming Soon',
                 style: TextStyle(
-                    fontSize: 22,
+                    fontSize: NumistaTheme.textXl,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF31333F))),
             SizedBox(height: 8),
@@ -1304,6 +1381,44 @@ class _SidebarDivider extends StatelessWidget {
       );
 }
 
+// ─── Desktop More Section (ExpansionTile) ────────────────────────────────────
+class _MoreSection extends StatelessWidget {
+  final List<Widget> children;
+  final bool isCollapsed;
+
+  const _MoreSection({
+    required this.children,
+    this.isCollapsed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isCollapsed) {
+      return Tooltip(
+        message: 'More',
+        child: ExpansionTile(
+          leading: const Icon(Icons.more_horiz),
+          title: const SizedBox.shrink(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: EdgeInsets.zero,
+          children: children,
+        ),
+      );
+    }
+    return ExpansionTile(
+      leading: const Icon(Icons.more_horiz),
+      title: const Text(
+        'More',
+        style: TextStyle(fontSize: NumistaTheme.textBody),
+      ),
+      childrenPadding: EdgeInsets.zero,
+      children: children,
+    );
+  }
+}
+
+typedef MoreNavSection = _MoreSection;
+
 // ─── Sidebar section header ──────────────────────────────────────────────────
 class _SidebarSectionHeader extends StatelessWidget {
   final String title;
@@ -1317,7 +1432,7 @@ class _SidebarSectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: NumistaTheme.textCaption,
           fontWeight: FontWeight.bold,
           color: isDark ? Colors.white38 : Colors.black45,
           letterSpacing: 0.8,
@@ -1345,7 +1460,7 @@ class _DemoBanner extends StatelessWidget {
           const Expanded(
             child: Text(
               "You're browsing a read-only demo. Create a free account to add coins, use the scanner, and save your collection.",
-              style: TextStyle(color: Colors.white, fontSize: 12),
+              style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textCaption),
             ),
           ),
           const SizedBox(width: 12),
@@ -1355,7 +1470,7 @@ class _DemoBanner extends StatelessWidget {
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white54),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              textStyle: const TextStyle(fontSize: NumistaTheme.textCaption, fontWeight: FontWeight.w600),
             ),
             child: const Text('Try It Free →'),
           ),
@@ -1382,7 +1497,7 @@ class _GuestBanner extends StatelessWidget {
           const Expanded(
             child: Text(
               'Guest session active — your coins are saved for 30 days. Create a free account to keep them permanently.',
-              style: TextStyle(color: Colors.white, fontSize: 12),
+              style: TextStyle(color: Colors.white, fontSize: NumistaTheme.textCaption),
             ),
           ),
           const SizedBox(width: 12),
@@ -1392,7 +1507,7 @@ class _GuestBanner extends StatelessWidget {
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white54),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              textStyle: const TextStyle(fontSize: NumistaTheme.textCaption, fontWeight: FontWeight.w600),
             ),
             child: const Text('Create Account →'),
           ),
@@ -1546,12 +1661,12 @@ class _MorganSidebarButtonState extends State<_MorganSidebarButton> {
                     Text('Ask Morgan',
                         style: TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: NumistaTheme.textCaption,
                             fontWeight: FontWeight.w600)),
                     Text('Your AI guide',
                         style: TextStyle(
                             color: Color(0xFF2DD4BF),
-                            fontSize: 9)),
+                            fontSize: NumistaTheme.textCaption)),
                   ],
                 ),
               ),

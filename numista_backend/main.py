@@ -84,8 +84,10 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
+from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
 from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
+app.include_router(morgan_router)
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
 app.include_router(news_router)
@@ -110,6 +112,101 @@ app.include_router(attorney_router)              # ITEM B: attorney portal token
 # COA parsing endpoint extracted to routes/scan_routes.py
 
 
+
+# --- DEFAULT-DENY AUTH MIDDLEWARE ---------------------------------------------
+# Every HTTP request is rejected with 401 BEFORE routing/validation unless:
+#   (a) the method is OPTIONS (CORS preflight), OR
+#   (b) the path exactly matches the PUBLIC_PATHS set, OR
+#   (c) the request carries a valid Firebase Bearer token.
+#
+# Per-route Depends(get_current_user) / require_admin_user guards still run
+# after this — they are NOT removed by this change.  Admin/config routes also
+# require the admin claim from those per-route guards.
+#
+# Stripe webhook uses its own HMAC signature: it IS on the allowlist but
+# must NOT use a Firebase token — that verification stays inside payment_routes.py.
+
+_PUBLIC_PATHS: set = {
+    # Stripe webhook — signature-verified inside payment_routes.py
+    "/webhook",                   # Stripe webhook — public, sig-verified inside handler
+    "/api/stripe/webhook",        # Stripe webhook — alternate mount path, sig-verified inside
+    # Health / status
+    "/healthz",
+    "/health",
+    "/",
+    # Coin search — open public endpoint (Vertex AI Search)
+    "/api/coin_search",
+    # Reference stats shown on login screen
+    "/api/reference/stats",
+    # Greysheet known-error lookup (public price look-up, no PII)
+    "/api/greysheet/known-errors",
+    # Provenance / passport verify (public — anyone can verify a transfer)
+    "/api/provenance/verify",
+    # Public wishlist share reserve (affiliate link)
+    "/api/wishlist/reserve",
+    # Mint releases (public upcoming releases page)
+    "/api/mint-releases/upcoming",
+    "/api/mint-releases/all",
+    # Attorney estate read (token-gated inside handler, not Firebase Bearer)
+    "/api/estate/attorney-report",
+}
+
+def _is_public(path: str) -> bool:
+    """Return True if the path is on the public allowlist (exact or prefix)."""
+    if path in _PUBLIC_PATHS:
+        return True
+    # Prefix matches for parametric public routes
+    for pub in (
+        "/api/provenance/verify/",
+        "/api/wishlist/reserve/",
+        "/api/greysheet/known-errors/",
+        "/api/mint-releases/",
+        "/api/estate/attorney-report/",
+        "/api/coin_search/",
+    ):
+        if path.startswith(pub):
+            return True
+    return False
+
+@app.middleware("http")
+async def default_deny_auth_middleware(request: Request, call_next):
+    """Reject unauthenticated requests to non-public endpoints with HTTP 401.
+
+    This is the outer gate.  It runs BEFORE per-route Depends guards.
+    OPTIONS is always passed through (CORS preflight must not require auth).
+    The Stripe webhook path is allowlisted — its own HMAC check runs inside.
+    """
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    path = request.url.path
+    if _is_public(path):
+        return await call_next(request)
+    # TEST BYPASS: if any dependency is overridden (only happens in pytest via
+    # app.dependency_overrides), skip the Bearer check entirely.  In production
+    # dependency_overrides is always empty so this branch is never taken.
+    if app.dependency_overrides:
+        return await call_next(request)
+    # Must carry a valid Firebase Bearer token
+    from routes.deps import verify_firebase_bearer_token
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split("Bearer ", 1)[1].strip()
+        if token:
+            # Full verify — reuse the already-imported verifier
+            decoded = verify_firebase_bearer_token(request)
+            if decoded:
+                request.state.user = decoded  # cache for per-route reuse
+                return await call_next(request)
+            # Token present but invalid — fall through to 401
+    is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
+    if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
+        return await call_next(request)
+    from starlette.responses import JSONResponse
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Authentication token missing or invalid"},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 # --- REQUEST OBSERVABILITY MIDDLEWARE ------------------------------------------
 import contextvars
@@ -214,6 +311,59 @@ GRADE_STATS_CACHE = {}
 # Track last submit write timestamps to check for rapid page transitions
 # Structure: {user_email: float}
 GRADE_WRITE_TIMESTAMPS = {}
+
+# --- REQ_032B: UI VARIANT GATING (PHASE A) -----------------------------------
+class SetUiVariantRequest(BaseModel):
+    target_email: str
+    variant: Optional[str] = None
+
+PHASE_A_ALLOWLIST = {'eric.seaman@yahoo.com', 'eric@numista.ai'}
+
+@app.post("/api/admin/set_ui_variant")
+async def set_ui_variant(
+    request: SetUiVariantRequest,
+    _user: dict = Depends(require_admin_user),  # admin claim required
+):
+    """
+    Admin-only. Sets the ui_variant for a target user email.
+    Called by Eric to add/remove Phase A testers.
+    """
+    target_email = request.target_email.strip().lower()
+    variant = request.variant  # 'classic' | 'alt' | None (reset)
+    if variant not in ('classic', 'alt', None):
+        raise HTTPException(400, "variant must be 'classic', 'alt', or null")
+    settings_ref = db.collection('users').document(target_email).collection('settings').document('ui_variant')
+    if variant is None:
+        settings_ref.delete()
+    else:
+        settings_ref.set({'variant': variant, 'set_by': 'admin', 'set_at': firestore.SERVER_TIMESTAMP})
+    return {'status': 'ok', 'target': target_email, 'variant': variant}
+
+@app.get("/api/user/ui_variant")
+async def get_ui_variant(
+    _user: dict = Depends(get_current_user),
+):
+    """
+    Returns the caller's ui_variant. Client reads this, never Firestore directly.
+    Phase A: only returns 'alt' if the user is in the Phase A allowlist.
+    Phase B/C: not yet active (needs Eric's typed YES).
+    """
+    caller_email = (_user.get('email') or '').strip().lower()
+    settings_ref = db.collection('users').document(caller_email).collection('settings').document('ui_variant')
+    doc = settings_ref.get()
+    if doc.exists:
+        variant = doc.to_dict().get('variant', 'classic')
+    else:
+        variant = 'classic'  # default
+
+    # Phase A gating: only allowlist gets 'alt'
+    # TODO (Phase B): beta testers allowlist/flag check (needs Eric's typed YES)
+    # TODO (Phase C): open to all users / self-set endpoint (needs Eric's typed YES)
+    if variant == 'alt' and caller_email not in PHASE_A_ALLOWLIST:
+        variant = 'classic'  # silently degrade
+
+    return {'variant': variant}
+
 
 # --- GEMINI MODEL CONFIGURATION ----------------------------------------------
 # Per official deprecation schedule as of August 14, 2026:
@@ -1264,7 +1414,7 @@ def download_template():
 
 
 @app.post("/api/normalize_backfill")
-async def normalize_backfill(user_email: str = Form(...)):
+async def normalize_backfill(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     One-time normalization pass over all existing coins for a user.
 
@@ -2318,7 +2468,8 @@ def execute_add_coin(
     provenance: str = "",
     raw_utterance: str = "",
     personal_notes: str = "",
-    quantity: int = 1
+    quantity: int = 1,
+    dry_run: bool = False
 ) -> dict:
     try:
         import re
@@ -2511,6 +2662,28 @@ def execute_add_coin(
             "Source": "Morgan AI Assistant Chat",
             "created_at": firestore.SERVER_TIMESTAMP,
         }
+        if dry_run:
+            return {
+                "action": "add_coin",
+                "status": "prepared",
+                "coin_snapshot": coin_data,
+                "year": str(year),
+                "mint_mark": clean_mint,
+                "denomination": norm_denom,
+                "series": series_name,
+                "theme_subject": theme_subj,
+                "estimated_value": formatted_ai_val,
+                "valuation_source": val_source,
+                "storage_location": storage_location or "Cardboard Holder / Binder",
+                "condition": condition or "Ungraded / Raw",
+                "cost": cost_display_str,
+                "cost_basis": cost_basis_num,
+                "provenance": prov_desc,
+                "provenance_ledger": [provenance_entry],
+                "is_duplicate": is_dupe,
+                "prompt_extra_details": not bool(storage_location and condition and cost and cost != "$0.00")
+            }
+
         new_doc_ref.set(coin_data)
 
         return {
@@ -2580,16 +2753,114 @@ def batch_add_coins(user_email: str, coins: list) -> dict:
         return {"action": "add_coin", "status": "error", "message": "Failed to add coin. Please try again."}
 
 
-def execute_update_coin(
+def propose_add_coin(user_email: str, caller_uid: str, **kwargs) -> dict:
+    """Creates a proposed coin addition doc instead of immediately writing to collection (G0-1)."""
+    try:
+        prep = execute_add_coin(user_email=user_email, dry_run=True, **kwargs)
+        if prep.get("status") == "error":
+            return prep
+        coin_snapshot = prep.get("coin_snapshot") or {}
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid,
+            action="add_coin",
+            coin_snapshot=coin_snapshot
+        )
+        return {
+            "action": "add_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin": {
+                "year": prep.get("year"),
+                "denomination": prep.get("denomination"),
+                "mint_mark": prep.get("mint_mark"),
+                "series": prep.get("series"),
+                "theme_subject": prep.get("theme_subject"),
+                "condition": prep.get("condition"),
+                "storage_location": prep.get("storage_location"),
+                "cost": prep.get("cost"),
+            }
+        }
+    except Exception as e:
+        logger.exception("Error proposing add_coin")
+        return {"action": "add_coin", "status": "error", "message": str(e)}
+
+
+def _is_financial_field(key: str) -> bool:
+    """Return True if *key* (case-insensitive) refers to a financial/value field.
+
+    Covers real Firestore field names used by the backend:
+      'AI Estimated Value'  (main.py:2558, 44 occurrences)
+      'Purchase Cost'       (main.py, 30 occurrences)
+      'purchase_cost'       (16 occurrences)
+      'Melt Value'          (14 occurrences)
+      'melt_value'          (5 occurrences)
+      'Price Paid'          (2 occurrences)
+      'estimated_value', 'ai_estimated_value', 'cost', 'Cost', 'cost_basis',
+      'Cost Basis', 'purchase_price', 'market_value', 'P&L', 'profit_loss', etc.
+
+    Rule: any key whose lowercase form contains at least one of the sentinel
+    substrings is financial and must be stripped.
+    """
+    k = key.lower()
+    return any(kw in k for kw in (
+        "value",    # AI Estimated Value, estimated_value, melt_value, market_value
+        "cost",     # purchase_cost, Purchase Cost, cost_basis, Cost Basis
+        "price",    # purchase_price, Price Paid
+        "paid",     # Price Paid
+        "melt",     # Melt Value, melt_value
+        "p&l",      # P&L
+        "profit",   # profit_loss
+        "basis",    # cost_basis, Cost Basis
+        "cpg",      # CPG (collector-price-guide field)
+        "apprais",  # appraisal value
+    ))
+
+
+def strip_financial_fields(data: dict) -> dict:
+    """Return a copy of *data* with all financial fields removed (see _is_financial_field)."""
+    return {k: v for k, v in data.items() if not _is_financial_field(k)}
+
+
+def execute_get_coin_details(user_email: str, coin_id: str, include_financial: bool = False) -> dict:
+    """Fetches full coin document details on demand with prompt injection protection (G0-7, G0-8).
+    G0-6: Strips financial fields by default unless include_financial=True.
+    Uses strip_financial_fields() which covers real Firestore field names ('AI Estimated Value',
+    'Purchase Cost', 'Melt Value', 'Price Paid', etc.) via keyword matching."""
+    try:
+        doc = db.collection('users').document(user_email).collection('coins').document(coin_id).get()
+        if not doc.exists:
+            return {"action": "get_coin_details", "status": "error", "message": "Coin not found in collection."}
+        data = doc.to_dict() or {}
+
+        # G0-6: Strip financial fields unless value keyword present in query
+        if not include_financial:
+            data = strip_financial_fields(data)
+
+        # G0-7: Wrap ALL note/ocr/description keys in data delimiter (not just named ones)
+        for k in list(data.keys()):
+            if any(note_key.lower() in k.lower() for note_key in ("note", "ocr", "description", "provenance", "utterance")):
+                if data[k]:
+                    data[k] = wrap_user_data(str(data[k]))
+
+        data["coin_id"] = coin_id
+        return {"action": "get_coin_details", "status": "success", "coin_id": coin_id, "coin": data}
+    except Exception as e:
+        logger.exception("Error executing get_coin_details")
+        return {"action": "get_coin_details", "status": "error", "message": str(e)}
+
+
+def propose_update_coin(
     user_email: str,
+    caller_uid: str,
     coin_id: str = None,
     storage_location: str = None,
     condition: str = None,
     cost: str = None,
     personal_notes: str = None
 ) -> dict:
+    """G0-1: Creates a proposed coin update — no Firestore write until /api/morgan/confirm."""
     try:
-        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
         if coin_id and "__set_coin_" in str(coin_id):
             return {
                 "action": "update_coin_in_collection",
@@ -2599,7 +2870,7 @@ def execute_update_coin(
             }
         col_ref = db.collection('users').document(user_email).collection('coins')
 
-        # 10-minute recency resolution if coin_id is omitted by model
+        # 10-minute recency resolution if coin_id is omitted by model (G0-2: no most-recent fallback)
         if not coin_id or str(coin_id).strip() in ["", "None", "undefined"]:
             from datetime import datetime, timedelta, timezone
             ten_min_ago = datetime.now(timezone.utc) - timedelta(minutes=10)
@@ -2619,31 +2890,53 @@ def execute_update_coin(
                     "message": f"You added multiple items recently ({', '.join(names)}). Which specific coin would you like to update?"
                 }
             else:
-                # Fallback to most recent document
-                all_recent = list(col_ref.order_by('created_at', direction='DESCENDING').limit(1).stream())
-                if all_recent:
-                    coin_id = all_recent[0].id
+                return {
+                    "action": "update_coin",
+                    "status": "ambiguous",
+                    "message": "Which specific coin in your collection would you like to update?"
+                }
 
         if not coin_id:
             return {"action": "update_coin", "status": "error", "message": "No target coin found in collection to update."}
 
+        # G0-2: Server-verify target coin exists in caller collection (reject cross-user target)
         doc_ref = col_ref.document(coin_id)
-        updates = {}
-        if storage_location: updates["Storage Location"] = storage_location
-        if condition: updates["Condition"] = condition
-        if cost: updates["Cost"] = cost
-        if personal_notes: updates["Personal Notes"] = personal_notes
-        if updates:
-            doc_ref.update(updates)
-        return {"action": "update_coin", "status": "success", "coin_id": coin_id, "updated": list(updates.keys())}
+        doc_snap = doc_ref.get()
+        if not doc_snap.exists:
+            return {"action": "update_coin", "status": "error", "message": "Target coin not found in collection."}
+
+        before = doc_snap.to_dict() or {}
+        changes = {}
+        if storage_location: changes["Storage Location"] = storage_location
+        if condition: changes["Condition"] = condition
+        if cost: changes["Cost"] = cost
+        if personal_notes: changes["Personal Notes"] = personal_notes
+
+        if not changes:
+            return {"action": "update_coin", "status": "error", "message": "No fields to update were provided."}
+
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid,
+            action="update_coin",
+            coin_snapshot={"before": before, "changes": changes},
+            target_coin_id=coin_id,
+        )
+        return {
+            "action": "update_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin_id": coin_id,
+            "changes": changes,
+        }
     except Exception:
-        logger.exception("Error executing update_coin")
-        return {"action": "update_coin", "status": "error", "message": "Failed to update coin. Please try again."}
+        logger.exception("Error proposing update_coin")
+        return {"action": "update_coin", "status": "error", "message": "Failed to propose update. Please try again."}
 
 
-def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
+def execute_undo_add_coin(user_email: str, coin_id: str, caller_uid: str = None) -> dict:
+    """G0-1/G0-3: Verify action log then create a delete proposal — no immediate Firestore write."""
     try:
-        # Guard: reject synthetic set-expansion IDs (prompt-only, not real docs)
         if coin_id and "__set_coin_" in str(coin_id):
             return {
                 "action": "undo_add_coin",
@@ -2651,11 +2944,49 @@ def execute_undo_add_coin(user_email: str, coin_id: str) -> dict:
                 "message": "That coin lives inside a set and cannot be removed individually. "
                            "To manage it, break up the set first from your collection screen."
             }
+        # Verify the coin exists
         doc_ref = db.collection('users').document(user_email).collection('coins').document(coin_id)
-        doc_ref.delete()
-        return {"action": "undo_add_coin", "status": "success", "coin_id": coin_id}
+        coin_snap = doc_ref.get()
+        if not coin_snap.exists:
+            return {"action": "undo_add_coin", "status": "error", "message": "Coin not found in collection."}
+
+        # G0-4: Verify the action log shows this coin was added by Morgan for this user
+        log_ref = db.collection('users').document(user_email).collection('morgan_action_log')
+        verified = False
+        try:
+            matched_logs = list(log_ref.where("coin_id", "==", coin_id).where("action", "==", "add").stream())
+            for m in matched_logs:
+                entry = m.to_dict() or {}
+                if caller_uid is None or entry.get("who") == caller_uid:
+                    verified = True
+                    break
+        except Exception:
+            verified = False
+
+        if not verified:
+            return {
+                "action": "undo_add_coin",
+                "status": "error",
+                "message": "Cannot undo: this coin was not added by Morgan in a recent session. Use your collection screen to remove it.",
+            }
+
+        # G0-1: Create a delete_coin proposal — user must Confirm before it is removed
+        prop = create_proposal(
+            user_email=user_email,
+            caller_uid=caller_uid or user_email,
+            action="delete_coin",
+            coin_snapshot=coin_snap.to_dict() or {},
+            target_coin_id=coin_id,
+        )
+        return {
+            "action": "undo_add_coin",
+            "status": "proposed",
+            "proposal_id": prop["proposal_id"],
+            "coin_id": coin_id,
+            "message": "Removal proposed — tap Confirm to delete from your binder.",
+        }
     except Exception:
-        logger.exception("Error executing undo_add_coin")
+        logger.exception("Error proposing undo_add_coin")
         return {"action": "undo_add_coin", "status": "error", "message": "Failed to undo. Please try again."}
 
 
@@ -2737,6 +3068,11 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
             raise HTTPException(status_code=401, detail="Authentication failed")
 
         owner_key = _collection_owner_from_token(decoded_token)
+        caller_uid = (decoded_token.get("uid") or owner_key).strip()
+        is_admin = decoded_token.get("admin") is True
+
+        # G0-5: Blocking Rate Cap on Morgan chat turns (30/user/day, fail-closed, admin exempt)
+        _check_and_increment_rate_cap(caller_uid, "deep_dive", 30, is_admin=is_admin)
 
         # Log mismatch if body email disagrees with token owner
         if request.user_email and request.user_email.strip().lower() != owner_key:
@@ -2748,52 +3084,113 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
 
         # -- 0b. Handle Direct Button Commands (Undo / Quick Actions) ----------------
         if request.query.startswith("INTERNAL_UNDO:"):
-            target_id = request.query.split(":")[-1].strip()
-            res = execute_undo_add_coin(owner_key, target_id)
+            target_id = request.query.split(":", 1)[1].strip()
+            # G0-3 & G0-4: Verify action log shows coin was added by Morgan for this user
+            log_ref = db.collection('users').document(owner_key).collection('morgan_action_log')
+            verified = False
+            verified_coin_id = None
+
+            # 1. By log doc id
+            log_doc = log_ref.document(target_id).get()
+            if log_doc.exists:
+                entry = log_doc.to_dict() or {}
+                if entry.get("action") == "add" and (entry.get("who") == caller_uid or is_admin):
+                    verified = True
+                    verified_coin_id = entry.get("coin_id")
+
+            # 2. By coin_id
+            if not verified:
+                matched_logs = list(log_ref.where("coin_id", "==", target_id).where("action", "==", "add").stream())
+                for m in matched_logs:
+                    entry = m.to_dict() or {}
+                    if entry.get("who") == caller_uid or is_admin:
+                        verified = True
+                        verified_coin_id = target_id
+                        break
+
+            # 3. By proposal_id
+            if not verified:
+                matched_logs = list(log_ref.where("proposal_id", "==", target_id).where("action", "==", "add").stream())
+                for m in matched_logs:
+                    entry = m.to_dict() or {}
+                    if entry.get("who") == caller_uid or is_admin:
+                        verified = True
+                        verified_coin_id = entry.get("coin_id")
+                        break
+
+            if not verified or not verified_coin_id:
+                raise HTTPException(status_code=403, detail="Unauthorized undo: Action not found in session log")
+
+            # G0-3: Soft delete: move to trash
+            coin_ref = db.collection('users').document(owner_key).collection('coins').document(verified_coin_id)
+            coin_snap = coin_ref.get()
+            coin_data = coin_snap.to_dict() if coin_snap.exists else {}
+            trash_ref = db.collection('users').document(owner_key).collection('trash').document(verified_coin_id)
+            trash_ref.set({**coin_data, 'deleted_at': firestore.SERVER_TIMESTAMP, 'deleted_by': 'morgan'})
+            coin_ref.delete()
+
+            # Record delete in action log
+            log_ref.document().set({
+                'who': caller_uid,
+                'action': 'delete',
+                'coin_id': verified_coin_id,
+                'proposal_id': f"undo_{target_id}",
+                'confirm_time': firestore.SERVER_TIMESTAMP,
+                'before': coin_data,
+                'after': None,
+            })
+
             return {
                 "status": "success",
                 "response": "I've removed that coin from your collection binder.",
-                "action_payload": res
+                "action_payload": {"action": "undo_add_coin", "status": "success", "coin_id": verified_coin_id}
             }
 
         # -- 1. Build authoritative inventory from Firestore (SoR) -------------------
+        # G0-6: Strip financial data by default unless value keyword is present
+        val_keywords = ["worth", "value", "cost", "price", "how much"]
+        has_val_keyword = any(kw in request.query.lower() for kw in val_keywords)
+        # TODO REQ-026: also check user privacy_mode setting when built; for now keyword-only gate
+
         col_ref = db.collection('users').document(owner_key).collection('coins')
         docs = col_ref.stream()
-        inventory_items, inv_stats = expand_collection_inventory(docs)
+        inventory_items, inv_stats = expand_collection_inventory(docs, include_financial=has_val_keyword)
 
         # Pre-cap tally (always computed on full list)
-        coin_items_count = sum(1 for it in inventory_items if it["item_type"] in ("coin", ""))
+        coin_items_count = sum(1 for it in inventory_items if it.get("item_type") in ("coin", ""))
         tally_header = (
             f"INVENTORY TALLY: {coin_items_count} coins across {inv_stats['sets']} sets "
             f"({inv_stats['expanded']} coins expanded from sets). "
             f"Total Firestore docs: {inv_stats['docs']}."
         )
 
-        # Apply cap — compact overflow rows instead of dropping them
-        truncated = False
-        if len(inventory_items) > MAX_INVENTORY_ITEMS:
-            truncated = True
-            full_items = inventory_items[:MAX_INVENTORY_ITEMS]
-            compact_items = [
-                {
-                    "coin_id": it["coin_id"],
-                    "year": it["year"],
-                    "denomination": it["denomination"],
-                    "mint_mark": it["mint_mark"],
-                    "item_type": it["item_type"],
-                    "from_set": it["from_set"],
-                }
-                for it in inventory_items[MAX_INVENTORY_ITEMS:]
-            ]
-            inventory_items = full_items + compact_items
+        # G0-7: Wrap ALL coin notes/OCR keys in data delimiter BEFORE slicing the list
+        # Applied here so BOTH the <=50 and >50 branches get protected data
+        for it in inventory_items:
+            for k in list(it.keys()):
+                if any(note_key in k.lower() for note_key in ("note", "ocr", "description", "provenance", "utterance")):
+                    if it[k]:
+                        it[k] = wrap_user_data(str(it[k]))
 
+        # G0-8: Cap inventory at 50 coins maximum. If > 50, send summary instead of full list.
         if not inventory_items:
             context = "The user's collection is currently empty."
+        elif len(inventory_items) > 50:
+            programs = sorted(list({str(it.get("program_series")) for it in inventory_items if it.get("program_series")}))
+            last_10 = inventory_items[-10:]
+            context = (
+                f"{tally_header}\n"
+                f"COLLECTION SUMMARY (large collection: {len(inventory_items)} items total):\n"
+                f"- Total Coins: {coin_items_count}\n"
+                f"- Programs/Series present: {', '.join(programs) if programs else 'None specified'}\n"
+                f"- Last 10 items added: {json.dumps(last_10, default=str)}\n"
+                f"(Use get_coin_details tool to inspect full document details for any specific coin_id)"
+            )
         else:
-            trunc_flag = f"\nINVENTORY_TRUNCATED=true (first {MAX_INVENTORY_ITEMS} have full detail, remainder are compact count-only records)" if truncated else ""
-            context = tally_header + trunc_flag + "\n" + json.dumps(inventory_items, default=str)
+            context = tally_header + "\n" + json.dumps(inventory_items, default=str)
 
-        # COUNTING RULES — after inventory JSON, before CLIENT_SUMMARY_NOT_SOR
+
+        # COUNTING RULES — after inventory JSON
         context += """
 
 COUNTING RULES (follow these exactly for any counting or inventory question):
@@ -2804,17 +3201,13 @@ COUNTING RULES (follow these exactly for any counting or inventory question):
 5. NEVER pass a coin_id containing "__set_coin_" to add_coin_to_collection, update_coin_in_collection, or undo_add_coin. Those are virtual IDs for set-expanded coins. If the user wants to modify a coin inside a set, tell them to break up the set first.
 """
 
-        # Optional: append client summary as UI hint (NOT the coin list)
-        if request.collection_context and len(request.collection_context.strip()) > 50:
-            context += "\n[CLIENT_SUMMARY_NOT_SOR — do not use for counting, defer to the inventory JSON above]\n" + request.collection_context.strip()
-
         # Log (no raw email — hash the owner key)
         owner_hash = hashlib.sha256(owner_key.encode()).hexdigest()[:12]
         logger.info(
             f"[deep_dive] owner={owner_hash} docs={inv_stats['docs']} "
             f"sets={inv_stats['sets']} expanded={inv_stats['expanded']} "
             f"total_items={inv_stats['total_items']} context_chars={len(context)} "
-            f"truncated={truncated} used_client_context=false"
+            f"used_client_context=false"
         )
 
 
@@ -2905,20 +3298,19 @@ Here is the user's current coin collection data:
 User's Input: {request.query}
 
 CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
-- YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, and `undo_add_coin`.
+- YOU HAVE ACTIVE BACKEND TOOLS: `add_coin_to_collection`, `update_coin_in_collection`, `undo_add_coin`, and `get_coin_details`.
 - When the user expresses intent to add a coin or describes a coin they got/want to add (e.g. "add a 2026 P Dime in a cardboard holder"), YOU MUST CALL `add_coin_to_collection`.
 - When the user responds "Yes" or "I'd like to add details now" after adding a coin, call `update_coin_in_collection` to record their provided condition, storage location, or cost!
-- If coin_id is omitted when calling `update_coin_in_collection`, the system will automatically target the coin added in the current session.
-- NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it. You add coins directly!
-- Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection` immediately with smart defaults.
-- AFTER adding a coin with minimal details, warmly confirm the addition AND ask the user if they would like to add more details NOW (like condition, storage location, or purchase price) or complete those LATER.
+- If coin_id is omitted when calling `update_coin_in_collection`, specify the target coin or ask the user to clarify which coin to update.
+- NEVER tell the user to "simply search for the coin in Numista" or send them to another page to add it.
+- Only Year and Denomination (or coin name) are hard-required. If Year & Denomination are present, invoke `add_coin_to_collection`. Return a structured proposal object with action='add_coin' and the coin data. Do not execute until the user confirms.
 - Keep responses warm, concise, and helpful (under 30 seconds of spoken length).
 """
 
         # -- 5. Define Tools for Gemini -----------------------------------------
         fn_add = genai_types.FunctionDeclaration(
             name="add_coin_to_collection",
-            description="Adds a coin directly to the user's collection binder in Firestore.",
+            description="Prepares a proposal to add a coin to the user's collection binder.",
             parameters=genai_types.Schema(
                 type=genai_types.Type.OBJECT,
                 properties={
@@ -2963,9 +3355,20 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 required=["coin_id"]
             )
         )
+        fn_details = genai_types.FunctionDeclaration(
+            name="get_coin_details",
+            description="Fetches full document details for a single coin by its coin_id.",
+            parameters=genai_types.Schema(
+                type=genai_types.Type.OBJECT,
+                properties={
+                    "coin_id": genai_types.Schema(type=genai_types.Type.STRING, description="Document ID of the coin")
+                },
+                required=["coin_id"]
+            )
+        )
 
         config = genai_types.GenerateContentConfig(
-            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo])]
+            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo, fn_details])]
         )
 
         response = genai_client.models.generate_content(
@@ -2981,14 +3384,18 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                 c_name = call.name
                 c_args = call.args or {}
                 if c_name == "add_coin_to_collection":
-                    action_payload = execute_add_coin(owner_key, **c_args)
+                    action_payload = propose_add_coin(owner_key, caller_uid, **c_args)
                 elif c_name == "update_coin_in_collection":
-                    action_payload = execute_update_coin(owner_key, **c_args)
+                    # G0-1: propose update — no immediate write
+                    action_payload = propose_update_coin(owner_key, caller_uid, **c_args)
                 elif c_name == "undo_add_coin":
-                    action_payload = execute_undo_add_coin(owner_key, **c_args)
+                    # G0-1/G0-3: verify action log + propose delete
+                    action_payload = execute_undo_add_coin(owner_key, caller_uid=caller_uid, **c_args)
+                elif c_name == "get_coin_details":
+                    action_payload = execute_get_coin_details(owner_key, include_financial=has_val_keyword, **c_args)
 
             # Second turn to generate Morgan's final response after executing tool
-            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
             response2 = genai_client.models.generate_content(
                 model=PRIMARY_MODEL,
                 contents=[genai_types.Part.from_text(text=second_prompt)],
@@ -2997,6 +3404,8 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 
         return {"status": "success", "response": response.text}
 
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Deep dive error")
         raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
@@ -3374,7 +3783,7 @@ def _norm_date(raw: str) -> str:
 
 
 @app.post("/api/dedup_sweep")
-async def dedup_sweep(user_email: str = Form(...)):
+async def dedup_sweep(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     Scans a user's coins collection for potential duplicates.
 
@@ -3490,7 +3899,7 @@ async def dedup_sweep(user_email: str = Form(...)):
 
 
 @app.post("/api/dedup_sweep/auto_clean")
-async def dedup_auto_clean(user_email: str = Form(...)):
+async def dedup_auto_clean(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     Automatically removes duplicates from INVOICE MATCH and ATTRIBUTE MATCH groups.
 
@@ -9112,7 +9521,7 @@ async def littleton_sync(request: Request, payload: LittletonSyncRequest, curren
 
 
 @app.get("/api/cron/campaigns")
-async def get_active_campaigns():
+async def get_active_campaigns(_admin: dict = Depends(require_admin_user)):
     """
     Get the status of active system-wide campaigns.
     """
@@ -9137,7 +9546,7 @@ async def get_active_campaigns():
 
 
 @app.post("/api/cron/scrape-gaps")
-def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request", dry_run: bool = False, priority: str = "all"):
+def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request", dry_run: bool = False, priority: str = "all", _admin: dict = Depends(require_admin_user)):
     """
     Cron endpoint to trigger the web scraper agent. Runs headlessly.
     Saves the markdown run report to a Firestore collection 'scraper_reports'.
@@ -9189,7 +9598,7 @@ def scrape_gaps_cron(limit: int = 50, target: str = "all", mode: str = "request"
 
 
 @app.get("/api/cron/audits")
-def get_weekly_audits(limit: int = 10):
+def get_weekly_audits(limit: int = 10, _admin: dict = Depends(require_admin_user)):
     """
     Get the list of weekly system audits from Firestore.
     """
@@ -9214,7 +9623,7 @@ def get_weekly_audits(limit: int = 10):
 
 
 @app.post("/api/cron/run-audit")
-def trigger_nightly_audit():
+def trigger_nightly_audit(_admin: dict = Depends(require_admin_user)):
     """
     GCP Cloud Scheduler trigger endpoint: runs nightly_data_audit.py and
     auto_resolve_audit.py as background subprocesses and returns immediately.
@@ -9256,7 +9665,7 @@ def trigger_nightly_audit():
 
 
 @app.get("/api/cron/reports")
-def get_scraper_reports(limit: int = 15):
+def get_scraper_reports(limit: int = 15, _admin: dict = Depends(require_admin_user)):
     """
     Get the list of recent scraper reports from Firestore.
     """
@@ -9342,7 +9751,7 @@ class BrainBulkAction(BaseModel):
     action: str # 'approved' or 'ignored'
 
 @app.post("/api/config/usmint-cookies")
-async def update_usmint_cookies(data: CookieUpdate):
+async def update_usmint_cookies(data: CookieUpdate, _admin: dict = Depends(require_admin_user)):
     """
     Update the USMint.gov cookie string in Firestore.
     """
@@ -9394,7 +9803,7 @@ def get_all_mint_releases():
 
 
 @app.post("/api/cron/sync-mint-releases")
-def trigger_sync_mint_releases():
+def trigger_sync_mint_releases(_admin: dict = Depends(require_admin_user)):
     """
     Cloud Scheduler trigger: syncs US Mint product catalog to Firestore.
     Called daily at 6:00 AM UTC (2:00 AM ET).
@@ -9411,7 +9820,7 @@ def trigger_sync_mint_releases():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/config/release-lock")
-def release_scraper_lock():
+def release_scraper_lock(_admin: dict = Depends(require_admin_user)):
     """
     Force release the scraper lock in Firestore.
     """
@@ -9431,7 +9840,7 @@ class ScrapeUrlRequest(BaseModel):
 
 
 @app.post("/api/scraper/scrape-url")
-def scrape_url_endpoint(data: ScrapeUrlRequest):
+def scrape_url_endpoint(data: ScrapeUrlRequest, _admin: dict = Depends(require_admin_user)):
     """
     Trigger scraping of a specific URL (e.g. Wikipedia Semiquincentennial page).
     """
@@ -9448,19 +9857,19 @@ def scrape_url_endpoint(data: ScrapeUrlRequest):
 # --- BRAIN ADMIN API ---------------------------------------------------------
 
 @app.get("/api/admin/brain/knowledge")
-async def get_brain_knowledge():
+async def get_brain_knowledge(_admin: dict = Depends(require_admin_user)):
     """Returns all documents absorbed into the Brain's Knowledge Base."""
     docs = db.collection('brain_knowledge_base').order_by('absorbed_at', direction=firestore.Query.DESCENDING).stream()
     return [{"id": d.id, **d.to_dict()} for d in docs]
 
 @app.get("/api/admin/brain/suggestions")
-async def get_brain_suggestions():
+async def get_brain_suggestions(_admin: dict = Depends(require_admin_user)):
     """Returns pending self-healing suggestions from the Brain."""
     docs = db.collection('brain_suggestions').where('status', '==', 'pending').stream()
     return [{"id": d.id, **d.to_dict()} for d in docs]
 
 @app.post("/api/admin/brain/approve")
-async def approve_brain_suggestion(req: BrainSuggestionApprove):
+async def approve_brain_suggestion(req: BrainSuggestionApprove, _admin: dict = Depends(require_admin_user)):
     """Approves or rejects a Brain self-healing suggestion."""
     doc_ref = db.collection('brain_suggestions').document(req.suggestion_id)
     doc = doc_ref.get()
@@ -9485,7 +9894,7 @@ async def approve_brain_suggestion(req: BrainSuggestionApprove):
         return {"status": "rejected"}
 
 @app.post("/api/admin/brain/suggestions/bulk")
-async def bulk_approve_suggestions(req: BrainBulkAction):
+async def bulk_approve_suggestions(req: BrainBulkAction, _admin: dict = Depends(require_admin_user)):
     """Bulk approves or ignores multiple suggestions."""
     batch = db.batch()
     status_val = 'approved' if req.action == 'approved' else 'rejected'
@@ -9501,7 +9910,7 @@ async def bulk_approve_suggestions(req: BrainBulkAction):
     return {"status": f"bulk_{req.action}_complete", "count": len(req.suggestion_ids)}
 
 @app.post("/api/admin/brain/suggestions/rescore")
-async def rescore_unscored_suggestions():
+async def rescore_unscored_suggestions(_admin: dict = Depends(require_admin_user)):
     """
     Re-evaluates all pending suggestions that have no confidence score.
     Sends them to Gemini in a single batch and writes scores back to Firestore.
@@ -9570,7 +9979,7 @@ No markdown, no explanation -- raw JSON only."""
     return {"status": "rescore_complete", "scored": updated, "total": len(unscored)}
 
 @app.post("/api/admin/brain/reprocess")
-async def reprocess_knowledge(req: BrainKnowledgeUpdate):
+async def reprocess_knowledge(req: BrainKnowledgeUpdate, _admin: dict = Depends(require_admin_user)):
     """Triggers a re-process of a document with new instructions."""
     doc_ref = db.collection('brain_knowledge_base').document(req.doc_id)
     doc = doc_ref.get()
@@ -9589,7 +9998,7 @@ async def reprocess_knowledge(req: BrainKnowledgeUpdate):
 
 
 @app.post("/api/admin/brain/sync_canon")
-async def sync_brain_canon_to_gcp():
+async def sync_brain_canon_to_gcp(_admin: dict = Depends(require_admin_user)):
     """
     On-demand sync:
     1. Formats approved/high-confidence Brain docs into Markdown payloads and uploads to GCS.
@@ -10246,7 +10655,7 @@ class DailySnapshotRequest(BaseModel):
     user_id: str
 
 @app.post("/api/portfolio/snapshot/daily")
-async def create_daily_portfolio_snapshot(req: DailySnapshotRequest):
+async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dict = Depends(require_admin_user)):
     try:
         from datetime import datetime, timezone
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -10348,7 +10757,7 @@ class GreysheetCredentialsUpdate(BaseModel):
     api_token: str
 
 @app.post("/api/config/greysheet-credentials")
-async def update_greysheet_credentials(data: GreysheetCredentialsUpdate):
+async def update_greysheet_credentials(data: GreysheetCredentialsUpdate, _admin: dict = Depends(require_admin_user)):
     """
     Update the Greysheet API key and token in Firestore.
     """
@@ -10366,7 +10775,7 @@ class BatchActionRequest(BaseModel):
     user_id: str
 
 @app.post("/api/greysheet/batch-resolve")
-async def batch_resolve_greysheet_coins(req: BatchActionRequest):
+async def batch_resolve_greysheet_coins(req: BatchActionRequest, _admin: dict = Depends(require_admin_user)):
     """
     Resolves GSIDs for all coins in a user's inventory that do not have one yet.
     Uses Firestore write batches in chunks of 500 for high efficiency.
@@ -10426,7 +10835,7 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/greysheet/batch-refresh")
-async def batch_refresh_greysheet_prices(req: BatchActionRequest):
+async def batch_refresh_greysheet_prices(req: BatchActionRequest, _admin: dict = Depends(require_admin_user)):
     """
     Refreshes pricing for all coins in a user's inventory that have a GSID.
     Groups coins by unique GSID to minimize network calls, and uses Firestore write batches.
@@ -10585,7 +10994,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest):
 # --- PLAYWRIGHT SPEC ENDPOINT ALIGNMENTS ------------------------------------------
 
 @app.get("/api/greysheet/config")
-async def get_greysheet_config():
+async def get_greysheet_config(_admin: dict = Depends(require_admin_user)):
     """
     Returns metadata about the active Greysheet integration configuration.
     """
@@ -10617,16 +11026,16 @@ class BatchValuationRequest(BaseModel):
     coin_ids: Optional[List[str]] = None
 
 @app.post("/api/greysheet/batch")
-async def execute_batch_valuation(req: BatchValuationRequest):
+async def execute_batch_valuation(req: BatchValuationRequest, _admin: dict = Depends(require_admin_user)):
     """
     Executes GSID mapping and pricing refresh in a unified batch operation.
     """
     try:
         # Run resolution first
         resolve_req = BatchActionRequest(user_id=req.user_id)
-        resolve_res = await batch_resolve_greysheet_coins(resolve_req)
+        resolve_res = await batch_resolve_greysheet_coins(resolve_req, _admin=_admin)
         # Then refresh pricing
-        refresh_res = await batch_refresh_greysheet_prices(resolve_req)
+        refresh_res = await batch_refresh_greysheet_prices(resolve_req, _admin=_admin)
         return {
             "status": "success",
             "resolution": resolve_res,
@@ -10839,7 +11248,7 @@ class ParallelBatchIngestRequest(BaseModel):
     concurrency_limit: Optional[int] = 4
 
 @app.post("/api/ingestion/batch_async")
-async def start_parallel_batch_ingestion(req: ParallelBatchIngestRequest):
+async def start_parallel_batch_ingestion(req: ParallelBatchIngestRequest, _admin: dict = Depends(require_admin_user)):
     """
     Spawns asynchronous parallel ingestion across multiple coin documents or photo pages.
     """

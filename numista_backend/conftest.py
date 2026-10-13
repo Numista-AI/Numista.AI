@@ -3,6 +3,10 @@ import sys
 from unittest.mock import MagicMock, patch
 
 os.environ["DISABLE_PROXIES"] = "true"
+# Allow monkeypatch-based legacy tests to bypass the default-deny auth middleware.
+# ONLY active when K_SERVICE and ENVIRONMENT!=production are unset (i.e., local/CI only).
+# Tests that validate the 401 behavior should use dependency_overrides or set K_SERVICE.
+os.environ.setdefault("ALLOW_UNAUTHENTICATED", "1")
 
 import google.auth
 import google.cloud.firestore

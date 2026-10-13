@@ -87,25 +87,42 @@ def test_pricing_endpoint():
 def test_deals_endpoints():
     # Auth guard: /api/greysheet/deals and /api/greysheet/deals/refresh
     # now require a Firebase Bearer token — unauthenticated callers must receive 401.
-    response = client.get("/api/greysheet/deals")
-    assert response.status_code == 401, (
-        f"Expected 401 for unauthenticated /api/greysheet/deals, got {response.status_code}")
+    # Use dependency_overrides to simulate missing auth (ALLOW_UNAUTHENTICATED=1 is set
+    # in conftest for legacy monkeypatch tests, so we must explicitly override the dep).
+    from routes.deps import get_current_user
+    from fastapi import HTTPException as _HTTPException
 
-    response = client.post("/api/greysheet/deals/refresh")
-    assert response.status_code == 401, (
-        f"Expected 401 for unauthenticated /api/greysheet/deals/refresh, got {response.status_code}")
+    async def _unauthenticated():
+        raise _HTTPException(status_code=401, detail="Authentication token missing or invalid")
+
+    app.dependency_overrides[get_current_user] = _unauthenticated
+    try:
+        response = client.get("/api/greysheet/deals")
+        assert response.status_code == 401, (
+            f"Expected 401 for unauthenticated /api/greysheet/deals, got {response.status_code}")
+
+        response = client.post("/api/greysheet/deals/refresh")
+        assert response.status_code == 401, (
+            f"Expected 401 for unauthenticated /api/greysheet/deals/refresh, got {response.status_code}")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 def test_daily_snapshot_endpoint():
-    # Test POST /api/portfolio/snapshot/daily
-    # We will trigger snapshot for a test user
-    payload = {"user_id": "test_user_snapshot@numista.ai"}
-    response = client.post("/api/portfolio/snapshot/daily", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "success"
-    assert "snapshot" in data
-    assert "totalValue" in data["snapshot"]
-    assert "categories" in data["snapshot"]
+    from routes.deps import require_admin_user
+    app.dependency_overrides[require_admin_user] = lambda: {"uid": "admin_uid", "email": "admin@numista.ai", "admin": True}
+    try:
+        # Test POST /api/portfolio/snapshot/daily
+        # We will trigger snapshot for a test user
+        payload = {"user_id": "test_user_snapshot@numista.ai"}
+        response = client.post("/api/portfolio/snapshot/daily", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "snapshot" in data
+        assert "totalValue" in data["snapshot"]
+        assert "categories" in data["snapshot"]
+    finally:
+        app.dependency_overrides.pop(require_admin_user, None)
 
 def test_advanced_api_level_default(monkeypatch):
     """Verify that GreysheetService requests include apiLevel=advanced."""
