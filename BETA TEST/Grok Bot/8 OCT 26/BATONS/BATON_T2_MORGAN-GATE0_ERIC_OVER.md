@@ -1,20 +1,20 @@
-# BATON T2_MORGAN-GATE0
-Holder: AGCOS  Proword: WAIT-OUT
-Since: 13 Oct 2026 ~2:45 PM ET
-Task: V3 PASS on dev (COS_SCORE_MORGAN_GATE0_BUILD_V3.md). WAIT-OUT: parked for one Eric YES bundle. T1B+T3b now PASS; waiting on T3 F1-F2 then GROKCOS will route ERIC for YES.
+﻿# BATON T2_MORGAN-GATE0
+Holder: ERIC  Proword: OVER
+Since: 13 Oct 2026 ~3:35 PM ET
+Task: V3 PASS (prior). T3 F1-F2 now PASS. ERIC: type YES to deploy one bundle T1B+T2+T3+T3b (all PASS on dev). Pre-deploy: confirm Firebase admin:true claim. No deploy / live writes without typed YES.
 No deploy / live writes without Eric typed YES.
 ## Log
 - 12 Oct 2026 4:47 PM ET GROKCOS issued baton.
 
 ## Log
-2026-10-12 17:11 ET â€” AG CoS: T1 EXECUTE_DONE landed. T2 Morgan Gate 0 build starting on dev.
+2026-10-12 17:11 ET Ã¢â‚¬â€ AG CoS: T1 EXECUTE_DONE landed. T2 Morgan Gate 0 build starting on dev.
 
 ## Log
-2026-10-12 17:29 ET â€” AG CoS: EXECUTE_DONE_MORGAN_GATE0.md filed. Commit 0b436c97. G0-1 through G0-9, 456 tests pass. Passing to Grok CoS to score code.
+2026-10-12 17:29 ET Ã¢â‚¬â€ AG CoS: EXECUTE_DONE_MORGAN_GATE0.md filed. Commit 0b436c97. G0-1 through G0-9, 456 tests pass. Passing to Grok CoS to score code.
 - 12 Oct 2026 5:38 PM ET GROKCOS scored build 0b436c97 ITERATE (COS_SCORE_MORGAN_GATE0_BUILD.md; 456/456 pytest on my run). 6 required fixes: update_coin + undo tool still write without Confirm, get_coin_details leaks money fields, >50 summary skips delimiter, Privacy Mode unchecked, confirm not transactional. Passing to AGCOS. See RADIO NET\NET-009.
 
 ## Log
-2026-10-12 19:49 ET â€” AG CoS: All 6 ITERATE fixes applied. Commit 9769dac5. 474/474 pytest pass. EXECUTE_DONE_MORGAN_GATE0_V2.md filed. Passing to Grok CoS to score V2.
+2026-10-12 19:49 ET Ã¢â‚¬â€ AG CoS: All 6 ITERATE fixes applied. Commit 9769dac5. 474/474 pytest pass. EXECUTE_DONE_MORGAN_GATE0_V2.md filed. Passing to Grok CoS to score V2.
 - 12 Oct 2026 8:05 PM ET GROKCOS scored V2 9769dac5 ITERATE (COS_SCORE_MORGAN_GATE0_BUILD_V2.md; 474/474 pytest on my run). Required: money strip misses real field names (AI Estimated Value, Purchase Cost, Melt Value, Price Paid) so values reach the AI; Privacy TODO in ai_routes too; clear message on claimed-but-failed proposal. Passing to AGCOS. See RADIO NET\NET-014.
 
 
@@ -27,4 +27,8 @@ No deploy / live writes without Eric typed YES.
 
 
 ## Log
-2026-10-13 ~15:15 ET � AG CoS: T2 already PASS (per NET-029). T3 F1+F2 now done. Passing T2+T3 together to Grok CoS for YES bundle per NET-029 instruction.
+2026-10-13 ~15:15 ET — AG CoS: T2 already PASS (per NET-029). T3 F1+F2 now done. Passing T2+T3 together to Grok CoS for YES bundle per NET-029 instruction.
+
+
+- 13 Oct 2026 ~3:35 PM ET GROKCOS: T3 F1+F2 PASS. Assembled YES bundle. Passing baton to ERIC for typed YES (T1B+T2+T3+T3b). See RADIO NET\NET-031. No stall.
+
