@@ -149,6 +149,9 @@ _PUBLIC_PATHS: set = {
     "/api/mint-releases/all",
     # Attorney estate read (token-gated inside handler, not Firebase Bearer)
     "/api/estate/attorney-report",
+    # Metal spot prices — called unauthenticated from home_dashboard.dart before sign-in;
+    # data is non-sensitive (yfinance commodity prices, no PII).
+    "/api/spot_prices",
 }
 
 def _is_public(path: str) -> bool:
