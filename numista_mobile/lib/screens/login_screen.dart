@@ -51,6 +51,8 @@ class _LoginScreenState extends State<LoginScreen>
   final FocusNode _pinKeyboardFocus = FocusNode();
 
   void _onKeypadDigit(String d) {
+    // Re-request focus so physical keyboard continues to work after on-screen keypad tap
+    _pinKeyboardFocus.requestFocus();
     final current = _pinCtrl.text;
     if (current.length < 6) {
       final next = current + d;
@@ -624,10 +626,16 @@ class _LoginScreenState extends State<LoginScreen>
               },
               child: Column(
                 children: [
-                  _PinBoxRow(
-                    filled: List.generate(6, (i) => i < _pinCtrl.text.length),
-                    digits: _pinDigits,
-                    showDigits: _pinBoxVisible,
+                  // T3 Fix 1b: GestureDetector re-requests focus so physical keyboard
+                  // works even after user tapped the email TextField (which steals focus).
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _pinKeyboardFocus.requestFocus(),
+                    child: _PinBoxRow(
+                      filled: List.generate(6, (i) => i < _pinCtrl.text.length),
+                      digits: _pinDigits,
+                      showDigits: _pinBoxVisible,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Center(
@@ -1014,7 +1022,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(width: 10),
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(label, style: TextStyle(color: color, fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -1034,7 +1042,7 @@ class _StatBadge extends StatelessWidget {
       children: [
         Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1565C0))),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3), textAlign: TextAlign.center),
+        Text(label, style: const TextStyle(fontSize: NumistaTheme.textBodySm, color: Color(0xFF64748B), height: 1.3), textAlign: TextAlign.center),
       ],
     );
   }
@@ -1196,7 +1204,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
             const SizedBox(height: 6),
             Text(
               'Upload obverse (front) and reverse (back) photos to see AI identification in action.',
-              style: TextStyle(color: _isDark ? Colors.white60 : const Color(0xFF5A5C69), fontSize: 13),
+              style: TextStyle(color: _isDark ? Colors.white60 : const Color(0xFF5A5C69), fontSize: NumistaTheme.textBodySm),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -1223,7 +1231,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.red.withAlpha(50)),
                 ),
-                child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                child: Text(_error!, style: TextStyle(color: Colors.redAccent, fontSize: NumistaTheme.textBodySm)),
               ),
               const SizedBox(height: 16),
             ],

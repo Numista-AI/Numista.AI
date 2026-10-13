@@ -87,13 +87,25 @@ def test_pricing_endpoint():
 def test_deals_endpoints():
     # Auth guard: /api/greysheet/deals and /api/greysheet/deals/refresh
     # now require a Firebase Bearer token — unauthenticated callers must receive 401.
-    response = client.get("/api/greysheet/deals")
-    assert response.status_code == 401, (
-        f"Expected 401 for unauthenticated /api/greysheet/deals, got {response.status_code}")
+    # Use dependency_overrides to simulate missing auth (ALLOW_UNAUTHENTICATED=1 is set
+    # in conftest for legacy monkeypatch tests, so we must explicitly override the dep).
+    from routes.deps import get_current_user
+    from fastapi import HTTPException as _HTTPException
 
-    response = client.post("/api/greysheet/deals/refresh")
-    assert response.status_code == 401, (
-        f"Expected 401 for unauthenticated /api/greysheet/deals/refresh, got {response.status_code}")
+    async def _unauthenticated():
+        raise _HTTPException(status_code=401, detail="Authentication token missing or invalid")
+
+    app.dependency_overrides[get_current_user] = _unauthenticated
+    try:
+        response = client.get("/api/greysheet/deals")
+        assert response.status_code == 401, (
+            f"Expected 401 for unauthenticated /api/greysheet/deals, got {response.status_code}")
+
+        response = client.post("/api/greysheet/deals/refresh")
+        assert response.status_code == 401, (
+            f"Expected 401 for unauthenticated /api/greysheet/deals/refresh, got {response.status_code}")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 def test_daily_snapshot_endpoint():
     # Test POST /api/portfolio/snapshot/daily

@@ -270,7 +270,11 @@ async def api_morgan_confirm(
         target_ref = coin_col_ref.document(coin_id)
         target_snap = target_ref.get()
         if not target_snap.exists:
-            raise HTTPException(status_code=404, detail="Target coin not found in collection")
+            logger.warning(f"Claimed edit proposal {req.proposal_id} but coin {coin_id} no longer in collection")
+            raise HTTPException(
+                status_code=404,
+                detail="That coin is no longer in your binder — it may have been deleted. The proposal has been used and cannot be retried."
+            )
         before_snapshot = target_snap.to_dict() or {}
         # snapshot for edit proposals has structure {"before": {...}, "changes": {...}}
         changes = snapshot.get("changes") if isinstance(snapshot.get("changes"), dict) else snapshot
@@ -285,7 +289,11 @@ async def api_morgan_confirm(
         target_ref = coin_col_ref.document(coin_id)
         target_snap = target_ref.get()
         if not target_snap.exists:
-            raise HTTPException(status_code=404, detail="Target coin not found in collection")
+            logger.warning(f"Claimed delete proposal {req.proposal_id} but coin {coin_id} no longer in collection")
+            raise HTTPException(
+                status_code=404,
+                detail="That coin is no longer in your binder — it may have already been deleted. The proposal has been used and cannot be retried."
+            )
         before_snapshot = target_snap.to_dict() or {}
         # G0-3 soft delete: write to trash first
         trash_ref = db.collection("users").document(target_email).collection("trash").document(coin_id)

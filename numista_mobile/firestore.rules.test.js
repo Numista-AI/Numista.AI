@@ -297,3 +297,72 @@ test("ALLOW: owner can still write to coins (writable subcollection)", async () 
   );
 });
 
+
+// =============================================================================
+// ADDENDUM C — Entitlement field protection on users/{email} (T1B + T3b V3)
+// Tests that owner cannot set tier/stripe_tier/beta_tester on their own user doc.
+// =============================================================================
+
+const ownerEmail = "testowner@numista.ai";
+const userDocPath = `users/${ownerEmail}`;
+
+test("DENY: owner cannot set 'tier' on own user doc (P0 entitlement field)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", tier: "family_estate" })
+  );
+});
+
+test("DENY: owner cannot set 'stripe_tier' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", stripe_tier: "enterprise" })
+  );
+});
+
+test("DENY: owner cannot set 'beta_tester' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", beta_tester: true })
+  );
+});
+
+test("DENY: owner cannot set 'is_lifetime_family_estate' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", is_lifetime_family_estate: true })
+  );
+});
+
+test("DENY: owner cannot set 'admin' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", admin: true })
+  );
+});
+
+test("ALLOW: owner can create own user doc without entitlement fields", async () => {
+  // Clear any existing doc first via admin context
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    const ref = doc(adminDb, userDocPath);
+    try { await ref.delete(); } catch (_) {}
+  });
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(doc(db, userDocPath), {
+      display_name: "Alice",
+      created_at: new Date().toISOString(),
+    })
+  );
+});
+
+test("DENY: coin create with is_demo: true still blocked by coin-level rule", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, coinPath("demo_test")), {
+      Year: "2025",
+      is_demo: true,
+    })
+  );
+});

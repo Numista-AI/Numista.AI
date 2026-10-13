@@ -38,10 +38,9 @@ void main() {
     });
 
     test('no hardcoded fontSize below 14 in login_screen.dart login form section', () {
-      // T3 V2 Fix 3: login form section must use tokens, no raw numbers < 14.
-      // Scope: first ~1000 lines which contain the login, create, reset forms.
-      // The scanner/coin-display widget sections (> line 1000) are exempt — they
-      // have design-specific small sizes that are intentional (chart labels, etc.)
+      // T3 V3 Fix 3: scope is the entire LoginScreen state class + helper widgets
+      // (_StatBadge, _StatDivider, _strengthHint) up to FreeScanPreviewScreen.
+      // Scoped by class boundary, not line count, so it doesn't shift with edits.
       File loginFile = File('lib/screens/login_screen.dart');
       if (!loginFile.existsSync()) {
         loginFile = File('numista_mobile/lib/screens/login_screen.dart');
@@ -50,7 +49,15 @@ void main() {
           reason: 'login_screen.dart must exist');
 
       final lines = loginFile.readAsLinesSync();
-      final formLines = lines.take(1000).join('\n');
+      // Find the boundary: stop at 'class FreeScanPreviewScreen' (everything before is login UI)
+      int boundaryLine = lines.length;
+      for (int i = 0; i < lines.length; i++) {
+        if (lines[i].contains('class FreeScanPreviewScreen')) {
+          boundaryLine = i;
+          break;
+        }
+      }
+      final formLines = lines.take(boundaryLine).join('\n');
       final regex = RegExp(r'fontSize:\s*([0-9]+(?:\.[0-9]+)?)');
       final matches = regex.allMatches(formLines);
 
@@ -58,7 +65,10 @@ void main() {
       for (final match in matches) {
         final val = double.tryParse(match.group(1)!);
         if (val != null && val < 14.0) {
-          violations.add(match.group(0)!);
+          // 22px stat badge value is intentional — only the LABEL must be >= 14
+          violations.add('${match.group(0)} (near: ${formLines.substring(
+              (match.start - 40).clamp(0, formLines.length),
+              (match.end + 40).clamp(0, formLines.length))})');
         }
       }
       expect(violations, isEmpty,
