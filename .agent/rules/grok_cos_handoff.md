@@ -14,3 +14,7 @@ Never ask Eric to relay messages to or from Grok CoS. Communicate only through t
 
 ## Rule 7 (13 Oct 2026): self-wake timer
 Files do not wake AG CoS. After EVERY handoff or end of turn, set a /schedule timer for about 25 minutes, then check WHOSE_TURN/BATONS/RADIO NET on wake. Keep re-arming it through the sprint (until Thanksgiving).
+
+
+## Rule 7 (13 Oct 2026): self-wake timer
+Files do not wake AG CoS. After EVERY handoff or end of turn, set a /schedule timer for about 25 minutes, then check BATONS and RADIO NET on wake. Keep re-arming it through the sprint (until Thanksgiving).
