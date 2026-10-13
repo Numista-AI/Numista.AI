@@ -5,12 +5,13 @@ Tier limits: Pro = 5 sub-accounts max, Estate/Sovereign/Power User = Unlimited.
 Persists data to Firestore: /users/{parent_email}/subaccounts/{child_id}
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import time
 import logging
 from google.cloud import firestore
+from routes.deps import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def _get_parent_tier(db: firestore.Client, parent_email: str) -> str:
 
 
 @router.post("/subaccounts", response_model=SubAccountResponse)
-def create_subaccount(req: SubAccountCreateRequest):
+def create_subaccount(req: SubAccountCreateRequest, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     Create a new family sub-account under a parent master email in Firestore.
     Enforces tier limits: Pro tier max 5 sub-accounts, Estate/Sovereign tier unlimited.
@@ -93,7 +94,7 @@ def create_subaccount(req: SubAccountCreateRequest):
 
 
 @router.get("/subaccounts", response_model=List[SubAccountResponse])
-def get_subaccounts(parent_email: str):
+def get_subaccounts(parent_email: str, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     List all family sub-accounts for a parent email from Firestore.
     """
@@ -105,7 +106,7 @@ def get_subaccounts(parent_email: str):
 
 
 @router.delete("/subaccounts/{child_id}")
-def delete_subaccount(child_id: str, parent_email: str):
+def delete_subaccount(child_id: str, parent_email: str, _user: Dict[str, Any] = Depends(get_current_user)):
     """
     Delete a sub-account by child_id from Firestore.
     """

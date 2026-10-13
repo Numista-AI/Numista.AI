@@ -116,6 +116,9 @@ async def api_ai_chat(req: ChatTurnRequest, user: Dict[str, Any] = Depends(get_c
     try:
         val_keywords = ["worth", "value", "cost", "price", "how much"]
         has_val_keyword = any(kw in (req.query or "").lower() for kw in val_keywords)
+        # TODO REQ-026: also check user privacy_mode setting when built — the keyword gate
+        # is the ONLY financial gate here until REQ-026 ships. Ensure strip_financial_fields()
+        # is called on all coin tool results regardless of this gate.
         stats_doc = db.collection("users").document(user_email).collection("summary").document("stats").get()
         if stats_doc.exists:
             stats = stats_doc.to_dict() or {}

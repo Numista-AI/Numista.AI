@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from google.cloud import storage
-from routes.deps import db, logger
+from routes.deps import db, logger, get_current_user
 
 router = APIRouter(prefix="/api/v1/estate", tags=["Estate Planning & Attorney Portal"])
 
@@ -59,7 +59,7 @@ def iter_gcs_blob(bucket_name: str, blob_path: str, chunk_size: int = 256 * 1024
 # ==============================================================================
 
 @router.post("/generate-attorney-link")
-async def generate_attorney_link(req: GenerateAttorneyLinkRequest):
+async def generate_attorney_link(req: GenerateAttorneyLinkRequest, _user: dict = Depends(get_current_user)):
     """
     Generates a secure 32-character url-safe token and creates a frozen snapshot
     in the root collection estate_reports/{token}.

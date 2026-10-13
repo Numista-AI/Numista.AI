@@ -428,14 +428,31 @@ def test_financial_stripped_from_inventory():
 
 
 def test_get_coin_details_strips_financial_by_default():
-    """G0-6 V2: execute_get_coin_details strips cost/value by default."""
+    """G0-6 V3: execute_get_coin_details strips real Firestore field names by default.
+    Tests the actual names used in Firestore: 'AI Estimated Value', 'Purchase Cost',
+    'Melt Value', 'Price Paid' (snake_case variants too).
+    Mutation proof: if strip_financial_fields() is disabled these fields appear."""
     mock_db = MagicMock()
     doc_snap = MagicMock()
     doc_snap.exists = True
     doc_snap.to_dict.return_value = {
-        "Year": "2026", "Denomination": "Cent",
-        "Cost": "$0.01", "ai_estimated_value": "$0.10", "estimated_value": "$0.10",
-        "Personal Notes": "nice coin"
+        "Year": "2026", "Denomination": "Cent", "Mint": "P",
+        # Real Firestore field names (as written by the backend)
+        "AI Estimated Value": "$10.00",
+        "Purchase Cost": "$1.50",
+        "Melt Value": "$0.027",
+        "Price Paid": "$1.25",
+        # Legacy / snake_case variants that must also be stripped
+        "ai_estimated_value": "$10.00",
+        "purchase_cost": "1.50",
+        "melt_value": "0.027",
+        "estimated_value": "$10.00",
+        "Cost": "$1.50",
+        "cost_basis": "$1.25",
+        "P&L": "+$8.50",
+        "profit_loss": "8.50",
+        # Non-financial field — must NOT be stripped
+        "Personal Notes": "nice coin",
     }
     doc_ref = MagicMock()
     doc_ref.get.return_value = doc_snap
@@ -446,10 +463,25 @@ def test_get_coin_details_strips_financial_by_default():
 
     assert res.get("status") == "success"
     coin = res["coin"]
-    assert "Cost" not in coin
+    # Real Firestore field names must be stripped
+    assert "AI Estimated Value" not in coin, "Real field name 'AI Estimated Value' not stripped"
+    assert "Purchase Cost" not in coin, "Real field name 'Purchase Cost' not stripped"
+    assert "Melt Value" not in coin, "Real field name 'Melt Value' not stripped"
+    assert "Price Paid" not in coin, "Real field name 'Price Paid' not stripped"
+    # Legacy / snake_case also stripped
     assert "ai_estimated_value" not in coin
+    assert "purchase_cost" not in coin
+    assert "melt_value" not in coin
     assert "estimated_value" not in coin
+    assert "Cost" not in coin
+    assert "cost_basis" not in coin
+    assert "P&L" not in coin
+    assert "profit_loss" not in coin
+    # Non-financial fields survive
     assert coin["Year"] == "2026"
+    assert coin["Denomination"] == "Cent"
+    # Notes wrapped in delimiter (not stripped)
+    assert "Personal Notes" in coin
 
 
 # ─── G0-7: Prompt Injection Guards ────────────────────────────────────────────

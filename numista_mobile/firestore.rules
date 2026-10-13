@@ -95,25 +95,40 @@ service cloud.firestore {
       allow write: if false;  // server-only writes via Admin SDK
     }
 
-    // Narrowed wildcard: excludes server-only subcollections that must not be
-    // client-writable (settings, estate_reports, morgan_action_log, trash, audit_log).
-    // This fixes the T3b ITERATE issue where the broad {document=**} wildcard
-    // silently overrode the more-specific settings/write:false rule above.
-    // NOTE: coins/{coinId} and profile have more-specific match blocks above
-    //       that enforce field-level guards. The wildcard below covers all other
-    //       subcollections (wishlist, reviews, etc.).
+    // Server-only entitlement fields — owner MUST NOT be able to set these.
+    // The server (Admin SDK) sets them; any client write that touches them is denied.
+    // On create: those fields must be absent (or default false/null).
+    // On update: the diff must not include any of these keys.
+    function _serverOnlyKeys() {
+      return ['tier', 'stripe_tier', 'beta_tester', 'is_lifetime_family_estate',
+              'is_ai_qc_account', 'is_bot_account', 'sandbox_cleared', 'admin'];
+    }
+    function _noEntitlementChange() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(_serverOnlyKeys());
+    }
+    function _noEntitlementOnCreate() {
+      return !request.resource.data.keys().hasAny(_serverOnlyKeys());
+    }
+
     match /users/{email} {
-      allow read, write: if isOwner(email);
+      allow read: if isOwner(email);
+      // Owner may create their own user doc only if entitlement fields are absent.
+      allow create: if isOwner(email) && _noEntitlementOnCreate();
+      // Owner may update only if they don't touch any entitlement field.
+      allow update: if isOwner(email) && _noEntitlementChange();
+      // Deletes not allowed from client (would lose all data).
+      allow delete: if false;
     }
     // Subcollections the owner CAN read+write (wishlist, review_queue, morgan_proposals, etc.)
+    // coins and profile are excluded because they have more-specific blocks above.
     match /users/{email}/{sub}/{docId} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile']);
     }
     // Nested docs within writable subcollections
     match /users/{email}/{sub}/{docId}/{rest=**} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile']);
     }
     // Server-only subcollections — owner may read but NOT write (server SA only)
     match /users/{email}/settings/{docId} {

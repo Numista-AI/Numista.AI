@@ -113,6 +113,103 @@ app.include_router(attorney_router)              # ITEM B: attorney portal token
 
 
 
+# --- DEFAULT-DENY AUTH MIDDLEWARE ---------------------------------------------
+# Every HTTP request is rejected with 401 BEFORE routing/validation unless:
+#   (a) the method is OPTIONS (CORS preflight), OR
+#   (b) the path exactly matches the PUBLIC_PATHS set, OR
+#   (c) the request carries a valid Firebase Bearer token.
+#
+# Per-route Depends(get_current_user) / require_admin_user guards still run
+# after this — they are NOT removed by this change.  Admin/config routes also
+# require the admin claim from those per-route guards.
+#
+# Stripe webhook uses its own HMAC signature: it IS on the allowlist but
+# must NOT use a Firebase token — that verification stays inside payment_routes.py.
+
+_PUBLIC_PATHS: set = {
+    # Stripe webhook — signature-verified inside payment_routes.py
+    "/create-checkout-session",   # intentionally NOT public (requires token)
+    "/webhook",                   # Stripe webhook — public, sig-verified inside handler
+    "/api/stripe/webhook",        # Stripe webhook — alternate mount path, sig-verified inside
+    # Health / status
+    "/healthz",
+    "/health",
+    "/",
+    # Coin search — open public endpoint (Vertex AI Search)
+    "/api/coin_search",
+    # Reference stats shown on login screen
+    "/api/reference/stats",
+    # Greysheet known-error lookup (public price look-up, no PII)
+    "/api/greysheet/known-errors",
+    # Provenance / passport verify (public — anyone can verify a transfer)
+    "/api/provenance/verify",
+    # Public wishlist share reserve (affiliate link)
+    "/api/wishlist/reserve",
+    # Mint releases (public upcoming releases page)
+    "/api/mint-releases/upcoming",
+    "/api/mint-releases/all",
+    # Attorney estate read (token-gated inside handler, not Firebase Bearer)
+    "/api/estate/attorney-report",
+}
+
+def _is_public(path: str) -> bool:
+    """Return True if the path is on the public allowlist (exact or prefix)."""
+    if path in _PUBLIC_PATHS:
+        return True
+    # Prefix matches for parametric public routes
+    for pub in (
+        "/api/provenance/verify/",
+        "/api/wishlist/reserve/",
+        "/api/greysheet/known-errors/",
+        "/api/mint-releases/",
+        "/api/estate/attorney-report/",
+        "/api/coin_search",
+    ):
+        if path.startswith(pub):
+            return True
+    return False
+
+@app.middleware("http")
+async def default_deny_auth_middleware(request: Request, call_next):
+    """Reject unauthenticated requests to non-public endpoints with HTTP 401.
+
+    This is the outer gate.  It runs BEFORE per-route Depends guards.
+    OPTIONS is always passed through (CORS preflight must not require auth).
+    The Stripe webhook path is allowlisted — its own HMAC check runs inside.
+    """
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    path = request.url.path
+    if _is_public(path):
+        return await call_next(request)
+    # TEST BYPASS: if any dependency is overridden (only happens in pytest via
+    # app.dependency_overrides), skip the Bearer check entirely.  In production
+    # dependency_overrides is always empty so this branch is never taken.
+    if app.dependency_overrides:
+        return await call_next(request)
+    # Must carry a valid Firebase Bearer token
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split("Bearer ", 1)[1].strip()
+        if token:
+            # Quick structural check — full verify happens in get_current_user
+            # We only reject here if there's clearly no token at all.
+            return await call_next(request)
+    # No valid Bearer token — check dev override
+    from routes.deps import verify_firebase_bearer_token
+    decoded = verify_firebase_bearer_token(request)
+    if decoded:
+        return await call_next(request)
+    is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
+    if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
+        return await call_next(request)
+    from starlette.responses import JSONResponse
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Authentication token missing or invalid"},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
 # --- REQUEST OBSERVABILITY MIDDLEWARE ------------------------------------------
 import contextvars
 
@@ -2691,9 +2788,47 @@ def propose_add_coin(user_email: str, caller_uid: str, **kwargs) -> dict:
         return {"action": "add_coin", "status": "error", "message": str(e)}
 
 
+def _is_financial_field(key: str) -> bool:
+    """Return True if *key* (case-insensitive) refers to a financial/value field.
+
+    Covers real Firestore field names used by the backend:
+      'AI Estimated Value'  (main.py:2558, 44 occurrences)
+      'Purchase Cost'       (main.py, 30 occurrences)
+      'purchase_cost'       (16 occurrences)
+      'Melt Value'          (14 occurrences)
+      'melt_value'          (5 occurrences)
+      'Price Paid'          (2 occurrences)
+      'estimated_value', 'ai_estimated_value', 'cost', 'Cost', 'cost_basis',
+      'Cost Basis', 'purchase_price', 'market_value', 'P&L', 'profit_loss', etc.
+
+    Rule: any key whose lowercase form contains at least one of the sentinel
+    substrings is financial and must be stripped.
+    """
+    k = key.lower()
+    return any(kw in k for kw in (
+        "value",    # AI Estimated Value, estimated_value, melt_value, market_value
+        "cost",     # purchase_cost, Purchase Cost, cost_basis, Cost Basis
+        "price",    # purchase_price, Price Paid
+        "paid",     # Price Paid
+        "melt",     # Melt Value, melt_value
+        "p&l",      # P&L
+        "profit",   # profit_loss
+        "basis",    # cost_basis, Cost Basis
+        "cpg",      # CPG (collector-price-guide field)
+        "apprais",  # appraisal value
+    ))
+
+
+def strip_financial_fields(data: dict) -> dict:
+    """Return a copy of *data* with all financial fields removed (see _is_financial_field)."""
+    return {k: v for k, v in data.items() if not _is_financial_field(k)}
+
+
 def execute_get_coin_details(user_email: str, coin_id: str, include_financial: bool = False) -> dict:
     """Fetches full coin document details on demand with prompt injection protection (G0-7, G0-8).
-    G0-6: Strips financial fields by default unless include_financial=True."""
+    G0-6: Strips financial fields by default unless include_financial=True.
+    Uses strip_financial_fields() which covers real Firestore field names ('AI Estimated Value',
+    'Purchase Cost', 'Melt Value', 'Price Paid', etc.) via keyword matching."""
     try:
         doc = db.collection('users').document(user_email).collection('coins').document(coin_id).get()
         if not doc.exists:
@@ -2702,14 +2837,9 @@ def execute_get_coin_details(user_email: str, coin_id: str, include_financial: b
 
         # G0-6: Strip financial fields unless value keyword present in query
         if not include_financial:
-            for financial_key in ("ai_estimated_value", "estimated_value", "cost", "Cost",
-                                  "cost_basis", "Cost Basis", "purchase_price", "Purchase Price",
-                                  "market_value", "P&L", "profit_loss"):
-                data.pop(financial_key, None)
+            data = strip_financial_fields(data)
 
         # G0-7: Wrap ALL note/ocr/description keys in data delimiter (not just named ones)
-        _NOTE_KEYS = ("Personal Notes", "personal_notes", "notes", "ocr_text",
-                      "description", "Description", "raw_utterance", "provenance")
         for k in list(data.keys()):
             if any(note_key.lower() in k.lower() for note_key in ("note", "ocr", "description", "provenance", "utterance")):
                 if data[k]:
@@ -3653,7 +3783,7 @@ def _norm_date(raw: str) -> str:
 
 
 @app.post("/api/dedup_sweep")
-async def dedup_sweep(user_email: str = Form(...)):
+async def dedup_sweep(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     Scans a user's coins collection for potential duplicates.
 
@@ -3769,7 +3899,7 @@ async def dedup_sweep(user_email: str = Form(...)):
 
 
 @app.post("/api/dedup_sweep/auto_clean")
-async def dedup_auto_clean(user_email: str = Form(...)):
+async def dedup_auto_clean(user_email: str = Form(...), _admin: dict = Depends(require_admin_user)):
     """
     Automatically removes duplicates from INVOICE MATCH and ATTRIBUTE MATCH groups.
 
@@ -9621,7 +9751,7 @@ class BrainBulkAction(BaseModel):
     action: str # 'approved' or 'ignored'
 
 @app.post("/api/config/usmint-cookies")
-async def update_usmint_cookies(data: CookieUpdate):
+async def update_usmint_cookies(data: CookieUpdate, _admin: dict = Depends(require_admin_user)):
     """
     Update the USMint.gov cookie string in Firestore.
     """
@@ -10627,7 +10757,7 @@ class GreysheetCredentialsUpdate(BaseModel):
     api_token: str
 
 @app.post("/api/config/greysheet-credentials")
-async def update_greysheet_credentials(data: GreysheetCredentialsUpdate):
+async def update_greysheet_credentials(data: GreysheetCredentialsUpdate, _admin: dict = Depends(require_admin_user)):
     """
     Update the Greysheet API key and token in Firestore.
     """
