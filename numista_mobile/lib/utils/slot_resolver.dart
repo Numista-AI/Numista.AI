@@ -212,6 +212,30 @@ class SlotResolver {
       .replaceAll('\u2018', "'") // ' left single quotation mark
       .replaceAll('\u2019', "'"); // ' right single quotation mark
 
+  /// AWQ F1 old-name → canonical-name alias map (match-time only, no Firestore write).
+  ///
+  /// Coins stored before F1 apply use short names that no longer match renamed slots.
+  /// This map converts the normalized old name to the normalized canonical name so
+  /// isMatch succeeds at read time. Mirrors checklist_parser.py US_WOMEN_QUARTERS_OFFICIAL_TITLES.
+  ///
+  /// Keys and values are already lowercased (as _normalizeSubject produces).
+  static const Map<String, String> _awqOldNameAliases = {
+    // 2024 renames (F1 AWQ apply)
+    'dr. pauli murray':  'rev. dr. pauli murray', // old short name
+    'pauli murray':      'rev. dr. pauli murray', // even shorter alias
+    'patsy mink':        'patsy takemoto mink',   // old short name
+    'stacey milbern':    'stacey park milbern',   // old short name
+    // Zitkala-Ša: OCR commonly drops the Š diacritic
+    'zitkala-sa':        'zitkala-\u0161a',        // ASCII fallback → canonical Š
+    'zitkala-sha':       'zitkala-\u0161a',        // common OCR misread
+  };
+
+  /// Applies [_awqOldNameAliases] to a normalized subject string.
+  /// Returns the canonical normalized form, or input unchanged if no alias found.
+  /// Pure read-time — no Firestore writes, no migration required.
+  static String _canonicalizeAwqSubject(String normalized) =>
+      _awqOldNameAliases[normalized] ?? normalized;
+
   /// Returns true if [program] has more than one distinct coin design name.
   /// Uses slot name count, NOT catalog years (50SQ ProgramCoin.year is null).
   /// Single-design programs (Kennedy, Morgan, Roosevelt …) return false.
@@ -242,7 +266,10 @@ class SlotResolver {
 
     // ── 1. Theme path: exact ──────────────────────────────────────────────
     if (theme.isNotEmpty) {
-      return _normalizeSubject(theme) == slotNorm;
+      // Apply AWQ old-name alias map for match-time canonicalization.
+      // Coins stored as "Dr. Pauli Murray" → "rev. dr. pauli murray" → matches slot.
+      // Read-only: no Firestore writes; no migration required.
+      return _canonicalizeAwqSubject(_normalizeSubject(theme)) == slotNorm;
       // Non-empty wrong theme → false; no fallback.
     }
 

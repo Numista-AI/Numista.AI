@@ -234,3 +234,6 @@ numista_qc/node_modules/
 # Note: Numista_Brain_Inbox/ is already excluded above (line 159).
 numista_backend/serviceAccountKey.json
 Numista_Brain_Inbox/Brain Sorter/brain_status.md
+
+# npm lockfile accidentally generated in Flutter project
+package-lock.json

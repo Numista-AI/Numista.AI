@@ -201,14 +201,14 @@ void main() {
       expect(SlotResolver.isMatch(coin, program, slot), isTrue);
     });
 
-    test('"Dr. Pauli Murray" (old name) does NOT match "Rev. Dr. Pauli Murray" slot', () {
+    test('"Dr. Pauli Murray" (old name) NOW matches "Rev. Dr. Pauli Murray" slot via alias map', () {
       final program = _fullAwqProgram();
       final slot = program.coins.firstWhere((s) => s.name == 'Rev. Dr. Pauli Murray');
       final coin = _item(themeSubject: 'Dr. Pauli Murray', year: '2024', mintMark: 'S');
       expect(
         SlotResolver.isMatch(coin, program, slot),
-        isFalse,
-        reason: 'Old name "Dr. Pauli Murray" must NOT match — old stored coins need Firestore migration.',
+        isTrue,
+        reason: 'Old name "Dr. Pauli Murray" now matches via _awqOldNameAliases at match-time — no Firestore write.',
       );
     });
 
@@ -389,6 +389,131 @@ void main() {
         reason: 'Okina Kanakaʻole proof coin must match S-PROOF slot. '
             'Key: $kanakaProofKey. Result: $kanakaResult.',
       );
+    });
+  });
+
+  // ===========================================================================
+  // GROUP 5: AWQ old-name alias map — match-time canonicalization
+  // No Firestore write, no migration. Pure read-time alias lookup.
+  // NET-058 requirement: "Pauli Murray, Patsy Mink, Stacey Milbern, Zitkala-Sa"
+  // must light up renamed slots regardless of stored name.
+  //
+  // MUTATION PROOF (NET-058):
+  // To verify: remove _awqOldNameAliases map OR comment out the
+  // _canonicalizeAwqSubject call in _fastPathSubjectMatchesSlot.
+  // All 5 alias isMatch tests + the resolveProgramInventory test FAIL with:
+  //   Expected: <true>  Actual: <false>
+  // The no-false-positive test still passes (it tests a different slot).
+  // ===========================================================================
+
+  group('AWQ old-name alias map — match-time canonicalization (no Firestore write)', () {
+    test('"Dr. Pauli Murray" (old stored name) matches "Rev. Dr. Pauli Murray" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Rev. Dr. Pauli Murray');
+      final coin = _item(themeSubject: 'Dr. Pauli Murray', year: '2024', mintMark: 'P');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: '"Dr. Pauli Murray" → "rev. dr. pauli murray" via _awqOldNameAliases. '
+            'No Firestore write required.',
+      );
+    });
+
+    test('"Pauli Murray" (short alias) matches "Rev. Dr. Pauli Murray" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Rev. Dr. Pauli Murray');
+      final coin = _item(themeSubject: 'Pauli Murray', year: '2024', mintMark: 'D');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: '"Pauli Murray" → "rev. dr. pauli murray" via _awqOldNameAliases.',
+      );
+    });
+
+    test('"Patsy Mink" (old stored name) matches "Patsy Takemoto Mink" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Patsy Takemoto Mink');
+      final coin = _item(themeSubject: 'Patsy Mink', year: '2024', mintMark: 'P');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: '"Patsy Mink" → "patsy takemoto mink" via _awqOldNameAliases.',
+      );
+    });
+
+    test('"Stacey Milbern" (old stored name) matches "Stacey Park Milbern" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Stacey Park Milbern');
+      final coin = _item(themeSubject: 'Stacey Milbern', year: '2025', mintMark: 'D');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: '"Stacey Milbern" → "stacey park milbern" via _awqOldNameAliases.',
+      );
+    });
+
+    test('"Zitkala-Sa" (ASCII, no diacritic) matches "Zitkala-Ša" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name.startsWith('Zitkala'));
+      final coin = _item(themeSubject: 'Zitkala-Sa', year: '2024', mintMark: 'P');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: '"Zitkala-Sa" (ASCII) → "zitkala-\u0161a" via _awqOldNameAliases. '
+            'Covers OCR-dropped diacritic case.',
+      );
+    });
+
+    test('No false positive: "Dr. Pauli Murray" does NOT match "Patsy Takemoto Mink" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Patsy Takemoto Mink');
+      final coin = _item(themeSubject: 'Dr. Pauli Murray', year: '2024', mintMark: 'P');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isFalse,
+        reason: 'Alias map must not cause cross-slot false positives.',
+      );
+    });
+
+    test('resolveProgramInventory: old-name coins (Dr. Pauli Murray, Patsy Mink, '
+        'Stacey Milbern, Zitkala-Sa) all OWNED via alias map', () {
+      // Simulates a user whose collection was scanned before F1 apply.
+      // Stored coins use old/short names; slots now have canonical names.
+      // Without alias map: 4 slots go dark. With alias map: all 4 light up.
+      final program = _fullAwqProgram();
+
+      final coins = <Map<String, dynamic>>[
+        _item(themeSubject: 'Dr. Pauli Murray', year: '2024'),      // → Rev. Dr. Pauli Murray
+        _item(themeSubject: 'Patsy Mink', year: '2024'),             // → Patsy Takemoto Mink
+        _item(themeSubject: 'Stacey Milbern', year: '2025'),         // → Stacey Park Milbern
+        _item(themeSubject: 'Zitkala-Sa', year: '2024'),             // → Zitkala-Ša
+      ];
+
+      final result = SlotResolver.resolveProgramInventory(
+        program: program,
+        coins: coins,
+      );
+
+      // Each old-name coin must light up its renamed slot's P-mint key.
+      // Slot IDs come from _fullAwqProgram() definitions:
+      //   Rev. Dr. Pauli Murray  → awq_2024_dr__pauli_murray
+      //   Patsy Takemoto Mink    → awq_2024_patsy_mink
+      //   Stacey Park Milbern    → awq_2025_stacey_milbern
+      //   Zitkala-Ša             → awq_2024_zitkala_sa
+      const pauliKey   = 'american_women_quarters_awq_2024_dr__pauli_murray_P';
+      const patsyKey   = 'american_women_quarters_awq_2024_patsy_mink_P';
+      const staceyKey  = 'american_women_quarters_awq_2025_stacey_milbern_P';
+      const zitkalaKey = 'american_women_quarters_awq_2024_zitkala_sa_P';
+
+      expect(result.containsKey(pauliKey),   isTrue, reason: 'Rev. Dr. Pauli Murray P-slot key must exist in result map');
+      expect(result.containsKey(patsyKey),   isTrue, reason: 'Patsy Takemoto Mink P-slot key must exist in result map');
+      expect(result.containsKey(staceyKey),  isTrue, reason: 'Stacey Park Milbern P-slot key must exist in result map');
+      expect(result.containsKey(zitkalaKey), isTrue, reason: 'Zitkala-Ša P-slot key must exist in result map');
+
+      expect(result[pauliKey],   isNot(SlotMatchResult.empty), reason: '"Dr. Pauli Murray" coin must OWNED Pauli Murray slot via alias');
+      expect(result[patsyKey],   isNot(SlotMatchResult.empty), reason: '"Patsy Mink" coin must OWNED Patsy Takemoto Mink slot via alias');
+      expect(result[staceyKey],  isNot(SlotMatchResult.empty), reason: '"Stacey Milbern" coin must OWNED Stacey Park Milbern slot via alias');
+      expect(result[zitkalaKey], isNot(SlotMatchResult.empty), reason: '"Zitkala-Sa" coin must OWNED Zitkala-Ša slot via alias');
     });
   });
 }
