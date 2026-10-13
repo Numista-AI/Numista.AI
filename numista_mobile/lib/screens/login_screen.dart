@@ -1247,7 +1247,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
                       const SizedBox(height: 16),
                       Text('Morgan is scanning your coin...', style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 14)),
                       const SizedBox(height: 6),
-                      Text('Analyzing details & estimating value', style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF8B92B4), fontSize: 11)),
+                      Text('Analyzing details & estimating value', style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF8B92B4), fontSize: NumistaTheme.textBodySm)),
                     ],
                   ),
                 ),
@@ -1296,9 +1296,9 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
                 children: [
                   Icon(Icons.add_a_photo_outlined, color: _isDark ? Colors.white38 : const Color(0xFF8B92B4), size: 36),
                   const SizedBox(height: 10),
-                  Text(label, style: TextStyle(color: _isDark ? Colors.white60 : const Color(0xFF5A5C69), fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(label, style: TextStyle(color: _isDark ? Colors.white60 : const Color(0xFF5A5C69), fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text('Tap to upload', style: TextStyle(color: _isDark ? Colors.white30 : Colors.black38, fontSize: 11)),
+                  Text('Tap to upload', style: TextStyle(color: _isDark ? Colors.white30 : Colors.black38, fontSize: NumistaTheme.textBodySm)),
                 ],
               ),
       ),
@@ -1357,7 +1357,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Create a free account to track your collection, log values, and export estate plans.',
-                    style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: 12),
+                    style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69), fontSize: NumistaTheme.textBodySm),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -1391,8 +1391,8 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF8B92B4), fontSize: 13)),
-          Text(value, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF8B92B4), fontSize: NumistaTheme.textBodySm)),
+          Text(value, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.bold)),
         ],
       ),
     );
