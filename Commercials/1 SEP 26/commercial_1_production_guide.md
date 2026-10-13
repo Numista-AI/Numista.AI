@@ -30,7 +30,7 @@
 - **Duration**: ~4 seconds
 - **Camera**: Medium close-up, warm natural push-in
 - **Veo Prompt**:
-> `Cinematic 3D animation, Pixar style. A charming Momma Owl perched at a kitchen counter holding a tablet showing a coin app. She talks to her teenage son off-screen with a warm, playful expression, pausing to do a humorous, affectionate eye-roll. Warm golden kitchen lighting, crisp feather detail, fluid micro-expressions, 4k 24fps.`
+> `Cinematic 3D animation, Pixar style. A charming Momma Owl perched at a kitchen counter holding a tablet showing a coin app (Numista.ai). She talks to her teenage son off-screen with a warm, playful expression, pausing to do a humorous, affectionate eye-roll. Warm golden kitchen lighting, crisp feather detail, fluid micro-expressions, 4k 24fps.`
 - **Voiceover**:
 > *(Momma)*: "I know you use AI to help with your homework... and I think it would be good for you to help Gram Pa organize that footlocker of old coins. It’d be fun for him to show you all the stuff he’s collected over the years!"
 
