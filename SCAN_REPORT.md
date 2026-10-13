@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.403)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [412 passed, 0 failed in 28.94s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` exit 0 with "No issues found!"], 419/419 Flutter unit tests passed [100% pass rate in 19.0s], live Cloud Run backend probes 100% operational across all routes [7/7 healthy], and Playwright smoke tests 100% operational [8/8 passed in 42.1s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-10-09
+* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [474 passed, 0 failed in 16.16s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` exit 0 with "No issues found!"], 433/433 Flutter unit tests passed [100% pass rate in 11.0s], live Cloud Run backend probes 100% operational across all routes [8/8 healthy], and Playwright smoke tests 100% operational [8/8 passed in 31.2s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
+* **Scan Date:** 2026-10-13
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
 * **Versions Scanned:** Backend v4.403, Mobile/Web Frontend v4.403 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -12,11 +12,14 @@
 * **Fatal Backend Errors:** 0
 * **Dart / Flutter Compilation Errors & Warnings:** 0 errors, 0 warnings (`dart analyze lib` exit 0; "No issues found!")
 * **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; 100% 2026 GA compliance)
-* **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (7/7 endpoints healthy)
-* **Backend Pytest Suite:** 412 passed, 0 failed in 28.94s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 42.1s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
-* **Flutter Unit Suite:** 419 passed, 0 failed in 19.0s (100% pass rate; 0 failures)
-* **Security & Lateral Transfer Hardening (v4.401–v4.403):** Verified active (Client auth headers, recipient-before-PIN DoS prevention, atomic attempt counters, passwordMode wiring, Firebase token enforcement on transfer, grade_review, admin/grade_flags, and greysheet/deals routes [REQ-027 / REQ-027B / REQ-027C]).
+* **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (8/8 endpoints healthy)
+* **Backend Pytest Suite:** 474 passed, 0 failed in 16.16s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
+* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 31.2s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
+* **Flutter Unit Suite:** 433 passed, 0 failed in 11.0s (100% pass rate; 0 failures)
+* **Morgan Gate 0 V2 Verification (commit 9769dac5):** Verified active (Coin proposal update and undo logic, currency string sanitization/stripping, custom delimiters for batches >50, transactional confirmation, and action-log verified undo).
+* **Older User Onboarding & UX Polish (REQ-032 V2, commit 9fc13333):** Verified active (Hardware keyboard listener, 14px typography floor, login form token alignment, enlarged forgot-PIN tap targets, numeric keypad cap, and textBodySm banner styling).
+* **Alternate Site & Dynamic Variant Switcher (REQ-032B V2, commit 9fc13333):** Verified active (Firestore wildcard rule exclusions, fail-safe degradation to classic layout on API error or unlisted user, and `ui_variant` admin endpoints).
+* **Security & Lateral Transfer Hardening (v4.401–v4.403):** Verified active (Client auth headers, recipient-before-PIN DoS prevention, atomic attempt counters, passwordMode wiring, Firebase token enforcement on transfer, grade_review, admin/grade_flags, and greysheet/deals routes [REQ-027 / REQ-027B / REQ-027C / REQ-031 / REQ-031B]).
 * **PIN Authentication & Lockout Security (v4.401–v4.402):** Verified active (PIN-first sign-in UX, softened lockout messages to "a few minutes", anti-enumeration protection, and removal of PINs and coin counts from email notifications [REQ-025 / REQ-025B]).
 * **Marketing & Sourcing Accuracy (v4.403):** Verified active (Removed unverified eBay/arbitrage claims and ensured clean sign-in redirects across public entrypoints [REQ_028]).
 * **Front Door & Session Reliability (v4.399):** Verified active (Resolved sign-in dead ends across public entrypoints, zero-read Firestore isolation in demo mode, XML sitemap validation, and CORS/Bearer auth on `/generate_estate_report` [REQ-023D / REQ-020]).
@@ -66,9 +69,9 @@
 ## Greysheet API & Tier 0 Image Waterfall Health
 * **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/` ➔ `200 OK` (Status: ok, Service: Numista.AI Backend)
-  * `/api/greysheet/config` ➔ `200 OK` (Status: active, Tier: Basic, Fallback rate: 0%)
+  * `/api/greysheet/config` ➔ `200 OK` (Status: active, Mode: fallback, Tier: Basic)
   * `/api/greysheet/pricing/1001` ➔ `200 OK` (Ground-truth pricing payload resolved from Firestore cache for 1834 1c Large 8 Large Stars Medium Letters MS RB)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,204.20, Silver: $60.46, Platinum: $1,690.50, Palladium: $1,157.00)
+  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,207.70, Silver: $60.58, Platinum: $1,691.00, Palladium: $1,157.00)
   * `/api/template` ➔ `200 OK` (CSV Template headers validated)
   * `/api/transfer/passport-pdf/dummy` ➔ `401 Unauthorized` (Token authentication required per REQ-027D, dummy ID unauthenticated rejected as expected)
   * `/api/transfer/initiate` ➔ `401 Unauthorized` (Token authentication required per REQ-027, unauthenticated POST rejected as expected)
@@ -80,6 +83,19 @@
 ---
 
 ## Core Features & Pipeline Audit
+* **Morgan Gate 0 V2 Pipeline:**
+  * Propose update and undo support for coin specifications.
+  * Money formatting sanitization (strips `$` and commas prior to numerical cast).
+  * Safe pipe delimiter encoding for batch collections exceeding 50 entries.
+  * Transactional confirmation and verified audit trail with rollback capabilities.
+* **Older User Onboarding & Mobile UX (REQ-032 V2):**
+  * Hardware and software keyboard event listeners for assistive peripherals.
+  * Enforced 14px font size baseline for legibility across small viewports.
+  * Unified color tokens on login/PIN forms with 48px min tap-targets for PIN recovery.
+  * Numeric-only keypad restriction on 6-digit credential entries.
+* **Dynamic UI Variant Delivery (REQ-032B V2):**
+  * Firestore wildcard security rule exclusions for multi-tenant variant states.
+  * Graceful fallback degradation to classic UI variant whenever network or permissions fail.
 * **Security & Lateral Transfer Hardening (v4.401–v4.403):**
   * Auth token enforcement: Requires verified Firebase bearer token on transfer routes (`/api/transfer/initiate`, `/api/transfer/complete`, `/api/transfer/cancel`, `/api/transfer/sold-items`).
   * Transfer attack mitigations: Enforces recipient lock before PIN validation to prevent enumeration/DoS, atomic attempt counters, and PIN brute-force lockout.
@@ -144,7 +160,7 @@
   * Core scan, AI, and collection routes (`scan_routes.py`, `ai_routes.py`, `collection_routes.py`)
   * Market valuation and Greysheet pricing (`greysheet_routes.py`, `valuation_routes.py`, `greysheet_admin_routes.py`, `greysheet_error_routes.py`)
   * Estate and Lateral Transfer systems (`estate_routes.py`, `attorney_routes.py`, `main.py`)
-  * PCGS, news, payment, support, and admin routes (`pcgs_routes.py`, `news_routes.py`, `payment_routes.py`, `support_routes.py`, `affiliate_routes.py`, `grade_review_routes.py`, `import_routes.py`, `subaccount_routes.py`, `telemetry_routes.py`, `sandbox_routes.py`)
+  * PCGS, news, payment, support, and admin routes (`pcgs_routes.py`, `news_routes.py`, `payment_routes.py`, `support_routes.py`, `affiliate_routes.py`, `grade_review_routes.py`, `import_routes.py`, `subaccount_routes.py`, `telemetry_routes.py`, `sandbox_routes.py`, `morgan_routes.py`)
 * **Route Parity Baseline:** `route_snapshot_baseline.json` maintained for automated regression detection.
 * **Frontend Dart Analysis:** `dart analyze lib` executed with 0 compilation errors and 0 warnings ("No issues found!").
 
@@ -159,11 +175,11 @@
 ---
 
 ## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `412 passed, 0 failed in 28.94s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
+* **Backend Pytest Suite:** `474 passed, 0 failed in 16.16s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
 * **Frontend Dart Analyzer:** `Analyzing lib... No issues found!` (Exit code 0, 0 errors, 0 warnings).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 42.1s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `419 passed, 0 failed in 19.0s` (100% pass rate; 0 failures).
-* **Layer 3 Data Health Probes:** `7/7 endpoints healthy` (Homepage: 200 OK, Backend Root: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 401 auth sentinel, Transfer Initiate: 401 auth sentinel).
+* **Frontend Playwright Smoke Suite:** `8/8 passed in 31.2s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
+* **Frontend Flutter Unit Suite:** `433 passed, 0 failed in 11.0s` (100% pass rate; 0 failures).
+* **Layer 3 Data Health Probes:** `8/8 endpoints healthy` (Homepage: 200 OK, Backend Root: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 401 auth sentinel, Transfer Initiate: 401 auth sentinel).
 * **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
 
 ---
