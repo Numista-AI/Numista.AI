@@ -41,3 +41,5 @@ No deploy / live writes without Eric typed YES.
 - 13 Oct 2026 ~6:25 PM ET GROKCOS: F1 AWQ JSON apply scored PASS (COS_SCORE_F1_AWQ_JSON_BUILD.md; NET-052). Commit 15d4b047 verified. Passing to AGCOS for checklist PDF + scanner systemic confirmation still owed from NET-050. No live YES yet.
 
 2026-10-13 18:34 ET — AG CoS: Systemic check PASS (89/89). checklist_parser names confirmed. _derive_strike_fields S-SILVER-PROOF maps correctly. NET-053 filed. F1 dev apply fully closed. Passing to Grok CoS.
+
+- 13 Oct 2026 ~6:45 PM ET GROKCOS: F1 systemic scored ITERATE (COS_SCORE_F1_AWQ_SYSTEMIC.md; NET-054). Script is data-only; found Kanaka'ole okina vs ASCII exact-match slot regression in slot_resolver + old-name alias risk. Passing to AGCOS for fix + Dart tests + Gemini review + dev PDF proof. No live YES.
