@@ -205,7 +205,36 @@ class SlotResolver {
   static String _normalizeSubject(String raw) => raw
       .toLowerCase()
       .trim()
-      .replaceFirst(RegExp(r'^\d{4}\s*[-–]\s*'), '');
+      .replaceFirst(RegExp(r'^\d{4}\s*[-–]\s*'), '')
+      // Normalize apostrophe variants: okina (U+02BB), left/right single quotes
+      // (U+2018/U+2019) → ASCII apostrophe. Ensures Kanakaʻole == Kanaka'ole.
+      .replaceAll('\u02bb', "'") // ʻ okina
+      .replaceAll('\u2018', "'") // ' left single quotation mark
+      .replaceAll('\u2019', "'"); // ' right single quotation mark
+
+  /// AWQ F1 old-name → canonical-name alias map (match-time only, no Firestore write).
+  ///
+  /// Coins stored before F1 apply use short names that no longer match renamed slots.
+  /// This map converts the normalized old name to the normalized canonical name so
+  /// isMatch succeeds at read time. Mirrors checklist_parser.py US_WOMEN_QUARTERS_OFFICIAL_TITLES.
+  ///
+  /// Keys and values are already lowercased (as _normalizeSubject produces).
+  static const Map<String, String> _awqOldNameAliases = {
+    // 2024 renames (F1 AWQ apply)
+    'dr. pauli murray':  'rev. dr. pauli murray', // old short name
+    'pauli murray':      'rev. dr. pauli murray', // even shorter alias
+    'patsy mink':        'patsy takemoto mink',   // old short name
+    'stacey milbern':    'stacey park milbern',   // old short name
+    // Zitkala-Ša: OCR commonly drops the Š diacritic
+    'zitkala-sa':        'zitkala-\u0161a',        // ASCII fallback → canonical Š
+    'zitkala-sha':       'zitkala-\u0161a',        // common OCR misread
+  };
+
+  /// Applies [_awqOldNameAliases] to a normalized subject string.
+  /// Returns the canonical normalized form, or input unchanged if no alias found.
+  /// Pure read-time — no Firestore writes, no migration required.
+  static String _canonicalizeAwqSubject(String normalized) =>
+      _awqOldNameAliases[normalized] ?? normalized;
 
   /// Returns true if [program] has more than one distinct coin design name.
   /// Uses slot name count, NOT catalog years (50SQ ProgramCoin.year is null).
@@ -237,7 +266,10 @@ class SlotResolver {
 
     // ── 1. Theme path: exact ──────────────────────────────────────────────
     if (theme.isNotEmpty) {
-      return _normalizeSubject(theme) == slotNorm;
+      // Apply AWQ old-name alias map for match-time canonicalization.
+      // Coins stored as "Dr. Pauli Murray" → "rev. dr. pauli murray" → matches slot.
+      // Read-only: no Firestore writes; no migration required.
+      return _canonicalizeAwqSubject(_normalizeSubject(theme)) == slotNorm;
       // Non-empty wrong theme → false; no fallback.
     }
 
@@ -246,25 +278,44 @@ class SlotResolver {
 
     final normTitle = _normalizeSubject(title);
 
-    // Find the longest slot name that appears as a full phrase in the title.
-    // Full-phrase = preceded/followed by word boundary (start, end, space, hyphen).
-    String? longestMatch;
+    // Build a candidate map: normalized phrase → canonical slot name it resolves to.
+    // Includes each slot's own normalized name AND any AWQ old-name alias keys
+    // whose value resolves to that slot. Aliases cover Title-embedded old names
+    // like "2024 Patsy Mink Quarter" → alias "patsy mink" → "patsy takemoto mink".
+    final Map<String, String> candidateToCanonical = {};
     for (final slot in program.coins) {
-      final candidate = _normalizeSubject(slot.name);
-      if (candidate.isEmpty) continue;
+      final canonical = _normalizeSubject(slot.name);
+      if (canonical.isEmpty) continue;
+      candidateToCanonical[canonical] = canonical; // slot's own name
+    }
+    // Add alias keys: "patsy mink" → "patsy takemoto mink", etc.
+    for (final entry in _awqOldNameAliases.entries) {
+      final aliasKey       = entry.key;       // already lowercased
+      final canonicalValue = entry.value;     // already lowercased
+      // Only include alias if its canonical value actually corresponds to a slot.
+      if (candidateToCanonical.containsKey(canonicalValue)) {
+        candidateToCanonical[aliasKey] = canonicalValue;
+      }
+    }
+
+    // Find the longest candidate phrase that appears as a full phrase in the title.
+    // Full-phrase = preceded/followed by word boundary (start, end, space, hyphen).
+    String? longestCandidate;
+    String? longestCanonical;
+    for (final entry in candidateToCanonical.entries) {
+      final candidate = entry.key;
       final pattern = RegExp(
           r'(?:^|[\s\-])' + RegExp.escape(candidate) + r'(?:$|[\s\-])');
       if (pattern.hasMatch(normTitle)) {
-        if (longestMatch == null || candidate.length > longestMatch.length) {
-          longestMatch = candidate;
+        if (longestCandidate == null || candidate.length > longestCandidate.length) {
+          longestCandidate = candidate;
+          longestCanonical = entry.value;
         }
       }
     }
-    if (longestMatch == null) return false;
-    // This slot wins only if its name IS the longest-matching name.
-    // Length equality alone is not sufficient — "new mexico" and "new jersey"
-    // are both 10 chars; only the name that actually appeared in the title wins.
-    return longestMatch == slotNorm;
+    if (longestCanonical == null) return false;
+    // This slot wins only if its canonical name IS the longest-matching canonical.
+    return longestCanonical == slotNorm;
   }
 
   // ─── Coin matching ─────────────────────────────────────────────────────────

@@ -24576,15 +24576,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24603,15 +24603,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24630,15 +24630,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24657,15 +24657,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24684,15 +24684,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24711,22 +24711,22 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
       {
         "id": "awq_2023_edith_kanaka_ole",
         "year": "2023",
-        "name": "Edith Kanaka'ole",
+        "name": "Edith Kanakaʻole",
         "varieties": [
           {
             "id": "P",
@@ -24738,15 +24738,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24765,15 +24765,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24792,15 +24792,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24819,22 +24819,22 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
       {
         "id": "awq_2024_dr__pauli_murray",
         "year": "2024",
-        "name": "Dr. Pauli Murray",
+        "name": "Rev. Dr. Pauli Murray",
         "varieties": [
           {
             "id": "P",
@@ -24846,22 +24846,22 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
       {
         "id": "awq_2024_patsy_mink",
         "year": "2024",
-        "name": "Patsy Mink",
+        "name": "Patsy Takemoto Mink",
         "varieties": [
           {
             "id": "P",
@@ -24873,15 +24873,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24900,15 +24900,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24927,20 +24927,20 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
       {
-        "id": "awq_2024_zitkala__a",
+        "id": "awq_2024_zitkala_sa",
         "year": "2024",
         "name": "Zitkala-Ša",
         "varieties": [
@@ -24954,15 +24954,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -24981,15 +24981,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -25008,15 +25008,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -25035,22 +25035,22 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
       {
         "id": "awq_2025_stacey_milbern",
         "year": "2025",
-        "name": "Stacey Milbern",
+        "name": "Stacey Park Milbern",
         "varieties": [
           {
             "id": "P",
@@ -25062,15 +25062,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       },
@@ -25089,15 +25089,15 @@
           },
           {
             "id": "S",
-            "label": "S"
+            "label": "S Uncirculated"
           },
           {
             "id": "S-PROOF",
-            "label": "Proof"
+            "label": "S Proof (clad)"
           },
           {
-            "id": "W-UNC",
-            "label": "West Point Uncirculated (W)"
+            "id": "S-SILVER-PROOF",
+            "label": "S Silver Proof (99.9% silver)"
           }
         ]
       }
