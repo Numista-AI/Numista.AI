@@ -28,6 +28,7 @@ class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
   final String? initialTabName;
   final bool showCertFullScreen;
+  final bool showAddAnotherConfirm;
   final Map<String, dynamic>? initialCoinPreset;
 
   const AddCoinsHub({
@@ -35,6 +36,7 @@ class AddCoinsHub extends StatefulWidget {
     this.onNavigate,
     this.initialTabName,
     this.showCertFullScreen = false,
+    this.showAddAnotherConfirm = false,
     this.initialCoinPreset,
   });
 
@@ -134,7 +136,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     int initialIdx = 0;
     // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
     // Priority: batch import → AI photo → manual → cert (PCGS/NGC/CAC) → SKU → roll → world → set.
-    if (widget.initialCoinPreset != null) {
+    if (widget.initialCoinPreset != null && !widget.showAddAnotherConfirm) {
       _showMoreWays = true;
       initialIdx = 3;
       final preset = widget.initialCoinPreset!;
@@ -147,11 +149,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (year.isNotEmpty) {
         _certManualYear.text = year;
       }
-      final grader = preset['grader']?.toString() ?? 'NGC';
-      _certPendingConfirm = {
-        '_grader': grader,
-        'certNo': preset['certNo']?.toString() ?? '',
-      };
+      final certNo = preset['certNo']?.toString() ?? '';
+      if (certNo.isNotEmpty) {
+        final grader = preset['grader']?.toString() ?? 'NGC';
+        _certPendingConfirm = {
+          '_grader': grader,
+          'certNo': certNo,
+        };
+      }
     } else if (widget.initialTabName != null) {
       _showMoreWays = true;
       switch (widget.initialTabName) {
@@ -333,10 +338,254 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
+  Widget _buildAddAnotherConfirmCard() {
+    final preset = widget.initialCoinPreset ?? {};
+    final rawName = (preset['name'] ?? '').toString();
+    final displayName = rawName.contains('||')
+        ? rawName.split('||').where((s) => s.isNotEmpty).join(' ')
+        : rawName;
+    final year = (preset['year'] ?? '').toString();
+    final mint = (preset['mint'] ?? '').toString();
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 540),
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD1FAE5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.add_circle_outline, color: Color(0xFF065F46), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Confirm Coin Details',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  const SizedBox(height: 20),
+                  // Coin name
+                  Text(
+                    displayName.isNotEmpty ? displayName : 'Unknown Coin',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Year & Mint details
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Year: ',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                            Text(
+                              year.isNotEmpty ? year : 'N/A',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Text(
+                              'Mint: ',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                            Text(
+                              mint.isNotEmpty ? mint : 'None / Philadelphia',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Primary 56px Save button
+                  ElevatedButton(
+                    onPressed: _isProcessing ? null : _saveAddAnotherCoin,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 56),
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _isProcessing
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                        : const Text(
+                            'Save to My Collection',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Secondary text button
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddCoinsHub(
+                              showCertFullScreen: true,
+                              initialCoinPreset: widget.initialCoinPreset,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Has a slab cert # instead',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveAddAnotherCoin() async {
+    final preset = widget.initialCoinPreset ?? {};
+    final rawName = (preset['name'] ?? '').toString();
+    final displayName = rawName.contains('||')
+        ? rawName.split('||').where((s) => s.isNotEmpty).join(' ')
+        : rawName;
+    final year = (preset['year'] ?? '').toString();
+    final mint = (preset['mint'] ?? '').toString();
+
+    setState(() => _isProcessing = true);
+    try {
+      final coinDoc = <String, dynamic>{
+        'CoinName': displayName,
+        'Theme/Subject': displayName,
+        'Year': year,
+        'Mint Mark': mint,
+        'Condition': 'Ungraded',
+        'Quantity': 1,
+        'Country': 'United States',
+        'source': 'manual',
+        'Added': FieldValue.serverTimestamp(),
+        'is_demo': false,
+        'is_demo_cleared': false,
+      };
+
+      await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .add(coinDoc);
+
+      BetaChecklistService.autoCompleteTask('task_3_manual_entry');
+
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('✅ Coin added to your collection!'),
+        backgroundColor: const Color(0xFF10B981),
+        action: widget.onNavigate != null
+            ? SnackBarAction(
+                label: 'View',
+                textColor: Colors.white,
+                onPressed: () => widget.onNavigate!('My Collection'),
+              )
+            : null,
+      ));
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save coin: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // ─── UI Builders ─────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    if (widget.showAddAnotherConfirm) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Add another copy'),
+          leading: const BackButton(),
+        ),
+        body: _buildAddAnotherConfirmCard(),
+      );
+    }
+
     if (widget.showCertFullScreen) {
       return Scaffold(
         appBar: AppBar(
@@ -2404,8 +2653,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Add by Cert # — PCGS / NGC / CAC',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                  Text('Auto-detects grader from cert number format. Always confirms before saving.',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  Text('Type the number on the slab label',
+                      style: TextStyle(color: Color(0xFF334155), fontSize: 18, fontWeight: FontWeight.w600)),
                 ])),
               ]),
               const SizedBox(height: 20),
@@ -2433,7 +2682,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             child: FilterChip(
                               label: Text(g,
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: (_certGrader == (g == 'Not sure' ? null : g))
                                         ? Colors.white
@@ -2466,7 +2715,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                               : _certGrader == 'NGC'
                                   ? 'NGC: Enter slab details with cert # pre-filled'
                                   : 'CAC: Enter slab details with cert # pre-filled',
-                      style: const TextStyle(fontSize: 16, color: Color(0xFF334155)),
+                      style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
                     ),
                   ],
                 ),
@@ -2548,11 +2797,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                               children: [
                                 Text(
                                   'Detected Cert # $_scanResultText${_scanResultGrader != null && _scanResultGrader!.isNotEmpty ? ' ($_scanResultGrader)' : ''}',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
                                 ),
                                 const SizedBox(height: 2),
                                 const Text('Verify this number and look it up below.',
-                                    style: TextStyle(fontSize: 14, color: Color(0xFF047857))),
+                                    style: TextStyle(fontSize: 18, color: Color(0xFF065F46))),
                               ],
                             ),
                           ),
@@ -2564,7 +2813,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                               foregroundColor: Colors.white,
                               minimumSize: const Size(0, 48),
                             ),
-                            child: const Text('Yes, look it up', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            child: const Text('Yes, look it up', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -2602,7 +2851,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                           ? const SizedBox(width: 16, height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.search_rounded, size: 18),
-                      label: Text(_pcgsLookupLoading ? 'Looking up...' : 'Look Up'),
+                      label: Text(_pcgsLookupLoading ? 'Looking up...' : 'Look Up',
+                          style: const TextStyle(fontSize: 18)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
@@ -2632,127 +2882,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 const SizedBox(height: 16),
                 _buildManualCertEntryCard(_certPendingConfirm!),
               ],
-
-              const SizedBox(height: 16),
-
-              // ── Platform badge / Advanced (PCGS token + bulk import) ─────
-              if (_hasPlatformToken)
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    border: Border.all(color: const Color(0xFFBBF7D0)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
-                      title: const Text('Powered by Numista.AI',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF065F46))),
-                      subtitle: const Text('PCGS API access included — no setup needed',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF10B981))),
-                      initiallyExpanded: _showAdvancedToken,
-                      onExpansionChanged: (v) => setState(() => _showAdvancedToken = v),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: _buildBulkImportSection(),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: const Color(0xFFE2E6E9)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.tune_rounded, color: Color(0xFF64748B), size: 18),
-                      title: const Text('Advanced Options (PCGS Token & Bulk Import)',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                      subtitle: const Text('PCGS API token setup & bulk CSV import',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                      initiallyExpanded: _showAdvancedToken,
-                      onExpansionChanged: (v) => setState(() => _showAdvancedToken = v),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Divider(height: 1),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFED7AA)),
-                              ),
-                              child: const Text(
-                                '⚠️  A PCGS API token is required for PCGS live lookups. '
-                                'Generate yours free at pcgs.com/publicapi/documentation → "Generate Token". '
-                                'NGC and CAC always use manual entry (no public API available).',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF9A3412), height: 1.5),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _pcgsTokenCtrl,
-                                  obscureText: true,
-                                  decoration: InputDecoration(
-                                    labelText: 'PCGS Bearer Token',
-                                    hintText: 'Paste token here...',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                    suffixIcon: _isLoadingToken
-                                        ? const Padding(padding: EdgeInsets.all(10),
-                                            child: SizedBox(width: 14, height: 14,
-                                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF94A3B8))))
-                                        : _pcgsTokenSaved
-                                            ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 18)
-                                            : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  final t = _pcgsTokenCtrl.text.trim();
-                                  if (t.isEmpty) return;
-                                  await PcgsImportService.saveToken(t);
-                                  if (!mounted) return;
-                                  setState(() => _pcgsTokenSaved = true);
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                    content: Text('✅ Token saved'), backgroundColor: Color(0xFF10B981)));
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Save'),
-                              ),
-                            ]),
-                            if (_pcgsTokenSaved) ...[
-                              const SizedBox(height: 6),
-                              const Text('✅ Token active — PCGS lookups ready.',
-                                  style: TextStyle(color: Color(0xFF10B981), fontSize: 11)),
-                            ],
-                            const SizedBox(height: 20),
-                            const Divider(),
-                            _buildBulkImportSection(),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -2862,6 +2991,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   Future<void> _lookupCertUnified() async {
     final raw = _pcgsSingleCtrl.text.trim();
     if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Enter a cert # before saving'),
+        backgroundColor: Color(0xFFD97706),
+      ));
       setState(() => _pcgsLookupError = 'Please enter a cert number.');
       return;
     }
@@ -2955,7 +3088,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               grader == 'NGC'
                   ? 'Verify your cert at ngccoin.com/certlookup/$certNo/ then enter the details below.'
                   : 'Verify your cert at cacgrading.com/cert-verify/$certNo then enter the details below.',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1E3A8A), height: 1.4),
+              style: const TextStyle(fontSize: 18, color: Color(0xFF1E3A8A), height: 1.4),
             )),
           ]),
         ),
@@ -2985,9 +3118,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             final gradeText = _certManualGrade.text.trim();
             final hasGrade = gradeText.isNotEmpty;
             final isNgc = grader.toUpperCase() == 'NGC';
-            final labelText = isNgc
-                ? 'Check this slab on ngccoin.com'
-                : 'Verify Cert on ${grader.toUpperCase()}.com →';
+            final labelText = switch (grader.toUpperCase()) {
+              'NGC' => 'Check this slab on ngccoin.com',
+              'CAC' => 'Check this slab on cacgrading.com',
+              _     => 'Check this slab on pcgs.com',
+            };
 
             return SizedBox(
               width: double.infinity,
@@ -3065,7 +3200,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ? 'CAC verification is manual — details entered above.'
               : 'NGC cert details entered above.',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
         ),
       ]),
     );

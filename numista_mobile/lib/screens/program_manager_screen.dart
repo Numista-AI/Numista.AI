@@ -1319,13 +1319,13 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      // NET-087 / P7-V5: 48px labeled add-another button prefilling slot coin
+                                      // NET-087 / P7-V6: 48px labeled add-another button navigating to plain confirm card
                                       OutlinedButton(
                                         onPressed: () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) => AddCoinsHub(
-                                              showCertFullScreen: true,
+                                              showAddAnotherConfirm: true,
                                               initialCoinPreset: {
                                                 'name': coinName.contains('||')
                                                     ? coinName.split('||').where((s) => s.isNotEmpty).join(' ')
