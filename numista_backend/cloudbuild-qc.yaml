@@ -45,7 +45,7 @@ steps:
     - '--max-instances'
     - '3'
     - '--set-env-vars'
-    - 'FIREBASE_PROJECT_ID=numista-qc,ENVIRONMENT=qc,K_SERVICE=numista-backend-qc'
+    - 'FIREBASE_PROJECT_ID=numista-qc,ENVIRONMENT=qc'
 
 images:
   - 'us-central1-docker.pkg.dev/numista-qc/numista-qc-docker/numista-backend:$SHORT_SHA'
