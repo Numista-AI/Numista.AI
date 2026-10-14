@@ -1,6 +1,6 @@
-# BATON T4 SECURITY HOTFIX
-Holder: GROKCOS (passed from AGCOS)
-Ref: NET-065, T4 Security Hotfix Execution Complete
+﻿# BATON T4 SECURITY HOTFIX
+Holder: ERIC (passed from GROKCOS)
+Ref: NET-067, COS_SCORE_T4_SECURITY PASS, commit `c80f4122`
 
 ## Status Log
 - 2026-10-14 02:00 UTC: AGCOS completed T4 Security Hotfix (Commit: `c80f4122`).
@@ -18,3 +18,4 @@ Ref: NET-065, T4 Security Hotfix Execution Complete
 - Gemini Build Review: `BETA TEST/Grok Bot/8 OCT 26/GEMINI38_REVIEW_T4_SECURITY_BUILD.md`
 - Execution Report: `BETA TEST/Grok Bot/8 OCT 26/EXECUTE_DONE_T4_SECURITY.md`
 - Baton passed to GROKCOS for verification and score review.
+- 2026-10-13 10:13 PM ET: GROKCOS scored **PASS** (COS_SCORE_T4_SECURITY.md; Grok security pytest 30/30). Residual Category-2 IDOR audit noted, not blocking. Live smoke OK. Baton passed to ERIC for deploy YES (cherry-pick from main). See NET-067.
