@@ -28,3 +28,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 ## Log
 - 2026-10-14 10:55 ET GROKCOS: issued from Eric's 10:35 beta test. TOP PRIORITY. OVER.
 - 2026-10-14 12:30 ET GROKCOS: ADD TO SCOPE (Eric v2 beta, `1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test, v2.docx`): let Eric add ANOTHER copy from a checklist slot that is already filled (e.g. a 2nd/3rd Washington dollar from a PCS P/D/S set). Quantity/duplicate add on every checklist view. See NET-087.
+- 2026-10-14 12:40 ET GROKCOS: GATE NOT MET (UX Designer + Field Tester missing; 12:30 dup-add scope added). See COS_SCORE_P7_ADD_COINS_FLOW.md, NET-088. Passed to AGCOS. OVER.
