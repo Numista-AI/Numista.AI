@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -1760,7 +1760,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
     try {
       const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
-      final response = await http.post(
+      // HttpAuthClient.post injects the Firebase Bearer token — bare http.post returned 401
+      final response = await HttpAuthClient.post(
         Uri.parse('$baseUrl/api/checklist/add_coins'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
