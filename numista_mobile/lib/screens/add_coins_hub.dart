@@ -22,6 +22,7 @@ import '../widgets/morgan_guide_flow.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../theme/numista_theme.dart';
+import '../services/http_auth_client.dart';
 
 
 class AddCoinsHub extends StatefulWidget {
@@ -2883,7 +2884,36 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     ]);
   }
 
-  Future<void> _saveManualCertEntry(String grader, String certNo) async {
+  Future<bool> _showDuplicateCertDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706)),
+          SizedBox(width: 8),
+          Text('Duplicate Cert #', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ]),
+        content: const Text('This cert # is already in your collection. Add another copy anyway?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Add anyway'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<void> _saveManualCertEntry(String grader, String certNo, {bool allowDuplicate = false}) async {
     setState(() => _certManualSaving = true);
     try {
       final coinDoc = <String, dynamic>{
@@ -2898,7 +2928,53 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'Added':             FieldValue.serverTimestamp(),
         'is_demo':           false,
         'is_demo_cleared':   false,
+        'is_duplicate_allowed': allowDuplicate,
       };
+
+      // ── Dup-add check (NET-087 / Task 3) ──────────────────────────────────
+      if (!allowDuplicate) {
+        bool isDuplicate = false;
+        try {
+          final uri = Uri.parse('$kApiBaseUrl/api/cert_save');
+          final payloadData = Map<String, dynamic>.from(coinDoc)..remove('Added');
+          final resp = await HttpAuthClient.post(
+            uri,
+            body: jsonEncode({
+              'cert_num': certNo,
+              'grader': grader,
+              'allow_duplicate': false,
+              'coin_data': payloadData,
+            }),
+            timeout: const Duration(seconds: 4),
+          );
+          if (resp.statusCode == 409) {
+            isDuplicate = true;
+          }
+        } catch (_) {}
+
+        if (!isDuplicate) {
+          try {
+            final existing = await FirebaseFirestore.instance
+                .collection(AuthService.coinsPath)
+                .where('certNo', isEqualTo: certNo)
+                .limit(1)
+                .get();
+            if (existing.docs.isNotEmpty) {
+              isDuplicate = true;
+            }
+          } catch (_) {}
+        }
+
+        if (isDuplicate) {
+          setState(() => _certManualSaving = false);
+          final proceed = await _showDuplicateCertDialog();
+          if (proceed) {
+            await _saveManualCertEntry(grader, certNo, allowDuplicate: true);
+          }
+          return;
+        }
+      }
+
       await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
           .add(coinDoc);
@@ -3582,12 +3658,58 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _addLookupResultToCollection() async {
+  Future<void> _addLookupResultToCollection({bool allowDuplicate = false}) async {
     if (_pcgsLookupResult == null) return;
     setState(() => _pcgsSingleAdding = true);
     try {
       final cert = _parseCertNumber(_pcgsSingleCtrl.text.trim());
       final mapped = PcgsImportService.mapToFirestoreSchema(_pcgsLookupResult!, certNo: cert);
+      mapped['is_duplicate_allowed'] = allowDuplicate;
+
+      // ── Dup-add check (NET-087 / Task 3) ──────────────────────────────────
+      if (!allowDuplicate) {
+        bool isDuplicate = false;
+        try {
+          final uri = Uri.parse('$kApiBaseUrl/api/cert_save');
+          final payloadData = Map<String, dynamic>.from(mapped)..remove('importedAt');
+          final resp = await HttpAuthClient.post(
+            uri,
+            body: jsonEncode({
+              'cert_num': cert,
+              'grader': 'PCGS',
+              'allow_duplicate': false,
+              'coin_data': payloadData,
+            }),
+            timeout: const Duration(seconds: 4),
+          );
+          if (resp.statusCode == 409) {
+            isDuplicate = true;
+          }
+        } catch (_) {}
+
+        if (!isDuplicate) {
+          try {
+            final existing = await FirebaseFirestore.instance
+                .collection(AuthService.coinsPath)
+                .where('certNo', isEqualTo: cert)
+                .limit(1)
+                .get();
+            if (existing.docs.isNotEmpty) {
+              isDuplicate = true;
+            }
+          } catch (_) {}
+        }
+
+        if (isDuplicate) {
+          setState(() => _pcgsSingleAdding = false);
+          final proceed = await _showDuplicateCertDialog();
+          if (proceed) {
+            await _addLookupResultToCollection(allowDuplicate: true);
+          }
+          return;
+        }
+      }
+
       await FirebaseFirestore.instance.collection(AuthService.coinsPath).add(mapped);
       BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
       if (!mounted) return;

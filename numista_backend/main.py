@@ -84,6 +84,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
+from routes.cert_routes import router as cert_router   # P7: unified cert lookup
 from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
 from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
@@ -107,6 +108,7 @@ app.include_router(support_router)
 app.include_router(telemetry_router)             # ITEM 4: silent error telemetry
 app.include_router(sandbox_router)               # ITEM 8: demo coin clear
 app.include_router(attorney_router)              # ITEM B: attorney portal token issuance + snapshot
+app.include_router(cert_router)                        # P7: unified cert lookup
 
 
 # COA parsing endpoint extracted to routes/scan_routes.py

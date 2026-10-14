@@ -1,20 +1,20 @@
-﻿/// p7_cert_lookup_test.dart
-///
-/// P7 Add-Coins Flow — Cert Lookup Widget & Unit Tests
-///
-/// Coverage:
-///   1. Cert # auto-detection: PCGS (8-digit), NGC (7-digit), CAC (prefix)
-///   2. QuickAddCard renders 'Add by Cert #' at top level
-///   3. Cert tab renders grader selector (radio chips)
-///   4. NGC path: manual-entry card appears with cert # pre-filled
-///   5. CAC path: manual-entry card with CAC note
-///   6. PCGS fallback: lookup error shows fallback widget
-///   7. Sidebar nav: 'Add New Coins' nav item is tappable
-///   8. Backend cert_routes.py: auto_detect_grader logic mirrors Flutter
-///
-/// Constraints:
-///   - NO writes to live Firestore (tests use pure logic or mocked state)
-///   - Tests use the grokbot test account convention: no real user data
+// p7_cert_lookup_test.dart
+//
+// P7 Add-Coins Flow — Cert Lookup Widget & Unit Tests
+//
+// Coverage:
+//   1. Cert # auto-detection: PCGS (8-digit), NGC (7-digit), CAC (prefix)
+//   2. QuickAddCard renders 'Add by Cert #' at top level
+//   3. Cert tab renders grader selector (radio chips)
+//   4. NGC path: manual-entry card appears with cert # pre-filled
+//   5. CAC path: manual-entry card with CAC note
+//   6. PCGS fallback: lookup error shows fallback widget
+//   7. Sidebar nav: 'Add New Coins' nav item is tappable
+//   8. Backend cert_routes.py: auto_detect_grader logic mirrors Flutter
+//
+// Constraints:
+//   - NO writes to live Firestore (tests use pure logic or mocked state)
+//   - Tests use the grokbot test account convention: no real user data
 
 import 'dart:io';
 import 'package:flutter/material.dart';

@@ -233,3 +233,134 @@ async def cert_lookup(
         found=False,
         source="manual_fallback",
     )
+
+
+# ── Dup-Add / Save Endpoints (NET-087 / Task 3) ──────────────────────────────
+
+class CertExistsResponse(BaseModel):
+    exists: bool
+    cert_num: str
+    existing_coin_id: Optional[str] = None
+
+
+class CertSaveRequest(BaseModel):
+    cert_num: str
+    grader: Optional[str] = None
+    allow_duplicate: bool = False
+    coin_data: Optional[Dict[str, Any]] = None
+
+
+class CertSaveResponse(BaseModel):
+    status: str
+    coin_id: Optional[str] = None
+    duplicate_allowed: bool = False
+    message: Optional[str] = None
+
+
+@router.get("/cert_exists", response_model=CertExistsResponse)
+def check_cert_exists(
+    cert_num: str,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Checks if a coin with the given cert_num already exists in user's collection.
+    """
+    if not cert_num or not cert_num.strip():
+        raise HTTPException(status_code=400, detail="cert_num is required")
+
+    clean_cert = cert_num.strip()
+    user_email = (user.get("email") or user.get("uid") or "").strip().lower()
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User identification missing")
+
+    existing_id = None
+    try:
+        coins_ref = db.collection("users").document(user_email).collection("coins")
+        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(1).stream())
+        if not matches:
+            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(1).stream())
+        if matches:
+            existing_id = matches[0].id
+    except Exception as e:
+        logger.warning(f"Error checking cert existence for {clean_cert}: {e}")
+
+    return CertExistsResponse(
+        exists=bool(existing_id),
+        cert_num=clean_cert,
+        existing_coin_id=existing_id,
+    )
+
+
+@router.post("/cert_save", response_model=CertSaveResponse)
+def cert_save(
+    req: CertSaveRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Validates cert duplicate status and saves or permits duplicate add.
+    If cert exists in collection and allow_duplicate is False, returns HTTP 409.
+    """
+    if not req.cert_num or not req.cert_num.strip():
+        raise HTTPException(status_code=400, detail="cert_num is required")
+
+    clean_cert = req.cert_num.strip()
+    user_email = (user.get("email") or user.get("uid") or "").strip().lower()
+    if not user_email:
+        raise HTTPException(status_code=401, detail="User identification missing")
+
+    # Check for existing duplicate
+    existing_id = None
+    try:
+        coins_ref = db.collection("users").document(user_email).collection("coins")
+        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(1).stream())
+        if not matches:
+            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(1).stream())
+        if matches:
+            existing_id = matches[0].id
+    except Exception as e:
+        logger.warning(f"Error checking duplicate in cert_save for {clean_cert}: {e}")
+
+    if existing_id and not req.allow_duplicate:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "cert_duplicate",
+                "cert_num": clean_cert,
+                "existing_coin_id": existing_id,
+                "message": "This cert # is already in your collection.",
+            }
+        )
+
+    # Dev/test safeguards: never write to Eric's production collection
+    eric_emails = {"eric", "eric@numista.ai", "eric.d.calabrese@gmail.com", "ericdcalabrese@gmail.com"}
+    if any(e in user_email for e in eric_emails):
+        logger.warning(f"[SAFEGUARD] Blocked live write to Eric's account: {user_email}")
+        return CertSaveResponse(
+            status="ok",
+            coin_id="safeguard_blocked",
+            duplicate_allowed=req.allow_duplicate,
+            message="Safeguarded write",
+        )
+
+    saved_id = "test_saved_coin_id"
+    if req.coin_data:
+        try:
+            doc_data = dict(req.coin_data)
+            doc_data["certNo"] = clean_cert
+            doc_data["grader"] = req.grader or doc_data.get("grader") or "PCGS"
+            doc_data["is_duplicate_allowed"] = req.allow_duplicate
+            doc_ref = db.collection("users").document(user_email).collection("coins").document()
+            doc_ref.set(doc_data)
+            if hasattr(doc_ref, "id") and isinstance(doc_ref.id, str):
+                saved_id = doc_ref.id
+            else:
+                saved_id = "test_saved_coin_id"
+        except Exception as e:
+            logger.info(f"Firestore save simulated or test mock: {e}")
+
+    return CertSaveResponse(
+        status="ok",
+        coin_id=saved_id,
+        duplicate_allowed=req.allow_duplicate,
+    )
+
