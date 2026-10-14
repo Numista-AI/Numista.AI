@@ -204,11 +204,14 @@ def test_cert_save_duplicate_detection_409():
 
 
 def test_cert_save_duplicate_allowed():
-    """POST /api/cert_save with duplicate cert and allow_duplicate=True proceeds successfully."""
+    """POST /api/cert_save with duplicate cert and allow_duplicate=True returns 200 status='clear'.
+    FAIL-1 fix: cert_save is now CHECK-ONLY — Flutter does the single Firestore write.
+    """
     mock_existing = MagicMock()
     mock_existing.id = "coin_existing_999"
 
     with patch("routes.cert_routes.db.collection") as mock_col:
+        mock_db_write = mock_col.return_value.document.return_value.collection.return_value.document.return_value.set
         mock_col.return_value.document.return_value.collection.return_value.where.return_value.limit.return_value.stream.return_value = [mock_existing]
         response = client.post(
             "/api/cert_save",
@@ -221,7 +224,68 @@ def test_cert_save_duplicate_allowed():
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        # FAIL-1 fix: status is now 'clear', not 'ok'
+        assert data["status"] == "clear", f"Expected 'clear', got '{data['status']}'"
         assert data["duplicate_allowed"] is True
-        assert "coin_id" in data
+        # No Firestore write should have occurred
+        mock_db_write.assert_not_called()
+
+
+def test_cert_save_clear_path_no_firestore_write():
+    """POST /api/cert_save with no duplicate returns 200 status='clear' without writing to Firestore.
+    FAIL-1 fix: cert_save check-only. Flutter is the single writer.
+    FAIL-2 fix: eric_emails safeguard removed (would have returned fake 'ok').
+    """
+    with patch("routes.cert_routes.db.collection") as mock_col:
+        # No existing coin
+        mock_col.return_value.document.return_value.collection.return_value.where.return_value.limit.return_value.stream.return_value = []
+        mock_db_write = mock_col.return_value.document.return_value.collection.return_value.document.return_value.set
+
+        response = client.post(
+            "/api/cert_save",
+            json={
+                "cert_num": "53652580",
+                "grader": "PCGS",
+                "allow_duplicate": False,
+                "coin_data": {"CoinName": "1881-S Morgan"},
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "clear"
+        assert data.get("coin_id") is None  # No ID — Flutter will get one from its .add()
+        # Critical: backend must NOT have written to Firestore
+        mock_db_write.assert_not_called()
+
+
+def test_cert_save_no_eric_emails_safeguard():
+    """FAIL-2 fix: eric_emails block is removed — no fake 'ok' for any email.
+    Previously, emails containing 'eric' (e.g. eric@numista.ai, erica@...) got a
+    fake status='ok' with coin_id='safeguard_blocked'. Now all get real responses.
+    """
+    test_emails = [
+        "eric@numista.ai",
+        "eric.seaman@yahoo.com",
+        "erica@example.com",
+        "frederick@example.com",
+    ]
+    for email in test_emails:
+        with patch("routes.cert_routes.db.collection") as mock_col:
+            mock_col.return_value.document.return_value.collection.return_value.where.return_value.limit.return_value.stream.return_value = []
+            response = client.post(
+                "/api/cert_save",
+                json={
+                    "cert_num": "53652580",
+                    "grader": "PCGS",
+                    "allow_duplicate": False,
+                    "coin_data": {"CoinName": "1881-S Morgan"},
+                }
+            )
+            assert response.status_code == 200
+            data = response.json()
+            # Must be 'clear', never 'safeguard_blocked' or fake 'ok'
+            assert data["status"] == "clear", \
+                f"Email {email} got status={data['status']!r} — eric_emails block may still be active"
+            assert data.get("coin_id") != "safeguard_blocked", \
+                f"Email {email} triggered safeguard — eric_emails block must be removed"
 

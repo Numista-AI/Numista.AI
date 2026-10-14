@@ -297,8 +297,15 @@ def cert_save(
     user: dict = Depends(get_current_user),
 ):
     """
-    Validates cert duplicate status and saves or permits duplicate add.
-    If cert exists in collection and allow_duplicate is False, returns HTTP 409.
+    Checks whether a cert already exists in the user's collection.
+    Returns HTTP 409 if the cert exists and allow_duplicate is False.
+    Returns HTTP 200 (status='clear') otherwise.
+
+    NOTE: This endpoint does NOT write to Firestore. The Flutter client is the
+    single writer — it calls this endpoint first, then does its own
+    FirebaseFirestore.instance.collection(coinsPath).add(coinDoc) on 200.
+    This prevents double-write bugs. (FAIL 1 fix: removed backend Firestore write.
+    FAIL 2 fix: removed eric_emails safeguard block — never fake data.)
     """
     if not req.cert_num or not req.cert_num.strip():
         raise HTTPException(status_code=400, detail="cert_num is required")
@@ -331,36 +338,130 @@ def cert_save(
             }
         )
 
-    # Dev/test safeguards: never write to Eric's production collection
-    eric_emails = {"eric", "eric@numista.ai", "eric.d.calabrese@gmail.com", "ericdcalabrese@gmail.com"}
-    if any(e in user_email for e in eric_emails):
-        logger.warning(f"[SAFEGUARD] Blocked live write to Eric's account: {user_email}")
-        return CertSaveResponse(
-            status="ok",
-            coin_id="safeguard_blocked",
-            duplicate_allowed=req.allow_duplicate,
-            message="Safeguarded write",
-        )
-
-    saved_id = "test_saved_coin_id"
-    if req.coin_data:
-        try:
-            doc_data = dict(req.coin_data)
-            doc_data["certNo"] = clean_cert
-            doc_data["grader"] = req.grader or doc_data.get("grader") or "PCGS"
-            doc_data["is_duplicate_allowed"] = req.allow_duplicate
-            doc_ref = db.collection("users").document(user_email).collection("coins").document()
-            doc_ref.set(doc_data)
-            if hasattr(doc_ref, "id") and isinstance(doc_ref.id, str):
-                saved_id = doc_ref.id
-            else:
-                saved_id = "test_saved_coin_id"
-        except Exception as e:
-            logger.info(f"Firestore save simulated or test mock: {e}")
-
+    # Return clear — Flutter does the single Firestore write.
     return CertSaveResponse(
-        status="ok",
-        coin_id=saved_id,
+        status="clear",
+        coin_id=None,
         duplicate_allowed=req.allow_duplicate,
+        message="OK to save",
     )
 
+
+# ── NET-093: Slab Photo Cert # Scanner ───────────────────────────────────────
+
+class ScanCertResponse(BaseModel):
+    cert_number: Optional[str] = None
+    grader: Optional[str] = None   # "PCGS" | "NGC" | "CAC" | null
+    confidence: str = "LOW"        # "HIGH" | "MEDIUM" | "LOW"
+    message: str = ""
+
+
+@router.post("/scan_cert_number", response_model=ScanCertResponse)
+async def scan_cert_number(
+    image: bytes = Depends(lambda: None),  # overridden below
+    user: dict = Depends(get_current_user),
+):
+    """
+    NET-093: OCR a grading slab photo to extract the cert number and grader.
+    Expects a multipart/form-data POST with field 'image' (JPEG/PNG bytes).
+    Uses Gemini Vision to read the cert # printed on the slab label.
+    Returns cert_number, grader, and confidence.
+
+    NOTE: This endpoint is implemented via the multipart form handler below.
+    """
+    raise HTTPException(status_code=405, detail="Use multipart form POST.")
+
+
+from fastapi import UploadFile, File as FastAPIFile
+import base64, os
+
+
+@router.post("/scan_cert_number_upload", response_model=ScanCertResponse)
+async def scan_cert_number_upload(
+    file: UploadFile = FastAPIFile(...),
+    user: dict = Depends(get_current_user),
+):
+    """
+    NET-093: OCR a grading slab photo to extract the cert number and grader.
+    Accepts multipart/form-data with field 'file' (JPEG/PNG/WEBP).
+    Uses Gemini Vision (gemini-2.0-flash) to read the cert # from the slab label.
+    Returns {cert_number, grader, confidence, message}.
+
+    Grader detection rules (same as auto-detect in Flutter):
+    - PCGS: 8 numeric digits (e.g. 53652580) or barcode slash format
+    - NGC: 7 digits, optionally with dash suffix (e.g. 8321797-003)
+    - CAC: starts with 'CAC' (e.g. CAC12345) or label says 'CAC'
+    """
+    _check_cert_rate_limit(user.get("uid") or user.get("email", "anon"), limit=5)
+
+    raw = await file.read()
+    if len(raw) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image too large (max 10 MB).")
+
+    # Detect MIME type
+    mime = file.content_type or "image/jpeg"
+    b64 = base64.b64encode(raw).decode()
+
+    try:
+        import google.generativeai as genai
+        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="AI service not configured.")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        prompt = (
+            "You are examining an image of a certified coin grading slab label. "
+            "Your ONLY job is to extract the certification number and identify the grading company.\n\n"
+            "Grading companies and their cert # formats:\n"
+            "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
+            "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
+            "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
+            "- CAC: starts with 'CAC' (e.g. CAC12345 or CACG12345). "
+            "  Label says 'CAC' or 'Certified Acceptance Corporation'.\n\n"
+            "Return ONLY valid JSON, no markdown:\n"
+            '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|null>", '
+            '"confidence": "<HIGH|MEDIUM|LOW>"}'
+        )
+
+        import google.generativeai.types as gtypes
+        image_part = {"mime_type": mime, "data": raw}
+        response = model.generate_content(
+            [prompt, image_part],
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                max_output_tokens=128,
+            ),
+        )
+        text = response.text.strip()
+        import json
+        data = json.loads(text)
+        cert_num = (data.get("cert_number") or "").strip() or None
+        grader = (data.get("grader") or "").strip().upper() or None
+        if grader not in ("PCGS", "NGC", "CAC"):
+            grader = None
+        confidence = data.get("confidence", "LOW").upper()
+        if confidence not in ("HIGH", "MEDIUM", "LOW"):
+            confidence = "LOW"
+
+        if not cert_num:
+            return ScanCertResponse(
+                cert_number=None, grader=None, confidence="LOW",
+                message="No cert number found in image."
+            )
+
+        return ScanCertResponse(
+            cert_number=cert_num,
+            grader=grader,
+            confidence=confidence,
+            message="OK",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"scan_cert_number failed: {e}")
+        return ScanCertResponse(
+            cert_number=None, grader=None, confidence="LOW",
+            message="Scan failed — please enter cert # manually."
+        )

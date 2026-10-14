@@ -2542,7 +2542,25 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
+                    // NET-093: Camera scan to pre-fill cert #
+                    Tooltip(
+                      message: 'Scan slab photo to auto-fill cert #',
+                      child: InkWell(
+                        onTap: _pcgsLookupLoading ? null : _scanSlabPhoto,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          height: 50,
+                          width: 46,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFF94A3B8)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.photo_camera_outlined, size: 22, color: Color(0xFF64748B)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: _pcgsLookupLoading ? null : _lookupCertUnified,
                       icon: _pcgsLookupLoading
@@ -2707,6 +2725,84 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   /// Unified cert lookup — dispatches to PCGS live API or NGC/CAC manual entry.
+  // NET-093: Slab photo → cert # pre-fill
+  Future<void> _scanSlabPhoto() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final fileName = picked.name;
+      final mime = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
+
+      if (!mounted) return;
+      setState(() => _pcgsLookupLoading = true);
+
+      final uri = Uri.parse('$kApiBaseUrl/api/scan_cert_number_upload');
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final request = http.MultipartRequest('POST', uri);
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(http.MultipartFile.fromBytes(
+        'file', bytes, filename: fileName,
+        contentType: MediaType.parse(mime),
+      ));
+
+      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final body = await streamed.stream.bytesToString();
+
+      if (!mounted) return;
+      setState(() => _pcgsLookupLoading = false);
+
+      if (streamed.statusCode == 200) {
+        final data = jsonDecode(body) as Map<String, dynamic>;
+        final certNum = (data['cert_number'] as String? ?? '').trim();
+        final grader  = (data['grader'] as String? ?? '').trim().toUpperCase();
+        if (certNum.isNotEmpty) {
+          setState(() {
+            _pcgsSingleCtrl.text = certNum;
+            if (grader == 'NGC' || grader == 'CAC' || grader == 'PCGS') {
+              _certGrader = grader;
+            }
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('📸 Cert # $certNum detected — tap Look Up to continue'),
+              backgroundColor: const Color(0xFF10B981),
+              duration: const Duration(seconds: 3),
+            ));
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('No cert number detected — please enter it manually.'),
+              backgroundColor: Colors.orange,
+            ));
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Scan failed — please enter cert # manually.'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _pcgsLookupLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Scan failed — please enter cert # manually.'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
   Future<void> _lookupCertUnified() async {
     final raw = _pcgsSingleCtrl.text.trim();
     if (raw.isEmpty) {
@@ -2819,6 +2915,47 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         _certManualField('NOTES', _certManualNotes, hint: 'Any additional details...', maxLines: 2),
         const SizedBox(height: 20),
 
+        // NET-093: Verify link — open grader's public cert page before confirming
+        Builder(builder: (_) {
+          final String verifyUrl;
+          switch (grader.toUpperCase()) {
+            case 'NGC':
+              verifyUrl = 'https://www.ngccoin.com/certlookup/$certNo/';
+              break;
+            case 'CAC':
+              verifyUrl = 'https://www.cacgrading.com/cert-verify/$certNo';
+              break;
+            default:
+              verifyUrl = 'https://www.pcgs.com/cert/$certNo';
+          }
+          return SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse(verifyUrl);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              icon: const Icon(Icons.open_in_new_rounded, size: 15),
+              label: Text('Verify Cert on ${grader.toUpperCase()}.com →'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: grader == 'NGC'
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFF0EA5E9),
+                side: BorderSide(color: grader == 'NGC'
+                    ? const Color(0xFFDDD6FE)
+                    : const Color(0xFFBAE6FD)),
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 12),
+
         // Confirm & Save button
         SizedBox(
           width: double.infinity,
@@ -2916,12 +3053,29 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   Future<void> _saveManualCertEntry(String grader, String certNo, {bool allowDuplicate = false}) async {
     setState(() => _certManualSaving = true);
     try {
+      final grade = _certManualGrade.text.trim();
+      // ── Verify link (NET-093): stored as proof, shown in confirm screen ───
+      final String verifyLink;
+      switch (grader.toUpperCase()) {
+        case 'NGC':
+          final gradeSlug = grade.replaceAll(' ', '').toUpperCase();
+          verifyLink = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSlug/';
+          break;
+        case 'CAC':
+          verifyLink = 'https://www.cacgrading.com/cert-verify/$certNo';
+          break;
+        case 'PCGS':
+        default:
+          verifyLink = 'https://www.pcgs.com/cert/$certNo';
+          break;
+      }
+
       final coinDoc = <String, dynamic>{
         'certNo':            certNo,
         'grader':            grader,
         'CoinName':          _certManualCoinName.text.trim(),
         'Year':              _certManualYear.text.trim(),
-        'Grade':             _certManualGrade.text.trim(),
+        'Grade':             grade,
         'Denomination':      _certManualDenom.text.trim(),
         'Personal Notes':    _certManualNotes.text.trim(),
         'source':            'cert_manual_${grader.toLowerCase()}',
@@ -2929,9 +3083,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'is_demo':           false,
         'is_demo_cleared':   false,
         'is_duplicate_allowed': allowDuplicate,
+        // NET-093: public verify link stored as proof; every manual entry starts unverified
+        'verify_link':       verifyLink,
+        'verified':          false,
       };
 
-      // ── Dup-add check (NET-087 / Task 3) ──────────────────────────────────
+
+      // ── Dup-add check (NET-087 / Task 3): backend is single checker ───────
       if (!allowDuplicate) {
         bool isDuplicate = false;
         try {
@@ -2952,19 +3110,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           }
         } catch (_) {}
 
-        if (!isDuplicate) {
-          try {
-            final existing = await FirebaseFirestore.instance
-                .collection(AuthService.coinsPath)
-                .where('certNo', isEqualTo: certNo)
-                .limit(1)
-                .get();
-            if (existing.docs.isNotEmpty) {
-              isDuplicate = true;
-            }
-          } catch (_) {}
-        }
-
         if (isDuplicate) {
           setState(() => _certManualSaving = false);
           final proceed = await _showDuplicateCertDialog();
@@ -2974,6 +3119,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           return;
         }
       }
+
 
       await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
@@ -3520,6 +3666,30 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         const SizedBox(height: 16),
         const Divider(),
         const SizedBox(height: 12),
+        // NET-093: Verify on PCGS.com before confirming add
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final cert = _parseCertNumber(_pcgsSingleCtrl.text.trim());
+              final uri = Uri.parse('https://www.pcgs.com/cert/$cert');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            icon: const Icon(Icons.open_in_new_rounded, size: 15),
+            label: const Text('Verify on PCGS.com →'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF1D4ED8),
+              side: const BorderSide(color: Color(0xFF93C5FD)),
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
@@ -3665,8 +3835,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final cert = _parseCertNumber(_pcgsSingleCtrl.text.trim());
       final mapped = PcgsImportService.mapToFirestoreSchema(_pcgsLookupResult!, certNo: cert);
       mapped['is_duplicate_allowed'] = allowDuplicate;
+      // NET-093: public verify link stored as proof; PCGS lookup entries start unverified
+      mapped['verify_link'] = 'https://www.pcgs.com/cert/$cert';
+      mapped['verified'] = false;
 
-      // ── Dup-add check (NET-087 / Task 3) ──────────────────────────────────
+      // ── Dup-add check (NET-087 / Task 3): backend is single checker ───────
       if (!allowDuplicate) {
         bool isDuplicate = false;
         try {
@@ -3687,19 +3860,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           }
         } catch (_) {}
 
-        if (!isDuplicate) {
-          try {
-            final existing = await FirebaseFirestore.instance
-                .collection(AuthService.coinsPath)
-                .where('certNo', isEqualTo: cert)
-                .limit(1)
-                .get();
-            if (existing.docs.isNotEmpty) {
-              isDuplicate = true;
-            }
-          } catch (_) {}
-        }
-
         if (isDuplicate) {
           setState(() => _pcgsSingleAdding = false);
           final proceed = await _showDuplicateCertDialog();
@@ -3709,6 +3869,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           return;
         }
       }
+
 
       await FirebaseFirestore.instance.collection(AuthService.coinsPath).add(mapped);
       BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');

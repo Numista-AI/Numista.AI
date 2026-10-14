@@ -17,6 +17,7 @@ import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../utils/slot_resolver.dart';
 import '../services/set_expansion_helper.dart';
+import 'add_coins_hub.dart';
 
 
 class ProgramManagerScreen extends StatefulWidget {
@@ -1290,29 +1291,61 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 }
 
                                 if (isOwned) {
-                                  // ── Owned ──────────────────────────────
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD1FAE5),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.check,
-                                            size: 11,
-                                            color: Color(0xFF10B981)),
-                                        const SizedBox(width: 3),
-                                        Text(chipLabel,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF065F46),
-                                              fontWeight: FontWeight.w500,
-                                            )),
-                                      ],
-                                    ),
+                                  // ── Owned + Add-Another (NET-087) ──────
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD1FAE5),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.check,
+                                                size: 11,
+                                                color: Color(0xFF10B981)),
+                                            const SizedBox(width: 3),
+                                            Text(chipLabel,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF065F46),
+                                                  fontWeight: FontWeight.w500,
+                                                )),
+                                          ],
+                                        ),
+                                      ),
+                                      // NET-087: add-another-copy button
+                                      GestureDetector(
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AddCoinsHub(
+                                              initialTabName: 'cert',
+                                            ),
+                                          ),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 4),
+                                          child: Tooltip(
+                                            message: 'Add another copy',
+                                            child: Container(
+                                              padding: const EdgeInsets.all(3),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFD1FAE5),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: const Icon(Icons.add,
+                                                  size: 12,
+                                                  color: Color(0xFF10B981)),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 } else if (isPending) {
                                   // ── Pending / Unreleased ───────────────
