@@ -1421,7 +1421,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           } catch (_) {}
                         }
 
-                        final liveCoinsCount = coinsDocs.where((d) => (d.data()['item_type'] != 'supply' && d.data()['is_supply'] != true)).length;
+                        final liveExpansion = expandCollection(
+                          coinsDocs.map((d) => d.data()).toList(),
+                          coinsDocs.map((d) => d.id).toList(),
+                        );
+                        final liveCoinsCount = liveExpansion.totalCoins;
                         final liveSuppliesCount = coinsDocs.where((d) => (d.data()['item_type'] == 'supply' || d.data()['is_supply'] == true)).length;
                         final coinsCount = coinsDocs.isNotEmpty ? liveCoinsCount : ((stats['coin_count'] as num?)?.toInt() ?? 0);
                         final suppliesCount = coinsDocs.isNotEmpty ? liveSuppliesCount : ((stats['supply_count'] as num?)?.toInt() ?? 0);

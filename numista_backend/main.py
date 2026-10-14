@@ -10680,14 +10680,18 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         
         # 1. Fetch all coins for the user
-        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        coins_docs = list(db.collection("users").document(req.user_id).collection("coins").get())
+
+        # Authoritative single source of truth for coin/lot counts (P2 fix)
+        _inventory, _ = expand_collection_inventory(coins_docs)
+        _counts = count_coins_and_lots(_inventory)
+        total_coins = _counts["total_coins"]
         
         total_value = 0.0
         gold_val = 0.0
         silver_val = 0.0
         type_val = 0.0
         
-        total_coins = 0
         melt_value_sum = 0.0
         acquisition_cost_sum = 0.0
         face_value_sum = 0.0
@@ -10700,15 +10704,13 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
             except Exception:
                 return 0.0
         
-        for doc in coins_ref:
+        for doc in coins_docs:
             coin = doc.to_dict()
             qty = 1
             try:
                 qty = int(coin.get("Quantity") or 1)
             except Exception:
                 pass
-                
-            total_coins += qty
             
             # Default to Bid value as standard valuation
             val = float(coin.get("greysheetBid") or 0.0)
