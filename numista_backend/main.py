@@ -192,15 +192,18 @@ async def default_deny_auth_middleware(request: Request, call_next):
     # Must carry a valid Firebase Bearer token
     from routes.deps import verify_firebase_bearer_token
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization", "")
+    token = ""
     if auth_header.startswith("Bearer "):
         token = auth_header.split("Bearer ", 1)[1].strip()
-        if token:
-            # Full verify — reuse the already-imported verifier
-            decoded = verify_firebase_bearer_token(request)
-            if decoded:
-                request.state.user = decoded  # cache for per-route reuse
-                return await call_next(request)
-            # Token present but invalid — fall through to 401
+    elif request.query_params.get("token"):
+        token = request.query_params.get("token", "").strip()
+    if token:
+        # Full verify — reuse the already-imported verifier
+        decoded = verify_firebase_bearer_token(request)
+        if decoded:
+            request.state.user = decoded  # cache for per-route reuse
+            return await call_next(request)
+        # Token present but invalid — fall through to 401
     is_prod = os.environ.get("K_SERVICE") or os.environ.get("ENVIRONMENT") == "production"
     if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
         return await call_next(request)
@@ -8018,13 +8021,14 @@ def receipt_view_url(
     user_email: str,
     receipt_id: str,
     authorization: Optional[str] = Header(None),
+    _user: dict = Depends(get_current_user),
 ):
     """
     Return a reliable streaming URL for viewing original PDF, JPG, or PNG receipt documents inline.
     Looks up receipt metadata across receipts collection, review_queue, and coins.
     """
     import urllib.parse
-    owner_key = _authenticate_request(authorization, user_email)
+    owner_key = _authenticate_request(authorization, user_email, current_user=_user)
     user_email = owner_key
 
     gcs_path, original_filename = _get_receipt_metadata(user_email, receipt_id)
@@ -8071,6 +8075,7 @@ def receipt_stream(
     receipt_id: str,
     authorization: Optional[str] = Header(None),
     token: Optional[str] = Query(None),
+    _user: dict = Depends(get_current_user),
 ):
     """
     Direct document stream endpoint that reads receipt bytes (PDF, JPG, PNG, etc.)
@@ -8080,7 +8085,7 @@ def receipt_stream(
     from fastapi.responses import Response
 
     auth_header = authorization or (f"Bearer {token}" if token else None)
-    owner_key = _authenticate_request(auth_header, user_email)
+    owner_key = _authenticate_request(auth_header, user_email, current_user=_user)
     user_email = owner_key
 
     gcs_path, original_filename = _get_receipt_metadata(user_email, receipt_id)
@@ -8140,44 +8145,33 @@ class ClearCollectionRequest(BaseModel):
 
 
 @app.get("/api/collection/count")
-def collection_count(authorization: str = Header(None), user_email: str = ""):
-    """Return expanded coin/lot counts. Token-verified.
+def collection_count(
+    authorization: Optional[str] = Header(None),
+    user_email: str = "",
+    _user: dict = Depends(get_current_user),
+):
+    """Return expanded coin/lot counts. Token-verified with ownership check.
 
     Returns:
         { "owner": str, "user_email": str, "coins": int, "lots": int, "sets": int }
     """
     try:
-        # --- Auth: same pattern as deep_dive ---
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Missing Authorization header")
-        id_token = authorization.split("Bearer ", 1)[1].strip()
-        try:
-            decoded_token = fb_auth.verify_id_token(id_token)
-        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
-                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
-        except Exception as e:
-            logger.error(f"[collection/count] auth error: {type(e).__name__}: {e}")
-            raise HTTPException(status_code=401, detail="Authentication failed")
-
-        owner_key = _collection_owner_from_token(decoded_token)
-
-        # Log mismatch — user_email is deprecated, not used to select collection
-        if user_email and user_email.strip().lower() != owner_key:
-            logger.info(
-                f"[collection/count] deprecated user_email param ignored; "
-                f"owner={hashlib.sha256(owner_key.encode()).hexdigest()[:12]}"
-            )
+        owner_key = _authenticate_request(authorization, user_email if user_email else None, current_user=_user)
+        target_owner = user_email.strip().lower() if user_email else owner_key
 
         # --- Expand and count ---
-        coins_ref = db.collection('users').document(owner_key).collection('coins')
+        coins_ref = db.collection('users').document(target_owner).collection('coins')
         docs = coins_ref.stream()
         inventory, stats = expand_collection_inventory(docs)
         counts = count_coins_and_lots(inventory)
 
         return {
-            "owner": owner_key,
-            "user_email": owner_key,     # deprecated field, kept for back-compat
+            "owner": target_owner,
+            "user_email": target_owner,     # deprecated field, kept for back-compat
+            "coins": counts["total_coins"],
+            "lots": counts["total_lots"],
+            "sets": counts["set_count"],
+        }
             "coins": counts["total_coins"],
             "lots": counts["total_lots"],
             "sets": counts["set_count"],

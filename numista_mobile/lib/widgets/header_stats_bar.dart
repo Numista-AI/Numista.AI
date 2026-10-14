@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../services/set_expansion_helper.dart';
 
 /// 4-Fact Responsive Header Stats Bar for Desktop Web
 /// Displays:
@@ -148,12 +149,17 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
         final isMedium = constraints.maxWidth > 1000 && !isWide;
         final isOffline = widget.spotPrices.isEmpty;
 
+        final filteredCount = expandCollection(
+          widget.docs.map((d) => (d.data() as Map<String, dynamic>?) ?? {}).toList(),
+          widget.docs.map((d) => d.id).toList(),
+        ).totalCoins;
+
         // Fact 1: Count Chip
         final countChip = _buildStatChip(
           label: widget.isFiltered ? 'FILTERED COINS' : 'TOTAL COINS',
           value: widget.isFiltered
-              ? '${widget.docs.length} of ${widget.totalCoinsCount}'
-              : '${widget.docs.length} coins',
+              ? '$filteredCount of ${widget.totalCoinsCount}'
+              : '${widget.totalCoinsCount} coins',
           subtext: widget.isFiltered ? 'for current filter settings' : null,
           cardBg: cardBg,
           borderCol: borderCol,

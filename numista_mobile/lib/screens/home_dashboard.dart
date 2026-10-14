@@ -342,7 +342,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 // Use expansion-aware counting (Dimes Bug v2.2)
                 final coinDocIds = coins.map((d) => (d['id'] ?? '').toString()).toList();
                 final expansion = expandCollection(coins, coinDocIds);
-                int totalItems = expansion.totalCoins + currency.length + worldItems.length;
+                final int totalCoins = expansion.totalCoins;
+                final int totalItems = totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
             double bidTotal = 0;
             double askTotal = 0;
@@ -487,9 +488,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final effectiveCoinsVal = advanced ? cpgTotal : bidTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
-            if (totalItems > 0) {
+            if (totalCoins > 0 || totalItems > 0) {
               PortfolioSnapshotService.maybeTakeSnapshot(
-                totalCoins: totalItems,
+                totalCoins: totalCoins,
                 portfolioValue: portfolioValue,
                 meltValue: meltValue,
                 acquisitionCost: acquisitionCost,
@@ -647,7 +648,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalItems, advanced: advanced),
+                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalCoins, advanced: advanced),
                                 if (pendingValueCount > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
@@ -680,7 +681,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     if (narrow) {
                       return Column(children: [
                         Row(children: [
-                          Expanded(child: _metricCard('Total Coins', totalItems.toString())),
+                          Expanded(child: _metricCard('Total Coins', totalCoins.toString())),
                           const SizedBox(width: 10),
                           Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
                         ]),
@@ -699,7 +700,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _metricCardFlex('Total Coins', totalItems.toString()),
+                        _metricCardFlex('Total Coins', totalCoins.toString()),
                         _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
                         _metricCardFlex('Melt Value', fmt.format(meltValue)),
                         _metricCardFlex('Face Value', fmt.format(faceValue)),
@@ -843,7 +844,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                   // ── Morgan Widget ─────────────────────────────────────────
                   _MorganDashboardCard(
-                    totalCoins: totalItems,
+                    totalCoins: totalCoins,
                     onAskMorgan: widget.onAskMorgan,
                     onAskMorganWithQuery: widget.onAskMorganWithQuery,
                   ),

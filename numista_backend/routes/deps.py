@@ -50,11 +50,15 @@ if not firebase_admin._apps:
 # ── 4. Authentication Middleware Dependencies ─────────────────────────────────
 
 def verify_firebase_bearer_token(request: Request) -> Optional[Dict[str, Any]]:
-    """Extracts Authorization Bearer token and verifies via Firebase Admin SDK."""
+    """Extracts Authorization Bearer token (or query token) and verifies via Firebase Admin SDK."""
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split("Bearer ")[1].strip()
+    elif request.query_params.get("token"):
+        token = request.query_params.get("token", "").strip()
+    if not token:
         return None
-    token = auth_header.split("Bearer ")[1].strip()
     try:
         decoded_token = firebase_auth.verify_id_token(token)
         return decoded_token

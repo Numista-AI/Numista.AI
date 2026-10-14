@@ -25,16 +25,17 @@ Routes
 
 from __future__ import annotations
 
+import os
 import datetime
 import hashlib
 import secrets
 from datetime import timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 
-from routes.deps import db, logger
+from routes.deps import db, logger, get_current_user
 
 router = APIRouter(prefix="/api/attorney", tags=["Attorney Portal"])
 
@@ -165,12 +166,15 @@ async def issue_attorney_token(request: Request):
 
 
 @router.get("/snapshot")
-async def get_attorney_snapshot(uid: str, token: str, request: Request):
+async def get_attorney_snapshot(
+    uid: str,
+    token: str,
+    request: Request,
+    _user: dict = Depends(get_current_user),
+):
     """
     GET /api/attorney/snapshot?uid=<firebase_uid>&token=<raw_32_hex>
-    Public endpoint — no Firebase Auth required on the attorney side.
-
-    Validates the token hash, checks expiry and revocation, applies the
+    Validates the token hash, checks caller ownership, expiry and revocation, applies the
     field allow-list, and returns the scoped collection snapshot.
 
     B-ADD-2 write-ordering:
@@ -202,12 +206,22 @@ async def get_attorney_snapshot(uid: str, token: str, request: Request):
 
     data = snap.to_dict() or {}
 
+    owner_uid = data.get("uid") or ""
+    owner_email = (data.get("user_email") or "").strip().lower()
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+
     # Verify uid matches
     if data.get("uid") != uid:
         raise HTTPException(
             status_code=403,
-            detail="This link is not valid for this account.",
+            detail="Forbidden",
         )
+
+    if not _user.get("admin") and not is_dev_guest:
+        if caller_uid != owner_uid and caller_email != owner_uid and caller_email != owner_email:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     # Check revocation
     if data.get("is_revoked"):
