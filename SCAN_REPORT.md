@@ -1,8 +1,8 @@
 # SCAN REPORT: Numista.AI System Audit (v4.403)
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [474 passed, 0 failed in 16.16s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` exit 0 with "No issues found!"], 433/433 Flutter unit tests passed [100% pass rate in 11.0s], live Cloud Run backend probes 100% operational across all routes [8/8 healthy], and Playwright smoke tests 100% operational [8/8 passed in 31.2s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-10-13
+* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [511 passed, 0 failed in 36.45s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` exit 0 with "No issues found!"], 471/471 Flutter unit tests passed [100% pass rate in 21.0s], live Cloud Run backend probes 100% operational across all routes [8/8 healthy; default-deny auth sentinels validated], and Playwright smoke tests 100% operational [8/8 passed in 42.3s; master suite was not run this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
+* **Scan Date:** 2026-10-14
 * **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
 * **Versions Scanned:** Backend v4.403, Mobile/Web Frontend v4.403 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
 
@@ -13,9 +13,10 @@
 * **Dart / Flutter Compilation Errors & Warnings:** 0 errors, 0 warnings (`dart analyze lib` exit 0; "No issues found!")
 * **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; 100% 2026 GA compliance)
 * **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (8/8 endpoints healthy)
-* **Backend Pytest Suite:** 474 passed, 0 failed in 16.16s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 31.2s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
-* **Flutter Unit Suite:** 433 passed, 0 failed in 11.0s (100% pass rate; 0 failures)
+* **Backend Pytest Suite:** 511 passed, 0 failed in 36.45s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
+* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 42.3s (`auth.setup.js`, `01-homepage.spec.js`; master suite was not run this session)
+* **Flutter Unit Suite:** 471 passed, 0 failed in 21.0s (100% pass rate; 0 failures)
+* **T4 Security & Protection Hardening (PR #262, commit c80f4122 / eee06487):** Verified active (Portfolio snapshot IDOR ownership verification, estate rules & document size limits, AI valuation rate capping [20/hr] and anonymous user block with 403, CSV formula injection sanitization, admin navigation role check, and dependency upgrades reducing open Dependabot alerts from 64 to 47).
 * **Morgan Gate 0 V2 Verification (commit 9769dac5):** Verified active (Coin proposal update and undo logic, currency string sanitization/stripping, custom delimiters for batches >50, transactional confirmation, and action-log verified undo).
 * **Older User Onboarding & UX Polish (REQ-032 V2, commit 9fc13333):** Verified active (Hardware keyboard listener, 14px typography floor, login form token alignment, enlarged forgot-PIN tap targets, numeric keypad cap, and textBodySm banner styling).
 * **Alternate Site & Dynamic Variant Switcher (REQ-032B V2, commit 9fc13333):** Verified active (Firestore wildcard rule exclusions, fail-safe degradation to classic layout on API error or unlisted user, and `ui_variant` admin endpoints).
@@ -32,13 +33,13 @@
 * **Upcoming US Mint Releases & Valuation Fallback (v4.361–v4.370):** Verified active (Automated test suites, migration seed hardening, and official US Mint Issue Price fallback with `ai_value_status` field).
 * **26RJ Catalog & Ghost Repair Status:** Verified active (26RJ 20-coin count, 8 Firestore `coin_image_index` URLs aligned, ghost children eliminated, anti-hallucination guardrail active in `main.py`).
 * **Checklist Stale PDF Hotfix Status:** Verified active (`HOTFIX PDF_STALE` and `PDF_STALE_AFTER_CHECKOFF` enforce server-side cache bypass and atomic FutureBuilder invalidation).
-* **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 security hardening active. **Dependabot:** 64 open alerts flagged on default branch (3 critical, 35 high, 26 moderate npm/pub dependencies; triage recommended before launch).
+* **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 & T4 security hardening active. **Dependabot:** Reduced to 47 open alerts on default branch (1 critical, 25 high, 20 medium, 1 low npm/pub dependencies; triage recommended before launch).
 
 ---
 
 ## Dev Environment & Credential Notes
 1. ✅ **Greysheet API Dev Fallback (Phase 1 Security Hardening):** Local `.env` intentionally unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN` per Phase 1 security policy. Dev environment defaults to Tier 0 Firestore `config/greysheet` cache with live fallback. Production credentials are securely managed in GCP Secret Manager and Cloud Run environment variables.
-2. ✅ **Live Greysheet Probing:** Direct live probe to `https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config` returned HTTP 200 with active Basic Tier mode.
+2. ✅ **Live Greysheet Probing:** Direct live probe to `https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config` returned HTTP 401 Unauthorized as expected without Bearer authentication under default-deny security enforcement.
 
 ---
 
@@ -69,10 +70,10 @@
 ## Greysheet API & Tier 0 Image Waterfall Health
 * **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
   * `/` ➔ `200 OK` (Status: ok, Service: Numista.AI Backend)
-  * `/api/greysheet/config` ➔ `200 OK` (Status: active, Mode: fallback, Tier: Basic)
-  * `/api/greysheet/pricing/1001` ➔ `200 OK` (Ground-truth pricing payload resolved from Firestore cache for 1834 1c Large 8 Large Stars Medium Letters MS RB)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,207.70, Silver: $60.58, Platinum: $1,691.00, Palladium: $1,157.00)
-  * `/api/template` ➔ `200 OK` (CSV Template headers validated)
+  * `/api/greysheet/config` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; admin Bearer token required)
+  * `/api/greysheet/pricing/1001` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; verified Bearer token required)
+  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,164.70, Silver: $58.73, Platinum: $1,665.20, Palladium: $1,134.50)
+  * `/api/template` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; authenticated access required)
   * `/api/transfer/passport-pdf/dummy` ➔ `401 Unauthorized` (Token authentication required per REQ-027D, dummy ID unauthenticated rejected as expected)
   * `/api/transfer/initiate` ➔ `401 Unauthorized` (Token authentication required per REQ-027, unauthenticated POST rejected as expected)
 * **Production Web App (`https://numista.ai`):** ➔ `200 OK` (HTML shell rendered, Flutter canvas bootstrapped)
@@ -83,6 +84,12 @@
 ---
 
 ## Core Features & Pipeline Audit
+* **T4 Security & Protection Hardening (PR #262):**
+  * Portfolio Snapshot IDOR Protection: `/api/portfolio/snapshot` verifies caller UID/email against target `user_id` or requires admin status.
+  * Estate Rules & Document Size Protection: Hardened Firestore security rules and capped payload thresholds preventing estate document tampering.
+  * Valuation Rate Limiting: 20 requests per hour per user on `/api/estimate_value_text` and `/api/estimate_value_general`, with anonymous access blocked via HTTP 403.
+  * CSV Formula Injection Sanitization: `BackupExportService` automatically prefixes cells starting with `=`, `+`, `-`, or `@` with `'` to neutralize spreadsheet execution.
+  * Admin Navigation Role Guard: `base_layout.dart` verifies `canManageAdmins` permission before exposing privileged administration routes.
 * **Morgan Gate 0 V2 Pipeline:**
   * Propose update and undo support for coin specifications.
   * Money formatting sanitization (strips `$` and commas prior to numerical cast).
@@ -169,17 +176,18 @@
 ## Security Audit
 * **CodeQL Alert #69:** ✅ **RESOLVED.** Incomplete URL substring sanitization for Smithsonian domain check replaced with `urlparse` netloc comparison.
 * **Phase 1 Security Hardening:** ✅ Complete. Auth interceptors, subaccount persistence, and secret hygiene enforced.
+* **T4 Security Hotfix:** ✅ Deployed & verified (PR #262, commit c80f4122 / eee06487). Portfolio IDOR, estate permissions, rate limiting, and CSV injection hardening active.
 * **PCGS Bearer Token:** ✅ Confirmed via `PCGS_BEARER_TOKEN` environment variable.
-* **Dependabot Vulnerability Management:** ⚠️ 64 open alerts flagged on default branch (3 critical, 35 high, 26 moderate npm/pub dependencies; triage recommended before launch).
+* **Dependabot Vulnerability Management:** ⚠️ 47 open alerts flagged on default branch (1 critical, 25 high, 20 medium, 1 low npm/pub dependencies; remediated down from 64 in prior audit).
 
 ---
 
 ## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `474 passed, 0 failed in 16.16s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
+* **Backend Pytest Suite:** `511 passed, 0 failed in 36.45s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
 * **Frontend Dart Analyzer:** `Analyzing lib... No issues found!` (Exit code 0, 0 errors, 0 warnings).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 31.2s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `433 passed, 0 failed in 11.0s` (100% pass rate; 0 failures).
-* **Layer 3 Data Health Probes:** `8/8 endpoints healthy` (Homepage: 200 OK, Backend Root: 200 OK, Greysheet Config: 200 OK, Pricing: 200 OK, Spot Prices: 200 OK, Template: 200 OK, Passport PDF: 401 auth sentinel, Transfer Initiate: 401 auth sentinel).
+* **Frontend Playwright Smoke Suite:** `8/8 passed in 42.3s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
+* **Frontend Flutter Unit Suite:** `471 passed, 0 failed in 21.0s` (100% pass rate; 0 failures).
+* **Layer 3 Data Health Probes:** `8/8 endpoints healthy` (Homepage: 200 OK, Backend Root: 200 OK, Spot Prices: 200 OK; Greysheet Config: 401 auth sentinel, Pricing: 401 auth sentinel, Template: 401 auth sentinel, Passport PDF: 401 auth sentinel, Transfer Initiate: 401 auth sentinel).
 * **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
 
 ---
@@ -187,5 +195,5 @@
 ## Recommended Pre-Launch Action Items
 1. **Dart Hygiene:** Maintain 0 issues baseline achieved on `lib` across future PRs and feature merges.
 2. **Pytest Deprecation Cleanups:** Address upstream FastAPI/asyncio deprecation warnings in test environments (`asyncio.iscoroutinefunction` slated for removal in Python 3.16).
-3. **Dependabot Remediation:** Triage and resolve the 64 open GitHub security alerts before launch, prioritizing the 3 critical and 35 high items.
+3. **Dependabot Remediation:** Continue triaging and resolving the remaining 47 open GitHub security alerts before launch, prioritizing the 1 critical and 25 high items.
 4. **Skill Maintenance:** Keep `.agents/skills/project-scanner/SKILL.md` aligned with current backend Cloud Run endpoints and newly registered coin programs.
