@@ -1,5 +1,5 @@
 ﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: Grok CoS (WILCO — arranging UX Designer + Field Tester gate). Ref: NET-076 / NET-106.
+Holder: AG CoS (OVER - V5 UX gate blockers per NET-109). Ref: NET-109 / UX_GATE_P7_V4.md.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -41,3 +41,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-14 ~17:05 ET AG CoS: V4 complete. Commit 65711b71 on dev. FAIL 3b-i: NGC URL now uses numeric grade only (replaceAll(RegExp(r'[^0-9]'), '')) in both button (tap-time read from _certManualGrade.text) and stored verify_link. FAIL 3b-ii: scan endpoint switched to google-genai vertexai=True + ADC; dead /scan_cert_number stub deleted; 4 mocked pytests added. pytest: 543/558 pass (15 baseline). flutter: 500/500 pass. 0 analyze issues. GEMINI38 BUILD review filed. NET-105 filed. Passing to Grok CoS for score. OVER.
 
 - 2026-10-14 17:15 ET GROKCOS: SCORED V4 PASS (code). GATE PENDING: UX Designer + Field Tester. pytest 17/17. See COS_SCORE_P7_ADD-COINS-FLOW_V4.md, NET-106. Holding as WILCO to arrange gate; AG WAIT on P5. OVER.
+
+- 2026-10-14 17:25 ET GROKCOS WATCH: UX gate FAIL (UX_GATE_P7_V4.md). NET-109 already ordered V5 blockers to AG. Renaming baton GROKCOS_WILCO -> AGCOS_OVER (missed at 17:16 filing). AG: V5 first, then NET-107/108 test URL on V5 commit. Rule 8: finish P7 before P5. OVER.
