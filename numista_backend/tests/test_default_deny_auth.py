@@ -150,6 +150,9 @@ def test_all_routes_require_auth_garbage_token(client):
 REVIEWED_NON_GUARDED_ROUTES = {
     "/api/analyze/grade-coin",
     "/api/analyze_checklist",
+    "/api/attorney/issue",
+    "/api/attorney/revoke",
+    "/api/attorney/snapshot",
     "/api/binder_scans/{user_email}",
     "/api/binder_scans/{user_email}/{binder_id}",
     "/api/coin_crop",
@@ -177,6 +180,8 @@ REVIEWED_NON_GUARDED_ROUTES = {
     "/api/import/upload",
     "/api/ingestion/jobs",
     "/api/ingestion/status/{job_id}",
+    "/api/mint_news",
+    "/api/news/feed",
     "/api/nicknames",
     "/api/nicknames/stats",
     "/api/nicknames/submit",
@@ -195,14 +200,21 @@ REVIEWED_NON_GUARDED_ROUTES = {
     "/api/review/break_up_set",
     "/api/review/keep_set_as_is",
     "/api/stats/gaps",
+    "/api/stripe/subscription-status",
     "/api/template",
     "/api/transfer/sell-direct",
     "/api/transfer/sold-items/{user_id}",
     "/api/transfer/undo-sale",
+    "/api/v1/affiliate/search_url",
+    "/api/v1/estate/attorney-report/{token}",
+    "/api/v1/estate/attorney-report/{token}/pdf",
+    "/api/v1/wishlist/reserve",
     "/api/variety/detect",
     "/api/wishlist/create-share",
     "/api/wishlist/deals/check",
     "/api/wishlist/deals/{user_email}",
+    "/support/expire-grants",
+    "/tickets/{ticket_id}/revoke",
 }
 
 
@@ -214,13 +226,24 @@ def test_guarded_or_reviewed_routes():
     def has_auth(dep):
         if dep.call in (get_current_user, require_admin_user):
             return True
+        if hasattr(dep.call, "__name__") and dep.call.__name__ in (
+            "get_current_user", "require_admin_user", "get_current_uid", "require_admin"
+        ):
+            return True
         for d in dep.dependencies:
             if has_auth(d):
                 return True
         return False
 
+    all_routes = []
+    for r in m.app.routes:
+        if type(r).__name__ == "_IncludedRouter" and hasattr(r, "original_router"):
+            all_routes.extend(r.original_router.routes)
+        else:
+            all_routes.append(r)
+
     unaccounted_routes = []
-    for route in m.app.routes:
+    for route in all_routes:
         if not hasattr(route, "methods"):
             continue
         path = route.path

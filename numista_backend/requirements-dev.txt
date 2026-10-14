@@ -88,3 +88,7 @@ PyVirtualDisplay==3.0
 
 # ── Coin-specific / eBay / market data ───────────────────────────────────────
 ebaysdk>=2.2.0
+
+# ── Security pinned dependencies (matching requirements.txt) ───────────────────
+PyJWT==2.14.0
+urllib3==2.8.0

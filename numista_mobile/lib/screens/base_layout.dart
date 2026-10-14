@@ -414,6 +414,9 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'AI Trainer Board':
         return const HumanAiTrainerScreen();
       case 'Admin: Grade Flags':
+        if (!AuthService.isAdmin) {
+          return const Center(child: Text('Admin access required.'));
+        }
         return const AdminGradeFlagsScreen();
       case 'Admin: Beta Dashboard':
       case 'Beta Feedback Inbox':
@@ -824,8 +827,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                             if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'AI TRAINING'),
                             _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
                             // Admin-only: Grade Flag & Beta Feedback Inbox
-                            if (email == 'jseaman1204@gmail.com' ||
-                                email.endsWith('@numista.ai')) ...[ 
+                            if (AuthService.isAdmin) ...[ 
                               _buildNavItem('Admin Grade Flags',
                                   icon: Icons.admin_panel_settings_outlined),
                               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(

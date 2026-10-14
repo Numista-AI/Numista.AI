@@ -72,7 +72,7 @@ async def generate_attorney_link(req: GenerateAttorneyLinkRequest, _user: dict =
     try:
         token = secrets.token_urlsafe(32)
         now_dt = datetime.datetime.now(timezone.utc)
-        expires_dt = now_dt + datetime.timedelta(days=req.valid_days or 7)
+        expires_dt = now_dt + datetime.timedelta(days=min(max(req.valid_days if req.valid_days is not None else 7, 1), 30))
 
         # 1. Fetch collector's current coins and currency for frozen snapshot
         user_ref = db.collection("users").document(req.owner_uid)
