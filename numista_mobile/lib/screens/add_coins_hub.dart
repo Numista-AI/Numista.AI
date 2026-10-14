@@ -2995,7 +2995,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         content: Text('Enter a cert # before saving'),
         backgroundColor: Color(0xFFD97706),
       ));
-      setState(() => _pcgsLookupError = 'Please enter a cert number.');
+      // Do NOT set _pcgsLookupError — that triggers the wrong PCGS fallback card.
       return;
     }
     final grader = _certGrader ?? _autoDetectGrader(raw);
@@ -3014,6 +3014,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     // NGC or CAC — no public API, show manual-entry card with cert # prefilled
     final certClean = raw.contains('/') ? raw.split('/').last.trim() : raw;
+    // Refuse slash-only input like "123/" that yields an empty cert number
+    if (certClean.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Enter a cert # before saving'),
+        backgroundColor: Color(0xFFD97706),
+      ));
+      return;
+    }
     setState(() {
       _certPendingConfirm = {
         '_grader': grader,
@@ -3062,7 +3070,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(grader,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(
@@ -3267,6 +3275,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Future<void> _saveManualCertEntry(String grader, String certNo, {bool allowDuplicate = false}) async {
+    // Empty-cert guard — must not write a coin with no cert number
+    if (certNo.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Enter a cert # before saving'),
+        backgroundColor: Color(0xFFD97706),
+      ));
+      return; // _certManualSaving was never set true — no reset needed
+    }
     setState(() => _certManualSaving = true);
     try {
       final grade = _certManualGrade.text.trim();
@@ -3715,20 +3731,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // Header
           Row(children: [
-            const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFD97706)),
+            const Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFD97706)),
             const SizedBox(width: 6),
             const Expanded(
               child: Text(
-                'Automatic lookup unavailable right now',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                'Lookup not available right now',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
               ),
             ),
           ]),
           const SizedBox(height: 8),
           const Text(
-            'PCGS blocks automated lookups from our servers. '
-            'You can verify the cert directly on PCGS.com instead:',
-            style: TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.4),
+            'You can check the cert directly on PCGS.com instead:',
+            style: TextStyle(fontSize: 18, color: Color(0xFF78350F), height: 1.4),
           ),
           if (hasCert) ...[
             const SizedBox(height: 10),
@@ -3742,40 +3757,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
                 },
-                icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: Text('View Cert #$cert on PCGS.com'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF1D4ED8),
                   side: const BorderSide(color: Color(0xFF93C5FD)),
                   backgroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          // CSV tip
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
-            ),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.lightbulb_outline_rounded, size: 14, color: Color(0xFF2563EB)),
-              const SizedBox(width: 6),
-              const Expanded(
-                child: Text(
-                  'Tip: Use "Upload PCGS CSV" below to import your whole PCGS registry at once — '
-                  'no lookup limits, faster for multiple coins.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF), height: 1.4),
-                ),
-              ),
-            ]),
-          ),
         ]),
       ),
     );
