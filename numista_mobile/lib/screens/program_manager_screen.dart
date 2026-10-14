@@ -1318,32 +1318,33 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                           ],
                                         ),
                                       ),
-                                      // NET-087: add-another-copy button
-                                      GestureDetector(
-                                        onTap: () => Navigator.push(
+                                      const SizedBox(width: 4),
+                                      // NET-087 / P7-V5: 48px labeled add-another button prefilling slot coin
+                                      OutlinedButton(
+                                        onPressed: () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) => AddCoinsHub(
-                                              initialTabName: 'cert',
+                                              showCertFullScreen: true,
+                                              initialCoinPreset: {
+                                                'name': coinName.contains('||')
+                                                    ? coinName.split('||').where((s) => s.isNotEmpty).join(' ')
+                                                    : coinName,
+                                                'year': coin.year ?? '',
+                                                'mint': variety.id,
+                                              },
                                             ),
                                           ),
                                         ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 4),
-                                          child: Tooltip(
-                                            message: 'Add another copy',
-                                            child: Container(
-                                              padding: const EdgeInsets.all(3),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFD1FAE5),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: const Icon(Icons.add,
-                                                  size: 12,
-                                                  color: Color(0xFF10B981)),
-                                            ),
-                                          ),
+                                        style: OutlinedButton.styleFrom(
+                                          minimumSize: const Size(0, 48),
+                                          foregroundColor: const Color(0xFF065F46),
+                                          side: const BorderSide(color: Color(0xFF10B981)),
+                                          backgroundColor: const Color(0xFFD1FAE5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                         ),
+                                        child: const Text('+ Add another copy',
+                                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                                       ),
                                     ],
                                   );

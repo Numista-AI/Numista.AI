@@ -151,6 +151,7 @@ void main() {
     // Manual entry card appears with Confirm & Add button
     final confirmSaveBtn = find.text('Confirm & Add to My Collection');
     expect(confirmSaveBtn, findsOneWidget);
+    await tester.ensureVisible(confirmSaveBtn);
     await tester.tap(confirmSaveBtn);
     await tester.pumpAndSettle();
 
