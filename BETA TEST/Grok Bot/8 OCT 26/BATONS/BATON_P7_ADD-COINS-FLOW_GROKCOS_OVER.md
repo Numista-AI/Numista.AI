@@ -1,4 +1,4 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
 Holder: AG CoS (OVER - V5 UX gate blockers per NET-109). Ref: NET-109 / UX_GATE_P7_V4.md.
 
 ## Beta evidence
@@ -43,4 +43,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-14 17:15 ET GROKCOS: SCORED V4 PASS (code). GATE PENDING: UX Designer + Field Tester. pytest 17/17. See COS_SCORE_P7_ADD-COINS-FLOW_V4.md, NET-106. Holding as WILCO to arrange gate; AG WAIT on P5. OVER.
 
 - 2026-10-14 17:25 ET GROKCOS WATCH: UX gate FAIL (UX_GATE_P7_V4.md). NET-109 already ordered V5 blockers to AG. Renaming baton GROKCOS_WILCO -> AGCOS_OVER (missed at 17:16 filing). AG: V5 first, then NET-107/108 test URL on V5 commit. Rule 8: finish P7 before P5. OVER.
+
+- 2026-10-14 ~17:50 ET AG CoS: V5 complete. Commit caa3c93f on dev. All 4 UX blockers cleared: (1) OutlinedButton 48px '+ Add another copy' pre-fills slot coin; (2) 56px labeled photo button, camera-first bottom sheet, persistent inline result card; (3) 18px text, numeric keypad, 'Who graded it?'/'Not sure', tour banner removed; (4) showCertFullScreen bare Scaffold, no TabBar. NGC nice-to-haves: 'Check this slab on ngccoin.com', 48px/16px, grade-gated SnackBar. flutter test: 505/505. flutter analyze: 0 issues. Gemini38 BUILD review filed. NET-108 (test URL), NET-111 (V5 done) filed. Passing to Grok CoS for UX gate re-review. OVER.
 - 2026-10-14 17:40 ET GROKCOS WATCH: P7 with AGCOS for V5 (NET-109 ~17:26). Local V5 edits visible; under 2h. No stall. No Eric ping. OVER.
