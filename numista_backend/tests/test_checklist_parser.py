@@ -307,9 +307,12 @@ def test_official_title_and_diacritic_preservation():
     assert "Š" in get_official_us_mint_title(2024, "Zitkala-Ša")
     assert get_official_us_mint_title(2024, "Zitkala-Ša") == "Zitkala-Ša"
     
-    # Edith Kanaka'ole preserves apostrophe
-    assert "'" in get_official_us_mint_title(2023, "Edith Kanaka'ole")
-    assert get_official_us_mint_title(2023, "Edith Kanaka'ole") == "Edith Kanaka'ole"
+    # Edith Kanakaʻole: ASCII apostrophe input → canonical okina (U+02BB) output (matches JSON)
+    result = get_official_us_mint_title(2023, "Edith Kanaka'ole")
+    assert "\u02bb" in result, f"Expected okina in result, got: {result!r}"
+    assert result == "Edith Kanakaʻole", f"Expected okina canonical, got: {result!r}"
+    # Also confirm okina input is idempotent
+    assert get_official_us_mint_title(2023, "Edith Kanakaʻole") == "Edith Kanakaʻole"
 
 
 # ── Case 11: Missing Subject Fail-Closed Quarantine ──────────────────────────

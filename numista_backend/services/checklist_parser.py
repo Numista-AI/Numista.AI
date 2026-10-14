@@ -183,12 +183,18 @@ US_WOMEN_QUARTERS_OFFICIAL_TITLES: Dict[tuple, str] = {
     (2022, "Nina Otero-Warren"): "Nina Otero-Warren",
     (2022, "Anna May Wong"): "Anna May Wong",
     (2023, "Bessie Coleman"): "Bessie Coleman",
-    (2023, "Edith Kanaka'ole"): "Edith Kanaka'ole",
+    # Canonical: okina (U+02BB). ASCII/smart-quote aliases below for round-trips.
+    (2023, "Edith Kanakaʻole"): "Edith Kanakaʻole",       # okina — matches JSON
+    (2023, "Edith Kanaka'ole"): "Edith Kanakaʻole",        # ASCII apostrophe alias
+    (2023, "Edith Kanaka\u2019ole"): "Edith Kanakaʻole",   # right single quote alias
     (2023, "Eleanor Roosevelt"): "Eleanor Roosevelt",
     (2023, "Jovita Idar"): "Jovita Idar",
     (2023, "Maria Tallchief"): "Maria Tallchief",
+    # Old name → corrected canonical (old stored coins)
     (2024, "Dr. Pauli Murray"): "Rev. Dr. Pauli Murray",
+    (2024, "Rev. Dr. Pauli Murray"): "Rev. Dr. Pauli Murray",  # idempotent
     (2024, "Patsy Mink"): "Patsy Takemoto Mink",
+    (2024, "Patsy Takemoto Mink"): "Patsy Takemoto Mink",      # idempotent
     (2024, "Dr. Mary Edwards Walker"): "Dr. Mary Edwards Walker",
     (2024, "Celia Cruz"): "Celia Cruz",
     (2024, "Zitkala-Ša"): "Zitkala-Ša",
@@ -197,6 +203,7 @@ US_WOMEN_QUARTERS_OFFICIAL_TITLES: Dict[tuple, str] = {
     (2025, "Juliette Gordon Low"): "Juliette Gordon Low",
     (2025, "Dr. Vera Rubin"): "Dr. Vera Rubin",
     (2025, "Stacey Milbern"): "Stacey Park Milbern",
+    (2025, "Stacey Park Milbern"): "Stacey Park Milbern",      # idempotent
     (2025, "Althea Gibson"): "Althea Gibson",
 }
 

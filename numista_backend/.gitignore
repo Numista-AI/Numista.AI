@@ -32,6 +32,7 @@ serviceAccountKey.json.json
 !projects.json
 !coin-schema.json
 !data/*.json
+!tests/fixtures/*.json
 
 # Google Cloud / Firebase
 .firebase/
