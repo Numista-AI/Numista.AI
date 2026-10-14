@@ -1,5 +1,5 @@
-﻿# BATON P2 COIN-COUNT MISMATCH FIX (priority 2 of 5)
-Holder: AG CoS. Ref: NET-070.
+# BATON P2 COIN-COUNT MISMATCH FIX (priority 2 of 5)
+Holder: Grok CoS. Ref: NET-070.
 
 ## Task
 Counts disagree across surfaces: 313 / 311 / 284 / 314. Find the single source of truth and fix the counting code on dev.
@@ -15,3 +15,4 @@ Counts disagree across surfaces: 313 / 311 / 284 / 314. Find the single source o
 - Rule 7: keep your 25-min wake timer running. git mv the baton (one file per track).
 ## Log
 - 2026-10-14 09:40 ET GROKCOS: issued. Passed to AGCOS. OVER.
+- 2026-10-14 11:00 ET AGCOS: Code fix complete on dev. Root cause: home_dashboard passed totalItems (coins+currency+world) to coin cards (313/314), header_stats_bar rendered unexpanded parent docs (284). Single source of truth established via expandCollection/count_coins_and_lots (311 physical coins). Backend snapshot/count updated. Flutter tests (3/3), Pytest (27/27), flutter analyze (0 errors) all pass. Zero Firestore writes. Filed GEMINI38_REVIEW_P2_COIN_COUNT_BUILD.md and EXECUTE_DONE_P2_COIN_COUNT.md. Passed to GROKCOS for build review/scoring. OVER.

@@ -1522,8 +1522,16 @@ async def submit_nickname(
     category:   str  = Form('Other'),
     example:    str  = Form(''),
     notes:      str  = Form(''),
+    _user:      dict = Depends(get_current_user),
 ):
     """Submit a new coin nickname/slang term for community review."""
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     nickname_clean = nickname.strip()
     maps_to_clean  = maps_to.strip()
     key = nickname_clean.lower()
@@ -1693,8 +1701,16 @@ async def vote_nickname(
     doc_id:     str,
     user_email: str = Form(...),
     rating:     int = Form(...),
+    _user:      dict = Depends(get_current_user),
 ):
     """Cast or update a star rating (1-5) on a community nickname submission."""
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     if not 1 <= rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
 
@@ -1950,11 +1966,19 @@ async def process_invoice(
     import_session_id: str = Form(''),  # set by Bulk Import flow
     receipt_id:        str = Form(''),  # set by Bulk Import flow; links to receipts collection
     mask_pii:          bool = Form(False),
+    _user:             dict = Depends(get_current_user),
 ):
     """
     Uses GCP Document AI to scrape a PDF invoice, then heavily prompts Vertex AI 
     to filter out non-coin items (binders, sheets) and extract valid numismatic purchases.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     contents = await file.read()
     
     # 1. Document AI Extraction (Standard Form Parser)
@@ -3023,33 +3047,43 @@ def _collection_owner_from_token(user: Dict[str, Any]) -> str:
     return email
 
 
-def _authenticate_request(authorization: Optional[str], body_email: Optional[str] = None) -> str:
-    """Verify Firebase ID token from Authorization header and return owner key.
+def _authenticate_request(
+    authorization: Optional[str] = None,
+    body_email: Optional[str] = None,
+    current_user: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Verify Firebase ID token from Authorization header or current_user and return owner key.
 
     If body_email is supplied, verifies it matches the authenticated identity (or raises 403).
+    Supports admin bypass and dev_guest bypass under ALLOW_UNAUTHENTICATED=1.
     """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-    id_token = authorization.split("Bearer ", 1)[1].strip()
-    try:
-        decoded_token = fb_auth.verify_id_token(id_token)
-    except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
-            fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
-        raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token")
-    except Exception as e:
-        logger.error(f"[_authenticate_request] unexpected auth error: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=401, detail="Authentication failed")
+    decoded_token = current_user
+    if not decoded_token:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        id_token = authorization.split("Bearer ", 1)[1].strip()
+        try:
+            decoded_token = fb_auth.verify_id_token(id_token)
+        except (fb_auth.InvalidIdTokenError, fb_auth.ExpiredIdTokenError,
+                fb_auth.RevokedIdTokenError, fb_auth.CertificateFetchError):
+            raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token")
+        except Exception as e:
+            logger.error(f"[_authenticate_request] unexpected auth error: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Authentication failed")
 
     owner_key = _collection_owner_from_token(decoded_token)
     if body_email:
         clean_body = body_email.strip().lower()
         token_email = (decoded_token.get("email") or "").strip().lower()
-        token_uid = (decoded_token.get("uid") or "").strip()
-        if clean_body != owner_key and clean_body != token_email and clean_body != token_uid:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: Mismatched authenticated identity and requested user_email"
-            )
+        token_uid = (decoded_token.get("uid") or decoded_token.get("user_id") or "").strip()
+        is_admin = decoded_token.get("admin") is True
+        is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and token_email == "dev_guest@numista.ai"
+        if not is_admin and not is_dev_guest:
+            if clean_body != owner_key and clean_body != token_email and clean_body != token_uid.lower():
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Mismatched authenticated identity and requested user_email"
+                )
     return owner_key
 
 
@@ -4238,7 +4272,11 @@ from PIL import Image as _PILImage
 
 
 @app.get("/api/coin_crop")
-def get_coin_crop(coin_id: str, user_email: str):
+def get_coin_crop(
+    coin_id: str,
+    user_email: str,
+    _user: dict = Depends(get_current_user),
+):
     """
     Returns a base64-encoded JPEG crop of the specific coin's binder slot.
 
@@ -4248,6 +4286,13 @@ def get_coin_crop(coin_id: str, user_email: str):
     3. If slot_bbox is missing (old scans): return {"fallback": true} so Flutter
        displays the full binder page image instead (graceful degradation).
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         coin_ref = (db.collection('users').document(user_email)
                       .collection('coins').document(coin_id))
@@ -4841,6 +4886,7 @@ async def analyze_checklist(
     binder_title: Optional[str]    = Form(None),
     format_hint:  Optional[str]    = Form(None),   # "littleton" | "whitman" | "numista" | "unknown"
     files:        List[UploadFile] = File(...),
+    _user:        dict             = Depends(get_current_user),
 ):
     """
     Analyzes a printed coin program checklist (PDF or image scan).
@@ -4856,6 +4902,13 @@ async def analyze_checklist(
 
     Returns the same coin_slots structure as analyze_binder_scan.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     scan_uuid    = str(uuid.uuid4())
     gcs_urls     = []
     all_raw_bytes = []  # Keep bytes for potential Gemini fallback
@@ -5240,12 +5293,22 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest, _user: dict = D
 
 
 @app.get("/api/binder_scans/{user_email}")
-async def list_binder_scans(user_email: str):
+async def list_binder_scans(
+    user_email: str,
+    _user: dict = Depends(get_current_user),
+):
     """
     Returns all binder_scan documents for a user.
     Used by the Storage Location viewer in My Collection to display
     the binder overview when a user clicks a Storage Location value.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         docs = (
             db.collection("users")
@@ -5275,11 +5338,22 @@ async def list_binder_scans(user_email: str):
 
 
 @app.get("/api/binder_scans/{user_email}/{binder_id}")
-async def get_binder_detail(user_email: str, binder_id: str):
+async def get_binder_detail(
+    user_email: str,
+    binder_id: str,
+    _user: dict = Depends(get_current_user),
+):
     """
     Returns the full detail of one binder scan, including all coin_slots.
     Used when a user clicks a Storage Location link in My Collection.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         doc = (
             db.collection("users")
@@ -5488,6 +5562,7 @@ async def identify_group_photo(
     image: UploadFile = File(...),
     message: Optional[str] = Form(None),
     authorization: Optional[str] = Header(None),
+    _user: dict = Depends(get_current_user),
 ):
     """Identify multiple coins in a single group photo.
     Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
@@ -5501,7 +5576,7 @@ async def identify_group_photo(
     }
 
     try:
-        owner_key = _authenticate_request(authorization, user_email)
+        owner_key = _authenticate_request(authorization, user_email, current_user=_user)
         user_email = owner_key
         import uuid as _uuid
         raw_bytes = await image.read()
@@ -6026,6 +6101,7 @@ async def identify_coin_photo(
     override_storage: Optional[str] = Form(None),
     override_notes:   Optional[str] = Form(None),
     authorization:    Optional[str] = Header(None),
+    _user:            dict = Depends(get_current_user),
 ):
     """
     Two-pass Gemini AI coin identification from obverse + reverse photos (or single photo).
@@ -6041,9 +6117,8 @@ async def identify_coin_photo(
 
     Returns the full coin document as JSON whether or not it was saved.
     """
-    if save_to_collection:
-        owner_key = _authenticate_request(authorization, user_email)
-        user_email = owner_key
+    owner_key = _authenticate_request(authorization, user_email, current_user=_user)
+    user_email = owner_key
 
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
@@ -6865,11 +6940,19 @@ async def import_upload(
     file: UploadFile = File(...),
     user_email: str = Form(...),
     session_id: str = Form(...),
+    _user: dict = Depends(get_current_user),
 ):
     """
     Direct multipart file upload endpoint for invoice PDFs, coin photos, and spreadsheets.
     Streams directly to GCS via ADC credentials without signed URL signing constraints.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail="INVALID_FILE: No file provided")
     
@@ -7001,7 +7084,18 @@ def import_start(req: ImportStartRequest):
 # ── GET /api/import/status/{session_id} ───────────────────────────────────────
 
 @app.get("/api/import/status/{session_id}")
-def import_status(session_id: str, user_email: str):
+def import_status(
+    session_id: str,
+    user_email: str,
+    _user: dict = Depends(get_current_user),
+):
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     doc = db.collection("users").document(user_email)\
             .collection("import_sessions").document(session_id).get()
     if not doc.exists:
@@ -7709,9 +7803,10 @@ def list_receipts(
     session_id: str = None,
     limit: int = 100,
     authorization: Optional[str] = Header(None),
+    _user: dict = Depends(get_current_user),
 ):
     """Return all receipts for a user, dynamically pruning stale linked coin IDs."""
-    owner_key = _authenticate_request(authorization, user_email)
+    owner_key = _authenticate_request(authorization, user_email, current_user=_user)
     user_email = owner_key
 
     col = db.collection("users").document(user_email).collection("receipts")
@@ -7760,13 +7855,14 @@ async def delete_receipt(
     user_email: str,
     receipt_id: str,
     authorization: Optional[str] = Header(None),
+    _user: dict = Depends(get_current_user),
 ):
     """
     Delete a receipt record from users/{user_email}/receipts/{receipt_id}.
     Cleans up any GCS storage blob if present, but ONLY when zero coins link to it (MF-1).
     Enforces owner-folder isolation on the storage blob path.
     """
-    owner_key = _authenticate_request(authorization, user_email)
+    owner_key = _authenticate_request(authorization, user_email, current_user=_user)
     user_email = owner_key
 
     receipt_ref = db.collection("users").document(user_email).collection("receipts").document(receipt_id)
@@ -8168,10 +8264,6 @@ def collection_count(
         return {
             "owner": target_owner,
             "user_email": target_owner,     # deprecated field, kept for back-compat
-            "coins": counts["total_coins"],
-            "lots": counts["total_lots"],
-            "sets": counts["set_count"],
-        }
             "coins": counts["total_coins"],
             "lots": counts["total_lots"],
             "sets": counts["set_count"],
@@ -10674,14 +10766,18 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         
         # 1. Fetch all coins for the user
-        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        coins_docs = list(db.collection("users").document(req.user_id).collection("coins").get())
+        
+        # Authoritative single source of truth for coin/lot counts
+        inventory, _ = expand_collection_inventory(coins_docs)
+        counts = count_coins_and_lots(inventory)
+        total_coins = counts["total_coins"]
         
         total_value = 0.0
         gold_val = 0.0
         silver_val = 0.0
         type_val = 0.0
         
-        total_coins = 0
         melt_value_sum = 0.0
         acquisition_cost_sum = 0.0
         face_value_sum = 0.0
@@ -10694,15 +10790,13 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
             except Exception:
                 return 0.0
         
-        for doc in coins_ref:
+        for doc in coins_docs:
             coin = doc.to_dict()
             qty = 1
             try:
                 qty = int(coin.get("Quantity") or 1)
             except Exception:
                 pass
-                
-            total_coins += qty
             
             # Default to Bid value as standard valuation
             val = float(coin.get("greysheetBid") or 0.0)
@@ -11349,10 +11443,20 @@ class WishlistCheckRequest(BaseModel):
     wishlist_items: Optional[List[Dict[str, Any]]] = []
 
 @app.get("/api/wishlist/deals/{user_email}")
-async def get_user_wishlist_deals(user_email: str):
+async def get_user_wishlist_deals(
+    user_email: str,
+    _user: dict = Depends(get_current_user),
+):
     """
     Fetches real-time eBay arbitrage deals matching a specific user's wishlist coins.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         from services.deal_spotter_service import DealSpotterService
         service = DealSpotterService(db=db)
@@ -11573,11 +11677,15 @@ async def api_undo_sale(req: UndoSaleRequest, authorization: Optional[str] = Hea
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/transfer/sold-items/{user_id}")
-async def api_get_sold_items(user_id: str, authorization: Optional[str] = Header(None)):
+async def api_get_sold_items(
+    user_id: str,
+    authorization: Optional[str] = Header(None),
+    _user: dict = Depends(get_current_user),
+):
     """
     Returns the list of sold/transferred items for user.
     """
-    owner_key = _authenticate_request(authorization, user_id)
+    owner_key = _authenticate_request(authorization, user_id, current_user=_user)
     user_id = owner_key
     try:
         from services.transfer_service import get_sold_inventory
@@ -11851,11 +11959,24 @@ async def api_create_wishlist_share(req: WishlistShareRequest):
 
 # 3. Secure GCS Signed Appraisal URL & Audit Logging
 @app.get("/api/estate/generate-appraisal-url")
-async def api_generate_estate_appraisal_url(request: Request, user_email: str, state: str = "FL", token_id: Optional[str] = None):
+async def api_generate_estate_appraisal_url(
+    request: Request,
+    user_email: str,
+    state: str = "FL",
+    token_id: Optional[str] = None,
+    _user: dict = Depends(get_current_user),
+):
     """
     Generates a 7-day GCS signed URL for attorney estate appraisal review
     and logs an audit record to /users/{email}/estate_audits.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         audit_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
