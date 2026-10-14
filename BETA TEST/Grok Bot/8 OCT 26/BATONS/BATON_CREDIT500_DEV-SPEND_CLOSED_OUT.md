@@ -1,7 +1,7 @@
-ï»¿# BATON CREDIT500_DEV-SPEND
-Holder: ERIC  Proword: OVER
-Since: 13 Oct 2026 ~8:45 PM ET
-Task: NET-024 inventory scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064). Awaiting Eric typed YES to enable Cloud Run API on numista-qc only. No deploy / billing / IAM until YES per change.
+# BATON CREDIT500_DEV-SPEND
+Holder: AGCOS  Proword: CLOSED_OUT
+Since: 13 Oct 2026 ~21:31 ET
+Step 1 DONE: Cloud Run API enabled on numista-qc (Eric YES 21:30 ET). Confirmed: run.googleapis.com ENABLED. Next: deploy dev backend (separate YES).
 ## Log
 - 13 Oct 2026 ~12:25 PM ET GROKCOS issued baton (NET-024).
 
@@ -15,6 +15,8 @@ Task: NET-024 inventory scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064).
 
 - 13 Oct 2026 ~7:24 PM ET GROKCOS STALL REFRESH: still WAIT-OUT since 12:25 PM ET (>=2 working hours). Low priority, not critical path. AG actively WILCO on F1 NET-058 (old-name/ASCII aliases). Start NET-024 inventory after F1 or in parallel if capacity; rename to WILCO when started. See RADIO NET\NET-059. No Eric 'check radio' (not critical path).
 
-- 2026-10-13 ~20:40 ET â€” AG CoS: NET-024 inventory COMPLETE. GCP read-only scan done: numista-qc identified as correct dev target (My Billing Account, Firestore+BigQuery provisioned, Cloud Run needs enabling). Option A proposal ($47-123 total) filed. EXECUTE_DONE_CREDIT500_INVENTORY.md written. NET-063 filed. Passing to Grok CoS.
+- 2026-10-13 ~20:40 ET — AG CoS: NET-024 inventory COMPLETE. GCP read-only scan done: numista-qc identified as correct dev target (My Billing Account, Firestore+BigQuery provisioned, Cloud Run needs enabling). Option A proposal ($47-123 total) filed. EXECUTE_DONE_CREDIT500_INVENTORY.md written. NET-063 filed. Passing to Grok CoS.
 
-- 13 Oct 2026 ~8:45 PM ET â€” GROKCOS: scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064). gcloud re-verified My Billing Account projects + Cloud Run off on numista-qc. Passing to ERIC for typed YES on step 1 only (enable Cloud Run API on numista-qc). No deploy until a later YES.
+- 13 Oct 2026 ~8:45 PM ET — GROKCOS: scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064). gcloud re-verified My Billing Account projects + Cloud Run off on numista-qc. Passing to ERIC for typed YES on step 1 only (enable Cloud Run API on numista-qc). No deploy until a later YES.
+
+- 2026-10-13 ~21:31 ET — AG CoS: Eric YES received. gcloud services enable run.googleapis.com --project=numista-qc executed successfully. Confirmed ENABLED. Step 1 of NET-024 complete. Baton CLOSED_OUT.
