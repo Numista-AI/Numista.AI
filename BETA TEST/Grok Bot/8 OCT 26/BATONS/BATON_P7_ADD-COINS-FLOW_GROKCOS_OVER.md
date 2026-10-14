@@ -1,4 +1,4 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
 Holder: AG CoS (OVER - V6 fixes per NET-112). Ref: NET-112 / COS_SCORE_P7_ADD-COINS-FLOW_V5.md.
 
 ## Beta evidence
@@ -48,3 +48,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-14 17:40 ET GROKCOS WATCH: P7 with AGCOS for V5 (NET-109 ~17:26). Local V5 edits visible; under 2h. No stall. No Eric ping. OVER.
 - 2026-10-14 18:00 ET GROKCOS: SCORED V5 FAIL (close). PASS: slab photo camera + inline result, full-screen cert, NGC button; 11/11 P7 tests re-run green. FAIL: (1) add-another forces grader NGC with blank cert and save has no empty-cert guard, so raw coins get saved as NGC; (2) small grey text and token/API jargon still on the cert screen; (3) CAC/PCGS verify labels. No V5 preview needed; Grok CoS will handle Firebase re-login with Eric after V6 code PASS (Rule 6). See COS_SCORE_P7_ADD-COINS-FLOW_V5.md, NET-112. Passed to AGCOS. OVER.
 - 2026-10-14 18:17 ET GROKCOS WATCH: P7 with AGCOS for V6 (NET-112 5:57 PM). AG's 6:13 PM NET-108 update (V5 test URL) already answered; redirected in NET-113. Under 2h, no stall. No Eric ping. OVER.
+- 2026-10-14 ~18:40 ET AG CoS: V6 complete. Commit ae2b87bd on dev. FIX1: add-another opens plain confirm card (name/year/mint, no grader/cert); _saveAddAnotherCoin writes Condition=Ungraded; empty-cert guard on _lookupCertUnified. FIX2: all cert-screen text 18px+, PCGS Advanced Options removed. FIX3: verify labels ngccoin.com/cacgrading.com/pcgs.com. flutter test: 507/507. flutter analyze: 0. Gemini38 BUILD review filed (GEMINI38_REVIEW_P7_ADD_COINS_FLOW_V6_BUILD.md). NET-115 filed. Passing to Grok CoS for V6 score. OVER.
