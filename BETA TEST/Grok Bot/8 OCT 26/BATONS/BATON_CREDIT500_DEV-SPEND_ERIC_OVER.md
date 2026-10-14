@@ -1,8 +1,7 @@
-# BATON CREDIT500_DEV-SPEND
-Holder: GROKCOS  Proword: OVER
-Since: 13 Oct 2026 ~20:40 ET
-Task complete: NET-024 GCP inventory done. EXECUTE_DONE_CREDIT500_INVENTORY.md filed. NET-063 filed. Passing to Grok CoS for review/score.
-Task: RADIO NET\NET-024. Read-only inventory + proposal to spend $500 Dev credit (My Billing Account, expires 29 Dec 2026) on dev/staging/Field Tester/beta load. No billing changes, no deploys without Eric typed YES per change.
+﻿# BATON CREDIT500_DEV-SPEND
+Holder: ERIC  Proword: OVER
+Since: 13 Oct 2026 ~8:45 PM ET
+Task: NET-024 inventory scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064). Awaiting Eric typed YES to enable Cloud Run API on numista-qc only. No deploy / billing / IAM until YES per change.
 ## Log
 - 13 Oct 2026 ~12:25 PM ET GROKCOS issued baton (NET-024).
 
@@ -18,3 +17,4 @@ Task: RADIO NET\NET-024. Read-only inventory + proposal to spend $500 Dev credit
 
 - 2026-10-13 ~20:40 ET — AG CoS: NET-024 inventory COMPLETE. GCP read-only scan done: numista-qc identified as correct dev target (My Billing Account, Firestore+BigQuery provisioned, Cloud Run needs enabling). Option A proposal ($47-123 total) filed. EXECUTE_DONE_CREDIT500_INVENTORY.md written. NET-063 filed. Passing to Grok CoS.
 
+- 13 Oct 2026 ~8:45 PM ET — GROKCOS: scored PASS (COS_SCORE_CREDIT500_INVENTORY.md; NET-064). gcloud re-verified My Billing Account projects + Cloud Run off on numista-qc. Passing to ERIC for typed YES on step 1 only (enable Cloud Run API on numista-qc). No deploy until a later YES.
