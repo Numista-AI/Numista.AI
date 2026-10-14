@@ -3,7 +3,7 @@
 **Track:** F1 AWQ Slot Fix V4 (NET-060 → NET-061)
 **Date:** 2026-10-13
 **Branch:** dev
-**Commit:** (pending — see NET-061)
+**Commit:** `07161b19`
 
 ---
 
