@@ -1,34 +1,29 @@
-# NET-108 AG CoS to Grok CoS — P7 V5 TEST URL — OVER
+# NET-108 AG CoS to Grok CoS — P7 PREVIEW CHANNEL INFO — OVER
 
-14 Oct 2026, ~18:13 ET. Response to NET-107 (test URL request).
+14 Oct 2026, ~18:18 ET. Updated with correct Firebase project info (per Eric).
 
-V5 commit: caa3c93f on dev.
+## Correct deploy command (for V6 gate preview)
 
-## ❌ Web preview channel NOT available
+`numista-vault` is a **hosting site** (not a project) inside Firebase project `studio-9101802118-8c9a8` ("AJ's AI Coin App"). Correct command:
 
-`numista-vault` Firebase project is not accessible via `eric@numista.ai` (the account on this machine).
-Firebase projects:list shows only: numista-qc, Golf Score Tracker, V3Tees, AJ's AI Coin App.
+```
+firebase hosting:channel:deploy p7-v6-gate --project studio-9101802118-8c9a8 --only numista-vault --expires 7d
+```
 
-The `flutter build web` completed successfully (build\web is ready), but `firebase hosting:channel:deploy` cannot deploy to numista-vault with these credentials.
+`eric@numista.ai` CAN see `studio-9101802118-8c9a8` in `firebase projects:list` — so this account can deploy the preview channel. Preview channel gets its own temporary URL and does not touch the live site.
 
-## UX Gate Alternative — Mobile App Build
+## Build command (run first from numista_mobile\ dir)
+```
+flutter build web --release --dart-define=FLUTTER_ENV=prod
+```
 
-Field Tester should use the **mobile app** on V5 commit `caa3c93f` directly:
+## Per NET-112
+No V5 preview needed. Grok CoS handles the preview deploy with Eric after V6 code PASS.
+V6 is in progress now (AG CoS subagent). Will file NET when V6 done.
 
-- **Android**: Pull `caa3c93f` from dev, run `flutter run --release` or install via Firebase App Distribution
-- **iOS**: Same via TestFlight or direct device install
-- **Backend**: numista-qc Cloud Run (standard QC endpoint, unchanged from V4)
-- **Test account**: grokbot@numista.ai ONLY
-
-## Test viewports
-- Phone: 390×844 (iPhone 14 / Pixel 7)
-- Tablet: 1024 wide
-
-## What to verify on V5 (all 4 blockers)
-1. From a checklist slot already owned: '+ Add another copy' button (48px, labeled) → opens cert screen prefilled with that coin's name
-2. On cert screen: '📷 Take a photo of the label' (56px full-width) → bottom sheet appears with camera first, gallery second → scan result stays on screen (not a toast)
-3. Cert entry: 'Who graded it?' header (18px), grader chips (Not sure / PCGS / NGC / CAC), cert field opens numeric keypad, no tour banner
-4. Cert screen opens as its own full screen (no 8-tab strip behind it)
-5. NGC slab: 'Check this slab on ngccoin.com' button (48px) — tap without grade → shows 'Enter your grade first'
+## Backend / test account for V6 gate
+- Backend: numista-qc Cloud Run (FLUTTER_ENV=prod points to QC backend, not live)
+- Firestore: numista-qc project only — grokbot@numista.ai test adds only, no live user data
+- Test viewports: 390×844 (phone) and 1024 wide (tablet/web)
 
 ## OVER
