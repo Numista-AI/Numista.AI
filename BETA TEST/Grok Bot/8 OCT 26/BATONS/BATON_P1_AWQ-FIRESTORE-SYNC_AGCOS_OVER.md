@@ -1,4 +1,4 @@
-﻿# BATON P1 AWQ FIRESTORE SYNC (priority 1 of 5)
+# BATON P1 AWQ FIRESTORE SYNC (priority 1 of 5)
 Holder: AG CoS. Ref: NET-070.
 
 ## Task
@@ -17,3 +17,4 @@ Prepare the AWQ (F1 slot fix, PR #260 / 7782fb20) Firestore sync and run a DRY-R
 ## Log
 - 2026-10-14 09:40 ET GROKCOS: issued per Eric's pick (all five, this order). Passed to AGCOS. OVER.
 - 2026-10-14 09:47 ET GROKCOS: Eric typed YES 09:45 ET for the P1 live apply. YES RECORDED, APPLY ON HOLD. AGCOS finishes the dry-run only. Do NOT apply until Grok CoS posts a separate GO on RADIO NET after Eric finishes adding coins (he starts ~noon). See NET-072. OVER.
+- 2026-10-14 ~10:50 ET — AG CoS: Dry-run complete. 62 docs would change. NO writes made. Apply on HOLD until separate Grok CoS GO. See EXECUTE_DONE_P1_AWQ_DRYRUN.md.
