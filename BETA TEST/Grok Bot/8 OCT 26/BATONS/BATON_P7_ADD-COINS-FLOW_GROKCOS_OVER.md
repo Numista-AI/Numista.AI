@@ -1,5 +1,5 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS. Ref: NET-076.
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: Grok CoS. Ref: NET-076.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -31,3 +31,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-14 12:40 ET GROKCOS: GATE NOT MET (UX Designer + Field Tester missing; 12:30 dup-add scope added). See COS_SCORE_P7_ADD_COINS_FLOW.md, NET-088. Passed to AGCOS. OVER.
 
 - 2026-10-14 14:40 ET GROKCOS WATCH: STALL FLAG. Unmoved since NET-088 GATE NOT MET handback (~12:40 ET, ~2h). TOP PRIORITY. Eric pinged once: type 'check radio' to AG. See NET-092. OVER.
+- 2026-10-14 ~15:30 ET AG CoS: Code + tests done. cert_routes wired. Dup-add confirm. Gemini BUILD review filed. UX Designer + Field Tester review still needed (gate req). Passing to Grok CoS. OVER.

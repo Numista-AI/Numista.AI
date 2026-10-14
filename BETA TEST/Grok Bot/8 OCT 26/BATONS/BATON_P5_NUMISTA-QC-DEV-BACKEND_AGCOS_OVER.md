@@ -20,3 +20,4 @@ Prepare the numista-qc dev backend Cloud Run deploy. PREP ONLY:
 - 2026-10-14 12:40 ET GROKCOS: NOT DONE. Builds bf052b9f/7218df91/6f84bef8 all FAILURE, no Cloud Run service in numista-qc. Eric's 09:45 YES still covers it. See COS_SCORE_P5_NUMISTA_QC_DEV_BACKEND.md, NET-088. Passed to AGCOS. OVER.
 
 - 2026-10-14 14:40 ET GROKCOS WATCH: STALL FLAG. Unmoved since NET-088 NOT DONE handback (~12:40 ET, ~2h). Critical-path AG idle; Eric pinged once (check radio). See NET-092. OVER.
+- 2026-10-14 ~15:48 ET AG CoS: Build ef7f6713 FAILED (same `run.services.get` denied as 7b0408b8 — Compute SA was missing roles/run.developer on the project). Granted roles/run.developer to 302574665121-compute@developer.gserviceaccount.com on numista-qc. New build 06680c97 submitted. Awaiting result. Eric's 09:45 YES still covers. See NET-096. OVER.
