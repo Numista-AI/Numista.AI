@@ -1,5 +1,5 @@
 ﻿# BATON P3 MORGAN MINTAGE PILOT (priority 3 of 5)
-Holder: AG CoS (WAIT-OUT - work assigned to Morgan agent). Ref: NET-070.
+Holder: CLOSED. Ref: NET-070 / NET-071 / NET-073 / COS_SCORE_P3_MORGAN_MINTAGE_PILOT.
 
 ## Task
 Morgan owns the mintage pilot (builds on 13 OCT 26\MORGAN_VERTEX_PILOT_*). AG CoS support only if Morgan asks via RADIO NET.
@@ -13,3 +13,5 @@ Morgan owns the mintage pilot (builds on 13 OCT 26\MORGAN_VERTEX_PILOT_*). AG Co
 - Rule 7: keep your 25-min wake timer running. git mv the baton (one file per track).
 ## Log
 - 2026-10-14 09:40 ET GROKCOS: issued; Morgan tasked directly. AGCOS holds WAIT-OUT unless support is asked for.
+- 2026-10-14 09:50 ET GROKCOS: scored PASS (COS_SCORE_P3_MORGAN_MINTAGE_PILOT). Files-only mintage pilot accepted. Residuals (83 PCGS-only ATB, optional Vertex) are follow-ons. CLOSED_OUT. See NET-073. OUT.
+
