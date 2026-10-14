@@ -286,7 +286,7 @@ async def rag_query_endpoint(req: RagQueryRequest, _user: dict = Depends(get_cur
         logger.error(f"RAG query endpoint error: {e}")
         return {"query": req.query, "answer": f"RAG search error: {str(e)}", "status": "error"}
 
-PROJECT_ID = "studio-9101802118-8c9a8"
+PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "studio-9101802118-8c9a8")
 LOCATION = "global"
 
 # --- GCS USER CONTENT BUCKET ------------------------------------------------
