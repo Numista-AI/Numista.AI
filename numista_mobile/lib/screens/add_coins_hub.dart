@@ -67,6 +67,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   String _pcgsLookupError   = '';
   bool   _pcgsSingleAdding  = false;
 
+  // ─── Unified Cert Lookup state (PCGS / NGC / CAC) ────────────────────────
+  // Grader selection: null = auto-detect from number format
+  String? _certGrader;   // 'PCGS' | 'NGC' | 'CAC' | null (auto)
+  // Manual-entry fallback controllers (used for NGC & CAC, which have no public API)
+  final _certManualCoinName  = TextEditingController();
+  final _certManualYear      = TextEditingController();
+  final _certManualGrade     = TextEditingController();
+  final _certManualDenom     = TextEditingController();
+  final _certManualNotes     = TextEditingController();
+  bool   _certManualSaving   = false;
+  // Confirm-before-save state: holds the result data pending user confirmation
+  Map<String, dynamic>? _certPendingConfirm;
+
   // ─── Excel import state ─────────────────────────────────────────────────
   final _importNameCtrl = TextEditingController();
 
@@ -108,7 +121,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     super.initState();
     int initialIdx = 0;
     // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
-    // Priority: batch import → AI photo → manual → PCGS → SKU → roll → world → set.
+    // Priority: batch import → AI photo → manual → cert (PCGS/NGC/CAC) → SKU → roll → world → set.
     if (widget.initialTabName != null) {
       _showMoreWays = true;
       switch (widget.initialTabName) {
@@ -123,7 +136,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           initialIdx = 2;
           break;
         case 'pcgs':
-          initialIdx = 3;
+        case 'cert':
+        case 'ngc':
+        case 'cac':
+          initialIdx = 3;  // P7: unified cert tab
           break;
         case 'sku':
           initialIdx = 4;
@@ -140,6 +156,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         default:
           initialIdx = 0;
       }
+
     }
     _tabController = TabController(
       length: 8,
@@ -182,8 +199,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _picTheme.dispose();  _picMint.dispose();    _picGrade.dispose();
     _picMetal.dispose();  _picVariety.dispose(); _picCost.dispose();
     _picStorage.dispose(); _picNotes.dispose();
+    // NGC/CAC manual-entry controllers
+    _certManualCoinName.dispose();
+    _certManualYear.dispose();
+    _certManualGrade.dispose();
+    _certManualDenom.dispose();
+    _certManualNotes.dispose();
     super.dispose();
   }
+
 
   Future<void> _loadSavedPcgsToken() async {
     try {
@@ -305,6 +329,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       children: [
         _buildHeader(context),
         if (!_bannerDismissed) _buildOnboardingBanner(),
+        // ── P7 FIX: Cert lookup is TOP LEVEL — always visible ───────────────
+        _QuickAddCard(
+          icon: Icons.verified_outlined,
+          label: 'Add by Cert # (PCGS / NGC / CAC)',
+          onTap: () {
+            setState(() => _showMoreWays = true);
+            _tabController.animateTo(3);
+          },
+        ),
         _QuickAddCard(
           icon: Icons.camera_alt_outlined,
           label: 'Take a photo',
@@ -352,11 +385,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             child: TabBarView(
               controller: _tabController,
               children: [
-                // ITEM 9: Tab order matches priority: upload → camera → manual → pcgs → sku → roll → world → set
+                // ITEM 9: Tab order matches priority: upload → camera → manual → cert → sku → roll → world → set
                 _buildUploadFilesTab(),
                 _buildCameraScannerTab(),
                 _buildManualEntryTab(),
-                _buildPcgsImportTab(),
+                _buildCertLookupTab(),   // P7 FIX: unified PCGS/NGC/CAC tab (was _buildPcgsImportTab)
                 _buildSkuImportTab(),
                 _buildRollEntryTab(),
                 _buildWorldItemsTab(),
@@ -370,6 +403,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ],
     );
   }
+
 
   Widget _buildOnboardingBanner() {
     return Container(
@@ -394,7 +428,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Quick Camera • Upload Files/PDFs • Manual Entry • Add by SKU • PCGS/NGC Cert • Roll/Batch • World & Mint Sets',
+                  'Cert # (PCGS/NGC/CAC) • Quick Camera • Upload Files/PDFs • Manual Entry • Add by SKU • Roll/Batch • World & Mint Sets',
                   style: TextStyle(fontSize: 11, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69)),
                 ),
               ],
@@ -450,14 +484,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         indicatorColor: const Color(0xFFF63366),
         indicatorWeight: 3,
         tabs: const [
-          Tab(text: 'Upload Files',      icon: Icon(Icons.upload_file_outlined,  size: 20)),
-          Tab(text: 'AI Photo ID',       icon: Icon(Icons.photo_camera_outlined, size: 20)),
-          Tab(text: 'Manual Entry',      icon: Icon(Icons.edit_note,             size: 20)),
-          Tab(text: 'PCGS Cert Lookup',  icon: Icon(Icons.shield_outlined,       size: 20)),
-          Tab(text: 'Add by SKU',        icon: Icon(Icons.qr_code,               size: 20)),
-          Tab(text: 'Roll/Jar/Batch',    icon: Icon(Icons.currency_exchange,     size: 20)),
-          Tab(text: 'World & Specialty', icon: Icon(Icons.language_rounded,      size: 20)),
-          Tab(text: 'Mint Set',          icon: Icon(Icons.collections_bookmark,  size: 20)),
+          Tab(text: 'Upload Files',           icon: Icon(Icons.upload_file_outlined,  size: 20)),
+          Tab(text: 'AI Photo ID',            icon: Icon(Icons.photo_camera_outlined, size: 20)),
+          Tab(text: 'Manual Entry',           icon: Icon(Icons.edit_note,             size: 20)),
+          Tab(text: 'Cert Lookup',            icon: Icon(Icons.verified_outlined,     size: 20)),  // P7: PCGS/NGC/CAC
+          Tab(text: 'Add by SKU',             icon: Icon(Icons.qr_code,               size: 20)),
+          Tab(text: 'Roll/Jar/Batch',         icon: Icon(Icons.currency_exchange,     size: 20)),
+          Tab(text: 'World & Specialty',      icon: Icon(Icons.language_rounded,      size: 20)),
+          Tab(text: 'Mint Set',               icon: Icon(Icons.collections_bookmark,  size: 20)),
+
         ],
       ),
     );
@@ -2319,9 +2354,591 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
-  // ─── PCGS Cert Verification Tab ──────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // P7 FIX: Unified Cert Lookup Tab — PCGS / NGC / CAC
+  //
+  // Grader Detection Rules (mirrors cert_routes.py):
+  //   CAC   : starts with "CAC" — always manual entry (no public API)
+  //   NGC   : 7-digit number (e.g. 1234567 or 1234567-001) — no public API,
+  //           fallback to manual entry with cert # prefilled
+  //   PCGS  : 8-digit number (e.g. 53652580, or slash format 986403.70/53652580)
+  //           uses PcgsImportService (live API if token available)
+  //
+  // Always shows a confirm-before-save screen regardless of grader.
+  // ─────────────────────────────────────────────────────────────────────────
 
+  /// Auto-detects grader from cert number text entered by user.
+  String _autoDetectGrader(String raw) {
+    final upper = raw.trim().toUpperCase();
+    if (upper.startsWith('CAC')) return 'CAC';
+    // Extract digits (handle slash format and NGC dash format)
+    String digits;
+    if (upper.contains('/')) {
+      digits = upper.split('/').last.replaceAll(RegExp(r'\D'), '');
+    } else if (upper.contains('-')) {
+      digits = upper.split('-').first.replaceAll(RegExp(r'\D'), '');
+    } else {
+      digits = upper.replaceAll(RegExp(r'\D'), '');
+    }
+    // Strip leading zeros from barcode format
+    if (digits.length > 9) digits = digits.replaceFirst(RegExp(r'^0+'), '');
+    if (digits.length == 7) return 'NGC';
+    if (digits.length == 8) return 'PCGS';
+    return 'PCGS';  // default
+  }
+
+  Widget _buildCertLookupTab() {
+    // Determine effective grader for display
+    final rawInput = _pcgsSingleCtrl.text;
+    final effectiveGrader = _certGrader ?? (rawInput.isNotEmpty ? _autoDetectGrader(rawInput) : 'PCGS');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 64),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // ── Hero header ───────────────────────────────────────────────
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.verified_outlined, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Add by Cert # — PCGS / NGC / CAC',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                  Text('Auto-detects grader from cert number format. Always confirms before saving.',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                ])),
+              ]),
+              const SizedBox(height: 20),
+
+              // ── Grader selector (radio buttons) ──────────────────────────
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('GRADER', style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.bold,
+                        color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        for (final g in ['Auto', 'PCGS', 'NGC', 'CAC'])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(g,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: (_certGrader == (g == 'Auto' ? null : g))
+                                        ? Colors.white
+                                        : const Color(0xFF334155),
+                                  )),
+                              selected: (_certGrader == (g == 'Auto' ? null : g)),
+                              onSelected: (_) => setState(() {
+                                _certGrader = (g == 'Auto') ? null : g;
+                                _pcgsLookupResult = null;
+                                _pcgsLookupError = '';
+                                _certPendingConfirm = null;
+                              }),
+                              selectedColor: const Color(0xFF2563EB),
+                              checkmarkColor: Colors.white,
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _certGrader == null
+                          ? 'Auto: 8-digit → PCGS, 7-digit → NGC, starts with CAC → CAC'
+                          : _certGrader == 'PCGS'
+                              ? 'PCGS: Live API lookup (Cloudflare-passed from browser context)'
+                              : _certGrader == 'NGC'
+                                  ? 'NGC: No public API — manual entry with cert # pre-filled'
+                                  : 'CAC: No public API — manual entry with cert # pre-filled',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Cert number input card ────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E6E9)),
+                  boxShadow: [BoxShadow(
+                      color: Colors.black.withAlpha(5), blurRadius: 8,
+                      offset: const Offset(0, 2))],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                  // Label row
+                  Row(children: [
+                    Text(
+                      '$effectiveGrader Certification Number',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14,
+                          color: Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: _showCertHelpDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Icon(Icons.help_outline_rounded, size: 18, color: Color(0xFF2563EB)),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(
+                    effectiveGrader == 'PCGS'
+                        ? 'Enter the number after the "/" on your PCGS slab (e.g. 53652580)'
+                        : effectiveGrader == 'NGC'
+                            ? 'Enter your 7-digit NGC cert number (e.g. 1234567 or 1234567-001)'
+                            : 'Enter your CAC cert number (e.g. CAC12345 or CACG12345)',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Input + button row
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _pcgsSingleCtrl,
+                        keyboardType: TextInputType.text,
+                        onChanged: (_) => setState(() {}),  // trigger auto-detect refresh
+                        onSubmitted: (_) => _lookupCertUnified(),
+                        decoration: InputDecoration(
+                          hintText: effectiveGrader == 'PCGS'
+                              ? 'e.g.  53652580'
+                              : effectiveGrader == 'NGC'
+                                  ? 'e.g.  1234567'
+                                  : 'e.g.  CAC12345',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          prefixIcon: const Icon(Icons.tag, size: 18, color: Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: _pcgsLookupLoading ? null : _lookupCertUnified,
+                      icon: _pcgsLookupLoading
+                          ? const SizedBox(width: 16, height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.search_rounded, size: 18),
+                      label: Text(_pcgsLookupLoading ? 'Looking up...' : 'Look Up'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ]),
+
+                  // Error / fallback UI
+                  if (_pcgsLookupError.isNotEmpty)
+                    _buildCertLookupFallback(_pcgsLookupError),
+                ]),
+              ),
+
+              // ── PCGS result card (confirm before save) ───────────────────
+              if (_pcgsLookupResult != null) ...[
+                const SizedBox(height: 16),
+                _buildLookupResultCard(_pcgsLookupResult!),
+              ],
+
+              // ── NGC / CAC manual entry fallback card ─────────────────────
+              if (_certPendingConfirm != null &&
+                  (_certPendingConfirm!['_grader'] == 'NGC' ||
+                   _certPendingConfirm!['_grader'] == 'CAC')) ...[
+                const SizedBox(height: 16),
+                _buildManualCertEntryCard(_certPendingConfirm!),
+              ],
+
+              const SizedBox(height: 16),
+
+              // ── Platform badge / Advanced (PCGS token + bulk import) ─────
+              if (_hasPlatformToken)
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 18),
+                      title: const Text('Powered by Numista.AI',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF065F46))),
+                      subtitle: const Text('PCGS API access included — no setup needed',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF10B981))),
+                      initiallyExpanded: _showAdvancedToken,
+                      onExpansionChanged: (v) => setState(() => _showAdvancedToken = v),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: _buildBulkImportSection(),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFE2E6E9)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.tune_rounded, color: Color(0xFF64748B), size: 18),
+                      title: const Text('Advanced Options (PCGS Token & Bulk Import)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                      subtitle: const Text('PCGS API token setup & bulk CSV import',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                      initiallyExpanded: _showAdvancedToken,
+                      onExpansionChanged: (v) => setState(() => _showAdvancedToken = v),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const Divider(height: 1),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFED7AA)),
+                              ),
+                              child: const Text(
+                                '⚠️  A PCGS API token is required for PCGS live lookups. '
+                                'Generate yours free at pcgs.com/publicapi/documentation → "Generate Token". '
+                                'NGC and CAC always use manual entry (no public API available).',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF9A3412), height: 1.5),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _pcgsTokenCtrl,
+                                  obscureText: true,
+                                  decoration: InputDecoration(
+                                    labelText: 'PCGS Bearer Token',
+                                    hintText: 'Paste token here...',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    suffixIcon: _isLoadingToken
+                                        ? const Padding(padding: EdgeInsets.all(10),
+                                            child: SizedBox(width: 14, height: 14,
+                                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF94A3B8))))
+                                        : _pcgsTokenSaved
+                                            ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 18)
+                                            : null,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  final t = _pcgsTokenCtrl.text.trim();
+                                  if (t.isEmpty) return;
+                                  await PcgsImportService.saveToken(t);
+                                  if (!mounted) return;
+                                  setState(() => _pcgsTokenSaved = true);
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                    content: Text('✅ Token saved'), backgroundColor: Color(0xFF10B981)));
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Save'),
+                              ),
+                            ]),
+                            if (_pcgsTokenSaved) ...[
+                              const SizedBox(height: 6),
+                              const Text('✅ Token active — PCGS lookups ready.',
+                                  style: TextStyle(color: Color(0xFF10B981), fontSize: 11)),
+                            ],
+                            const SizedBox(height: 20),
+                            const Divider(),
+                            _buildBulkImportSection(),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Unified cert lookup — dispatches to PCGS live API or NGC/CAC manual entry.
+  Future<void> _lookupCertUnified() async {
+    final raw = _pcgsSingleCtrl.text.trim();
+    if (raw.isEmpty) {
+      setState(() => _pcgsLookupError = 'Please enter a cert number.');
+      return;
+    }
+    final grader = _certGrader ?? _autoDetectGrader(raw);
+
+    setState(() {
+      _pcgsLookupResult = null;
+      _pcgsLookupError = '';
+      _certPendingConfirm = null;
+    });
+
+    if (grader == 'PCGS') {
+      // Delegate to existing PCGS lookup
+      await _lookupSingleCert();
+      return;
+    }
+
+    // NGC or CAC — no public API, show manual-entry card with cert # prefilled
+    final certClean = raw.contains('/') ? raw.split('/').last.trim() : raw;
+    setState(() {
+      _certPendingConfirm = {
+        '_grader': grader,
+        'certNo': certClean,
+      };
+      // Pre-fill manual fields
+      _certManualCoinName.clear();
+      _certManualYear.clear();
+      _certManualGrade.clear();
+      _certManualDenom.clear();
+      _certManualNotes.clear();
+    });
+  }
+
+  /// Manual-entry confirm card shown for NGC and CAC (no public API).
+  Widget _buildManualCertEntryCard(Map<String, dynamic> pending) {
+    final grader = pending['_grader'] as String;
+    final certNo = pending['certNo'] as String;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: grader == 'NGC' ? const Color(0xFF7C3AED) : const Color(0xFF0EA5E9),
+          width: 2,
+        ),
+        boxShadow: [BoxShadow(
+            color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: grader == 'NGC'
+                  ? const Color(0xFF7C3AED)
+                  : const Color(0xFF0EA5E9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(grader,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(
+            grader == 'NGC'
+                ? 'NGC has no public cert API — enter details manually'
+                : 'CAC verification is manual — cert # prefilled',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF1E293B)),
+          )),
+        ]),
+        const SizedBox(height: 4),
+        Container(
+          margin: const EdgeInsets.only(top: 6, bottom: 12),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFFBD38D)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.info_outline, size: 14, color: Color(0xFFD97706)),
+            const SizedBox(width: 6),
+            Expanded(child: Text(
+              grader == 'NGC'
+                  ? 'Verify your cert at ngccoin.com/certlookup/$certNo/ then enter the details below.'
+                  : 'CAC verification: cacgrading.com/cert-verify/$certNo — enter details after verifying.',
+              style: const TextStyle(fontSize: 11, color: Color(0xFF78350F), height: 1.4),
+            )),
+          ]),
+        ),
+
+        // Cert # (read-only pre-filled)
+        _certManualField('CERT NUMBER', TextEditingController(text: certNo), readOnly: true),
+        const SizedBox(height: 12),
+        _certManualField('COIN NAME / DESCRIPTION', _certManualCoinName,
+            hint: 'e.g. 1921 Morgan Dollar'),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _certManualField('YEAR', _certManualYear, hint: 'e.g. 1921')),
+          const SizedBox(width: 12),
+          Expanded(child: _certManualField('GRADE', _certManualGrade, hint: 'e.g. MS-64')),
+        ]),
+        const SizedBox(height: 12),
+        _certManualField('DENOMINATION', _certManualDenom, hint: 'e.g. Dollar'),
+        const SizedBox(height: 12),
+        _certManualField('NOTES', _certManualNotes, hint: 'Any additional details...', maxLines: 2),
+        const SizedBox(height: 20),
+
+        // Confirm & Save button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _certManualSaving ? null : () => _saveManualCertEntry(grader, certNo),
+            icon: _certManualSaving
+                ? const SizedBox(width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.add_circle_outline_rounded, size: 18),
+            label: Text(_certManualSaving
+                ? 'Saving...'
+                : 'Confirm & Add to My Collection'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: grader == 'NGC'
+                  ? const Color(0xFF7C3AED)
+                  : const Color(0xFF0EA5E9),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          grader == 'CAC'
+              ? 'CAC verification is manual — no automated lookup available.'
+              : 'NGC has no public cert lookup API — data entered manually.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _certManualField(String label, TextEditingController ctrl,
+      {String? hint, bool readOnly = false, int maxLines = 1}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(
+          fontSize: 11, fontWeight: FontWeight.bold,
+          color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+      const SizedBox(height: 5),
+      TextField(
+        controller: ctrl,
+        readOnly: readOnly,
+        maxLines: maxLines,
+        style: TextStyle(
+            fontSize: 14,
+            color: readOnly ? const Color(0xFF94A3B8) : const Color(0xFF1E293B)),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
+          filled: true,
+          fillColor: readOnly ? const Color(0xFFF8FAFC) : Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+        ),
+      ),
+    ]);
+  }
+
+  Future<void> _saveManualCertEntry(String grader, String certNo) async {
+    setState(() => _certManualSaving = true);
+    try {
+      final coinDoc = <String, dynamic>{
+        'certNo':            certNo,
+        'grader':            grader,
+        'CoinName':          _certManualCoinName.text.trim(),
+        'Year':              _certManualYear.text.trim(),
+        'Grade':             _certManualGrade.text.trim(),
+        'Denomination':      _certManualDenom.text.trim(),
+        'Personal Notes':    _certManualNotes.text.trim(),
+        'source':            'cert_manual_${grader.toLowerCase()}',
+        'Added':             FieldValue.serverTimestamp(),
+        'is_demo':           false,
+        'is_demo_cleared':   false,
+      };
+      await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .add(coinDoc);
+      BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
+      if (!mounted) return;
+      setState(() {
+        _certManualSaving  = false;
+        _certPendingConfirm = null;
+        _pcgsSingleCtrl.clear();
+        _certManualCoinName.clear();
+        _certManualYear.clear();
+        _certManualGrade.clear();
+        _certManualDenom.clear();
+        _certManualNotes.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('✅ $grader coin added to your collection!'),
+        backgroundColor: const Color(0xFF10B981),
+        action: widget.onNavigate != null
+            ? SnackBarAction(
+                label: 'View',
+                textColor: Colors.white,
+                onPressed: () => widget.onNavigate!('My Collection'))
+            : null,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _certManualSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Couldn\'t save coin. Please try again. ($e)'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  // ─── PCGS Cert Verification Tab (legacy — kept for bulk import) ──────────
+
+  // ignore: unused_element
   Widget _buildPcgsImportTab() {
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 64),
       child: Center(

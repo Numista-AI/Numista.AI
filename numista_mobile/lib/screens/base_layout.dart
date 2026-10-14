@@ -806,7 +806,37 @@ class _BaseLayoutState extends State<BaseLayout> {
                             _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
                             _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
 
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
+
+                            if (!_isSidebarCollapsed)
+                              // P7 FIX: Header is now clickable — navigates to AddCoinsHub
+                              Builder(builder: (context) {
+                                final isHeaderDark = Theme.of(context).brightness == Brightness.dark;
+                                return GestureDetector(
+                                  onTap: () => setState(() => _activeRoute = 'Add New Coins'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8, top: 22, bottom: 6),
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: Text(
+                                        'ADD NEW COINS/NOTES/ETC.',
+                                        style: TextStyle(
+                                          fontSize: NumistaTheme.textCaption,
+                                          fontWeight: FontWeight.bold,
+                                          color: isHeaderDark
+                                              ? const Color(0xFF38BDF8)
+                                              : const Color(0xFF2563EB),
+                                          letterSpacing: 0.8,
+                                          decoration: TextDecoration.underline,
+                                          decorationColor: isHeaderDark
+                                              ? const Color(0xFF38BDF8).withAlpha(120)
+                                              : const Color(0xFF2563EB).withAlpha(120),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+
                             _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: email.isNotEmpty
