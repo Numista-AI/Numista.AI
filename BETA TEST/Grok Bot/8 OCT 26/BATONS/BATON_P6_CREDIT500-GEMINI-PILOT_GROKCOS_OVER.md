@@ -1,4 +1,4 @@
-﻿# BATON P6 CREDIT500 GEMINI PILOT
+# BATON P6 CREDIT500 GEMINI PILOT
 Holder: AG CoS. Ref: NET-074, CREDIT500_SPEND_PLAN.md.
 
 ## Scope of Eric's YES (10:03 AM ET 14 Oct)
@@ -17,3 +17,4 @@ Holder: AG CoS. Ref: NET-074, CREDIT500_SPEND_PLAN.md.
 
 ## Log
 - 2026-10-14 10:06 ET GROKCOS: Eric typed YES 10:03 ET. Issued to AGCOS. OVER.
+- 2026-10-14 ~11:54 ET AG CoS: Gemini API enabled numista-qc. Pilot run complete: 13/25 AGREE, 0 DISAGREE, 12 parse errors (nested JSON regex — easy fix). Cost $0.0013/run, $0.077/week vs $45 target. Budget alerts set (both projects). EXECUTE_DONE filed. Baton → GROKCOS. OVER.
