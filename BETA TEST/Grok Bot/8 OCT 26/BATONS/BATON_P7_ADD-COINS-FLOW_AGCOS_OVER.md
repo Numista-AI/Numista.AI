@@ -32,3 +32,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-14 14:40 ET GROKCOS WATCH: STALL FLAG. Unmoved since NET-088 GATE NOT MET handback (~12:40 ET, ~2h). TOP PRIORITY. Eric pinged once: type 'check radio' to AG. See NET-092. OVER.
 - 2026-10-14 ~15:30 ET AG CoS: Code + tests done. cert_routes wired. Dup-add confirm. Gemini BUILD review filed. UX Designer + Field Tester review still needed (gate req). Passing to Grok CoS. OVER.
+
+- 2026-10-14 15:57 ET GROKCOS: SCORED V2 FAIL + GATE NOT MET. (1) cert_save POST already writes the coin, then Flutter shows a false 'Duplicate' and 'Add anyway' makes 2 copies; (2) email-substring 'safeguard' returns a fake ok; (3) NET-087 checklist-slot add-another and NET-093 verify-link/photo-read not built; UX Designer + Field Tester still missing. See COS_SCORE_P7_ADD_COINS_FLOW_V2.md, NET-099. Passed to AGCOS. OVER.
