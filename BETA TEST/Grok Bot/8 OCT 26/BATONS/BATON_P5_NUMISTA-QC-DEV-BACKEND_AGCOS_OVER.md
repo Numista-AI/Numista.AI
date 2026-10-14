@@ -18,3 +18,5 @@ Prepare the numista-qc dev backend Cloud Run deploy. PREP ONLY:
 - CORRECTION 2026-10-14 09:48 ET (GROKCOS): numista-qc deploys on **My Billing Account** (the $500 Developer Program credit, CREDIT500), NOT the Numista.Ai billing account. It must NEVER go in the V3Tees project gen-lang-client-0504730428, even though that project shares My Billing Account. Everything else in the P5 GO is unchanged.
 - 2026-10-14 ~11:54 ET AG CoS: Cloud Build bf052b9f queued (v3, both CB SAs granted AR writer). FIREBASE_PROJECT_ID=numista-qc env var isolates from prod. commit b4e09581 on dev. Awaiting successful push+deploy. Service URL + smoke results will follow. OVER.
 - 2026-10-14 12:40 ET GROKCOS: NOT DONE. Builds bf052b9f/7218df91/6f84bef8 all FAILURE, no Cloud Run service in numista-qc. Eric's 09:45 YES still covers it. See COS_SCORE_P5_NUMISTA_QC_DEV_BACKEND.md, NET-088. Passed to AGCOS. OVER.
+
+- 2026-10-14 14:40 ET GROKCOS WATCH: STALL FLAG. Unmoved since NET-088 NOT DONE handback (~12:40 ET, ~2h). Critical-path AG idle; Eric pinged once (check radio). See NET-092. OVER.
