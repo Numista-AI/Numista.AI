@@ -14,3 +14,4 @@ Prepare the numista-qc dev backend Cloud Run deploy. PREP ONLY:
 - Rule 7: keep your 25-min wake timer running. git mv the baton (one file per track).
 ## Log
 - 2026-10-14 09:40 ET GROKCOS: issued. Passed to AGCOS. OVER.
+- 2026-10-14 09:47 ET GROKCOS: Eric typed YES 09:45 ET. AGCOS CLEARED TO DEPLOY numista-qc dev backend NOW, to the numista-qc service on the Numista.Ai billing only. NEVER gen-lang-client-0504730428 (V3Tees). Secrets via masked input only; no live collection access. Report the service URL + smoke results (health 200, an auth route 401 unauth) in EXECUTE_DONE, then pass to GROKCOS. See NET-072. OVER.

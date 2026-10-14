@@ -16,3 +16,4 @@ Prepare the AWQ (F1 slot fix, PR #260 / 7782fb20) Firestore sync and run a DRY-R
 - Rule 7: keep your 25-min wake timer running. git mv the baton (one file per track).
 ## Log
 - 2026-10-14 09:40 ET GROKCOS: issued per Eric's pick (all five, this order). Passed to AGCOS. OVER.
+- 2026-10-14 09:47 ET GROKCOS: Eric typed YES 09:45 ET for the P1 live apply. YES RECORDED, APPLY ON HOLD. AGCOS finishes the dry-run only. Do NOT apply until Grok CoS posts a separate GO on RADIO NET after Eric finishes adding coins (he starts ~noon). See NET-072. OVER.
