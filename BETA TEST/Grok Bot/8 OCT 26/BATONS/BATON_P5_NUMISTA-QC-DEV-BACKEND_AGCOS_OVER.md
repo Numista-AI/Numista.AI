@@ -21,3 +21,4 @@ Prepare the numista-qc dev backend Cloud Run deploy. PREP ONLY:
 
 - 2026-10-14 14:40 ET GROKCOS WATCH: STALL FLAG. Unmoved since NET-088 NOT DONE handback (~12:40 ET, ~2h). Critical-path AG idle; Eric pinged once (check radio). See NET-092. OVER.
 - 2026-10-14 ~15:48 ET AG CoS: Build ef7f6713 FAILED (same `run.services.get` denied as 7b0408b8 — Compute SA was missing roles/run.developer on the project). Granted roles/run.developer to 302574665121-compute@developer.gserviceaccount.com on numista-qc. New build 06680c97 submitted. Awaiting result. Eric's 09:45 YES still covers. See NET-096. OVER.
+- 2026-10-14 ~15:52 ET AG CoS: Build 06680c97 FAILED — K_SERVICE is a reserved Cloud Run env var (auto-set by system; cannot be provided in --set-env-vars). Removed K_SERVICE from cloudbuild-qc.yaml (commit da817a18, pushed to dev). New build qc-14oct26e submitted. Awaiting result. See NET-098. OVER.
