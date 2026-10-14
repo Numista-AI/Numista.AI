@@ -6375,7 +6375,7 @@ Rules:
 """
 
 @app.post("/api/estimate_value_text")
-async def estimate_value_text(request: TextValuationRequest):
+async def estimate_value_text(request: TextValuationRequest, _user: dict = Depends(get_current_user)):
     """
     Text-only coin value estimation -- no photos required.
 
@@ -6386,6 +6386,14 @@ async def estimate_value_text(request: TextValuationRequest):
     be visually confirmed without photos.  Sets needs_photo=True so the UI
     can prompt the user to upload images for a more precise estimate.
     """
+    if _user.get("firebase", {}).get("sign_in_provider") == "anonymous":
+        raise HTTPException(status_code=403, detail="Anonymous users cannot use AI valuation")
+    _check_and_increment_rate_cap(
+        _user.get("uid") or _user.get("user_id"),
+        "estimate_value",
+        20,
+        is_admin=_user.get("admin", False)
+    )
     # Check if this is a packaged set (e.g. Proof Set, Mint Set)
     doc_dict = {
         "Year": request.year,
@@ -6505,10 +6513,18 @@ Rules:
 """
 
 @app.post("/api/estimate_value_general")
-async def estimate_value_general(request: GeneralValuationRequest):
+async def estimate_value_general(request: GeneralValuationRequest, _user: dict = Depends(get_current_user)):
     """
     Generic text-only valuation for any item type (banknote, medal, specialty, coin, etc.).
     """
+    if _user.get("firebase", {}).get("sign_in_provider") == "anonymous":
+        raise HTTPException(status_code=403, detail="Anonymous users cannot use AI valuation")
+    _check_and_increment_rate_cap(
+        _user.get("uid") or _user.get("user_id"),
+        "estimate_value",
+        20,
+        is_admin=_user.get("admin", False)
+    )
     prompt = GENERAL_VALUATION_PROMPT.format(
         item_type    = request.item_type,
         name         = request.name or "Unknown",
@@ -11187,10 +11203,16 @@ async def search_ebay_deals(
 
 
 @app.get("/api/portfolio/snapshot")
-async def get_portfolio_snapshot_history(user_id: str):
+async def get_portfolio_snapshot_history(
+    user_id: str,
+    _user: dict = Depends(get_current_user),
+):
     """
     Fetches the historical portfolio snapshots for a specific user.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    if caller_uid != user_id and _user.get("email") != user_id and not _user.get("admin"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     try:
         snapshots_ref = db.collection("users").document(user_id).collection("portfolio_history").order_by("date", direction=firestore.Query.DESCENDING).get()
         history = []

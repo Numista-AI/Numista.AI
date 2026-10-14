@@ -29,6 +29,35 @@ class AuthService {
     );
   }
 
+  static bool _isAdminCached = false;
+
+  /// Returns true if the signed-in user has admin privileges.
+  /// Checks cached custom token claims or admin email pattern, rejecting anonymous users.
+  static bool get isAdmin {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return false;
+    if (_isAdminCached) return true;
+    final email = user.email?.trim().toLowerCase() ?? '';
+    return email == 'jseaman1204@gmail.com' || email.endsWith('@numista.ai');
+  }
+
+  /// Refreshes the cached admin custom claim from Firebase Auth.
+  static Future<bool> refreshAdminClaim() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.isAnonymous) {
+        _isAdminCached = false;
+        return false;
+      }
+      final result = await user.getIdTokenResult();
+      _isAdminCached = result.claims?['admin'] == true;
+      return _isAdminCached;
+    } catch (_) {
+      _isAdminCached = false;
+      return false;
+    }
+  }
+
   static String get userEmail {
     final user = _auth.currentUser;
     if (user?.isAnonymous == true) return 'guest';
@@ -169,6 +198,7 @@ class AuthService {
 
   // ─── Sign Out ─────────────────────────────────────────────────────────────
   static Future<void> signOut() async {
+    _isAdminCached = false;
     UiVariantService.reset();
     await _auth.signOut();
   }

@@ -210,11 +210,16 @@ class BackupExportService {
         .join('; ');
   }
 
-  static String _cleanCsvCell(dynamic val) {
+  static String cleanCsvCell(dynamic val) {
     if (val == null) return '""';
-    final str = val.toString().replaceAll('"', '""');
+    var str = val.toString().replaceAll('"', '""');
+    if (str.isNotEmpty && '=+-@\t\r'.contains(str[0])) {
+      str = "'$str";
+    }
     return '"$str"';
   }
+
+  static String _cleanCsvCell(dynamic val) => cleanCsvCell(val);
 
   static void _triggerWebDownload(String content, String filename, String mimeType) {
     dl_impl.triggerWebDownload(content, filename, mimeType);
