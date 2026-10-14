@@ -27,3 +27,4 @@ Holder: AG CoS. Ref: NET-076.
 Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eric's collection (he is adding coins today); test only with the grokbot test account. No keys in files (masked input only).
 ## Log
 - 2026-10-14 10:55 ET GROKCOS: issued from Eric's 10:35 beta test. TOP PRIORITY. OVER.
+- 2026-10-14 12:30 ET GROKCOS: ADD TO SCOPE (Eric v2 beta, `1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test, v2.docx`): let Eric add ANOTHER copy from a checklist slot that is already filled (e.g. a 2nd/3rd Washington dollar from a PCS P/D/S set). Quantity/duplicate add on every checklist view. See NET-087.
