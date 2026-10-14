@@ -111,6 +111,23 @@ Map<String, dynamic> _item({
       'Denomination': 'Quarter',
     };
 
+/// Title-only coin — no Theme/Subject field.
+/// Exercises the Title path (_fastPathSubjectMatchesSlot lines 276-320).
+/// Grok CoS probe: "2024 Patsy Mink Quarter", "2025 Stacey Milbern Quarter" etc.
+Map<String, dynamic> _titleItem({
+  required String title,
+  String year = '2024',
+  String mintMark = 'P',
+}) =>
+    {
+      'program_id': 'american_women_quarters',
+      'Program/Series': 'American Women Quarters',
+      'Title': title,          // ← Title path; NO Theme/Subject key
+      'Year': year,
+      'Mint Mark': mintMark,
+      'Denomination': 'Quarter',
+    };
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -514,6 +531,129 @@ void main() {
       expect(result[patsyKey],   isNot(SlotMatchResult.empty), reason: '"Patsy Mink" coin must OWNED Patsy Takemoto Mink slot via alias');
       expect(result[staceyKey],  isNot(SlotMatchResult.empty), reason: '"Stacey Milbern" coin must OWNED Stacey Park Milbern slot via alias');
       expect(result[zitkalaKey], isNot(SlotMatchResult.empty), reason: '"Zitkala-Sa" coin must OWNED Zitkala-Ša slot via alias');
+    });
+  });
+
+  // ===========================================================================
+  // GROUP 6: Title-only old-name alias — Title path canonicalization
+  // Grok CoS probe (NET-060): coins with ONLY a Title field (no Theme/Subject),
+  // e.g. "2024 Patsy Mink Quarter" — Title path must apply alias map too.
+  // "2024 Celia Cruz Quarter" lights on canonical path → Title path is live.
+  //
+  // MUTATION PROOF (NET-060):
+  // Remove alias keys from candidateToCanonical build loop in _fastPathSubjectMatchesSlot.
+  // All 4 Title-only old-name isMatch tests FAIL (Expected: <true> Actual: <false>).
+  // Canonical Title test + no-false-positive test still PASS.
+  // Restore → all PASS again.
+  // ===========================================================================
+
+  group('AWQ Title-path old-name alias — Title-only coins (no Theme/Subject)', () {
+    test('"2024 Patsy Mink Quarter" Title-only matches "Patsy Takemoto Mink" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Patsy Takemoto Mink');
+      final coin = _titleItem(title: '2024 Patsy Mink Quarter', year: '2024');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: 'Title "2024 Patsy Mink Quarter" contains alias "patsy mink" → '
+            '"patsy takemoto mink" canonical via Title path alias extension.',
+      );
+    });
+
+    test('"2024 Dr. Pauli Murray Quarter" Title-only matches "Rev. Dr. Pauli Murray" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Rev. Dr. Pauli Murray');
+      final coin = _titleItem(title: '2024 Dr. Pauli Murray Quarter', year: '2024');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: 'Title contains alias "dr. pauli murray" → "rev. dr. pauli murray" via Title path.',
+      );
+    });
+
+    test('"2025 Stacey Milbern Quarter" Title-only matches "Stacey Park Milbern" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Stacey Park Milbern');
+      final coin = _titleItem(title: '2025 Stacey Milbern Quarter', year: '2025');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: 'Title contains alias "stacey milbern" → "stacey park milbern" via Title path.',
+      );
+    });
+
+    test('"2024 Zitkala-Sa Quarter" Title-only matches "Zitkala-Ša" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name.startsWith('Zitkala'));
+      final coin = _titleItem(title: '2024 Zitkala-Sa Quarter', year: '2024');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: 'Title contains alias "zitkala-sa" (ASCII) → "zitkala-\u0161a" via Title path.',
+      );
+    });
+
+    test('"2024 Celia Cruz Quarter" canonical Title still matches "Celia Cruz" slot', () {
+      // Regression: canonical path must still work after alias extension.
+      // Grok CoS confirmed "Celia Cruz" lights — verify it still does.
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Celia Cruz');
+      final coin = _titleItem(title: '2024 Celia Cruz Quarter', year: '2024');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isTrue,
+        reason: 'Canonical "celia cruz" in title must still match its slot (no regression).',
+      );
+    });
+
+    test('No false positive: "2024 Patsy Mink Quarter" Title does NOT match "Celia Cruz" slot', () {
+      final program = _fullAwqProgram();
+      final slot = program.coins.firstWhere((s) => s.name == 'Celia Cruz');
+      final coin = _titleItem(title: '2024 Patsy Mink Quarter', year: '2024');
+      expect(
+        SlotResolver.isMatch(coin, program, slot),
+        isFalse,
+        reason: 'Title alias must not cause cross-slot false positives.',
+      );
+    });
+
+    test('resolveProgramInventory: Title-only old-name coins all OWNED via Title path alias', () {
+      // Simulates coins whose Title embeds old names but have no Theme/Subject.
+      // Without alias extension in Title path: 4 slots go dark.
+      // With alias extension: all 4 light up.
+      final program = _fullAwqProgram();
+
+      final coins = <Map<String, dynamic>>[
+        _titleItem(title: '2024 Patsy Mink Quarter',    year: '2024'),  // → Patsy Takemoto Mink
+        _titleItem(title: '2024 Dr. Pauli Murray Quarter', year: '2024'), // → Rev. Dr. Pauli Murray
+        _titleItem(title: '2025 Stacey Milbern Quarter', year: '2025'), // → Stacey Park Milbern
+        _titleItem(title: '2024 Zitkala-Sa Quarter',    year: '2024'),  // → Zitkala-Ša
+      ];
+
+      final result = SlotResolver.resolveProgramInventory(
+        program: program,
+        coins: coins,
+      );
+
+      // Use same slot key constants as Group 5 (keys are program-id + slot-id + variety).
+      const pauliKey   = 'american_women_quarters_awq_2024_dr__pauli_murray_P';
+      const patsyKey   = 'american_women_quarters_awq_2024_patsy_mink_P';
+      const staceyKey  = 'american_women_quarters_awq_2025_stacey_milbern_P';
+      const zitkalaKey = 'american_women_quarters_awq_2024_zitkala_sa_P';
+
+      expect(result.containsKey(pauliKey),   isTrue, reason: 'Rev. Dr. Pauli Murray P-slot key must exist');
+      expect(result.containsKey(patsyKey),   isTrue, reason: 'Patsy Takemoto Mink P-slot key must exist');
+      expect(result.containsKey(staceyKey),  isTrue, reason: 'Stacey Park Milbern P-slot key must exist');
+      expect(result.containsKey(zitkalaKey), isTrue, reason: 'Zitkala-Ša P-slot key must exist');
+
+      expect(result[pauliKey],   isNot(SlotMatchResult.empty),
+          reason: 'Title "2024 Dr. Pauli Murray Quarter" must OWNED Rev. Dr. Pauli Murray slot via Title alias');
+      expect(result[patsyKey],   isNot(SlotMatchResult.empty),
+          reason: 'Title "2024 Patsy Mink Quarter" must OWNED Patsy Takemoto Mink slot via Title alias');
+      expect(result[staceyKey],  isNot(SlotMatchResult.empty),
+          reason: 'Title "2025 Stacey Milbern Quarter" must OWNED Stacey Park Milbern slot via Title alias');
+      expect(result[zitkalaKey], isNot(SlotMatchResult.empty),
+          reason: 'Title "2024 Zitkala-Sa Quarter" must OWNED Zitkala-Ša slot via Title alias');
     });
   });
 }

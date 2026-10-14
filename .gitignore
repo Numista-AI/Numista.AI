@@ -235,5 +235,5 @@ numista_qc/node_modules/
 numista_backend/serviceAccountKey.json
 Numista_Brain_Inbox/Brain Sorter/brain_status.md
 
-# npm lockfile accidentally generated in Flutter project
-package-lock.json
+# npm lockfile accidentally generated in Flutter project (scoped to numista_mobile/)
+numista_mobile/package-lock.json

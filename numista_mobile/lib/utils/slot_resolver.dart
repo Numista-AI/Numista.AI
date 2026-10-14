@@ -278,25 +278,44 @@ class SlotResolver {
 
     final normTitle = _normalizeSubject(title);
 
-    // Find the longest slot name that appears as a full phrase in the title.
-    // Full-phrase = preceded/followed by word boundary (start, end, space, hyphen).
-    String? longestMatch;
+    // Build a candidate map: normalized phrase → canonical slot name it resolves to.
+    // Includes each slot's own normalized name AND any AWQ old-name alias keys
+    // whose value resolves to that slot. Aliases cover Title-embedded old names
+    // like "2024 Patsy Mink Quarter" → alias "patsy mink" → "patsy takemoto mink".
+    final Map<String, String> candidateToCanonical = {};
     for (final slot in program.coins) {
-      final candidate = _normalizeSubject(slot.name);
-      if (candidate.isEmpty) continue;
+      final canonical = _normalizeSubject(slot.name);
+      if (canonical.isEmpty) continue;
+      candidateToCanonical[canonical] = canonical; // slot's own name
+    }
+    // Add alias keys: "patsy mink" → "patsy takemoto mink", etc.
+    for (final entry in _awqOldNameAliases.entries) {
+      final aliasKey       = entry.key;       // already lowercased
+      final canonicalValue = entry.value;     // already lowercased
+      // Only include alias if its canonical value actually corresponds to a slot.
+      if (candidateToCanonical.containsKey(canonicalValue)) {
+        candidateToCanonical[aliasKey] = canonicalValue;
+      }
+    }
+
+    // Find the longest candidate phrase that appears as a full phrase in the title.
+    // Full-phrase = preceded/followed by word boundary (start, end, space, hyphen).
+    String? longestCandidate;
+    String? longestCanonical;
+    for (final entry in candidateToCanonical.entries) {
+      final candidate = entry.key;
       final pattern = RegExp(
           r'(?:^|[\s\-])' + RegExp.escape(candidate) + r'(?:$|[\s\-])');
       if (pattern.hasMatch(normTitle)) {
-        if (longestMatch == null || candidate.length > longestMatch.length) {
-          longestMatch = candidate;
+        if (longestCandidate == null || candidate.length > longestCandidate.length) {
+          longestCandidate = candidate;
+          longestCanonical = entry.value;
         }
       }
     }
-    if (longestMatch == null) return false;
-    // This slot wins only if its name IS the longest-matching name.
-    // Length equality alone is not sufficient — "new mexico" and "new jersey"
-    // are both 10 chars; only the name that actually appeared in the title wins.
-    return longestMatch == slotNorm;
+    if (longestCanonical == null) return false;
+    // This slot wins only if its canonical name IS the longest-matching canonical.
+    return longestCanonical == slotNorm;
   }
 
   // ─── Coin matching ─────────────────────────────────────────────────────────
