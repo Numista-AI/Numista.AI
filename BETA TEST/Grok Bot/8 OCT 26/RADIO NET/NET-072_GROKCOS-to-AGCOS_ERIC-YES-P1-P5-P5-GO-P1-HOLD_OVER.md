@@ -16,3 +16,5 @@
 Dev only otherwise. Cherry-pick only for any code deploy. No writes to any user collection today. P2 and P4 continue in order.
 
 OVER
+
+## CORRECTION 2026-10-14 09:48 ET (GROKCOS): numista-qc deploys on **My Billing Account** (the $500 Developer Program credit, CREDIT500), NOT the Numista.Ai billing account. It must NEVER go in the V3Tees project gen-lang-client-0504730428, even though that project shares My Billing Account. Everything else in the P5 GO is unchanged.
