@@ -32,6 +32,11 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from routes.deps import logger, get_current_user, db
 
+# google-genai SDK — Vertex AI + ADC (no API key). Patchable at module level for tests.
+from google import genai as _genai
+from google.genai import types as _genai_types
+
+
 router = APIRouter(prefix="/api", tags=["Certification Lookup"])
 
 _PCGS_API_BASE = "https://api.pcgs.com/publicapi"
@@ -356,24 +361,14 @@ class ScanCertResponse(BaseModel):
     message: str = ""
 
 
-@router.post("/scan_cert_number", response_model=ScanCertResponse)
-async def scan_cert_number(
-    image: bytes = Depends(lambda: None),  # overridden below
-    user: dict = Depends(get_current_user),
-):
-    """
-    NET-093: OCR a grading slab photo to extract the cert number and grader.
-    Expects a multipart/form-data POST with field 'image' (JPEG/PNG bytes).
-    Uses Gemini Vision to read the cert # printed on the slab label.
-    Returns cert_number, grader, and confidence.
-
-    NOTE: This endpoint is implemented via the multipart form handler below.
-    """
-    raise HTTPException(status_code=405, detail="Use multipart form POST.")
-
 
 from fastapi import UploadFile, File as FastAPIFile
-import base64, os
+import base64, os, json
+
+
+# Vertex AI backend — uses ADC, no API key. Match pattern from main.py.
+_SCAN_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "numista-qc")
+_SCAN_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
 
 
 @router.post("/scan_cert_number_upload", response_model=ScanCertResponse)
@@ -384,7 +379,7 @@ async def scan_cert_number_upload(
     """
     NET-093: OCR a grading slab photo to extract the cert number and grader.
     Accepts multipart/form-data with field 'file' (JPEG/PNG/WEBP).
-    Uses Gemini Vision (gemini-2.0-flash) to read the cert # from the slab label.
+    Uses Gemini Vision (gemini-2.0-flash-002) via Vertex AI + ADC.
     Returns {cert_number, grader, confidence, message}.
 
     Grader detection rules (same as auto-detect in Flutter):
@@ -400,15 +395,13 @@ async def scan_cert_number_upload(
 
     # Detect MIME type
     mime = file.content_type or "image/jpeg"
-    b64 = base64.b64encode(raw).decode()
 
     try:
-        import google.generativeai as genai
-        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise HTTPException(status_code=503, detail="AI service not configured.")
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        _scan_client = _genai.Client(
+            vertexai=True,
+            project=_SCAN_PROJECT_ID,
+            location=_SCAN_LOCATION,
+        )
 
         prompt = (
             "You are examining an image of a certified coin grading slab label. "
@@ -424,17 +417,16 @@ async def scan_cert_number_upload(
             '"confidence": "<HIGH|MEDIUM|LOW>"}'
         )
 
-        import google.generativeai.types as gtypes
-        image_part = {"mime_type": mime, "data": raw}
-        response = model.generate_content(
-            [prompt, image_part],
-            generation_config=genai.GenerationConfig(
+        image_part = _genai_types.Part.from_bytes(data=raw, mime_type=mime)
+        response = _scan_client.models.generate_content(
+            model="gemini-2.0-flash-002",
+            contents=[prompt, image_part],
+            config=_genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 max_output_tokens=128,
             ),
         )
         text = response.text.strip()
-        import json
         data = json.loads(text)
         cert_num = (data.get("cert_number") or "").strip() or None
         grader = (data.get("grader") or "").strip().upper() or None

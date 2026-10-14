@@ -2916,22 +2916,28 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         const SizedBox(height: 20),
 
         // NET-093: Verify link — open grader's public cert page before confirming
+        // NGC URL uses numeric grade only (PF67→67, MS64→64) per certlookup format.
+        // Grade is read at tap time so the user fills the grade field first.
         Builder(builder: (_) {
-          final String verifyUrl;
-          switch (grader.toUpperCase()) {
-            case 'NGC':
-              verifyUrl = 'https://www.ngccoin.com/certlookup/$certNo/';
-              break;
-            case 'CAC':
-              verifyUrl = 'https://www.cacgrading.com/cert-verify/$certNo';
-              break;
-            default:
-              verifyUrl = 'https://www.pcgs.com/cert/$certNo';
-          }
           return SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () async {
+                final String verifyUrl;
+                switch (grader.toUpperCase()) {
+                  case 'NGC':
+                    // Extract digits only from grade at tap time: PF67→67, MS64→64
+                    final tapGrade = _certManualGrade.text.trim();
+                    final numericGrade = tapGrade.replaceAll(RegExp(r'[^0-9]'), '');
+                    final gradeSegment = numericGrade.isNotEmpty ? numericGrade : tapGrade;
+                    verifyUrl = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSegment/';
+                    break;
+                  case 'CAC':
+                    verifyUrl = 'https://www.cacgrading.com/cert-verify/$certNo';
+                    break;
+                  default:
+                    verifyUrl = 'https://www.pcgs.com/cert/$certNo';
+                }
                 final uri = Uri.parse(verifyUrl);
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -3058,8 +3064,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final String verifyLink;
       switch (grader.toUpperCase()) {
         case 'NGC':
-          final gradeSlug = grade.replaceAll(' ', '').toUpperCase();
-          verifyLink = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSlug/';
+          // Numeric grade only: PF67→67, MS64→64, PR65→65
+          final numericGrade = grade.replaceAll(RegExp(r'[^0-9]'), '');
+          final gradeSegment = numericGrade.isNotEmpty ? numericGrade : grade;
+          verifyLink = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSegment/';
           break;
         case 'CAC':
           verifyLink = 'https://www.cacgrading.com/cert-verify/$certNo';

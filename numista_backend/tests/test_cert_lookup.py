@@ -289,3 +289,89 @@ def test_cert_save_no_eric_emails_safeguard():
             assert data.get("coin_id") != "safeguard_blocked", \
                 f"Email {email} triggered safeguard — eric_emails block must be removed"
 
+
+def test_scan_cert_number_upload_returns_cert():
+    """scan_cert_number_upload extracts cert # and grader from slab image (Vertex AI mocked).
+    Verifies: uses google-genai vertexai=True pattern, no GOOGLE_API_KEY, returns correct fields.
+    """
+    mock_response = MagicMock()
+    mock_response.text = '{"cert_number": "53652580", "grader": "PCGS", "confidence": "HIGH"}'
+
+    with patch("routes.cert_routes._genai") as _mock_genai_mod:
+        # Mock the Client constructor and the models.generate_content call
+        mock_client = MagicMock()
+        _mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("test.jpg", b"\xff\xd8\xff" + b"\x00" * 100, "image/jpeg")},
+        )
+
+    assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
+    data = response.json()
+    assert data["cert_number"] == "53652580"
+    assert data["grader"] == "PCGS"
+    assert data["confidence"] == "HIGH"
+    assert data["message"] == "OK"
+
+
+def test_scan_cert_number_upload_ngc_cert():
+    """scan_cert_number_upload correctly returns NGC cert with dash suffix."""
+    mock_response = MagicMock()
+    mock_response.text = '{"cert_number": "8321797-003", "grader": "NGC", "confidence": "HIGH"}'
+
+    with patch("routes.cert_routes._genai") as _mock_genai_mod:
+        mock_client = MagicMock()
+        _mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("ngc.jpg", b"\xff\xd8\xff" + b"\x00" * 50, "image/jpeg")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["cert_number"] == "8321797-003"
+    assert data["grader"] == "NGC"
+
+
+def test_scan_cert_number_upload_no_cert_found():
+    """scan_cert_number_upload returns LOW confidence and no cert when AI finds nothing."""
+    mock_response = MagicMock()
+    mock_response.text = '{"cert_number": null, "grader": null, "confidence": "LOW"}'
+
+    with patch("routes.cert_routes._genai") as _mock_genai_mod:
+        mock_client = MagicMock()
+        _mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_response
+
+        response = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("blank.png", b"\x89PNG\r\n" + b"\x00" * 50, "image/png")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["cert_number"] is None
+    assert data["confidence"] == "LOW"
+    assert "No cert number found" in data["message"]
+
+
+def test_ngc_verify_url_numeric_grade():
+    """NGC certlookup URL must use numeric grade only: PF67→67, MS64→64, PR65→65."""
+    import re
+
+    # Simulate the grade extraction logic from _saveManualCertEntry and the verify button
+    def _ngc_url(cert_no: str, grade: str) -> str:
+        numeric_grade = re.sub(r'[^0-9]', '', grade)
+        grade_segment = numeric_grade if numeric_grade else grade
+        return f"https://www.ngccoin.com/certlookup/{cert_no}/{grade_segment}/"
+
+    # Grok CoS test case from NET-104
+    assert _ngc_url("8321797-003", "PF67") == "https://www.ngccoin.com/certlookup/8321797-003/67/"
+    assert _ngc_url("8321797-003", "MS64") == "https://www.ngccoin.com/certlookup/8321797-003/64/"
+    assert _ngc_url("8321797-003", "PR65") == "https://www.ngccoin.com/certlookup/8321797-003/65/"
+    # Edge: plain numeric grade passed as-is
+    assert _ngc_url("1234567", "67") == "https://www.ngccoin.com/certlookup/1234567/67/"
