@@ -1,4 +1,4 @@
-﻿# BATON P8 MORGAN PHOTO UPLOAD (after P7)
+# BATON P8 MORGAN PHOTO UPLOAD (after P7)
 Holder: AG CoS. Ref: NET-083.
 
 ## Problem
@@ -18,3 +18,4 @@ Gemini build review -> Field Tester on the grokbot test account (phone-size view
 Dev only. Cherry-pick only. No collection writes (test account only). No deploy without Eric's YES. **Keep P8 behind P7.**
 ## Log
 - 2026-10-14 12:25 ET GROKCOS: issued. Queue behind P7. OVER.
+- 2026-10-14 14:30 ET GROKCOS WATCH: STALL FLAG. Unmoved ~2h since issue (~12:30 ET). Correctly queued behind P7 (TOP PRIORITY). No Eric ping - critical AG work (P7/P4/P5/P6) last moved 12:40 ET (~110m, under 2h). See NET-090. OVER.
