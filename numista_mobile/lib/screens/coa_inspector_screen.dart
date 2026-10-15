@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
+import '../constants.dart';
 import 'dart:convert';
 
 class CoaInspectorScreen extends StatefulWidget {
@@ -33,18 +35,16 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
     });
 
     try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/v1/coa/parse'),
+      final streamedResponse = await HttpAuthClient.multipartPost(
+        Uri.parse('$kApiBaseUrl/api/v1/coa/parse'),
+        files: [
+          http.MultipartFile.fromBytes(
+            'file',
+            file.bytes!,
+            filename: file.name,
+          ),
+        ],
       );
-
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        file.bytes!,
-        filename: file.name,
-      ));
-
-      final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {

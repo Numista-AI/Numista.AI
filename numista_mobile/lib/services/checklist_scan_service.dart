@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
+import 'http_auth_client.dart';
 
 /// Result returned from the Cloud Run scan_service endpoint.
 class ScanResult {
@@ -99,24 +100,25 @@ class ChecklistScanService {
   }) async {
     try {
       final uri = Uri.parse('$_baseUrl/api/analyze_checklist');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.fields['program_id'] = programId;
-      request.fields['user_email'] = userId;
-      request.fields['page_number'] = pageNumber.toString();
-      request.fields['total_pages'] = totalPages.toString();
 
       final mimeType = _mimeTypeFromPath(imageFile.path);
       final parts = mimeType.split('/');
-      request.files.add(await http.MultipartFile.fromPath(
+      final file = await http.MultipartFile.fromPath(
         'files',
         imageFile.path,
         contentType: MediaType(parts[0], parts.length > 1 ? parts[1] : 'jpeg'),
-      ));
+      );
 
-      final streamed = await request.send().timeout(
-        const Duration(seconds: 120),
-        onTimeout: () => throw Exception('Request timed out after 120s'),
+      final streamed = await HttpAuthClient.multipartPost(
+        uri,
+        fields: {
+          'program_id': programId,
+          'user_email': userId,
+          'page_number': pageNumber.toString(),
+          'total_pages': totalPages.toString(),
+        },
+        files: [file],
+        timeout: const Duration(seconds: 120),
       );
 
       final body = await streamed.stream.bytesToString();
@@ -138,9 +140,8 @@ class ChecklistScanService {
   /// Quick health check — returns true if the service is reachable.
   static Future<bool> isHealthy() async {
     try {
-      final resp = await http
-          .get(Uri.parse('$_baseUrl/'))
-          .timeout(const Duration(seconds: 10));
+      final resp = await HttpAuthClient
+          .get(Uri.parse('$_baseUrl/'), timeout: const Duration(seconds: 10));
       return resp.statusCode == 200;
     } catch (_) {
       return false;

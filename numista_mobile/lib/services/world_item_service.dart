@@ -19,6 +19,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'http_auth_client.dart';
 
 import '../constants.dart';
 import 'auth_service.dart';
@@ -393,8 +394,7 @@ class WorldItemService {
     String notesHint = '',
   }) async {
     try {
-      final request = http.MultipartRequest('POST', Uri.parse(_endpoint));
-
+      final files = <http.MultipartFile>[];
       if (imageBytes != null) {
         final ext  = imageFileName.split('.').last.toLowerCase();
         final mime = {
@@ -403,7 +403,7 @@ class WorldItemService {
           'webp': 'image/webp',
         }[ext] ?? 'image/jpeg';
 
-        request.files.add(http.MultipartFile.fromBytes(
+        files.add(http.MultipartFile.fromBytes(
           'image',
           imageBytes,
           filename: imageFileName,
@@ -411,13 +411,16 @@ class WorldItemService {
         ));
       }
 
-      request.fields['country_hint']   = countryHint;
-      request.fields['year_hint']      = yearHint;
-      request.fields['item_type_hint'] = itemTypeHint.backendHint;
-      request.fields['notes_hint']     = notesHint;
-
-      final streamedResp = await request.send().timeout(
-        const Duration(seconds: 60),
+      final streamedResp = await HttpAuthClient.multipartPost(
+        Uri.parse(_endpoint),
+        fields: {
+          'country_hint': countryHint,
+          'year_hint': yearHint,
+          'item_type_hint': itemTypeHint.backendHint,
+          'notes_hint': notesHint,
+        },
+        files: files,
+        timeout: const Duration(seconds: 60),
       );
       final body = await streamedResp.stream.bytesToString();
 
@@ -511,7 +514,7 @@ class WorldItemService {
   /// Returns a map like {'Gold': 3200.0, 'Silver': 34.5, ...}
   static Future<Map<String, double>> fetchSpotPrices() async {
     try {
-      final resp = await http
+      final resp = await HttpAuthClient
           .get(Uri.parse('$kApiBaseUrl/api/spot_prices'))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {

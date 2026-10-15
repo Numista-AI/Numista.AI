@@ -7,7 +7,7 @@ import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/guest_seed_service.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -216,13 +216,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Future<void> _loadDismissedNews() async {
     try {
       // ITEM 1: GET /api/dismissed_news (no path param — identity from JWT Bearer token).
-      // Old URL: /api/dismissed_news/{userEmail} was an IDOR vulnerability.
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      if (idToken == null) return;
-
-      final resp = await http.get(
+      final resp = await HttpAuthClient.get(
         Uri.parse('$kApiBaseUrl/api/dismissed_news'),
-        headers: {'Authorization': 'Bearer $idToken'},
       );
       if (!mounted) return;
       if (resp.statusCode == 200) {
@@ -245,7 +240,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Future<void> _fetchSpotPrices() async {
 
     try {
-      final response = await http.get(
+      final response = await HttpAuthClient.get(
           Uri.parse('$kApiBaseUrl/api/spot_prices'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

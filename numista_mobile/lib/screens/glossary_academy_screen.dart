@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
 import '../widgets/grade_badge_widget.dart';
@@ -42,7 +42,7 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
   Future<void> _fetchReferenceData() async {
     try {
       // Fetch Glossary
-      final glossaryRes = await http.get(Uri.parse('$kApiBaseUrl/api/reference/glossary'));
+      final glossaryRes = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/reference/glossary'));
       
       if (glossaryRes.statusCode == 200) {
         final glossaryData = List<Map<String, dynamic>>.from(json.decode(glossaryRes.body));
@@ -56,7 +56,7 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
         final loadedGrades = <Map<String, dynamic>>[];
         for (final code in sheldonCodes) {
           try {
-            final res = await http.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));
+            final res = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));
             if (res.statusCode == 200) {
               loadedGrades.add(json.decode(res.body));
             }
@@ -107,7 +107,7 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
     });
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/reference/search'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'query': query}),

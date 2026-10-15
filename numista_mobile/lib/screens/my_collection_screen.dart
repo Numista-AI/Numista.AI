@@ -159,7 +159,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   Future<void> _fetchSpotPrices() async {
     try {
-      final resp = await http.get(Uri.parse(
+      final resp = await HttpAuthClient.get(Uri.parse(
           '$kApiBaseUrl/api/spot_prices'));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
@@ -5430,12 +5430,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     // HEIC→JPEG conversion via server (M6: route owner-photo upload through conversion)
     if (ext == 'heic' || ext == 'heif') {
       try {
-        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
         final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
-        final request = http.MultipartRequest('POST', uri);
-        if (idToken != null) request.headers['Authorization'] = 'Bearer $idToken';
-        request.files.add(http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'));
-        final response = await request.send().timeout(const Duration(seconds: 30));
+        final response = await HttpAuthClient.multipartPost(
+          uri,
+          files: [
+            http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'),
+          ],
+          timeout: const Duration(seconds: 30),
+        );
         if (response.statusCode == 200 && response.headers['x-converted'] == 'true') {
           uploadBytes = Uint8List.fromList(await response.stream.toBytes());
           ext = 'jpg';

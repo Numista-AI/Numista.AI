@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
 
@@ -193,7 +193,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
   Future<void> _fetchDetails() async {
     try {
       final code = Uri.encodeComponent(widget.gradeCode);
-      final response = await http.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));
+      final response = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));
       if (response.statusCode == 200) {
         if (mounted) {
           setState(() {

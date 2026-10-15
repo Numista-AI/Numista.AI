@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
+import '../services/http_auth_client.dart';
 import '../widgets/grade_badge_widget.dart';
 
 
@@ -40,7 +41,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (user == null) return;
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/commit"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -101,7 +102,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (user == null) return;
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/commit"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -169,7 +170,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
     setState(() => _isProcessing = true);
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/delete_items"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -236,7 +237,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (confirm != true) return;
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/delete_items"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -295,12 +296,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 ? _buildReceiptsList(cachedReceipts!, user, setDlgState)
                 : FutureBuilder<http.Response>(
                     future: () async {
-                      final token = await user.getIdToken();
-                      return http.get(
+                      return HttpAuthClient.get(
                         Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}"),
-                        headers: {
-                          if (token != null) 'Authorization': 'Bearer $token',
-                        },
                       );
                     }(),
                     builder: (context, snapshot) {
@@ -388,12 +385,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    final token = await user.getIdToken();
-                    final res = await http.get(
+                    final res = await HttpAuthClient.get(
                       Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}/view_url"),
-                      headers: {
-                        if (token != null) 'Authorization': 'Bearer $token',
-                      },
                     );
                     if (res.statusCode == 200) {
                       final data = jsonDecode(res.body);
@@ -439,12 +432,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                           onPressed: () async {
                             Navigator.pop(delCtx);
                             try {
-                              final token = await user.getIdToken();
-                              final res = await http.delete(
+                              final res = await HttpAuthClient.delete(
                                 Uri.parse("$_apiUrl/api/receipts/${Uri.encodeComponent(user.email!)}/${r['receipt_id']}"),
-                                headers: {
-                                  if (token != null) 'Authorization': 'Bearer $token',
-                                },
                               );
                               if (res.statusCode == 200) {
                                 setDlgState(() {
@@ -488,7 +477,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (user == null) return;
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/bulk_update"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -556,7 +545,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
     setState(() => _isProcessing = true);
     try {
-      final resp = await http.post(
+      final resp = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/keep_set_as_is"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"user_email": user.email, "set_doc_id": docId}),
@@ -617,7 +606,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
     setState(() => _isProcessing = true);
     try {
-      final resp = await http.post(
+      final resp = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/break_up_set"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"user_email": user.email, "set_doc_id": docId}),
@@ -1061,7 +1050,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     .update(updates);
 
                                 // Then commit to main collection
-                                final response = await http.post(
+                                final response = await HttpAuthClient.post(
                                   Uri.parse("$_apiUrl/api/review/commit"),
                                   headers: {"Content-Type": "application/json"},
                                   body: jsonEncode({

@@ -1,4 +1,4 @@
-﻿// error_message_service.dart
+// error_message_service.dart
 // ITEM 4 - Numista.AI Beta Sprint
 //
 // Dual-path error handling:
@@ -12,8 +12,7 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import 'http_auth_client.dart';
 import '../constants.dart';
 
 class ErrorMessageService {
@@ -83,17 +82,10 @@ class ErrorMessageService {
     bool isCrash = false,
   }) async {
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      if (idToken == null) return;
-
       final payload = '{"context":"$context","error_type":"${error.runtimeType}","has_stack":${stackTrace != null},"is_crash":$isCrash}';
 
-      await http.post(
+      await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/telemetry/silent-error'),
-        headers: {
-          'Authorization': 'Bearer $idToken',
-          'Content-Type': 'application/json',
-        },
         body: payload,
       ).timeout(const Duration(seconds: 5));
     } catch (_) {

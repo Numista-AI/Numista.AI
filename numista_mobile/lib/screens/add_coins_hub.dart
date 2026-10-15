@@ -8,6 +8,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/camera_capture_service.dart';
+import '../services/http_auth_client.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/add_coin_manual_form.dart';
@@ -3281,10 +3282,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     try {
       final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.fields['user_email'] = AuthService.userEmail;
-      request.fields['save_to_collection'] = 'false';
 
       MediaType getMediaType(String filename) {
         final ext = filename.split('.').last.toLowerCase();
@@ -3301,15 +3298,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ? (_camObverseName ?? 'obverse.jpg')
           : (_camReverseName ?? 'reverse.jpg');
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_a',
-        primaryBytes,
-        filename: primaryName,
-        contentType: getMediaType(primaryName),
-      ));
+      final files = <http.MultipartFile>[
+        http.MultipartFile.fromBytes(
+          'image_a',
+          primaryBytes,
+          filename: primaryName,
+          contentType: getMediaType(primaryName),
+        ),
+      ];
 
       if (_camObverseBytes != null && _camReverseBytes != null) {
-        request.files.add(http.MultipartFile.fromBytes(
+        files.add(http.MultipartFile.fromBytes(
           'image_b',
           _camReverseBytes!,
           filename: _camReverseName ?? 'reverse.jpg',
@@ -3317,7 +3316,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         ));
       }
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final streamedResponse = await HttpAuthClient.multipartPost(
+        uri,
+        fields: {
+          'user_email': AuthService.userEmail,
+          'save_to_collection': 'false',
+        },
+        files: files,
+        timeout: const Duration(seconds: 60),
+      );
       final responseBody = await streamedResponse.stream.bytesToString();
 
       if (streamedResponse.statusCode == 200) {
@@ -3372,27 +3379,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     try {
       final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.fields['user_email'] = AuthService.userEmail;
-      request.fields['save_to_collection'] = 'true';
-
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      // Send the overrides edited by the user
-      request.fields['override_year'] = _picYear.text.trim();
-      request.fields['override_denom'] = _picDenom.text.trim();
-      request.fields['override_series'] = _picSeries.text.trim();
-      request.fields['override_theme'] = _picTheme.text.trim();
-      request.fields['override_mint'] = _picMint.text.trim();
-      request.fields['override_grade'] = _picGrade.text.trim();
-      request.fields['override_metal'] = _picMetal.text.trim();
-      request.fields['override_cost'] = _picCost.text.trim();
-      request.fields['override_storage'] = _picStorage.text.trim();
-      request.fields['override_notes'] = _picNotes.text.trim();
 
       MediaType getMediaType(String filename) {
         final ext = filename.split('.').last.toLowerCase();
@@ -3404,21 +3390,42 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         return MediaType.parse(mime);
       }
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_a',
-        _camObverseBytes!,
-        filename: _camObverseName ?? 'obverse.jpg',
-        contentType: getMediaType(_camObverseName ?? 'obverse.jpg'),
-      ));
+      final files = <http.MultipartFile>[
+        http.MultipartFile.fromBytes(
+          'image_a',
+          _camObverseBytes!,
+          filename: _camObverseName ?? 'obverse.jpg',
+          contentType: getMediaType(_camObverseName ?? 'obverse.jpg'),
+        ),
+        http.MultipartFile.fromBytes(
+          'image_b',
+          _camReverseBytes!,
+          filename: _camReverseName ?? 'reverse.jpg',
+          contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
+        ),
+      ];
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_b',
-        _camReverseBytes!,
-        filename: _camReverseName ?? 'reverse.jpg',
-        contentType: getMediaType(_camReverseName ?? 'reverse.jpg'),
-      ));
+      final fields = <String, String>{
+        'user_email': AuthService.userEmail,
+        'save_to_collection': 'true',
+        'override_year': _picYear.text.trim(),
+        'override_denom': _picDenom.text.trim(),
+        'override_series': _picSeries.text.trim(),
+        'override_theme': _picTheme.text.trim(),
+        'override_mint': _picMint.text.trim(),
+        'override_grade': _picGrade.text.trim(),
+        'override_metal': _picMetal.text.trim(),
+        'override_cost': _picCost.text.trim(),
+        'override_storage': _picStorage.text.trim(),
+        'override_notes': _picNotes.text.trim(),
+      };
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final streamedResponse = await HttpAuthClient.multipartPost(
+        uri,
+        fields: fields,
+        files: files,
+        timeout: const Duration(seconds: 60),
+      );
       final responseBody = await streamedResponse.stream.bytesToString();
 
       if (streamedResponse.statusCode == 200) {

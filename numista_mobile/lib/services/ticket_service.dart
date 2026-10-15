@@ -19,20 +19,6 @@ const _base = kApiBaseUrl;
 class TicketService {
   TicketService._();
 
-  // ── Header builder ─────────────────────────────────────────────────────
-
-  /// Returns base JSON headers with Authorization token attached.
-  static Future<Map<String, String>> _headers(
-      {Map<String, String>? extra}) async {
-    final token = await HttpAuthClient.getIdToken();
-    final h = <String, String>{
-      'Content-Type': 'application/json',
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      if (extra != null) ...extra,
-    };
-    return h;
-  }
-
   // ── User-facing endpoints ──────────────────────────────────────────────
 
   /// Submit a new help ticket. Returns the new ticket_id on success.
@@ -51,9 +37,8 @@ class TicketService {
       'diagnostic_package': ?diagnosticPackage,
     };
 
-    final resp = await http.post(
+    final resp = await HttpAuthClient.post(
       Uri.parse('$_base/tickets'),
-      headers: await _headers(),
       body: jsonEncode(body),
     );
 
@@ -66,9 +51,8 @@ class TicketService {
 
   /// Fetch the caller's own ticket list.
   static Future<List<HelpTicket>> listMyTickets() async {
-    final resp = await http.get(
+    final resp = await HttpAuthClient.get(
       Uri.parse('$_base/tickets'),
-      headers: await _headers(),
     );
 
     if (resp.statusCode == 200) {
@@ -97,9 +81,8 @@ class TicketService {
       'duration_hours': durationHours,
     };
 
-    final resp = await http.post(
+    final resp = await HttpAuthClient.post(
       Uri.parse('$_base/tickets/$ticketId/grant'),
-      headers: await _headers(),
       body: jsonEncode(body),
     );
 
@@ -111,9 +94,8 @@ class TicketService {
 
   /// Revoke the active grant on a ticket.
   static Future<void> revokeGrant(String ticketId) async {
-    final resp = await http.post(
+    final resp = await HttpAuthClient.post(
       Uri.parse('$_base/tickets/$ticketId/revoke'),
-      headers: await _headers(),
     );
 
     if (resp.statusCode != 200) {
@@ -134,9 +116,8 @@ class TicketService {
       'status': ?status,
     };
 
-    final resp = await http.patch(
+    final resp = await HttpAuthClient.patch(
       Uri.parse('$_base/tickets/$ticketId'),
-      headers: await _headers(),
       body: jsonEncode(body),
     );
 
@@ -147,9 +128,8 @@ class TicketService {
 
   /// Post a message to a ticket thread (user side).
   static Future<String> postMessage(String ticketId, String msgBody) async {
-    final resp = await http.post(
+    final resp = await HttpAuthClient.post(
       Uri.parse('$_base/tickets/$ticketId/messages'),
-      headers: await _headers(),
       body: jsonEncode({'body': msgBody}),
     );
 
@@ -164,9 +144,8 @@ class TicketService {
 
   /// Fetch the support queue (admin only).
   static Future<List<HelpTicket>> listSupportTickets() async {
-    final resp = await http.get(
+    final resp = await HttpAuthClient.get(
       Uri.parse('$_base/support/tickets'),
-      headers: await _headers(),
     );
 
     if (resp.statusCode == 200) {
@@ -182,9 +161,8 @@ class TicketService {
   static Future<SupportTicketView> getSupportTicketView({
     required String ticketId,
   }) async {
-    final resp = await http.get(
+    final resp = await HttpAuthClient.get(
       Uri.parse('$_base/support/tickets/$ticketId'),
-      headers: await _headers(),
     );
 
     if (resp.statusCode == 200) {
@@ -200,9 +178,8 @@ class TicketService {
     required String ticketId,
     required String msgBody,
   }) async {
-    final resp = await http.post(
+    final resp = await HttpAuthClient.post(
       Uri.parse('$_base/support/tickets/$ticketId/messages'),
-      headers: await _headers(),
       body: jsonEncode({'body': msgBody}),
     );
 
@@ -215,9 +192,8 @@ class TicketService {
   /// Admin updates ticket status.
   static Future<void> updateTicketStatus(
       String ticketId, String status) async {
-    final resp = await http.patch(
+    final resp = await HttpAuthClient.patch(
       Uri.parse('$_base/support/tickets/$ticketId/status'),
-      headers: await _headers(),
       body: jsonEncode({'status': status}),
     );
 
@@ -251,9 +227,8 @@ class TicketService {
     required String ticketId,
     required List<String> urls,
   }) async {
-    final resp = await http.patch(
+    final resp = await HttpAuthClient.patch(
       Uri.parse('$_base/tickets/$ticketId/screenshots'),
-      headers: await _headers(),
       body: jsonEncode({'screenshot_urls': urls}),
     );
     if (resp.statusCode != 200) {
