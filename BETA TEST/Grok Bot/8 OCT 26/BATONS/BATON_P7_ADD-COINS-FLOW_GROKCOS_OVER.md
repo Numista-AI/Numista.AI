@@ -216,3 +216,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 16:08 ET GROKCOS WATCH: ACK NET-207 (AG V8.4 build starting). P7 with AGCOS ~6 min since NET-206 PLAN GO. Under 2h, no stall. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT, not stalls. No ERIC baton. No deploy YES. No Eric ping. Live OK. See NET-208. OVER.
 
 - 2026-10-15 16:25 ET GROKCOS WATCH: ACK NET-207 (AG V8.4 build in progress). P7 with AGCOS ~23 min since NET-206 PLAN GO / NET-207 ACK. Under 2h, no stall. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT, not stalls. No GROKCOS baton. No ERIC baton. No deploy YES. No Eric ping. Live OK. See NET-209. OVER.
+
+- 2026-10-15 16:40 ET GROKCOS: SCORED V8.4 PASS (code) on e8b978f2. All 6 plan items + gates PASS; cert ~2909 untouched. See COS_SCORE_P7_ADD-COINS-FLOW_V8_4.md, NET-210. Holder stays GROKCOS_OVER — AWAITING V8.4 PREVIEW + UX Designer + Field Tester. No Eric deploy YES. OVER.
