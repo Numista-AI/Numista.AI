@@ -8,3 +8,5 @@ Time: 2026-10-15 09:38 ET.
 - Stall math: ~98 min working time today (< 2h). No stall flag. No "check radio" ping.
 - Live smoke 09:37 ET: numista.ai 200, /api/spot_prices 200, /api/collection 401 (default-deny OK), numista-vault.web.app 200.
 OVER
+
+CORRECTION 09:40 ET: SKILL.md change was committed by AG in 18c9ddeb (docs(scanner) pause sidecar + docs-only). Disregard the 'uncommitted' note above. Grok CoS will review that diff on next watch. OVER
